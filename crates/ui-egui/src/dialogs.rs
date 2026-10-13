@@ -76,6 +76,7 @@ pub struct Dialogs {
     pub settings_open: bool,
     pub commands_open: bool,
     pub about_open: bool,
+    pub messages_open: bool,
     command_filter: String,
 }
 
@@ -147,36 +148,79 @@ impl Dialogs {
     }
 }
 
-/// Native file picker (None on the web or when cancelled).
-pub fn pick_file(what: &str, exts: &[&str]) -> Option<String> {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        rfd::FileDialog::new()
-            .add_filter(what, exts)
-            .pick_file()
-            .and_then(|p| p.to_str().map(str::to_string))
+/// Extensions offered when picking a figure.
+pub const FIGURE_EXTS: &[&str] = &["fig", "xfig", "rustfig"];
+/// Extensions offered when picking a picture.
+pub const PICTURE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "bmp", "tif", "tiff", "ppm", "pgm"];
+
+/// File pickers. The app uses [`NativeDialogs`]; tests substitute a script.
+pub trait FileDialogs {
+    /// Choose an existing file (`None` when cancelled or unavailable).
+    fn pick_file(&self, what: &str, exts: &[&str]) -> Option<String>;
+    /// Choose where to save.
+    fn save_file(&self, default_name: &str, what: &str, exts: &[&str]) -> Option<String>;
+}
+
+/// The operating system's file dialogs (none on the web yet).
+pub struct NativeDialogs;
+
+impl FileDialogs for NativeDialogs {
+    fn pick_file(&self, what: &str, exts: &[&str]) -> Option<String> {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            rfd::FileDialog::new()
+                .add_filter(what, exts)
+                .pick_file()
+                .and_then(|p| p.to_str().map(str::to_string))
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = (what, exts);
+            None
+        }
     }
-    #[cfg(target_arch = "wasm32")]
-    {
-        let _ = (what, exts);
-        None
+
+    fn save_file(&self, default_name: &str, what: &str, exts: &[&str]) -> Option<String> {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            rfd::FileDialog::new()
+                .set_file_name(default_name)
+                .add_filter(what, exts)
+                .save_file()
+                .and_then(|p| p.to_str().map(str::to_string))
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = (default_name, what, exts);
+            None
+        }
     }
 }
 
-/// Native save dialog.
-pub fn save_file(default_name: &str, what: &str, exts: &[&str]) -> Option<String> {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        rfd::FileDialog::new()
-            .set_file_name(default_name)
-            .add_filter(what, exts)
-            .save_file()
-            .and_then(|p| p.to_str().map(str::to_string))
+/// Dialogs that answer from a script, in order (for tests).
+#[derive(Default)]
+pub struct ScriptedDialogs {
+    answers: std::cell::RefCell<std::collections::VecDeque<Option<String>>>,
+}
+
+impl ScriptedDialogs {
+    pub fn new(answers: impl IntoIterator<Item = Option<String>>) -> Self {
+        ScriptedDialogs {
+            answers: std::cell::RefCell::new(answers.into_iter().collect()),
+        }
     }
-    #[cfg(target_arch = "wasm32")]
-    {
-        let _ = (default_name, what, exts);
-        None
+
+    fn next(&self) -> Option<String> {
+        self.answers.borrow_mut().pop_front().flatten()
+    }
+}
+
+impl FileDialogs for ScriptedDialogs {
+    fn pick_file(&self, _what: &str, _exts: &[&str]) -> Option<String> {
+        self.next()
+    }
+    fn save_file(&self, _default_name: &str, _what: &str, _exts: &[&str]) -> Option<String> {
+        self.next()
     }
 }
 
@@ -187,6 +231,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     settings_dialog(app, ctx);
     commands_dialog(app, ctx);
     about_dialog(app, ctx);
+    messages_dialog(app, ctx);
     unsaved_dialog(app, ctx);
 }
 
@@ -427,7 +472,10 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
             .and_then(|s| s.to_str())
             .unwrap_or("figure")
             .to_string();
-        if let Some(path) = save_file(&format!("{stem}.{}", st.format), st.format, &[st.format]) {
+        if let Some(path) = app
+            .file_dialogs
+            .save_file(&format!("{stem}.{}", st.format), st.format, &[st.format])
+        {
             let mut p = json!({
                 "path": path,
                 "format": st.format,
@@ -593,6 +641,29 @@ fn commands_dialog(app: &mut App, ctx: &egui::Context) {
             });
         });
     app.dialogs.commands_open = open;
+}
+
+fn messages_dialog(app: &mut App, ctx: &egui::Context) {
+    if !app.dialogs.messages_open {
+        return;
+    }
+    let mut open = true;
+    let tk = crate::theme::Tokens::for_dark(ctx.style().visuals.dark_mode);
+    egui::Window::new("Messages")
+        .open(&mut open)
+        .default_size([460.0, 260.0])
+        .show(ctx, |ui| {
+            egui::ScrollArea::vertical().stick_to_bottom(true).show(ui, |ui| {
+                if app.messages.is_empty() {
+                    ui.label("No messages yet.");
+                }
+                for m in &app.messages {
+                    let c = if m.error { tk.error } else { ui.visuals().text_color() };
+                    ui.label(egui::RichText::new(&m.text).color(c));
+                }
+            });
+        });
+    app.dialogs.messages_open = open;
 }
 
 fn about_dialog(app: &mut App, ctx: &egui::Context) {

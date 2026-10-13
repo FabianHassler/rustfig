@@ -14,6 +14,18 @@ pub struct UiCommand {
 
 pub const UI_COMMANDS: &[UiCommand] = &[
     UiCommand {
+        id: "app.redraw",
+        label: "Redraw",
+        shortcut: "Ctrl+Shift+L",
+        params: "{}",
+    },
+    UiCommand {
+        id: "app.toggle_layout",
+        label: "Classic xfig layout",
+        shortcut: "",
+        params: "{\"classic\"?: bool}",
+    },
+    UiCommand {
         id: "app.new",
         label: "New",
         shortcut: "Ctrl+N",
@@ -116,7 +128,7 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.new" => app.guard_unsaved(Pending::New),
         "app.open" => app.guard_unsaved(Pending::Open(path)),
         "app.merge" => {
-            if let Some(p) = path.or_else(|| dialogs::pick_file("Figures", &["fig", "xfig", "rustfig"])) {
+            if let Some(p) = path.or_else(|| app.file_dialogs.pick_file("Figures", dialogs::FIGURE_EXTS)) {
                 return app
                     .engine
                     .execute("file.merge", &json!({ "path": p }))
@@ -132,7 +144,7 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
             return run_ui(app, "app.save_as", p);
         }
         "app.save_as" => {
-            if let Some(p) = path.or_else(|| dialogs::save_file("figure.fig", "Figures", &["fig", "rustfig"])) {
+            if let Some(p) = path.or_else(|| app.file_dialogs.save_file("figure.fig", "Figures", &["fig", "rustfig"])) {
                 let r = app
                     .engine
                     .execute("file.save", &json!({ "path": p }))
@@ -150,16 +162,20 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.search" => app.dialogs.search.open = true,
         "app.document_settings" => app.dialogs.settings_open = true,
         "app.toggle_depths" => app.show_depths = !app.show_depths,
+        "app.redraw" => app.canvas.invalidate(),
+        "app.toggle_layout" => {
+            let classic = p.get("classic").and_then(Value::as_bool).unwrap_or(!app.classic());
+            app.layout = if classic {
+                crate::Layout::Classic
+            } else {
+                crate::Layout::Modern
+            };
+        }
         "app.toggle_indicator" => app.show_indicator = !app.show_indicator,
         "app.commands" => app.dialogs.commands_open = true,
         "app.about" => app.dialogs.about_open = true,
         "app.import_picture" => {
-            let file = path.or_else(|| {
-                dialogs::pick_file(
-                    "Pictures",
-                    &["png", "jpg", "jpeg", "gif", "bmp", "tif", "tiff", "ppm", "pgm"],
-                )
-            });
+            let file = path.or_else(|| app.file_dialogs.pick_file("Pictures", dialogs::PICTURE_EXTS));
             if let Some(f) = file {
                 let c = app.engine.view.visible().center();
                 return app
@@ -173,8 +189,9 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
     Ok(json!({}))
 }
 
-/// Menu layout: (menu, entries). "-" is a separator, "Name>" opens a submenu
-/// until "<".
+/// Menu layout, after xfig's (File, Edit, View, Snap, Help) with RustFig's
+/// Object and Tools menus as extras. "-" is a separator, "Name>" opens a
+/// submenu until "<". The Snap menu is built in code ([`snap_menu`]).
 const LAYOUT: &[(&str, &[&str])] = &[
     (
         "File",
@@ -182,13 +199,11 @@ const LAYOUT: &[(&str, &[&str])] = &[
             "app.new",
             "app.open",
             "app.merge",
-            "-",
             "app.save",
             "app.save_as",
             "app.export",
             "-",
             "app.import_picture",
-            "app.document_settings",
             "-",
             "app.quit",
         ],
@@ -199,36 +214,41 @@ const LAYOUT: &[(&str, &[&str])] = &[
             "edit.undo",
             "edit.redo",
             "-",
+            "edit.paste",
             "edit.cut",
             "edit.copy",
-            "edit.paste",
             "edit.duplicate",
             "edit.delete",
+            "-",
+            "app.search",
             "edit.delete_all",
+            "-",
+            "app.document_settings",
             "-",
             "edit.select_all",
             "edit.select_none",
-            "-",
-            "app.search",
             "app.edit_selected",
         ],
     ),
     (
         "View",
         &[
+            "app.redraw",
+            "doc.toggle_orientation",
+            "-",
             "view.zoom_in",
             "view.zoom_out",
             "view.zoom_fit",
             "view.zoom_actual",
             "view.pan_origin",
             "-",
-            "view.toggle_grid",
             "view.toggle_page_border",
-            "doc.toggle_orientation",
-            "-",
-            "app.toggle_indicator",
             "app.toggle_depths",
+            "view.toggle_grid",
+            "app.toggle_indicator",
             "depth.show_all",
+            "-",
+            "app.toggle_layout",
         ],
     ),
     (
@@ -266,7 +286,38 @@ const LAYOUT: &[(&str, &[&str])] = &[
     ("Help", &["app.commands", "app.about"]),
 ];
 
+/// Menu labels that differ from the command labels, using xfig's wording.
+const MENU_LABELS: &[(&str, &str)] = &[
+    ("app.quit", "Exit"),
+    ("edit.paste", "Paste Objects"),
+    ("view.zoom_fit", "Zoom to Fit canvas"),
+    ("view.toggle_page_border", "Show page borders"),
+    ("app.toggle_depths", "Show depth manager"),
+    ("view.toggle_grid", "Show grid"),
+    ("app.toggle_indicator", "Show attribute panel"),
+    ("app.document_settings", "Units and Page…"),
+];
+
+/// Check mark state of toggle entries (xfig marks them with an asterisk).
+fn checked(app: &App, id: &str) -> Option<bool> {
+    match id {
+        "view.toggle_page_border" => Some(app.engine.show_page_border),
+        "app.toggle_depths" => Some(app.show_depths),
+        "view.toggle_grid" => Some(app.engine.indicator.grid.is_some()),
+        "app.toggle_indicator" => Some(app.show_indicator),
+        "app.toggle_layout" => Some(app.classic()),
+        _ => None,
+    }
+}
+
 fn label_of(id: &str) -> (&'static str, &'static str) {
+    if let Some((_, l)) = MENU_LABELS.iter().find(|(i, _)| *i == id) {
+        let shortcut = cmd::find(id)
+            .map(|c| c.shortcut)
+            .or_else(|| find_ui(id).map(|c| c.shortcut))
+            .unwrap_or("");
+        return (l, shortcut);
+    }
     if let Some(c) = cmd::find(id) {
         return (c.label, c.shortcut);
     }
@@ -278,7 +329,12 @@ fn label_of(id: &str) -> (&'static str, &'static str) {
 
 fn entry(app: &mut App, ui: &mut egui::Ui, id: &str) {
     let (label, shortcut) = label_of(id);
-    let mut b = egui::Button::new(label);
+    let text = match checked(app, id) {
+        Some(true) => format!("✔ {label}"),
+        Some(false) => format!("    {label}"),
+        None => label.to_string(),
+    };
+    let mut b = egui::Button::new(text);
     if !shortcut.is_empty() {
         b = b.shortcut_text(display_shortcut(shortcut));
     }
@@ -310,8 +366,16 @@ fn entries(app: &mut App, ui: &mut egui::Ui, list: &[&str]) {
 }
 
 pub fn menu_bar(app: &mut App, ui: &mut egui::Ui) {
-    egui::MenuBar::new().ui(ui, |ui| {
+    egui::MenuBar::new().ui(ui, |ui| menu_buttons(app, ui));
+}
+
+/// The menu buttons alone, laid out in the current row.
+pub fn menu_buttons(app: &mut App, ui: &mut egui::Ui) {
+    {
         for (name, list) in LAYOUT {
+            if *name == "Object" {
+                ui.menu_button("Snap", |ui| snap_menu(app, ui));
+            }
             ui.menu_button(*name, |ui| entries(app, ui, list));
             if *name == "Object" {
                 ui.menu_button("Tools", |ui| {
@@ -328,7 +392,35 @@ pub fn menu_bar(app: &mut App, ui: &mut egui::Ui) {
                 });
             }
         }
-    });
+    }
+}
+
+/// The Snap menu: point positioning and grid (object snaps follow in W4).
+pub fn snap_menu(app: &mut App, ui: &mut egui::Ui) {
+    let units = app.engine.doc().settings.units;
+    ui.label(egui::RichText::new("Point positioning").small());
+    for m in rustfig_engine::SnapMode::ALL {
+        let on = app.engine.indicator.snap == m;
+        if ui.radio(on, m.label(units)).clicked() {
+            app.run("indicator.set", json!({ "snap": m }));
+            ui.close();
+        }
+    }
+    ui.separator();
+    ui.label(egui::RichText::new("Grid").small());
+    if ui.radio(app.engine.indicator.grid.is_none(), "off").clicked() {
+        app.run("indicator.set", json!({ "grid": Value::Null }));
+        ui.close();
+    }
+    for m in rustfig_engine::SnapMode::ALL.iter().skip(1) {
+        if ui
+            .radio(app.engine.indicator.grid == Some(*m), m.label(units))
+            .clicked()
+        {
+            app.run("indicator.set", json!({ "grid": m }));
+            ui.close();
+        }
+    }
 }
 
 /// Human-readable shortcut ("Ctrl" shows as ⌘ on macOS).

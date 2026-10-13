@@ -55,14 +55,14 @@
 ## Main window (xfig screen map)
 | xfig | RustFig | Plan |
 |---|---|---|
-| Main menus File, Edit, View, Snap, Help | 🟡 File, Edit, View, Object, Tools, Help; no Snap menu | W1, W4 |
-| Current file name | 🟡 window title only | W1 |
-| Message panel | 🟡 status bar, no history | W1 |
-| Mouse-function indicator | ❌ | W2 |
+| Main menus File, Edit, View, Snap, Help | ✅ in xfig's order with xfig labels (Object and Tools as extras); Snap has point positioning and grid, object snaps missing | W4 |
+| Current file name | ✅ next to the menus, marks unsaved changes | — |
+| Message panel | ✅ under the menus; click for the history | — |
+| Mouse-function indicator | 🟡 shows each button's current function per tool and state; xfig's three-button scheme comes in W2 | W2 |
 | Three-button mouse semantics | 🟡 left click + double/right click | W2 |
-| Units box | ❌ | W6 |
+| Units box | 🟡 shows the units, opens units and page settings; xfig's scale panel missing | W6 |
 | Top and side rulers | ❌ | W6 |
-| Depth panel: checkboxes, drag-toggle, All On/Off/Toggle, Gray/Blank | 🟡 checkboxes only, hidden by default | W3 |
+| Depth panel: checkboxes, drag-toggle, All On/Off/Toggle, Gray/Blank | 🟡 checkboxes, shown by default in the classic layout | W3 |
 | Attribute panel: graphical buttons, per-mode attributes | 🟡 all attributes always shown as plain widgets | W5 |
 | xfig accelerators (Meta-key) | 🟡 platform shortcuts and xfig mode letters | W7 |
 
@@ -71,3 +71,4 @@
 |---|---|
 | 2026-10-13 | First checklist. |
 | 2026-10-13 | Added the main-window section (plan phase W). |
+| 2026-10-13 | W1: classic layout, message panel, mouse indicator, units box. |

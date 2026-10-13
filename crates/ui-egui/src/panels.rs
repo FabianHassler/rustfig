@@ -11,10 +11,10 @@ use serde_json::{json, Value};
 pub fn mode_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     egui::ScrollArea::vertical().show(ui, |ui| {
         ui.add_space(4.0);
-        ui.label(RichText::new("Draw").small().color(tk.muted));
+        ui.label(RichText::new("Drawing").small().color(tk.muted));
         tool_grid(app, ui, tk, true);
         ui.add_space(6.0);
-        ui.label(RichText::new("Edit").small().color(tk.muted));
+        ui.label(RichText::new("Editing").small().color(tk.muted));
         tool_grid(app, ui, tk, false);
     });
 }
@@ -52,6 +52,8 @@ fn tool_grid(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, drawing: bool) {
                 } else {
                     format!("{} ({})", t.label(), t.shortcut())
                 };
+                let label = t.label();
+                resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, active, label));
                 if resp.on_hover_text(tip).clicked() {
                     app.run(t.id(), json!({}));
                 }
@@ -428,6 +430,161 @@ pub fn depth_panel(app: &mut App, ui: &mut egui::Ui) {
             }
         }
     });
+}
+
+/// The classic xfig top strip: menus and the current file on the first row,
+/// the message panel on the second, the mouse-function indicator and the
+/// units box on the right.
+pub fn classic_top(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
+    let right_w = 330.0;
+    ui.horizontal(|ui| {
+        let left_w = (ui.available_width() - right_w - 8.0).max(200.0);
+        ui.allocate_ui_with_layout(vec2(left_w, 48.0), egui::Layout::top_down(egui::Align::Min), |ui| {
+            ui.horizontal(|ui| {
+                crate::menus::menu_buttons(app, ui);
+                ui.separator();
+                current_file(app, ui, tk);
+            });
+            message_panel(app, ui, tk);
+        });
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+            ui.vertical(|ui| {
+                mouse_indicator(app, ui, tk);
+                ui.horizontal(|ui| {
+                    units_box(app, ui);
+                    if let Some(c) = app.canvas.cursor {
+                        let d = app.engine.doc();
+                        ui.monospace(format!("{:>7.3} {:>7.3}", d.to_units(c.x), d.to_units(c.y)));
+                    }
+                    ui.label(RichText::new(format!("{:.0}%", app.engine.view.zoom * 100.0)).color(tk.muted));
+                });
+            });
+        });
+    });
+}
+
+fn current_file(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
+    let name = app
+        .engine
+        .path()
+        .and_then(|p| std::path::Path::new(p).file_name())
+        .and_then(|n| n.to_str())
+        .unwrap_or("(untitled)");
+    let text = if app.engine.is_modified() {
+        format!("{name} (modified)")
+    } else {
+        name.to_string()
+    };
+    egui::Frame::NONE
+        .stroke(egui::Stroke::new(1.0_f32, tk.muted))
+        .inner_margin(vec2(6.0, 1.0))
+        .show(ui, |ui| {
+            ui.label(RichText::new(text).monospace())
+                .on_hover_text(app.engine.path().unwrap_or("not saved yet"));
+        });
+}
+
+fn message_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
+    let (text, color) = match &app.message {
+        Some(m) => (
+            m.text.clone(),
+            if m.error { tk.error } else { ui.visuals().text_color() },
+        ),
+        None => (format!("{} mode", app.engine.tool().label()), tk.muted),
+    };
+    let resp = egui::Frame::NONE
+        .fill(ui.visuals().extreme_bg_color)
+        .inner_margin(vec2(6.0, 2.0))
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.add(
+                egui::Label::new(RichText::new(text).color(color))
+                    .truncate()
+                    .sense(Sense::click()),
+            )
+        })
+        .inner;
+    if resp.on_hover_text("Click for the message history").clicked() {
+        app.dialogs.messages_open = !app.dialogs.messages_open;
+    }
+}
+
+/// xfig's mouse-function indicator: what each button does right now.
+pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
+    let h = app.engine.mouse_hints();
+    let size = vec2(320.0, 34.0);
+    let (rect, resp) = ui.allocate_exact_size(size, Sense::hover());
+    let p = ui.painter_at(rect);
+    let stroke = egui::Stroke::new(1.0_f32, tk.muted);
+    p.rect_stroke(rect, 2.0, stroke, egui::StrokeKind::Inside);
+    let text = ui.visuals().text_color();
+    let small = egui::FontId::proportional(10.0);
+    let font = egui::FontId::proportional(12.0);
+    p.text(
+        rect.left_top() + vec2(4.0, 2.0),
+        egui::Align2::LEFT_TOP,
+        "Mouse Buttons",
+        small.clone(),
+        tk.muted,
+    );
+    let c = egui::pos2(rect.center().x, rect.bottom() - 13.0);
+    for (i, label) in [h.left, h.middle, h.right].iter().enumerate() {
+        let x = c.x + (i as f32 - 1.0) * 11.0;
+        let r = egui::Rect::from_center_size(egui::pos2(x, c.y), vec2(9.0, 14.0));
+        let active = !label.is_empty();
+        if active {
+            p.rect_filled(r, 2.0, tk.selection.gamma_multiply(0.35));
+        }
+        p.rect_stroke(r, 2.0, stroke, egui::StrokeKind::Inside);
+    }
+    p.text(
+        egui::pos2(c.x - 22.0, c.y),
+        egui::Align2::RIGHT_CENTER,
+        h.left,
+        font.clone(),
+        text,
+    );
+    p.text(
+        egui::pos2(c.x, rect.top() + 2.0),
+        egui::Align2::CENTER_TOP,
+        h.middle,
+        small,
+        text,
+    );
+    p.text(
+        egui::pos2(c.x + 22.0, c.y),
+        egui::Align2::LEFT_CENTER,
+        h.right,
+        font,
+        text,
+    );
+    if h.keyboard {
+        p.text(
+            rect.right_top() + vec2(-4.0, 2.0),
+            egui::Align2::RIGHT_TOP,
+            "keyboard: typing",
+            egui::FontId::proportional(10.0),
+            tk.caret,
+        );
+    }
+    let summary = format!(
+        "Left: {}; middle: {}; right: {}",
+        h.left,
+        h.middle,
+        if h.right.is_empty() { "—" } else { h.right }
+    );
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, summary.clone()));
+}
+
+fn units_box(app: &mut App, ui: &mut egui::Ui) {
+    let u = app.engine.doc().unit_name();
+    if ui
+        .button(format!("1 {u} = 1.00 {u}"))
+        .on_hover_text("Units and page settings")
+        .clicked()
+    {
+        app.dialogs.settings_open = true;
+    }
 }
 
 pub fn status_bar(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {

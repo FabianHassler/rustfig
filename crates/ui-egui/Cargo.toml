@@ -21,5 +21,8 @@ eframe.workspace = true
 serde_json.workspace = true
 log.workspace = true
 
+[dev-dependencies]
+egui_kittest = { version = "0.33", default-features = false }
+
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rfd.workspace = true

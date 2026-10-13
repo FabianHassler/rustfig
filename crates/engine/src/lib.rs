@@ -17,7 +17,7 @@ mod view;
 
 pub use error::EngineError;
 pub use indicator::{GridMode, Indicator, SnapMode};
-pub use tools::{Key, Overlay, ToolEvent, ToolKind};
+pub use tools::{Key, MouseHints, Overlay, ToolEvent, ToolKind};
 pub use view::View;
 
 pub use rustfig_format as format;

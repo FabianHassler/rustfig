@@ -16,7 +16,20 @@ pub mod theme;
 use rustfig_engine::{Engine, UiRequest};
 use serde_json::{json, Value};
 
-/// A message shown in the status bar.
+/// Most messages kept in the message panel's history.
+pub const MAX_MESSAGES: usize = 200;
+
+/// Window layout.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Layout {
+    /// xfig's arrangement: menus, file name, message panel, mouse indicator and
+    /// units box at the top; depth panel on the right.
+    Classic,
+    /// Menu bar at the top, status bar at the bottom.
+    Modern,
+}
+
+/// A message shown in the message panel / status bar.
 #[derive(Debug, Clone)]
 pub struct Message {
     pub text: String,
@@ -36,10 +49,16 @@ pub struct App {
     pub engine: Engine,
     pub canvas: canvas::CanvasState,
     pub dialogs: dialogs::Dialogs,
+    /// The latest message.
     pub message: Option<Message>,
+    /// Message history, oldest first.
+    pub messages: Vec<Message>,
+    pub layout: Layout,
     pub show_depths: bool,
     pub show_indicator: bool,
     pub pending: Option<Pending>,
+    /// File pickers (native dialogs; replaced in tests).
+    pub file_dialogs: Box<dyn dialogs::FileDialogs>,
     quit_confirmed: bool,
     #[cfg(not(target_arch = "wasm32"))]
     control: Option<control::Server>,
@@ -48,23 +67,31 @@ pub struct App {
 }
 
 impl App {
-    /// Create the app. `control_port` starts the JSON-lines control server (native only).
-    pub fn new(cc: &eframe::CreationContext<'_>, engine: Engine, control_port: Option<u16>) -> App {
-        cc.egui_ctx.set_theme(egui::ThemePreference::System);
-        let mut app = App {
+    /// Create the app without eframe (used by `new` and by UI tests).
+    pub fn with_engine(engine: Engine) -> App {
+        App {
             engine,
             canvas: canvas::CanvasState::default(),
             dialogs: dialogs::Dialogs::default(),
             message: None,
-            show_depths: false,
+            messages: Vec::new(),
+            layout: Layout::Classic,
+            show_depths: true,
             show_indicator: true,
             pending: None,
+            file_dialogs: Box::new(dialogs::NativeDialogs),
             quit_confirmed: false,
             #[cfg(not(target_arch = "wasm32"))]
             control: None,
             #[cfg(not(target_arch = "wasm32"))]
             screenshot_waiters: Vec::new(),
-        };
+        }
+    }
+
+    /// Create the app. `control_port` starts the JSON-lines control server (native only).
+    pub fn new(cc: &eframe::CreationContext<'_>, engine: Engine, control_port: Option<u16>) -> App {
+        cc.egui_ctx.set_theme(egui::ThemePreference::System);
+        let mut app = App::with_engine(engine);
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(port) = control_port {
             match control::Server::start(port, cc.egui_ctx.clone()) {
@@ -74,10 +101,7 @@ impl App {
                 }
                 Err(e) => {
                     log::error!("control channel: failed to bind 127.0.0.1:{port}: {e}");
-                    app.message = Some(Message {
-                        text: format!("Control port {port} unavailable: {e}"),
-                        error: true,
-                    });
+                    app.error(format!("Control port {port} unavailable: {e}"));
                 }
             }
         }
@@ -86,15 +110,29 @@ impl App {
         app
     }
 
+    /// Whether the classic xfig layout is active.
+    pub fn classic(&self) -> bool {
+        self.layout == Layout::Classic
+    }
+
+    fn push_message(&mut self, m: Message) {
+        self.messages.push(m.clone());
+        if self.messages.len() > MAX_MESSAGES {
+            let extra = self.messages.len() - MAX_MESSAGES;
+            self.messages.drain(..extra);
+        }
+        self.message = Some(m);
+    }
+
     pub fn info(&mut self, text: impl Into<String>) {
-        self.message = Some(Message {
+        self.push_message(Message {
             text: text.into(),
             error: false,
         });
     }
 
     pub fn error(&mut self, text: impl Into<String>) {
-        self.message = Some(Message {
+        self.push_message(Message {
             text: text.into(),
             error: true,
         });
@@ -138,10 +176,7 @@ impl App {
             match r {
                 UiRequest::EditObject { id } => self.dialogs.open_edit(&self.engine, id),
                 UiRequest::PickPicture { rect } => {
-                    if let Some(path) = dialogs::pick_file(
-                        "Pictures",
-                        &["png", "jpg", "jpeg", "gif", "bmp", "tif", "tiff", "ppm", "pgm"],
-                    ) {
+                    if let Some(path) = self.file_dialogs.pick_file("Pictures", dialogs::PICTURE_EXTS) {
                         self.run(
                             "shape.picture",
                             json!({"path": path, "x": rect.min.x, "y": rect.min.y, "width": rect.width(), "height": rect.height()}),
@@ -168,7 +203,7 @@ impl App {
                 self.engine.set_modified(false);
             }
             Pending::Open(path) => {
-                let path = path.or_else(|| dialogs::pick_file("Figures", &["fig", "xfig", "rustfig"]));
+                let path = path.or_else(|| self.file_dialogs.pick_file("Figures", dialogs::FIGURE_EXTS));
                 if let Some(p) = path {
                     self.run("file.open", json!({ "path": p }));
                 }
@@ -196,21 +231,30 @@ impl App {
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.ui(ctx);
+    }
+}
+
+impl App {
+    /// Run one UI frame (guarded against panics).
+    pub fn ui(&mut self, ctx: &egui::Context) {
         let frame_result = rustfig_engine::guard::catch(|| self.frame(ctx));
         if let Err(msg) = frame_result {
             self.error(format!("internal error (please report): {msg}"));
         }
     }
-}
 
-impl App {
     fn frame(&mut self, ctx: &egui::Context) {
         #[cfg(not(target_arch = "wasm32"))]
         self.poll_control(ctx);
         let tokens = theme::Tokens::for_dark(ctx.style().visuals.dark_mode);
         menus::handle_shortcuts(self, ctx);
-        egui::TopBottomPanel::top("menu").show(ctx, |ui| menus::menu_bar(self, ui));
-        egui::TopBottomPanel::bottom("status").show(ctx, |ui| panels::status_bar(self, ui, &tokens));
+        if self.classic() {
+            egui::TopBottomPanel::top("xfig_top").show(ctx, |ui| panels::classic_top(self, ui, &tokens));
+        } else {
+            egui::TopBottomPanel::top("menu").show(ctx, |ui| menus::menu_bar(self, ui));
+            egui::TopBottomPanel::bottom("status").show(ctx, |ui| panels::status_bar(self, ui, &tokens));
+        }
         if self.show_indicator {
             egui::TopBottomPanel::bottom("indicator").show(ctx, |ui| panels::indicator_panel(self, ui));
         }

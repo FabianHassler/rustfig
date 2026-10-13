@@ -369,6 +369,16 @@ pub(crate) enum ToolState {
     },
 }
 
+/// What each mouse button does right now (xfig's mouse-function indicator).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct MouseHints {
+    pub left: &'static str,
+    pub middle: &'static str,
+    pub right: &'static str,
+    /// Keyboard input goes to the tool (the text tool is typing).
+    pub keyboard: bool,
+}
+
 /// Pick tolerance in screen pixels.
 const PICK_PX: f64 = 6.0;
 
@@ -1270,6 +1280,84 @@ impl Engine {
         Ok(())
     }
 
+    // ---- mouse hints -------------------------------------------------------
+
+    /// The current function of each mouse button, for the mouse indicator.
+    /// Must describe what [`Engine::tool_event`] actually does.
+    pub fn mouse_hints(&self) -> MouseHints {
+        let pan = "pan";
+        let h = |left, right| MouseHints {
+            left,
+            middle: pan,
+            right,
+            keyboard: false,
+        };
+        let tool = self.tool;
+        match &self.tool_state {
+            ToolState::Points { pts, .. } => {
+                if tool == ToolKind::Arc {
+                    h(if pts.len() < 2 { "second point" } else { "last point" }, "cancel")
+                } else {
+                    h("next point", "finish")
+                }
+            }
+            ToolState::Drag { .. } => {
+                let left = match tool {
+                    ToolKind::CircleRadius => "set radius",
+                    ToolKind::CircleDiameter => "set diameter",
+                    ToolKind::EllipseRadii => "set radii",
+                    ToolKind::RegularPolygon => "set size",
+                    _ => "final corner",
+                };
+                h(left, "cancel")
+            }
+            ToolState::Text { .. } => MouseHints {
+                left: "new text",
+                middle: pan,
+                right: "finish text",
+                keyboard: true,
+            },
+            ToolState::MoveObjs { dragging: true, .. } => h("drop", ""),
+            ToolState::MoveObjs { .. } => h("place object", "cancel"),
+            ToolState::RubberBand { .. } => h("drag region", ""),
+            ToolState::PointDrag { dragging: true, .. } => h("drop point", ""),
+            ToolState::PointDrag { .. } => h("place point", "cancel"),
+            ToolState::Scale { .. } => h("set size", "cancel"),
+            ToolState::Idle => {
+                let left = match tool {
+                    ToolKind::Select => "select / drag",
+                    ToolKind::Polyline | ToolKind::Polygon | ToolKind::Arc => "first point",
+                    t if t.spline_kind().is_some() => "first point",
+                    ToolKind::CircleRadius | ToolKind::EllipseRadii | ToolKind::RegularPolygon => "center",
+                    ToolKind::CircleDiameter => "diameter start",
+                    ToolKind::EllipseDiameter | ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture => "first corner",
+                    ToolKind::Text => "place or edit text",
+                    ToolKind::Glue => "region to glue",
+                    ToolKind::Break => "break compound",
+                    ToolKind::Scale => "pick object",
+                    ToolKind::Align => "align compound",
+                    ToolKind::Move => "pick object",
+                    ToolKind::Copy => "copy object",
+                    ToolKind::MovePoint => "pick point",
+                    ToolKind::AddPoint => "add point",
+                    ToolKind::DeletePoint => "delete point",
+                    ToolKind::Delete => "delete object",
+                    ToolKind::Update => "update object",
+                    ToolKind::Edit => "edit object",
+                    ToolKind::FlipV => "flip up/down",
+                    ToolKind::FlipH => "flip left/right",
+                    ToolKind::RotateCcw => "rotate ccw",
+                    ToolKind::RotateCw => "rotate cw",
+                    ToolKind::Convert => "convert",
+                    ToolKind::OpenClose => "open/close",
+                    ToolKind::Arrow => "toggle arrow",
+                    _ => "",
+                };
+                h(left, "")
+            }
+        }
+    }
+
     // ---- overlay -----------------------------------------------------------
 
     /// What to draw on top of the document for the active tool.
@@ -1619,6 +1707,39 @@ mod tests {
         })
         .unwrap();
         assert_eq!(e.selection().len(), 1);
+    }
+
+    #[test]
+    fn mouse_hints_follow_state() {
+        let mut e = Engine::new();
+        for t in ToolKind::ALL {
+            e.set_tool(t);
+            let h = e.mouse_hints();
+            assert!(!h.left.is_empty(), "{} has no left-button hint", t.id());
+            assert_eq!(h.middle, "pan");
+        }
+        e.set_tool(ToolKind::Polyline);
+        assert_eq!(e.mouse_hints().left, "first point");
+        press(&mut e, 0.0, 0.0);
+        assert_eq!(e.mouse_hints().right, "finish");
+        e.set_tool(ToolKind::Text);
+        press(&mut e, 0.0, 0.0);
+        assert!(e.mouse_hints().keyboard);
+        e.set_tool(ToolKind::Box);
+        e.tool_event(ToolEvent::Press {
+            pos: Point::ZERO,
+            right: false,
+            shift: false,
+        })
+        .unwrap();
+        assert_eq!(e.mouse_hints().right, "cancel");
+        e.tool_event(ToolEvent::Press {
+            pos: Point::ZERO,
+            right: true,
+            shift: false,
+        })
+        .unwrap();
+        assert!(!e.tool_busy(), "right button must cancel as the hint says");
     }
 
     #[test]

@@ -20,7 +20,7 @@ saves and exports. Web build not yet verified.
 | Overall parity (weighted) | ≈58 % |
 | Commands (all reachable from the control channel and MCP) | 124 engine (incl. 38 tool modes) + 15 UI |
 | Interactive tools (xfig modes) | 38 |
-| Tests | 85 (unit, integration, property-based fuzzing) |
+| Tests | 94 (unit, integration, property-based fuzzing, headless UI) |
 | Fig format | read 3.0–3.2, write 3.2 |
 | Export formats | PDF, SVG, EPS, PNG |
 | Perf, 50k paths (render fit / hit test / open) | 330 ms / 0.1 ms / 17 ms |
@@ -35,7 +35,7 @@ saves and exports. Web build not yet verified.
 | File format | 85 % | Fig 1.x/2.x read missing |
 | Export | 35 % | LaTeX family, bitmaps besides PNG, print missing |
 | Text | 55 % | fallback fonts, no character map or LaTeX special text |
-| View & navigation | 75 % | rulers missing |
+| View & navigation | 80 % | classic xfig layout with mouse indicator; rulers and object snaps missing |
 | Undo | 100 % | multi-level (xfig: single level) |
 | Libraries | 0 % | not started |
 | Printing | 10 % | export PDF only |
@@ -67,4 +67,5 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-13 | W1: classic xfig window layout (menus File/Edit/View/Snap/Help, file name, message panel with history, mouse-function indicator, units box, depth panel shown), headless UI tests with egui_kittest. |
 | 2026-10-13 | M0–M3: workspace, geometry, model, Fig 3.x reader/writer, renderer (screen, PNG, SVG, EPS, PDF), engine with 124 commands and 38 tools, egui app, control channel, MCP server, CLI, xtask gates. Parity ≈58 %. |

@@ -38,6 +38,14 @@ pub struct CanvasState {
     pub render_ms: f64,
 }
 
+impl CanvasState {
+    /// Drop cached rasters so the next frame redraws everything.
+    pub fn invalidate(&mut self) {
+        self.doc_key = None;
+        self.ov_key = None;
+    }
+}
+
 fn to_pos(p: Point, origin: Pos2) -> Pos2 {
     pos2(origin.x + p.x as f32, origin.y + p.y as f32)
 }
