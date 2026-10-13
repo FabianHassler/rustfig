@@ -29,6 +29,30 @@ criteria and estimates. Commit messages use the task id (`A1: shared undo snapsh
 | A7 | **Render cache for large drawings:** reuse the built scene between frames and rebuild only on revision change; spatial index for culling. | 50k-path pan render < 150 ms (now ≈330 ms). | 4 |
 | A8 | **fig2dev reference tests.** Render test figures through fig2dev and RustFig and compare them (design below). | `cargo test` runs the comparison when fig2dev is installed and skips otherwise; each fixture has a recorded score; the diff images are written for review. | 12 |
 
+## Phase W: xfig window parity (≈92 h)
+
+RustFig's window has the same building blocks as xfig's (mode panel left,
+attribute panel bottom, canvas, depth panel) but not xfig's layout or
+behaviour. The xfig manual's screen map lists: main menus (File, Edit,
+View, Snap, Help), current file name, message panel, mouse-function
+indicator, units box, top and side rulers, drawing and editing mode panels,
+attribute panel, depth panel, canvas. This phase makes RustFig's main window
+match it, with the modern additions kept but optional.
+
+| Id | Task | Acceptance | Hours |
+|----|------|------------|------:|
+| W1 | **xfig layout**: a top strip with the current file name, the message panel (with history), the mouse-function indicator and the units box; menus File, Edit, View, Snap, Help in xfig's order and naming (RustFig's Object/Tools menus remain as extras); depth panel shown by default. A "Classic xfig / Modern" layout setting. | Side-by-side screenshot with the manual's screen image shows the same regions in the same places. | 16 |
+| W2 | **Mouse setup and indicator**: xfig's three-button semantics per mode (e.g. polyline: left adds a point, middle finishes, right cancels; move: middle places at the original position) with the indicator showing what each button does in the current mode and state. Setting "Mouse buttons: xfig (3 buttons) / modern (left + double click)", plus modifier equivalents for two-button mice and trackpads. | For every tool the indicator text matches the tool's actual behaviour (unit test over all tools and states); both mouse schemes have tool tests. | 16 |
+| W3 | **Depth panel (layers) parity**: a row for every used depth with object counts; click or drag across checkboxes to switch several depths; All On / All Off / Toggle buttons; Gray or Blank display of depths that are off; objects on off depths can't be picked or edited; export and print of "active layers only". | Tests for picking and exports with depths off; screenshot review. | 12 |
+| W4 | **Snap menu**: Hold, Release, Endpoint, Midpoint, Nearest, Focus, Diametric, Normal, Tangent, Intersect, applied to the next clicked point in drawing and editing modes (replaces E10). | Tests per snap mode on lines, arcs, ellipses and splines. | 16 |
+| W5 | **Attribute panel parity**: xfig-style buttons that show the current value graphically and open a choice panel; only the attributes relevant to the current mode are shown, like xfig; adds the missing ones: point positioning (D7), linked move (D8), text flags (rigid, special, hidden), arrow mode and arrow-type panel, latex/manhattan line modes, depth. | Screenshot review per mode; switching modes changes the visible attributes. | 16 |
+| W6 | **Rulers** (top and side) with cursor tracking, unit ticks and click-to-pan (replaces E2); **units box**: click to change units and scale. | Screenshot review; units change updates rulers and coordinates. | 10 |
+| W7 | **Menu accelerators** matching xfig's (Meta-key shortcuts in the menus, e.g. Meta-N, Meta-U undo, Meta-T paste) as an optional keymap next to the platform-standard one. | Tests that the xfig keymap reaches the documented commands. | 6 |
+
+Global settings (Edit › Global settings, E1), the character map (View, E5)
+and Manage styles (View, E6) complete the xfig menus. E8 (mouse hint bar) is
+covered by W2.
+
 ## Phase B: exports for LaTeX users, M4 (≈88 h)
 
 | Id | Task | Acceptance | Hours |
@@ -67,20 +91,18 @@ criteria and estimates. Commit messages use the task id (`A1: shared undo snapsh
 | D8 | **Linked move**: moving a box drags the attached line end points (xfig's smart links). | Test with a box and two attached lines. | 10 |
 | D9 | Arrowhead types 10–14 with exact shapes; dash-dot tick styles. | Visual review against the xfig manual. | 6 |
 
-## Phase E: UI completeness, M7 (≈75 h)
+## Phase E: UI completeness, M7 (≈56 h)
 
 | Id | Task | Acceptance | Hours |
 |----|------|------------|------:|
 | E1 | **Settings persistence** (eframe storage on native and web): indicator, grid, units, panel visibility, recent files. | Restart keeps settings; File menu lists recent files. | 8 |
-| E2 | **Rulers** with cursor tracking, units, and drag to pan. | Screenshot review. | 8 |
 | E3 | **Zoom box** and zoom tool. | Drag a box to zoom into it. | 4 |
 | E4 | **Colour editor**: create and edit user colours (RGB/HSV), remove unused ones. | New colours save to the Fig file. | 10 |
 | E5 | **Character map** inserting into the text being typed (Symbol and Dingbats included). | Insert ∑ with the Symbol font. | 8 |
 | E6 | **Style manager**: named attribute sets applied to the indicator. | Save, apply, delete a style; persists. | 10 |
 | E7 | **System clipboard**: copy objects as Fig text and SVG, paste Fig text and images. | Copy between two RustFig windows; paste an image from a browser. | 10 |
-| E8 | **Keyboard and mouse help**: a mouse-function hint bar like xfig's, and a shortcut sheet. | Screenshot review. | 5 |
+| E8 | **Shortcut sheet** listing every command and its keys (the mouse indicator is W2). | Screenshot review. | 2 |
 | E9 | **Dark/light theme switch** and UI scale setting. | Screenshot review. | 4 |
-| E10 | Snap to object points (end points, centres, intersections) besides the grid. | Tests. | 8 |
 
 ## Phase F: text, fonts and languages (≈60 h)
 
@@ -140,9 +162,12 @@ is an optional extra, used in two ways.
 
 ## Order and milestones
 
-1. A8 and B0 first (fig2dev reference tests, then the fig2dev export backend), then the rest of phase A, then B1, B2, C1–C3: the first release candidate for LaTeX users, on desktop and web.
-2. D1, D6, E1, E2, E7: the features xfig users miss most day to day.
-3. The rest of B, D and E, then F and G toward Beta (parity ≥ 85 %, about 460 h in total).
+1. A8 and B0 (fig2dev reference tests, then the fig2dev export backend).
+2. A1 (undo memory) and A4 (UI smoke tests, so the window work below is tested).
+3. Phase W, xfig window parity: W1 → W2 → W3 → W5 → W6 → W4 → W7 (layout first, then mouse and layers, which xfig users notice at once), with D7 and D8 alongside W5.
+4. The rest of phase A, then B1, B2, C1–C3: the first release candidate for LaTeX users, on desktop and web.
+5. D1, D6, E1, E7: the features xfig users miss most day to day.
+6. The rest of B, D and E, then F and G toward Beta (parity ≥ 85 %, about 550 h in total).
 
 ## Decisions that are the user's
 
@@ -158,3 +183,4 @@ is an optional extra, used in two ways.
 |------|------|
 | 2026-10-13 | First plan, after M0–M3. |
 | 2026-10-13 | Added A8 (fig2dev reference tests) and B0 (fig2dev export backend) with design notes. |
+| 2026-10-13 | Added phase W (xfig window parity: layout, mouse setup and indicator, depth panel, Snap menu, attribute panel, rulers, accelerators); moved E2 and E10 into it. |

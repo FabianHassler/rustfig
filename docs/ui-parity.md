@@ -52,7 +52,22 @@
 | Rulers | — | ❌ |
 | Mouse-function panel | status bar shows the tool | 🟡 |
 
+## Main window (xfig screen map)
+| xfig | RustFig | Plan |
+|---|---|---|
+| Main menus File, Edit, View, Snap, Help | 🟡 File, Edit, View, Object, Tools, Help; no Snap menu | W1, W4 |
+| Current file name | 🟡 window title only | W1 |
+| Message panel | 🟡 status bar, no history | W1 |
+| Mouse-function indicator | ❌ | W2 |
+| Three-button mouse semantics | 🟡 left click + double/right click | W2 |
+| Units box | ❌ | W6 |
+| Top and side rulers | ❌ | W6 |
+| Depth panel: checkboxes, drag-toggle, All On/Off/Toggle, Gray/Blank | 🟡 checkboxes only, hidden by default | W3 |
+| Attribute panel: graphical buttons, per-mode attributes | 🟡 all attributes always shown as plain widgets | W5 |
+| xfig accelerators (Meta-key) | 🟡 platform shortcuts and xfig mode letters | W7 |
+
 ## Revision history
 | Date | Note |
 |---|---|
 | 2026-10-13 | First checklist. |
+| 2026-10-13 | Added the main-window section (plan phase W). |
