@@ -1,6 +1,6 @@
 # Milestones
 
-**Status:** 2026-10-13. Current focus: **phase A (hardening)**, then M4 (exports). Task-level plan: [plan.md](plan.md).
+**Status:** 2026-10-13. Current focus: **phase W (xfig window parity)**, then phase A (hardening) and M4 (exports). Task-level plan: [plan.md](plan.md).
 
 | Milestone | Content | State |
 |-----------|---------|-------|

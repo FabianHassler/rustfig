@@ -57,9 +57,9 @@ English only. See [localization parity](docs/localization-parity.md).
 
 The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 [docs/gaps.md](docs/gaps.md). Next up:
-1. fig2dev: reference tests comparing RustFig with xfig's converter (A8), then fig2dev as an optional export backend for LaTeX and the other languages (B0).
-2. Phase W, xfig window parity: xfig layout, mouse setup and indicator, depth panel (layers), Snap menu, per-mode attribute panel, rulers.
-3. Phase A, hardening: shared undo snapshots, CI on three OSes with wasm, UI smoke tests, export polish, crash recovery.
+1. Phase W, xfig window parity: xfig layout, mouse setup and indicator, depth panel (layers), Snap menu, per-mode attribute panel, rulers.
+2. fig2dev: reference tests comparing RustFig with xfig's converter (A8), then fig2dev as an optional export backend (B0).
+3. Phase A, hardening: shared undo snapshots, per-command cost, CI (Linux on every push, all OSes for releases), web build, UI tests, export polish, crash recovery, no UI stalls on large drawings.
 4. Phase B, exports for LaTeX users: TikZ, PDF/EPS + LaTeX overlay, PostScript layout, printing.
 5. Phase C, web: trunk packaging and browser file I/O.
 

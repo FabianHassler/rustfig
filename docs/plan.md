@@ -1,6 +1,6 @@
 # Execution plan
 
-**Status:** 2026-10-13. Current phase: **A (hardening)**, starting with A8 and B0 (fig2dev). Overall parity ≈58 %.
+**Status:** 2026-10-13. Current phase: **W (xfig window parity)**, then A8 and B0 (fig2dev) and the rest of phase A. Overall parity ≈58 %.
 
 This is the committed work plan. [`gaps.md`](gaps.md) ranks every known
 shortfall; this file groups them into phases with task ids, acceptance
@@ -47,7 +47,7 @@ match it, with the modern additions kept but optional.
 
 | Id | Task | Acceptance | Hours |
 |----|------|------------|------:|
-| W1 | **xfig layout**: a top strip with the current file name, the message panel (with history), the mouse-function indicator and the units box; menus File, Edit, View, Snap, Help in xfig's order and naming (RustFig's Object/Tools menus remain as extras); depth panel shown by default. A "Classic xfig / Modern" layout setting. | Side-by-side screenshot with the manual's screen image shows the same regions in the same places. | 16 |
+| W1 | **xfig layout** (starts with the A4 groundwork, see Order): a top strip with the current file name, the message panel (with history), the mouse-function indicator and the units box; menus File, Edit, View, Snap, Help in xfig's order and naming (RustFig's Object/Tools menus remain as extras); depth panel shown by default. A "Classic xfig / Modern" layout setting. | Side-by-side screenshot with the manual's screen image shows the same regions in the same places. | 16 |
 | W2 | **Mouse setup and indicator**: xfig's three-button semantics per mode (e.g. polyline: left adds a point, middle finishes, right cancels; move: middle places at the original position) with the indicator showing what each button does in the current mode and state. Setting "Mouse buttons: xfig (3 buttons) / modern (left + double click)", plus modifier equivalents for two-button mice and trackpads. | For every tool the indicator text matches the tool's actual behaviour (unit test over all tools and states); both mouse schemes have tool tests. | 16 |
 | W3 | **Depth panel (layers) parity**: a row for every used depth with object counts; click or drag across checkboxes to switch several depths; All On / All Off / Toggle buttons; Gray or Blank display of depths that are off; objects on off depths can't be picked or edited; export and print of "active layers only". | Tests for picking and exports with depths off; screenshot review. | 12 |
 | W4 | **Snap menu**: Hold, Release, Endpoint, Midpoint, Nearest, Focus, Diametric, Normal, Tangent, Intersect, applied to the next clicked point in drawing and editing modes (replaces E10). | Tests per snap mode on lines, arcs, ellipses and splines. | 16 |
@@ -168,9 +168,9 @@ is an optional extra, used in two ways.
 
 ## Order and milestones
 
-1. A8 and B0 (fig2dev reference tests, then the fig2dev export backend).
-2. A1 and A9 (undo memory, per-command cost), A2 and A3 (CI, web build), A4 (UI smoke tests, so the window work below is tested).
-3. Phase W, xfig window parity: W1 → W2 → W3 → W5 → W6 → W4 → W7 (layout first, then mouse and layers, which xfig users notice at once), with D7 and D8 alongside W5.
+1. Phase W, xfig window parity, first: W1 → W2 → W3 → W5 → W6 → W4 → W7, with D7 and D8 alongside W5. W1 starts with the A4 groundwork (app construction separated from eframe, replaceable file dialogs, a first `egui_kittest` test) so every W task lands with UI tests.
+2. A8 and B0 (fig2dev reference tests, then the fig2dev export backend).
+3. A1 and A9 (undo memory, per-command cost), A2 and A3 (CI, web build), the rest of A4.
 4. A5–A7, then B1, B2, C1–C3: the first release candidate for LaTeX users, on desktop and web.
 5. D1, D6, E1, E7: the features xfig users miss most day to day.
 6. The rest of B, D and E, then F and G toward Beta (parity ≥ 85 %, about 550 h in total).
@@ -190,6 +190,7 @@ is an optional extra, used in two ways.
 |------|------|
 | 2026-10-13 | First plan, after M0–M3. |
 | 2026-10-13 | Added A8 (fig2dev reference tests) and B0 (fig2dev export backend) with design notes. |
+| 2026-10-13 | Phase W moved to the front (user request); W1 absorbs the A4 groundwork. |
 | 2026-10-13 | A2: Windows and macOS CI only for releases (user decision). |
 | 2026-10-13 | Reviewed phase A against the code: measured A1, corrected A5 and A7 (the root causes were different), added A9; phase A now ≈84 h. |
 | 2026-10-13 | Added phase W (xfig window parity: layout, mouse setup and indicator, depth panel, Snap menu, attribute panel, rulers, accelerators); moved E2 and E10 into it. |
