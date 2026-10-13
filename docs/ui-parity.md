@@ -1,0 +1,58 @@
+# UI parity checklist
+
+**Status:** 2026-10-13. ✅ done · 🟡 partial · ❌ missing
+
+## Drawing modes
+| xfig mode | RustFig | |
+|---|---|---|
+| Circle by radius / diameter | `tool.circle_radius`, `tool.circle_diameter` | ✅ |
+| Ellipse by radii / diameter | `tool.ellipse_radii`, `tool.ellipse_diameter` | ✅ |
+| Closed/open approximated spline | `tool.closed_spline`, `tool.spline` | ✅ |
+| Closed/open interpolated spline | `tool.closed_interp_spline`, `tool.interp_spline` | ✅ |
+| Closed/open X-spline | `tool.closed_xspline`, `tool.xspline` | ✅ |
+| Polygon, polyline | `tool.polygon`, `tool.polyline` | ✅ |
+| Box, arc-box | `tool.box`, `tool.arc_box` | ✅ |
+| Regular polygon | `tool.regular_polygon` | ✅ |
+| Arc | `tool.arc` (three clicks) | ✅ |
+| Picture | `tool.picture` (PNG/JPEG/GIF/BMP/TIFF/PNM) | 🟡 no EPS/PDF/XPM |
+| Text | `tool.text` | 🟡 no character map |
+| Library object | — | ❌ |
+
+## Editing modes
+| xfig mode | RustFig | |
+|---|---|---|
+| Glue / break compound | `tool.glue`, `tool.break` | ✅ |
+| Open compound | — | ❌ |
+| Scale | `tool.scale` | ✅ |
+| Align | `tool.align`, `arrange.align` | ✅ |
+| Move / copy | `tool.move`, `tool.copy` | ✅ |
+| Move / add / delete point | `tool.move_point`, `tool.add_point`, `tool.delete_point` | ✅ |
+| Delete | `tool.delete` | ✅ |
+| Update | `tool.update` | ✅ |
+| Edit | `tool.edit` + edit dialog | ✅ |
+| Flip up/down, left/right | `tool.flip_vertical`, `tool.flip_horizontal` | ✅ |
+| Rotate | `tool.rotate_ccw`, `tool.rotate_cw` | ✅ |
+| Convert | `tool.convert` | ✅ |
+| Open/close | `tool.open_close` | ✅ |
+| Add/remove arrows | `tool.arrow` | ✅ |
+| Join/split, chop, tangent/normal | — | ❌ |
+| Angle / length / area measure | `object.measure` (command only) | 🟡 |
+
+## Menus and panels
+| xfig | RustFig | |
+|---|---|---|
+| File: New/Open/Merge/Save/Save As/Export/Exit | ✅ | ✅ |
+| File: Print | — | ❌ |
+| Edit: Undo (multi-level), Paste, Delete All, Search/Replace | ✅ | ✅ |
+| Edit: Spell check, Global settings | — | ❌ |
+| View: zoom, fit, pan to origin, page border, portrait/landscape | ✅ | ✅ |
+| View: depth manager | right panel | ✅ |
+| View: character map, style manager | — | ❌ |
+| Indicator panel (line, colours, fill, depth, arrows, caps, joins, fonts, justification, angle, radius, sides, rotation, grid, positioning) | bottom panel | 🟡 no latex/manhattan positioning |
+| Rulers | — | ❌ |
+| Mouse-function panel | status bar shows the tool | 🟡 |
+
+## Revision history
+| Date | Note |
+|---|---|
+| 2026-10-13 | First checklist. |

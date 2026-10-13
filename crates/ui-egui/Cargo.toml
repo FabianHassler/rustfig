@@ -1,0 +1,25 @@
+[package]
+name = "rustfig-ui-egui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+rustfig-geom.workspace = true
+rustfig-model.workspace = true
+rustfig-engine.workspace = true
+rustfig-render.workspace = true
+rustfig-text = { path = "../text" }
+egui.workspace = true
+eframe.workspace = true
+serde_json.workspace = true
+log.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rfd.workspace = true

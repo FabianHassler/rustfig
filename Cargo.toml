@@ -1,0 +1,66 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/geom",
+    "crates/model",
+    "crates/text",
+    "crates/format",
+    "crates/render",
+    "crates/engine",
+    "crates/mcp",
+    "crates/ui-egui",
+    "apps/rustfig",
+    "apps/cli",
+    "xtask",
+]
+default-members = ["apps/rustfig", "apps/cli"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/FabianHassler/rustfig"
+rust-version = "1.85"
+
+[workspace.dependencies]
+rustfig-geom = { path = "crates/geom" }
+rustfig-model = { path = "crates/model" }
+rustfig-text = { path = "crates/text" }
+rustfig-format = { path = "crates/format" }
+rustfig-render = { path = "crates/render" }
+rustfig-engine = { path = "crates/engine" }
+rustfig-mcp = { path = "crates/mcp" }
+rustfig-ui-egui = { path = "crates/ui-egui" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tiny-skia = "0.11"
+ttf-parser = "0.25"
+epaint_default_fonts = "0.33"
+pdf-writer = "0.12"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "bmp", "pnm", "tiff"] }
+egui = "0.33"
+eframe = { version = "0.33", default-features = false, features = ["default_fonts", "glow", "wayland", "x11"] }
+rfd = "0.15"
+proptest = "1"
+log = "0.4"
+wasm-bindgen-futures = "0.4"
+web-sys = "0.3"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+unreachable = "deny"
+todo = "deny"
+unimplemented = "deny"
+field_reassign_with_default = "allow"
+
+[profile.release]
+opt-level = 3
+debug = false
+
+[profile.dev.package."*"]
+opt-level = 2

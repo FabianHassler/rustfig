@@ -1,0 +1,31 @@
+RustFig
+Copyright (c) 2026 The RustFig contributors
+
+RustFig is licensed under either of the Apache License, Version 2.0
+(LICENSE-APACHE) or the MIT license (LICENSE-MIT), at your option.
+
+RustFig is a clean-room implementation. Its behaviour follows the public
+xfig documentation (user manual and the Fig file format description); it
+contains no xfig source code. xfig is (c) 1985 Supoj Sutanthavibul and
+later contributors; the Fig format description is distributed under the
+xfig licence, which permits use and redistribution.
+
+X-splines are implemented from the published paper: C. Blanc and
+C. Schlick, "X-Splines: A Spline Model Designed for the End User",
+SIGGRAPH '95.
+
+Assets
+------
+This repository contains no image, icon or font files. Tool icons,
+fill patterns and colour tables are generated in code (see ASSETS.md).
+
+Fonts used at run time
+----------------------
+- Optional: fonts from storytold/craft-fonts, embedded only when the build
+  sets CRAFT_FONTS_DIR; their licences ship with that repository.
+- Fallback: Ubuntu Light (Ubuntu Font Licence 1.0) and Hack (MIT/Bitstream
+  Vera licence), bundled inside the `epaint_default_fonts` crate (a
+  dependency, MIT OR Apache-2.0), used for canvas and bitmap text.
+
+Third-party Rust crates are used under their own licences (MIT, Apache-2.0,
+BSD, Zlib and similar permissive licences); see Cargo.lock.

@@ -1,0 +1,221 @@
+//! Alignment, distribution and stacking order (depth).
+
+use super::{has_selection, num, opt_str, CmdResult, Command};
+use crate::{Engine, EngineError};
+use rustfig_geom::{Affine, Rect};
+use rustfig_model::{ObjectId, MAX_DEPTH};
+use serde_json::{json, Value};
+
+pub(super) fn commands() -> Vec<Command> {
+    vec![
+        Command {
+            id: "arrange.align",
+            label: "Align",
+            menu: "Object/Arrange",
+            shortcut: "",
+            params: "{\"ids\"?: [id], \"h\"?: none|left|center|right, \"v\"?: none|top|center|bottom}  — defaults from the indicator",
+            mutates: true,
+            enabled: has_selection,
+            run: align,
+        },
+        Command {
+            id: "arrange.distribute",
+            label: "Distribute",
+            menu: "Object/Arrange",
+            shortcut: "",
+            params: "{\"ids\"?: [id], \"axis\": horizontal|vertical}  — equal gaps between objects",
+            mutates: true,
+            enabled: has_selection,
+            run: distribute,
+        },
+        Command {
+            id: "arrange.to_front",
+            label: "Bring to Front",
+            menu: "Object/Arrange",
+            shortcut: "Ctrl+Shift+Up",
+            params: "{\"ids\"?: [id]}",
+            mutates: true,
+            enabled: has_selection,
+            run: |e, p| restack(e, p, Stack::Front),
+        },
+        Command {
+            id: "arrange.forward",
+            label: "Bring Forward",
+            menu: "Object/Arrange",
+            shortcut: "Ctrl+Up",
+            params: "{\"ids\"?: [id]}  — depth - 1",
+            mutates: true,
+            enabled: has_selection,
+            run: |e, p| restack(e, p, Stack::Forward),
+        },
+        Command {
+            id: "arrange.backward",
+            label: "Send Backward",
+            menu: "Object/Arrange",
+            shortcut: "Ctrl+Down",
+            params: "{\"ids\"?: [id]}  — depth + 1",
+            mutates: true,
+            enabled: has_selection,
+            run: |e, p| restack(e, p, Stack::Backward),
+        },
+        Command {
+            id: "arrange.to_back",
+            label: "Send to Back",
+            menu: "Object/Arrange",
+            shortcut: "Ctrl+Shift+Down",
+            params: "{\"ids\"?: [id]}",
+            mutates: true,
+            enabled: has_selection,
+            run: |e, p| restack(e, p, Stack::Back),
+        },
+        Command {
+            id: "arrange.set_depth",
+            label: "Set depth",
+            menu: "",
+            shortcut: "",
+            params: "{\"ids\"?: [id], \"depth\": 0-999}",
+            mutates: true,
+            enabled: has_selection_or_ids,
+            run: set_depth,
+        },
+    ]
+}
+
+fn has_selection_or_ids(_: &Engine) -> bool {
+    true
+}
+
+fn targets(e: &Engine, p: &Value) -> Result<Vec<(ObjectId, Rect)>, EngineError> {
+    let ids = e.target_ids(p)?;
+    if ids.is_empty() {
+        return Err(EngineError::bad_params("no objects selected"));
+    }
+    Ok(ids
+        .iter()
+        .filter_map(|i| e.doc().get(*i).map(|o| (*i, o.geometry_bbox())))
+        .filter(|(_, r)| !r.is_empty())
+        .collect())
+}
+
+fn translate(e: &mut Engine, moves: Vec<(ObjectId, f64, f64)>) {
+    for (id, dx, dy) in moves {
+        if dx == 0.0 && dy == 0.0 {
+            continue;
+        }
+        if let Some(o) = e.doc_mut().get_mut(id) {
+            o.transform(&Affine::translate(dx, dy), false);
+        }
+    }
+}
+
+fn align(e: &mut Engine, p: &Value) -> CmdResult {
+    let h = opt_str(p, "h")?
+        .map(str::to_string)
+        .unwrap_or_else(|| e.indicator.align_h.clone());
+    let v = opt_str(p, "v")?
+        .map(str::to_string)
+        .unwrap_or_else(|| e.indicator.align_v.clone());
+    let items = targets(e, p)?;
+    let all = items.iter().fold(Rect::EMPTY, |r, (_, b)| r.union(b));
+    let mut moves = Vec::new();
+    for (id, b) in &items {
+        let dx = match h.as_str() {
+            "left" => all.min.x - b.min.x,
+            "center" => all.center().x - b.center().x,
+            "right" => all.max.x - b.max.x,
+            "none" | "" => 0.0,
+            other => {
+                return Err(EngineError::bad_params(format!(
+                    "unknown horizontal alignment {other:?}"
+                )))
+            }
+        };
+        let dy = match v.as_str() {
+            "top" => all.min.y - b.min.y,
+            "center" => all.center().y - b.center().y,
+            "bottom" => all.max.y - b.max.y,
+            "none" | "" => 0.0,
+            other => return Err(EngineError::bad_params(format!("unknown vertical alignment {other:?}"))),
+        };
+        moves.push((*id, dx, dy));
+    }
+    translate(e, moves);
+    Ok(json!({"count": items.len()}))
+}
+
+fn distribute(e: &mut Engine, p: &Value) -> CmdResult {
+    let horizontal = match opt_str(p, "axis")?.unwrap_or("horizontal") {
+        "horizontal" | "h" | "x" => true,
+        "vertical" | "v" | "y" => false,
+        other => return Err(EngineError::bad_params(format!("unknown axis {other:?}"))),
+    };
+    let mut items = targets(e, p)?;
+    if items.len() < 3 {
+        return Ok(json!({"count": items.len()}));
+    }
+    let lo = |r: &Rect| if horizontal { r.min.x } else { r.min.y };
+    let size = |r: &Rect| if horizontal { r.width() } else { r.height() };
+    items.sort_by(|a, b| lo(&a.1).total_cmp(&lo(&b.1)));
+    let (Some(first), Some(last)) = (items.first(), items.last()) else {
+        return Ok(json!({"count": 0}));
+    };
+    let start = lo(&first.1);
+    let end = lo(&last.1) + size(&last.1);
+    let total: f64 = items.iter().map(|(_, r)| size(r)).sum();
+    let gap = (end - start - total) / (items.len() - 1) as f64;
+    let mut pos = start;
+    let mut moves = Vec::new();
+    for (id, r) in &items {
+        let d = pos - lo(r);
+        moves.push(if horizontal { (*id, d, 0.0) } else { (*id, 0.0, d) });
+        pos += size(r) + gap;
+    }
+    let n = moves.len();
+    translate(e, moves);
+    Ok(json!({"count": n}))
+}
+
+enum Stack {
+    Front,
+    Forward,
+    Backward,
+    Back,
+}
+
+fn restack(e: &mut Engine, p: &Value, how: Stack) -> CmdResult {
+    let ids = e.target_ids(p)?;
+    let others: Vec<i32> = e
+        .doc()
+        .objects
+        .iter()
+        .filter(|o| !ids.contains(&o.id))
+        .map(|o| o.depth())
+        .collect();
+    let min = others.iter().copied().min().unwrap_or(50);
+    let max = others.iter().copied().max().unwrap_or(50);
+    for o in e.doc_mut().objects.iter_mut() {
+        if !ids.contains(&o.id) {
+            continue;
+        }
+        let d = o.depth();
+        let nd = match how {
+            Stack::Front => (min - 1).min(d),
+            Stack::Forward => d - 1,
+            Stack::Backward => d + 1,
+            Stack::Back => (max + 1).max(d),
+        };
+        o.set_depth(nd.clamp(0, MAX_DEPTH));
+    }
+    Ok(json!({"count": ids.len()}))
+}
+
+fn set_depth(e: &mut Engine, p: &Value) -> CmdResult {
+    let ids = e.target_ids(p)?;
+    let d = (num(p, "depth")?.round() as i32).clamp(0, MAX_DEPTH);
+    for o in e.doc_mut().objects.iter_mut() {
+        if ids.contains(&o.id) {
+            o.set_depth(d);
+        }
+    }
+    Ok(json!({"count": ids.len()}))
+}

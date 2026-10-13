@@ -1,0 +1,196 @@
+//! View commands: zoom, pan, grid, snap, page border.
+
+use super::{always, num, num_or, opt_str, CmdResult, Command};
+use crate::{Engine, EngineError, SnapMode};
+use rustfig_geom::Point;
+use serde_json::{json, Value};
+
+pub(super) fn commands() -> Vec<Command> {
+    vec![
+        Command {
+            id: "view.zoom_in",
+            label: "Zoom In",
+            menu: "View",
+            shortcut: "Ctrl+=",
+            params: "{}",
+            mutates: false,
+            enabled: always,
+            run: |e, _| zoom_by(e, 2.0),
+        },
+        Command {
+            id: "view.zoom_out",
+            label: "Zoom Out",
+            menu: "View",
+            shortcut: "Ctrl+-",
+            params: "{}",
+            mutates: false,
+            enabled: always,
+            run: |e, _| zoom_by(e, 0.5),
+        },
+        Command {
+            id: "view.zoom_fit",
+            label: "Zoom to Fit",
+            menu: "View",
+            shortcut: "Ctrl+0",
+            params: "{}",
+            mutates: false,
+            enabled: always,
+            run: |e, _| {
+                let bb = e.doc().bbox();
+                if !bb.is_empty() {
+                    e.view.fit(&bb);
+                }
+                Ok(json!({"zoom": e.view.zoom}))
+            },
+        },
+        Command {
+            id: "view.zoom_actual",
+            label: "Actual Size",
+            menu: "View",
+            shortcut: "Ctrl+1",
+            params: "{}",
+            mutates: false,
+            enabled: always,
+            run: |e, _| {
+                let c = Point::new(e.view.size.0 / 2.0, e.view.size.1 / 2.0);
+                e.view.zoom_about(1.0, c);
+                Ok(json!({"zoom": 1.0}))
+            },
+        },
+        Command {
+            id: "view.zoom_set",
+            label: "Set zoom",
+            menu: "",
+            shortcut: "",
+            params: "{\"zoom\": factor (1 = 80 px/inch), \"x\"?, \"y\"?: screen anchor}",
+            mutates: false,
+            enabled: always,
+            run: |e, p| {
+                let z = num(p, "zoom")?;
+                if z <= 0.0 {
+                    return Err(EngineError::bad_params("zoom must be positive"));
+                }
+                let a = Point::new(
+                    num_or(p, "x", e.view.size.0 / 2.0)?,
+                    num_or(p, "y", e.view.size.1 / 2.0)?,
+                );
+                e.view.zoom_about(z, a);
+                Ok(json!({"zoom": e.view.zoom}))
+            },
+        },
+        Command {
+            id: "view.pan",
+            label: "Pan",
+            menu: "",
+            shortcut: "",
+            params: "{\"dx\", \"dy\"}  — screen pixels",
+            mutates: false,
+            enabled: always,
+            run: |e, p| {
+                e.view.pan_pixels(num(p, "dx")?, num(p, "dy")?);
+                Ok(json!({}))
+            },
+        },
+        Command {
+            id: "view.pan_origin",
+            label: "Pan to Origin",
+            menu: "View",
+            shortcut: "",
+            params: "{}",
+            mutates: false,
+            enabled: always,
+            run: |e, _| {
+                let s = e.view.px_per_fig();
+                e.view.origin = Point::new(-40.0 / s, -40.0 / s);
+                Ok(json!({}))
+            },
+        },
+        Command {
+            id: "view.set_size",
+            label: "Set canvas size",
+            menu: "",
+            shortcut: "",
+            params: "{\"width\", \"height\"}  — pixels (set by the UI)",
+            mutates: false,
+            enabled: always,
+            run: |e, p| {
+                let (w, h) = (num(p, "width")?, num(p, "height")?);
+                e.view.size = (w.clamp(1.0, 100_000.0), h.clamp(1.0, 100_000.0));
+                Ok(json!({}))
+            },
+        },
+        Command {
+            id: "view.toggle_grid",
+            label: "Show Grid",
+            menu: "View",
+            shortcut: "Ctrl+'",
+            params: "{}",
+            mutates: false,
+            enabled: always,
+            run: |e, _| {
+                e.indicator.grid = match e.indicator.grid {
+                    Some(_) => None,
+                    None => Some(match e.indicator.snap {
+                        SnapMode::Any => SnapMode::Medium,
+                        s => s,
+                    }),
+                };
+                Ok(json!({"grid": e.indicator.grid.is_some()}))
+            },
+        },
+        Command {
+            id: "view.set_grid",
+            label: "Set grid",
+            menu: "",
+            shortcut: "",
+            params: "{\"grid\": none|fine|small|medium|large|coarse}",
+            mutates: false,
+            enabled: always,
+            run: |e, p| {
+                e.indicator.grid = match opt_str(p, "grid")?.unwrap_or("none") {
+                    "none" | "off" => None,
+                    s => Some(parse_mode(s)?),
+                };
+                Ok(json!({}))
+            },
+        },
+        Command {
+            id: "view.set_snap",
+            label: "Set point positioning",
+            menu: "",
+            shortcut: "",
+            params: "{\"snap\": any|fine|small|medium|large|coarse}",
+            mutates: false,
+            enabled: always,
+            run: |e, p| {
+                e.indicator.snap = parse_mode(opt_str(p, "snap")?.unwrap_or("any"))?;
+                Ok(json!({}))
+            },
+        },
+        Command {
+            id: "view.toggle_page_border",
+            label: "Show Page Border",
+            menu: "View",
+            shortcut: "Ctrl+B",
+            params: "{}",
+            mutates: false,
+            enabled: always,
+            run: |e, _| {
+                e.show_page_border = !e.show_page_border;
+                Ok(json!({"page_border": e.show_page_border}))
+            },
+        },
+    ]
+}
+
+fn parse_mode(s: &str) -> Result<SnapMode, EngineError> {
+    serde_json::from_value(Value::String(s.to_string()))
+        .map_err(|_| EngineError::bad_params(format!("unknown positioning mode {s:?}")))
+}
+
+fn zoom_by(e: &mut Engine, f: f64) -> CmdResult {
+    let c = Point::new(e.view.size.0 / 2.0, e.view.size.1 / 2.0);
+    let z = e.view.zoom * f;
+    e.view.zoom_about(z, c);
+    Ok(json!({"zoom": e.view.zoom}))
+}
