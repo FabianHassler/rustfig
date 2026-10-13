@@ -26,7 +26,7 @@ most of it spent copying the document and re-measuring every text.
 | Id | Task | Acceptance | Hours |
 |----|------|------------|------:|
 | A1 | **Shared undo snapshots.** `Engine::execute` deep-copies the whole document before every mutating command, and `History` keeps up to 200 copies: about 2.9 GB for the measured document. Store top-level objects as `Arc<Object>` so a snapshot copies pointers, and mutate through `Arc::make_mut` only on the objects a command touches (about 15 `doc_mut().objects.iter_mut()` call sites in `cmd/*`). Cap the history by memory as well as by step count. | 200 single-object edits on the 50k-path document add < 50 MB; snapshot cost < 1 ms; `rustfig-cli perf` gains an "edit + undo" row within budget. | 10 |
-| A2 | **CI pipeline** (GitHub Actions; none exists yet): `cargo xtask ci` on Linux, Windows and macOS, wasm target installed, `RUSTFIG_REQUIRE_WASM=1`, fig2dev installed on Linux for A8, cargo cache. Linux needs system packages for eframe/glow and for `rfd` (GTK 3 by default; switching `rfd` to its xdg-portal backend avoids GTK). The repository is private: Actions minutes are limited and macOS minutes count ten times, so how often macOS runs is a **user decision**. | Green on all three OSes; the wasm check runs, not skipped. | 8 |
+| A2 | **CI pipeline** (GitHub Actions; none exists yet). **Every push and pull request:** `cargo xtask ci` on Linux, with the wasm target installed, `RUSTFIG_REQUIRE_WASM=1`, fig2dev installed for A8, and a cargo cache. **Releases only** (tags `v*`, plus manual `workflow_dispatch`): the same on Windows and macOS, followed by release builds attached to the GitHub release. Linux needs system packages for eframe/glow and for `rfd` (GTK 3 by default; switching `rfd` to its xdg-portal backend avoids GTK). | Linux job green on every push with the wasm check running, not skipped; pushing a `v*` tag runs all three OSes and produces release binaries. | 8 |
 | A3 | **Web build compiles.** Can't be checked on this machine (Homebrew Rust has no wasm target), so it runs in CI (A2) or after installing rustup locally. Code review found no blockers so far: native-only code (rfd, control channel, `Instant`) is cfg-gated and `getrandom` isn't in the wasm dependency tree. Still to confirm: the eframe `wayland`/`x11` features on wasm, `eframe::wasm_bindgen` in `apps/rustfig`, and `std::fs` calls (they compile, then fail at run time with an error message). | `cargo xtask wasm` passes in CI. | 4 |
 | A4 | **UI smoke tests** with `egui_kittest` 0.33 (matches egui 0.33). `App::new` takes an eframe `CreationContext` and the file dialogs block (rfd), so first split app construction from eframe and route dialogs through a replaceable provider. | Headless tests click every tool, draw a box, open each dialog and the unsaved-changes prompt; they run in `cargo test`. | 10 |
 | A5 | **Export polish.** (a) Export bounds: miter joins and arrow tips can reach past the scene's bounding box (it adds only half the stroke width), and the default margin is 0, so tips touching the edge get cut; make bounds join-aware and add a small default border. (b) True curves: the scene holds only polylines (an ellipse of radius 600 becomes about 750 points), so add curve segments to `Prim::Path` and emit them in SVG, PDF and EPS (the raster backend keeps flattening). | Sample exports unclipped in all formats; the sample's SVG at least 50 % smaller; raster output unchanged. | 12 |
@@ -179,7 +179,7 @@ is an optional extra, used in two ways.
 
 - Clean-room policy for `old/` (whether agents may read the xfig C sources, or only its documentation).
 - New heavy dependencies (PDF rendering, spell checking, localization framework).
-- CI cost: how often the macOS (and Windows) jobs run on the private repository (A2).
+- CI cost (decided 2026-10-13): Linux runs on every push; Windows and macOS run only for releases (A2).
 - fig2dev stays an optional external program (agreed 2026-10-13): never bundled, never required for the native formats or the web build.
 - Publishing (demo site, crate names, releases) and the product name/branding.
 - Licence changes and any asset of unclear provenance.
@@ -190,5 +190,6 @@ is an optional extra, used in two ways.
 |------|------|
 | 2026-10-13 | First plan, after M0–M3. |
 | 2026-10-13 | Added A8 (fig2dev reference tests) and B0 (fig2dev export backend) with design notes. |
+| 2026-10-13 | A2: Windows and macOS CI only for releases (user decision). |
 | 2026-10-13 | Reviewed phase A against the code: measured A1, corrected A5 and A7 (the root causes were different), added A9; phase A now ≈84 h. |
 | 2026-10-13 | Added phase W (xfig window parity: layout, mouse setup and indicator, depth panel, Snap menu, attribute panel, rulers, accelerators); moved E2 and E10 into it. |
