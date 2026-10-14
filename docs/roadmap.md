@@ -1,6 +1,6 @@
 # Milestones
 
-**Status:** 2026-10-14. Current focus: **phase W, A8 and D9 done**; next B0 (porting fig2dev to Rust), then phase A (hardening) and M4 (exports). Task-level plan: [plan.md](plan.md).
+**Status:** 2026-10-14. Current focus: **phase W, A8 and D9 done**; B0 (porting fig2dev to Rust) under way with A10 (comparison on xfig's sample figures), then phase A (hardening) and M4 (exports). Task-level plan: [plan.md](plan.md).
 
 | Milestone | Content | State |
 |-----------|---------|-------|

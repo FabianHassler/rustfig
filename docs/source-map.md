@@ -158,7 +158,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_canvas.c` | 1218 | canvas input, key bindings | `ui-egui/canvas` | own | review |
 | `w_cursor.c` | 144 | cursors per mode | canvas | partial | — |
 | `w_color.c` | 2592 | colour panel and editor | indicator combo | partial: colour editor | E4 |
-| `w_export.c` | 2054 | export panel | `dialogs::export` | partial | B7 |
+| `w_export.c` | 2054 | export panel | `dialogs::export` (language menu in xfig's order), default suffixes in `render/languages` | partial | B7 |
 | `w_print.c` | 1542 | print panel | — | missing; modern: PDF to the system print dialog (decided) | B5 |
 | `w_file.c`, `w_dir.c`, `w_browse.c`, `w_listwidget.c` | 3.5 k | file panel and browser with preview | native dialogs (`rfd`) | modern; preview missing | — |
 | `w_library.c` | 1831 | library panel | — | missing | D6 |
@@ -182,7 +182,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `localmath.c`, `messages.c` | 114 | math helpers, error messages | `geom`, errors | n/a | — |
 | `read.c` | 2048 | Fig reader (second reference) | `format/fig_read` | own | review |
 | `read1_3.c` | 549 | Fig 1.3 reader | — | missing | G1 |
-| `bound.c` | 1156 | bounds incl. arrows and text | `geom/arrow` (`arrow_shapes`, `calc_arrow` ported), `render` | arrows ported (D9); bounds own | B0 |
+| `bound.c` | 1156 | bounds incl. arrows and text | `geom/arrow` (`arrow_shapes`, `calc_arrow` ported), `render` | arrows ported (D9); bounds own: fig2dev pads lines by (t+1)/√2, arcs and splines by (t+1)/2, ellipses not at all (port next) | B0 |
 | `trans_spline.c` | 661 | splines to polylines for exporters | `geom` | own | review |
 | `colors.c` | 851 | colour names | `model` | own | — |
 | `dev/genps.c`, `genpdf.c` | 2.9 k | PostScript/PDF with page layout; the reference where drivers disagree | `render/eps`, `render/pdf`; `set_style` → `LineKind::dash_pattern`, `linewidth_adj` → `geom::stroke_width`, arrow fills | partial: page layout, multi-page | B4 |
@@ -191,7 +191,8 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `dev/genpict2e.c`, `genlatex.c`, `genepic.c`, `genpictex.c`, `genpstricks.c` | 9.1 k | LaTeX picture languages | — | missing | B3 (pict2e, PSTricks), B9 (the rest) |
 | `dev/gensvg.c` | 1331 | SVG | `render/svg`; `geom::stroke_width` ported from `linewidth_adj` | own; reference-tested (A8) | review |
 | `dev/genbitmaps.c` | 593 | GIF, JPEG, PNG, PPM, TIFF, XBM, XPM via ghostscript | `render` PNG (own renderer, no ghostscript) | partial | B6 |
-| `dev/genemf.c`, `gencgm.c`, `gendxf.c`, `genibmgl.c`, `genmp.c`, `genmf.c`, `genmap.c`, `gentk.c`, `genptk.c`, `genshape.c`, `gentextyl.c`, `gentpic.c`, `genpic.c`, `gengbx.c`, `genge.c`, `genbox.c` | ≈17 k | EMF, CGM, DXF, HPGL, MetaPost, METAFONT, image maps, Tk, shapes, … | — | missing | B9 |
+| `dev/genbox.c` | 78 | LaTeX box | `render/drivers/latex_box` | ported | — |
+| `dev/genemf.c`, `gencgm.c`, `gendxf.c`, `genibmgl.c`, `genmp.c`, `genmf.c`, `genmap.c`, `gentk.c`, `genptk.c`, `genshape.c`, `gentextyl.c`, `gentpic.c`, `genpic.c`, `gengbx.c`, `genge.c` | ≈17 k | EMF, CGM, DXF, HPGL, MetaPost, METAFONT, image maps, Tk, shapes, … | — | missing | B9 |
 | `dev/encode.c` | 236 | ASCII85 and deflate streams for PostScript/PDF | `render/eps`, `render/pdf` | own | review |
 | `dev/tkpattern.c` | 122 | Tk fill patterns | — | missing | B9 |
 | `dev/xtmpfile.c` | 150 | temporary files | — | n/a | — |

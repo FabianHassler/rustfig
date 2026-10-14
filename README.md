@@ -16,7 +16,7 @@ and Linux, with a web (WASM) build on the way.
   update, add/move/delete points, glue/break compounds, align, distribute,
   convert line ↔ spline, open/close, arrows, depth ordering, multi-level undo.
 - Files: reads Fig 3.0–3.2, writes Fig 3.2 and a native JSON format.
-- Export: PDF, SVG, EPS, PNG (all 22 xfig fill patterns, arrowheads, dashes).
+- Export: PDF, SVG, EPS, PNG, LaTeX box (all 22 xfig fill patterns, arrowheads and dashes as fig2dev draws them); xfig's other export languages are being ported from fig2dev.
 - Automation: every action is a command, reachable from a JSON control
   channel, an MCP server and the command line.
 

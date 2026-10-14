@@ -463,3 +463,27 @@ fn classic_menus_are_xfigs() {
     use egui_kittest::kittest::NodeT;
     assert!(h.get_by_label_contains("Print...").accesskit_node().is_disabled());
 }
+
+#[test]
+fn export_dialog_lists_xfigs_languages() {
+    let dir = std::env::temp_dir().join(format!("rustfig-ui-export-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let out = dir.join("figure.box").to_string_lossy().into_owned();
+    let mut a = app();
+    a.file_dialogs = Box::new(ScriptedDialogs::new([Some(out.clone())]));
+    a.run("shape.rectangle", json!({"x": 0, "y": 0, "width": 1200, "height": 600}));
+    let mut h = harness(a);
+    h.state_mut().run("app.export", json!({}));
+    h.run_steps(2);
+    h.get_by_label("PDF (Portable Document Format)").click();
+    h.run_steps(2);
+    // Languages not ported yet are listed but greyed out.
+    h.get_by_label("TeX/LaTeX + tikz macros");
+    h.get_by_label("LaTeX box (figure boundary)").click();
+    h.run_steps(2);
+    h.get_by_label("Export…").click();
+    h.run_steps(2);
+    let text = std::fs::read_to_string(&out).unwrap();
+    assert!(text.starts_with("\\makebox["), "{text}");
+    std::fs::remove_dir_all(&dir).unwrap();
+}

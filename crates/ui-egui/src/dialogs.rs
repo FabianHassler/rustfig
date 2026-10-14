@@ -3,6 +3,7 @@
 
 use crate::panels::{color_combo, fill_combo, font_combo, line_combo};
 use crate::{menus, App};
+use rustfig_engine::render::languages::{language, LANGUAGES};
 use rustfig_engine::Engine;
 use rustfig_model::{CapStyle, JoinStyle, Justify, LineKind, ObjectId, ObjectKind, PaperSize, PolyKind};
 use serde_json::{json, Value};
@@ -472,12 +473,30 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
                 .num_columns(2)
                 .spacing([8.0, 6.0])
                 .show(ui, |ui| {
-                    ui.label("Format");
-                    ui.horizontal(|ui| {
-                        for f in ["pdf", "svg", "eps", "png"] {
-                            ui.radio_value(&mut st.format, f, f.to_uppercase());
-                        }
-                    });
+                    ui.label("Language");
+                    let current = language(st.format).map_or(st.format, |l| l.description);
+                    let combo = egui::ComboBox::from_id_salt("export_language")
+                        .selected_text(current)
+                        .width(280.0)
+                        .show_ui(ui, |ui| {
+                            for l in LANGUAGES {
+                                let item = ui.add_enabled(
+                                    l.available(),
+                                    egui::Button::selectable(st.format == l.id, l.description),
+                                );
+                                let item = match l.task() {
+                                    Some(t) if !l.available() => item
+                                        .on_disabled_hover_text(format!("Being ported from fig2dev (plan task {t})")),
+                                    _ => item,
+                                };
+                                if item.clicked() {
+                                    st.format = l.id;
+                                }
+                            }
+                        });
+                    combo
+                        .response
+                        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, current));
                     ui.end_row();
                     ui.label("Magnification");
                     ui.add(
@@ -532,10 +551,8 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
             .and_then(|s| s.to_str())
             .unwrap_or("figure")
             .to_string();
-        if let Some(path) = app
-            .file_dialogs
-            .save_file(&format!("{stem}.{}", st.format), st.format, &[st.format])
-        {
+        let ext = language(st.format).map_or(st.format, |l| l.extension);
+        if let Some(path) = app.file_dialogs.save_file(&format!("{stem}.{ext}"), ext, &[ext]) {
             let mut p = json!({
                 "path": path,
                 "format": st.format,
@@ -741,7 +758,7 @@ fn about_dialog(app: &mut App, ctx: &egui::Context) {
             ui.heading("RustFig");
             ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
             ui.label("A clean-room, Rust-native vector drawing program in the spirit of xfig.");
-            ui.label("Reads and writes Fig 3.2 files; exports PDF, SVG, EPS and PNG.");
+            ui.label("Reads and writes Fig 3.2 files; exports PDF, SVG, EPS, PNG and the LaTeX box (more of fig2dev's languages are being ported).");
             ui.label("Licensed MIT OR Apache-2.0.");
         });
     app.dialogs.about_open = open;

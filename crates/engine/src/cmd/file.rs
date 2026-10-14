@@ -4,6 +4,7 @@ use super::{always, has_objects, num_or, opt_bool, opt_num, opt_str, string, Cmd
 use crate::{import, Engine, EngineError};
 use rustfig_format::FileFormat;
 use rustfig_model::{Document, ObjectKind, Rgb};
+use rustfig_render::languages::{language, language_for_path, Language, Status, LANGUAGES};
 use rustfig_render::{ExportFormat, ExportOptions};
 use serde_json::{json, Value};
 use std::path::Path;
@@ -85,7 +86,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Export…",
             menu: "",
             shortcut: "",
-            params: "{\"path\": string, \"format\"?: \"svg\"|\"eps\"|\"pdf\"|\"png\", \"magnification\"?: percent, \"margin\"?: fig units, \"dpi\"?: number, \"background\"?: \"#rrggbb\", \"active_layers_only\"?: bool, \"whole_figure_bounds\"?: bool}  — active_layers_only leaves out depths that are off; whole_figure_bounds then still sizes the page by the whole figure",
+            params: "{\"path\": string, \"format\"?: language id (see file.export_formats; default from the file name), \"magnification\"?: percent, \"margin\"?: fig units, \"dpi\"?: number, \"background\"?: \"#rrggbb\", \"active_layers_only\"?: bool, \"whole_figure_bounds\"?: bool}  — active_layers_only leaves out depths that are off; whole_figure_bounds then still sizes the page by the whole figure; pspdf writes NAME.eps and NAME.pdf",
             mutates: false,
             enabled: has_objects,
             run: export_file,
@@ -95,10 +96,20 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Export to data",
             menu: "",
             shortcut: "",
-            params: "{\"format\": \"svg\"|\"eps\"|\"pdf\"|\"png\", ...export options}  — returns {\"data\": text} or {\"base64\": ...}",
+            params: "{\"format\": language id, ...export options}  — returns {\"data\": text} or {\"base64\": ...}; pspdf returns {\"files\": [{\"extension\", \"data\"|\"base64\"}]}",
             mutates: false,
             enabled: has_objects,
             run: export_data,
+        },
+        Command {
+            id: "file.export_formats",
+            label: "Export formats",
+            menu: "",
+            shortcut: "",
+            params: "{}  — returns {\"formats\": [{\"id\", \"description\", \"extension\", \"aliases\", \"kind\", \"available\", \"status\", \"task\"}]}: xfig's export languages in its order; unavailable ones are still being ported from fig2dev",
+            mutates: false,
+            enabled: always,
+            run: export_formats,
         },
     ]
 }
@@ -262,27 +273,119 @@ fn render(e: &Engine, format: ExportFormat, p: &Value) -> Result<Vec<u8>, Engine
     rustfig_render::export(e.doc(), format, &opts).map_err(EngineError::format)
 }
 
+/// The export language from `format`, or else from the file name.
+fn export_language(p: &Value, path: Option<&str>) -> Result<&'static Language, EngineError> {
+    let lang = match (opt_str(p, "format")?, path) {
+        (Some(f), _) => language(f).ok_or_else(|| {
+            EngineError::bad_params(format!("unknown export language {f:?} (see file.export_formats)"))
+        })?,
+        (None, Some(path)) => language_for_path(path).ok_or_else(|| {
+            EngineError::bad_params(
+                "cannot tell the export language from the file name; pass \"format\" (see file.export_formats)",
+            )
+        })?,
+        (None, None) => return Err(EngineError::bad_params("missing \"format\"")),
+    };
+    if !lang.available() {
+        return Err(EngineError::bad_params(format!(
+            "{} export is not available yet: it is being ported from fig2dev (plan task {})",
+            lang.description,
+            lang.task().unwrap_or("B0")
+        )));
+    }
+    Ok(lang)
+}
+
+/// The native format writing a language (pspdf is two of them).
+fn formats_of(lang: &Language) -> Result<Vec<ExportFormat>, EngineError> {
+    if lang.id == "pspdf" {
+        return Ok(vec![ExportFormat::Eps, ExportFormat::Pdf]);
+    }
+    ExportFormat::from_name(lang.id)
+        .map(|f| vec![f])
+        .ok_or_else(|| EngineError::internal(format!("no writer for {}", lang.id)))
+}
+
+fn is_text(f: ExportFormat) -> bool {
+    matches!(f, ExportFormat::Svg | ExportFormat::Eps | ExportFormat::LatexBox)
+}
+
 fn export_file(e: &mut Engine, p: &Value) -> CmdResult {
     let path = string(p, "path")?;
-    let format = match opt_str(p, "format")? {
-        Some(f) => ExportFormat::from_name(f),
-        None => ExportFormat::from_path(&path),
+    let lang = export_language(p, Some(&path))?;
+    let formats = formats_of(lang)?;
+    let mut written = Vec::new();
+    let mut total = 0;
+    for f in &formats {
+        let target = if formats.len() > 1 {
+            with_extension(&path, f.extension())
+        } else {
+            path.clone()
+        };
+        let bytes = render(e, *f, p)?;
+        write_atomic(&target, &bytes)?;
+        total += bytes.len();
+        written.push(target);
     }
-    .ok_or_else(|| EngineError::bad_params("unknown export format (use svg, eps, pdf or png)"))?;
-    let bytes = render(e, format, p)?;
-    write_atomic(&path, &bytes)?;
-    e.set_status(format!("Exported {path}"));
-    Ok(json!({"path": path, "bytes": bytes.len()}))
+    e.set_status(format!("Exported {}", written.join(" and ")));
+    Ok(json!({"path": path, "paths": written, "bytes": total, "format": lang.id}))
+}
+
+/// `path` with its extension replaced (or added).
+fn with_extension(path: &str, ext: &str) -> String {
+    let name_start = path.rfind(['/', '\\']).map_or(0, |i| i + 1);
+    match path.get(name_start..).and_then(|name| name.rfind('.')) {
+        Some(dot) if dot > 0 => format!("{}.{ext}", path.get(..name_start + dot).unwrap_or(path)),
+        _ => format!("{path}.{ext}"),
+    }
 }
 
 fn export_data(e: &mut Engine, p: &Value) -> CmdResult {
-    let format = ExportFormat::from_name(&string(p, "format")?)
-        .ok_or_else(|| EngineError::bad_params("unknown export format (use svg, eps, pdf or png)"))?;
-    let bytes = render(e, format, p)?;
-    Ok(match format {
-        ExportFormat::Svg | ExportFormat::Eps => json!({"data": String::from_utf8_lossy(&bytes)}),
-        ExportFormat::Pdf | ExportFormat::Png => json!({"base64": base64(&bytes)}),
-    })
+    let lang = export_language(p, None)?;
+    let formats = formats_of(lang)?;
+    let mut files = Vec::new();
+    for f in &formats {
+        let bytes = render(e, *f, p)?;
+        files.push(if is_text(*f) {
+            json!({"extension": f.extension(), "data": String::from_utf8_lossy(&bytes)})
+        } else {
+            json!({"extension": f.extension(), "base64": base64(&bytes)})
+        });
+    }
+    match files.as_slice() {
+        [one] => {
+            let mut one = one.clone();
+            if let Some(m) = one.as_object_mut() {
+                m.remove("extension");
+            }
+            Ok(one)
+        }
+        _ => Ok(json!({ "files": files })),
+    }
+}
+
+fn export_formats(_: &mut Engine, _: &Value) -> CmdResult {
+    let formats: Vec<Value> = LANGUAGES
+        .iter()
+        .map(|l| {
+            let (status, task) = match l.status {
+                Status::Available => ("available", None),
+                Status::Partial(t) => ("partial", Some(t)),
+                Status::Planned(t) => ("planned", Some(t)),
+            };
+            json!({
+                "id": l.id,
+                "description": l.description,
+                "extension": l.extension,
+                "aliases": l.aliases,
+                "kind": format!("{:?}", l.kind).to_lowercase(),
+                "available": l.available(),
+                "status": status,
+                "task": task,
+            })
+        })
+        .collect();
+    Ok(json!({ "formats": formats }))
 }
 
 pub(crate) fn base64(data: &[u8]) -> String {

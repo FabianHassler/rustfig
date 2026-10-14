@@ -1,6 +1,6 @@
 # File format parity checklist
 
-**Status:** 2026-10-13.
+**Status:** 2026-10-14 (B0 started: every fig2dev language listed by `file.export_formats`).
 
 | Format | Read | Write | Notes |
 |---|---|---|---|
@@ -12,10 +12,12 @@
 | SVG | — | ✅ | vector, patterns via clip paths, embedded PNG images |
 | EPS | — | ✅ | Level 2, ISO-Latin-1 fonts |
 | PNG | — | ✅ | any resolution up to 20 000 px edge |
+| EPS and PDF together (xfig's pspdf) | — | ✅ | two files, NAME.eps and NAME.pdf |
+| LaTeX box (fig2dev `box`) | — | ✅ | ported from `genbox.c`; bounds still RustFig's (B0) |
 | PostScript (print) | — | ❌ | gap #3 |
-| LaTeX (TikZ, PSTricks, pict2e, eepic) | — | ❌ | gap #1 |
+| LaTeX (TikZ, PSTricks, pict2e, epic/eepic, latex, pictex, pstex/pdftex) | — | ❌ | being ported from fig2dev (B1–B3, B9); gap #1 |
 | GIF/JPEG/TIFF/PPM/XBM/XPM | — | ❌ | gap #10 |
-| CGM/EMF/HPGL/MetaPost/DXF | — | ❌ | |
+| CGM/EMF/HPGL/MetaPost/METAFONT/DXF/Gerber/map/Tk/PIC/tpic/textyl/shape/SLD | — | ❌ | being ported from fig2dev (B9) |
 | Picture import PNG/JPEG/GIF/BMP/TIFF/PNM | ✅ | — | |
 | Picture import EPS/PDF/XPM/XBM/PCX | ❌ | — | gap #14 |
 
@@ -25,3 +27,4 @@ Fuzzing: `crates/format/tests/prop_format.rs`, `crates/engine/tests/import_fuzz.
 | Date | Note |
 |---|---|
 | 2026-10-13 | First checklist. |
+| 2026-10-14 | xfig's language list; LaTeX box and pspdf. |

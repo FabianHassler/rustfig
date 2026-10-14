@@ -12,6 +12,8 @@ pub enum ExportFormat {
     Eps,
     Pdf,
     Png,
+    /// fig2dev's LaTeX box (`-L box`).
+    LatexBox,
 }
 
 impl ExportFormat {
@@ -21,6 +23,7 @@ impl ExportFormat {
             "eps" | "ps" => Some(ExportFormat::Eps),
             "pdf" => Some(ExportFormat::Pdf),
             "png" => Some(ExportFormat::Png),
+            "box" => Some(ExportFormat::LatexBox),
             _ => None,
         }
     }
@@ -36,6 +39,7 @@ impl ExportFormat {
             ExportFormat::Eps => "eps",
             ExportFormat::Pdf => "pdf",
             ExportFormat::Png => "png",
+            ExportFormat::LatexBox => "box",
         }
     }
 }
@@ -114,6 +118,7 @@ pub fn export(doc: &Document, format: ExportFormat, opts: &ExportOptions) -> Res
         ExportFormat::Svg => crate::svg::to_svg(&scene, &bounds, scale, bg).into_bytes(),
         ExportFormat::Eps => crate::eps::to_eps(&scene, &bounds, scale, bg).into_bytes(),
         ExportFormat::Pdf => crate::pdf::to_pdf(&scene, &bounds, scale, bg),
+        ExportFormat::LatexBox => crate::drivers::latex_box::to_box(&doc.comments, &bounds, scale).into_bytes(),
         ExportFormat::Png => {
             let dpi = if opts.dpi.is_finite() {
                 opts.dpi.clamp(1.0, 4800.0)

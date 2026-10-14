@@ -5,8 +5,10 @@
 //! The same scene drives the canvas and every export, so what you see is
 //! what you export.
 
+pub mod drivers;
 pub mod eps;
 pub mod export;
+pub mod languages;
 pub mod pattern;
 pub mod pdf;
 pub mod raster;

@@ -9,8 +9,10 @@ use std::process::ExitCode;
 use std::time::Instant;
 
 const USAGE: &str = "usage:
-  rustfig-cli convert IN OUT [--magnification PCT] [--dpi N] [--margin FIGUNITS] [--background #rrggbb]
-        OUT format from its extension: .fig .rustfig .svg .eps .pdf .png
+  rustfig-cli convert IN OUT [--format LANG] [--magnification PCT] [--dpi N] [--margin FIGUNITS] [--background #rrggbb]
+        OUT: .fig/.rustfig save; otherwise an export language (fig2dev's -L names),
+        from --format or the file's extension
+  rustfig-cli formats               list the export languages and which are available
   rustfig-cli info FILE
   rustfig-cli perf [--paths N]      check performance budgets on a synthetic document
   rustfig-cli bench FILE            time render, save and open for one file
@@ -21,6 +23,7 @@ fn main() -> ExitCode {
     let result = match args.first().map(String::as_str) {
         Some("convert") => convert(&args[1..]),
         Some("info") => info(&args[1..]),
+        Some("formats") => formats(),
         Some("perf") => perf(&args[1..]),
         Some("bench") => bench(&args[1..]),
         Some("mcp") => rustfig_mcp::Server::new().serve_stdio().map_err(|e| e.to_string()),
@@ -78,7 +81,30 @@ fn convert(args: &[String]) -> Result<(), String> {
     if let Some(bg) = opt(args, "--background") {
         p["background"] = json!(bg);
     }
+    if let Some(f) = opt(args, "--format") {
+        p["format"] = json!(f);
+    }
     e.execute("file.export", &p).map_err(|e| e.message)?;
+    Ok(())
+}
+
+fn formats() -> Result<(), String> {
+    let mut e = Engine::new();
+    let v = e.execute("file.export_formats", &json!({})).map_err(|e| e.message)?;
+    for f in v["formats"].as_array().into_iter().flatten() {
+        let status = match (f["status"].as_str(), f["task"].as_str()) {
+            (Some("available"), _) => "available".to_string(),
+            (Some(s), Some(t)) => format!("{s} ({t})"),
+            (s, _) => s.unwrap_or_default().to_string(),
+        };
+        println!(
+            "{:10} .{:9} {:34} {}",
+            f["id"].as_str().unwrap_or_default(),
+            f["extension"].as_str().unwrap_or_default(),
+            f["description"].as_str().unwrap_or_default(),
+            status
+        );
+    }
     Ok(())
 }
 
