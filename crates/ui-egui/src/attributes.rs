@@ -345,20 +345,21 @@ fn arrow_choice_of(kind: i32, style: i32) -> i32 {
 /// Arrow types RustFig draws (0–9; xfig's 10–14 come with D9).
 const ARROW_CHOICES: i32 = 19;
 
+/// Arrow mode in xfig's order: none, forward, both, backward.
 fn arrow_mode(ind: &Indicator) -> usize {
     match (ind.forward_arrow, ind.backward_arrow) {
         (false, false) => 0,
         (true, false) => 1,
-        (false, true) => 2,
-        (true, true) => 3,
+        (true, true) => 2,
+        (false, true) => 3,
     }
 }
 
 fn set_arrow_mode(app: &mut App, m: usize) {
     let (f, b) = match m % 4 {
         1 => (true, false),
-        2 => (false, true),
-        3 => (true, true),
+        2 => (true, true),
+        3 => (false, true),
         _ => (false, false),
     };
     set(app, json!({"forward_arrow": f, "backward_arrow": b}));
@@ -370,10 +371,10 @@ const JUSTIFY: [Justify; 3] = [Justify::Left, Justify::Center, Justify::Right];
 const JOINS: [JoinStyle; 3] = [JoinStyle::Miter, JoinStyle::Round, JoinStyle::Bevel];
 const CAPS: [CapStyle; 3] = [CapStyle::Butt, CapStyle::Round, CapStyle::Projecting];
 
-/// Grid choices: off, then the snap steps other than "any".
+/// Grid choices (xfig's): none, then grid steps 1–4.
 fn grid_choices() -> Vec<Option<SnapMode>> {
     std::iter::once(None)
-        .chain(SnapMode::ALL.iter().skip(1).map(|m| Some(*m)))
+        .chain(SnapMode::ALL.iter().skip(2).map(|m| Some(*m)))
         .collect()
 }
 
@@ -412,7 +413,7 @@ fn value_text(app: &App, a: Attr) -> String {
         Attr::LineStyle => ind.line.name().into(),
         Attr::JoinStyle => format!("{:?}", ind.join).to_lowercase(),
         Attr::CapStyle => format!("{:?}", ind.cap).to_lowercase(),
-        Attr::ArrowMode => ["none", "forward", "backward", "both"]
+        Attr::ArrowMode => ["none", "forward", "both", "backward"]
             .get(arrow_mode(ind))
             .copied()
             .unwrap_or("none")
@@ -574,6 +575,162 @@ fn set_arrow_type(app: &mut App, ind: &Indicator, n: i32) {
     set(app, json!({ "arrow": a }));
 }
 
+// ---- xfig's pictures (w_icons.c) -------------------------------------------
+
+use crate::xfig_icons::{self as xi, Xbm};
+
+fn arrow_type_icon(n: i32) -> &'static Xbm {
+    const T: [&Xbm; 19] = [
+        &xi::ARROW0,
+        &xi::ARROW1O,
+        &xi::ARROW1F,
+        &xi::ARROW2O,
+        &xi::ARROW2F,
+        &xi::ARROW3O,
+        &xi::ARROW3F,
+        &xi::ARROW4O,
+        &xi::ARROW4F,
+        &xi::ARROW5O,
+        &xi::ARROW5F,
+        &xi::ARROW6O,
+        &xi::ARROW6F,
+        &xi::ARROW7O,
+        &xi::ARROW7F,
+        &xi::ARROW8O,
+        &xi::ARROW8F,
+        &xi::ARROW9A,
+        &xi::ARROW9B,
+    ];
+    usize::try_from(n)
+        .ok()
+        .and_then(|i| T.get(i))
+        .copied()
+        .unwrap_or(&xi::ARROW0)
+}
+
+fn line_icon(k: LineKind) -> &'static Xbm {
+    match k {
+        LineKind::Dashed => &xi::DASHLINE,
+        LineKind::Dotted => &xi::DOTTEDLINE,
+        LineKind::DashDotted => &xi::DASHDOTLINE,
+        LineKind::DashDoubleDotted => &xi::DASH2DOTSLINE,
+        LineKind::DashTripleDotted => &xi::DASH3DOTSLINE,
+        LineKind::Solid | LineKind::Default => &xi::SOLIDLINE,
+    }
+}
+
+fn join_icon(j: JoinStyle) -> &'static Xbm {
+    match j {
+        JoinStyle::Miter => &xi::JOINMITER,
+        JoinStyle::Round => &xi::JOINROUND,
+        JoinStyle::Bevel => &xi::JOINBEVEL,
+    }
+}
+
+fn cap_icon(c: CapStyle) -> &'static Xbm {
+    match c {
+        CapStyle::Butt => &xi::CAPBUTT,
+        CapStyle::Round => &xi::CAPROUND,
+        CapStyle::Projecting => &xi::CAPPROJECT,
+    }
+}
+
+const ARROW_MODE_ICONS: [&Xbm; 4] = [&xi::NOARROWS, &xi::FARROWS, &xi::FBARROWS, &xi::BARROWS];
+
+fn just_icon(j: Justify) -> &'static Xbm {
+    match j {
+        Justify::Left => &xi::TEXTL,
+        Justify::Center => &xi::TEXTC,
+        Justify::Right => &xi::TEXTR,
+    }
+}
+
+/// xfig's point positioning pictures: any, magnet, grid 1–4.
+fn posn_icon(m: SnapMode) -> &'static Xbm {
+    match m {
+        SnapMode::Any => &xi::ANY,
+        SnapMode::Fine => &xi::FINE_GRID,
+        SnapMode::Small => &xi::GRID1,
+        SnapMode::Medium => &xi::GRID2,
+        SnapMode::Large => &xi::GRID3,
+        SnapMode::Coarse => &xi::GRID4,
+    }
+}
+
+fn grid_icon(g: Option<SnapMode>) -> &'static Xbm {
+    g.map_or(&xi::NONE, posn_icon)
+}
+
+fn align_icon(v: &str, horizontal: bool) -> &'static Xbm {
+    match (v, horizontal) {
+        ("left", true) => &xi::HALIGNL,
+        ("center", true) => &xi::HALIGNC,
+        ("right", true) => &xi::HALIGNR,
+        ("top", false) => &xi::VALIGNT,
+        ("center", false) => &xi::VALIGNC,
+        ("bottom", false) => &xi::VALIGNB,
+        _ => &xi::NONE,
+    }
+}
+
+/// The picture xfig shows on an attribute button, if it shows one.
+fn value_icon(ind: &Indicator, a: Attr) -> Option<&'static Xbm> {
+    Some(match a {
+        Attr::Grid => grid_icon(ind.grid),
+        Attr::PointPosn => posn_icon(ind.snap),
+        Attr::HAlign => align_icon(&ind.align_h, true),
+        Attr::VAlign => align_icon(&ind.align_v, false),
+        Attr::ArcType => {
+            if ind.pie_arc {
+                &xi::PIE_WEDGE_ARC
+            } else {
+                &xi::OPEN_ARC
+            }
+        }
+        Attr::LineStyle => line_icon(ind.line),
+        Attr::JoinStyle => join_icon(ind.join),
+        Attr::CapStyle => cap_icon(ind.cap),
+        Attr::ArrowMode => ARROW_MODE_ICONS.get(arrow_mode(ind)).copied().unwrap_or(&xi::NOARROWS),
+        Attr::ArrowType => arrow_type_icon(arrow_choice_of(ind.arrow.kind, ind.arrow.style)),
+        Attr::TextJust => just_icon(ind.justify),
+        _ => return None,
+    })
+}
+
+/// A row (wrapping every `per_row`) of xfig pictures to choose from;
+/// returns the index clicked.
+fn icon_choices(ui: &mut Ui, id: &str, items: &[(bool, String, &'static Xbm)], per_row: usize) -> Option<usize> {
+    let mut chosen = None;
+    egui::Grid::new(("icon_choices", id))
+        .spacing(vec2(2.0, 2.0))
+        .show(ui, |ui| {
+            for (i, (selected, name, icon)) in items.iter().enumerate() {
+                let (r, resp) = ui.allocate_exact_size(vec2(36.0, 36.0), Sense::click());
+                let v = ui.style().interact_selectable(&resp, *selected);
+                ui.painter().rect_filled(r, 2.0, v.weak_bg_fill);
+                crate::xfig_icons::paint(ui, icon, r, ui.visuals().text_color());
+                if *selected {
+                    ui.painter().rect_stroke(
+                        r,
+                        2.0,
+                        Stroke::new(2.0_f32, ui.visuals().selection.stroke.color),
+                        egui::StrokeKind::Inside,
+                    );
+                }
+                if resp.clicked() {
+                    chosen = Some(i);
+                }
+                resp.on_hover_text(name.as_str()).widget_info(|| {
+                    egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, *selected, name)
+                });
+                if per_row > 0 && i % per_row == per_row - 1 {
+                    ui.end_row();
+                }
+            }
+        });
+    chosen
+}
+
 // ---- value pictures ------------------------------------------------------
 
 fn draw_value(app: &App, ui: &Ui, p: &Painter, r: Rect, button: Rect, tk: &Tokens, a: Attr) {
@@ -584,6 +741,15 @@ fn draw_value(app: &App, ui: &Ui, p: &Painter, r: Rect, button: Rect, tk: &Token
     let text_right = |s: &str| {
         p.text(r.right_center(), egui::Align2::RIGHT_CENTER, s, small.clone(), ink);
     };
+    if let Some(icon) = value_icon(ind, a) {
+        // xfig's 32×32 picture, the full height of the button.
+        let tall = Rect::from_min_max(
+            pos2(r.left(), button.top() + 1.0),
+            pos2(r.right(), button.bottom() - 1.0),
+        );
+        crate::xfig_icons::paint(ui, icon, tall, ink);
+        return;
+    }
     match a {
         Attr::PenColor | Attr::FillColor => {
             let c = if a == Attr::PenColor {
@@ -613,20 +779,6 @@ fn draw_value(app: &App, ui: &Ui, p: &Painter, r: Rect, button: Rect, tk: &Token
             let w = (ind.thickness as f32).clamp(0.5, 8.0);
             p.line_segment([pos2(r.left(), y), pos2(r.right() - 16.0, y)], Stroke::new(w, ink));
         }
-        Attr::LineStyle => line_sample(p, r, ind.line, ind.style_val, ink),
-        Attr::JoinStyle => join_sample(p, r, ind.join, ink, ui.visuals().widgets.inactive.weak_bg_fill),
-        Attr::CapStyle => cap_sample(p, r, ind.cap, ink, tk),
-        Attr::ArrowMode => arrow_mode_sample(p, r, arrow_mode(ind), ink),
-        Attr::ArrowType => arrow_sample(
-            p,
-            r,
-            ind.arrow.kind,
-            ind.arrow.style,
-            ink,
-            ui.visuals().extreme_bg_color,
-        ),
-        Attr::ArcType => arc_sample(p, r, ind.pie_arc, ink),
-        Attr::TextJust => just_sample(p, r, ind.justify, ink),
         _ => text_right(&value_text(app, a)),
     }
 }
@@ -679,172 +831,6 @@ fn fill_swatch(p: &Painter, r: Rect, doc: &Document, fill_color: i32, area_fill:
     p.rect_stroke(r, 0.0, stroke, egui::StrokeKind::Inside);
 }
 
-fn line_sample(p: &Painter, r: Rect, kind: LineKind, style_val: f64, ink: Color32) {
-    let y = r.center().y;
-    let pts = [pos2(r.left(), y), pos2(r.right(), y)];
-    // Dash lengths at about one pixel per 1/80 inch.
-    let px = |v: f64| (v / rustfig_geom::FIG_PER_STYLE_UNIT).max(1.0) as f32;
-    let pat = kind.dash_pattern(style_val, 15.0);
-    if pat.is_empty() {
-        p.line_segment(pts, Stroke::new(1.5_f32, ink));
-        return;
-    }
-    let dashes: Vec<f32> = pat.iter().step_by(2).map(|v| px(*v)).collect();
-    let gaps: Vec<f32> = pat.iter().skip(1).step_by(2).map(|v| px(*v)).collect();
-    p.extend(egui::Shape::dashed_line_with_offset(
-        &pts,
-        Stroke::new(1.5_f32, ink),
-        &dashes,
-        &gaps,
-        0.0,
-    ));
-}
-
-fn join_sample(p: &Painter, r: Rect, join: JoinStyle, ink: Color32, bg: Color32) {
-    let h = r.height().min(22.0);
-    let c = r.center();
-    let tip = pos2(c.x + h * 0.5, c.y);
-    let a = pos2(c.x - h * 0.5, c.y - h * 0.4);
-    let b = pos2(c.x - h * 0.5, c.y + h * 0.4);
-    let w = 5.0;
-    p.add(egui::Shape::line(vec![a, tip, b], Stroke::new(w, ink)));
-    match join {
-        JoinStyle::Miter => {
-            p.add(egui::Shape::convex_polygon(
-                vec![
-                    pos2(tip.x - 2.0, tip.y - 3.0),
-                    pos2(tip.x + 4.0, tip.y),
-                    pos2(tip.x - 2.0, tip.y + 3.0),
-                ],
-                ink,
-                Stroke::NONE,
-            ));
-        }
-        JoinStyle::Round => {
-            p.circle_filled(tip, w / 2.0 + 0.5, ink);
-        }
-        JoinStyle::Bevel => {
-            p.rect_filled(
-                Rect::from_min_max(pos2(tip.x + 0.5, tip.y - 4.0), pos2(tip.x + 4.0, tip.y + 4.0)),
-                0.0,
-                bg,
-            );
-        }
-    }
-}
-
-fn cap_sample(p: &Painter, r: Rect, cap: CapStyle, ink: Color32, tk: &Tokens) {
-    let y = r.center().y;
-    let (x0, x1) = (r.left() + 6.0, r.right() - 6.0);
-    let w = 7.0;
-    let ext = if cap == CapStyle::Projecting { w / 2.0 } else { 0.0 };
-    p.rect_filled(
-        Rect::from_min_max(pos2(x0 - ext, y - w / 2.0), pos2(x1 + ext, y + w / 2.0)),
-        0.0,
-        ink,
-    );
-    if cap == CapStyle::Round {
-        p.circle_filled(pos2(x0, y), w / 2.0, ink);
-        p.circle_filled(pos2(x1, y), w / 2.0, ink);
-    }
-    // The end points, as xfig's cap pictures mark them.
-    let mark = Stroke::new(1.0_f32, tk.selection);
-    p.line_segment([pos2(x0, y - w), pos2(x0, y + w)], mark);
-    p.line_segment([pos2(x1, y - w), pos2(x1, y + w)], mark);
-}
-
-fn arrowhead_shape(p: &Painter, tip: Pos2, from: Pos2, kind: i32, style: i32, ink: Color32, bg: Color32) {
-    use rustfig_geom::{ArrowFill, Point};
-    let Some(shape) = rustfig_geom::arrowhead(
-        Point::new(f64::from(tip.x), f64::from(tip.y)),
-        Point::new(f64::from(from.x), f64::from(from.y)),
-        kind,
-        style,
-        8.0,
-        10.0,
-    ) else {
-        return;
-    };
-    let pts: Vec<Pos2> = shape.outline.iter().map(|q| pos2(q.x as f32, q.y as f32)).collect();
-    let stroke = Stroke::new(1.0_f32, ink);
-    match (shape.closed, shape.fill) {
-        (false, _) | (_, ArrowFill::None) => {
-            p.add(egui::Shape::line(pts, stroke));
-        }
-        (true, fill) => {
-            let f = if fill == ArrowFill::Pen { ink } else { bg };
-            p.add(egui::Shape::Path(egui::epaint::PathShape {
-                points: pts,
-                closed: true,
-                fill: f,
-                stroke: stroke.into(),
-            }));
-        }
-    }
-}
-
-fn arrow_sample(p: &Painter, r: Rect, kind: i32, style: i32, ink: Color32, bg: Color32) {
-    let y = r.center().y;
-    let (x0, x1) = (r.left() + 2.0, r.right() - 4.0);
-    p.line_segment([pos2(x0, y), pos2(x1 - 6.0, y)], Stroke::new(1.0_f32, ink));
-    arrowhead_shape(p, pos2(x1, y), pos2(x0, y), kind, style, ink, bg);
-}
-
-fn arrow_mode_sample(p: &Painter, r: Rect, mode: usize, ink: Color32) {
-    let y = r.center().y;
-    let (x0, x1) = (r.left() + 2.0, r.right() - 2.0);
-    p.line_segment([pos2(x0, y), pos2(x1, y)], Stroke::new(1.0_f32, ink));
-    let head = |tip: Pos2, dir: f32| {
-        p.add(egui::Shape::line(
-            vec![
-                pos2(tip.x - 6.0 * dir, tip.y - 4.0),
-                tip,
-                pos2(tip.x - 6.0 * dir, tip.y + 4.0),
-            ],
-            Stroke::new(1.0_f32, ink),
-        ));
-    };
-    if mode == 1 || mode == 3 {
-        head(pos2(x1, y), 1.0);
-    }
-    if mode == 2 || mode == 3 {
-        head(pos2(x0, y), -1.0);
-    }
-}
-
-fn arc_sample(p: &Painter, r: Rect, pie: bool, ink: Color32) {
-    let c = pos2(r.center().x, r.bottom() - 2.0);
-    let rad = (r.height() - 4.0).min(r.width() / 2.0 - 2.0).max(4.0);
-    let pts: Vec<Pos2> = (0..=16)
-        .map(|i| {
-            let t = std::f32::consts::PI * (i as f32 / 16.0);
-            pos2(c.x + rad * t.cos(), c.y - rad * t.sin())
-        })
-        .collect();
-    let stroke = Stroke::new(1.0_f32, ink);
-    if pie {
-        let mut closed = pts.clone();
-        closed.push(c);
-        p.add(egui::Shape::closed_line(closed, stroke));
-    } else {
-        p.add(egui::Shape::line(pts, stroke));
-    }
-}
-
-fn just_sample(p: &Painter, r: Rect, j: Justify, ink: Color32) {
-    let w = r.width().min(26.0);
-    for (k, frac) in [1.0_f32, 0.6, 0.8].iter().enumerate() {
-        let lw = w * frac;
-        let y = r.top() + 6.0 + k as f32 * 7.0;
-        let x0 = match j {
-            Justify::Left => r.right() - w,
-            Justify::Center => r.right() - w / 2.0 - lw / 2.0,
-            Justify::Right => r.right() - lw,
-        };
-        p.line_segment([pos2(x0, y), pos2(x0 + lw, y)], Stroke::new(2.0_f32, ink));
-    }
-}
-
 // ---- choice panels ---------------------------------------------------------
 
 /// A clickable cell with a picture; returns whether it was clicked.
@@ -871,7 +857,6 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
     ui.label(egui::RichText::new(a.name()).strong());
     let ind = app.engine.indicator.clone();
     let ink = ui.visuals().text_color();
-    let bg = ui.visuals().extreme_bg_color;
     match a {
         Attr::Zoom => {
             let mut z = app.engine.view.zoom;
@@ -897,33 +882,46 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
         }
         Attr::Grid => {
             let u = units(app);
-            for g in grid_choices() {
-                let name = g.map_or("none", |m| m.label(u));
-                if ui.selectable_label(ind.grid == g, name).clicked() {
-                    set(app, json!({ "grid": g }));
-                }
+            let list = grid_choices();
+            let items: Vec<_> = list
+                .iter()
+                .map(|g| {
+                    (
+                        ind.grid == *g,
+                        g.map_or("none", |m| m.label(u)).to_string(),
+                        grid_icon(*g),
+                    )
+                })
+                .collect();
+            if let Some(g) = icon_choices(ui, "grid", &items, 5).and_then(|i| list.get(i)) {
+                set(app, json!({ "grid": g }));
             }
         }
         Attr::PointPosn => {
             let u = units(app);
-            for m in SnapMode::ALL {
-                if ui.selectable_label(ind.snap == m, m.label(u)).clicked() {
-                    set(app, json!({ "snap": m }));
-                }
+            let items: Vec<_> = SnapMode::ALL
+                .iter()
+                .map(|m| (ind.snap == *m, m.label(u).to_string(), posn_icon(*m)))
+                .collect();
+            if let Some(m) = icon_choices(ui, "posn", &items, 6).and_then(|i| SnapMode::ALL.get(i)) {
+                set(app, json!({ "snap": m }));
             }
         }
         Attr::VAlign | Attr::HAlign => {
-            let (list, cur, field) = if a == Attr::VAlign {
-                (V_ALIGN, ind.align_v.as_str(), "align_v")
-            } else {
+            let horizontal = a == Attr::HAlign;
+            let (list, cur, field) = if horizontal {
                 (H_ALIGN, ind.align_h.as_str(), "align_h")
+            } else {
+                (V_ALIGN, ind.align_v.as_str(), "align_v")
             };
-            for v in list {
-                if ui.selectable_label(cur == v, v).clicked() {
-                    let mut m = serde_json::Map::new();
-                    m.insert(field.into(), json!(v));
-                    set(app, Value::Object(m));
-                }
+            let items: Vec<_> = list
+                .iter()
+                .map(|v| (cur == *v, (*v).to_string(), align_icon(v, horizontal)))
+                .collect();
+            if let Some(v) = icon_choices(ui, field, &items, 4).and_then(|i| list.get(i)) {
+                let mut m = serde_json::Map::new();
+                m.insert(field.into(), json!(v));
+                set(app, Value::Object(m));
             }
         }
         Attr::PenColor | Attr::FillColor => {
@@ -1005,26 +1003,22 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             }
         }
         Attr::ArcType => {
-            ui.horizontal(|ui| {
-                for (pie, name) in [(false, "open"), (true, "pie wedge")] {
-                    if cell(ui, vec2(40.0, 26.0), ind.pie_arc == pie, name, |p, r| {
-                        arc_sample(p, r, pie, ink)
-                    }) {
-                        set(app, json!({ "pie_arc": pie }));
-                    }
-                }
-            });
+            let items = [
+                (!ind.pie_arc, "open".to_string(), &xi::OPEN_ARC),
+                (ind.pie_arc, "pie wedge".to_string(), &xi::PIE_WEDGE_ARC),
+            ];
+            if let Some(i) = icon_choices(ui, "arc", &items, 2) {
+                set(app, json!({ "pie_arc": i == 1 }));
+            }
         }
         Attr::LineStyle => {
-            ui.horizontal(|ui| {
-                for k in LineKind::ALL {
-                    if cell(ui, vec2(40.0, 24.0), ind.line == k, k.name(), |p, r| {
-                        line_sample(p, r, k, ind.style_val, ink)
-                    }) {
-                        set(app, json!({ "line": k }));
-                    }
-                }
-            });
+            let items: Vec<_> = LineKind::ALL
+                .iter()
+                .map(|k| (ind.line == *k, k.name().to_string(), line_icon(*k)))
+                .collect();
+            if let Some(k) = icon_choices(ui, "line", &items, 6).and_then(|i| LineKind::ALL.get(i)) {
+                set(app, json!({ "line": k }));
+            }
             // xfig: "Default dash length" / "Default dot gap".
             let mut sv = ind.style_val;
             ui.horizontal(|ui| {
@@ -1047,63 +1041,50 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             });
         }
         Attr::JoinStyle => {
-            ui.horizontal(|ui| {
-                for j in JOINS {
-                    let name = format!("{j:?}").to_lowercase();
-                    if cell(ui, vec2(40.0, 26.0), ind.join == j, &name, |p, r| {
-                        join_sample(p, r, j, ink, bg)
-                    }) {
-                        set(app, json!({ "join": j }));
-                    }
-                }
-            });
+            let items: Vec<_> = JOINS
+                .iter()
+                .map(|j| (ind.join == *j, format!("{j:?}").to_lowercase(), join_icon(*j)))
+                .collect();
+            if let Some(j) = icon_choices(ui, "join", &items, 3).and_then(|i| JOINS.get(i)) {
+                set(app, json!({ "join": j }));
+            }
         }
         Attr::CapStyle => {
-            ui.horizontal(|ui| {
-                for c in CAPS {
-                    let name = format!("{c:?}").to_lowercase();
-                    if cell(ui, vec2(44.0, 26.0), ind.cap == c, &name, |p, r| {
-                        cap_sample(p, r, c, ink, tk)
-                    }) {
-                        set(app, json!({ "cap": c }));
-                    }
-                }
-            });
+            let items: Vec<_> = CAPS
+                .iter()
+                .map(|c| (ind.cap == *c, format!("{c:?}").to_lowercase(), cap_icon(*c)))
+                .collect();
+            if let Some(c) = icon_choices(ui, "cap", &items, 3).and_then(|i| CAPS.get(i)) {
+                set(app, json!({ "cap": c }));
+            }
         }
         Attr::ArrowMode => {
-            ui.horizontal(|ui| {
-                for (m, name) in ["no arrows", "forward", "backward", "both"].iter().enumerate() {
-                    if cell(ui, vec2(44.0, 24.0), arrow_mode(&ind) == m, name, |p, r| {
-                        arrow_mode_sample(p, r, m, ink)
-                    }) {
-                        set_arrow_mode(app, m);
-                    }
-                }
-            });
+            let names = ["no arrows", "forward", "both", "backward"];
+            let items: Vec<_> = names
+                .iter()
+                .zip(ARROW_MODE_ICONS)
+                .enumerate()
+                .map(|(m, (n, icon))| (arrow_mode(&ind) == m, (*n).to_string(), icon))
+                .collect();
+            if let Some(m) = icon_choices(ui, "arrow_mode", &items, 4) {
+                set_arrow_mode(app, m);
+            }
         }
         Attr::ArrowType => {
             let cur = arrow_choice_of(ind.arrow.kind, ind.arrow.style);
-            let mut chosen = None;
-            egui::Grid::new("arrow_types").spacing(vec2(2.0, 2.0)).show(ui, |ui| {
-                for n in 0..ARROW_CHOICES {
+            let items: Vec<_> = (0..ARROW_CHOICES)
+                .map(|n| {
                     let (kind, style) = arrow_choice(n);
                     let name = if kind == 0 {
                         "type 0".to_string()
                     } else {
                         format!("{} type {kind}", if style == 1 { "solid" } else { "hollow" })
                     };
-                    if cell(ui, vec2(40.0, 24.0), n == cur, &name, |p, r| {
-                        arrow_sample(p, r, kind, style, ink, bg)
-                    }) {
-                        chosen = Some(n);
-                    }
-                    if n % 9 == 8 {
-                        ui.end_row();
-                    }
-                }
-            });
-            if let Some(n) = chosen {
-                set_arrow_type(app, &ind, n);
+                    (n == cur, name, arrow_type_icon(n))
+                })
+                .collect();
+            if let Some(n) = icon_choices(ui, "arrow_type", &items, 9) {
+                set_arrow_type(app, &ind, n as i32);
             }
         }
         Attr::ArrowSize => {
@@ -1142,16 +1123,13 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             }
         }
         Attr::TextJust => {
-            ui.horizontal(|ui| {
-                for j in JUSTIFY {
-                    let name = format!("{j:?}").to_lowercase();
-                    if cell(ui, vec2(34.0, 26.0), ind.justify == j, &name, |p, r| {
-                        just_sample(p, r, j, ink)
-                    }) {
-                        set(app, json!({ "justify": j }));
-                    }
-                }
-            });
+            let items: Vec<_> = JUSTIFY
+                .iter()
+                .map(|j| (ind.justify == *j, format!("{j:?}").to_lowercase(), just_icon(*j)))
+                .collect();
+            if let Some(j) = icon_choices(ui, "just", &items, 3).and_then(|i| JUSTIFY.get(i)) {
+                set(app, json!({ "justify": j }));
+            }
         }
         Attr::TextFlags => {
             // xfig's Text Flags panel: Hidden, Rigid and TeX (special).

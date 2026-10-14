@@ -89,7 +89,7 @@ fn slot_grid(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, id: &str, slots: &[S
     egui::Grid::new(id).spacing(vec2(2.0, 2.0)).show(ui, |ui| {
         for (i, slot) in slots.iter().filter(|s| !wide(s)).enumerate() {
             match slot {
-                Slot::Missing(icon, tip, task) => missing_button(app, ui, tk, icon, tip, task, SLOT),
+                Slot::Missing(icon, tip, task) => missing_button(ui, tk, icon, tip, task, SLOT),
                 Slot::Tool(t, icon) => tool_button(app, ui, tk, *t, icon),
             }
             if i % 2 == 1 {
@@ -99,7 +99,7 @@ fn slot_grid(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, id: &str, slots: &[S
     });
     for slot in slots.iter().filter(|s| wide(s)) {
         if let Slot::Missing(icon, tip, task) = slot {
-            missing_button(app, ui, tk, icon, tip, task, vec2(SLOT.x * 2.0 + 2.0, SLOT.y));
+            missing_button(ui, tk, icon, tip, task, vec2(SLOT.x * 2.0 + 2.0, SLOT.y));
         }
     }
 }
@@ -116,7 +116,7 @@ fn tool_button(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, t: ToolKind, icon:
     };
     ui.painter().rect_filled(rect, 2.0, bg);
     let ink = if active { tk.icon_active } else { tk.icon };
-    paint_xbm(app, ui, icon, rect, ink);
+    xfig_icons::paint(ui, icon, rect, ink);
     let tip = if t.shortcut().is_empty() {
         t.label().to_string()
     } else {
@@ -129,9 +129,7 @@ fn tool_button(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, t: ToolKind, icon:
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 fn missing_button(
-    app: &mut App,
     ui: &mut egui::Ui,
     tk: &Tokens,
     icon: &'static xfig_icons::Xbm,
@@ -142,35 +140,10 @@ fn missing_button(
     let (rect, resp) = ui.allocate_exact_size(size, Sense::hover());
     ui.painter()
         .rect_filled(rect, 2.0, ui.visuals().widgets.noninteractive.bg_fill);
-    paint_xbm(app, ui, icon, rect, tk.muted.gamma_multiply(0.6));
+    xfig_icons::paint(ui, icon, rect, tk.muted.gamma_multiply(0.6));
     let text = format!("{tip} (not available yet, plan task {task})");
     resp.on_hover_text(text.clone())
         .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, false, text.clone()));
-}
-
-/// Paint an xfig bitmap centred in `rect`, one bitmap pixel per point.
-fn paint_xbm(app: &mut App, ui: &egui::Ui, icon: &'static xfig_icons::Xbm, rect: egui::Rect, tint: Color32) {
-    let tex = app.icon_textures.entry(icon.name).or_insert_with(|| {
-        let mut img = egui::ColorImage::filled([icon.width, icon.height], Color32::TRANSPARENT);
-        for y in 0..icon.height {
-            for x in 0..icon.width {
-                if icon.get(x, y) {
-                    if let Some(px) = img.pixels.get_mut(y * icon.width + x) {
-                        *px = Color32::WHITE;
-                    }
-                }
-            }
-        }
-        ui.ctx()
-            .load_texture(format!("xfig-icon-{}", icon.name), img, egui::TextureOptions::NEAREST)
-    });
-    let r = egui::Rect::from_center_size(rect.center(), vec2(icon.width as f32, icon.height as f32));
-    ui.painter().image(
-        tex.id(),
-        r,
-        egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
-        tint,
-    );
 }
 
 /// Colour swatch + name.

@@ -145,7 +145,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 |---|---:|---|---|---|---|
 | `w_cmdpanel.c` | 1860 | main menus | `menus::XFIG_MENUS` (classic layout) | ported: entries, order, dividers, accelerators | — |
 | `w_modepanel.c` | 905 | mode panel, mode keys, per-mode attribute masks | `panels::mode_panel`, `ToolKind::shortcut`, `attributes_for` | own; keys and masks ported | review |
-| `w_icons.c` | 3270 | mode and attribute icon bitmaps | `ui-egui/xfig_icons.rs` (mode icons, verbatim), `panels::mode_panel` (xfig's order) | ported: mode icons; attribute icons still drawn in code | — |
+| `w_icons.c` | 3270 | mode and attribute icon bitmaps | `ui-egui/xfig_icons.rs` (verbatim), used by `panels::mode_panel` and `attributes` | ported: mode icons and the attribute pictures (line, join, cap, arrow mode and type, arc type, justification, grid, positioning, alignment) | — |
 | `w_indpanel.c` | 4865 | attribute (indicator) panel, choice panels | `ui-egui/attributes` | ported: buttons, order, per-mode masks, choice panels; missing: Angle Geom, Smart Links, copy counts, dimension line, tangent length, colour editor | D7, D8, D10, D4, E4 |
 | `w_mousefun.c` | 432 | mouse-function indicator | `panels::mouse_indicator`, `Engine::mouse_hints` | ported: layout and wording | — |
 | `w_msgpanel.c` | 881 | message panel, lengths while drawing | `panels::message_panel` | partial: show lengths | D10 |
@@ -204,6 +204,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 |------|------|
 | 2026-10-14 | First version. |
 | 2026-10-14 | S1: draw and save order ported (`u_redraw.c`, `f_save.c`). |
+| 2026-10-14 | Attribute panel: xfig's pictures (`w_icons.c`), xfig's arrow-mode order and grid choices. |
 | 2026-10-14 | Mode panel: xfig's icon bitmaps and mode order (`w_icons.c`, `w_modepanel.c`). |
 | 2026-10-14 | W7: accelerators from `app-defaults/Fig` and the mode tooltips (`w_modepanel.c`). |
 | 2026-10-14 | W4: object snaps ported (`w_snap.c`, `w_intersect.c`). |
