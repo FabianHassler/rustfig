@@ -1,4 +1,8 @@
 //! Drawing objects and their attributes.
+//
+// Ported in parts from fig2dev dev/genps.c (`set_style` dash patterns) and
+// xfig src/u_redraw.c and src/f_save.c (object type order) (xfig licence,
+// see LICENSE-xfig).
 
 use rustfig_geom::{arc_from_three_points, flatten_round_rect, Affine, Point, Rect};
 use serde::{Deserialize, Serialize};

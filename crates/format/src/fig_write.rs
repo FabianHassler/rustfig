@@ -1,4 +1,7 @@
 //! Writer for the Fig 3.2 format.
+//
+// Object order ported from xfig src/f_save.c (xfig licence, see
+// LICENSE-xfig).
 
 use rustfig_geom::Point;
 use rustfig_model::{Arrow, Document, Object, ObjectKind, Orientation, PolyKind, Style, Units};

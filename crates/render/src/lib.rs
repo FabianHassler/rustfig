@@ -4,6 +4,10 @@
 //! a document. Backends turn it into pixels ([`raster`]), SVG, EPS or PDF.
 //! The same scene drives the canvas and every export, so what you see is
 //! what you export.
+//
+// Ported from xfig src/u_redraw.c (drawing order, gray depths) and fig2dev
+// dev/genps.c (`PSFONTMAG` text sizes, arrows on pie arcs) and colors.c
+// (`rgb2luminance`) (xfig licence, see LICENSE-xfig).
 
 pub mod bound;
 pub mod drivers;

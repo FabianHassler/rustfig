@@ -1,4 +1,7 @@
 //! The Fig font tables and the mapping from Fig font numbers to font requests.
+//
+// Font tables from xfig src/u_fonts.c and fig2dev dev/psfonts.c (xfig
+// licence, see LICENSE-xfig).
 
 /// Number of PostScript fonts in the Fig format (0–34).
 pub const PS_FONT_COUNT: i32 = 35;

@@ -11,6 +11,8 @@ Parts Copyright (c) 1991 by Paul King
 Parts Copyright (c) 1991 by Henning Spruth
 Parts Copyright (c) 1992 by Brian Boyter
 Parts Copyright (c) 1995 by C. Blanc and C. Schlick
+Parts Copyright (c) 2002 by Anthony Starks
+Parts Copyright (c) 2002-2006 by Martin Kroeker
 Parts Copyright (c) 2004 by Chris Moller
 Parts Copyright (c) 2015-2024 by Thomas Loimer
 and the other contributors named in the xfig and fig2dev sources.
@@ -23,3 +25,34 @@ copy, modify, merge, publish, distribute, sublicense and/or sell copies of
 the Software, and to permit persons who receive copies from any such
 party to do so, with the only requirement being that the above copyright
 and this permission notice remain intact.
+
+
+Files derived from xfig and fig2dev
+-----------------------------------
+Each file below carries a comment naming its sources and pointing to this
+notice. xfig's sources are cited as src/..., fig2dev's as fig2dev/... (its
+drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
+`cargo xtask licences` checks that this list and those comments agree.
+
+- crates/engine/src/snap.rs: xfig src/w_snap.c, src/w_intersect.c
+- crates/engine/src/tools/mod.rs: xfig src/w_modepanel.c, src/d_*.c, src/e_*.c, src/w_canvas.c
+- crates/format/src/fig_read.rs: xfig src/f_read.c; fig2dev/read.c
+- crates/format/src/fig_write.rs: xfig src/f_save.c
+- crates/geom/src/arrow.rs: fig2dev/bound.c, fig2dev/dev/genps.c
+- crates/geom/src/lib.rs: fig2dev/dev/genps.c, fig2dev/dev/gensvg.c
+- crates/model/src/color.rs: xfig src/u_colors.c; fig2dev/colors.c
+- crates/model/src/object.rs: xfig src/u_redraw.c, src/f_save.c; fig2dev/dev/genps.c
+- crates/model/src/xcolors.rs: fig2dev/colors.c
+- crates/render/src/bound.rs: fig2dev/bound.c, fig2dev/read.c
+- crates/render/src/drivers/latex_box.rs: fig2dev/dev/genbox.c
+- crates/render/src/export.rs: fig2dev/fig2dev.c, fig2dev/read.c, fig2dev/dev/genps.c
+- crates/render/src/languages.rs: xfig src/mode.c, src/w_export.c
+- crates/render/src/lib.rs: xfig src/u_redraw.c; fig2dev/dev/genps.c, fig2dev/colors.c
+- crates/render/src/options.rs: fig2dev/fig2dev.c, fig2dev/dev/genps.c, genpdf.c, genbitmaps.c, gensvg.c
+- crates/render/src/pattern.rs: fig2dev/dev/psprolog.h
+- crates/text/src/fonts.rs: xfig src/u_fonts.c; fig2dev/dev/psfonts.c
+- crates/ui-egui/src/attributes.rs: xfig src/w_indpanel.c, src/w_indpanel.h, src/w_modepanel.c, src/w_icons.c
+- crates/ui-egui/src/menus.rs: xfig src/w_cmdpanel.c, src/w_modepanel.c, app-defaults/Fig
+- crates/ui-egui/src/panels.rs: xfig src/w_modepanel.c, src/w_mousefun.c, src/w_layers.c, src/w_snap.c, src/w_icons.c
+- crates/ui-egui/src/rulers.rs: xfig src/w_rulers.c, src/u_pan.c
+- crates/ui-egui/src/xfig_icons.rs: xfig src/w_icons.c, src/w_indpanel.c (bitmaps copied verbatim)

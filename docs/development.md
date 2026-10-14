@@ -7,7 +7,7 @@
 ```sh
 cargo run --release -p rustfig -- [--control 7979] [file.fig]
 cargo run --release -p rustfig-cli -- convert in.fig out.pdf
-cargo xtask ci        # fmt, clippy -D warnings, tests, layers, assets, wasm
+cargo xtask ci        # fmt, clippy -D warnings, tests, layers, assets, licences, wasm
 UPDATE_REFERENCE=1 cargo test -p rustfig-engine --test fig2dev_reference -- --nocapture
                       # re-record the fig2dev comparison scores (needs fig2dev;
                       # set RUSTFIG_FIG2DEV if it isn't on PATH)

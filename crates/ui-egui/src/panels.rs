@@ -1,5 +1,10 @@
 //! Side and bottom panels: mode (tool) panel, attribute (indicator) panel,
 //! depth manager and status bar.
+//
+// Ported from xfig src/w_modepanel.c (mode order, tooltips) and
+// src/w_mousefun.c (mouse-function indicator); the depth panel follows
+// src/w_layers.c and the Snap Mode indicator src/w_snap.c (xfig licence, see
+// LICENSE-xfig).
 
 use crate::theme::Tokens;
 use crate::{xfig_icons, App};

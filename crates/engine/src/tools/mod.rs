@@ -3,6 +3,10 @@
 //! A tool receives pointer and key events in Fig coordinates, keeps its
 //! in-progress state (the rubber band) and commits its result by running a
 //! command, so every edit is undoable and scriptable.
+//
+// Ported in parts from xfig src/w_modepanel.c (mode keys), the drawing and
+// editing modes src/d_*.c and src/e_*.c (button behaviour, `set_mousefun`
+// wording) and src/w_canvas.c (snapping) (xfig licence, see LICENSE-xfig).
 
 use crate::cmd::shape::make_ellipse;
 use crate::{Engine, EngineError, UiRequest};

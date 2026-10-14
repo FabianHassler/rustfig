@@ -11,8 +11,9 @@ Sutanthavibul, (c) 1991 Micah Beck, and Brian V. Smith, Paul King, Thomas
 Loimer and other contributors, under the xfig licence (SPDX: Xfig), which
 permits use, modification, sublicensing and redistribution provided the
 copyright and permission notice remain intact. That notice is reproduced
-in LICENSE-xfig; files with ported code name their xfig or fig2dev source
-in a comment.
+in LICENSE-xfig, which also lists every RustFig file derived from xfig or
+fig2dev with its sources; each of those files names its sources in a
+comment and points to LICENSE-xfig.
 
 X-splines are implemented from the published paper: C. Blanc and
 C. Schlick, "X-Splines: A Spline Model Designed for the End User",

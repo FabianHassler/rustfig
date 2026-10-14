@@ -1,4 +1,8 @@
 //! Menu bar, keyboard shortcuts and the UI-only commands.
+//
+// Ported from xfig src/w_cmdpanel.c (menu entries, order and dividers),
+// app-defaults/Fig (`Fig*accelerators`) and src/w_modepanel.c (mode keys)
+// (xfig licence, see LICENSE-xfig).
 
 use crate::{dialogs, App, Pending};
 use rustfig_engine::{cmd, Key, ToolEvent};

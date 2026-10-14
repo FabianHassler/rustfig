@@ -1,4 +1,7 @@
 //! Reader for the Fig format, versions 3.0–3.2.
+//
+// Reading follows xfig src/f_read.c and fig2dev read.c, for example the
+// optional centring line (xfig licence, see LICENSE-xfig).
 
 use crate::FormatError;
 use rustfig_geom::Point;

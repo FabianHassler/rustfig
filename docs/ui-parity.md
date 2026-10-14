@@ -65,6 +65,7 @@
 | Depth panel: checkboxes, drag-toggle, All On/Off/Toggle, Gray/Blank | ✅ with object counts; hidden depths can't be picked; export of active layers only | — |
 | Attribute panel: graphical buttons, per-mode attributes | ✅ xfig's buttons and order, per-mode masks, choice panels; middle/right buttons step values | — |
 | xfig accelerators (Meta-key) | ✅ xfig keymap (on by default): Meta = Alt/Option menu keys, physical Ctrl mode keys, xfig's mode letters; menus show "Meta-N"; platform shortcuts stay | — |
+| Icons at HiDPI | xfig's 1-bit bitmaps, jagged above 1× | W9 |
 | xfig's other key and mouse bindings (menu letters, panel keys, wheel bindings, compose keys) | not yet audited | W8 |
 
 ## Revision history
@@ -80,5 +81,6 @@
 | 2026-10-14 | W4: Snap menu. |
 | 2026-10-14 | W7: xfig accelerators. |
 | 2026-10-15 | W8 planned: audit of every xfig binding. |
+| 2026-10-15 | W9 planned: vector icons. |
 | 2026-10-14 | Mode panel: xfig's icons and order; modes not yet available shown greyed. |
 | 2026-10-14 | Main menus cloned from xfig. |

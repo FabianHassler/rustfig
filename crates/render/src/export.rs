@@ -1,4 +1,8 @@
 //! One entry point for every export format.
+//
+// Ported from fig2dev fig2dev.c (`main`: `-Z`, metric magnification),
+// read.c (`-s`) and dev/genps.c (`-f`, `PSFONTMAG`) (xfig licence, see
+// LICENSE-xfig).
 
 use crate::options::{DriverOptions, SizeDim};
 use crate::{raster, Rgba, Scene, SceneOptions};
