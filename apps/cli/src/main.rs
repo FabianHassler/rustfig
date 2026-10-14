@@ -241,6 +241,7 @@ fn measure_doc(doc: &Document, report: &mut Report, scale_budget: f64) -> Result
                 &raster::RasterOptions {
                     transform: view.transform(),
                     min_line_px: 1.0,
+                    pattern: rustfig_render::pattern::PatternFrame::screen(),
                 },
             )
         });
