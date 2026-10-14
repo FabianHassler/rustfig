@@ -796,7 +796,9 @@ impl Engine {
                     start, kind, button: b, ..
                 } = self.tool_state
                 {
-                    if b != button {
+                    // xfig: an ellipse is finished with either button.
+                    let ellipse = matches!(kind, ToolKind::EllipseRadii | ToolKind::EllipseDiameter);
+                    if b != button && !(ellipse && self.xfig_buttons()) {
                         return Ok(());
                     }
                     self.tool_state = ToolState::Idle;
@@ -929,12 +931,21 @@ impl Engine {
     fn text_event(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
         match ev {
             ToolEvent::Press { pos, button, .. } => {
-                if button == Button::Middle {
-                    return Ok(());
-                }
-                self.finish_text()?;
-                if button == Button::Right {
-                    return Ok(());
+                let typing = matches!(self.tool_state, ToolState::Text { .. });
+                match button {
+                    // xfig: the middle button finishes the text (`d_text.c`).
+                    Button::Middle => return if typing { self.finish_text() } else { Ok(()) },
+                    // xfig: the right button cancels it (an edited text keeps
+                    // its old string); the modern scheme finishes it.
+                    Button::Right => {
+                        return if self.xfig_buttons() {
+                            self.tool_state = ToolState::Idle;
+                            Ok(())
+                        } else {
+                            self.finish_text()
+                        };
+                    }
+                    Button::Left => self.finish_text()?,
                 }
                 // Clicking an existing text edits it.
                 let tol = self.pick_tol();
@@ -1771,7 +1782,8 @@ impl Engine {
 
     /// The current function of each mouse button, for the mouse indicator.
     /// Must describe what [`Engine::tool_event`] actually does: a test
-    /// checks every tool and state in both schemes.
+    /// checks every tool and state in both schemes. The wording is xfig's
+    /// (`set_mousefun` calls in xfig's `d_*.c` and `e_*.c`).
     pub fn mouse_hints(&self) -> MouseHints {
         let xfig = self.xfig_buttons();
         let h = |left, middle, right| MouseHints {
@@ -1795,7 +1807,7 @@ impl Engine {
                 } else if tool == ToolKind::Arc {
                     let left = match (center.is_some(), pts.len()) {
                         (true, 0) => "first point",
-                        (true, 1) => "mid angle",
+                        (true, 1) => "direction",
                         (true, _) => "final angle",
                         (false, 0 | 1) => "mid point",
                         (false, _) => "final point",
@@ -1808,18 +1820,18 @@ impl Engine {
                 }
             }
             ToolState::Drag { kind, button, .. } => {
-                let label = match kind {
-                    ToolKind::CircleRadius => "set radius",
-                    ToolKind::CircleDiameter => "set diameter",
-                    ToolKind::EllipseRadii => "set radii",
-                    _ => "final point",
-                };
-                on(*button, label, "cancel")
+                // xfig finishes an ellipse with either button (`d_ellipse.c`).
+                match kind {
+                    ToolKind::EllipseRadii if xfig => h("Ellipse corner", "Ellipse corner", "cancel"),
+                    ToolKind::EllipseDiameter if xfig => h("final corner", "final corner", "cancel"),
+                    ToolKind::CircleRadius => on(*button, "set radius", "cancel"),
+                    _ => on(*button, "final point", "cancel"),
+                }
             }
             ToolState::Text { .. } => MouseHints {
                 left: "new text",
-                middle: if xfig { "" } else { "pan" },
-                right: "finish text",
+                middle: if xfig { "finish text" } else { "pan" },
+                right: if xfig { "cancel" } else { "finish text" },
                 keyboard: true,
             },
             ToolState::MoveObjs {
@@ -1831,45 +1843,53 @@ impl Engine {
             ToolState::RubberBand { click: true, .. } => h("", "final corner", "cancel"),
             ToolState::RubberBand { .. } => h("drag region", "", "cancel"),
             ToolState::PointDrag {
-                dragging, constrain, ..
+                dragging,
+                constrain,
+                insert,
+                ..
             } => {
                 let b = if *constrain { Button::Middle } else { Button::Left };
-                on(b, if *dragging { "drop point" } else { "new position" }, "cancel")
+                let place = if *insert { "place new point" } else { "new posn" };
+                on(b, if *dragging { "drop point" } else { place }, "cancel")
             }
-            ToolState::Scale { button, .. } => on(*button, "new size", "cancel"),
+            ToolState::Scale { button, .. } => on(*button, "new posn", "cancel"),
             ToolState::Idle => {
-                let glue = if self.selection().len() >= 2 { "glue tagged" } else { "" };
+                let glue = if self.selection().len() >= 2 {
+                    "compound tagged"
+                } else {
+                    ""
+                };
                 let (l, m, r) = match tool {
                     ToolKind::Select => ("select / drag", "", ""),
                     ToolKind::Polyline => ("first point", "freehand", if xfig { "single point" } else { "" }),
                     ToolKind::Polygon => ("first point", "freehand", ""),
                     t if t.spline_kind().is_some() => ("first point", "freehand", ""),
                     ToolKind::Arc => ("first point", "center point", ""),
-                    ToolKind::CircleRadius | ToolKind::EllipseRadii if xfig => ("circle center", "ellipse center", ""),
+                    ToolKind::CircleRadius | ToolKind::EllipseRadii if xfig => ("Circle center", "Ellipse center", ""),
                     ToolKind::CircleDiameter | ToolKind::EllipseDiameter if xfig => {
-                        ("circle diameter", "ellipse corner", "")
+                        ("Circle diameter", "Ellipse corner", "")
                     }
                     ToolKind::CircleRadius | ToolKind::EllipseRadii => ("center", "", ""),
                     ToolKind::CircleDiameter => ("diameter start", "", ""),
                     ToolKind::EllipseDiameter => ("first corner", "", ""),
                     ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture => ("corner point", "", ""),
                     ToolKind::RegularPolygon => ("center point", "", ""),
-                    ToolKind::Text => ("place or edit text", "", ""),
+                    ToolKind::Text => ("position cursor", "", ""),
                     ToolKind::Glue => ("tag object", "tag region", glue),
                     ToolKind::Break => ("break compound", "break and tag", ""),
-                    ToolKind::Scale => ("scale object", "scale about center", ""),
+                    ToolKind::Scale => ("scale box", "scale about center", ""),
                     ToolKind::Align => ("align compound", "", ""),
                     ToolKind::Move => ("move object", "horiz/vert move", ""),
                     ToolKind::Copy => ("copy object", "horiz/vert copy", "copy to cut buf"),
                     ToolKind::MovePoint => ("move point", "horiz/vert move", ""),
-                    ToolKind::AddPoint => ("add point", "", ""),
+                    ToolKind::AddPoint => ("break/add here", "", ""),
                     ToolKind::DeletePoint => ("delete point", "", ""),
                     ToolKind::Delete => ("delete object", "delete region", "del to cut buf"),
                     ToolKind::Update => ("update object", "update settings", ""),
                     ToolKind::Edit => ("edit object", "", ""),
                     ToolKind::FlipV | ToolKind::FlipH => ("flip", "copy & flip", ""),
                     ToolKind::RotateCcw | ToolKind::RotateCw => ("rotate object", "copy & rotate", ""),
-                    ToolKind::Convert => ("spline <-> line", "", "open <-> close"),
+                    ToolKind::Convert => ("spline<->line", "", "open<->closed"),
                     ToolKind::OpenClose => ("open/close", "", ""),
                     ToolKind::Arrow if xfig => ("add arrow", "delete arrow", ""),
                     ToolKind::Arrow => ("toggle arrow", "", ""),
@@ -2429,6 +2449,30 @@ mod tests {
     }
 
     #[test]
+    fn xfig_text_buttons() {
+        let mut e = Engine::new();
+        e.set_tool(ToolKind::Text);
+        // Middle finishes.
+        click(&mut e, 600.0, 600.0, Button::Left);
+        e.tool_event(ToolEvent::Text("Hi".into())).unwrap();
+        click(&mut e, 0.0, 0.0, Button::Middle);
+        assert_eq!(e.doc().objects.len(), 1);
+        assert!(!e.tool_busy());
+        // Right cancels: nothing new, and an edited text keeps its string.
+        click(&mut e, 3000.0, 3000.0, Button::Left);
+        e.tool_event(ToolEvent::Text("gone".into())).unwrap();
+        click(&mut e, 0.0, 0.0, Button::Right);
+        assert_eq!(e.doc().objects.len(), 1);
+        click(&mut e, 650.0, 590.0, Button::Left);
+        e.tool_event(ToolEvent::Text("!!".into())).unwrap();
+        click(&mut e, 0.0, 0.0, Button::Right);
+        let ObjectKind::Text(t) = objects_of(&e)[0] else {
+            panic!()
+        };
+        assert_eq!(t.text, "Hi");
+    }
+
+    #[test]
     fn modern_scheme_right_finishes_and_middle_is_ignored() {
         let mut e = Engine::new();
         e.set_mouse_scheme(MouseScheme::Modern);
@@ -2479,12 +2523,16 @@ mod tests {
         let mut e = Engine::new();
         e.set_tool(ToolKind::CircleRadius);
         click(&mut e, 0.0, 0.0, Button::Middle);
-        click(&mut e, 0.0, 0.0, Button::Left); // other button: ignored
         click(&mut e, 1200.0, 600.0, Button::Middle);
         let ObjectKind::Ellipse(el) = objects_of(&e)[0] else {
             panic!()
         };
         assert_eq!(el.radii, Point::new(1200.0, 600.0));
+        // xfig finishes an ellipse with either button (`d_ellipse.c`).
+        click(&mut e, 0.0, 0.0, Button::Middle);
+        click(&mut e, 600.0, 300.0, Button::Left);
+        assert_eq!(e.doc().objects.len(), 2);
+        assert!(e.undo());
         click(&mut e, 0.0, 0.0, Button::Left);
         click(&mut e, 1200.0, 600.0, Button::Left);
         let ObjectKind::Ellipse(el) = objects_of(&e)[1] else {
@@ -2535,7 +2583,7 @@ mod tests {
         click(&mut e, 2800.0, 2800.0, Button::Middle);
         click(&mut e, 3200.0, 3200.0, Button::Middle);
         assert_eq!(e.selection().len(), 2);
-        assert_eq!(e.mouse_hints().right, "glue tagged");
+        assert_eq!(e.mouse_hints().right, "compound tagged");
         click(&mut e, 0.0, 0.0, Button::Right);
         assert_eq!(e.doc().objects.len(), 2);
         assert!(objects_of(&e)

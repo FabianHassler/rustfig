@@ -596,10 +596,14 @@ fn message_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     }
 }
 
-/// xfig's mouse-function indicator: what each button does right now, one
-/// column per button, each with a small mouse showing which button it is.
-const INDICATOR_SIZE: egui::Vec2 = vec2(380.0, 38.0);
+const INDICATOR_SIZE: egui::Vec2 = vec2(380.0, 44.0);
 
+/// xfig's mouse-function indicator: a small three-button mouse in the
+/// middle, the left button's function left of it, the middle one's above
+/// and the right one's to the right, each button with a tick pointing at its
+/// label. Geometry ported from xfig's `w_mousefun.c` (xfig licence, see
+/// LICENSE-xfig): buttons 4.5 % of the width wide and half the height high,
+/// starting at 45 % of the height.
 pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
     let h = app.engine.mouse_hints();
     let xfig = app.engine.mouse_scheme() == rustfig_engine::MouseScheme::Xfig;
@@ -625,34 +629,44 @@ pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
         p.text(
             rect.right_top() + vec2(-4.0, 2.0),
             egui::Align2::RIGHT_TOP,
-            "keyboard: typing",
+            "keyboard",
             small,
             tk.caret,
         );
     }
-    let col_w = (rect.width() - 8.0) / 3.0;
-    let y = rect.bottom() - 12.0;
-    for (i, label) in [h.left, h.middle, h.right].iter().enumerate() {
-        let x0 = rect.left() + 4.0 + col_w * i as f32;
-        // The mouse: three buttons side by side, this column's one marked.
-        for k in 0..3 {
-            let r = egui::Rect::from_min_size(egui::pos2(x0 + k as f32 * 6.0, y - 8.0), vec2(5.0, 15.0));
-            if k == i {
-                let fill = if label.is_empty() {
-                    tk.muted.gamma_multiply(0.5)
-                } else {
-                    tk.selection
-                };
-                p.rect_filled(r, 1.0, fill);
-            }
-            p.rect_stroke(r, 1.0, stroke, egui::StrokeKind::Inside);
-        }
-        let text_x = x0 + 22.0;
-        let mut job = egui::text::LayoutJob::simple_singleline((*label).to_string(), font.clone(), text);
-        job.wrap = egui::text::TextWrapping::truncate_at_width(col_w - 26.0);
-        let galley = ui.fonts_mut(|f| f.layout_job(job));
-        p.galley(egui::pos2(text_x, y - galley.size().y / 2.0), galley, text);
+    let (w, ht) = (rect.width(), rect.height());
+    let but_w = (w * 0.045).round();
+    let but_h = (ht * 0.5).round();
+    let left_space = ((w - 4.0 * but_w) / 2.0).round();
+    let top = rect.top() + (ht * 0.45).round();
+    let x0 = rect.left() + left_space;
+    let line = egui::Stroke::new(1.0_f32, text);
+    for k in [0.0, 1.5, 3.0] {
+        let r = egui::Rect::from_min_size(egui::pos2(x0 + k * but_w, top), vec2(but_w, but_h));
+        p.rect_stroke(r, 1.0, line, egui::StrokeKind::Inside);
     }
+    let mid_y = top + but_h / 2.0;
+    p.line_segment([egui::pos2(x0, mid_y), egui::pos2(x0 - 5.0, mid_y)], line);
+    let mid_x = x0 + 2.0 * but_w;
+    p.line_segment([egui::pos2(mid_x, top), egui::pos2(mid_x, top - 5.0)], line);
+    let right_x = x0 + 4.0 * but_w;
+    p.line_segment([egui::pos2(right_x, mid_y), egui::pos2(right_x + 5.0, mid_y)], line);
+    // Labels centred in the space beside the mouse (left, right) and above
+    // it (middle), truncated to fit.
+    let label = |s: &str, centre: egui::Pos2, max_w: f32| {
+        let mut job = egui::text::LayoutJob::simple_singleline(s.to_string(), font.clone(), text);
+        job.wrap = egui::text::TextWrapping::truncate_at_width(max_w);
+        let g = ui.fonts_mut(|f| f.layout_job(job));
+        p.galley(centre - g.size() / 2.0, g, text);
+    };
+    let side_w = left_space - 10.0;
+    label(h.left, egui::pos2(rect.left() + left_space / 2.0, mid_y + 2.0), side_w);
+    label(h.middle, egui::pos2(rect.center().x, rect.top() + 8.0), w - 2.0 * 90.0);
+    label(
+        h.right,
+        egui::pos2(rect.right() - left_space / 2.0, mid_y + 2.0),
+        side_w,
+    );
     let summary = format!(
         "Left: {}; middle: {}; right: {}",
         if h.left.is_empty() { "—" } else { h.left },

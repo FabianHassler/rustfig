@@ -26,7 +26,9 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 2. **Gray depths are drawn behind everything** (fixed in S1). xfig draws all inactive
    layers in gray first, then the active ones (`u_redraw.c`); RustFig keeps
    them at their own depth (S1).
-3. **Mouse indicator layout.** xfig puts the left label left of the mouse,
+3. **Mouse indicator layout** (fixed in S2, with xfig's wording and two
+   behaviours the wording revealed: ellipses finish with either button,
+   and in text mode middle finishes and right cancels). xfig puts the left label left of the mouse,
    the middle label above it and the right label right of it
    (`w_mousefun.c`, manual image `mouse-function-indicator.png`); W2 used
    three columns. Port the layout (S2).
@@ -40,7 +42,14 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
    `-startgridmode`, arrow defaults, …) that set xfig's defaults; `f_util.c`
    reads `~/.xfigrc`. RustFig has no settings persistence yet (E1); porting
    the option set gives users their familiar defaults (S3).
-6. **Exports can be ported from fig2dev.** `gentikz.c`, `genpstex.c`,
+6. **Seen in the real xfig** (3.2.9a under XQuartz with the user's
+   options, captured with `xwd`): the depth panel shows no object counts
+   (RustFig's are an addition); a "Snap Mode" box sits above the depth
+   panel (W4); with no mode chosen the attribute panel shows only Zoom and
+   Grid Mode (W5); rulers in the chosen units with the units box in the
+   corner (W6); the mode panel labels some icons (Picture, Scale, Align,
+   Move, Copy, Delete, Update, Edit, Rotate).
+7. **Exports can be ported from fig2dev.** `gentikz.c`, `genpstex.c`,
    `genpict2e.c`, `genpstricks.c`, `genlatex.c`, `genps.c` cover phase B
    directly; `trans_spline.c` and `bound.c` are their shared helpers.
 
@@ -138,7 +147,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_modepanel.c` | 905 | mode panel | `panels::mode_panel` | own | review |
 | `w_icons.c` | 3270 | mode and attribute icon bitmaps | `ui-egui/icons` (drawn in code) | own | port bitmaps for xfig's look (W5) |
 | `w_indpanel.c` | 4865 | attribute (indicator) panel, choice panels | `panels::indicator` | partial | W5 |
-| `w_mousefun.c` | 432 | mouse-function indicator | `panels::mouse_indicator` | own; layout differs | S2 |
+| `w_mousefun.c` | 432 | mouse-function indicator | `panels::mouse_indicator`, `Engine::mouse_hints` | ported: layout and wording | — |
 | `w_msgpanel.c` | 881 | message panel, lengths while drawing | `panels::message_panel` | partial: show lengths | D10 |
 | `w_layers.c` | 903 | depth panel | `panels::depth_panel` | own | review (Front/Back labels) |
 | `w_rulers.c` | 1479 | rulers and units box | — | missing | W6 |
@@ -195,3 +204,4 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 |------|------|
 | 2026-10-14 | First version. |
 | 2026-10-14 | S1: draw and save order ported (`u_redraw.c`, `f_save.c`). |
+| 2026-10-14 | S2: mouse indicator ported (`w_mousefun.c`, `set_mousefun` wording); notes from the real xfig. |

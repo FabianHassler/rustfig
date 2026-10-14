@@ -58,7 +58,7 @@
 | Main menus File, Edit, View, Snap, Help | ✅ in xfig's order with xfig labels (Object and Tools as extras); Snap has point positioning and grid, object snaps missing | W4 |
 | Current file name | ✅ next to the menus, marks unsaved changes | — |
 | Message panel | ✅ under the menus; click for the history | — |
-| Mouse-function indicator | ✅ each button's current function per tool and state, checked against the tools by a test | — |
+| Mouse-function indicator | ✅ xfig's layout and wording, each button's current function per tool and state, checked against the tools by a test | — |
 | Three-button mouse semantics | ✅ xfig's per-mode functions (default) or a modern scheme (View › xfig mouse buttons); Alt+click = middle, Ctrl+click = right. Missing: dimension lines, rotate/flip anchor, array copy, align to canvas | D |
 | Units box | 🟡 shows the units, opens units and page settings; xfig's scale panel missing | W6 |
 | Top and side rulers | ❌ | W6 |
