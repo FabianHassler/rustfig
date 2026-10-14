@@ -30,7 +30,9 @@ document's top-level objects are `Arc<Object>`, commands change one through
 `Arc::make_mut` (or `Document::get_mut`), so the snapshot shares every object
 the command did not touch; `history.rs` keeps each step only as the run of
 the object list that differs from the state after it, and caps the history
-at 200 steps and about 256 MB.
+at 200 steps and about 256 MB. After a command, `execute` re-measures the
+texts of the objects it changed (A9); the hit-test box cache keeps each box
+with its object, so only changed objects are recomputed.
 
 Tools (`crates/engine/src/tools`) turn pointer and key events (in Fig units)
 into commands. While busy they expose an `Overlay` (preview objects, guides,

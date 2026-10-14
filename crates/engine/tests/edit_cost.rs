@@ -1,4 +1,5 @@
-//! A1: undo snapshots share unchanged objects, so editing a large drawing
+//! A1 and A9: undo snapshots share unchanged objects, and commands only
+//! re-measure what they changed, so editing a large drawing
 //! keeps the history small and each step cheap.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
@@ -71,4 +72,53 @@ fn edits_share_unchanged_objects() {
         assert!(e.undo());
     }
     assert_eq!(e.doc().objects, before);
+}
+
+/// A9: texts changed by a command get new metrics; the others are left alone.
+#[test]
+fn changed_texts_are_measured() {
+    let mut e = Engine::new();
+    let a = e
+        .execute("shape.text", &json!({"x": 0, "y": 0, "text": "Hamburgefonts"}))
+        .unwrap()["id"]
+        .as_u64()
+        .unwrap();
+    e.execute("shape.text", &json!({"x": 0, "y": 900, "text": "other"}))
+        .unwrap();
+    let length = |e: &Engine, i: usize| match &e.doc().objects[i].kind {
+        ObjectKind::Text(t) => t.length,
+        _ => panic!(),
+    };
+    let (l0, other) = (length(&e, 0), length(&e, 1));
+    let untouched = Arc::clone(&e.doc().objects[1]);
+    e.execute("object.set_attributes", &json!({"ids": [a], "font_size": 24}))
+        .unwrap();
+    assert!((length(&e, 0) - 2.0 * l0).abs() < l0 * 0.1, "{} {l0}", length(&e, 0));
+    e.execute("object.set_attributes", &json!({"ids": [a], "text": "H"}))
+        .unwrap();
+    assert!(length(&e, 0) < l0);
+    assert!(Arc::ptr_eq(&untouched, &e.doc().objects[1]));
+    assert_eq!(length(&e, 1), other);
+}
+
+/// A9: hit testing sees objects changed since the last test, in the same
+/// revision (as inside a running command).
+#[test]
+fn hit_test_follows_changed_objects() {
+    let mut e = Engine::new();
+    e.execute(
+        "shape.rectangle",
+        &json!({"x": 0, "y": 0, "width": 1200, "height": 1200}),
+    )
+    .unwrap();
+    let id = e.doc().objects[0].id;
+    assert_eq!(e.hit_test(Point::new(0.0, 600.0), 30.0), Some(id));
+    let rev = e.revision();
+    e.doc_mut()
+        .get_mut(id)
+        .unwrap()
+        .transform(&rustfig_geom::Affine::translate(5000.0, 0.0), false);
+    assert_eq!(e.revision(), rev);
+    assert_eq!(e.hit_test(Point::new(0.0, 600.0), 30.0), None);
+    assert_eq!(e.hit_test(Point::new(5000.0, 600.0), 30.0), Some(id));
 }

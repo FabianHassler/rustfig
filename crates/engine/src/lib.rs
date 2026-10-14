@@ -85,8 +85,10 @@ pub struct Engine {
     status: String,
     /// Set by [`Engine::doc_mut`] while a command runs.
     changed: bool,
-    /// Bounding boxes of top-level objects, valid for one revision.
-    bbox_cache: std::cell::RefCell<(u64, Vec<Rect>)>,
+    /// Bounding boxes of the top-level objects, each with the object it
+    /// belongs to: a changed object is a new `Arc`, so entries stay right
+    /// even while a command runs.
+    bbox_cache: std::cell::RefCell<Vec<(Arc<Object>, Rect)>>,
 }
 
 impl Default for Engine {
@@ -123,7 +125,7 @@ impl Engine {
             requests: Vec::new(),
             status: "READY. Select a mode or load a file".to_string(),
             changed: false,
-            bbox_cache: std::cell::RefCell::new((0, Vec::new())),
+            bbox_cache: std::cell::RefCell::new(Vec::new()),
         }
     }
 
@@ -261,6 +263,7 @@ impl Engine {
                 self.changed = false;
             }
             (Ok(_), Some((doc, sel))) if self.changed => {
+                self.fix_changed_text(&doc);
                 self.history.push(doc, sel, &self.doc);
                 self.modified = true;
                 self.bump_revision();
@@ -341,44 +344,70 @@ impl Engine {
         id
     }
 
-    /// Recompute text heights/lengths from font metrics. Only objects
-    /// whose texts change are copied, so the rest stay shared with the undo
-    /// history.
-    pub fn fix_all_text(&mut self) {
-        fn stale(o: &Object) -> bool {
-            match &o.kind {
-                ObjectKind::Text(t) => {
-                    let mut fixed = t.clone();
-                    fix_text_metrics(&mut fixed);
-                    fixed.length != t.length || fixed.height != t.height
-                }
-                ObjectKind::Compound(c) => c.objects.iter().any(stale),
-                _ => false,
-            }
-        }
-        fn fix(o: &mut Object) {
-            match &mut o.kind {
-                ObjectKind::Text(t) => fix_text_metrics(t),
-                ObjectKind::Compound(c) => c.objects.iter_mut().for_each(fix),
-                _ => {}
-            }
-        }
-        for o in &mut self.doc.objects {
-            if stale(o) {
-                fix(Arc::make_mut(o));
+    /// Recompute the text metrics of the top-level objects that differ from
+    /// `before` (the document before a command); the rest are unchanged.
+    fn fix_changed_text(&mut self, before: &Document) {
+        let (a, b) = (&mut self.doc.objects, &before.objects);
+        let positional = a.len() == b.len();
+        let others: std::collections::HashSet<*const Object> = if positional {
+            Default::default()
+        } else {
+            b.iter().map(Arc::as_ptr).collect()
+        };
+        for (i, o) in a.iter_mut().enumerate() {
+            let unchanged = if positional {
+                b.get(i).is_some_and(|x| Arc::ptr_eq(x, o))
+            } else {
+                others.contains(&Arc::as_ptr(o))
+            };
+            if !unchanged && text_stale(o) {
+                fix_texts(Arc::make_mut(o));
             }
         }
     }
 
-    /// Bounding boxes of the top-level objects (cached per revision).
-    fn object_bboxes(&self) -> std::cell::Ref<'_, (u64, Vec<Rect>)> {
-        let stale = {
+    /// Recompute text heights/lengths from font metrics. Only objects
+    /// whose texts change are copied, so the rest stay shared with the undo
+    /// history.
+    pub fn fix_all_text(&mut self) {
+        for o in &mut self.doc.objects {
+            if text_stale(o) {
+                fix_texts(Arc::make_mut(o));
+            }
+        }
+    }
+
+    /// Bounding boxes of the top-level objects, recomputed only for objects
+    /// that changed since the last call.
+    fn object_bboxes(&self) -> std::cell::Ref<'_, Vec<(Arc<Object>, Rect)>> {
+        let objs = &self.doc.objects;
+        let fresh = {
             let c = self.bbox_cache.borrow();
-            c.0 != self.revision || c.1.len() != self.doc.objects.len()
+            c.len() == objs.len() && c.iter().zip(objs).all(|((a, _), b)| Arc::ptr_eq(a, b))
         };
-        if stale {
-            let boxes = self.doc.objects.iter().map(|o| o.bbox()).collect();
-            *self.bbox_cache.borrow_mut() = (self.revision, boxes);
+        if !fresh {
+            let mut c = self.bbox_cache.borrow_mut();
+            let old = std::mem::take(&mut *c);
+            // Unchanged runs at the start and the end keep their boxes.
+            let prefix = old.iter().zip(objs).take_while(|((a, _), b)| Arc::ptr_eq(a, b)).count();
+            let suffix = old
+                .iter()
+                .rev()
+                .zip(objs.iter().rev())
+                .take(old.len().min(objs.len()) - prefix)
+                .take_while(|((a, _), b)| Arc::ptr_eq(a, b))
+                .count();
+            let old_tail = old.len() - suffix;
+            let mut fresh = Vec::with_capacity(objs.len());
+            fresh.extend(old.iter().take(prefix).cloned());
+            fresh.extend(
+                objs.iter()
+                    .take(objs.len() - suffix)
+                    .skip(prefix)
+                    .map(|o| (Arc::clone(o), o.bbox())),
+            );
+            fresh.extend(old.into_iter().skip(old_tail));
+            *c = fresh;
         }
         self.bbox_cache.borrow()
     }
@@ -389,7 +418,7 @@ impl Engine {
         // (depth, xfig type rank, index): the front-most is the one drawn last.
         let mut best: Option<(i32, u8, usize)> = None;
         for (i, o) in self.doc.objects.iter().enumerate() {
-            let Some(bb) = boxes.1.get(i) else { break };
+            let Some((_, bb)) = boxes.get(i) else { break };
             if !bb.expand(tol).contains(p) || !self.is_visible(o) {
                 continue;
             }
@@ -573,6 +602,28 @@ impl Engine {
 }
 
 /// Recompute a text's stored height and length from font metrics.
+/// Whether a text in `o` has metrics other than its font gives.
+fn text_stale(o: &Object) -> bool {
+    match &o.kind {
+        ObjectKind::Text(t) => {
+            let mut fixed = t.clone();
+            fix_text_metrics(&mut fixed);
+            fixed.length != t.length || fixed.height != t.height
+        }
+        ObjectKind::Compound(c) => c.objects.iter().any(text_stale),
+        _ => false,
+    }
+}
+
+/// Recompute the metrics of every text in `o`.
+fn fix_texts(o: &mut Object) {
+    match &mut o.kind {
+        ObjectKind::Text(t) => fix_text_metrics(t),
+        ObjectKind::Compound(c) => c.objects.iter_mut().for_each(fix_texts),
+        _ => {}
+    }
+}
+
 pub fn fix_text_metrics(t: &mut Text) {
     let req = rustfig_text::FontRequest::for_fig(t.font, t.is_postscript());
     let m = rustfig_text::measure(&req, t.size, &t.text);

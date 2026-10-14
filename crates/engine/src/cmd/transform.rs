@@ -104,7 +104,6 @@ pub(crate) fn apply(e: &mut Engine, p: &Value, t: Affine, scale_text: bool) -> C
             o.transform(&t, scale_text);
             new_ids.push(e.add_object(o));
         }
-        e.fix_all_text();
         e.set_selection(new_ids.clone());
         return Ok(json!({"count": new_ids.len(), "ids": super::ids_value(&new_ids)}));
     }
@@ -113,7 +112,6 @@ pub(crate) fn apply(e: &mut Engine, p: &Value, t: Affine, scale_text: bool) -> C
             Arc::make_mut(o).transform(&t, scale_text);
         }
     }
-    e.fix_all_text();
     Ok(json!({"count": ids.len()}))
 }
 

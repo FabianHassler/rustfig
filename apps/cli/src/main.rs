@@ -313,7 +313,16 @@ fn measure_doc(doc: &Document, report: &mut Report, scale_budget: f64) -> Result
         .collect();
     let (_, ms) = time(|| pts.iter().filter_map(|p| e.hit_test(*p, 30.0)).count());
     report.add("hit test (per click)", ms / 1000.0, 20.0 * scale_budget);
-    // A1: one-object edits and their undo, on the whole document.
+    // A1, A9: one-object edits and their undo, on the document plus 5,000
+    // texts (re-measuring every text made each edit cost milliseconds).
+    for i in 0..5000 {
+        let (x, y) = (
+            bb.min.x + (i % 100) as f64 * 400.0,
+            bb.max.y + 600.0 + (i / 100) as f64 * 300.0,
+        );
+        e.execute("shape.text", &json!({"x": x, "y": y, "text": format!("label {i}")}))
+            .map_err(|e| e.message)?;
+    }
     let ids: Vec<u64> = e.doc().objects.iter().step_by(97).take(50).map(|o| o.id.0).collect();
     let (_, ms) = time(|| {
         for id in &ids {

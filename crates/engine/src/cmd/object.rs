@@ -228,7 +228,6 @@ fn for_targets(e: &mut Engine, p: &Value, f: &mut dyn FnMut(&mut Object)) -> Res
             walk_mut(Arc::make_mut(o), f);
         }
     }
-    e.fix_all_text();
     Ok(ids.len())
 }
 

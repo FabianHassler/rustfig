@@ -256,7 +256,6 @@ fn search_replace(e: &mut Engine, p: &Value) -> CmdResult {
                 count += n;
             }
         }
-        e.fix_all_text();
     }
     e.set_selection(hits.clone());
     Ok(json!({"matches": hits.len(), "replaced": count, "ids": ids_value(&hits)}))
