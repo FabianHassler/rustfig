@@ -67,7 +67,9 @@ pub fn load_all_pictures(doc: &mut Document, base: Option<&Path>) -> Vec<String>
             }
         }
     }
-    walk(&mut doc.objects, base, &mut errors);
+    for o in &mut doc.objects {
+        walk(std::slice::from_mut(std::sync::Arc::make_mut(o)), base, &mut errors);
+    }
     errors
 }
 

@@ -219,7 +219,7 @@ fn synthetic(n: usize) -> Document {
                 ],
             )),
         };
-        doc.objects.push(Object::new(kind));
+        doc.objects.push(std::sync::Arc::new(Object::new(kind)));
     }
     doc.assign_ids();
     doc
@@ -313,6 +313,20 @@ fn measure_doc(doc: &Document, report: &mut Report, scale_budget: f64) -> Result
         .collect();
     let (_, ms) = time(|| pts.iter().filter_map(|p| e.hit_test(*p, 30.0)).count());
     report.add("hit test (per click)", ms / 1000.0, 20.0 * scale_budget);
+    // A1: one-object edits and their undo, on the whole document.
+    let ids: Vec<u64> = e.doc().objects.iter().step_by(97).take(50).map(|o| o.id.0).collect();
+    let (_, ms) = time(|| {
+        for id in &ids {
+            let _ = e.execute("transform.move", &json!({"ids": [id], "dx": 15, "dy": 0}));
+        }
+    });
+    report.add("edit (one object)", ms / ids.len().max(1) as f64, 10.0 * scale_budget);
+    let (_, ms) = time(|| {
+        for _ in &ids {
+            e.undo();
+        }
+    });
+    report.add("undo (one step)", ms / ids.len().max(1) as f64, 5.0 * scale_budget);
     let (text, ms) = time(|| rustfig_format::write_fig(doc));
     report.add("save .fig", ms, 800.0 * scale_budget);
     let (parsed, ms) = time(|| rustfig_format::read_fig(text.as_bytes()));

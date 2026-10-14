@@ -584,7 +584,7 @@ pub fn read_fig(src: &[u8]) -> Result<Document, FormatError> {
     // The rest of the resolution line is ignored.
     r.next_line();
     doc.settings = settings;
-    doc.objects = r.objects(&mut doc, 0)?;
+    doc.objects = r.objects(&mut doc, 0)?.into_iter().map(Into::into).collect();
     doc.assign_ids();
     Ok(doc)
 }

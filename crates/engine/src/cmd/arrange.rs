@@ -5,6 +5,7 @@ use crate::{Engine, EngineError};
 use rustfig_geom::{Affine, Rect};
 use rustfig_model::{ObjectId, MAX_DEPTH};
 use serde_json::{json, Value};
+use std::sync::Arc;
 
 pub(super) fn commands() -> Vec<Command> {
     vec![
@@ -204,7 +205,7 @@ fn restack(e: &mut Engine, p: &Value, how: Stack) -> CmdResult {
             Stack::Backward => d + 1,
             Stack::Back => (max + 1).max(d),
         };
-        o.set_depth(nd.clamp(0, MAX_DEPTH));
+        Arc::make_mut(o).set_depth(nd.clamp(0, MAX_DEPTH));
     }
     Ok(json!({"count": ids.len()}))
 }
@@ -214,7 +215,7 @@ fn set_depth(e: &mut Engine, p: &Value) -> CmdResult {
     let d = (num(p, "depth")?.round() as i32).clamp(0, MAX_DEPTH);
     for o in e.doc_mut().objects.iter_mut() {
         if ids.contains(&o.id) {
-            o.set_depth(d);
+            Arc::make_mut(o).set_depth(d);
         }
     }
     Ok(json!({"count": ids.len()}))

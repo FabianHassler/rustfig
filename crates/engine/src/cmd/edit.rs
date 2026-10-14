@@ -4,6 +4,7 @@ use super::{always, has_objects, has_selection, ids_value, num_or, opt_bool, str
 use crate::{Engine, EngineError};
 use rustfig_model::{Object, ObjectId, ObjectKind};
 use serde_json::{json, Value};
+use std::sync::Arc;
 
 pub(super) fn commands() -> Vec<Command> {
     vec![
@@ -153,7 +154,7 @@ fn clone_targets(e: &Engine, p: &Value) -> Result<Vec<Object>, EngineError> {
         .objects
         .iter()
         .filter(|o| ids.contains(&o.id))
-        .cloned()
+        .map(|o| (**o).clone())
         .collect())
 }
 
@@ -246,7 +247,14 @@ fn search_replace(e: &mut Engine, p: &Value) -> CmdResult {
     if let Some(rep) = replace {
         let find_c = find.clone();
         for o in e.doc_mut().objects.iter_mut() {
-            count += replace_text(o, &find_c, &rep, case);
+            // Replace in a copy, kept only where something changed, so
+            // untouched objects stay shared with the undo history.
+            let mut copy = (**o).clone();
+            let n = replace_text(&mut copy, &find_c, &rep, case);
+            if n > 0 {
+                *o = Arc::new(copy);
+                count += n;
+            }
         }
         e.fix_all_text();
     }

@@ -609,6 +609,12 @@ pub struct Object {
     pub kind: ObjectKind,
 }
 
+impl AsRef<Object> for Object {
+    fn as_ref(&self) -> &Object {
+        self
+    }
+}
+
 impl Object {
     pub fn new(kind: ObjectKind) -> Object {
         Object {

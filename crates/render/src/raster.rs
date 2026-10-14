@@ -401,11 +401,12 @@ mod tests {
         let mut s = Style::default();
         s.area_fill = 20;
         s.fill_color = rustfig_model::ColorRef(4);
-        doc.objects.push(Object::new(ObjectKind::Polyline(Polyline::rect(
-            s,
-            Point::new(0.0, 0.0),
-            Point::new(1200.0, 1200.0),
-        ))));
+        doc.objects
+            .push(std::sync::Arc::new(Object::new(ObjectKind::Polyline(Polyline::rect(
+                s,
+                Point::new(0.0, 0.0),
+                Point::new(1200.0, 1200.0),
+            )))));
         let scene = Scene::build(&doc, &SceneOptions::default());
         let pm = render_region(
             &scene,

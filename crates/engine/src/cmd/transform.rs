@@ -4,6 +4,7 @@ use super::{has_selection, num, num_or, opt_bool, opt_num, CmdResult, Command};
 use crate::{Engine, EngineError};
 use rustfig_geom::{Affine, Point};
 use serde_json::{json, Value};
+use std::sync::Arc;
 
 pub(super) fn commands() -> Vec<Command> {
     vec![
@@ -109,7 +110,7 @@ pub(crate) fn apply(e: &mut Engine, p: &Value, t: Affine, scale_text: bool) -> C
     }
     for o in e.doc_mut().objects.iter_mut() {
         if ids.contains(&o.id) {
-            o.transform(&t, scale_text);
+            Arc::make_mut(o).transform(&t, scale_text);
         }
     }
     e.fix_all_text();

@@ -25,7 +25,12 @@ User-visible behaviour lives in `crates/engine/src/cmd/*`. A command has an id,
 label, menu path, shortcut, parameter docs, a `mutates` flag, `enabled` and
 `run`. `Engine::execute` snapshots the document before a mutating command;
 on error it restores the snapshot (commands are atomic), and on success it
-pushes the snapshot onto the undo stack.
+pushes the snapshot onto the undo stack. Snapshots are cheap (A1): the
+document's top-level objects are `Arc<Object>`, commands change one through
+`Arc::make_mut` (or `Document::get_mut`), so the snapshot shares every object
+the command did not touch; `history.rs` keeps each step only as the run of
+the object list that differs from the state after it, and caps the history
+at 200 steps and about 256 MB.
 
 Tools (`crates/engine/src/tools`) turn pointer and key events (in Fig units)
 into commands. While busy they expose an `Overlay` (preview objects, guides,

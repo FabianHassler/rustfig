@@ -8,6 +8,7 @@ use rustfig_model::{
     Polyline, Spline, SplineKind, MAX_DEPTH,
 };
 use serde_json::{json, Value};
+use std::sync::Arc;
 
 pub(super) fn commands() -> Vec<Command> {
     vec![
@@ -165,7 +166,7 @@ fn group(e: &mut Engine, p: &Value) -> CmdResult {
     let mut rest = Vec::new();
     for o in std::mem::take(&mut doc.objects) {
         if ids.contains(&o.id) {
-            members.push(o);
+            members.push(Arc::unwrap_or_clone(o));
         } else {
             rest.push(o);
         }
@@ -173,7 +174,7 @@ fn group(e: &mut Engine, p: &Value) -> CmdResult {
     let mut c = Object::new(ObjectKind::Compound(Compound { objects: members }));
     c.id = doc.alloc_id();
     let id = c.id;
-    rest.insert(first.min(rest.len()), c);
+    rest.insert(first.min(rest.len()), Arc::new(c));
     doc.objects = rest;
     e.set_selection(vec![id]);
     Ok(json!({"id": id.0}))
@@ -186,15 +187,17 @@ fn ungroup(e: &mut Engine, p: &Value) -> CmdResult {
     let mut freed = Vec::new();
     let mut broke = 0;
     for o in std::mem::take(&mut doc.objects) {
-        match o.kind {
-            ObjectKind::Compound(c) if ids.contains(&o.id) => {
+        match &o.kind {
+            ObjectKind::Compound(_) if ids.contains(&o.id) => {
                 broke += 1;
-                for child in c.objects {
-                    freed.push(child.id);
-                    out.push(child);
+                if let ObjectKind::Compound(c) = Arc::unwrap_or_clone(o).kind {
+                    for child in c.objects {
+                        freed.push(child.id);
+                        out.push(Arc::new(child));
+                    }
                 }
             }
-            kind => out.push(Object { kind, ..o }),
+            _ => out.push(o),
         }
     }
     doc.objects = out;
@@ -222,7 +225,7 @@ fn for_targets(e: &mut Engine, p: &Value, f: &mut dyn FnMut(&mut Object)) -> Res
     }
     for o in e.doc_mut().objects.iter_mut() {
         if ids.contains(&o.id) {
-            walk_mut(o, f);
+            walk_mut(Arc::make_mut(o), f);
         }
     }
     e.fix_all_text();
@@ -420,7 +423,13 @@ fn set_attributes(e: &mut Engine, p: &Value) -> CmdResult {
 
 fn get(e: &mut Engine, p: &Value) -> CmdResult {
     let ids = e.target_ids(p)?;
-    let objs: Vec<&Object> = e.doc().objects.iter().filter(|o| ids.contains(&o.id)).collect();
+    let objs: Vec<&Object> = e
+        .doc()
+        .objects
+        .iter()
+        .filter(|o| ids.contains(&o.id))
+        .map(|o| &**o)
+        .collect();
     serde_json::to_value(objs)
         .map(|v| json!({"objects": v}))
         .map_err(|err| EngineError::internal(err.to_string()))

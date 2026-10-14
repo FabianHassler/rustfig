@@ -206,11 +206,11 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
                 settings: doc.settings.clone(),
                 comments: Vec::new(),
                 colors: doc.colors.clone(),
-                objects: overlay.preview.clone(),
+                objects: overlay.preview.iter().cloned().map(std::sync::Arc::new).collect(),
                 next_id: 0,
             };
             if let Some(t) = &overlay.text {
-                d.objects.push(t.object.clone());
+                d.objects.push(std::sync::Arc::new(t.object.clone()));
             }
             let scene = Scene::build(&d, &SceneOptions::default());
             let img = rasterize_scene(&scene, t, w, h);

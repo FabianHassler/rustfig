@@ -9,6 +9,7 @@ use rustfig_render::options::{options_for, parse_options, Arg, DriverOptions, Op
 use rustfig_render::{ExportFormat, ExportOptions};
 use serde_json::{json, Value};
 use std::path::Path;
+use std::sync::Arc;
 
 pub(super) fn commands() -> Vec<Command> {
     vec![
@@ -161,7 +162,7 @@ fn open_data(e: &mut Engine, p: &Value) -> CmdResult {
     Ok(json!({"objects": count}))
 }
 
-fn merge_doc(e: &mut Engine, mut other: Document) -> CmdResult {
+fn merge_doc(e: &mut Engine, other: Document) -> CmdResult {
     // Map user colours of the merged document into this one.
     let mut map = std::collections::BTreeMap::new();
     for c in &other.colors {
@@ -191,9 +192,10 @@ fn merge_doc(e: &mut Engine, mut other: Document) -> CmdResult {
             }
         }
     }
-    remap(&mut other.objects, &map);
+    let mut objects: Vec<rustfig_model::Object> = other.objects.into_iter().map(Arc::unwrap_or_clone).collect();
+    remap(&mut objects, &map);
     let mut ids = Vec::new();
-    for o in other.objects {
+    for o in objects {
         ids.push(e.add_object(o));
     }
     e.set_selection(ids.clone());

@@ -32,6 +32,7 @@ use rustfig_geom::{Point, Rect};
 use rustfig_model::{Document, Object, ObjectId, ObjectKind, Text};
 use serde_json::Value;
 use std::collections::BTreeSet;
+use std::sync::Arc;
 
 /// Something the engine asks the UI to do (open a dialog, pick a file).
 #[derive(Debug, Clone, PartialEq)]
@@ -128,6 +129,12 @@ impl Engine {
 
     pub fn doc(&self) -> &Document {
         &self.doc
+    }
+
+    /// Memory the undo and redo steps hold of their own (an estimate; they
+    /// share unchanged objects with the document).
+    pub fn undo_bytes(&self) -> usize {
+        self.history.bytes()
     }
 
     /// Mutable document access; marks the document as changed.
@@ -254,7 +261,7 @@ impl Engine {
                 self.changed = false;
             }
             (Ok(_), Some((doc, sel))) if self.changed => {
-                self.history.push(doc, sel);
+                self.history.push(doc, sel, &self.doc);
                 self.modified = true;
                 self.bump_revision();
                 self.prune_selection();
@@ -330,22 +337,37 @@ impl Engine {
         }
         self.doc_mut().reassign_ids(&mut obj);
         let id = obj.id;
-        self.doc_mut().objects.push(obj);
+        self.doc_mut().objects.push(Arc::new(obj));
         id
     }
 
-    /// Recompute text heights/lengths from font metrics.
+    /// Recompute text heights/lengths from font metrics. Only objects
+    /// whose texts change are copied, so the rest stay shared with the undo
+    /// history.
     pub fn fix_all_text(&mut self) {
-        fn walk(objs: &mut [Object]) {
-            for o in objs {
-                match &mut o.kind {
-                    ObjectKind::Text(t) => fix_text_metrics(t),
-                    ObjectKind::Compound(c) => walk(&mut c.objects),
-                    _ => {}
+        fn stale(o: &Object) -> bool {
+            match &o.kind {
+                ObjectKind::Text(t) => {
+                    let mut fixed = t.clone();
+                    fix_text_metrics(&mut fixed);
+                    fixed.length != t.length || fixed.height != t.height
                 }
+                ObjectKind::Compound(c) => c.objects.iter().any(stale),
+                _ => false,
             }
         }
-        walk(&mut self.doc.objects);
+        fn fix(o: &mut Object) {
+            match &mut o.kind {
+                ObjectKind::Text(t) => fix_text_metrics(t),
+                ObjectKind::Compound(c) => c.objects.iter_mut().for_each(fix),
+                _ => {}
+            }
+        }
+        for o in &mut self.doc.objects {
+            if stale(o) {
+                fix(Arc::make_mut(o));
+            }
+        }
     }
 
     /// Bounding boxes of the top-level objects (cached per revision).
@@ -355,7 +377,7 @@ impl Engine {
             c.0 != self.revision || c.1.len() != self.doc.objects.len()
         };
         if stale {
-            let boxes = self.doc.objects.iter().map(Object::bbox).collect();
+            let boxes = self.doc.objects.iter().map(|o| o.bbox()).collect();
             *self.bbox_cache.borrow_mut() = (self.revision, boxes);
         }
         self.bbox_cache.borrow()
@@ -486,8 +508,9 @@ impl Engine {
 
     /// The leaf object nearest `p` within `tol` on a visible depth.
     fn snap_target(&self, p: Point, tol: f64) -> Option<Object> {
-        fn walk<'a>(objs: &'a [Object], e: &Engine, p: Point, best: &mut Option<(f64, &'a Object)>) {
+        fn walk<'a, O: AsRef<Object>>(objs: &'a [O], e: &Engine, p: Point, best: &mut Option<(f64, &'a Object)>) {
             for o in objs {
+                let o = o.as_ref();
                 match &o.kind {
                     ObjectKind::Compound(c) => walk(&c.objects, e, p, best),
                     _ if !e.is_visible(o) => {}

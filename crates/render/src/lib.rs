@@ -587,16 +587,18 @@ mod tests {
         let mut back = Style::default();
         back.depth = 90;
         back.pen_color = ColorRef(4);
-        doc.objects.push(Object::new(ObjectKind::Polyline(Polyline::rect(
-            front,
-            Point::ZERO,
-            Point::new(10.0, 10.0),
-        ))));
-        doc.objects.push(Object::new(ObjectKind::Polyline(Polyline::rect(
-            back,
-            Point::ZERO,
-            Point::new(10.0, 10.0),
-        ))));
+        doc.objects
+            .push(std::sync::Arc::new(Object::new(ObjectKind::Polyline(Polyline::rect(
+                front,
+                Point::ZERO,
+                Point::new(10.0, 10.0),
+            )))));
+        doc.objects
+            .push(std::sync::Arc::new(Object::new(ObjectKind::Polyline(Polyline::rect(
+                back,
+                Point::ZERO,
+                Point::new(10.0, 10.0),
+            )))));
         let s = Scene::build(&doc, &SceneOptions::default());
         assert_eq!(s.prims.len(), 2);
         let Prim::Path { stroke: Some(st), .. } = &s.prims[0] else {
@@ -632,7 +634,7 @@ mod tests {
         // Same depth: a line listed before an arc, and a compound holding a
         // line. xfig draws arcs, then compounds, then lines.
         let mut doc = Document::new();
-        doc.objects.push(rect_at(50, 4, 0.0)); // red line
+        doc.objects.push(std::sync::Arc::new(rect_at(50, 4, 0.0))); // red line
         let mut st = Style::default();
         st.depth = 50;
         st.pen_color = ColorRef(1); // blue arc
@@ -644,10 +646,11 @@ mod tests {
             false,
         )
         .unwrap();
-        doc.objects.push(Object::new(ObjectKind::Arc(arc)));
-        doc.objects.push(Object::new(ObjectKind::Compound(Compound {
-            objects: vec![rect_at(50, 2, 20.0)], // green line in a compound
-        })));
+        doc.objects.push(std::sync::Arc::new(Object::new(ObjectKind::Arc(arc))));
+        doc.objects
+            .push(std::sync::Arc::new(Object::new(ObjectKind::Compound(Compound {
+                objects: vec![rect_at(50, 2, 20.0)], // green line in a compound
+            }))));
         let s = Scene::build(&doc, &SceneOptions::default());
         // Red channel of each stroke: blue arc 0, green compound member 0, red line 255.
         let order: Vec<u8> = s
@@ -670,8 +673,8 @@ mod tests {
     #[test]
     fn gray_depths_are_drawn_behind_active_ones() {
         let mut doc = Document::new();
-        doc.objects.push(rect_at(90, 4, 0.0)); // active, at the back
-        doc.objects.push(rect_at(10, 4, 0.0)); // off, in front
+        doc.objects.push(std::sync::Arc::new(rect_at(90, 4, 0.0))); // active, at the back
+        doc.objects.push(std::sync::Arc::new(rect_at(10, 4, 0.0))); // off, in front
         let opts = SceneOptions {
             hidden_depths: [10].into_iter().collect(),
             gray_hidden: true,
@@ -689,11 +692,12 @@ mod tests {
         let mut st = Style::default();
         st.depth = 30;
         st.pen_color = ColorRef(4);
-        doc.objects.push(Object::new(ObjectKind::Polyline(Polyline::rect(
-            st,
-            Point::ZERO,
-            Point::new(10.0, 10.0),
-        ))));
+        doc.objects
+            .push(std::sync::Arc::new(Object::new(ObjectKind::Polyline(Polyline::rect(
+                st,
+                Point::ZERO,
+                Point::new(10.0, 10.0),
+            )))));
         let mut opts = SceneOptions {
             hidden_depths: [30].into_iter().collect(),
             ..SceneOptions::default()
@@ -717,7 +721,8 @@ mod tests {
             vec![Point::ZERO, Point::new(1000.0, 0.0)],
         );
         p.forward_arrow = Some(Arrow::default());
-        doc.objects.push(Object::new(ObjectKind::Polyline(p)));
+        doc.objects
+            .push(std::sync::Arc::new(Object::new(ObjectKind::Polyline(p))));
         let s = Scene::build(&doc, &SceneOptions::default());
         assert_eq!(s.prims.len(), 2);
         let Prim::Path { subpaths, .. } = &s.prims[0] else {

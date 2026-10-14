@@ -171,7 +171,9 @@ pub struct Document {
     pub comments: Vec<String>,
     #[serde(default)]
     pub colors: Vec<UserColor>,
-    pub objects: Vec<Object>,
+    /// Top-level objects, shared so an undo snapshot copies pointers;
+    /// change one through [`std::sync::Arc::make_mut`] (or [`Document::object_mut`]).
+    pub objects: Vec<std::sync::Arc<Object>>,
     /// Next id handed out by [`Document::alloc_id`].
     #[serde(default)]
     pub next_id: u64,
@@ -202,7 +204,9 @@ impl Document {
                 }
             }
         }
-        walk(&mut self.objects, &mut next);
+        for o in &mut self.objects {
+            walk(std::slice::from_mut(std::sync::Arc::make_mut(o)), &mut next);
+        }
         self.next_id = next;
     }
 
@@ -246,11 +250,15 @@ impl Document {
 
     /// Top-level object with the given id.
     pub fn get(&self, id: ObjectId) -> Option<&Object> {
-        self.objects.iter().find(|o| o.id == id)
+        self.objects.iter().find(|o| o.id == id).map(|o| &**o)
     }
 
+    /// Top-level object with the given id, unshared from undo snapshots.
     pub fn get_mut(&mut self, id: ObjectId) -> Option<&mut Object> {
-        self.objects.iter_mut().find(|o| o.id == id)
+        self.objects
+            .iter_mut()
+            .find(|o| o.id == id)
+            .map(std::sync::Arc::make_mut)
     }
 
     pub fn index_of(&self, id: ObjectId) -> Option<usize> {
@@ -264,9 +272,9 @@ impl Document {
 
     /// Number of leaf objects, counting into compounds.
     pub fn leaf_count(&self) -> usize {
-        fn count(objs: &[Object]) -> usize {
+        fn count<O: AsRef<Object>>(objs: &[O]) -> usize {
             objs.iter()
-                .map(|o| match &o.kind {
+                .map(|o| match &o.as_ref().kind {
                     ObjectKind::Compound(c) => count(&c.objects),
                     _ => 1,
                 })
@@ -280,7 +288,7 @@ impl Document {
     /// ([`Object::xfig_type_rank`]), keeping their order within a type.
     /// A stable sort of these by depth gives xfig's drawing order.
     pub fn for_each_leaf_xfig_order<'a>(&'a self, f: &mut dyn FnMut(&'a Object)) {
-        fn walk<'a>(objs: &'a [Object], f: &mut dyn FnMut(&'a Object)) {
+        fn walk<'a, O: AsRef<Object>>(objs: &'a [O], f: &mut dyn FnMut(&'a Object)) {
             for o in xfig_order(objs) {
                 match &o.kind {
                     ObjectKind::Compound(c) => walk(&c.objects, f),
@@ -292,8 +300,9 @@ impl Document {
     }
 
     pub fn for_each_leaf<'a>(&'a self, f: &mut dyn FnMut(&'a Object)) {
-        fn walk<'a>(objs: &'a [Object], f: &mut dyn FnMut(&'a Object)) {
+        fn walk<'a, O: AsRef<Object>>(objs: &'a [O], f: &mut dyn FnMut(&'a Object)) {
             for o in objs {
+                let o = o.as_ref();
                 match &o.kind {
                     ObjectKind::Compound(c) => walk(&c.objects, f),
                     _ => f(o),
@@ -349,8 +358,8 @@ pub fn pt(x: f64, y: f64) -> Point {
 }
 
 /// Objects in xfig's list order: by type, keeping the order within a type.
-pub fn xfig_order(objs: &[Object]) -> Vec<&Object> {
-    let mut v: Vec<&Object> = objs.iter().collect();
+pub fn xfig_order<O: AsRef<Object>>(objs: &[O]) -> Vec<&Object> {
+    let mut v: Vec<&Object> = objs.iter().map(AsRef::as_ref).collect();
     v.sort_by_key(|o| o.xfig_type_rank());
     v
 }

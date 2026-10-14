@@ -210,7 +210,7 @@ mod tests {
 
     fn bounds(o: Object) -> Rect {
         let mut doc = Document::new();
-        doc.objects.push(o);
+        doc.objects.push(std::sync::Arc::new(o));
         fig2dev_bounds(&doc, &BTreeSet::new(), true)
     }
 

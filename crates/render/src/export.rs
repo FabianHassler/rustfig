@@ -240,7 +240,9 @@ fn with_text_options(doc: &Document, d: &DriverOptions) -> Document {
         }
     }
     let mut doc = doc.clone();
-    walk(&mut doc.objects, d);
+    for o in &mut doc.objects {
+        walk(std::slice::from_mut(std::sync::Arc::make_mut(o)), d);
+    }
     doc
 }
 
@@ -267,7 +269,7 @@ mod metric_text_tests {
             origin: Point::new(0.0, 0.0),
             text: "x".into(),
         };
-        doc.objects.push(Object::new(ObjectKind::Text(t)));
+        doc.objects.push(std::sync::Arc::new(Object::new(ObjectKind::Text(t))));
         let unit_fix = if units == Units::Metric {
             1200.0 / 2.54 / 450.0
         } else {
