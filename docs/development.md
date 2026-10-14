@@ -20,21 +20,14 @@ If `cargo` cannot write to `~/.cargo` (sandboxed agents), set
 skipped with a warning; set `RUSTFIG_REQUIRE_WASM=1` (as CI should) to make
 it fail instead. With rustup: `rustup target add wasm32-unknown-unknown`.
 
-Homebrew's Rust can't load the official wasm32 standard library (it is built
-by a different rustc), so install rustup next to it and run the wasm check
-through rustup's toolchain:
-
-```sh
-brew install rustup        # keg-only: plain cargo/rustc stay Homebrew's
-"$(brew --prefix rustup)/bin/rustup" toolchain install stable --profile minimal --target wasm32-unknown-unknown
-CARGO_TARGET_DIR=target/rustup RUSTFIG_REQUIRE_WASM=1 \
-  "$(brew --prefix rustup)/bin/cargo" +stable xtask wasm
-```
+Use rustup rather than Homebrew's `rust` formula: Homebrew's compiler can't
+load the official wasm32 standard library, so the target can't be added to
+it. On macOS, `brew install rustup` (keg-only; put
+`$(brew --prefix rustup)/bin` on your `PATH`), then
+`rustup default stable` and `rustup target add wasm32-unknown-unknown`.
 
 xtask runs its cargo commands with the rustc of the toolchain that started
-it, so `cargo +toolchain xtask …` stays on that toolchain. The separate
-target directory keeps the two compilers from rebuilding each other's
-artifacts.
+it, so `cargo +toolchain xtask …` stays on that toolchain.
 
 ## Fonts
 
