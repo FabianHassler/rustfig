@@ -38,8 +38,61 @@ fn out_dir() -> PathBuf {
 fn reference_png(fig: &[u8], dir: &Path) -> Vec<u8> {
     let svg = fig2dev::convert(fig, "svg", &[], Some(dir)).unwrap();
     let mut opt = resvg::usvg::Options::default();
-    opt.fontdb_mut().load_system_fonts();
-    let tree = resvg::usvg::Tree::from_data(&svg, &opt).unwrap();
+    let db = opt.fontdb_mut();
+    db.load_system_fonts();
+    // fig2dev names PostScript families without a generic fallback; where
+    // they are missing (Linux CI has URW's clones, fonts-urw-base35), fall
+    // back to the first clone installed.
+    let has = |db: &resvg::usvg::fontdb::Database, f: &str| db.faces().any(|x| x.families.iter().any(|(n, _)| n == f));
+    let pick =
+        |db: &resvg::usvg::fontdb::Database, names: &[&str]| names.iter().find(|n| has(db, n)).map(|n| n.to_string());
+    if let Some(f) = pick(
+        db,
+        &[
+            "Times",
+            "Nimbus Roman",
+            "Nimbus Roman No9 L",
+            "Liberation Serif",
+            "DejaVu Serif",
+        ],
+    ) {
+        db.set_serif_family(f);
+    }
+    if let Some(f) = pick(
+        db,
+        &[
+            "Helvetica",
+            "Nimbus Sans",
+            "Nimbus Sans L",
+            "Liberation Sans",
+            "DejaVu Sans",
+        ],
+    ) {
+        db.set_sans_serif_family(f);
+    }
+    if let Some(f) = pick(
+        db,
+        &[
+            "Courier",
+            "Nimbus Mono PS",
+            "Nimbus Mono L",
+            "Liberation Mono",
+            "DejaVu Sans Mono",
+        ],
+    ) {
+        db.set_monospace_family(f);
+    }
+    let svg = String::from_utf8(svg)
+        .unwrap()
+        .replace("font-family=\"Times\"", "font-family=\"Times,serif\"")
+        .replace("font-family=\"Times,Symbol\"", "font-family=\"Times,Symbol,serif\"")
+        .replace("font-family=\"Helvetica\"", "font-family=\"Helvetica,sans-serif\"")
+        .replace(
+            "font-family=\"AvantGarde\"",
+            "font-family=\"AvantGarde,URW Gothic,sans-serif\"",
+        )
+        .replace("font-family=\"Courier\"", "font-family=\"Courier,monospace\"");
+    let tree = resvg::usvg::Tree::from_data(svg.as_bytes(), &opt).unwrap();
     let size = tree.size();
     let s = SIDE / f64::from(size.width().max(size.height()));
     let (w, h) = (
