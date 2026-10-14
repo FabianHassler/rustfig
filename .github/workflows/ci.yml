@@ -1,0 +1,48 @@
+# Plan task A2: the quality gates on every push and pull request (Linux).
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # A missing wasm target must fail, not skip (CLAUDE.md).
+  RUSTFIG_REQUIRE_WASM: "1"
+
+jobs:
+  linux:
+    name: cargo xtask ci (Linux)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: System packages (eframe, rfd's GTK dialogs, fig2dev for the A8 reference tests)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libgtk-3-dev libxkbcommon-dev libwayland-dev \
+            libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+            fig2dev
+          fig2dev -V
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: Quality gates (fmt, clippy, tests, layers, assets, wasm)
+        run: cargo xtask ci
+      - name: Performance budgets
+        run: cargo run --release -p rustfig-cli -- perf
+      - name: fig2dev comparison images
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fig2dev-reference
+          path: target/fig2dev-reference
+          if-no-files-found: ignore

@@ -1,6 +1,6 @@
 # Development
 
-**Status:** 2026-10-13.
+**Status:** 2026-10-15 (CI workflows).
 
 ## Build and run
 
@@ -23,8 +23,14 @@ If `cargo` cannot write to `~/.cargo` (sandboxed agents), set
 
 `cargo xtask ci` must pass before every commit. `cargo xtask wasm` needs the
 `wasm32-unknown-unknown` target. When the target is missing the check is
-skipped with a warning; set `RUSTFIG_REQUIRE_WASM=1` (as CI should) to make
-it fail instead. With rustup: `rustup target add wasm32-unknown-unknown`.
+skipped with a warning; set `RUSTFIG_REQUIRE_WASM=1` (as CI does) to make
+it fail instead.
+
+GitHub Actions (plan A2): `.github/workflows/ci.yml` runs `cargo xtask ci`
+and the perf budgets on Linux for every push and pull request, with fig2dev
+installed so the A8 reference tests run. `release.yml` runs on `v*` tags (or
+by hand): the gates on Linux, Windows and macOS, then release builds of
+`rustfig` and `rustfig-cli` attached to the GitHub release. With rustup: `rustup target add wasm32-unknown-unknown`.
 
 Use rustup rather than Homebrew's `rust` formula: Homebrew's compiler can't
 load the official wasm32 standard library, so the target can't be added to
