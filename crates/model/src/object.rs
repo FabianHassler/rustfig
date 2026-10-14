@@ -746,7 +746,7 @@ impl Object {
                 }
                 let w = self
                     .style()
-                    .map(|s| s.thickness.max(0) as f64 * rustfig_geom::FIG_PER_THICKNESS / 2.0)
+                    .map(|s| rustfig_geom::stroke_width(f64::from(s.thickness)) / 2.0)
                     .unwrap_or(0.0);
                 r.expand(w)
             }

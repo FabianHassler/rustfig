@@ -22,3 +22,5 @@ image.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
+# Rasterises fig2dev's SVG for the reference tests (tests only).
+resvg = "0.48"

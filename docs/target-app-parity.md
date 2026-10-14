@@ -1,6 +1,6 @@
 # Target-app parity assessment: RustFig vs xfig 3.2.9
 
-**Status:** 2026-10-14, overall **≈61 %** (W4 landed). Revised whenever a task lands.
+**Status:** 2026-10-14, overall **≈61 %** (A8 landed: fig2dev reference tests). Revised whenever a task lands.
 
 ## Methodology
 
@@ -23,7 +23,7 @@ the score.
 | Editing modes | 12 | 70 % | anchor point for flip/rotate (right button), array copy, align to canvas, figure comments from Edit mode, open compound (edit in place), join/split lines, chop, tangent/normal, angle/length/area measure modes, copy to library | 56 |
 | Attributes / indicator | 10 | 75 % | colour editor UI, Angle Geom (latex, manhattan, mountain), smart links, copy counts, arrow types 10–14 exact shapes, dash-dot tick styles | 34 |
 | File format | 10 | 85 % | reading Fig 1.x/2.x, exact pre-3.2 spline conversion | 24 |
-| Export | 12 | 35 % | PostScript (multi-page, print layout), LaTeX family (TikZ, PSTricks, pict2e, eepic), GIF/JPEG/TIFF/PPM/XBM/XPM, CGM/EMF/HPGL/MetaPost/DXF | 120 |
+| Export | 12 | 35 % | to be ported from fig2dev, no ghostscript (B0–B9): PostScript (multi-page, print layout), LaTeX family (TikZ, PSTricks, pict2e, eepic, …), GIF/JPEG/TIFF/PPM/XBM/XPM, CGM/EMF/HPGL/MetaPost/DXF and the rest | 140 |
 | Text | 10 | 55 % | character map, LaTeX special-text export, exact PostScript font metrics, compose keys, spell check | 60 |
 | View & navigation | 8 | 96 % | zoom box (Ctrl+left), pan to origin with Ctrl+middle | 4 |
 | Undo | 4 | 100 % | — | 0 |
@@ -31,14 +31,15 @@ the score.
 | Printing | 5 | 10 % | print dialog and printer output | 30 |
 | Settings & styles | 5 | 15 % | settings persistence, recent files, style manager, units dialog | 30 |
 | Platforms | 7 | 50 % | Windows/Linux verification, web build and file I/O on the web | 40 |
-| **Overall** | 100 | **≈61 %** | | **452** |
+| **Overall** | 100 | **≈61 %** | | **472** |
 
 ## Evidence of what ships
 
 - Drawing tools: `crates/engine/src/tools/mod.rs` (38 tools; tests draw polylines, boxes and text and move objects).
 - Commands: `crates/engine/src/cmd/*` (125), swept with hostile parameters in `crates/engine/tests/command_sweep.rs`.
 - Fig I/O: `crates/format/src/fig_read.rs` and `fig_write.rs`; round trip and fuzzing in `crates/format/tests/`.
-- Rendering: `crates/render/` (scene, tiny-skia raster, SVG, EPS, PDF; all 22 fill patterns; arrowheads; dashes).
+- Rendering: `crates/render/` (scene, tiny-skia raster, SVG, EPS, PDF; all 22 fill patterns; arrowheads; dashes); line widths as fig2dev (`geom::stroke_width`).
+- Reference comparison with fig2dev: `crates/engine/tests/fig2dev_reference.rs`, 11 fixtures with recorded scores (`fixtures/scores.json`); arrowhead types ≥ 4 and pie-arc arrows still differ (D9).
 - UI: `crates/ui-egui/` (mode panel, attribute panel, depth manager, edit/export/search/settings dialogs, menus with shortcuts).
 - Automation: control channel `crates/ui-egui/src/control.rs`, MCP `crates/mcp/`, CLI `apps/cli/`.
 - Main window: classic xfig layout (`crates/ui-egui/src/panels.rs` `classic_top`), mouse hints from the engine (`Engine::mouse_hints`), headless UI tests in `crates/ui-egui/tests/ui_smoke.rs`.
@@ -53,6 +54,7 @@ the score.
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-14 | ≈61 % | A8: fig2dev reference tests; line widths fixed. Exports re-estimated for porting fig2dev (+20 h). |
 | 2026-10-13 | 58 % | First assessment. |
 | 2026-10-13 | 58 % | W1: View & navigation 75 → 80 % (rounds to the same overall). |
 | 2026-10-14 | 61 % | W4: View & navigation 92 → 96 % (Snap menu: object snaps). |

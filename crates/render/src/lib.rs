@@ -15,7 +15,7 @@ mod textcache;
 
 pub use export::{export, export_bounds, ExportFormat, ExportOptions};
 
-use rustfig_geom::{arrowhead, ArrowShape, Point, Rect, FIG_PER_POINT, FIG_PER_THICKNESS};
+use rustfig_geom::{arrowhead, ArrowShape, Point, Rect, FIG_PER_POINT};
 use rustfig_model::{
     area_fill_color, flatten_object, Arrow, CapStyle, ColorRef, Document, JoinStyle, Justify, LineKind, Object,
     ObjectKind, PolyKind, RasterImage, Rgb, Style,
@@ -256,9 +256,10 @@ fn fill_for(doc: &Document, s: &Style) -> Option<Fill> {
     area_fill_color(fc, s.fill_color.is_default_or_black(), is_white, s.area_fill).map(|c| Fill::Solid(Rgba::opaque(c)))
 }
 
-/// Stroke width in Fig units for a thickness in 1/80 inch.
+/// Stroke width in Fig units for a thickness in 1/80 inch (fig2dev's rule,
+/// [`rustfig_geom::stroke_width`]).
 pub fn line_width(thickness: f64) -> f64 {
-    thickness.max(0.0) * FIG_PER_THICKNESS
+    rustfig_geom::stroke_width(thickness)
 }
 
 fn stroke_for(doc: &Document, s: &Style) -> Option<Stroke> {

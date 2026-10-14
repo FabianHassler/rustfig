@@ -115,7 +115,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 
 | File | Lines | What it does | RustFig | Status | Task |
 |---|---:|---|---|---|---|
-| `u_draw.c` | 2237 | drawing every object type, arrowheads, dash patterns | `render`, `geom` arrows | own; arrow shapes 0–14 to check | D9 |
+| `u_draw.c` | 2237 | drawing every object type, arrowheads, dash patterns | `render`, `geom` arrows | own; arrow types ≥ 4 differ from fig2dev (A8) | D9 |
 | `u_draw_spline.c` | 384 | X-spline evaluation | `geom` xspline (from the paper) | own | review (step size) |
 | `u_redraw.c` | 731 | redraw order, gray layers | `render::Scene::build` | ported: draw order, gray layers first | — |
 | `u_bound.c` | 653 | bounding boxes | `model` | own | review |
@@ -137,7 +137,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `u_pan.c` | 89 | pan steps | `rulers::pan_step` | ported | — |
 | `u_print.c` | 923 | print and export through fig2dev | `cmd/file` export | partial | B4 |
 | `u_ghostscript.c` | 1218 | EPS/PDF preview through ghostscript | — | missing | G2 |
-| `u_spawn.c` | 587 | run external programs | — | missing (fig2dev backend B0, image editor) | B0 |
+| `u_spawn.c` | 587 | run external programs | — | n/a for exports (fig2dev is ported, B0); image editor later | — |
 
 ## xfig: window (`w_*`, 44 k lines; rewritten in egui)
 
@@ -188,12 +188,12 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `dev/genps.c`, `genpdf.c` | 2.9 k | PostScript/PDF with page layout | `render/eps`, `render/pdf` | partial: page layout, multi-page | B4 |
 | `dev/genpstex.c` | 176 | PS/PDF + LaTeX overlay (pstex, pdftex) | — | missing | B2 |
 | `dev/gentikz.c` | 1870 | TikZ | — | missing | B1 |
-| `dev/genpict2e.c`, `genlatex.c`, `genepic.c`, `genpictex.c`, `genpstricks.c` | 9.1 k | LaTeX picture languages | — | missing | B3 (pict2e, PSTricks), B0 (the rest) |
-| `dev/gensvg.c` | 1331 | SVG | `render/svg` | own | review |
-| `dev/genbitmaps.c` | 593 | GIF, JPEG, PNG, PPM, TIFF, XBM, XPM via ghostscript | `render` PNG | partial | B6 |
-| `dev/genemf.c`, `gencgm.c`, `gendxf.c`, `genibmgl.c`, `genmp.c`, `genmf.c`, `genmap.c`, `gentk.c`, `genptk.c`, `genshape.c`, `gentextyl.c`, `gentpic.c`, `genpic.c`, `gengbx.c`, `genge.c`, `genbox.c` | ≈17 k | EMF, CGM, DXF, HPGL, MetaPost, METAFONT, image maps, Tk, shapes, … | — | missing (exotic) | B0 |
+| `dev/genpict2e.c`, `genlatex.c`, `genepic.c`, `genpictex.c`, `genpstricks.c` | 9.1 k | LaTeX picture languages | — | missing | B3 (pict2e, PSTricks), B9 (the rest) |
+| `dev/gensvg.c` | 1331 | SVG | `render/svg`; `geom::stroke_width` ported from `linewidth_adj` | own; reference-tested (A8) | review |
+| `dev/genbitmaps.c` | 593 | GIF, JPEG, PNG, PPM, TIFF, XBM, XPM via ghostscript | `render` PNG (own renderer, no ghostscript) | partial | B6 |
+| `dev/genemf.c`, `gencgm.c`, `gendxf.c`, `genibmgl.c`, `genmp.c`, `genmf.c`, `genmap.c`, `gentk.c`, `genptk.c`, `genshape.c`, `gentextyl.c`, `gentpic.c`, `genpic.c`, `gengbx.c`, `genge.c`, `genbox.c` | ≈17 k | EMF, CGM, DXF, HPGL, MetaPost, METAFONT, image maps, Tk, shapes, … | — | missing | B9 |
 | `dev/encode.c` | 236 | ASCII85 and deflate streams for PostScript/PDF | `render/eps`, `render/pdf` | own | review |
-| `dev/tkpattern.c` | 122 | Tk fill patterns | — | missing | B0 |
+| `dev/tkpattern.c` | 122 | Tk fill patterns | — | missing | B9 |
 | `dev/xtmpfile.c` | 150 | temporary files | — | n/a | — |
 | `dev/read*.c`, `readpics.c` | 3 k | pictures embedded in exports | `image` crate | modern | — |
 | `dev/psfonts.c`, `texfonts.c`, `setfigfont.c`, `textconvert.c` | 1 k | font names and LaTeX font selection for exports | `text` | partial | B8 |

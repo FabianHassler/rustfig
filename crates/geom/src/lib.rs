@@ -23,8 +23,22 @@ pub const FIG_PER_INCH: f64 = 1200.0;
 pub const FIG_PER_CM: f64 = 450.0;
 /// Fig units per point (1/72 inch).
 pub const FIG_PER_POINT: f64 = FIG_PER_INCH / 72.0;
-/// Fig units per line-thickness unit in exported output (1/160 inch).
-pub const FIG_PER_THICKNESS: f64 = FIG_PER_INCH / 160.0;
+/// Fig units per line-thickness unit (1/80 inch).
+pub const FIG_PER_THICKNESS: f64 = FIG_PER_INCH / 80.0;
+
+/// Drawn stroke width in Fig units for a line thickness in 1/80 inch:
+/// thickness 1 is drawn 1/160 inch wide, thicker lines one unit thinner than
+/// their nominal width, (t − 1)/80 inch.
+// Ported from fig2dev dev/genps.c and dev/gensvg.c `linewidth_adj` (xfig licence, see LICENSE-xfig).
+pub fn stroke_width(thickness: f64) -> f64 {
+    if !thickness.is_finite() || thickness <= 0.0 {
+        0.0
+    } else if thickness <= 1.0 {
+        thickness * FIG_PER_THICKNESS / 2.0
+    } else {
+        (thickness - 1.0) * FIG_PER_THICKNESS
+    }
+}
 /// Fig units per style unit (dash length, arc-box radius: 1/80 inch).
 pub const FIG_PER_STYLE_UNIT: f64 = FIG_PER_INCH / 80.0;
 

@@ -1,10 +1,10 @@
 # Known gaps (ranked work list)
 
-**Status:** 2026-10-14. Ranked by user impact per hour. Pick work from the top.
+**Status:** 2026-10-14 (A8: fig2dev reference tests landed). Ranked by user impact per hour. Pick work from the top.
 
 | # | Gap | Area | Impact | Hours |
 |---|-----|------|--------|------:|
-| 1 | LaTeX exports: TikZ, PSTricks, pict2e (special text passed through). Quick route: the fig2dev backend (plan B0, 8 h), then native exporters | Export | High: xfig's main audience writes LaTeX | 40 |
+| 1 | LaTeX exports: TikZ, PSTricks, pict2e (special text passed through), ported from fig2dev (B0–B3) | Export | High: xfig's main audience writes LaTeX | 40 |
 | 2 | Web build: compiles locally (2026-10-14); still to do: the wasm check in CI, trunk packaging and browser open/save/download | Platforms | High | 24 |
 | 3 | PostScript output with page layout (orientation, centring, multi-page) and printing | Export/Printing | High | 30 |
 | 4 | Library objects: browse a directory of .fig files and place them | Libraries | Medium | 40 |
@@ -18,18 +18,19 @@
 | 12 | Point positioning modes: latex lines, manhattan, mountain; linked move | Attributes | Low | 20 |
 | 13 | Read Fig 1.x/2.x files | File format | Low | 24 |
 | 14 | EPS/PDF/XBM/XPM/PCX picture objects (currently a crossed box) | File format | Low | 24 |
-| 15 | Exact arrowhead shapes for types 10–14; dash-dot tick styles | Attributes | Low | 8 |
+| 15 | Arrowheads differ from fig2dev's from type 4 on, no arrows on pie-wedge arcs, arcs ignore the direction flag when the middle point disagrees (found by the A8 reference tests; D9) | Rendering | Medium | 8 |
 | 16 | Windows and Linux smoke tests in CI | Platforms | Low | 8 |
 | 17 | Localization of UI strings | Localization | Low | 24 |
 | 18 | Spell check | Text | Low | 16 |
 | 19 | Accessibility (screen-reader labels for canvas objects) | Platforms | Low | 16 |
-| 21 | No visual comparison against xfig's own renderer; plan A8 adds fig2dev reference tests | Quality | Medium | 12 |
+| 21 | fig2dev's other output languages (EMF, CGM, DXF, HPGL, MetaPost, epic, …) not ported yet (B9) | Export | Low | 60 |
 | 20 | Real PostScript font metrics when craft-fonts lacks a face (synthetic bold/italic today) | Text | Low | 12 |
 
 ## Revision history
 
 | Date | Note |
 |------|------|
+| 2026-10-14 | A8 closed the comparison gap and found arrowhead, pie-arc and line-width differences (line widths fixed); fig2dev to be ported (#1, #21). |
 | 2026-10-13 | First list. |
 | 2026-10-13 | Added #0 (xfig window parity, phase W). |
 | 2026-10-13 | #0 shrank: W1 landed. |

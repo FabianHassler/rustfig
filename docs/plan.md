@@ -1,6 +1,6 @@
 # Execution plan
 
-**Status:** 2026-10-14. Phase W (xfig window parity) done; next A8 and B0 (fig2dev), then the rest of phase A. Overall parity ≈60 %.
+**Status:** 2026-10-14. Phase W (xfig window parity) and A8 done; next D9 and B0 (porting fig2dev), then the rest of phase A. Overall parity ≈60 %.
 
 This is the committed work plan. [`gaps.md`](gaps.md) ranks every known
 shortfall; this file groups them into phases with task ids, acceptance
@@ -50,7 +50,7 @@ most of it spent copying the document and re-measuring every text.
 | A6 | **Crash safety:** autosave a recovery file after edits (debounced) and from the panic guard; offer recovery on start (xfig writes `SAVE.fig`). Native only; the web version gets browser autosave in C3. | Kill the app mid-edit; the next start offers to restore; recovery files are removed after a clean save or exit. | 6 |
 | A7 | **No UI stalls on large drawings.** Today the canvas rebuilds the scene and re-rasterises the whole canvas on the UI thread whenever the view changes, so every pan or zoom step of the 50k-path document stalls for about 360 ms (30 ms scene, 330 ms raster; at fit zoom everything is visible, so culling alone won't help). Keep the scene per revision; while panning, shift the existing texture and draw only the uncovered strips; rasterise in a background thread (native) and swap the result in when ready; use a spatial index for culling when zoomed in. | UI frame time during pan and zoom < 16 ms on the 50k-path document; the full-quality image follows within 0.5 s. | 12 |
 | A9 | **Per-command cost.** Commands call `fix_all_text`, which re-measures every text in the document after any edit; re-measure only texts that changed. Also make the hit-test bounding-box cache safe against changes inside a running command. | A one-object move on the measured document < 2 ms (now 5.9 ms, before A1). | 4 |
-| A8 | **fig2dev reference tests.** Render test figures through fig2dev and RustFig and compare them (design below). | `cargo test` runs the comparison when fig2dev is installed and skips otherwise; each fixture has a recorded score; the diff images are written for review. | 12 |
+| A8 | ✅ 2026-10-14. **fig2dev reference tests** (`crates/engine/tests/fig2dev_reference.rs`): 11 fixtures rendered by fig2dev (its SVG, rasterised with resvg: no ghostscript) and by RustFig, trimmed, scaled, blurred and compared; baselines in `fixtures/scores.json`, `UPDATE_REFERENCE=1` rewrites them; images in `target/fig2dev-reference/`. Skips without fig2dev. First findings: line widths (fixed: fig2dev's `linewidth_adj`), arrowhead types ≥ 4 and arrows on pie-wedge arcs (D9), Symbol font (B8), arc direction flag (D9). | `cargo test` runs the comparison when fig2dev is installed and skips otherwise; each fixture has a recorded score; the diff images are written for review. | 12 |
 
 ## Phase W: xfig window parity (≈92 h)
 
@@ -76,17 +76,18 @@ Global settings (Edit › Global settings, E1), the character map (View, E5)
 and Manage styles (View, E6) complete the xfig menus. E8 (mouse hint bar) is
 covered by W2.
 
-## Phase B: exports for LaTeX users, M4 (≈88 h)
+## Phase B: exports (fig2dev ported), M4 (≈160 h)
 
 | Id | Task | Acceptance | Hours |
 |----|------|------------|------:|
-| B0 | **fig2dev export backend** (desktop only; design below). Covers the LaTeX family, CGM, EMF, DXF, MetaPost, GIF/JPEG/TIFF and more right away. B1–B6 then replace it where fidelity or the web build need native code. | With fig2dev installed, `file.export` writes every fig2dev language; without it, those formats show as unavailable and nothing breaks. | 8 |
+| B0 | **Port fig2dev to Rust** (decided 2026-10-14; design below): no external fig2dev and no ghostscript at runtime, so every format works on every platform and on the web. Start with the shared parts: `fig2dev.c`'s per-language options, `bound.c` (bounds with arrows and text), colour and font tables (`colors.c`, `psfonts.c`, `texfonts.c`), the export-format list and file-name mapping, `file.export_formats`. B1–B4, B6 and B9 then port the drivers. | `file.export_formats` lists every fig2dev language with its status; the export dialog greys out the ones not yet ported. | 10 |
 | B1 | **TikZ export** (`.tikz`/`.tex`): paths, fills, patterns, arrows, dashes, text with special flag passed through raw. | Compiles with pdflatex; a visual diff against the PDF export is close. | 16 |
 | B2 | **PDF/EPS + LaTeX overlay** (fig2dev's pdftex_t/pstex_t): graphics without special text, plus a `.tex` file placing the text. | The combined output typesets in LaTeX with fonts from the document. | 12 |
 | B3 | **PSTricks and pict2e exports.** | Both compile; a test checks the structure. | 14 |
 | B4 | **PostScript with page layout:** orientation, centring, paper size, magnification, multi-page tiling (the Fig header's "Multiple"). | Output matches the header settings; ghostscript renders it (manual check). | 12 |
 | B5 | **Printing, modernised** (decided 2026-10-14): xfig's Print panel options (paper, orientation, magnification, centring, layers, copies) produce a PDF that goes to the operating system's print dialog on macOS, Windows and Linux (and the browser's print on the web), instead of xfig's PostScript spooler commands. Command `file.print`. | Prints on all three desktop platforms; the web build opens the browser's print dialog. | 12 |
-| B6 | **Bitmaps:** GIF (with the Fig transparent colour), JPEG (quality), TIFF, PPM. | Round trip through the `image` crate in tests. | 6 |
+| B6 | **Bitmaps without ghostscript** (`genbitmaps.c` ran ghostscript): GIF (with the Fig transparent colour), JPEG (quality), TIFF, PPM, XBM, XPM, PCX from RustFig's own renderer. | Round trip through the `image` crate in tests; the reference test compares them with fig2dev. | 8 |
+| B9 | **Port the remaining fig2dev drivers**: the LaTeX picture languages (`genlatex.c`, `genepic.c` with eepic/eepicemu, `genpictex.c`, `gentextyl.c`, `gentpic.c`, `genpic.c`), EMF, CGM, DXF, HPGL (`genibmgl.c`), MetaPost, METAFONT, image maps, Tk/Perl-Tk, shape, Gerber, GE, box. | Each language has a structural test and, where it renders, a reference comparison with fig2dev. | 60 |
 | B7 | **Export dialog update** for all new formats, remembering the last choice. | Screenshot review. | 4 |
 | B8 | Accurate text widths in PDF/EPS: use the exported font's metrics (craft-fonts faces matching the standard 35) for justification. | Centred text in the PDF centres within 1 % of the line width. | 6 |
 
@@ -114,7 +115,7 @@ covered by W2.
 | D8 | **Linked move**: moving a box drags the attached line end points (xfig's smart links). | Test with a box and two attached lines. | 10 |
 | D10 | **Remaining mode options** found by the source map: dimension lines (Shift+left in polyline mode, `d_line.c`), align to canvas (`e_align.c`), array copy (`e_copy.c`), anchor point for flip/rotate and number of rotated copies (`e_flip.c`, `e_rotate.c`), scaling one edge (`e_scale.c`), lengths shown while drawing (`w_msgpanel.c`), typed coordinates for the next point (`w_keyboard.c`). | A test per option; mouse hints list them. | 16 |
 | D11 | **Every remaining xfig function** (goal decided 2026-10-14: all of xfig's functions): Digitize (`w_digitize.c`, tablet input against a scanned figure), screen capture into a picture object (`w_capture.c`, through the OS screenshot facilities), Show vertex numbers, Show info balloons, Autorefresh mode (`w_cmdpanel.c`), edit the figure comments from Edit mode, Unzoom semantics. Modern equivalents where the X11 way no longer works, decided per item. | Each menu entry and mode works; none is greyed out any more. | 24 |
-| D9 | Arrowhead types 10–14 with exact shapes; dash-dot tick styles. | Visual review against the xfig manual. | 6 |
+| D9 | **Arrowheads and arcs as fig2dev draws them** (found by A8): arrowhead types 4–14 with fig2dev's shapes (`bound.c` `arrow_shapes`, `u_draw.c`), arrows on pie-wedge arcs, arcs follow the direction flag when the middle point disagrees; dash-dot tick styles. | The `arrows` and `arcs` reference fixtures score below 0.005. | 8 |
 
 ## Phase E: UI completeness, M7 (≈56 h)
 
@@ -158,41 +159,34 @@ RustFig keeps its native PDF, SVG, EPS and PNG exporters (needed for the
 web build, WYSIWYG with the canvas, and machines without fig2dev). fig2dev
 is an optional extra, used in two ways.
 
-### B0: export backend
+### B0: porting fig2dev (decided 2026-10-14)
 
-- **Module** `crates/engine/src/fig2dev.rs`, compiled only on native targets (`cfg(not(target_arch = "wasm32"))`). No UI code; the engine owns process handling, so the CLI, MCP and control channel get it too.
-- **Finding the binary:** `RUSTFIG_FIG2DEV` (explicit path) → `PATH` → `/opt/homebrew/bin`, `/usr/local/bin`, `/usr/bin` (GUI apps on macOS don't inherit the shell's `PATH`). Cache the result and the version (`fig2dev -V`).
-- **Languages:** an allowlist matching 3.2.9a (`box cgm dxf eepic eepicemu emf epic eps gbx ge gif ibmgl jpeg latex map mf mp pcx pdf pdftex pdftex_t pic pict2e pictex png ppm ps pstex pstex_t pstricks ptk shape sld svg textyl tiff tikz tk tpic xbm xpm`). Never pass anything that isn't on it. Arguments go to `std::process::Command` as separate items, never through a shell.
-- **Running it:** write the document with `write_fig` to a temporary file. Run `fig2dev -L <lang> [-m <mag/100>] [-b <border>] [-g <background>] in.fig out` with the working directory set to the document's directory, so relative picture paths resolve. Kill it after a timeout (60 s). Return its stderr as the error message on failure. Remove temporary files afterwards.
-- **Options mapping:** magnification → `-m`; margin → `-b` (pixels for bitmaps, points for vector drivers, converted from Fig units); background → `-g` for bitmaps; driver-specific extras (TikZ `-P` stand-alone page, pdftex `-p` include name) via an `options` object passed through only for known flags.
-- **Commands:**
-  - `file.export` gains `engine: "native" | "fig2dev" | "auto"` (default `auto`: native for svg/eps/pdf/png, fig2dev for the rest).
-  - `file.export_data` works for fig2dev languages too (text formats as `data`, binary as `base64`).
-  - New `file.export_formats`: available formats with their engine and extension, and whether fig2dev was found.
-  - New `file.export_latex_overlay` {path, kind: pdftex|pstex}: writes the graphics file plus the `_t` LaTeX file referencing it (two fig2dev runs).
+- fig2dev's drivers are ported to Rust from `old/fig2dev-3.2.9a/fig2dev/` (xfig licence). RustFig never runs fig2dev or ghostscript: bitmap formats come from RustFig's renderer, PostScript and PDF from its own writers.
+- **Module** layout: shared code in `rustfig-render` (bounds, colour and font tables, options), one module per driver (`render/src/drivers/<lang>.rs`) with a header comment naming its C source. Drivers write text or bytes; none needs native-only code, so all work on the web.
+- **Options:** each language's fig2dev options (`fig2dev.c`, the man page) map to an `options` object on `file.export`; unknown keys are errors.
+- **Commands:** `file.export` and `file.export_data` accept every language; `file.export_formats` lists them with extension and status; `file.export_latex_overlay` {path, kind: pdftex|pstex} writes the graphics and the `_t` file.
 - **Formats from file names:** `.tikz`, `.pstricks`, `.cgm`, `.emf`, `.dxf`, `.mp`, `.mf`, `.gif`, `.jpg`/`.jpeg`, `.tif`/`.tiff`, `.ppm`, `.pcx`, `.xbm`, `.xpm`, `.ps`, `.pic`, `.tk`. A bare `.tex` is ambiguous, so it needs an explicit `format`.
-- **UI:** the export dialog lists native formats first, then fig2dev formats (greyed out with a hint when fig2dev is missing), and remembers the last choice.
-- **CLI:** `rustfig-cli convert IN OUT [--format LANG] [--engine native|fig2dev]`, and `rustfig-cli formats`.
-- **Tests:** unit tests for argument building and the allowlist; an integration test that exports every language from the sample file and checks a non-empty result, skipping when fig2dev is absent. Extend `command_sweep.rs` with hostile `format`/`options` values.
-- **Docs:** `file-format-parity.md` rows for each language (engine: fig2dev); `NOTICE` says fig2dev is an optional external program, not bundled; README and `development.md` explain `RUSTFIG_FIG2DEV`.
+- **CLI:** `rustfig-cli convert IN OUT [--format LANG] [--option key=value]…`, and `rustfig-cli formats`.
+- **Tests:** per driver, a structural test, the command sweep with hostile `format`/`options`, and the A8 comparison against fig2dev where it is installed.
+- **Docs:** `file-format-parity.md` rows per language; `source-map.md` status per `dev/*.c`.
 
-### A8: reference tests
+### A8: reference tests (done 2026-10-14)
 
-- **Fixtures** `crates/engine/tests/fixtures/*.fig`, written for RustFig (test data, not copied from xfig). One file per feature: line widths and dash styles, caps and joins, every arrowhead type and size, shades and tints, each fill pattern, the three spline kinds with mixed shape factors, arcs in both directions with arrows, rotated ellipses, text with each justification, angle and several fonts, compounds and depths, user colours, metric units.
-- **Rendering:** fig2dev `-L png` at a fixed magnification with `-S 4` smoothing and a white background; RustFig through `file.export_data` (png) at the same resolution and background.
-- **Comparing:** trim both images to their non-white bounding box, scale them to a common size, convert to greyscale, blur slightly (to tolerate anti-aliasing and 1-pixel offsets) and compute the mean absolute difference plus the share of strongly differing pixels.
-- **Baselines:** record each fixture's score in `fixtures/scores.json`. The test fails when a score gets worse than its baseline by more than a margin, so it catches regressions without requiring pixel equality. An `UPDATE_REFERENCE=1` run rewrites the baselines after an intended change.
-- **Review output:** write `fig2dev.png`, `rustfig.png` and `diff.png` per fixture to `target/fig2dev-reference/` for screenshot review; `rustfig-cli compare FILE` does the same for any file.
-- **Known differences to expect** (document rather than chase): fig2dev's bitmap line widths use 1/80 inch unless `-F`, font substitution (it uses real PostScript fonts through ghostscript), and pattern phase. Fixtures with the biggest differences become tasks (D9, F1 and new ones).
-- **CI:** install fig2dev on the Linux runner so the comparison runs there; it skips elsewhere.
+- **Fixtures** `crates/engine/tests/fixtures/*.fig`, written for RustFig: lines (widths, dashes, caps, joins), arrows (types 0–14, both styles), fills (shades, tints, patterns), splines (all six kinds), arcs (open and pie, both directions, arrows), ellipses (rotated), text (justification, angle, fonts), depths and compounds, colours (standard and user), metric, boxes (arc-box, polygon).
+- **Rendering:** fig2dev `-L svg` (no ghostscript), rasterised with resvg (a dev-dependency) at 1000 px; RustFig's PNG export at 150 dpi on white. fig2dev is test-only and optional (`RUSTFIG_FIG2DEV`, `PATH`, the usual install directories).
+- **Comparing:** trim to the ink, scale to a common size, grey, blur by 1 px; the mean absolute difference and the share of strongly differing pixels.
+- **Baselines** `fixtures/scores.json`; the test fails when a score gets worse by more than 0.02. `UPDATE_REFERENCE=1` rewrites them after an intended change.
+- **Review output:** `target/fig2dev-reference/<fixture>/{fig2dev,rustfig,diff}.png` (diff: red only in fig2dev, blue only in RustFig).
+- **Expected differences:** fonts (RustFig's fallback faces versus fig2dev's PostScript names), pattern phase.
+- **CI:** install fig2dev on the Linux runner (A2) so the comparison runs there; it skips elsewhere.
 
 ## Order and milestones
 
 1. ✅ Phase W, xfig window parity (W1–W7, S0–S2), done 2026-10-14.
-2. A8 and B0 (fig2dev reference tests, then the fig2dev export backend: every fig2dev language through the user's fig2dev, as xfig exports).
+2. ✅ A8 (fig2dev reference tests), then D9 (the arrowhead and arc differences it found) and B0 (start of the fig2dev port).
 3. A1 and A9 (undo memory, per-command cost), A2 and A3 (CI on Linux, Windows and macOS; web build), the rest of A4, A5–A7.
 4. E1 and S3 (preferences, xfig's command-line options).
-5. B1–B8 (native LaTeX exports, modern printing), C1–C3 (web): the first release candidate, on desktop and web.
+5. B1–B9 (fig2dev's drivers ported: LaTeX exports, bitmaps, PostScript; modern printing), C1–C3 (web): the first release candidate, on desktop and web.
 6. D6 (libraries), D1–D5, D7–D11, E3–E9: every remaining xfig function.
 7. F and G toward Beta and 1.0 (every xfig function available; about 550 h in total).
 
@@ -206,7 +200,7 @@ is an optional extra, used in two ways.
 - Outlook, not planned (2026-10-14): a WYSIWYG editor for LaTeX text in figures.
 - New heavy dependencies (PDF rendering, spell checking, localization framework).
 - CI cost (decided 2026-10-13): Linux runs on every push; Windows and macOS run only for releases (A2).
-- fig2dev stays an optional external program (agreed 2026-10-13): never bundled, never required for the native formats or the web build.
+- fig2dev is ported to Rust (decided 2026-10-14, replacing the 2026-10-13 plan to call it as an external program): no runtime dependence on fig2dev or ghostscript. The installed fig2dev serves only as the optional reference in the A8 tests.
 - Publishing (demo site, crate names, releases) and the product name/branding.
 - Licence changes and any asset of unclear provenance.
 
@@ -217,6 +211,7 @@ is an optional extra, used in two ways.
 | 2026-10-13 | First plan, after M0–M3. |
 | 2026-10-13 | Added A8 (fig2dev reference tests) and B0 (fig2dev export backend) with design notes. |
 | 2026-10-14 | A3: the web build compiles locally with rustup's toolchain; xtask uses the running toolchain's rustc. |
+| 2026-10-14 | A8 landed (fig2dev reference tests, no ghostscript). Decision: fig2dev is ported to Rust, no runtime fig2dev or ghostscript: B0 rewritten, B6 without ghostscript, B9 added (remaining drivers), D9 widened by A8's findings. |
 | 2026-10-14 | Decision: preferences are stored as TOML (E1). |
 | 2026-10-14 | Decisions: every xfig function, modern printing (B5), bundled libraries (D6), preferences (E1) and xfig options (S3) without user-specific defaults; D11 added; outlook: WYSIWYG LaTeX. |
 | 2026-10-14 | W7 landed: xfig keymap; phase W done. |

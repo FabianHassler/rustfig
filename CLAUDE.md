@@ -31,7 +31,7 @@ RustFig is an open-source, Rust-native reimplementation of xfig: close to the or
 | L7 | `rustfig`, `rustfig-cli` | `apps/` | desktop/web app; CLI (convert, info, perf, bench, mcp) |
 | — | `xtask` | `xtask/` | `cargo xtask ci \| layers \| assets \| wasm` |
 
-Coordinates are Fig units (1200 per inch; metric drawings use 450 per cm), y grows downwards; line thickness is in 1/80 inch (drawn at 1/160 inch, as fig2dev does).
+Coordinates are Fig units (1200 per inch; metric drawings use 450 per cm), y grows downwards; line thickness is in 1/80 inch, drawn as fig2dev draws it (`geom::stroke_width`: 1/160 inch for thickness 1, (t − 1)/80 inch above).
 
 ## Non-negotiables
 
@@ -77,6 +77,7 @@ Coordinates are Fig units (1200 per inch; metric drawings use 450 per cm), y gro
 - CLI: `rustfig-cli convert in.fig out.{fig,rustfig,svg,eps,pdf,png}`, `rustfig-cli info FILE`.
 - **Performance:** `rustfig-cli perf` checks the budgets (scene build, render fit/pan/zoom, hit test, save/open .fig, SVG export) on a synthetic 50k-path document; `rustfig-cli bench FILE` times one file. Run them before and after renderer, format or geometry changes, on an idle machine (on Linux the report warns when the load average makes timings noisy).
 - MCP: `rustfig-cli mcp` (see `docs/mcp.md`).
+- **fig2dev reference tests** (`crates/engine/tests/fig2dev_reference.rs`): compare RustFig's rendering of `crates/engine/tests/fixtures/*.fig` with fig2dev's (its SVG, rasterised with resvg; skipped without fig2dev). Review `target/fig2dev-reference/<fixture>/diff.png`; after an intended improvement, rerun with `UPDATE_REFERENCE=1` to record the new scores. RustFig never runs fig2dev or ghostscript itself: fig2dev's drivers are ported to Rust (plan B0).
 
 ## Roadmap and progress docs
 

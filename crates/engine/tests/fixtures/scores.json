@@ -1,0 +1,46 @@
+{
+  "arcs": {
+    "mean": 0.0087,
+    "strong": 0.0114
+  },
+  "arrows": {
+    "mean": 0.0169,
+    "strong": 0.0166
+  },
+  "boxes": {
+    "mean": 0.0067,
+    "strong": 0.0075
+  },
+  "colours": {
+    "mean": 0.0099,
+    "strong": 0.0015
+  },
+  "depths": {
+    "mean": 0.0034,
+    "strong": 0.0009
+  },
+  "ellipses": {
+    "mean": 0.0017,
+    "strong": 0.0
+  },
+  "fills": {
+    "mean": 0.0099,
+    "strong": 0.0026
+  },
+  "lines": {
+    "mean": 0.01,
+    "strong": 0.007
+  },
+  "metric": {
+    "mean": 0.0023,
+    "strong": 0.0011
+  },
+  "splines": {
+    "mean": 0.0029,
+    "strong": 0.0
+  },
+  "text": {
+    "mean": 0.0458,
+    "strong": 0.07
+  }
+}
