@@ -20,6 +20,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}",
     },
     UiCommand {
+        id: "app.unit_panel",
+        label: "Unit/Scale settings…",
+        shortcut: "",
+        params: "{}",
+    },
+    UiCommand {
         id: "app.toggle_layout",
         label: "Classic xfig layout",
         shortcut: "",
@@ -161,6 +167,7 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         },
         "app.search" => app.dialogs.search.open = true,
         "app.document_settings" => app.dialogs.settings_open = true,
+        "app.unit_panel" => app.unit_panel_open = true,
         "app.toggle_depths" => app.show_depths = !app.show_depths,
         "app.redraw" => app.canvas.invalidate(),
         "app.toggle_layout" => {
@@ -224,6 +231,7 @@ const LAYOUT: &[(&str, &[&str])] = &[
             "edit.delete_all",
             "-",
             "app.document_settings",
+            "app.unit_panel",
             "-",
             "edit.select_all",
             "edit.select_none",

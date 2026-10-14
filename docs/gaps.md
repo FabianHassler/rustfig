@@ -4,7 +4,7 @@
 
 | # | Gap | Area | Impact | Hours |
 |---|-----|------|--------|------:|
-| 0 | Main window differs from xfig: no object snaps, no rulers or unit panel, no xfig accelerators (plan phase W; W1–W3 and W5 done) | UI | High: xfig users notice at once | 32 |
+| 0 | Main window differs from xfig: no object snaps, no xfig accelerators (plan phase W; W1–W3, W5, W6 done) | UI | High: xfig users notice at once | 22 |
 | 1 | LaTeX exports: TikZ, PSTricks, pict2e (special text passed through). Quick route: the fig2dev backend (plan B0, 8 h), then native exporters | Export | High: xfig's main audience writes LaTeX | 40 |
 | 2 | Web build: compiles locally (2026-10-14); still to do: the wasm check in CI, trunk packaging and browser open/save/download | Platforms | High | 24 |
 | 3 | PostScript output with page layout (orientation, centring, multi-page) and printing | Export/Printing | High | 30 |
@@ -12,7 +12,7 @@
 | 5 | Open compound (edit inside a compound without breaking it) | Editing | Medium | 16 |
 | 6 | Join/split lines, chop, tangent/normal, measure modes | Editing | Medium | 40 |
 | 7 | Settings persistence (units, grid, recent files) and a style manager | Settings | Medium | 30 |
-| 8 | Rulers and the zoom box | View | Medium | 16 |
+| 8 | The zoom box (rulers landed with W6) | View | Medium | 4 |
 | 9 | Character map, compose-key input, LaTeX special-text handling | Text | Medium | 30 |
 | 10 | Bitmap exports GIF/JPEG/TIFF/PPM (with transparent colour) | Export | Medium | 12 |
 | 11 | Colour editor (create and edit user colours in the UI) | Attributes | Medium | 12 |
@@ -39,4 +39,5 @@
 | 2026-10-14 | Added #0b from the source map. |
 | 2026-10-14 | #0b closed: S1 landed. |
 | 2026-10-14 | #0 shrank: W5 landed. |
+| 2026-10-14 | #0 and #8 shrank: W6 landed. |
 | 2026-10-13 | Linked #1 to the fig2dev backend (B0); added #21 (reference tests, A8). |

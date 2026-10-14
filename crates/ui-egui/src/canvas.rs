@@ -95,7 +95,9 @@ fn tiny_skia_pixmap(w: usize, h: usize) -> Option<rustfig_render::raster::Pixmap
 }
 
 pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
-    let rect = ui.available_rect_before_wrap();
+    let area = ui.available_rect_before_wrap();
+    // xfig's rulers: top, right side, and the units box in the corner.
+    let (rect, top, side, unit_box) = crate::rulers::layout(area);
     let resp = ui.allocate_rect(rect, Sense::click_and_drag());
     let painter = ui.painter_at(rect);
     let ppp = ui.ctx().pixels_per_point();
@@ -252,6 +254,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     }
 
     handle_input(app, ui, &resp, rect);
+    crate::rulers::show(app, ui, tk, rect, top, side, unit_box);
 }
 
 fn draw_caret(

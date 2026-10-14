@@ -108,3 +108,29 @@ mod tests {
         assert_eq!(v.zoom, 4.0);
     }
 }
+
+/// How rulers and the units box show lengths (xfig's Unit/Scale panel,
+/// `w_rulers.c`): inches as fractions or decimals, and an optional figure
+/// unit with a scale factor ("1 cm = 2.00 m").
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnitScale {
+    /// Imperial rulers in tenths rather than sixteenths of an inch.
+    pub decimal_inches: bool,
+    /// Figure units per ruler unit.
+    pub factor: f64,
+    /// Name of the figure unit; empty means the ruler unit.
+    pub unit: String,
+}
+
+impl Default for UnitScale {
+    fn default() -> Self {
+        UnitScale {
+            decimal_inches: false,
+            factor: 1.0,
+            unit: String::new(),
+        }
+    }
+}
+
+/// Longest figure unit name accepted.
+pub const MAX_UNIT_NAME: usize = 16;

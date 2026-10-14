@@ -49,7 +49,7 @@
 | View: depth manager | right panel | ✅ |
 | View: character map, style manager | — | ❌ |
 | Indicator panel (line, colours, fill, depth, arrows, caps, joins, fonts, justification, angle, radius, sides, rotation, grid, positioning, arc type, text step, text flags) | xfig's buttons, per mode | 🟡 no Angle Geom (latex/manhattan), Smart Links, copy counts |
-| Rulers | — | ❌ |
+| Rulers | top and side, xfig's ticks and labels, cursor marker, pan buttons | ✅ |
 | Mouse-function panel | top strip, one column per button | ✅ |
 
 ## Main window (xfig screen map)
@@ -60,8 +60,8 @@
 | Message panel | ✅ under the menus; click for the history | — |
 | Mouse-function indicator | ✅ xfig's layout and wording, each button's current function per tool and state, checked against the tools by a test | — |
 | Three-button mouse semantics | ✅ xfig's per-mode functions (default) or a modern scheme (View › xfig mouse buttons); Alt+click = middle, Ctrl+click = right. Missing: dimension lines, rotate/flip anchor, array copy, align to canvas | D |
-| Units box | 🟡 shows the units, opens units and page settings; xfig's scale panel missing | W6 |
-| Top and side rulers | ❌ | W6 |
+| Units box | ✅ "1cm = 1.00cm" in the ruler corner; left: pan to origin, right: Unit menu (ruler units, figure unit, scale) | — |
+| Top and side rulers | ✅ ported from `w_rulers.c` | — |
 | Depth panel: checkboxes, drag-toggle, All On/Off/Toggle, Gray/Blank | ✅ with object counts; hidden depths can't be picked; export of active layers only | — |
 | Attribute panel: graphical buttons, per-mode attributes | ✅ xfig's buttons and order, per-mode masks, choice panels; middle/right buttons step values | — |
 | xfig accelerators (Meta-key) | 🟡 platform shortcuts and xfig mode letters | W7 |
@@ -75,3 +75,4 @@
 | 2026-10-14 | W2: three-button mouse semantics and the modern scheme. |
 | 2026-10-14 | W3: depth panel. |
 | 2026-10-14 | W5: attribute panel. |
+| 2026-10-14 | W6: rulers and units box. |

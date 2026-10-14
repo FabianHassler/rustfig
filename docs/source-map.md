@@ -134,7 +134,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `u_smartsearch.c` | 507 | smart links (lines follow moved boxes) | — | missing | D8 |
 | `u_undo.c` | 962 | undo (one level) | `engine/history` (multi-level) | own, superset | — |
 | `u_error.c` | 136 | emergency save on crash | `engine/guard` | partial: emergency save | A6 |
-| `u_pan.c` | 89 | pan steps | `engine/view` | own | — |
+| `u_pan.c` | 89 | pan steps | `rulers::pan_step` | ported | — |
 | `u_print.c` | 923 | print and export through fig2dev | `cmd/file` export | partial | B4 |
 | `u_ghostscript.c` | 1218 | EPS/PDF preview through ghostscript | — | missing | G2 |
 | `u_spawn.c` | 587 | run external programs | — | missing (fig2dev backend B0, image editor) | B0 |
@@ -150,7 +150,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_mousefun.c` | 432 | mouse-function indicator | `panels::mouse_indicator`, `Engine::mouse_hints` | ported: layout and wording | — |
 | `w_msgpanel.c` | 881 | message panel, lengths while drawing | `panels::message_panel` | partial: show lengths | D10 |
 | `w_layers.c` | 903 | depth panel | `panels::depth_panel` | own | review (Front/Back labels) |
-| `w_rulers.c` | 1479 | rulers and units box | — | missing | W6 |
+| `w_rulers.c` | 1479 | rulers and units box | `ui-egui/rulers`, `view.set_scale` | ported: tick tables, labels, marker, ruler buttons, units box, Unit menu | — |
 | `w_snap.c`, `w_intersect.c` | 2.8 k | Snap menu (object snaps) | `indicator` positioning only | partial | W4 |
 | `w_keyboard.c` | 518 | type coordinates for the next point | — | missing | W4 |
 | `w_zoom.c` | 202 | zoom panel | `cmd/view` | partial: zoom panel | E3 |
@@ -204,5 +204,6 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 |------|------|
 | 2026-10-14 | First version. |
 | 2026-10-14 | S1: draw and save order ported (`u_redraw.c`, `f_save.c`). |
+| 2026-10-14 | W6: rulers and units box ported (`w_rulers.c`, `u_pan.c`). |
 | 2026-10-14 | W5: attribute panel ported (`w_indpanel.c`, masks from `w_modepanel.c`). |
 | 2026-10-14 | S2: mouse indicator ported (`w_mousefun.c`, `set_mousefun` wording); notes from the real xfig. |

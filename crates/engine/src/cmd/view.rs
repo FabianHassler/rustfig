@@ -1,6 +1,6 @@
 //! View commands: zoom, pan, grid, snap, page border.
 
-use super::{always, num, num_or, opt_str, CmdResult, Command};
+use super::{always, num, num_or, opt_bool, opt_num, opt_str, CmdResult, Command};
 use crate::{Engine, EngineError, SnapMode};
 use rustfig_geom::Point;
 use serde_json::{json, Value};
@@ -89,6 +89,40 @@ pub(super) fn commands() -> Vec<Command> {
             run: |e, p| {
                 e.view.pan_pixels(num(p, "dx")?, num(p, "dy")?);
                 Ok(json!({}))
+            },
+        },
+        Command {
+            id: "view.set_scale",
+            label: "Unit/Scale settings",
+            menu: "",
+            shortcut: "",
+            params: "{\"decimal\"?: bool (imperial rulers in tenths), \"unit\"?: figure unit name (empty: the ruler unit), \"scale\"?: figure units per ruler unit}",
+            mutates: false,
+            enabled: always,
+            run: |e, p| {
+                let decimal = opt_bool(p, "decimal")?;
+                let unit = opt_str(p, "unit")?;
+                let scale = opt_num(p, "scale")?;
+                if let Some(u) = unit {
+                    if u.chars().count() > crate::view::MAX_UNIT_NAME || u.chars().any(char::is_control) {
+                        return Err(EngineError::bad_params("unit name too long or not printable"));
+                    }
+                }
+                if let Some(s) = scale {
+                    if !(s.is_finite() && (1e-6..=1e6).contains(&s)) {
+                        return Err(EngineError::bad_params("scale must be between 0.000001 and 1000000"));
+                    }
+                }
+                if let Some(d) = decimal {
+                    e.unit_scale.decimal_inches = d;
+                }
+                if let Some(u) = unit {
+                    e.unit_scale.unit = u.trim().to_string();
+                }
+                if let Some(s) = scale {
+                    e.unit_scale.factor = s;
+                }
+                Ok(json!({"label": e.unit_label()}))
             },
         },
         Command {

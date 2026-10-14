@@ -18,7 +18,7 @@ mod view;
 pub use error::EngineError;
 pub use indicator::{GridMode, Indicator, SnapMode};
 pub use tools::{Button, Key, MouseHints, MouseScheme, Overlay, ToolEvent, ToolKind};
-pub use view::View;
+pub use view::{UnitScale, View};
 
 pub use rustfig_format as format;
 pub use rustfig_geom as geom;
@@ -48,6 +48,8 @@ pub struct Engine {
     /// Current attributes for new objects.
     pub indicator: Indicator,
     pub view: View,
+    /// Ruler units and figure scale.
+    pub unit_scale: UnitScale,
     tool: ToolKind,
     tool_state: tools::ToolState,
     mouse_scheme: tools::MouseScheme,
@@ -83,6 +85,7 @@ impl Engine {
             history: History::default(),
             indicator: Indicator::default(),
             view: View::default(),
+            unit_scale: UnitScale::default(),
             tool: ToolKind::Select,
             tool_state: tools::ToolState::Idle,
             mouse_scheme: tools::MouseScheme::default(),
@@ -376,6 +379,18 @@ impl Engine {
             self.tool_state = tools::ToolState::Idle;
         }
         self.bump_revision();
+    }
+
+    /// The units box text, as xfig's: "1cm = 1.00cm", or with a figure unit
+    /// and scale "1cm = 2.00m".
+    pub fn unit_label(&self) -> String {
+        let ruler = self.doc().unit_name();
+        let fig = if self.unit_scale.unit.is_empty() {
+            ruler
+        } else {
+            self.unit_scale.unit.as_str()
+        };
+        format!("1{ruler} = {:.2}{fig}", self.unit_scale.factor)
     }
 
     /// Number of objects (leaves) at each depth in use, front to back.

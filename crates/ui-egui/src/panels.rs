@@ -320,7 +320,6 @@ pub fn classic_top(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
             ui.vertical(|ui| {
                 mouse_indicator(app, ui, tk);
                 ui.horizontal(|ui| {
-                    units_box(app, ui);
                     if let Some(c) = app.canvas.cursor {
                         let d = app.engine.doc();
                         ui.monospace(format!("{:>7.3} {:>7.3}", d.to_units(c.x), d.to_units(c.y)));
@@ -388,7 +387,7 @@ const INDICATOR_SIZE: egui::Vec2 = vec2(380.0, 44.0);
 /// starting at 45 % of the height.
 pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
     let mut h = app.engine.mouse_hints();
-    if let Some((left, middle, right)) = app.hint_override {
+    if let Some((left, middle, right)) = app.hint_shown {
         h = rustfig_engine::MouseHints {
             left,
             middle,
@@ -469,17 +468,6 @@ pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
          three-button scheme and the modern one."
     ));
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, summary.clone()));
-}
-
-fn units_box(app: &mut App, ui: &mut egui::Ui) {
-    let u = app.engine.doc().unit_name();
-    if ui
-        .button(format!("1 {u} = 1.00 {u}"))
-        .on_hover_text("Units and page settings")
-        .clicked()
-    {
-        app.dialogs.settings_open = true;
-    }
 }
 
 pub fn status_bar(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {

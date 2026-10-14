@@ -31,7 +31,9 @@ fn classic_layout_has_xfig_regions() {
     }
     h.get_by_label("(untitled)");
     h.get_by_label_contains("Left: select / drag");
-    h.get_by_label("1 in = 1.00 in");
+    h.get_by_label("Units: 1in = 1.00in");
+    h.get_by_label("Top ruler");
+    h.get_by_label("Side ruler");
     h.get_by_label("Depths");
     h.get_by_label("Drawing");
     h.get_by_label("Editing");
@@ -342,4 +344,29 @@ fn attribute_buttons_step_and_choose() {
     h.run_steps(2);
     let a = h.state().engine.indicator.arrow;
     assert_eq!((a.kind, a.style), (1, 1));
+}
+
+#[test]
+fn rulers_pan_and_units_box() {
+    let mut h = harness(app());
+    let x0 = h.state().engine.view.origin.x;
+    let top = h.get_by_label("Top ruler").rect().center();
+    // Left: pan left by 1/2 inch of the drawing (at this zoom).
+    click_button(&mut h, top, egui::PointerButton::Primary, egui::Modifiers::NONE);
+    let zoom = h.state().engine.view.zoom;
+    let moved = h.state().engine.view.origin.x - x0;
+    assert!((moved - 600.0 / zoom).abs() < 1e-6, "moved {moved}");
+    h.get_by_label_contains("Left: Pan Left; middle: Drag; right: Pan Right");
+    click_button(&mut h, top, egui::PointerButton::Secondary, egui::Modifiers::NONE);
+    assert!((h.state().engine.view.origin.x - x0).abs() < 1e-6);
+    // Units box: right opens the Unit/Scale panel.
+    let ub = h.get_by_label("Units: 1in = 1.00in").rect().center();
+    click_button(&mut h, ub, egui::PointerButton::Secondary, egui::Modifiers::NONE);
+    // Let the new window settle (egui sizes it in its first frame).
+    h.run_steps(3);
+    let metric = h.get_by_label("Metric (cm)").rect().center();
+    click_button(&mut h, metric, egui::PointerButton::Primary, egui::Modifiers::NONE);
+    h.run_steps(2);
+    assert_eq!(h.state().engine.doc().settings.units, rustfig_model::Units::Metric);
+    h.get_by_label("Units: 1cm = 1.00cm");
 }

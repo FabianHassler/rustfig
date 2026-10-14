@@ -7,7 +7,7 @@ and Linux, with a web (WASM) build on the way.
 
 ## Status
 
-**Alpha. Overall xfig parity ≈60 %** (see [ROADMAP.md](ROADMAP.md) and the
+**Alpha. Overall xfig parity ≈61 %** (see [ROADMAP.md](ROADMAP.md) and the
 [parity assessment](docs/target-app-parity.md)).
 
 - Draw: circles, ellipses, approximated/interpolated/X-splines, polylines,

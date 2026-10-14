@@ -12,6 +12,7 @@ pub mod dialogs;
 pub mod icons;
 pub mod menus;
 pub mod panels;
+pub mod rulers;
 pub mod theme;
 
 use rustfig_engine::{Engine, UiRequest};
@@ -62,6 +63,10 @@ pub struct App {
     /// Mouse hints shown instead of the tool's while the pointer is over a
     /// panel with its own button functions (the attribute buttons).
     pub hint_override: Option<(&'static str, &'static str, &'static str)>,
+    /// The Unit/Scale settings window (right click on the units box).
+    pub unit_panel_open: bool,
+    /// The override set during the previous frame, shown in this one.
+    pub hint_shown: Option<(&'static str, &'static str, &'static str)>,
     pub pending: Option<Pending>,
     /// File pickers (native dialogs; replaced in tests).
     pub file_dialogs: Box<dyn dialogs::FileDialogs>,
@@ -86,6 +91,8 @@ impl App {
             show_indicator: true,
             depth_drag: None,
             hint_override: None,
+            hint_shown: None,
+            unit_panel_open: false,
             pending: None,
             file_dialogs: Box::new(dialogs::NativeDialogs),
             quit_confirmed: false,
@@ -258,6 +265,8 @@ impl App {
         #[cfg(not(target_arch = "wasm32"))]
         self.poll_control(ctx);
         let tokens = theme::Tokens::for_dark(ctx.style().visuals.dark_mode);
+        // Panels set the hint override while hovered; show last frame's.
+        self.hint_shown = self.hint_override.take();
         menus::handle_shortcuts(self, ctx);
         if self.classic() {
             egui::TopBottomPanel::top("xfig_top").show(ctx, |ui| panels::classic_top(self, ui, &tokens));
