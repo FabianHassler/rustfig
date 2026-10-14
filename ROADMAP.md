@@ -61,7 +61,7 @@ English only. See [localization parity](docs/localization-parity.md).
 
 The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 [docs/gaps.md](docs/gaps.md). Next up:
-1. Fill patterns as fig2dev draws them (D12), then the rest of the fig2dev port (B0: export languages ✅, bounds ✅; options, colour and font tables next), checked against fig2dev's EPS and PDF on xfig's ≈2,550 sample figures (A10 ✅): every export language in Rust, no fig2dev or ghostscript at runtime.
+1. The rest of the fig2dev port (B0: export languages ✅, bounds ✅; options, colour and font tables next), checked against fig2dev's EPS and PDF on xfig's ≈2,550 sample figures (A10 ✅): every export language in Rust, no fig2dev or ghostscript at runtime.
 2. Phase A, hardening: shared undo snapshots, per-command cost, CI (Linux on every push, all OSes for releases), web build, UI tests, export polish, crash recovery, no UI stalls on large drawings.
 3. Preferences that survive restarts (E1) and xfig's command-line options (S3).
 4. Phase B: fig2dev's drivers ported (LaTeX exports, bitmaps, PostScript, the rest), modern printing (PDF to the system print dialog).
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-15 | D12: fill patterns ported from fig2dev's PostScript prolog (cells, line widths, arcs; physical size in exports). Corpus EPS median difference 0.0031, 95th percentile 0.031. |
 | 2026-10-14 | B0: exports sized by fig2dev's bounds (`bound.c`): EPS bounding boxes equal fig2dev's on 2,532 of 2,568 sample figures (the rest within 1 pt); corpus EPS median difference 0.015 → 0.006. 171 tests. |
 | 2026-10-14 | A10: RustFig's EPS, PDF and PNG compared with fig2dev's on xfig's ≈2,550 sample figures (opt-in test, ghostscript test-only), with a report ranked worst first; metric text no longer grows with the drawing; files without the centring header line open. Baseline over 2,569 figures: EPS median difference 0.015. 168 tests. |
 | 2026-10-14 | B0 started: xfig's export languages (all 40, unported ones greyed with their plan task), LaTeX box ported from fig2dev, EPS+PDF pair, `file.export_formats`, CLI `formats`. 166 tests. |

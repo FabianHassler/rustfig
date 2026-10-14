@@ -1,6 +1,6 @@
 //! Encapsulated PostScript backend.
 
-use crate::pattern::{coverage, PATTERN_LINE_WIDTH};
+use crate::pattern::{coverage, PatternFrame};
 use crate::{Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
 use rustfig_geom::{Point, Rect};
 use rustfig_model::{CapStyle, JoinStyle, Justify};
@@ -275,13 +275,15 @@ pub fn to_eps(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>
                         c.path(subpaths);
                         c.out.push_str("gsave eofill grestore gsave eoclip\n");
                         let region = Rect::from_points(subpaths.iter().flat_map(|s| s.pts.iter().copied()));
-                        let lines: Vec<SubPath> = coverage(*kind, &region)
-                            .into_iter()
-                            .map(|pts| SubPath { pts, closed: false })
-                            .collect();
+                        let frame = PatternFrame {
+                            origin: Point::new(c.min_x, c.max_y),
+                            fig_per_pt: 1.0 / c.k,
+                        };
+                        let (lines, line_width) = coverage(*kind, &region, &frame);
+                        let lines: Vec<SubPath> = lines.into_iter().map(|pts| SubPath { pts, closed: false }).collect();
                         c.path(&lines);
                         c.stroke(&Stroke {
-                            width: PATTERN_LINE_WIDTH,
+                            width: line_width,
                             color: *fg,
                             dash: Vec::new(),
                             cap: CapStyle::Butt,

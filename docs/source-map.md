@@ -191,6 +191,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `dev/genpict2e.c`, `genlatex.c`, `genepic.c`, `genpictex.c`, `genpstricks.c` | 9.1 k | LaTeX picture languages | — | missing | B3 (pict2e, PSTricks), B9 (the rest) |
 | `dev/gensvg.c` | 1331 | SVG | `render/svg`; `geom::stroke_width` ported from `linewidth_adj` | own; reference-tested (A8) | review |
 | `dev/genbitmaps.c` | 593 | GIF, JPEG, PNG, PPM, TIFF, XBM, XPM via ghostscript | `render` PNG (own renderer, no ghostscript) | partial | B6 |
+| `dev/psprolog.h` | 936 | PostScript prolog, the 22 fill patterns | `render/pattern` (`FILL_PAT01`…`22` ported) | patterns ported (D12) | — |
 | `dev/genbox.c` | 78 | LaTeX box | `render/drivers/latex_box` | ported | — |
 | `dev/genemf.c`, `gencgm.c`, `gendxf.c`, `genibmgl.c`, `genmp.c`, `genmf.c`, `genmap.c`, `gentk.c`, `genptk.c`, `genshape.c`, `gentextyl.c`, `gentpic.c`, `genpic.c`, `gengbx.c`, `genge.c` | ≈17 k | EMF, CGM, DXF, HPGL, MetaPost, METAFONT, image maps, Tk, shapes, … | — | missing | B9 |
 | `dev/encode.c` | 236 | ASCII85 and deflate streams for PostScript/PDF | `render/eps`, `render/pdf` | own | review |

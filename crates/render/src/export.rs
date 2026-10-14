@@ -136,7 +136,13 @@ pub fn export(doc: &Document, format: ExportFormat, opts: &ExportOptions) -> Res
                 150.0
             };
             let px_per_fig = dpi / 1200.0 * scale;
-            let pm = raster::render_region(&scene, &bounds, px_per_fig, bg)?;
+            let pm = raster::render_region(
+                &scene,
+                &bounds,
+                px_per_fig,
+                bg,
+                crate::pattern::PatternFrame::export(&bounds, scale),
+            )?;
             raster::encode_png(&pm)?
         }
     })

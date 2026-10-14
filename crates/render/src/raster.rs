@@ -1,6 +1,6 @@
 //! Raster backend (tiny-skia): canvas drawing and bitmap export.
 
-use crate::pattern::{coverage, PATTERN_LINE_WIDTH};
+use crate::pattern::{coverage, PatternFrame};
 use crate::{textcache, Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
 use rustfig_geom::{Affine, Point, Rect};
 use rustfig_model::{CapStyle, JoinStyle, Justify, RasterImage};
@@ -27,6 +27,8 @@ pub struct RasterOptions {
     pub transform: Affine,
     /// Thinnest stroke drawn, in pixels (1.0 on screen so hairlines show).
     pub min_line_px: f64,
+    /// Where fill patterns are anchored and how large their tiles are.
+    pub pattern: PatternFrame,
 }
 
 fn color(c: Rgba) -> Color {
@@ -125,11 +127,11 @@ fn draw_path(
                 // Pattern lines over the visible part of the shape, in Fig units.
                 if let Some(inv) = t.invert() {
                     let vis = Rect::from_points(bb.intersection_or_empty(&view).corners().map(|p| inv.apply(p)));
-                    let lines = coverage(*kind, &vis);
+                    let (lines, line_width) = coverage(*kind, &vis, &opts.pattern);
                     let subs: Vec<SubPath> = lines.into_iter().map(|pts| SubPath { pts, closed: false }).collect();
                     if let Some(lp) = build_path(&subs, t) {
                         let st = tiny_skia::Stroke {
-                            width: f((PATTERN_LINE_WIDTH * scale).max(1.0)),
+                            width: f((line_width * scale).max(0.5)),
                             ..tiny_skia::Stroke::default()
                         };
                         pm.stroke_path(&lp, &paint(*fg), &st, Transform::identity(), Some(&mask));
@@ -312,12 +314,14 @@ pub fn rasterize(scene: &Scene, pm: &mut Pixmap, opts: &RasterOptions) {
     }
 }
 
-/// Render the region `bounds` (Fig units) at `px_per_fig` into a pixmap.
+/// Render the region `bounds` (Fig units) at `px_per_fig` into a pixmap,
+/// with fill patterns in `pattern`.
 pub fn render_region(
     scene: &Scene,
     bounds: &Rect,
     px_per_fig: f64,
     background: Option<Rgba>,
+    pattern: PatternFrame,
 ) -> Result<Pixmap, String> {
     if bounds.is_empty() || !(px_per_fig.is_finite() && px_per_fig > 0.0) {
         return Err("nothing to render".into());
@@ -341,6 +345,7 @@ pub fn render_region(
         &RasterOptions {
             transform,
             min_line_px: 0.5,
+            pattern,
         },
     );
     Ok(pm)
@@ -402,7 +407,14 @@ mod tests {
             Point::new(1200.0, 1200.0),
         ))));
         let scene = Scene::build(&doc, &SceneOptions::default());
-        let pm = render_region(&scene, &doc.bbox(), 0.05, Some(Rgba::opaque(rustfig_model::Rgb::WHITE))).unwrap();
+        let pm = render_region(
+            &scene,
+            &doc.bbox(),
+            0.05,
+            Some(Rgba::opaque(rustfig_model::Rgb::WHITE)),
+            PatternFrame::screen(),
+        )
+        .unwrap();
         let mid = pm.pixel(pm.width() / 2, pm.height() / 2).unwrap();
         assert_eq!((mid.red(), mid.green(), mid.blue()), (255, 0, 0));
         assert!(!encode_png(&pm).unwrap().is_empty());
@@ -412,6 +424,6 @@ mod tests {
     fn refuses_huge_images() {
         let scene = Scene::default();
         let r = Rect::new(Point::ZERO, Point::new(1e9, 1e9));
-        assert!(render_region(&scene, &r, 1.0, None).is_err());
+        assert!(render_region(&scene, &r, 1.0, None, PatternFrame::screen()).is_err());
     }
 }

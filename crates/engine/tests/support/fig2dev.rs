@@ -178,8 +178,10 @@ pub fn ghostscript() -> Option<&'static Fig2dev> {
 }
 
 /// Rasterises an EPS (cropped to its bounding box) or a PDF page to PNG at
-/// `dpi`, anti-aliased, with ghostscript.
-pub fn rasterise(doc: &[u8], pdf: bool, dpi: u32) -> Result<Vec<u8>, String> {
+/// `dpi` with ghostscript; text is always anti-aliased, graphics when
+/// `antialias` (ghostscript draws pattern tiles without it in any case, so
+/// comparisons of two PostScript files turn it off for both).
+pub fn rasterise(doc: &[u8], pdf: bool, dpi: u32, antialias: bool) -> Result<Vec<u8>, String> {
     let gs = ghostscript().ok_or("ghostscript is not installed (set RUSTFIG_GS to its path)")?;
     let dir = TempDir::new()?;
     let input = dir.0.join(if pdf { "in.pdf" } else { "in.eps" });
@@ -192,7 +194,6 @@ pub fn rasterise(doc: &[u8], pdf: bool, dpi: u32) -> Result<Vec<u8>, String> {
         "-dNOPAUSE",
         "-sDEVICE=png16m",
         "-dTextAlphaBits=4",
-        "-dGraphicsAlphaBits=4",
         "-dFirstPage=1",
         "-dLastPage=1",
     ]
@@ -200,6 +201,14 @@ pub fn rasterise(doc: &[u8], pdf: bool, dpi: u32) -> Result<Vec<u8>, String> {
     .map(OsString::from)
     .collect();
     args.push(format!("-r{dpi}").into());
+    args.push(
+        if antialias {
+            "-dGraphicsAlphaBits=4"
+        } else {
+            "-dGraphicsAlphaBits=1"
+        }
+        .into(),
+    );
     if !pdf {
         args.push("-dEPSCrop".into());
     }

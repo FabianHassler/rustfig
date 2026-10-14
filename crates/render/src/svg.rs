@@ -1,6 +1,6 @@
 //! SVG backend.
 
-use crate::pattern::{coverage, PATTERN_LINE_WIDTH};
+use crate::pattern::{coverage, PatternFrame};
 use crate::{Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
 use rustfig_geom::{Point, Rect};
 use rustfig_model::{CapStyle, JoinStyle, Justify, RasterImage};
@@ -223,16 +223,14 @@ pub fn to_svg(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>
                         );
                         let _ = writeln!(out, "<path d=\"{d}\" fill=\"{}\" fill-rule=\"evenodd\"/>", rgb(*bg));
                         let region = Rect::from_points(subpaths.iter().flat_map(|s| s.pts.iter().copied()));
-                        let lines: Vec<SubPath> = coverage(*kind, &region)
-                            .into_iter()
-                            .map(|pts| SubPath { pts, closed: false })
-                            .collect();
+                        let (lines, line_width) = coverage(*kind, &region, &PatternFrame::export(&b, scale));
+                        let lines: Vec<SubPath> = lines.into_iter().map(|pts| SubPath { pts, closed: false }).collect();
                         let _ = writeln!(
                             out,
                             "<path clip-path=\"url(#c{clip_id})\" d=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{}\"/>",
                             path_data(&lines),
                             rgb(*fg),
-                            n(PATTERN_LINE_WIDTH)
+                            n(line_width)
                         );
                     }
                     None => {}

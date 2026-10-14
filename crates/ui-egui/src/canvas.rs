@@ -85,6 +85,7 @@ fn rasterize_scene(scene: &Scene, t: Affine, w: usize, h: usize) -> egui::ColorI
         &RasterOptions {
             transform: t,
             min_line_px: 1.0,
+            pattern: rustfig_render::pattern::PatternFrame::screen(),
         },
     );
     egui::ColorImage::from_rgba_premultiplied([w, h], pm.data())

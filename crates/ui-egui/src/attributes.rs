@@ -806,19 +806,20 @@ fn fill_swatch(p: &Painter, r: Rect, doc: &Document, fill_color: i32, area_fill:
         kind => {
             let bg: Rgb = doc.rgb(ColorRef(fill_color));
             p.rect_filled(r, 0.0, Color32::from_rgb(bg.r, bg.g, bg.b));
-            if let Some((tw, th, lines)) = rustfig_render::pattern::tile(kind) {
-                // Two tiles across the swatch.
+            if let Some(t) = rustfig_render::pattern::tile(kind) {
+                // Two tiles across the swatch; pattern space has y up.
+                let (tw, th) = (t.width, t.height);
                 let s = r.width() as f64 / (2.0 * tw.max(1.0));
                 let painter = p.with_clip_rect(r);
                 for ty in 0..(r.height() as f64 / (th * s)).ceil() as i32 + 1 {
                     for tx in 0..3 {
-                        for l in &lines {
+                        for l in &t.lines {
                             let pts: Vec<Pos2> = l
                                 .iter()
-                                .map(|q| {
+                                .map(|&(x, y)| {
                                     pos2(
-                                        r.left() + ((q.x + f64::from(tx) * tw) * s) as f32,
-                                        r.top() + ((q.y + f64::from(ty) * th) * s) as f32,
+                                        r.left() + ((x + f64::from(tx) * tw) * s) as f32,
+                                        r.top() + ((th - y + f64::from(ty) * th) * s) as f32,
                                     )
                                 })
                                 .collect();

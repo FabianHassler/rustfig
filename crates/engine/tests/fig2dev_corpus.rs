@@ -11,7 +11,8 @@
 //! sample of N figures.
 //!
 //! For each figure: fig2dev's EPS and RustFig's EPS, both rasterised by
-//! ghostscript (so only the writers differ); RustFig's own PNG against
+//! ghostscript without graphics anti-aliasing (so only the writers differ;
+//! ghostscript draws pattern tiles without it anyway); RustFig's own PNG against
 //! fig2dev's EPS; fig2dev's PDF against RustFig's PDF; the EPS bounding boxes.
 //! The report `target/fig2dev-reference/corpus/index.html` lists every
 //! figure, worst first, with images of the worst. Summary scores are checked
@@ -166,14 +167,14 @@ fn run_one(path: &Path) -> (Outcome, Option<Rasters>) {
     match fig2dev::convert(&fig, "eps", &xfig_args(), dir) {
         Err(e) => o.errors.push(e),
         Ok(ref_eps) => {
-            let ref_png = fig2dev::rasterise(&ref_eps, false, DPI);
+            let ref_png = fig2dev::rasterise(&ref_eps, false, DPI, false);
             let our_eps = rustfig(&doc, ExportFormat::Eps);
             match (&ref_png, &our_eps) {
                 (Ok(rp), Ok(oe)) => {
                     if let (Some((w1, h1)), Some((w2, h2))) = (bbox_size(&ref_eps), bbox_size(oe)) {
                         o.bbox = Some((w1 - w2).abs().max((h1 - h2).abs()));
                     }
-                    match fig2dev::rasterise(oe, false, DPI) {
+                    match fig2dev::rasterise(oe, false, DPI, false) {
                         Ok(op) => {
                             match compare::compare(rp, &op) {
                                 Ok(c) => o.eps = Some(c.score),
@@ -186,7 +187,10 @@ fn run_one(path: &Path) -> (Outcome, Option<Rasters>) {
                         }
                         Err(e) => o.errors.push(format!("RustFig's EPS: {e}")),
                     }
-                    match rustfig(&doc, ExportFormat::Png).and_then(|png| compare::compare(rp, &png)) {
+                    // RustFig's anti-aliased PNG against fig2dev's EPS, anti-aliased too.
+                    let png = fig2dev::rasterise(&ref_eps, false, DPI, true)
+                        .and_then(|aa| compare::compare(&aa, &rustfig(&doc, ExportFormat::Png)?));
+                    match png {
                         Ok(c) => o.png = Some(c.score),
                         Err(e) => o.errors.push(format!("RustFig's PNG: {e}")),
                     }
@@ -197,10 +201,10 @@ fn run_one(path: &Path) -> (Outcome, Option<Rasters>) {
         }
     }
     let pdf = fig2dev::convert(&fig, "pdf", &xfig_args(), dir)
-        .and_then(|p| fig2dev::rasterise(&p, true, DPI))
+        .and_then(|p| fig2dev::rasterise(&p, true, DPI, false))
         .and_then(|rp| {
             let ours = rustfig(&doc, ExportFormat::Pdf)?;
-            let op = fig2dev::rasterise(&ours, true, DPI)?;
+            let op = fig2dev::rasterise(&ours, true, DPI, false)?;
             compare::compare(&rp, &op)
         });
     match pdf {

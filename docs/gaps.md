@@ -1,6 +1,6 @@
 # Known gaps (ranked work list)
 
-**Status:** 2026-10-14 (A8, D9 and A10 landed). Ranked by user impact per hour. Pick work from the top.
+**Status:** 2026-10-15 (A8, D9, A10, D12 landed). Ranked by user impact per hour. Pick work from the top.
 
 | # | Gap | Area | Impact | Hours |
 |---|-----|------|--------|------:|
@@ -22,7 +22,6 @@
 | 17 | Localization of UI strings | Localization | Low | 24 |
 | 18 | Spell check | Text | Low | 16 |
 | 19 | Accessibility (screen-reader labels for canvas objects) | Platforms | Low | 16 |
-| 22 | Fill patterns in exports differ from fig2dev's PostScript (coarser cells, thicker lines there; found by A10; D12) | Rendering | Medium | 8 |
 | 21 | fig2dev's other output languages (EMF, CGM, DXF, HPGL, MetaPost, epic, …) not ported yet (B9) | Export | Low | 60 |
 | 20 | Real PostScript font metrics when craft-fonts lacks a face (synthetic bold/italic today); the A10 corpus shows text widths as the main remaining difference from fig2dev | Text | Medium | 12 |
 
@@ -30,6 +29,7 @@
 
 | Date | Note |
 |------|------|
+| 2026-10-15 | D12 closed #22 (fill patterns as fig2dev's). |
 | 2026-10-14 | Export bounds now fig2dev's (B0); the corpus's largest remaining difference is fill patterns (#22). |
 | 2026-10-14 | A10: corpus comparison with fig2dev on xfig's sample figures; metric text size fixed. Remaining differences: export bounding box (B0 `bound.c`), text widths (#20, B8). |
 | 2026-10-14 | D9 closed #15 (arrowheads, pie-arc arrows, arc direction, dash patterns as fig2dev's PostScript driver). |

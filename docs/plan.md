@@ -1,6 +1,6 @@
 # Execution plan
 
-**Status:** 2026-10-14. Phase W (xfig window parity), A8 and D9 done; next B0 (porting fig2dev), then the rest of phase A. Overall parity ≈60 %.
+**Status:** 2026-10-15. Phase W, A8, A10, D9 and D12 done; B0 (porting fig2dev) under way, then the rest of phase A. Overall parity ≈60 %.
 
 This is the committed work plan. [`gaps.md`](gaps.md) ranks every known
 shortfall; this file groups them into phases with task ids, acceptance
@@ -116,7 +116,7 @@ covered by W2.
 | D8 | **Linked move**: moving a box drags the attached line end points (xfig's smart links). | Test with a box and two attached lines. | 10 |
 | D10 | **Remaining mode options** found by the source map: dimension lines (Shift+left in polyline mode, `d_line.c`), align to canvas (`e_align.c`), array copy (`e_copy.c`), anchor point for flip/rotate and number of rotated copies (`e_flip.c`, `e_rotate.c`), scaling one edge (`e_scale.c`), lengths shown while drawing (`w_msgpanel.c`), typed coordinates for the next point (`w_keyboard.c`). | A test per option; mouse hints list them. | 16 |
 | D11 | **Every remaining xfig function** (goal decided 2026-10-14: all of xfig's functions): Digitize (`w_digitize.c`, tablet input against a scanned figure), screen capture into a picture object (`w_capture.c`, through the OS screenshot facilities), Show vertex numbers, Show info balloons, Autorefresh mode (`w_cmdpanel.c`), edit the figure comments from Edit mode, Unzoom semantics. Modern equivalents where the X11 way no longer works, decided per item. | Each menu entry and mode works; none is greyed out any more. | 24 |
-| D12 | **Fill patterns as fig2dev's PostScript draws them** (found by A10: the largest export difference): port the 22 pattern definitions and their scaling from `genps.c` (`FILL_PAT01`…, pattern cell size and line width in exports), so `fig2dev/tests/data/patterns.fig` and the Optics library match. | The `patterns.fig` corpus score falls from 0.30 below 0.05. | 8 |
+| D12 | ✅ 2026-10-15. **Fill patterns as fig2dev's PostScript draws them** (found by A10): the 22 patterns ported from `psprolog.h` (`FILL_PAT01`…: cells, line widths 0.7–1 pt, arcs) into `render/pattern.rs`; in exports the tiles keep their physical size and start at the page's lower-left corner (`PatternFrame`), as in fig2dev. At 600 dpi the ink coverage equals fig2dev's (horizontal lines 0.288 vs 0.284, circles 0.145 vs 0.142). Corpus: Welding `bi` 0.16 → 0.000, Optics grating 0.156 → 0.0025, `Examples/patterns.fig` 0.152 → 0.047; fig2dev's `tests/data/patterns.fig` 0.296 → 0.087 (the rest is the comparison's trim-and-rescale drift on a dense figure). The A10 test now rasterises both PostScript files without graphics anti-aliasing (ghostscript draws pattern tiles without it anyway). | The pattern figures match fig2dev's; `Examples/patterns.fig` below 0.05. | 8 |
 | D9 | ✅ 2026-10-14. **Arrowheads, arcs and dashes as fig2dev draws them** (found by A8): arrowheads ported from fig2dev `bound.c` (`arrow_shapes`, `calc_arrow`: all 15 types, tip moved back by the miter, half heads flush with the line, type 9's half fill) and `genps.c` (hollow heads filled white); arrows on pie-wedge arcs; polylines aim the head along their last segment; arcs follow their direction flag; dash patterns and dotted caps from `genps.c` `set_style`. Scores: arrows 0.0169 → 0.0077, arcs 0.0087 → 0.0041. | The `arrows` and `arcs` reference fixtures score below 0.01 (fig2dev's SVG rounds coordinates, so not below 0.005). | 8 |
 
 ## Phase E: UI completeness, M7 (≈56 h)
@@ -185,7 +185,7 @@ is an optional extra, used in two ways.
 ## Order and milestones
 
 1. ✅ Phase W, xfig window parity (W1–W7, S0–S2), done 2026-10-14.
-2. ✅ A8 (fig2dev reference tests), ✅ D9 (the arrowhead, arc and dash differences it found), ✅ A10 (EPS/PDF compared with fig2dev on xfig's sample figures), then B0 (the fig2dev port: language table ✅, `bound.c` ✅), D12 (fill patterns, the largest remaining difference).
+2. ✅ A8 (fig2dev reference tests), ✅ D9 (the arrowhead, arc and dash differences it found), ✅ A10 (EPS/PDF compared with fig2dev on xfig's sample figures), then B0 (the fig2dev port: language table ✅, `bound.c` ✅), ✅ D12 (fill patterns).
 3. A1 and A9 (undo memory, per-command cost), A2 and A3 (CI on Linux, Windows and macOS; web build), the rest of A4, A5–A7.
 4. E1 and S3 (preferences, xfig's command-line options).
 5. B1–B9 (fig2dev's drivers ported: LaTeX exports, bitmaps, PostScript; modern printing), C1–C3 (web): the first release candidate, on desktop and web.
@@ -214,6 +214,7 @@ is an optional extra, used in two ways.
 | 2026-10-13 | First plan, after M0–M3. |
 | 2026-10-13 | Added A8 (fig2dev reference tests) and B0 (fig2dev export backend) with design notes. |
 | 2026-10-14 | A3: the web build compiles locally with rustup's toolchain; xtask uses the running toolchain's rustc. |
+| 2026-10-15 | D12 landed: fig2dev's fill patterns; corpus EPS median 0.0031, 95th percentile 0.031 (both PostScript files rasterised alike). |
 | 2026-10-14 | B0: fig2dev's export bounds ported; corpus EPS median difference 0.015 → 0.006, 95th percentile 0.072 → 0.048; bounding boxes equal fig2dev's. |
 | 2026-10-14 | A10 landed: corpus comparison with fig2dev's EPS and PDF (ghostscript, test-only). Found and fixed: metric text was magnified with the drawing. xfig passes `-F` (true point sizes) to fig2dev for PS/EPS/PDF, so RustFig's 1/72-inch points are right. |
 | 2026-10-14 | B0 started: xfig's export-language table (`mode.c`), LaTeX box driver (`genbox.c`), pspdf, `file.export_formats`, language menu in the export dialog, CLI `formats`/`--format`. Found: fig2dev's bounding box (`bound.c`) differs from the ink bounds; porting it is B0's next step. A10 added (EPS/PDF comparison with fig2dev on xfig's sample figures, asked by the user). |

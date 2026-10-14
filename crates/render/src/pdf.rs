@@ -1,6 +1,6 @@
 //! PDF backend (pdf-writer). Text uses the standard 14 PDF fonts.
 
-use crate::pattern::{coverage, PATTERN_LINE_WIDTH};
+use crate::pattern::{coverage, PatternFrame};
 use crate::{Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
 use pdf_writer::types::{LineCapStyle, LineJoinStyle};
 use pdf_writer::{Content, Filter, Finish, Name, Pdf, Rect as PdfRect, Ref, Str};
@@ -247,13 +247,15 @@ pub fn to_pdf(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>
                         c.c.clip_even_odd();
                         c.c.end_path();
                         let region = Rect::from_points(subpaths.iter().flat_map(|s| s.pts.iter().copied()));
-                        let lines: Vec<SubPath> = coverage(*kind, &region)
-                            .into_iter()
-                            .map(|pts| SubPath { pts, closed: false })
-                            .collect();
+                        let frame = PatternFrame {
+                            origin: Point::new(c.min_x, c.max_y),
+                            fig_per_pt: 1.0 / c.k,
+                        };
+                        let (lines, line_width) = coverage(*kind, &region, &frame);
+                        let lines: Vec<SubPath> = lines.into_iter().map(|pts| SubPath { pts, closed: false }).collect();
                         c.path(&lines);
                         c.stroke(&Stroke {
-                            width: PATTERN_LINE_WIDTH,
+                            width: line_width,
                             color: *fg,
                             dash: Vec::new(),
                             cap: CapStyle::Butt,

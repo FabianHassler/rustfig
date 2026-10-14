@@ -1,6 +1,6 @@
 # Target-app parity assessment: RustFig vs xfig 3.2.9
 
-**Status:** 2026-10-14, overall **≈61 %** (B0: fig2dev's export bounds). Revised whenever a task lands.
+**Status:** 2026-10-15, overall **≈61 %** (D12: fill patterns as fig2dev's). Revised whenever a task lands.
 
 ## Methodology
 
@@ -39,6 +39,7 @@ the score.
 - Commands: `crates/engine/src/cmd/*`, swept with hostile parameters in `crates/engine/tests/command_sweep.rs`.
 - Fig I/O: `crates/format/src/fig_read.rs` and `fig_write.rs`; round trip and fuzzing in `crates/format/tests/`.
 - Rendering: `crates/render/` (scene, tiny-skia raster, SVG, EPS, PDF; all 22 fill patterns; arrowheads; dashes); line widths as fig2dev (`geom::stroke_width`).
+- Fill patterns as fig2dev's PostScript (`crates/render/src/pattern.rs`, from `psprolog.h`).
 - Export bounds as fig2dev's (`crates/render/src/bound.rs`, ported from `bound.c`): bounding boxes equal fig2dev's on 2,532 of 2,568 sample figures.
 - Export languages: `crates/render/src/languages.rs` (xfig's list and suffixes), `drivers/latex_box.rs`, `file.export_formats`; tests in `crates/engine/tests/export_languages.rs` and `export_dialog_lists_xfigs_languages` in `ui_smoke.rs`.
 - Corpus comparison with fig2dev's EPS and PDF on xfig's ≈2,550 sample figures: `crates/engine/tests/fig2dev_corpus.rs` (opt-in), baseline `fixtures/corpus-scores.json`, report `target/fig2dev-reference/corpus/`.
@@ -57,6 +58,7 @@ the score.
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-15 | ≈61 % | D12: fill patterns from fig2dev. |
 | 2026-10-14 | ≈61 % | B0: fig2dev's export bounds (Export 37 → 39 %). |
 | 2026-10-14 | ≈61 % | B0 started: export language table, LaTeX box, pspdf (Export 35 → 37 %). |
 | 2026-10-14 | ≈61 % | D9: arrowheads (all 15 types), pie-arc arrows, arc direction, dashes from fig2dev. |
