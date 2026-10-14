@@ -543,9 +543,16 @@ pub fn read_fig(src: &[u8]) -> Result<Document, FormatError> {
     } else {
         Orientation::Landscape
     };
+    // The centring line may be missing; fig2dev then reads the units line
+    // here (read.c `read_objects`).
     let just = header_line(&mut r)?;
-    settings.center = !just.to_ascii_lowercase().starts_with("flush");
-    let units = header_line(&mut r)?;
+    let lower = just.to_ascii_lowercase();
+    let units = if lower.starts_with("center") || lower.starts_with("flush") {
+        settings.center = !lower.starts_with("flush");
+        header_line(&mut r)?
+    } else {
+        just
+    };
     settings.units = if units.to_ascii_lowercase().starts_with("metric") {
         Units::Metric
     } else {

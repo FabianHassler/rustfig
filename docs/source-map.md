@@ -135,7 +135,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `u_undo.c` | 962 | undo (one level) | `engine/history` (multi-level) | own, superset | — |
 | `u_error.c` | 136 | emergency save on crash | `engine/guard` | partial: emergency save | A6 |
 | `u_pan.c` | 89 | pan steps | `rulers::pan_step` | ported | — |
-| `u_print.c` | 923 | print and export through fig2dev | `cmd/file` export | partial | B4 |
+| `u_print.c` | 923 | print and export through fig2dev (passes `-F`, true point sizes, for PS/EPS/PDF) | `cmd/file` export | partial | B4 |
 | `u_ghostscript.c` | 1218 | EPS/PDF preview through ghostscript | — | missing | G2 |
 | `u_spawn.c` | 587 | run external programs | — | n/a for exports (fig2dev is ported, B0); image editor later | — |
 
@@ -185,7 +185,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `bound.c` | 1156 | bounds incl. arrows and text | `geom/arrow` (`arrow_shapes`, `calc_arrow` ported), `render` | arrows ported (D9); bounds own: fig2dev pads lines by (t+1)/√2, arcs and splines by (t+1)/2, ellipses not at all (port next) | B0 |
 | `trans_spline.c` | 661 | splines to polylines for exporters | `geom` | own | review |
 | `colors.c` | 851 | colour names | `model` | own | — |
-| `dev/genps.c`, `genpdf.c` | 2.9 k | PostScript/PDF with page layout; the reference where drivers disagree | `render/eps`, `render/pdf`; `set_style` → `LineKind::dash_pattern`, `linewidth_adj` → `geom::stroke_width`, arrow fills | partial: page layout, multi-page | B4 |
+| `dev/genps.c`, `genpdf.c` | 2.9 k | PostScript/PDF with page layout; the reference where drivers disagree | `render/eps`, `render/pdf`; `set_style` → `LineKind::dash_pattern`, `linewidth_adj` → `geom::stroke_width`, arrow fills, `PSFONTMAG` → metric text keeps its point size (`SceneOptions::text_scale`) | partial: page layout, multi-page | B4 |
 | `dev/genpstex.c` | 176 | PS/PDF + LaTeX overlay (pstex, pdftex) | — | missing | B2 |
 | `dev/gentikz.c` | 1870 | TikZ | — | missing | B1 |
 | `dev/genpict2e.c`, `genlatex.c`, `genepic.c`, `genpictex.c`, `genpstricks.c` | 9.1 k | LaTeX picture languages | — | missing | B3 (pict2e, PSTricks), B9 (the rest) |

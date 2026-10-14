@@ -178,6 +178,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         hidden_depths: app.engine.hidden_depths.clone(),
         gray_hidden: app.engine.gray_hidden_depths,
         screen: true,
+        text_scale: None,
     };
     if app.canvas.doc_key.as_ref() != Some(&key) {
         let start = web_time_now();

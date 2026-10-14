@@ -113,3 +113,16 @@ fn objects_are_saved_in_xfig_type_order() {
     let text = out.find("\n4 ").unwrap();
     assert!(line < text, "lines are written before texts:\n{out}");
 }
+
+#[test]
+fn header_without_centring_line() {
+    // As in xfig's library figure simple_DScurves/cllog-400.fig; fig2dev reads it.
+    let src = "#FIG 3.2\nPortrait\nMetric\nLetter\n100.00\nSingle\n0\n1200 2\n2 1 0 1 0 -1 50 0 -1 0.000 1 0 7 0 0 2\n\t 1200 710 5847 710\n";
+    let doc = rustfig_format::read_fig(src.as_bytes()).unwrap();
+    assert!(doc.settings.center);
+    assert_eq!(doc.settings.units, rustfig_model::Units::Metric);
+    assert_eq!(doc.settings.transparent_color, 0);
+    assert_eq!(doc.objects.len(), 1);
+    let flush = src.replace("Portrait\n", "Portrait\nFlush left\n");
+    assert!(!rustfig_format::read_fig(flush.as_bytes()).unwrap().settings.center);
+}

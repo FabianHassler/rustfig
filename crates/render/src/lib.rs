@@ -199,6 +199,10 @@ pub struct SceneOptions {
     pub gray_hidden: bool,
     /// Draw for the screen: hidden texts appear as a placeholder.
     pub screen: bool,
+    /// Factor on font sizes; `None` is 1. Exports of metric drawings use
+    /// 76.2/80 so text keeps its point size while the drawing is magnified
+    /// by 80/76.2 (fig2dev with xfig's `-F`, `genps.c` `PSFONTMAG`).
+    pub text_scale: Option<f64>,
 }
 
 /// A depth-sorted list of primitives.
@@ -365,7 +369,7 @@ fn object_prims(doc: &Document, o: &Object, opts: &SceneOptions, out: &mut Vec<P
             out.push(Prim::Text(TextPrim {
                 origin: t.origin,
                 angle: if t.angle.is_finite() { t.angle } else { 0.0 },
-                size: t.size,
+                size: t.size * opts.text_scale.filter(|s| s.is_finite() && *s > 0.0).unwrap_or(1.0),
                 justify: t.justify,
                 font: t.font,
                 postscript: t.is_postscript(),

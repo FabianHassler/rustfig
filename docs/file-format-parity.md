@@ -4,7 +4,7 @@
 
 | Format | Read | Write | Notes |
 |---|---|---|---|
-| Fig 3.2 | ✅ | ✅ | all object types, user colours, comments, pictures, resolution scaling, UTF-8 and Latin-1 text, octal escapes |
+| Fig 3.2 | ✅ | ✅ | header without the centring line (as fig2dev); all object types, user colours, comments, pictures, resolution scaling, UTF-8 and Latin-1 text, octal escapes |
 | Fig 3.1, 3.0 | ✅ | — | old splines converted to X-splines (shape ±1) |
 | Fig 2.1 and older | ❌ | — | gap #13 |
 | RustFig native (`.rustfig`, JSON) | ✅ | ✅ | versioned envelope |

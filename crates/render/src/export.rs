@@ -87,15 +87,32 @@ pub fn export_bounds(scene: &Scene, margin: f64) -> Rect {
 
 /// Render a document in the given format.
 pub fn export(doc: &Document, format: ExportFormat, opts: &ExportOptions) -> Result<Vec<u8>, String> {
+    // fig2dev convention: metric drawings (450 units/cm) are magnified to true
+    // size, but their text keeps its point size.
+    let unit_fix = match doc.settings.units {
+        Units::Metric => 1200.0 / 2.54 / 450.0,
+        Units::Inches => 1.0,
+    };
+    let text_scale = Some(1.0 / unit_fix);
     let scene = Scene::build(
         doc,
         &SceneOptions {
             hidden_depths: opts.hidden_depths.clone(),
+            text_scale,
             ..SceneOptions::default()
         },
     );
     let bounds = if opts.whole_figure_bounds && !opts.hidden_depths.is_empty() {
-        export_bounds(&Scene::build(doc, &SceneOptions::default()), opts.margin)
+        export_bounds(
+            &Scene::build(
+                doc,
+                &SceneOptions {
+                    text_scale,
+                    ..SceneOptions::default()
+                },
+            ),
+            opts.margin,
+        )
     } else {
         export_bounds(&scene, opts.margin)
     };
@@ -107,11 +124,6 @@ pub fn export(doc: &Document, format: ExportFormat, opts: &ExportOptions) -> Res
         .unwrap_or(doc.settings.magnification)
         .clamp(0.1, 100_000.0)
         / 100.0;
-    // fig2dev convention: metric drawings (450 units/cm) are magnified to true size.
-    let unit_fix = match doc.settings.units {
-        Units::Metric => 1200.0 / 2.54 / 450.0,
-        Units::Inches => 1.0,
-    };
     let scale = mag * unit_fix;
     let bg = opts.background.map(Rgba::opaque);
     Ok(match format {
@@ -130,4 +142,54 @@ pub fn export(doc: &Document, format: ExportFormat, opts: &ExportOptions) -> Res
             raster::encode_png(&pm)?
         }
     })
+}
+
+#[cfg(test)]
+mod metric_text_tests {
+    use super::*;
+    use rustfig_geom::Point;
+    use rustfig_model::{ColorRef, Justify, Object, ObjectKind, Text};
+
+    fn text_scene_size(units: Units) -> f64 {
+        let mut doc = Document::new();
+        doc.settings.units = units;
+        let t = Text {
+            justify: Justify::Left,
+            color: ColorRef::BLACK,
+            depth: 50,
+            pen_style: -1,
+            font: 0,
+            size: 12.0,
+            angle: 0.0,
+            flags: 4,
+            height: 135.0,
+            length: 100.0,
+            origin: Point::new(0.0, 0.0),
+            text: "x".into(),
+        };
+        doc.objects.push(Object::new(ObjectKind::Text(t)));
+        let unit_fix = if units == Units::Metric {
+            1200.0 / 2.54 / 450.0
+        } else {
+            1.0
+        };
+        let scene = Scene::build(
+            &doc,
+            &SceneOptions {
+                text_scale: Some(1.0 / unit_fix),
+                ..Default::default()
+            },
+        );
+        match scene.prims.first() {
+            Some(crate::Prim::Text(t)) => t.size * unit_fix,
+            _ => 0.0,
+        }
+    }
+
+    #[test]
+    fn metric_text_keeps_its_point_size() {
+        // After the export's metric magnification the text is 12 points again.
+        assert!((text_scene_size(Units::Metric) - 12.0).abs() < 1e-9);
+        assert!((text_scene_size(Units::Inches) - 12.0).abs() < 1e-9);
+    }
 }

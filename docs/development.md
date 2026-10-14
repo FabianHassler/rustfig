@@ -11,6 +11,9 @@ cargo xtask ci        # fmt, clippy -D warnings, tests, layers, assets, wasm
 UPDATE_REFERENCE=1 cargo test -p rustfig-engine --test fig2dev_reference -- --nocapture
                       # re-record the fig2dev comparison scores (needs fig2dev;
                       # set RUSTFIG_FIG2DEV if it isn't on PATH)
+cargo test --release -p rustfig-engine --test fig2dev_corpus -- --ignored --nocapture
+                      # compare EPS/PDF/PNG with fig2dev on xfig's sample
+                      # figures (needs fig2dev and ghostscript; RUSTFIG_GS)
 ```
 
 If `cargo` cannot write to `~/.cargo` (sandboxed agents), set

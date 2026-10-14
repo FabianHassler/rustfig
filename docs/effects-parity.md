@@ -5,7 +5,7 @@
 | Item | State |
 |---|---|
 | Area fill shades 0–20, tints 21–40 | ✅ |
-| Patterns 41–62 | ✅ generated in code |
+| Patterns 41–62 | 🟡 generated in code; in exports they differ from fig2dev's PostScript patterns (D12) |
 | Line styles: solid, dashed, dotted, dash-dot, dash-double-dot, dash-triple-dot | ✅ fig2dev's PostScript patterns (`genps.c` `set_style`) |
 | Line widths | ✅ fig2dev's `linewidth_adj` |
 | Caps, joins | ✅ |

@@ -1,0 +1,29 @@
+{
+  "bbox_points": {
+    "count": 2568,
+    "median": 1.0,
+    "p95": 2.0
+  },
+  "eps_mean": {
+    "count": 2568,
+    "median": 0.0152,
+    "p95": 0.0716
+  },
+  "eps_strong": {
+    "count": 2568,
+    "median": 0.0031,
+    "p95": 0.0836
+  },
+  "figures": 2569,
+  "pdf_mean": {
+    "count": 2568,
+    "median": 0.0152,
+    "p95": 0.0733
+  },
+  "png_mean": {
+    "count": 2568,
+    "median": 0.028,
+    "p95": 0.076
+  },
+  "with_errors": 1
+}
