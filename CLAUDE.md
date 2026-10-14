@@ -1,6 +1,6 @@
 # RustFig — instructions for agents
 
-RustFig is a clean-room, open-source, Rust-native vector drawing app aiming at xfig parity (and beyond). It runs natively on macOS, Windows and Linux, and on the web via WASM (the wasm build compiles; packaging and browser file I/O not yet done).
+RustFig is an open-source, Rust-native reimplementation of xfig: close to the original in look and behaviour, with modern alternatives where xfig's way no longer works (printing, for example). It runs natively on macOS, Windows and Linux, and on the web via WASM (the wasm build compiles; packaging and browser file I/O not yet done).
 
 ## Start every session here
 
@@ -8,11 +8,12 @@ RustFig is a clean-room, open-source, Rust-native vector drawing app aiming at x
 2. Read `plan/STATUS.md` (local session notes, gitignored, may lag) and the relevant section of [`docs/architecture.md`](docs/architecture.md).
 3. Work in this loop: orient → plan → implement + test → verify (CI gates, run the app, screenshot) → record (progress docs, `plan/STATUS.md`) → commit. Don't stop to ask unless `docs/plan.md` › "Decisions that are the user's" lists the decision.
 
-## Clean-room
+## Using xfig's sources (decided 2026-10-14)
 
-- Behaviour reference: the xfig documentation in `old/xfig-3.2.9a/doc/` (`FORMAT3.2` and older format specs, the HTML manual in `doc/html/`, `xfig.man.in`) and fig2dev's man pages in `old/fig2dev-3.2.9a/man/`.
-- `old/` also holds the xfig and fig2dev C sources. RustFig code is original Rust: never translate or copy that code, comments or data tables. Facts the format defines (colour values, font names, field order) come from the format docs.
-- `old/` is gitignored; never commit it.
+- xfig and fig2dev are under the xfig licence (SPDX `Xfig`): use, modify, sublicense and redistribute freely, as long as the copyright and permission notice stay intact. RustFig may read, port and reuse their code, comments and data tables.
+- References in `old/` (gitignored, never commit it): the C sources (`old/xfig-3.2.9a/src/`, `old/fig2dev-3.2.9a/fig2dev/`), the format specs (`doc/FORMAT3.2` and older), the HTML manual with screenshots of every panel (`doc/html/`, `doc/html/images/`), `xfig.man.in`, the app defaults (`app-defaults/`), and fig2dev's man pages. Before building UI, look at the manual's image of that panel; with the user's permission, compare with the real xfig (`~/bin/xfig`, XQuartz).
+- Ported code: translate into idiomatic Rust that follows this file's rules (no panics, `Result`, layering) rather than transliterating C. Put a comment at the top of the Rust item or file naming the source, e.g. `// Ported from xfig src/u_draw.c (xfig licence, see LICENSE-xfig).` Copyright holders not yet listed go into `LICENSE-xfig`.
+- Some files under `old/` are not under the xfig licence (fig2dev's `lib/` replacement C functions; several figure libraries in `Libraries/` carry their own notice or none). Check the header before reusing; library figures follow the asset rules below.
 - Algorithms from papers are fine; cite them in `NOTICE` (X-splines: Blanc & Schlick 1995).
 
 ## Workspace
@@ -42,7 +43,7 @@ Coordinates are Fig units (1200 per inch; metric drawings use 450 per cm), y gro
 - **Every asset file must have a row in [`ASSETS.md`](ASSETS.md)** (path, author, source URL, licence, notes). Put licence texts next to the assets and summarize them in `NOTICE`. There are no asset files today: icons (`crates/ui-egui/src/icons.rs`), fill patterns (`crates/render/src/pattern.rs`) and colour tables are generated in code. Keep it that way where you can.
 - `cargo xtask assets` (run by `cargo xtask ci`) fails on any unattributed asset and on any font file.
 - **Fonts live in [storytold/craft-fonts](https://github.com/storytold/craft-fonts), never in this repo** (rules: craftrules [`standards/fonts.md`](https://github.com/storytold/craftrules/blob/main/standards/fonts.md)). Never commit a font file here; add new fonts to craft-fonts. The app uses them only through the optional `CRAFT_FONTS_DIR` build option (`CRAFT_FONTS_DIR="$PWD/../craft-fonts" cargo xtask ci`; use an absolute path), read by `crates/text/build.rs` into `rustfig_text::CRAFT_FONTS`; never add it to a `Cargo.toml`. Everything must build, test and run with `CRAFT_FONTS` empty (the fallback is Ubuntu Light and Hack from the `epaint_default_fonts` crate, with synthetic bold/italic), and tests of craft-fonts glyphs skip when it is empty.
-- Code and original assets are MIT OR Apache-2.0 (`LICENSE-MIT`, `LICENSE-APACHE`, `NOTICE`). If ArtCraft logos are ever added under `docs/brand/`, they are trademarks, not open source (`docs/brand/LICENSE-brand.txt`): never modify them or use them outside RustFig.
+- Code and original assets are MIT OR Apache-2.0 (`LICENSE-MIT`, `LICENSE-APACHE`, `NOTICE`); ported xfig/fig2dev parts also keep the xfig notice (`LICENSE-xfig`). If ArtCraft logos are ever added under `docs/brand/`, they are trademarks, not open source (`docs/brand/LICENSE-brand.txt`): never modify them or use them outside RustFig.
 - **Never crash: no panics in shipped code.** A crash loses the user's unsaved work. Files, pasted data, MCP and control messages, and command params are all untrusted input.
   - Fallible work returns `Result` (or `Option`); callers handle it or propagate it with `?`. Failures reach the user as an error message (`EngineError` for commands, `FormatError` in the format crate, `String` elsewhere below the engine), never as an abort.
   - Workspace clippy lints ban these outside tests, so `cargo xtask ci` fails on them: `unwrap()`, `expect()`, `panic!`, `unreachable!`, `todo!`, `unimplemented!`. Use instead: `?`, `.ok_or(…)?`, `let … else { return … }`, `if let`, `unwrap_or` / `unwrap_or_default` / `unwrap_or_else`, `.first()` / `.last()` / `.split_last()`, and a real error for a match arm you believe is impossible.

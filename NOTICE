@@ -4,11 +4,15 @@ Copyright (c) 2026 The RustFig contributors
 RustFig is licensed under either of the Apache License, Version 2.0
 (LICENSE-APACHE) or the MIT license (LICENSE-MIT), at your option.
 
-RustFig is a clean-room implementation. Its behaviour follows the public
-xfig documentation (user manual and the Fig file format description); it
-contains no xfig source code. xfig is (c) 1985 Supoj Sutanthavibul and
-later contributors; the Fig format description is distributed under the
-xfig licence, which permits use and redistribution.
+RustFig is a Rust reimplementation of xfig. Its behaviour follows xfig's
+documentation and sources, and parts of it are ported from xfig and fig2dev
+(https://mcj.sourceforge.net/). xfig and fig2dev are (c) 1985-1988 Supoj
+Sutanthavibul, (c) 1991 Micah Beck, and Brian V. Smith, Paul King, Thomas
+Loimer and other contributors, under the xfig licence (SPDX: Xfig), which
+permits use, modification, sublicensing and redistribution provided the
+copyright and permission notice remain intact. That notice is reproduced
+in LICENSE-xfig; files with ported code name their xfig or fig2dev source
+in a comment.
 
 X-splines are implemented from the published paper: C. Blanc and
 C. Schlick, "X-Splines: A Spline Model Designed for the End User",

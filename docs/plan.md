@@ -178,7 +178,7 @@ is an optional extra, used in two ways.
 
 ## Decisions that are the user's
 
-- Clean-room policy for `old/` (whether agents may read the xfig C sources, or only its documentation).
+- Use of xfig's sources (decided 2026-10-14): agents may read, port and reuse xfig and fig2dev code under the xfig licence, keeping its notice (`LICENSE-xfig`). The figure libraries in `old/xfig-3.2.9a/Libraries/` have mixed or missing licence notes; bundling them is still the user's decision (with D6).
 - New heavy dependencies (PDF rendering, spell checking, localization framework).
 - CI cost (decided 2026-10-13): Linux runs on every push; Windows and macOS run only for releases (A2).
 - fig2dev stays an optional external program (agreed 2026-10-13): never bundled, never required for the native formats or the web build.
@@ -192,6 +192,7 @@ is an optional extra, used in two ways.
 | 2026-10-13 | First plan, after M0–M3. |
 | 2026-10-13 | Added A8 (fig2dev reference tests) and B0 (fig2dev export backend) with design notes. |
 | 2026-10-14 | A3: the web build compiles locally with rustup's toolchain; xtask uses the running toolchain's rustc. |
+| 2026-10-14 | xfig and fig2dev sources may now be read and ported (user decision; xfig licence, `LICENSE-xfig`). |
 | 2026-10-14 | W3 landed: depth panel with counts, drag-toggle, All On/Off/Toggle, Gray/Blank; hidden depths can't be picked (Add Point could before); export of active layers only. |
 | 2026-10-14 | W2 landed: xfig three-button semantics per mode, modern scheme as a setting (View › xfig mouse buttons), Alt/Ctrl+click for middle/right, indicator with one column per button. |
 | 2026-10-13 | W1 landed: classic xfig layout, Snap menu (positioning and grid), mouse indicator, message history, units box, UI tests. |

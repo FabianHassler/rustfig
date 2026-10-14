@@ -1,7 +1,8 @@
 # RustFig
 
-A clean-room, open-source, Rust-native vector drawing program in the spirit
-of [xfig](https://mcj.sourceforge.net/). It runs natively on macOS, Windows
+An open-source, Rust-native reimplementation of the vector drawing program
+[xfig](https://mcj.sourceforge.net/), close to the original in look and
+behaviour. It runs natively on macOS, Windows
 and Linux, with a web (WASM) build on the way.
 
 ## Status
@@ -39,5 +40,5 @@ finishes; Esc cancels.
 
 ## License
 
-Code is licensed under MIT OR Apache-2.0 (`LICENSE-MIT`, `LICENSE-APACHE`).
+Code is licensed under MIT OR Apache-2.0 (`LICENSE-MIT`, `LICENSE-APACHE`). Parts ported from xfig and fig2dev also carry the xfig licence notice (`LICENSE-xfig`).
 See `NOTICE` and `ASSETS.md`.
