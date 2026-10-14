@@ -60,7 +60,17 @@ fn layout_toggle_command() {
 #[test]
 fn every_tool_button_selects_its_tool() {
     let mut h = harness(app());
-    for t in ToolKind::ALL {
+    // The mode panel has xfig's modes; RustFig's other tools are in the
+    // Tools menu.
+    let menu_only = [
+        ToolKind::Select,
+        ToolKind::OpenClose,
+        ToolKind::XSpline,
+        ToolKind::XSplineClosed,
+        ToolKind::EllipseRadii,
+        ToolKind::EllipseDiameter,
+    ];
+    for t in ToolKind::ALL.into_iter().filter(|t| !menu_only.contains(t)) {
         // The mode panel scrolls in a small window, as a user would.
         h.get_by_label(t.label()).scroll_to_me();
         // Scrolling is animated: let it settle.

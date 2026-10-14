@@ -2,17 +2,19 @@
 //! depth manager and status bar.
 
 use crate::theme::Tokens;
-use crate::{icons, xfig_icons, App};
+use crate::{xfig_icons, App};
 use egui::{vec2, Color32, RichText, Sense};
 use rustfig_engine::ToolKind;
 use rustfig_model::{Document, LineKind, Rgb, STANDARD_COLORS, STANDARD_COLOR_NAMES};
 use serde_json::json;
 
-/// A mode panel button: one of RustFig's tools with its icon, or an xfig
+/// A mode panel button: one of RustFig's tools with xfig's icon, or an xfig
 /// mode RustFig doesn't have yet (shown greyed out, with the plan task).
+/// RustFig's tools without an xfig mode (Select, Open/close, X-splines,
+/// separate ellipse tools) are in the Tools menu only.
 #[derive(Clone, Copy)]
 enum Slot {
-    Tool(ToolKind, Option<&'static xfig_icons::Xbm>),
+    Tool(ToolKind, &'static xfig_icons::Xbm),
     Missing(&'static xfig_icons::Xbm, &'static str, &'static str),
 }
 
@@ -20,60 +22,50 @@ enum Slot {
 /// The circle/ellipse modes are RustFig's circle tools, which draw ellipses
 /// with the middle button as xfig does.
 const DRAWING: [Slot; 15] = [
-    Slot::Tool(ToolKind::CircleRadius, Some(&xfig_icons::ELLRAD)),
-    Slot::Tool(ToolKind::CircleDiameter, Some(&xfig_icons::ELLDIA)),
-    Slot::Tool(ToolKind::SplineApproxClosed, Some(&xfig_icons::C_SPL)),
-    Slot::Tool(ToolKind::SplineApprox, Some(&xfig_icons::SPL)),
-    Slot::Tool(ToolKind::SplineInterpClosed, Some(&xfig_icons::C_INTSPL)),
-    Slot::Tool(ToolKind::SplineInterp, Some(&xfig_icons::INTSPL)),
-    Slot::Tool(ToolKind::Polygon, Some(&xfig_icons::POLYGON)),
-    Slot::Tool(ToolKind::Polyline, Some(&xfig_icons::LINE)),
-    Slot::Tool(ToolKind::Box, Some(&xfig_icons::BOX)),
-    Slot::Tool(ToolKind::ArcBox, Some(&xfig_icons::ARC_BOX)),
-    Slot::Tool(ToolKind::RegularPolygon, Some(&xfig_icons::REGPOLY)),
-    Slot::Tool(ToolKind::Arc, Some(&xfig_icons::ARC)),
-    Slot::Tool(ToolKind::Picture, Some(&xfig_icons::PICOBJ)),
-    Slot::Tool(ToolKind::Text, Some(&xfig_icons::TEXT)),
+    Slot::Tool(ToolKind::CircleRadius, &xfig_icons::ELLRAD),
+    Slot::Tool(ToolKind::CircleDiameter, &xfig_icons::ELLDIA),
+    Slot::Tool(ToolKind::SplineApproxClosed, &xfig_icons::C_SPL),
+    Slot::Tool(ToolKind::SplineApprox, &xfig_icons::SPL),
+    Slot::Tool(ToolKind::SplineInterpClosed, &xfig_icons::C_INTSPL),
+    Slot::Tool(ToolKind::SplineInterp, &xfig_icons::INTSPL),
+    Slot::Tool(ToolKind::Polygon, &xfig_icons::POLYGON),
+    Slot::Tool(ToolKind::Polyline, &xfig_icons::LINE),
+    Slot::Tool(ToolKind::Box, &xfig_icons::BOX),
+    Slot::Tool(ToolKind::ArcBox, &xfig_icons::ARC_BOX),
+    Slot::Tool(ToolKind::RegularPolygon, &xfig_icons::REGPOLY),
+    Slot::Tool(ToolKind::Arc, &xfig_icons::ARC),
+    Slot::Tool(ToolKind::Picture, &xfig_icons::PICOBJ),
+    Slot::Tool(ToolKind::Text, &xfig_icons::TEXT),
     Slot::Missing(&xfig_icons::LIBRARY, "Place a library object", "D6"),
 ];
 
 /// xfig's editing modes in its order.
 const EDITING: [Slot; 25] = [
-    Slot::Tool(ToolKind::Glue, Some(&xfig_icons::GLUE)),
-    Slot::Tool(ToolKind::Break, Some(&xfig_icons::BREAK)),
+    Slot::Tool(ToolKind::Glue, &xfig_icons::GLUE),
+    Slot::Tool(ToolKind::Break, &xfig_icons::BREAK),
     Slot::Missing(&xfig_icons::OPEN_COMP, "Open compound", "D1"),
     Slot::Missing(&xfig_icons::JOIN_SPLIT, "Join or split lines/splines", "D2"),
     Slot::Missing(&xfig_icons::CHOP, "Chop objects", "D3"),
-    Slot::Tool(ToolKind::Scale, Some(&xfig_icons::SCALE)),
-    Slot::Tool(ToolKind::Align, Some(&xfig_icons::ALIGN)),
-    Slot::Tool(ToolKind::MovePoint, Some(&xfig_icons::MOVEPT)),
-    Slot::Tool(ToolKind::Move, Some(&xfig_icons::MOVE)),
-    Slot::Tool(ToolKind::AddPoint, Some(&xfig_icons::ADDPT)),
-    Slot::Tool(ToolKind::Copy, Some(&xfig_icons::COPY)),
-    Slot::Tool(ToolKind::DeletePoint, Some(&xfig_icons::DELETEPT)),
-    Slot::Tool(ToolKind::Delete, Some(&xfig_icons::DELETE)),
-    Slot::Tool(ToolKind::Update, Some(&xfig_icons::UPDATE)),
-    Slot::Tool(ToolKind::Edit, Some(&xfig_icons::EDIT)),
-    Slot::Tool(ToolKind::FlipV, Some(&xfig_icons::FLIP_Y)),
-    Slot::Tool(ToolKind::FlipH, Some(&xfig_icons::FLIP_X)),
-    Slot::Tool(ToolKind::RotateCw, Some(&xfig_icons::ROTCW)),
-    Slot::Tool(ToolKind::RotateCcw, Some(&xfig_icons::ROTCCW)),
-    Slot::Tool(ToolKind::Convert, Some(&xfig_icons::CONVERT)),
-    Slot::Tool(ToolKind::Arrow, Some(&xfig_icons::AUTOARROW)),
+    Slot::Tool(ToolKind::Scale, &xfig_icons::SCALE),
+    Slot::Tool(ToolKind::Align, &xfig_icons::ALIGN),
+    Slot::Tool(ToolKind::MovePoint, &xfig_icons::MOVEPT),
+    Slot::Tool(ToolKind::Move, &xfig_icons::MOVE),
+    Slot::Tool(ToolKind::AddPoint, &xfig_icons::ADDPT),
+    Slot::Tool(ToolKind::Copy, &xfig_icons::COPY),
+    Slot::Tool(ToolKind::DeletePoint, &xfig_icons::DELETEPT),
+    Slot::Tool(ToolKind::Delete, &xfig_icons::DELETE),
+    Slot::Tool(ToolKind::Update, &xfig_icons::UPDATE),
+    Slot::Tool(ToolKind::Edit, &xfig_icons::EDIT),
+    Slot::Tool(ToolKind::FlipV, &xfig_icons::FLIP_Y),
+    Slot::Tool(ToolKind::FlipH, &xfig_icons::FLIP_X),
+    Slot::Tool(ToolKind::RotateCw, &xfig_icons::ROTCW),
+    Slot::Tool(ToolKind::RotateCcw, &xfig_icons::ROTCCW),
+    Slot::Tool(ToolKind::Convert, &xfig_icons::CONVERT),
+    Slot::Tool(ToolKind::Arrow, &xfig_icons::AUTOARROW),
     Slot::Missing(&xfig_icons::TANGENT, "Add tangent/normal to curve", "D4"),
     Slot::Missing(&xfig_icons::ANGLEMEAS, "Measure angle", "D5"),
     Slot::Missing(&xfig_icons::LENMEAS, "Measure length", "D5"),
     Slot::Missing(&xfig_icons::AREAMEAS, "Measure area", "D5"),
-];
-
-/// RustFig's tools xfig doesn't have as modes.
-const EXTRAS: [Slot; 6] = [
-    Slot::Tool(ToolKind::Select, None),
-    Slot::Tool(ToolKind::OpenClose, None),
-    Slot::Tool(ToolKind::XSplineClosed, Some(&xfig_icons::C_XSPL)),
-    Slot::Tool(ToolKind::XSpline, Some(&xfig_icons::XSPL)),
-    Slot::Tool(ToolKind::EllipseRadii, None),
-    Slot::Tool(ToolKind::EllipseDiameter, None),
 ];
 
 /// xfig's mode panel: its icons (`w_icons.c`, 36×32), two columns, the
@@ -86,9 +78,6 @@ pub fn mode_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         ui.add_space(4.0);
         ui.label(RichText::new("Editing").small().color(tk.muted));
         slot_grid(app, ui, tk, "edit_tools", &EDITING);
-        ui.add_space(4.0);
-        ui.label(RichText::new("RustFig").small().color(tk.muted));
-        slot_grid(app, ui, tk, "extra_tools", &EXTRAS);
     });
 }
 
@@ -101,7 +90,7 @@ fn slot_grid(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, id: &str, slots: &[S
         for (i, slot) in slots.iter().filter(|s| !wide(s)).enumerate() {
             match slot {
                 Slot::Missing(icon, tip, task) => missing_button(app, ui, tk, icon, tip, task, SLOT),
-                Slot::Tool(t, icon) => tool_button(app, ui, tk, *t, *icon),
+                Slot::Tool(t, icon) => tool_button(app, ui, tk, *t, icon),
             }
             if i % 2 == 1 {
                 ui.end_row();
@@ -115,7 +104,7 @@ fn slot_grid(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, id: &str, slots: &[S
     }
 }
 
-fn tool_button(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, t: ToolKind, icon: Option<&'static xfig_icons::Xbm>) {
+fn tool_button(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, t: ToolKind, icon: &'static xfig_icons::Xbm) {
     let (rect, resp) = ui.allocate_exact_size(SLOT, Sense::click());
     let active = app.engine.tool() == t;
     let bg = if active {
@@ -127,10 +116,7 @@ fn tool_button(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, t: ToolKind, icon:
     };
     ui.painter().rect_filled(rect, 2.0, bg);
     let ink = if active { tk.icon_active } else { tk.icon };
-    match icon {
-        Some(x) => paint_xbm(app, ui, x, rect, ink),
-        None => icons::paint(ui.painter(), rect.shrink(5.0), t, ink),
-    }
+    paint_xbm(app, ui, icon, rect, ink);
     let tip = if t.shortcut().is_empty() {
         t.label().to_string()
     } else {

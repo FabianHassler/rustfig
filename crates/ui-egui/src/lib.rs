@@ -9,7 +9,6 @@ pub mod canvas;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod control;
 pub mod dialogs;
-pub mod icons;
 pub mod menus;
 pub mod panels;
 pub mod rulers;

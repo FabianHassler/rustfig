@@ -66,7 +66,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
-| 2026-10-14 | Mode panel with xfig's own icons (`w_icons.c` bitmaps) in xfig's order; xfig modes RustFig lacks (library, open compound, join/split, chop, tangent, measure) shown greyed with their plan task; RustFig-only tools in their own group. |
+| 2026-10-14 | Mode panel with xfig's own icons (`w_icons.c` bitmaps) in xfig's order; xfig modes RustFig lacks (library, open compound, join/split, chop, tangent, measure) shown greyed with their plan task; RustFig's tools without an xfig mode (Select, Open/close, X-splines, separate ellipse tools) are in the Tools menu only. |
 | 2026-10-14 | W7: xfig's keyboard accelerators (`app-defaults/Fig`): Meta (Alt/Option) menu keys, physical-Ctrl mode keys, xfig's mode letters (s spline, Shift-a arrows, …); menus show "Meta-N"; on by default, View › xfig keyboard accelerators. Phase W done. 143 tests. |
 | 2026-10-14 | W4: xfig's Snap menu (`w_snap.c`, `w_intersect.c`): Hold, Release, Endpoint, Midpoint, Nearest, Focus, Normal, Tangent, Intersection, Diameter for the next clicked point, with the Snap Mode box above the depth panel; curves use their flattened outlines, so splines snap too. 141 tests. |
 | 2026-10-14 | W6: xfig's rulers (`w_rulers.c`: tick and label tables by zoom and units, cursor marker, left/right pan by 1/2 inch or 1 cm, middle drag, Shift ×5) and units box in the ruler corner (left: pan to origin; right: Unit menu with ruler units, figure unit and scale). Parity ≈61 %, 131 tests. |
