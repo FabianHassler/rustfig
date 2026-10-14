@@ -31,7 +31,7 @@ the score.
 | Printing | 5 | 10 % | print dialog and printer output | 30 |
 | Settings & styles | 5 | 15 % | settings persistence, recent files, style manager, units dialog | 30 |
 | Platforms | 7 | 50 % | Windows/Linux verification, web build and file I/O on the web | 40 |
-| **Overall** | 100 | **≈60 %** | | **466** |
+| **Overall** | 100 | **≈61 %** | | **452** |
 
 ## Evidence of what ships
 

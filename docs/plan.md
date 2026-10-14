@@ -31,7 +31,7 @@ tasks that touch each area.
 | S0 | ✅ 2026-10-14. **Source map** `docs/source-map.md`: every xfig and fig2dev C file with its RustFig module, status and task. | Every C file listed. | 4 |
 | S1 | ✅ 2026-10-14 (`Object::xfig_type_rank`, `Document::for_each_leaf_xfig_order`, `xfig_order`; hit testing follows the same order). **Draw order as xfig:** within a depth, arcs, compounds (recursively), ellipses, lines, splines, texts (`u_redraw.c`); gray depths drawn behind all active ones; `.fig` written in xfig's type order (`f_save.c`). | Render tests for type order, compound order and gray layers; a saved file lists objects in xfig's order. | 4 |
 | S2 | ✅ 2026-10-14 (also: xfig's labels word for word; ellipses finish with either button; text: middle finishes, right cancels). **Mouse indicator as xfig** (`w_mousefun.c`): left label left of the mouse, middle above, right label right; xfig's capitalisation. | Screenshot next to the manual's image. | 2 |
-| S3 | **Startup options and resources** (`main.c`, `resources.c`, `xfigmain.c`): the command-line options users pass (`-metric`, `-specialtext`, `-latexfonts`, `-startfontsize`, `-exportLanguage`, `-startgridmode`, `-startposnmode`, `-zoom`, arrow defaults, …) set the same defaults in RustFig; saved with E1 settings. | `rustfig -metric -specialtext …` starts with the same indicator settings as xfig; tests per option. | 10 |
+| S3 | **xfig's command-line options** (`main.c`, `xfig.man.in`): RustFig accepts xfig's standard options (`-metric`/`-inches`, `-specialtext`, `-latexfonts`, `-startfontsize`, `-startgridmode`, `-startposnmode`, `-zoom`, `-exportLanguage`, arrow defaults, `-portrait`/`-landscape`, …) as a general compatibility feature; they override the preferences (E1) for that run. Nothing user-specific is built in. | Each option has a test; `rustfig -metric file.fig` behaves as `xfig -metric file.fig`. | 10 |
 
 ## Phase A: hardening (≈84 h)
 
@@ -85,7 +85,7 @@ covered by W2.
 | B2 | **PDF/EPS + LaTeX overlay** (fig2dev's pdftex_t/pstex_t): graphics without special text, plus a `.tex` file placing the text. | The combined output typesets in LaTeX with fonts from the document. | 12 |
 | B3 | **PSTricks and pict2e exports.** | Both compile; a test checks the structure. | 14 |
 | B4 | **PostScript with page layout:** orientation, centring, paper size, magnification, multi-page tiling (the Fig header's "Multiple"). | Output matches the header settings; ghostscript renders it (manual check). | 12 |
-| B5 | **Printing**: native print via the OS (PDF to the system print dialog), command `file.print`. | Prints on macOS; graceful error elsewhere. | 10 |
+| B5 | **Printing, modernised** (decided 2026-10-14): xfig's Print panel options (paper, orientation, magnification, centring, layers, copies) produce a PDF that goes to the operating system's print dialog on macOS, Windows and Linux (and the browser's print on the web), instead of xfig's PostScript spooler commands. Command `file.print`. | Prints on all three desktop platforms; the web build opens the browser's print dialog. | 12 |
 | B6 | **Bitmaps:** GIF (with the Fig transparent colour), JPEG (quality), TIFF, PPM. | Round trip through the `image` crate in tests. | 6 |
 | B7 | **Export dialog update** for all new formats, remembering the last choice. | Screenshot review. | 4 |
 | B8 | Accurate text widths in PDF/EPS: use the exported font's metrics (craft-fonts faces matching the standard 35) for justification. | Centred text in the PDF centres within 1 % of the line width. | 6 |
@@ -109,17 +109,18 @@ covered by W2.
 | D3 | **Chop** (cut objects at intersections). | Tests with line/line, line/arc and line/ellipse. | 14 |
 | D4 | **Tangent/normal** tool for circles, ellipses, arcs and splines. | Draws the correct line at the clicked point. | 8 |
 | D5 | **Measure modes**: angle, length, area tools showing results in the status bar. | Matches `object.measure`. | 6 |
-| D6 | **Library objects**: browse a directory of .fig files with thumbnails, place them as compounds; copy a selection to a library. | Place an object from a sample library; undo removes it. | 30 |
+| D6 | **Library objects** (decided 2026-10-14: bundle xfig's libraries). Copy xfig's `Libraries/` (33 libraries, ≈2,600 files, 15 MB) into `libraries/` with each library's README/LICENSE notes; the few pictures they use (GIF, PNG, XPM, XBM, PS) get `ASSETS.md` rows. Library mode as xfig's (`e_placelib.c`, `w_library.c`): browse with thumbnails, place copies (place at original position with Shift+right), copy a selection to a library; user library directories from the preferences. | Place an object from a bundled library; undo removes it; `cargo xtask assets` passes. | 30 |
 | D7 | **Point positioning modes**: latex lines, manhattan, mountain, 45° constraint with Shift. | Tests per mode. | 10 |
 | D8 | **Linked move**: moving a box drags the attached line end points (xfig's smart links). | Test with a box and two attached lines. | 10 |
 | D10 | **Remaining mode options** found by the source map: dimension lines (Shift+left in polyline mode, `d_line.c`), align to canvas (`e_align.c`), array copy (`e_copy.c`), anchor point for flip/rotate and number of rotated copies (`e_flip.c`, `e_rotate.c`), scaling one edge (`e_scale.c`), lengths shown while drawing (`w_msgpanel.c`), typed coordinates for the next point (`w_keyboard.c`). | A test per option; mouse hints list them. | 16 |
+| D11 | **Every remaining xfig function** (goal decided 2026-10-14: all of xfig's functions): Digitize (`w_digitize.c`, tablet input against a scanned figure), screen capture into a picture object (`w_capture.c`, through the OS screenshot facilities), Show vertex numbers, Show info balloons, Autorefresh mode (`w_cmdpanel.c`), edit the figure comments from Edit mode, Unzoom semantics. Modern equivalents where the X11 way no longer works, decided per item. | Each menu entry and mode works; none is greyed out any more. | 24 |
 | D9 | Arrowhead types 10–14 with exact shapes; dash-dot tick styles. | Visual review against the xfig manual. | 6 |
 
 ## Phase E: UI completeness, M7 (≈56 h)
 
 | Id | Task | Acceptance | Hours |
 |----|------|------------|------:|
-| E1 | **Settings persistence** (eframe storage on native and web): indicator, grid, units, panel visibility, recent files. | Restart keeps settings; File menu lists recent files. | 8 |
+| E1 | **Preferences that survive restarts** (a modernisation: xfig keeps only recent files in `~/.xfigrc` and otherwise relies on X resources). One store behind an engine interface: a settings file in the platform's config directory (`~/.config/rustfig/`, `~/Library/Application Support/RustFig/`, `%APPDATA%\RustFig\`), browser storage on the web; xfig's standard defaults when it is missing; a damaged file is reported, never fatal. Stores what xfig makes configurable through resources (units, default font/size, LaTeX fonts, special text, grid, positioning, zoom, arrow defaults, export format), RustFig's switches (layout, mouse scheme, keymap, panels) and recent files. Edit › Global settings shows them; "Use current attributes as defaults" saves the attribute panel. | Restart keeps settings on macOS, Linux, Windows and the web; File menu lists recent files; a corrupt file falls back to defaults with a message. | 12 |
 | E3 | **Zoom box** and zoom tool. | Drag a box to zoom into it. | 4 |
 | E4 | **Colour editor**: create and edit user colours (RGB/HSV), remove unused ones. | New colours save to the Fig file. | 10 |
 | E5 | **Character map** inserting into the text being typed (Symbol and Dingbats included). | Insert ∑ with the Symbol font. | 8 |
@@ -187,16 +188,22 @@ is an optional extra, used in two ways.
 
 ## Order and milestones
 
-1. Phase W, xfig window parity, first: W1 → W2 → W3 → S1 → S2 → W5 → W6 → W4 → W7, with D7 and D8 alongside W5. W1 starts with the A4 groundwork (app construction separated from eframe, replaceable file dialogs, a first `egui_kittest` test) so every W task lands with UI tests.
-2. A8 and B0 (fig2dev reference tests, then the fig2dev export backend).
-3. A1 and A9 (undo memory, per-command cost), A2 and A3 (CI, web build), the rest of A4.
-4. A5–A7, then B1, B2, C1–C3: the first release candidate for LaTeX users, on desktop and web.
-5. D1, D6, E1, E7: the features xfig users miss most day to day.
-6. The rest of B, D and E, then F and G toward Beta (parity ≥ 85 %, about 550 h in total).
+1. ✅ Phase W, xfig window parity (W1–W7, S0–S2), done 2026-10-14.
+2. A8 and B0 (fig2dev reference tests, then the fig2dev export backend: every fig2dev language through the user's fig2dev, as xfig exports).
+3. A1 and A9 (undo memory, per-command cost), A2 and A3 (CI on Linux, Windows and macOS; web build), the rest of A4, A5–A7.
+4. E1 and S3 (preferences, xfig's command-line options).
+5. B1–B8 (native LaTeX exports, modern printing), C1–C3 (web): the first release candidate, on desktop and web.
+6. D6 (libraries), D1–D5, D7–D11, E3–E9: every remaining xfig function.
+7. F and G toward Beta and 1.0 (every xfig function available; about 550 h in total).
 
 ## Decisions that are the user's
 
-- Use of xfig's sources (decided 2026-10-14): agents may read, port and reuse xfig and fig2dev code under the xfig licence, keeping its notice (`LICENSE-xfig`). The figure libraries in `old/xfig-3.2.9a/Libraries/` have mixed or missing licence notes; bundling them is still the user's decision (with D6).
+- Use of xfig's sources (decided 2026-10-14): agents may read, port and reuse xfig and fig2dev code under the xfig licence, keeping its notice (`LICENSE-xfig`).
+- Scope (decided 2026-10-14): RustFig makes **every xfig function** available, with xfig's behaviour and standard defaults; modernisations are deliberate decisions. It is a general, cross-platform tool: no user's personal options or platform special cases are built in; personal choices go into the preferences (E1, S3).
+- Printing (decided 2026-10-14): modernised, PDF to the operating system's print dialog (B5).
+- Libraries (decided 2026-10-14): xfig's figure libraries are copied into the repository and bundled (D6), keeping each library's notes.
+- Preferences file format (open): a human-readable settings file (TOML, editable like xfig's resources) or egui's built-in storage (no new dependency, not meant for hand editing). Recommended: TOML.
+- Outlook, not planned (2026-10-14): a WYSIWYG editor for LaTeX text in figures.
 - New heavy dependencies (PDF rendering, spell checking, localization framework).
 - CI cost (decided 2026-10-13): Linux runs on every push; Windows and macOS run only for releases (A2).
 - fig2dev stays an optional external program (agreed 2026-10-13): never bundled, never required for the native formats or the web build.
@@ -210,6 +217,7 @@ is an optional extra, used in two ways.
 | 2026-10-13 | First plan, after M0–M3. |
 | 2026-10-13 | Added A8 (fig2dev reference tests) and B0 (fig2dev export backend) with design notes. |
 | 2026-10-14 | A3: the web build compiles locally with rustup's toolchain; xtask uses the running toolchain's rustc. |
+| 2026-10-14 | Decisions: every xfig function, modern printing (B5), bundled libraries (D6), preferences (E1) and xfig options (S3) without user-specific defaults; D11 added; outlook: WYSIWYG LaTeX. |
 | 2026-10-14 | W7 landed: xfig keymap; phase W done. |
 | 2026-10-14 | W4 landed: xfig's Snap menu and Snap Mode box. |
 | 2026-10-14 | W6 landed: xfig's rulers, units box and Unit menu. |

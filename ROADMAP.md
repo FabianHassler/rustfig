@@ -10,8 +10,8 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 |-------|---------|-------|
 | Prototype | Core model, file format, rendering | done |
 | **Alpha** | Usable for everyday figures; gaps in export formats, libraries, print | **current** |
-| Beta | xfig parity in all areas except exotic export languages | next |
-| 1.0 | Parity plus web, MCP and automation polish | later |
+| Beta | every everyday xfig function; preferences; native LaTeX exports; Windows, Linux and web verified | next |
+| 1.0 | every xfig function available (libraries, digitize, print, all exports), plus web, MCP and automation polish | later |
 
 ## Headline numbers
 
@@ -49,6 +49,10 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 - JSON-lines control channel, MCP server (`rustfig-cli mcp`), command-line converter.
 - Native `.rustfig` JSON format.
 
+## Outlook
+
+- A WYSIWYG editor for LaTeX text in figures (special text typeset on the canvas as it will appear in the document). An idea for after 1.0; not planned yet.
+
 ## Languages
 
 English only. See [localization parity](docs/localization-parity.md).
@@ -59,13 +63,16 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 [docs/gaps.md](docs/gaps.md). Next up:
 1. fig2dev: reference tests comparing RustFig with xfig's converter (A8), then fig2dev as an optional export backend (B0).
 2. Phase A, hardening: shared undo snapshots, per-command cost, CI (Linux on every push, all OSes for releases), web build, UI tests, export polish, crash recovery, no UI stalls on large drawings.
-3. Phase B, exports for LaTeX users: TikZ, PDF/EPS + LaTeX overlay, PostScript layout, printing.
-4. Phase C, web: trunk packaging and browser file I/O.
+3. Preferences that survive restarts (E1) and xfig's command-line options (S3).
+4. Phase B: native LaTeX exports, modern printing (PDF to the system print dialog).
+5. Phase C, web: trunk packaging and browser file I/O.
+6. Every remaining xfig function, including xfig's bundled figure libraries (D6) and D11.
 
 ## Progress log
 
 | Date | Change |
 |------|--------|
+| 2026-10-14 | Scope set: every xfig function, cross-platform, no user-specific defaults; modern printing; xfig's libraries bundled; preferences planned (E1, S3); outlook: WYSIWYG LaTeX. |
 | 2026-10-14 | Starts with no mode, as xfig: "READY. Select a mode or load a file", empty mouse indicator, canvas clicks ignored until a mode is chosen. |
 | 2026-10-14 | Attribute panel pictures are xfig's bitmaps (`w_icons.c`) on the buttons and in the choice panels; Arrow Mode in xfig's order (none, forward, both, backward); Grid Mode offers xfig's four grid steps. |
 | 2026-10-14 | Main menus cloned from xfig (`w_cmdpanel.c`): File, Edit, View, Snap, Help with xfig's entries, order, dividers and accelerators; entries RustFig lacks greyed with their plan task; Edit › Global settings holds RustFig's preferences; the Object and Tools menus remain in the modern layout. |

@@ -159,15 +159,15 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_cursor.c` | 144 | cursors per mode | canvas | partial | — |
 | `w_color.c` | 2592 | colour panel and editor | indicator combo | partial: colour editor | E4 |
 | `w_export.c` | 2054 | export panel | `dialogs::export` | partial | B7 |
-| `w_print.c` | 1542 | print panel | — | modern: PDF to the system print dialog | B5 |
+| `w_print.c` | 1542 | print panel | — | missing; modern: PDF to the system print dialog (decided) | B5 |
 | `w_file.c`, `w_dir.c`, `w_browse.c`, `w_listwidget.c` | 3.5 k | file panel and browser with preview | native dialogs (`rfd`) | modern; preview missing | — |
 | `w_library.c` | 1831 | library panel | — | missing | D6 |
 | `w_srchrepl.c` | 966 | search/replace, spell check | `dialogs::search` | partial: spell check | F5 |
 | `w_style.c` | 1026 | style manager | — | missing | E6 |
 | `w_fontpanel.c` | 424 | font menus | `attributes` Text Font panel | own | review |
 | `w_help.c` | 219 | Help menu | menus | own | — |
-| `w_capture.c` | 676 | screen capture into a picture | — | n/a (system screenshot) | — |
-| `w_digitize.c` | 471 | digitising tablet | — | n/a | — |
+| `w_capture.c` | 676 | screen capture into a picture | — | missing (through the OS screenshot facilities) | D11 |
+| `w_digitize.c` | 471 | digitising tablet | — | missing | D11 |
 | `w_drawprim.c`, `w_fontbits.c`, `w_rottext.c`, `w_i18n.c` | 4.6 k | X drawing primitives, bitmap fonts, rotated X text, X input methods | renderer, `text` | n/a | — |
 | `w_setup.c`, `w_util.c` | 2.1 k | X widget plumbing | — | n/a | — |
 | `main.c`, `xfigmain.c`, `resources.c`, `mode.c`, `object.c` | 5.1 k | command-line options, resources, mode state | `apps/rustfig`, `Indicator` | partial: options and resources | S3 |
