@@ -2,7 +2,7 @@
 
 **Status (2026-10-14):** Stage **Alpha**. Overall xfig parity **≈60 %**
 ([assessment](docs/target-app-parity.md)). The native app draws, edits,
-saves and exports. Web build not yet verified.
+saves and exports. The web build compiles; it is not yet packaged or tested in a browser.
 
 ## Stage
 
@@ -40,7 +40,7 @@ saves and exports. Web build not yet verified.
 | Libraries | 0 % | not started |
 | Printing | 10 % | export PDF only |
 | Settings & styles | 15 % | no persistence, style manager |
-| Platforms | 50 % | macOS verified; Windows/Linux/web unverified |
+| Platforms | 50 % | macOS verified; web build compiles; Windows/Linux and the web app at run time unverified |
 
 ## Features beyond xfig
 

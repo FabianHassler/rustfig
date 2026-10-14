@@ -66,8 +66,16 @@ fn run(cmd: &mut Command) -> Result<(), String> {
     }
 }
 
+/// Cargo of the running toolchain, using that toolchain's rustc too
+/// (unless RUSTC is set), so `cargo +toolchain xtask …` stays on it.
 fn cargo() -> Command {
-    Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".into()))
+    let mut c = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".into()));
+    if std::env::var_os("RUSTC").is_none() {
+        if let Some(r) = sibling_rustc() {
+            c.env("RUSTC", r);
+        }
+    }
+    c
 }
 
 /// Names of the dependencies declared in a Cargo.toml (all dependency tables).
@@ -170,8 +178,25 @@ fn assets() -> Result<(), String> {
     }
 }
 
+/// The rustc of the toolchain running this cargo (its sibling binary), so a
+/// `cargo +toolchain xtask` checks that toolchain, not whichever rustc comes
+/// first on PATH.
+fn sibling_rustc() -> Option<PathBuf> {
+    std::env::var_os("CARGO")
+        .map(PathBuf::from)
+        .and_then(|c| {
+            c.parent()
+                .map(|d| d.join(if cfg!(windows) { "rustc.exe" } else { "rustc" }))
+        })
+        .filter(|r| r.is_file())
+}
+
+fn rustc() -> Command {
+    Command::new(sibling_rustc().unwrap_or_else(|| PathBuf::from("rustc")))
+}
+
 fn wasm_target_installed() -> bool {
-    let out = Command::new("rustc").args(["--print", "sysroot"]).output();
+    let out = rustc().args(["--print", "sysroot"]).output();
     let Ok(out) = out else { return false };
     let sysroot = String::from_utf8_lossy(&out.stdout).trim().to_string();
     Path::new(&sysroot).join("lib/rustlib/wasm32-unknown-unknown").is_dir()

@@ -1,6 +1,6 @@
 # RustFig — instructions for agents
 
-RustFig is a clean-room, open-source, Rust-native vector drawing app aiming at xfig parity (and beyond). It runs natively on macOS, Windows and Linux, and on the web via WASM (web build not yet verified).
+RustFig is a clean-room, open-source, Rust-native vector drawing app aiming at xfig parity (and beyond). It runs natively on macOS, Windows and Linux, and on the web via WASM (the wasm build compiles; packaging and browser file I/O not yet done).
 
 ## Start every session here
 
@@ -61,7 +61,7 @@ Coordinates are Fig units (1200 per inch; metric drawings use 450 per cm), y gro
 ## Environment notes
 
 - If cargo can't write `~/.cargo` (sandboxed agents), use `export CARGO_HOME=$PWD/.cargo-home` (gitignored). Fetching new crates needs network access to crates.io; one crate archive contains `.vscode/settings.json`, which some sandboxes refuse to write.
-- This machine has Homebrew Rust without rustup, so the `wasm32-unknown-unknown` target can't be added and `cargo xtask wasm` prints a warning and skips. CI must set `RUSTFIG_REQUIRE_WASM=1` so the check fails instead of skipping.
+- This machine's default Rust is Homebrew's, which can't use the wasm32 target, so plain `cargo xtask ci` skips the wasm check with a warning. rustup is installed keg-only next to it with toolchain 1.99.0 + `wasm32-unknown-unknown`: run the wasm check with `CARGO_TARGET_DIR=target/rustup RUSTFIG_REQUIRE_WASM=1 "$(brew --prefix rustup)/bin/cargo" +1.99.0 xtask wasm` (see `docs/development.md`). CI must set `RUSTFIG_REQUIRE_WASM=1` so the check fails instead of skipping.
 - Shell gotchas: `mv`/`cp` are aliased interactive (use `/bin/mv -f` / `/bin/cp -f`), and zsh `noclobber` is on (use `>|` to overwrite with a redirect).
 - Parallel agents: separate `CARGO_TARGET_DIR` per agent; edit only the crates you own; write manifests atomically. Each target dir grows large: delete yours when you finish (a full disk fails links with `errno=28`).
 

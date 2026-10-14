@@ -91,6 +91,8 @@ impl App {
     /// Create the app. `control_port` starts the JSON-lines control server (native only).
     pub fn new(cc: &eframe::CreationContext<'_>, engine: Engine, control_port: Option<u16>) -> App {
         cc.egui_ctx.set_theme(egui::ThemePreference::System);
+        // Mutated only by the native control server below.
+        #[cfg_attr(target_arch = "wasm32", allow(unused_mut))]
         let mut app = App::with_engine(engine);
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(port) = control_port {
