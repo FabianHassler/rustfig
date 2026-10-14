@@ -17,7 +17,7 @@ mod view;
 
 pub use error::EngineError;
 pub use indicator::{GridMode, Indicator, SnapMode};
-pub use tools::{Key, MouseHints, Overlay, ToolEvent, ToolKind};
+pub use tools::{Button, Key, MouseHints, MouseScheme, Overlay, ToolEvent, ToolKind};
 pub use view::View;
 
 pub use rustfig_format as format;
@@ -50,6 +50,7 @@ pub struct Engine {
     pub view: View,
     tool: ToolKind,
     tool_state: tools::ToolState,
+    mouse_scheme: tools::MouseScheme,
     clipboard: Vec<Object>,
     path: Option<String>,
     modified: bool,
@@ -81,6 +82,7 @@ impl Engine {
             view: View::default(),
             tool: ToolKind::Select,
             tool_state: tools::ToolState::Idle,
+            mouse_scheme: tools::MouseScheme::default(),
             clipboard: Vec::new(),
             path: None,
             modified: false,

@@ -125,3 +125,87 @@ fn dialogs_open() {
         assert!(h.query_all_by_label(title).count() >= 1, "{cmd} did not open {title}");
     }
 }
+
+fn click_button(
+    h: &mut Harness<'static, App>,
+    pos: egui::Pos2,
+    button: egui::PointerButton,
+    modifiers: egui::Modifiers,
+) {
+    h.hover_at(pos);
+    h.run_steps(1);
+    for pressed in [true, false] {
+        h.event(egui::Event::PointerButton {
+            pos,
+            button,
+            pressed,
+            modifiers,
+        });
+        h.run_steps(1);
+    }
+}
+
+#[test]
+fn polyline_with_xfig_buttons() {
+    let mut h = harness(app());
+    h.get_by_label("Polyline").click();
+    h.run_steps(2);
+    let none = egui::Modifiers::NONE;
+    click_button(&mut h, pos2(400.0, 300.0), egui::PointerButton::Primary, none);
+    h.get_by_label_contains("middle: final point");
+    click_button(&mut h, pos2(500.0, 300.0), egui::PointerButton::Primary, none);
+    click_button(&mut h, pos2(500.0, 400.0), egui::PointerButton::Middle, none);
+    let doc = h.state().engine.doc();
+    assert_eq!(doc.objects.len(), 1);
+    assert_eq!(doc.objects[0].points().unwrap().len(), 3);
+    // Alt+click stands in for the middle button on a two-button mouse.
+    click_button(&mut h, pos2(400.0, 500.0), egui::PointerButton::Primary, none);
+    click_button(
+        &mut h,
+        pos2(500.0, 500.0),
+        egui::PointerButton::Primary,
+        egui::Modifiers::ALT,
+    );
+    assert_eq!(h.state().engine.doc().objects.len(), 2);
+    // The right button cancels.
+    click_button(&mut h, pos2(400.0, 600.0), egui::PointerButton::Primary, none);
+    click_button(&mut h, pos2(500.0, 600.0), egui::PointerButton::Secondary, none);
+    assert_eq!(h.state().engine.doc().objects.len(), 2);
+    assert!(!h.state().engine.tool_busy());
+}
+
+#[test]
+fn mouse_buttons_menu_switches_scheme() {
+    let mut h = harness(app());
+    h.get_by_label_contains("middle: —");
+    h.get_by_label("View").click();
+    h.run_steps(2);
+    h.get_by_label_contains("xfig mouse buttons").click();
+    h.run_steps(2);
+    assert_eq!(h.state().engine.mouse_scheme(), rustfig_engine::MouseScheme::Modern);
+    h.get_by_label_contains("middle: pan");
+}
+
+#[test]
+fn two_button_mapping() {
+    use egui::{Modifiers, PointerButton};
+    use rustfig_engine::Button;
+    use rustfig_ui_egui::canvas::tool_button;
+    assert_eq!(tool_button(PointerButton::Primary, Modifiers::NONE), Some(Button::Left));
+    assert_eq!(
+        tool_button(PointerButton::Primary, Modifiers::ALT),
+        Some(Button::Middle)
+    );
+    assert_eq!(
+        tool_button(PointerButton::Primary, Modifiers::CTRL),
+        Some(Button::Right)
+    );
+    assert_eq!(
+        tool_button(PointerButton::Middle, Modifiers::NONE),
+        Some(Button::Middle)
+    );
+    assert_eq!(
+        tool_button(PointerButton::Secondary, Modifiers::NONE),
+        Some(Button::Right)
+    );
+}

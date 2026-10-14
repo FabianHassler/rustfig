@@ -1,10 +1,10 @@
 # Known gaps (ranked work list)
 
-**Status:** 2026-10-13. Ranked by user impact per hour. Pick work from the top.
+**Status:** 2026-10-14. Ranked by user impact per hour. Pick work from the top.
 
 | # | Gap | Area | Impact | Hours |
 |---|-----|------|--------|------:|
-| 0 | Main window differs from xfig: no three-button mouse scheme, simpler depth panel, no object snaps, no rulers or unit panel, attribute panel not per mode (plan phase W; W1 layout done) | UI | High: xfig users notice at once | 76 |
+| 0 | Main window differs from xfig: simpler depth panel, no object snaps, no rulers or unit panel, attribute panel not per mode (plan phase W; W1 layout and W2 mouse buttons done) | UI | High: xfig users notice at once | 60 |
 | 1 | LaTeX exports: TikZ, PSTricks, pict2e (special text passed through). Quick route: the fig2dev backend (plan B0, 8 h), then native exporters | Export | High: xfig's main audience writes LaTeX | 40 |
 | 2 | Web build: install the wasm target in CI, verify `cargo xtask wasm`, add trunk packaging and browser open/save/download | Platforms | High | 24 |
 | 3 | PostScript output with page layout (orientation, centring, multi-page) and printing | Export/Printing | High | 30 |
@@ -34,4 +34,5 @@
 | 2026-10-13 | First list. |
 | 2026-10-13 | Added #0 (xfig window parity, phase W). |
 | 2026-10-13 | #0 shrank: W1 landed. |
+| 2026-10-14 | #0 shrank: W2 landed. |
 | 2026-10-13 | Linked #1 to the fig2dev backend (B0); added #21 (reference tests, A8). |

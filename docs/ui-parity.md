@@ -1,6 +1,6 @@
 # UI parity checklist
 
-**Status:** 2026-10-13. ✅ done · 🟡 partial · ❌ missing
+**Status:** 2026-10-14. ✅ done · 🟡 partial · ❌ missing
 
 ## Drawing modes
 | xfig mode | RustFig | |
@@ -50,7 +50,7 @@
 | View: character map, style manager | — | ❌ |
 | Indicator panel (line, colours, fill, depth, arrows, caps, joins, fonts, justification, angle, radius, sides, rotation, grid, positioning) | bottom panel | 🟡 no latex/manhattan positioning |
 | Rulers | — | ❌ |
-| Mouse-function panel | status bar shows the tool | 🟡 |
+| Mouse-function panel | top strip, one column per button | ✅ |
 
 ## Main window (xfig screen map)
 | xfig | RustFig | Plan |
@@ -58,8 +58,8 @@
 | Main menus File, Edit, View, Snap, Help | ✅ in xfig's order with xfig labels (Object and Tools as extras); Snap has point positioning and grid, object snaps missing | W4 |
 | Current file name | ✅ next to the menus, marks unsaved changes | — |
 | Message panel | ✅ under the menus; click for the history | — |
-| Mouse-function indicator | 🟡 shows each button's current function per tool and state; xfig's three-button scheme comes in W2 | W2 |
-| Three-button mouse semantics | 🟡 left click + double/right click | W2 |
+| Mouse-function indicator | ✅ each button's current function per tool and state, checked against the tools by a test | — |
+| Three-button mouse semantics | ✅ xfig's per-mode functions (default) or a modern scheme (View › xfig mouse buttons); Alt+click = middle, Ctrl+click = right. Missing: dimension lines, rotate/flip anchor, array copy, align to canvas | D |
 | Units box | 🟡 shows the units, opens units and page settings; xfig's scale panel missing | W6 |
 | Top and side rulers | ❌ | W6 |
 | Depth panel: checkboxes, drag-toggle, All On/Off/Toggle, Gray/Blank | 🟡 checkboxes, shown by default in the classic layout | W3 |
@@ -72,3 +72,4 @@
 | 2026-10-13 | First checklist. |
 | 2026-10-13 | Added the main-window section (plan phase W). |
 | 2026-10-13 | W1: classic layout, message panel, mouse indicator, units box. |
+| 2026-10-14 | W2: three-button mouse semantics and the modern scheme. |

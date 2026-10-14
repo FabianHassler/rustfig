@@ -1,7 +1,7 @@
 //! Tool (mode) selection and synthetic tool events.
 
 use super::{always, num, opt_bool, opt_str, CmdResult, Command};
-use crate::tools::{Key, ToolEvent, ToolKind};
+use crate::tools::{Button, Key, MouseScheme, ToolEvent, ToolKind};
 use crate::{Engine, EngineError};
 use rustfig_geom::Point;
 use serde_json::{json, Value};
@@ -25,12 +25,36 @@ pub(super) fn commands() -> Vec<Command> {
         label: "Send tool event",
         menu: "",
         shortcut: "",
-        params: "{\"type\": press|move|release|double_click|key|text, \"x\"?, \"y\"? (Fig units), \"button\"?: left|right, \"shift\"?: bool, \"key\"?: enter|escape|backspace|delete|left|right, \"text\"?: string}",
+        params: "{\"type\": press|move|release|double_click|key|text, \"x\"?, \"y\"? (Fig units), \"button\"?: left|middle|right (default left), \"shift\"?: bool, \"key\"?: enter|escape|backspace|delete|left|right, \"text\"?: string}",
         mutates: false,
         enabled: always,
         run: event,
     });
+    v.push(Command {
+        id: "tool.mouse_buttons",
+        label: "xfig mouse buttons (3 buttons)",
+        menu: "View",
+        shortcut: "",
+        params: "{\"scheme\"?: xfig|modern}  — toggles when omitted. xfig: left, middle and right have per-mode functions, right cancels; modern: left works, right or double click finishes, middle pans",
+        mutates: false,
+        enabled: always,
+        run: mouse_buttons,
+    });
     v
+}
+
+fn mouse_buttons(e: &mut Engine, p: &Value) -> CmdResult {
+    let scheme = match opt_str(p, "scheme")? {
+        Some(n) => {
+            MouseScheme::from_name(n).ok_or_else(|| EngineError::bad_params(format!("unknown mouse scheme {n:?}")))?
+        }
+        None => match e.mouse_scheme() {
+            MouseScheme::Xfig => MouseScheme::Modern,
+            MouseScheme::Modern => MouseScheme::Xfig,
+        },
+    };
+    e.set_mouse_scheme(scheme);
+    Ok(json!({"scheme": scheme.name()}))
 }
 
 fn set(e: &mut Engine, kind: ToolKind) -> CmdResult {
@@ -99,15 +123,18 @@ fn event(e: &mut Engine, p: &Value) -> CmdResult {
     let kind = opt_str(p, "type")?.unwrap_or("");
     let pos = || -> Result<Point, EngineError> { Ok(Point::new(num(p, "x")?, num(p, "y")?)) };
     let shift = opt_bool(p, "shift")?.unwrap_or(false);
-    let right = opt_str(p, "button")? == Some("right");
+    let button = match opt_str(p, "button")? {
+        Some(n) => Button::from_name(n).ok_or_else(|| EngineError::bad_params(format!("unknown button {n:?}")))?,
+        None => Button::Left,
+    };
     let ev = match kind {
         "press" => ToolEvent::Press {
             pos: pos()?,
-            right,
+            button,
             shift,
         },
         "move" => ToolEvent::Move { pos: pos()? },
-        "release" => ToolEvent::Release { pos: pos()?, right },
+        "release" => ToolEvent::Release { pos: pos()?, button },
         "double_click" => ToolEvent::DoubleClick { pos: pos()? },
         "key" => ToolEvent::Key(match opt_str(p, "key")?.unwrap_or("") {
             "enter" | "return" => Key::Enter,

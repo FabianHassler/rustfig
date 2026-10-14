@@ -1,6 +1,6 @@
 # RustFig roadmap
 
-**Status (2026-10-13):** Stage **Alpha**. Overall xfig parity **≈58 %**
+**Status (2026-10-14):** Stage **Alpha**. Overall xfig parity **≈60 %**
 ([assessment](docs/target-app-parity.md)). The native app draws, edits,
 saves and exports. Web build not yet verified.
 
@@ -17,10 +17,10 @@ saves and exports. Web build not yet verified.
 
 | Measure | Value |
 |---------|-------|
-| Overall parity (weighted) | ≈58 % |
-| Commands (all reachable from the control channel and MCP) | 124 engine (incl. 38 tool modes) + 15 UI |
+| Overall parity (weighted) | ≈60 % |
+| Commands (all reachable from the control channel and MCP) | 125 engine (incl. 38 tool modes) + 15 UI |
 | Interactive tools (xfig modes) | 38 |
-| Tests | 94 (unit, integration, property-based fuzzing, headless UI) |
+| Tests | 110 (unit, integration, property-based fuzzing, headless UI) |
 | Fig format | read 3.0–3.2, write 3.2 |
 | Export formats | PDF, SVG, EPS, PNG |
 | Perf, 50k paths (render fit / hit test / open) | 330 ms / 0.1 ms / 17 ms |
@@ -29,13 +29,13 @@ saves and exports. Web build not yet verified.
 
 | Dimension | Parity | Details |
 |-----------|--------|---------|
-| Drawing modes | 85 % | all xfig shapes except library objects |
-| Editing modes | 65 % | missing open-compound, join/split, chop, tangent, measure modes |
+| Drawing modes | 88 % | all xfig shapes except library objects; freehand and arc by centre |
+| Editing modes | 70 % | missing open-compound, join/split, chop, tangent, measure modes |
 | Attributes panel | 70 % | missing colour editor, latex/manhattan positioning |
 | File format | 85 % | Fig 1.x/2.x read missing |
 | Export | 35 % | LaTeX family, bitmaps besides PNG, print missing |
 | Text | 55 % | fallback fonts, no character map or LaTeX special text |
-| View & navigation | 80 % | classic xfig layout with mouse indicator; rulers and object snaps missing |
+| View & navigation | 85 % | classic xfig layout, xfig's three-button mouse (or a modern scheme); rulers and object snaps missing |
 | Undo | 100 % | multi-level (xfig: single level) |
 | Libraries | 0 % | not started |
 | Printing | 10 % | export PDF only |
@@ -57,7 +57,7 @@ English only. See [localization parity](docs/localization-parity.md).
 
 The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 [docs/gaps.md](docs/gaps.md). Next up:
-1. Phase W, xfig window parity: xfig layout, mouse setup and indicator, depth panel (layers), Snap menu, per-mode attribute panel, rulers.
+1. Phase W, xfig window parity (W1 layout and W2 mouse buttons done): depth panel (layers), Snap menu, per-mode attribute panel, rulers.
 2. fig2dev: reference tests comparing RustFig with xfig's converter (A8), then fig2dev as an optional export backend (B0).
 3. Phase A, hardening: shared undo snapshots, per-command cost, CI (Linux on every push, all OSes for releases), web build, UI tests, export polish, crash recovery, no UI stalls on large drawings.
 4. Phase B, exports for LaTeX users: TikZ, PDF/EPS + LaTeX overlay, PostScript layout, printing.
@@ -67,5 +67,6 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-14 | W2: xfig's three-button mouse per mode (left/middle/right, right cancels; freehand, arc by centre, constrained move, delete region, copy & flip/rotate, update settings) with a modern scheme as a setting; Alt/Ctrl+click for two-button mice; indicator checked against the tools by a test. Parity ≈60 %, 110 tests. |
 | 2026-10-13 | W1: classic xfig window layout (menus File/Edit/View/Snap/Help, file name, message panel with history, mouse-function indicator, units box, depth panel shown), headless UI tests with egui_kittest. |
 | 2026-10-13 | M0–M3: workspace, geometry, model, Fig 3.x reader/writer, renderer (screen, PNG, SVG, EPS, PDF), engine with 124 commands and 38 tools, egui app, control channel, MCP server, CLI, xtask gates. Parity ≈58 %. |

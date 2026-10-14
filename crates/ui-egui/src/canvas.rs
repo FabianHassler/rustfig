@@ -4,7 +4,7 @@
 use crate::theme::Tokens;
 use crate::App;
 use egui::{pos2, vec2, Color32, Pos2, Rect, Sense, Shape, Stroke, TextureHandle, TextureOptions};
-use rustfig_engine::{Overlay, ToolEvent};
+use rustfig_engine::{Button, MouseScheme, Overlay, ToolEvent};
 use rustfig_geom::{Affine, Point};
 use rustfig_model::{Document, ObjectId, ObjectKind, Orientation};
 use rustfig_render::raster::{rasterize, RasterOptions};
@@ -30,9 +30,9 @@ pub struct CanvasState {
     /// Pointer position in Fig units, if over the canvas.
     pub cursor: Option<Point>,
     last_sent: Option<Point>,
-    /// A primary press started on the canvas.
-    pressing: bool,
-    /// Panning with the middle button or space+drag.
+    /// The tool button of a press that started on the canvas.
+    pressing: Option<(egui::PointerButton, Button)>,
+    /// Panning with space+drag (or the middle button in the modern scheme).
     panning: bool,
     /// Milliseconds the last document render took.
     pub render_ms: f64,
@@ -293,16 +293,45 @@ fn web_time_now() -> f64 {
     }
 }
 
+/// The tool button for a physical button: Alt+left is the middle button and
+/// Ctrl+left the right one, for two-button mice and trackpads.
+pub fn tool_button(b: egui::PointerButton, m: egui::Modifiers) -> Option<Button> {
+    match b {
+        egui::PointerButton::Primary if m.alt => Some(Button::Middle),
+        egui::PointerButton::Primary if m.ctrl => Some(Button::Right),
+        egui::PointerButton::Primary => Some(Button::Left),
+        egui::PointerButton::Secondary => Some(Button::Right),
+        egui::PointerButton::Middle => Some(Button::Middle),
+        _ => None,
+    }
+}
+
 fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect) {
-    let (hover, pressed, released, sec_pressed, mid_down, double, shift, scroll, zoom, space) = ui.input(|i| {
+    const BUTTONS: [egui::PointerButton; 3] = [
+        egui::PointerButton::Primary,
+        egui::PointerButton::Middle,
+        egui::PointerButton::Secondary,
+    ];
+    let (hover, pressed, released, mid_down, any_down, double, scroll, zoom, space) = ui.input(|i| {
         (
             i.pointer.hover_pos(),
-            i.pointer.primary_pressed(),
-            i.pointer.primary_released(),
-            i.pointer.secondary_pressed(),
+            // Presses with the modifiers held at that moment.
+            i.events
+                .iter()
+                .filter_map(|e| match e {
+                    egui::Event::PointerButton {
+                        button,
+                        pressed: true,
+                        modifiers,
+                        ..
+                    } => Some((*button, *modifiers)),
+                    _ => None,
+                })
+                .collect::<Vec<_>>(),
+            BUTTONS.map(|b| i.pointer.button_released(b)),
             i.pointer.middle_down(),
+            i.pointer.any_down(),
             i.pointer.button_double_clicked(egui::PointerButton::Primary),
-            i.modifiers.shift,
             i.smooth_scroll_delta,
             i.zoom_delta(),
             i.key_down(egui::Key::Space),
@@ -313,7 +342,8 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
     let to_fig = |p: Pos2| view0.to_fig(Point::new(f64::from(p.x - rect.min.x), f64::from(p.y - rect.min.y)));
     app.canvas.cursor = if over { hover.map(to_fig) } else { None };
 
-    // Zoom (pinch or Ctrl+scroll) and pan (scroll, middle drag, space drag).
+    // Zoom (pinch or Ctrl+scroll) and pan (scroll, space drag, and the
+    // middle button when it isn't a tool button).
     if over {
         if (zoom - 1.0).abs() > 1e-4 {
             if let Some(p) = hover {
@@ -325,11 +355,12 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
             app.engine.view.pan_pixels(f64::from(scroll.x), f64::from(scroll.y));
         }
     }
-    if (mid_down || space) && (resp.dragged() || app.canvas.panning) && (over || app.canvas.panning) {
+    let mid_pans = mid_down && app.engine.mouse_scheme() == MouseScheme::Modern;
+    if (mid_pans || space) && (resp.dragged() || app.canvas.panning) && (over || app.canvas.panning) {
         app.canvas.panning = true;
         let d = ui.input(|i| i.pointer.delta());
         app.engine.view.pan_pixels(f64::from(d.x), f64::from(d.y));
-        if !(mid_down || ui.input(|i| i.pointer.primary_down())) {
+        if !any_down {
             app.canvas.panning = false;
         }
         return;
@@ -343,34 +374,30 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
     };
     if let Some(p) = hover {
         let fp = to_fig(p);
-        if over && sec_pressed {
+        for (phys, m) in pressed.iter().filter(|_| over) {
+            let Some(button) = tool_button(*phys, *m) else { continue };
+            if button != Button::Right {
+                app.canvas.pressing = Some((*phys, button));
+            }
             send(
                 app,
                 ToolEvent::Press {
                     pos: fp,
-                    right: true,
-                    shift,
+                    button,
+                    shift: m.shift,
                 },
             );
         }
-        if over && pressed {
-            app.canvas.pressing = true;
-            send(
-                app,
-                ToolEvent::Press {
-                    pos: fp,
-                    right: false,
-                    shift,
-                },
-            );
-        }
-        if (over || app.canvas.pressing) && app.canvas.last_sent != Some(fp) {
+        if (over || app.canvas.pressing.is_some()) && app.canvas.last_sent != Some(fp) {
             app.canvas.last_sent = Some(fp);
             send(app, ToolEvent::Move { pos: fp });
         }
-        if released && app.canvas.pressing {
-            app.canvas.pressing = false;
-            send(app, ToolEvent::Release { pos: fp, right: false });
+        if let Some((phys, button)) = app.canvas.pressing {
+            let i = BUTTONS.iter().position(|b| *b == phys).unwrap_or(0);
+            if released.get(i).copied().unwrap_or(false) {
+                app.canvas.pressing = None;
+                send(app, ToolEvent::Release { pos: fp, button });
+            }
         }
         if over && double {
             send(app, ToolEvent::DoubleClick { pos: fp });

@@ -436,7 +436,7 @@ pub fn depth_panel(app: &mut App, ui: &mut egui::Ui) {
 /// the message panel on the second, the mouse-function indicator and the
 /// units box on the right.
 pub fn classic_top(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
-    let right_w = 330.0;
+    let right_w = INDICATOR_SIZE.x + 16.0;
     ui.horizontal(|ui| {
         let left_w = (ui.available_width() - right_w - 8.0).max(200.0);
         ui.allocate_ui_with_layout(vec2(left_w, 48.0), egui::Layout::top_down(egui::Align::Min), |ui| {
@@ -448,6 +448,7 @@ pub fn classic_top(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
             message_panel(app, ui, tk);
         });
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+            ui.add_space(4.0);
             ui.vertical(|ui| {
                 mouse_indicator(app, ui, tk);
                 ui.horizontal(|ui| {
@@ -509,11 +510,14 @@ fn message_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     }
 }
 
-/// xfig's mouse-function indicator: what each button does right now.
+/// xfig's mouse-function indicator: what each button does right now, one
+/// column per button, each with a small mouse showing which button it is.
+const INDICATOR_SIZE: egui::Vec2 = vec2(380.0, 38.0);
+
 pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
     let h = app.engine.mouse_hints();
-    let size = vec2(320.0, 34.0);
-    let (rect, resp) = ui.allocate_exact_size(size, Sense::hover());
+    let xfig = app.engine.mouse_scheme() == rustfig_engine::MouseScheme::Xfig;
+    let (rect, resp) = ui.allocate_exact_size(INDICATOR_SIZE, Sense::hover());
     let p = ui.painter_at(rect);
     let stroke = egui::Stroke::new(1.0_f32, tk.muted);
     p.rect_stroke(rect, 2.0, stroke, egui::StrokeKind::Inside);
@@ -523,56 +527,57 @@ pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
     p.text(
         rect.left_top() + vec2(4.0, 2.0),
         egui::Align2::LEFT_TOP,
-        "Mouse Buttons",
+        if xfig {
+            "Mouse Buttons"
+        } else {
+            "Mouse Buttons (modern)"
+        },
         small.clone(),
         tk.muted,
-    );
-    let c = egui::pos2(rect.center().x, rect.bottom() - 13.0);
-    for (i, label) in [h.left, h.middle, h.right].iter().enumerate() {
-        let x = c.x + (i as f32 - 1.0) * 11.0;
-        let r = egui::Rect::from_center_size(egui::pos2(x, c.y), vec2(9.0, 14.0));
-        let active = !label.is_empty();
-        if active {
-            p.rect_filled(r, 2.0, tk.selection.gamma_multiply(0.35));
-        }
-        p.rect_stroke(r, 2.0, stroke, egui::StrokeKind::Inside);
-    }
-    p.text(
-        egui::pos2(c.x - 22.0, c.y),
-        egui::Align2::RIGHT_CENTER,
-        h.left,
-        font.clone(),
-        text,
-    );
-    p.text(
-        egui::pos2(c.x, rect.top() + 2.0),
-        egui::Align2::CENTER_TOP,
-        h.middle,
-        small,
-        text,
-    );
-    p.text(
-        egui::pos2(c.x + 22.0, c.y),
-        egui::Align2::LEFT_CENTER,
-        h.right,
-        font,
-        text,
     );
     if h.keyboard {
         p.text(
             rect.right_top() + vec2(-4.0, 2.0),
             egui::Align2::RIGHT_TOP,
             "keyboard: typing",
-            egui::FontId::proportional(10.0),
+            small,
             tk.caret,
         );
     }
+    let col_w = (rect.width() - 8.0) / 3.0;
+    let y = rect.bottom() - 12.0;
+    for (i, label) in [h.left, h.middle, h.right].iter().enumerate() {
+        let x0 = rect.left() + 4.0 + col_w * i as f32;
+        // The mouse: three buttons side by side, this column's one marked.
+        for k in 0..3 {
+            let r = egui::Rect::from_min_size(egui::pos2(x0 + k as f32 * 6.0, y - 8.0), vec2(5.0, 15.0));
+            if k == i {
+                let fill = if label.is_empty() {
+                    tk.muted.gamma_multiply(0.5)
+                } else {
+                    tk.selection
+                };
+                p.rect_filled(r, 1.0, fill);
+            }
+            p.rect_stroke(r, 1.0, stroke, egui::StrokeKind::Inside);
+        }
+        let text_x = x0 + 22.0;
+        let mut job = egui::text::LayoutJob::simple_singleline((*label).to_string(), font.clone(), text);
+        job.wrap = egui::text::TextWrapping::truncate_at_width(col_w - 26.0);
+        let galley = ui.fonts_mut(|f| f.layout_job(job));
+        p.galley(egui::pos2(text_x, y - galley.size().y / 2.0), galley, text);
+    }
     let summary = format!(
         "Left: {}; middle: {}; right: {}",
-        h.left,
-        h.middle,
+        if h.left.is_empty() { "—" } else { h.left },
+        if h.middle.is_empty() { "—" } else { h.middle },
         if h.right.is_empty() { "—" } else { h.right }
     );
+    let resp = resp.on_hover_text(format!(
+        "{summary}\n\nTwo-button mouse or trackpad: Alt/Option+click is the middle button, \
+         Ctrl+click the right button. View › xfig mouse buttons switches between xfig's \
+         three-button scheme and the modern one."
+    ));
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, summary.clone()));
 }
 

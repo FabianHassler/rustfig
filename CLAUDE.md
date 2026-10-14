@@ -70,7 +70,7 @@ Coordinates are Fig units (1200 per inch; metric drawings use 450 per cm), y gro
 - `cargo run --release -p rustfig -- --control 7979 [file.fig|file.rustfig]`. Sibling apps' agents use the same default port: if the status bar or log says the port is unavailable, pick another one, otherwise your requests reach a different app. Launching the GUI and connecting to the port may need the sandbox disabled.
 - Drive it with JSON lines on `127.0.0.1:7979`, one reply line per request:
   - `{"id":1,"method":"engine.execute","params":{"command":"shape.rectangle","params":{"x":600,"y":600,"width":1200,"height":600}}}`
-  - Tools: `{"command":"tool.box"}`, then `{"command":"tool.event","params":{"type":"press","x":0,"y":0}}` (types `press`, `move`, `release`, `double_click`, `key`, `text`; Fig coordinates).
+  - Tools: `{"command":"tool.box"}`, then `{"command":"tool.event","params":{"type":"press","x":0,"y":0}}` (types `press`, `move`, `release`, `double_click`, `key`, `text`; `"button": "left"|"middle"|"right"`; Fig coordinates). Mouse buttons follow `Engine::mouse_scheme()` (xfig's three buttons by default; `tool.mouse_buttons` switches to the modern scheme).
   - `{"id":2,"method":"ui.screenshot","params":{"path":"/abs/path/shot.png"}}` (write it inside your scratchpad or the project, so you can read it).
   - Other methods: `engine.commands`, `ui.run` (UI commands too), `ui.state`, `app.ping` (`crates/ui-egui/src/control.rs`).
 - CLI: `rustfig-cli convert in.fig out.{fig,rustfig,svg,eps,pdf,png}`, `rustfig-cli info FILE`.

@@ -1,7 +1,9 @@
 //! The current drawing attributes (xfig's indicator panel) and grid/snap modes.
 
 use rustfig_geom::Point;
-use rustfig_model::{Arrow, CapStyle, ColorRef, JoinStyle, Justify, LineKind, Style, Units};
+use rustfig_model::{
+    Arrow, CapStyle, ColorRef, JoinStyle, Justify, LineKind, Object, ObjectKind, PolyKind, Style, Units,
+};
 use serde::{Deserialize, Serialize};
 
 /// Grid spacing / point positioning steps.
@@ -169,6 +171,50 @@ impl Indicator {
             ..self.arrow
         };
         (self.forward_arrow.then_some(a), self.backward_arrow.then_some(a))
+    }
+
+    /// Copy an object's attributes into the indicator (xfig's Update mode,
+    /// middle button: "update settings"). The reverse of `object.update`.
+    pub fn take_from(&mut self, o: &Object) {
+        if let ObjectKind::Text(t) = &o.kind {
+            use rustfig_model::text_flags::*;
+            self.pen_color = t.color.0;
+            self.depth = t.depth;
+            self.font = t.font;
+            self.font_size = t.size;
+            self.justify = t.justify;
+            self.text_angle = t.angle.to_degrees();
+            self.rigid_text = t.flags & RIGID != 0;
+            self.special_text = t.flags & SPECIAL != 0;
+            self.postscript = t.flags & POSTSCRIPT != 0;
+            self.hidden_text = t.flags & HIDDEN != 0;
+            return;
+        }
+        if let Some(s) = o.style() {
+            self.line = s.line;
+            self.thickness = s.thickness;
+            self.pen_color = s.pen_color.0;
+            self.fill_color = s.fill_color.0;
+            self.depth = s.depth;
+            self.area_fill = s.area_fill;
+            if s.style_val > 0.0 {
+                self.style_val = s.style_val;
+            }
+            self.cap = s.cap;
+            self.join = s.join;
+        }
+        if let Some((f, b)) = o.arrows() {
+            self.forward_arrow = f.is_some();
+            self.backward_arrow = b.is_some();
+            if let Some(a) = f.or(b) {
+                self.arrow = a;
+            }
+        }
+        if let ObjectKind::Polyline(p) = &o.kind {
+            if p.kind == PolyKind::ArcBox {
+                self.box_radius = p.radius;
+            }
+        }
     }
 
     pub fn text_flags(&self) -> i32 {

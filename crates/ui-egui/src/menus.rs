@@ -249,6 +249,7 @@ const LAYOUT: &[(&str, &[&str])] = &[
             "depth.show_all",
             "-",
             "app.toggle_layout",
+            "tool.mouse_buttons",
         ],
     ),
     (
@@ -306,6 +307,7 @@ fn checked(app: &App, id: &str) -> Option<bool> {
         "view.toggle_grid" => Some(app.engine.indicator.grid.is_some()),
         "app.toggle_indicator" => Some(app.show_indicator),
         "app.toggle_layout" => Some(app.classic()),
+        "tool.mouse_buttons" => Some(app.engine.mouse_scheme() == rustfig_engine::MouseScheme::Xfig),
         _ => None,
     }
 }

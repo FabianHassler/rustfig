@@ -32,7 +32,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Rotate",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id], \"angle\": degrees counter-clockwise, \"cx\"?, \"cy\"?}",
+            params: "{\"ids\"?: [id], \"angle\": degrees counter-clockwise, \"cx\"?, \"cy\"?, \"copy\"?: bool}  — copy: rotate copies, keep the originals",
             mutates: true,
             enabled: has_selection_or_ids,
             run: rotate,
@@ -68,7 +68,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Flip Left/Right",
             menu: "Object/Transform",
             shortcut: "Ctrl+Shift+H",
-            params: "{\"ids\"?: [id], \"cx\"?}",
+            params: "{\"ids\"?: [id], \"cx\"?, \"copy\"?: bool}  — copy: flip copies, keep the originals",
             mutates: true,
             enabled: has_selection,
             run: |e, p| flip(e, p, true),
@@ -78,7 +78,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Flip Up/Down",
             menu: "Object/Transform",
             shortcut: "Ctrl+Shift+V",
-            params: "{\"ids\"?: [id], \"cy\"?}",
+            params: "{\"ids\"?: [id], \"cy\"?, \"copy\"?: bool}",
             mutates: true,
             enabled: has_selection,
             run: |e, p| flip(e, p, false),
@@ -95,6 +95,17 @@ pub(crate) fn apply(e: &mut Engine, p: &Value, t: Affine, scale_text: bool) -> C
     let ids = e.target_ids(p)?;
     if ids.is_empty() {
         return Err(EngineError::bad_params("no objects selected"));
+    }
+    if opt_bool(p, "copy")?.unwrap_or(false) {
+        let copies: Vec<_> = ids.iter().filter_map(|i| e.doc().get(*i).cloned()).collect();
+        let mut new_ids = Vec::new();
+        for mut o in copies {
+            o.transform(&t, scale_text);
+            new_ids.push(e.add_object(o));
+        }
+        e.fix_all_text();
+        e.set_selection(new_ids.clone());
+        return Ok(json!({"count": new_ids.len(), "ids": super::ids_value(&new_ids)}));
     }
     for o in e.doc_mut().objects.iter_mut() {
         if ids.contains(&o.id) {

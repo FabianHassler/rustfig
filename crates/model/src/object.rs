@@ -686,6 +686,16 @@ impl Object {
         }
     }
 
+    /// The arrowheads (forward, backward) of objects that can have them.
+    pub fn arrows(&self) -> Option<(Option<Arrow>, Option<Arrow>)> {
+        match &self.kind {
+            ObjectKind::Polyline(p) if p.kind == PolyKind::Polyline => Some((p.forward_arrow, p.backward_arrow)),
+            ObjectKind::Spline(s) if !s.closed => Some((s.forward_arrow, s.backward_arrow)),
+            ObjectKind::Arc(a) if !a.pie => Some((a.forward_arrow, a.backward_arrow)),
+            _ => None,
+        }
+    }
+
     pub fn arrows_mut(&mut self) -> Option<(&mut Option<Arrow>, &mut Option<Arrow>)> {
         match &mut self.kind {
             ObjectKind::Polyline(p) if p.kind == PolyKind::Polyline => {
