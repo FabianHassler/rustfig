@@ -5,6 +5,7 @@
 //! The same scene drives the canvas and every export, so what you see is
 //! what you export.
 
+pub mod bound;
 pub mod drivers;
 pub mod eps;
 pub mod export;
@@ -307,7 +308,7 @@ fn arrow_from(pts: &[Point], tip: Point, min: f64) -> Option<Point> {
 
 /// The arrowhead at the end of `pts`. Polylines point the head along their
 /// last segment, as fig2dev does; curves along the chord of the head's length.
-fn head_at_end(pts: &[Point], a: &Arrow, line_thickness: f64, poly: bool) -> Option<ArrowShape> {
+pub(crate) fn head_at_end(pts: &[Point], a: &Arrow, line_thickness: f64, poly: bool) -> Option<ArrowShape> {
     let tip = *pts.last()?;
     let from = if poly {
         pts.iter().rev().find(|p| p.dist(tip) > 1e-6).copied()?

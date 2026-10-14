@@ -1,6 +1,6 @@
 # Target-app parity assessment: RustFig vs xfig 3.2.9
 
-**Status:** 2026-10-14, overall **≈61 %** (A10 landed: corpus comparison with fig2dev). Revised whenever a task lands.
+**Status:** 2026-10-14, overall **≈61 %** (B0: fig2dev's export bounds). Revised whenever a task lands.
 
 ## Methodology
 
@@ -23,7 +23,7 @@ the score.
 | Editing modes | 12 | 70 % | anchor point for flip/rotate (right button), array copy, align to canvas, figure comments from Edit mode, open compound (edit in place), join/split lines, chop, tangent/normal, angle/length/area measure modes, copy to library | 56 |
 | Attributes / indicator | 10 | 75 % | colour editor UI, Angle Geom (latex, manhattan, mountain), smart links, copy counts, arrow types 10–14 exact shapes, dash-dot tick styles | 34 |
 | File format | 10 | 85 % | reading Fig 1.x/2.x, exact pre-3.2 spline conversion | 24 |
-| Export | 12 | 37 % | to be ported from fig2dev, no ghostscript (B0–B9): PostScript (multi-page, print layout), LaTeX family (TikZ, PSTricks, pict2e, eepic, …), GIF/JPEG/TIFF/PPM/XBM/XPM, CGM/EMF/HPGL/MetaPost/DXF and the rest | 140 |
+| Export | 12 | 39 % | to be ported from fig2dev, no ghostscript (B0–B9): PostScript (multi-page, print layout), LaTeX family (TikZ, PSTricks, pict2e, eepic, …), GIF/JPEG/TIFF/PPM/XBM/XPM, CGM/EMF/HPGL/MetaPost/DXF and the rest | 140 |
 | Text | 10 | 55 % | character map, LaTeX special-text export, exact PostScript font metrics, compose keys, spell check | 60 |
 | View & navigation | 8 | 96 % | zoom box (Ctrl+left), pan to origin with Ctrl+middle | 4 |
 | Undo | 4 | 100 % | — | 0 |
@@ -39,6 +39,7 @@ the score.
 - Commands: `crates/engine/src/cmd/*`, swept with hostile parameters in `crates/engine/tests/command_sweep.rs`.
 - Fig I/O: `crates/format/src/fig_read.rs` and `fig_write.rs`; round trip and fuzzing in `crates/format/tests/`.
 - Rendering: `crates/render/` (scene, tiny-skia raster, SVG, EPS, PDF; all 22 fill patterns; arrowheads; dashes); line widths as fig2dev (`geom::stroke_width`).
+- Export bounds as fig2dev's (`crates/render/src/bound.rs`, ported from `bound.c`): bounding boxes equal fig2dev's on 2,532 of 2,568 sample figures.
 - Export languages: `crates/render/src/languages.rs` (xfig's list and suffixes), `drivers/latex_box.rs`, `file.export_formats`; tests in `crates/engine/tests/export_languages.rs` and `export_dialog_lists_xfigs_languages` in `ui_smoke.rs`.
 - Corpus comparison with fig2dev's EPS and PDF on xfig's ≈2,550 sample figures: `crates/engine/tests/fig2dev_corpus.rs` (opt-in), baseline `fixtures/corpus-scores.json`, report `target/fig2dev-reference/corpus/`.
 - Reference comparison with fig2dev: `crates/engine/tests/fig2dev_reference.rs`, 11 fixtures with recorded scores (`fixtures/scores.json`); arrowheads, arcs and dashes ported from fig2dev (D9): `geom/arrow.rs`, `model` `dash_pattern`.
@@ -56,6 +57,7 @@ the score.
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-14 | ≈61 % | B0: fig2dev's export bounds (Export 37 → 39 %). |
 | 2026-10-14 | ≈61 % | B0 started: export language table, LaTeX box, pspdf (Export 35 → 37 %). |
 | 2026-10-14 | ≈61 % | D9: arrowheads (all 15 types), pie-arc arrows, arc direction, dashes from fig2dev. |
 | 2026-10-14 | ≈61 % | A8: fig2dev reference tests; line widths fixed. Exports re-estimated for porting fig2dev (+20 h). |

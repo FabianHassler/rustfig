@@ -182,7 +182,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `localmath.c`, `messages.c` | 114 | math helpers, error messages | `geom`, errors | n/a | — |
 | `read.c` | 2048 | Fig reader (second reference) | `format/fig_read` | own | review |
 | `read1_3.c` | 549 | Fig 1.3 reader | — | missing | G1 |
-| `bound.c` | 1156 | bounds incl. arrows and text | `geom/arrow` (`arrow_shapes`, `calc_arrow` ported), `render` | arrows ported (D9); bounds own: fig2dev pads lines by (t+1)/√2, arcs and splines by (t+1)/2, ellipses not at all (port next) | B0 |
+| `bound.c` | 1156 | bounds incl. arrows and text | `geom/arrow` (`arrow_shapes`, `calc_arrow`), `render/bound` (`compound_bound`, `arc_bound`, `ellipse_bound`, `line_bound`, `text_bound`, `arrow_bound`) | ported (D9, B0); ellipse extents analytic instead of the scan | — |
 | `trans_spline.c` | 661 | splines to polylines for exporters | `geom` | own | review |
 | `colors.c` | 851 | colour names | `model` | own | — |
 | `dev/genps.c`, `genpdf.c` | 2.9 k | PostScript/PDF with page layout; the reference where drivers disagree | `render/eps`, `render/pdf`; `set_style` → `LineKind::dash_pattern`, `linewidth_adj` → `geom::stroke_width`, arrow fills, `PSFONTMAG` → metric text keeps its point size (`SceneOptions::text_scale`) | partial: page layout, multi-page | B4 |

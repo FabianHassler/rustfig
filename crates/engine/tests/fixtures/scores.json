@@ -1,46 +1,46 @@
 {
   "arcs": {
-    "mean": 0.0041,
-    "strong": 0.0012
+    "mean": 0.0042,
+    "strong": 0.0031
   },
   "arrows": {
-    "mean": 0.0077,
-    "strong": 0.0008
+    "mean": 0.0119,
+    "strong": 0.0059
   },
   "boxes": {
-    "mean": 0.0067,
-    "strong": 0.0075
+    "mean": 0.0032,
+    "strong": 0.0002
   },
   "colours": {
-    "mean": 0.0099,
+    "mean": 0.0094,
     "strong": 0.0015
   },
   "depths": {
-    "mean": 0.0034,
-    "strong": 0.0009
+    "mean": 0.0021,
+    "strong": 0.0
   },
   "ellipses": {
-    "mean": 0.0017,
+    "mean": 0.0018,
     "strong": 0.0
   },
   "fills": {
-    "mean": 0.0099,
-    "strong": 0.0026
+    "mean": 0.0095,
+    "strong": 0.0024
   },
   "lines": {
-    "mean": 0.01,
-    "strong": 0.007
+    "mean": 0.0143,
+    "strong": 0.0135
   },
   "metric": {
-    "mean": 0.0023,
-    "strong": 0.0011
+    "mean": 0.0027,
+    "strong": 0.0012
   },
   "splines": {
-    "mean": 0.0029,
-    "strong": 0.0
+    "mean": 0.0047,
+    "strong": 0.0011
   },
   "text": {
-    "mean": 0.0458,
-    "strong": 0.07
+    "mean": 0.0363,
+    "strong": 0.0564
   }
 }

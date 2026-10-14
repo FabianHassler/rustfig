@@ -81,7 +81,7 @@ covered by W2.
 
 | Id | Task | Acceptance | Hours |
 |----|------|------------|------:|
-| B0 | 🟡 2026-10-14: language table, LaTeX box, pspdf, `file.export_formats`, export dialog, CLI `formats` landed; `bound.c` next. **Port fig2dev to Rust** (decided 2026-10-14; design below): no external fig2dev and no ghostscript at runtime, so every format works on every platform and on the web. Start with the shared parts: `fig2dev.c`'s per-language options, `bound.c` (bounds with arrows and text), colour and font tables (`colors.c`, `psfonts.c`, `texfonts.c`), the export-format list and file-name mapping, `file.export_formats`. B1–B4, B6 and B9 then port the drivers. | `file.export_formats` lists every fig2dev language with its status; the export dialog greys out the ones not yet ported. | 10 |
+| B0 | 🟡 2026-10-14: language table, LaTeX box, pspdf, `file.export_formats`, export dialog, CLI `formats`; fig2dev's bounds (`bound.c`, `render/bound.rs`) size every export: 2,532 of 2,568 corpus bounding boxes now equal fig2dev's, the rest within 1 pt. Next: per-language options (`fig2dev.c`), colour and font tables. **Port fig2dev to Rust** (decided 2026-10-14; design below): no external fig2dev and no ghostscript at runtime, so every format works on every platform and on the web. Start with the shared parts: `fig2dev.c`'s per-language options, `bound.c` (bounds with arrows and text), colour and font tables (`colors.c`, `psfonts.c`, `texfonts.c`), the export-format list and file-name mapping, `file.export_formats`. B1–B4, B6 and B9 then port the drivers. | `file.export_formats` lists every fig2dev language with its status; the export dialog greys out the ones not yet ported. | 10 |
 | B1 | **TikZ export** (`.tikz`/`.tex`): paths, fills, patterns, arrows, dashes, text with special flag passed through raw. | Compiles with pdflatex; a visual diff against the PDF export is close. | 16 |
 | B2 | **PDF/EPS + LaTeX overlay** (fig2dev's pdftex_t/pstex_t): graphics without special text, plus a `.tex` file placing the text. | The combined output typesets in LaTeX with fonts from the document. | 12 |
 | B3 | **PSTricks and pict2e exports.** | Both compile; a test checks the structure. | 14 |
@@ -185,7 +185,7 @@ is an optional extra, used in two ways.
 ## Order and milestones
 
 1. ✅ Phase W, xfig window parity (W1–W7, S0–S2), done 2026-10-14.
-2. ✅ A8 (fig2dev reference tests), ✅ D9 (the arrowhead, arc and dash differences it found), ✅ A10 (EPS/PDF compared with fig2dev on xfig's sample figures), then B0 (the fig2dev port: language table ✅, `bound.c` next).
+2. ✅ A8 (fig2dev reference tests), ✅ D9 (the arrowhead, arc and dash differences it found), ✅ A10 (EPS/PDF compared with fig2dev on xfig's sample figures), then B0 (the fig2dev port: language table ✅, `bound.c` ✅), D12 (fill patterns, the largest remaining difference).
 3. A1 and A9 (undo memory, per-command cost), A2 and A3 (CI on Linux, Windows and macOS; web build), the rest of A4, A5–A7.
 4. E1 and S3 (preferences, xfig's command-line options).
 5. B1–B9 (fig2dev's drivers ported: LaTeX exports, bitmaps, PostScript; modern printing), C1–C3 (web): the first release candidate, on desktop and web.
@@ -214,6 +214,7 @@ is an optional extra, used in two ways.
 | 2026-10-13 | First plan, after M0–M3. |
 | 2026-10-13 | Added A8 (fig2dev reference tests) and B0 (fig2dev export backend) with design notes. |
 | 2026-10-14 | A3: the web build compiles locally with rustup's toolchain; xtask uses the running toolchain's rustc. |
+| 2026-10-14 | B0: fig2dev's export bounds ported; corpus EPS median difference 0.015 → 0.006, 95th percentile 0.072 → 0.048; bounding boxes equal fig2dev's. |
 | 2026-10-14 | A10 landed: corpus comparison with fig2dev's EPS and PDF (ghostscript, test-only). Found and fixed: metric text was magnified with the drawing. xfig passes `-F` (true point sizes) to fig2dev for PS/EPS/PDF, so RustFig's 1/72-inch points are right. |
 | 2026-10-14 | B0 started: xfig's export-language table (`mode.c`), LaTeX box driver (`genbox.c`), pspdf, `file.export_formats`, language menu in the export dialog, CLI `formats`/`--format`. Found: fig2dev's bounding box (`bound.c`) differs from the ink bounds; porting it is B0's next step. A10 added (EPS/PDF comparison with fig2dev on xfig's sample figures, asked by the user). |
 | 2026-10-14 | D9 landed: fig2dev's arrowheads, pie-arc arrows, arc direction flag, PostScript dash patterns. Decision: PostScript (`genps.c`) is the reference where fig2dev's drivers disagree. |

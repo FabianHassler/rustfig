@@ -102,20 +102,18 @@ pub fn export(doc: &Document, format: ExportFormat, opts: &ExportOptions) -> Res
             ..SceneOptions::default()
         },
     );
-    let bounds = if opts.whole_figure_bounds && !opts.hidden_depths.is_empty() {
-        export_bounds(
-            &Scene::build(
-                doc,
-                &SceneOptions {
-                    text_scale,
-                    ..SceneOptions::default()
-                },
-            ),
-            opts.margin,
-        )
+    // The page is sized by fig2dev's bounds (`bound.c`), not by the ink.
+    let hidden = if opts.whole_figure_bounds {
+        BTreeSet::new()
     } else {
-        export_bounds(&scene, opts.margin)
+        opts.hidden_depths.clone()
     };
+    let m = if opts.margin.is_finite() {
+        opts.margin.clamp(0.0, 1.0e7)
+    } else {
+        0.0
+    };
+    let bounds = crate::bound::fig2dev_bounds(doc, &hidden, true).expand(m);
     if bounds.is_empty() {
         return Err("the drawing is empty".into());
     }
