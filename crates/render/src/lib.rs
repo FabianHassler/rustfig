@@ -10,6 +10,7 @@ pub mod drivers;
 pub mod eps;
 pub mod export;
 pub mod languages;
+pub mod options;
 pub mod pattern;
 pub mod pdf;
 pub mod raster;
@@ -128,6 +129,46 @@ impl Rgba {
             g: v,
             b: v,
             a: self.a,
+        }
+    }
+}
+
+impl Rgba {
+    /// The gray of fig2dev's `-N` (`colors.c` `rgb2luminance`).
+    pub fn luminance_gray(self) -> Rgba {
+        let lum = 0.3 * f64::from(self.r) + 0.59 * f64::from(self.g) + 0.11 * f64::from(self.b);
+        let v = lum.round().clamp(0.0, 255.0) as u8;
+        Rgba {
+            r: v,
+            g: v,
+            b: v,
+            a: self.a,
+        }
+    }
+}
+
+impl Scene {
+    /// Every stroke, fill and text colour passed through `f`. Pictures keep
+    /// theirs, as in fig2dev.
+    pub fn map_colors(&mut self, f: impl Fn(Rgba) -> Rgba) {
+        for p in &mut self.prims {
+            match p {
+                Prim::Path { fill, stroke, .. } => {
+                    match fill {
+                        Some(Fill::Solid(c)) => *c = f(*c),
+                        Some(Fill::Pattern { fg, bg, .. }) => {
+                            *fg = f(*fg);
+                            *bg = f(*bg);
+                        }
+                        None => {}
+                    }
+                    if let Some(s) = stroke {
+                        s.color = f(s.color);
+                    }
+                }
+                Prim::Text(t) => t.color = f(t.color),
+                Prim::Image { .. } => {}
+            }
         }
     }
 }

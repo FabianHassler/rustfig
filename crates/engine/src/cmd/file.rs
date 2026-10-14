@@ -5,6 +5,7 @@ use crate::{import, Engine, EngineError};
 use rustfig_format::FileFormat;
 use rustfig_model::{Document, ObjectKind, Rgb};
 use rustfig_render::languages::{language, language_for_path, Language, Status, LANGUAGES};
+use rustfig_render::options::{options_for, parse_options, Arg, DriverOptions, OptionValue, Support};
 use rustfig_render::{ExportFormat, ExportOptions};
 use serde_json::{json, Value};
 use std::path::Path;
@@ -86,7 +87,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Export…",
             menu: "",
             shortcut: "",
-            params: "{\"path\": string, \"format\"?: language id (see file.export_formats; default from the file name), \"magnification\"?: percent, \"margin\"?: fig units, \"dpi\"?: number, \"background\"?: \"#rrggbb\", \"active_layers_only\"?: bool, \"whole_figure_bounds\"?: bool}  — active_layers_only leaves out depths that are off; whole_figure_bounds then still sizes the page by the whole figure; pspdf writes NAME.eps and NAME.pdf",
+            params: "{\"path\": string, \"format\"?: language id (see file.export_formats; default from the file name), \"magnification\"?: percent, \"margin\"?: fig units, \"dpi\"?: number, \"background\"?: \"#rrggbb\", \"active_layers_only\"?: bool, \"whole_figure_bounds\"?: bool, \"options\"?: {key: value} fig2dev's options for the language, by key or letter (see file.export_formats)}  — active_layers_only leaves out depths that are off; whole_figure_bounds then still sizes the page by the whole figure; pspdf writes NAME.eps and NAME.pdf",
             mutates: false,
             enabled: has_objects,
             run: export_file,
@@ -106,7 +107,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Export formats",
             menu: "",
             shortcut: "",
-            params: "{}  — returns {\"formats\": [{\"id\", \"description\", \"extension\", \"aliases\", \"kind\", \"available\", \"status\", \"task\"}]}: xfig's export languages in its order; unavailable ones are still being ported from fig2dev",
+            params: "{}  — returns {\"formats\": [{\"id\", \"description\", \"extension\", \"aliases\", \"kind\", \"available\", \"status\", \"task\", \"options\": [{\"key\", \"letter\", \"arg\", \"help\", \"available\", \"task\"}]}]}: xfig's export languages in its order; unavailable ones are still being ported from fig2dev",
             mutates: false,
             enabled: always,
             run: export_formats,
@@ -249,7 +250,33 @@ fn save_data(e: &mut Engine, p: &Value) -> CmdResult {
     Ok(json!({"data": text}))
 }
 
-fn export_options(e: &Engine, p: &Value) -> Result<ExportOptions, EngineError> {
+/// fig2dev's options from the `options` object (see `file.export_formats`).
+fn driver_options(lang: &Language, p: &Value) -> Result<DriverOptions, EngineError> {
+    let items = match p.get("options") {
+        None | Some(Value::Null) => return Ok(DriverOptions::default()),
+        Some(Value::Object(m)) => m,
+        Some(_) => return Err(EngineError::bad_params("options must be an object")),
+    };
+    let mut parsed = Vec::with_capacity(items.len());
+    for (k, v) in items {
+        parsed.push((
+            k.as_str(),
+            match v {
+                Value::Bool(b) => OptionValue::Bool(*b),
+                Value::Number(n) => OptionValue::Number(n.as_f64().unwrap_or(f64::NAN)),
+                Value::String(s) => OptionValue::Text(s),
+                _ => {
+                    return Err(EngineError::bad_params(format!(
+                        "option {k} must be a boolean, number or string"
+                    )))
+                }
+            },
+        ));
+    }
+    parse_options(lang, &parsed).map_err(EngineError::bad_params)
+}
+
+fn export_options(e: &Engine, lang: &Language, p: &Value) -> Result<ExportOptions, EngineError> {
     let background = match opt_str(p, "background")? {
         Some(s) => Some(Rgb::from_hex(s).ok_or_else(|| EngineError::bad_params("background must be #rrggbb"))?),
         None => None,
@@ -265,11 +292,12 @@ fn export_options(e: &Engine, p: &Value) -> Result<ExportOptions, EngineError> {
             Default::default()
         },
         whole_figure_bounds: opt_bool(p, "whole_figure_bounds")?.unwrap_or(false),
+        fig2dev: driver_options(lang, p)?,
     })
 }
 
-fn render(e: &Engine, format: ExportFormat, p: &Value) -> Result<Vec<u8>, EngineError> {
-    let opts = export_options(e, p)?;
+fn render(e: &Engine, lang: &Language, format: ExportFormat, p: &Value) -> Result<Vec<u8>, EngineError> {
+    let opts = export_options(e, lang, p)?;
     rustfig_render::export(e.doc(), format, &opts).map_err(EngineError::format)
 }
 
@@ -322,7 +350,7 @@ fn export_file(e: &mut Engine, p: &Value) -> CmdResult {
         } else {
             path.clone()
         };
-        let bytes = render(e, *f, p)?;
+        let bytes = render(e, lang, *f, p)?;
         write_atomic(&target, &bytes)?;
         total += bytes.len();
         written.push(target);
@@ -345,7 +373,7 @@ fn export_data(e: &mut Engine, p: &Value) -> CmdResult {
     let formats = formats_of(lang)?;
     let mut files = Vec::new();
     for f in &formats {
-        let bytes = render(e, *f, p)?;
+        let bytes = render(e, lang, *f, p)?;
         files.push(if is_text(*f) {
             json!({"extension": f.extension(), "data": String::from_utf8_lossy(&bytes)})
         } else {
@@ -382,6 +410,25 @@ fn export_formats(_: &mut Engine, _: &Value) -> CmdResult {
                 "available": l.available(),
                 "status": status,
                 "task": task,
+                "options": options_for(l.id).map(|o| json!({
+                    "key": o.key,
+                    "letter": o.letter.to_string(),
+                    "arg": match o.arg {
+                        Arg::Flag => "bool",
+                        Arg::Number => "number",
+                        Arg::Text => "text",
+                        Arg::Color => "color",
+                        Arg::Depths => "depths",
+                        Arg::Size => "size",
+                        Arg::Font => "font",
+                    },
+                    "help": o.help,
+                    "available": o.support == Support::Ported,
+                    "task": match o.support {
+                        Support::Ported => None,
+                        Support::Planned(t) => Some(t),
+                    },
+                })).collect::<Vec<_>>(),
             })
         })
         .collect();

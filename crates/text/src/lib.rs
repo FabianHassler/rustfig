@@ -9,7 +9,8 @@
 mod fonts;
 
 pub use fonts::{
-    latex_font_name, ps_font_display_name, ps_font_name, FontRequest, Generic, LATEX_FONT_COUNT, PS_FONT_COUNT,
+    latex_font_name, ps_font_display_name, ps_font_name, ps_font_number, FontRequest, Generic, LATEX_FONT_COUNT,
+    PS_FONT_COUNT,
 };
 
 include!(concat!(env!("OUT_DIR"), "/craft_fonts.rs"));

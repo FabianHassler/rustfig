@@ -225,7 +225,8 @@ const ISO_FONTS: [&str; 39] = [
 ];
 
 /// Render a scene as EPS covering `bounds` (Fig units) at `scale`.
-pub fn to_eps(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>) -> String {
+/// `title` goes into `%%Title` (fig2dev's `-n`).
+pub fn to_eps(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>, title: Option<&str>) -> String {
     let b = if bounds.is_empty() {
         Rect::new(Point::ZERO, Point::new(1.0, 1.0))
     } else {
@@ -241,6 +242,9 @@ pub fn to_eps(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>
     };
     let (w, h) = (b.width() * k, b.height() * k);
     let _ = writeln!(c.out, "%!PS-Adobe-3.0 EPSF-3.0");
+    if let Some(t) = title {
+        let _ = writeln!(c.out, "%%Title: {}", t.replace(['\r', '\n'], " "));
+    }
     let _ = writeln!(c.out, "%%Creator: RustFig");
     let _ = writeln!(c.out, "%%BoundingBox: 0 0 {} {}", w.ceil() as i64, h.ceil() as i64);
     let _ = writeln!(c.out, "%%HiResBoundingBox: 0 0 {} {}", n(w), n(h));

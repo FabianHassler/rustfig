@@ -10,9 +10,11 @@ use std::time::Instant;
 
 const USAGE: &str = "usage:
   rustfig-cli convert IN OUT [--format LANG] [--magnification PCT] [--dpi N] [--margin FIGUNITS] [--background #rrggbb]
+                             [--option KEY=VALUE]...
         OUT: .fig/.rustfig save; otherwise an export language (fig2dev's -L names),
-        from --format or the file's extension
-  rustfig-cli formats               list the export languages and which are available
+        from --format or the file's extension; --option passes one of fig2dev's
+        options by name or letter (border=10, g=lightblue, N=true, Z=4w)
+  rustfig-cli formats [LANG]        list the export languages, or one language's options
   rustfig-cli info FILE
   rustfig-cli perf [--paths N]      check performance budgets on a synthetic document
   rustfig-cli bench FILE            time render, save and open for one file
@@ -23,7 +25,7 @@ fn main() -> ExitCode {
     let result = match args.first().map(String::as_str) {
         Some("convert") => convert(&args[1..]),
         Some("info") => info(&args[1..]),
-        Some("formats") => formats(),
+        Some("formats") => formats(args.get(1).map(String::as_str)),
         Some("perf") => perf(&args[1..]),
         Some("bench") => bench(&args[1..]),
         Some("mcp") => rustfig_mcp::Server::new().serve_stdio().map_err(|e| e.to_string()),
@@ -84,14 +86,59 @@ fn convert(args: &[String]) -> Result<(), String> {
     if let Some(f) = opt(args, "--format") {
         p["format"] = json!(f);
     }
+    let mut options = serde_json::Map::new();
+    for (i, a) in args.iter().enumerate() {
+        if a != "--option" {
+            continue;
+        }
+        let kv = args.get(i + 1).ok_or("--option needs KEY=VALUE")?;
+        let (k, v) = kv.split_once('=').unwrap_or((kv.as_str(), "true"));
+        // Numbers stay text: the engine reads them, and depth lists like
+        // -5 or titles like 2024 must stay as written.
+        let value = match v {
+            "true" => json!(true),
+            "false" => json!(false),
+            _ => json!(v),
+        };
+        options.insert(k.to_string(), value);
+    }
+    if !options.is_empty() {
+        p["options"] = serde_json::Value::Object(options);
+    }
     e.execute("file.export", &p).map_err(|e| e.message)?;
     Ok(())
 }
 
-fn formats() -> Result<(), String> {
+fn formats(lang: Option<&str>) -> Result<(), String> {
     let mut e = Engine::new();
     let v = e.execute("file.export_formats", &json!({})).map_err(|e| e.message)?;
-    for f in v["formats"].as_array().into_iter().flatten() {
+    let all = v["formats"].as_array().cloned().unwrap_or_default();
+    if let Some(lang) = lang {
+        let f = all
+            .iter()
+            .find(|f| f["id"].as_str().is_some_and(|id| id.eq_ignore_ascii_case(lang)))
+            .ok_or_else(|| format!("unknown language {lang:?}"))?;
+        println!(
+            "{} options (--option KEY=VALUE; KEY may be the fig2dev letter):",
+            f["id"].as_str().unwrap_or_default()
+        );
+        for o in f["options"].as_array().into_iter().flatten() {
+            let status = match o["task"].as_str() {
+                Some(t) => format!(" [not yet: {t}]"),
+                None => String::new(),
+            };
+            println!(
+                "  -{} {:18} {:7} {}{}",
+                o["letter"].as_str().unwrap_or_default(),
+                o["key"].as_str().unwrap_or_default(),
+                o["arg"].as_str().unwrap_or_default(),
+                o["help"].as_str().unwrap_or_default(),
+                status
+            );
+        }
+        return Ok(());
+    }
+    for f in &all {
         let status = match (f["status"].as_str(), f["task"].as_str()) {
             (Some("available"), _) => "available".to_string(),
             (Some(s), Some(t)) => format!("{s} ({t})"),

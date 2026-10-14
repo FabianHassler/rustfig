@@ -1,6 +1,6 @@
 # RustFig roadmap
 
-**Status (2026-10-14):** Stage **Alpha**. Overall xfig parity **≈61 %**
+**Status (2026-10-15):** Stage **Alpha**. Overall xfig parity **≈61 %**
 ([assessment](docs/target-app-parity.md)). The native app draws, edits,
 saves and exports. The web build compiles; it is not yet packaged or tested in a browser.
 
@@ -20,7 +20,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Overall parity (weighted) | ≈61 % |
 | Commands (all reachable from the control channel and MCP) | 133 engine (incl. 38 tool modes) + 17 UI |
 | Interactive tools (xfig modes) | 38 |
-| Tests | 171 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
+| Tests | 182 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 3.0–3.2, write 3.2 |
 | Export formats | PDF, SVG, EPS, PNG, EPS+PDF pair, LaTeX box (7 of xfig's 40 languages, PostScript without page layout yet; the rest being ported from fig2dev) |
 | Perf, 50k paths (render fit / hit test / open) | 330 ms / 0.1 ms / 17 ms |
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-15 | B0: fig2dev's export options (`-D`, `-K`, `-m`, `-Z`, `-s`, `-b`, `-g` with X11 colour names, `-N`, `-n`, `-f`, `-F`) on `file.export`, listed per language by `file.export_formats`, CLI `--option`; bounding boxes match fig2dev's with them. 182 tests. |
 | 2026-10-15 | D12: fill patterns ported from fig2dev's PostScript prolog (cells, line widths, arcs; physical size in exports). Corpus EPS median difference 0.0031, 95th percentile 0.031. |
 | 2026-10-14 | B0: exports sized by fig2dev's bounds (`bound.c`): EPS bounding boxes equal fig2dev's on 2,532 of 2,568 sample figures (the rest within 1 pt); corpus EPS median difference 0.015 → 0.006. 171 tests. |
 | 2026-10-14 | A10: RustFig's EPS, PDF and PNG compared with fig2dev's on xfig's ≈2,550 sample figures (opt-in test, ghostscript test-only), with a report ranked worst first; metric text no longer grows with the drawing; files without the centring header line open. Baseline over 2,569 figures: EPS median difference 0.015. 168 tests. |

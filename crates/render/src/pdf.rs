@@ -3,7 +3,7 @@
 use crate::pattern::{coverage, PatternFrame};
 use crate::{Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
 use pdf_writer::types::{LineCapStyle, LineJoinStyle};
-use pdf_writer::{Content, Filter, Finish, Name, Pdf, Rect as PdfRect, Ref, Str};
+use pdf_writer::{Content, Filter, Finish, Name, Pdf, Rect as PdfRect, Ref, Str, TextStr};
 use rustfig_geom::{Point, Rect};
 use rustfig_model::{CapStyle, JoinStyle, Justify, RasterImage};
 
@@ -208,7 +208,8 @@ fn image(c: &mut Ctx, corners: &[Point; 4], img: &RasterImage, flipped: bool, im
 }
 
 /// Render a scene as a one-page PDF covering `bounds` (Fig units) at `scale`.
-pub fn to_pdf(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>) -> Vec<u8> {
+/// `title` becomes the document's `/Title` (fig2dev's `-n`).
+pub fn to_pdf(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>, title: Option<&str>) -> Vec<u8> {
     let b = if bounds.is_empty() {
         Rect::new(Point::ZERO, Point::new(1.0, 1.0))
     } else {
@@ -354,6 +355,9 @@ pub fn to_pdf(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>
             s.finish();
         }
     }
+    if let Some(t) = title {
+        pdf.document_info(Ref::new(next)).title(TextStr(t));
+    }
     pdf.finish()
 }
 
@@ -363,7 +367,7 @@ mod tests {
 
     #[test]
     fn empty_pdf_is_valid_header() {
-        let pdf = to_pdf(&Scene::default(), &Rect::EMPTY, 1.0, None);
+        let pdf = to_pdf(&Scene::default(), &Rect::EMPTY, 1.0, None, Some("T"));
         assert!(pdf.starts_with(b"%PDF-"));
     }
 

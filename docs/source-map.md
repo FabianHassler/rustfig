@@ -176,7 +176,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 
 | File | Lines | What it does | RustFig | Status | Task |
 |---|---:|---|---|---|---|
-| `fig2dev.c` | 1136 | command line, option parsing per language, driver dispatch | `apps/cli` `convert` | partial: per-language options | B0 |
+| `fig2dev.c` | 1136 | command line, option parsing per language, driver dispatch | `render/options.rs` (option table, `-D`/`-K`/`-m`/`-Z`/`-s`), `render/export.rs` (applies them), `apps/cli` `convert --option` | ported: options of the languages written today; driver dispatch is `file.export` | B0 |
 | `iso2tex.c` | 236 | Latin-1 characters to TeX sequences | — | missing | B1–B3 |
 | `creationdate.c` | 114 | creation date for reproducible output (`SOURCE_DATE_EPOCH`) | — | missing | B4 |
 | `localmath.c`, `messages.c` | 114 | math helpers, error messages | `geom`, errors | n/a | — |
@@ -184,7 +184,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `read1_3.c` | 549 | Fig 1.3 reader | — | missing | G1 |
 | `bound.c` | 1156 | bounds incl. arrows and text | `geom/arrow` (`arrow_shapes`, `calc_arrow`), `render/bound` (`compound_bound`, `arc_bound`, `ellipse_bound`, `line_bound`, `text_bound`, `arrow_bound`) | ported (D9, B0); ellipse extents analytic instead of the scan | — |
 | `trans_spline.c` | 661 | splines to polylines for exporters | `geom` | own | review |
-| `colors.c` | 851 | colour names | `model` | own | — |
+| `colors.c` | 851 | colour names | `model/xcolors.rs` (`x_color`: X11 names and `#rgb` forms of `lookup_X_color`), `Rgba::luminance_gray` (`rgb2luminance`) | ported | — |
 | `dev/genps.c`, `genpdf.c` | 2.9 k | PostScript/PDF with page layout; the reference where drivers disagree | `render/eps`, `render/pdf`; `set_style` → `LineKind::dash_pattern`, `linewidth_adj` → `geom::stroke_width`, arrow fills, `PSFONTMAG` → metric text keeps its point size (`SceneOptions::text_scale`) | partial: page layout, multi-page | B4 |
 | `dev/genpstex.c` | 176 | PS/PDF + LaTeX overlay (pstex, pdftex) | — | missing | B2 |
 | `dev/gentikz.c` | 1870 | TikZ | — | missing | B1 |
@@ -205,6 +205,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | Date | Note |
 |------|------|
 | 2026-10-14 | First version. |
+| 2026-10-15 | `fig2dev.c` options and `colors.c` ported (B0). |
 | 2026-10-14 | S1: draw and save order ported (`u_redraw.c`, `f_save.c`). |
 | 2026-10-14 | Attribute panel: xfig's pictures (`w_icons.c`), xfig's arrow-mode order and grid choices. |
 | 2026-10-14 | Mode panel: xfig's icon bitmaps and mode order (`w_icons.c`, `w_modepanel.c`). |

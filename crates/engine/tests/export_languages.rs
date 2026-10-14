@@ -105,3 +105,109 @@ fn files_pick_the_language_from_their_name() {
     assert!(!dir.join("fig.tikz").exists());
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+fn eps(e: &mut Engine, options: serde_json::Value) -> String {
+    let r = e
+        .execute("file.export_data", &json!({"format": "eps", "options": options}))
+        .unwrap();
+    r["data"].as_str().unwrap().to_string()
+}
+
+fn bbox(eps: &str) -> (i64, i64) {
+    let line = eps.lines().find(|l| l.starts_with("%%BoundingBox:")).unwrap();
+    let v: Vec<i64> = line.split_whitespace().skip(1).map(|n| n.parse().unwrap()).collect();
+    (v[2], v[3])
+}
+
+#[test]
+fn fig2dev_options_change_the_output() {
+    let mut e = drawing();
+    let plain = eps(&mut e, json!({}));
+    let (w, h) = bbox(&plain);
+    // -b: a border of 10 points on every side.
+    let (bw, bh) = bbox(&eps(&mut e, json!({"border": 10})));
+    assert_eq!((bw - w, bh - h), (20, 20));
+    // -m 2 doubles the figure; -Z 4w makes it 4 inches wide (padding included).
+    let (mw, _) = bbox(&eps(&mut e, json!({"m": 2})));
+    assert!((mw - 2 * w).abs() <= 2, "{mw} {w}");
+    let (zw, _) = bbox(&eps(&mut e, json!({"max_size": "4w"})));
+    assert!((zw - 288).abs() <= 1, "{zw}");
+    // -n, -g, -N.
+    assert!(eps(&mut e, json!({"title": "Figure 1"})).contains("%%Title: Figure 1"));
+    let bg = eps(&mut e, json!({"background": "red"}));
+    let gray = eps(&mut e, json!({"background": "red", "N": true}));
+    assert_ne!(bg, gray);
+    assert_ne!(bg, plain);
+    // Options may also be given by letter, with a dash.
+    assert_eq!(eps(&mut e, json!({"-b": 10})), eps(&mut e, json!({"border": 10})));
+}
+
+#[test]
+fn depth_options_select_objects_and_bounds() {
+    let mut e = drawing();
+    let r = e
+        .execute(
+            "shape.rectangle",
+            &json!({"x": 6000, "y": 0, "width": 1200, "height": 1200}),
+        )
+        .unwrap();
+    let id = r["id"].as_u64().unwrap();
+    e.execute("arrange.set_depth", &json!({"ids": [id], "depth": 10}))
+        .unwrap();
+    let all = eps(&mut e, json!({}));
+    let only_50 = eps(&mut e, json!({"depths": "+50"}));
+    let only_50_adjusted = eps(&mut e, json!({"depths": "+50", "K": true}));
+    // Without -K the page keeps the whole figure; with it, only depth 50 counts.
+    assert_ne!(only_50, all);
+    assert_eq!(bbox(&all), bbox(&only_50));
+    assert!(bbox(&only_50_adjusted).0 < bbox(&all).0 / 2);
+    assert_eq!(
+        bbox(&eps(&mut e, json!({"depths": "-10", "K": true}))),
+        bbox(&only_50_adjusted)
+    );
+}
+
+#[test]
+fn bad_options_are_refused() {
+    let mut e = drawing();
+    let err = |e: &mut Engine, format: &str, options: serde_json::Value| {
+        e.execute("file.export_data", &json!({"format": format, "options": options}))
+            .unwrap_err()
+            .message
+    };
+    assert!(err(&mut e, "eps", json!({"nonsense": 1})).contains("no option"));
+    assert!(err(&mut e, "eps", json!({"ascii_preview": true})).contains("B4"));
+    assert!(err(&mut e, "svg", json!({"title": "x"})).contains("no option"));
+    assert!(err(&mut e, "eps", json!({"border": "wide"})).contains("number"));
+    assert!(err(&mut e, "eps", json!({"m": 2, "Z": 3})).contains("only one"));
+    assert!(e
+        .execute("file.export_data", &json!({"format": "eps", "options": [1]}))
+        .is_err());
+}
+
+#[test]
+fn formats_list_each_languages_options() {
+    let mut e = Engine::new();
+    let v = e.execute("file.export_formats", &json!({})).unwrap();
+    let eps = v["formats"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| f["id"] == "eps")
+        .unwrap();
+    let keys: Vec<&str> = eps["options"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|o| o["key"].as_str().unwrap())
+        .collect();
+    assert!(keys.contains(&"border") && keys.contains(&"depths") && keys.contains(&"bbox"));
+    let bbox = eps["options"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|o| o["key"] == "bbox")
+        .unwrap();
+    assert_eq!(bbox["available"], false);
+    assert_eq!(bbox["task"], "B4");
+}

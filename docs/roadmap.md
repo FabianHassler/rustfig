@@ -1,6 +1,6 @@
 # Milestones
 
-**Status:** 2026-10-14. Current focus: **phase W, A8 and D9 done**; B0 (porting fig2dev to Rust) under way with A10 (comparison on xfig's sample figures), then phase A (hardening) and M4 (exports). Task-level plan: [plan.md](plan.md).
+**Status:** 2026-10-15. Current focus: **phase W, A8, A10, D9 and D12 done**; B0 (porting fig2dev to Rust: languages, bounds, options done) under way with A10 (comparison on xfig's sample figures), then phase A (hardening) and M4 (exports). Task-level plan: [plan.md](plan.md).
 
 | Milestone | Content | State |
 |-----------|---------|-------|
@@ -21,3 +21,4 @@
 | 2026-10-13 | M0–M3 landed. |
 | 2026-10-14 | Phase W: W1 (layout), W2 (mouse buttons) and W3 (depth panel) landed. |
 | 2026-10-14 | Phase W done (W4 Snap menu, W5 attribute panel, W6 rulers, W7 accelerators). |
+| 2026-10-15 | B0: fig2dev's languages, bounds and options ported; D12 fill patterns. |

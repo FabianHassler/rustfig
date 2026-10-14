@@ -93,6 +93,14 @@ pub fn ps_font_name(n: i32) -> &'static str {
         .unwrap_or("Times-Roman")
 }
 
+/// The Fig font number of a standard PostScript font name.
+pub fn ps_font_number(name: &str) -> Option<i32> {
+    PS_NAMES
+        .iter()
+        .position(|n| *n == name)
+        .and_then(|i| i32::try_from(i).ok())
+}
+
 /// Human-readable name for a Fig PostScript font number.
 pub fn ps_font_display_name(n: i32) -> &'static str {
     if n < 0 {

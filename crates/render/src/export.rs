@@ -1,8 +1,9 @@
 //! One entry point for every export format.
 
+use crate::options::{DriverOptions, SizeDim};
 use crate::{raster, Rgba, Scene, SceneOptions};
 use rustfig_geom::Rect;
-use rustfig_model::{Document, Rgb, Units};
+use rustfig_model::{Document, ObjectKind, Rgb, Units};
 use std::collections::BTreeSet;
 
 /// Export formats rendered from a scene.
@@ -60,6 +61,8 @@ pub struct ExportOptions {
     /// With depths left out: size the page by the whole figure rather than
     /// by the active layers alone.
     pub whole_figure_bounds: bool,
+    /// fig2dev's options (`file.export`'s `options`).
+    pub fig2dev: DriverOptions,
 }
 
 impl Default for ExportOptions {
@@ -71,6 +74,7 @@ impl Default for ExportOptions {
             background: None,
             hidden_depths: BTreeSet::new(),
             whole_figure_bounds: false,
+            fig2dev: DriverOptions::default(),
         }
     }
 }
@@ -87,47 +91,103 @@ pub fn export_bounds(scene: &Scene, margin: f64) -> Rect {
 
 /// Render a document in the given format.
 pub fn export(doc: &Document, format: ExportFormat, opts: &ExportOptions) -> Result<Vec<u8>, String> {
+    let d = &opts.fig2dev;
     // fig2dev convention: metric drawings (450 units/cm) are magnified to true
     // size, but their text keeps its point size.
     let unit_fix = match doc.settings.units {
         Units::Metric => 1200.0 / 2.54 / 450.0,
         Units::Inches => 1.0,
     };
-    let text_scale = Some(1.0 / unit_fix);
-    let scene = Scene::build(
+    // `-s` and `-f` change the texts before anything is measured.
+    let adjusted;
+    let doc = if d.font_size.is_some() || d.font.is_some() {
+        adjusted = with_text_options(doc, d);
+        &adjusted
+    } else {
+        doc
+    };
+    // `-D` leaves depths out; `-K` also leaves them out of the bounds.
+    let filtered: BTreeSet<i32> = match &d.depths {
+        Some(f) => doc.depths().into_iter().filter(|dep| !f.keeps(*dep)).collect(),
+        None => BTreeSet::new(),
+    };
+    let mut hidden = opts.hidden_depths.clone();
+    hidden.extend(filtered.iter().copied());
+    // Without `-F`, fig2dev reads font sizes as 1/80 inch (`PSFONTMAG`).
+    let text_scale = if d.correct_font_size {
+        1.0 / unit_fix
+    } else {
+        72.0 / 80.0
+    };
+    let mut scene = Scene::build(
         doc,
         &SceneOptions {
-            hidden_depths: opts.hidden_depths.clone(),
-            text_scale,
+            hidden_depths: hidden,
+            text_scale: Some(text_scale),
             ..SceneOptions::default()
         },
     );
     // The page is sized by fig2dev's bounds (`bound.c`), not by the ink.
-    let hidden = if opts.whole_figure_bounds {
+    let mut bounds_hidden = if opts.whole_figure_bounds {
         BTreeSet::new()
     } else {
         opts.hidden_depths.clone()
     };
+    if d.adjust_bbox {
+        bounds_hidden.extend(filtered.iter().copied());
+    }
+    let mut raw = crate::bound::fig2dev_bounds(doc, &bounds_hidden, true);
+    if raw.is_empty() {
+        return Err("the drawing is empty".into());
+    }
+    // fig2dev gives a figure without width or height some (only LaTeX text).
+    if raw.width() == 0.0 {
+        raw.max.x += 100.0;
+    }
+    if raw.height() == 0.0 {
+        raw.max.y += 100.0;
+    }
+    let mag = if let Some(z) = d.max_size {
+        // `-Z`: the size of one dimension, in inches (cm in metric drawings).
+        let figdim = match z.dim {
+            SizeDim::Width => raw.width(),
+            SizeDim::Height => raw.height(),
+            SizeDim::Largest => raw.width().max(raw.height()),
+        };
+        let inches = match doc.settings.units {
+            Units::Metric => z.size / 2.54,
+            Units::Inches => z.size,
+        };
+        inches * 1200.0 / figdim
+    } else if let Some(m) = d.magnification {
+        m
+    } else {
+        opts.magnification.unwrap_or(doc.settings.magnification) / 100.0
+    };
+    let mag = if mag.is_finite() { mag.clamp(0.001, 1000.0) } else { 1.0 };
+    let scale = mag * unit_fix;
+    // The margin is in Fig units; fig2dev's `-b` border is in points on the page.
     let m = if opts.margin.is_finite() {
         opts.margin.clamp(0.0, 1.0e7)
     } else {
         0.0
     };
-    let bounds = crate::bound::fig2dev_bounds(doc, &hidden, true).expand(m);
-    if bounds.is_empty() {
-        return Err("the drawing is empty".into());
+    let border = if d.border.is_finite() {
+        d.border.clamp(0.0, 72_000.0) * 1200.0 / 72.0 / scale
+    } else {
+        0.0
+    };
+    let bounds = raw.expand(m + border);
+    let mut bg = d.background.or(opts.background).map(Rgba::opaque);
+    if d.grayscale {
+        scene.map_colors(Rgba::luminance_gray);
+        bg = bg.map(Rgba::luminance_gray);
     }
-    let mag = opts
-        .magnification
-        .unwrap_or(doc.settings.magnification)
-        .clamp(0.1, 100_000.0)
-        / 100.0;
-    let scale = mag * unit_fix;
-    let bg = opts.background.map(Rgba::opaque);
+    let title = d.title.as_deref();
     Ok(match format {
         ExportFormat::Svg => crate::svg::to_svg(&scene, &bounds, scale, bg).into_bytes(),
-        ExportFormat::Eps => crate::eps::to_eps(&scene, &bounds, scale, bg).into_bytes(),
-        ExportFormat::Pdf => crate::pdf::to_pdf(&scene, &bounds, scale, bg),
+        ExportFormat::Eps => crate::eps::to_eps(&scene, &bounds, scale, bg, title).into_bytes(),
+        ExportFormat::Pdf => crate::pdf::to_pdf(&scene, &bounds, scale, bg, title),
         ExportFormat::LatexBox => crate::drivers::latex_box::to_box(&doc.comments, &bounds, scale).into_bytes(),
         ExportFormat::Png => {
             let dpi = if opts.dpi.is_finite() {
@@ -146,6 +206,42 @@ pub fn export(doc: &Document, format: ExportFormat, opts: &ExportOptions) -> Res
             raster::encode_png(&pm)?
         }
     })
+}
+
+/// The document with fig2dev's `-s` (every text at one size, its stored
+/// length and height scaled to match, as `read.c` does) and `-f` (the
+/// default font and Times-Roman replaced, as `genps.c` does) applied.
+fn with_text_options(doc: &Document, d: &DriverOptions) -> Document {
+    fn walk(objs: &mut [rustfig_model::Object], d: &DriverOptions) {
+        for o in objs {
+            match &mut o.kind {
+                ObjectKind::Compound(c) => walk(&mut c.objects, d),
+                ObjectKind::Text(t) => {
+                    if let Some(fs) = d.font_size {
+                        // fig2dev scales `-s` by `-m` (`fontmag`).
+                        let size = fs * d.magnification.unwrap_or(1.0);
+                        if t.size > 0.0 && size.is_finite() && size > 0.0 {
+                            t.length *= size / t.size;
+                            t.height *= size / t.size;
+                        }
+                        t.size = size;
+                    }
+                    if let Some(font) = d.font {
+                        // PostScript fonts -1 and 0, LaTeX fonts 0 and 1.
+                        let replaced = if t.is_postscript() { t.font <= 0 } else { t.font <= 1 };
+                        if replaced {
+                            t.font = font;
+                            t.flags |= rustfig_model::text_flags::POSTSCRIPT;
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    let mut doc = doc.clone();
+    walk(&mut doc.objects, d);
+    doc
 }
 
 #[cfg(test)]

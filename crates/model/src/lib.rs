@@ -8,10 +8,12 @@
 mod color;
 mod geometry;
 mod object;
+mod xcolors;
 
 pub use color::{area_fill_color, Rgb, STANDARD_COLORS, STANDARD_COLOR_NAMES};
 pub use geometry::{arc_geom, flatten_object, FlatPath};
 pub use object::*;
+pub use xcolors::{x_color, x_color_names};
 
 use rustfig_geom::{Point, Rect};
 use serde::{Deserialize, Serialize};

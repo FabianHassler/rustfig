@@ -1,6 +1,6 @@
 # File format parity checklist
 
-**Status:** 2026-10-14 (B0 started: every fig2dev language listed by `file.export_formats`).
+**Status:** 2026-10-15 (B0: fig2dev's options on every export).
 
 | Format | Read | Write | Notes |
 |---|---|---|---|
@@ -13,7 +13,8 @@
 | EPS | — | ✅ | Level 2, ISO-Latin-1 fonts |
 | PNG | — | ✅ | any resolution up to 20 000 px edge |
 | EPS and PDF together (xfig's pspdf) | — | ✅ | two files, NAME.eps and NAME.pdf |
-| LaTeX box (fig2dev `box`) | — | ✅ | ported from `genbox.c`; bounds still RustFig's (B0) |
+| LaTeX box (fig2dev `box`) | — | ✅ | ported from `genbox.c`; fig2dev's bounds |
+| fig2dev options (`file.export` `options`, CLI `--option`) | — | 🟡 | ported: depths `-D`/`-K`, `-m`, `-Z`, `-s`, border `-b`, background `-g` (X11 names), grayscale `-N`, title `-n`, font `-f`, `-F`; page layout and previews (B4), bitmap options (B6) refused with their task |
 | PostScript (print) | — | ❌ | gap #3 |
 | LaTeX (TikZ, PSTricks, pict2e, epic/eepic, latex, pictex, pstex/pdftex) | — | ❌ | being ported from fig2dev (B1–B3, B9); gap #1 |
 | GIF/JPEG/TIFF/PPM/XBM/XPM | — | ❌ | gap #10 |
@@ -28,3 +29,4 @@ Fuzzing: `crates/format/tests/prop_format.rs`, `crates/engine/tests/import_fuzz.
 |---|---|
 | 2026-10-13 | First checklist. |
 | 2026-10-14 | xfig's language list; LaTeX box and pspdf. |
+| 2026-10-15 | fig2dev's options. |
