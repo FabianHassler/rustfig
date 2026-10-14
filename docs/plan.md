@@ -72,6 +72,7 @@ match it, with the modern additions kept but optional.
 | W5 | ✅ 2026-10-14 (`ui-egui/attributes`, ported from `w_indpanel.c`; Arc Type and Text Step added; the attributes of later features — Angle Geom D7, Smart Links D8, copy counts and dimension line D10, tangent length D4 — appear with them). **Attribute panel parity**: xfig-style buttons that show the current value graphically and open a choice panel; only the attributes relevant to the current mode are shown, like xfig; adds the missing ones: point positioning (D7), linked move (D8), text flags (rigid, special, hidden), arrow mode and arrow-type panel, latex/manhattan line modes, depth. | Screenshot review per mode; switching modes changes the visible attributes. | 16 |
 | W6 | ✅ 2026-10-14 (`ui-egui/rulers`, ported from `w_rulers.c` and `u_pan.c`; `view.set_scale`, `app.unit_panel`). **Rulers** (top and side) with cursor tracking, unit ticks and click-to-pan (replaces E2); **units box**: click to change units and scale. | Screenshot review; units change updates rulers and coordinates. | 10 |
 | W7 | ✅ 2026-10-14 (`menus::XFIG_KEYS` from `app-defaults/Fig`; mode letters corrected to xfig's; `app.toggle_xfig_keys`, on by default). **Menu accelerators** matching xfig's (Meta-key shortcuts in the menus, e.g. Meta-N, Meta-U undo, Meta-T paste) as an optional keymap next to the platform-standard one. | Tests that the xfig keymap reaches the documented commands. | 6 |
+| W8 | **xfig's translations and accelerators, checked one by one** (asked 2026-10-15). W7 ported the menu accelerators; this audits every key and mouse binding xfig defines and closes the gaps. Sources: `app-defaults/Fig` (`Fig*accelerators`, about 50; the letter keys while a menu is open, `Fig*commands*{File,Edit,View,Help}*translations`, including File's recent files 1–9 and View's `v,v`; `*Text*translations` Delete/End/Home; the found-text and spell-check panels; the wheel bindings: indicator buttons, spinners, Alt/Meta+wheel popping up the draw/edit mode panels, Ctrl+K keyboard panel), the ~114 `XtParseTranslationTable`/`XtParseAcceleratorTable` tables in `src/*.c` (Return/Escape and field keys in every panel, `e_edit.c` popups, file, export, print, colour, font, style, search panels, rulers, depth panel), the canvas key handling (`w_canvas.c`, `w_keyboard.c`) and `CompKeyDB` (compose sequences for text). Deliverable: `docs/keys-parity.md` listing every binding with its xfig source, the RustFig command or handler, status and task; missing ones implemented (or given a task where they need a missing feature, e.g. spell check in D11); a table-driven test that every app-defaults accelerator and menu letter reaches its command. | Every binding in `app-defaults/Fig` and the C translation tables is listed with a status; all whose feature exists work and are tested; `ui-parity.md` links the list. | 10 |
 
 Global settings (Edit › Global settings, E1), the character map (View, E5)
 and Manage styles (View, E6) complete the xfig menus. E8 (mouse hint bar) is
@@ -186,7 +187,7 @@ is an optional extra, used in two ways.
 
 1. ✅ Phase W, xfig window parity (W1–W7, S0–S2), done 2026-10-14.
 2. ✅ A8 (fig2dev reference tests), ✅ D9 (the arrowhead, arc and dash differences it found), ✅ A10 (EPS/PDF compared with fig2dev on xfig's sample figures), then B0 (the fig2dev port: language table ✅, `bound.c` ✅), ✅ D12 (fill patterns).
-3. ✅ A1 and A9 (undo memory, per-command cost), A2 and A3 (CI on Linux, Windows and macOS; web build), the rest of A4, A5–A7.
+3. ✅ A1 and A9 (undo memory, per-command cost), A2 and A3 (CI pending its first green run), W8 (xfig's translations and accelerators), (CI on Linux, Windows and macOS; web build), the rest of A4, A5–A7.
 4. E1 and S3 (preferences, xfig's command-line options).
 5. B1–B9 (fig2dev's drivers ported: LaTeX exports, bitmaps, PostScript; modern printing), C1–C3 (web): the first release candidate, on desktop and web.
 6. D6 (libraries), D1–D5, D7–D12, E3–E9: every remaining xfig function.
@@ -215,6 +216,7 @@ is an optional extra, used in two ways.
 | 2026-10-13 | Added A8 (fig2dev reference tests) and B0 (fig2dev export backend) with design notes. |
 | 2026-10-14 | A3: the web build compiles locally with rustup's toolchain; xtask uses the running toolchain's rustc. |
 | 2026-10-15 | D12 landed: fig2dev's fill patterns; corpus EPS median 0.0031, 95th percentile 0.031 (both PostScript files rasterised alike). |
+| 2026-10-15 | Added W8: audit of xfig's translations and accelerators (app-defaults and the C translation tables), asked by the user. |
 | 2026-10-15 | A2: CI and release workflows written (first run pending). |
 | 2026-10-15 | A9 done: commands re-measure only changed texts; bounding-box cache per object. |
 | 2026-10-15 | A1 done: shared undo snapshots (0.08 MB for 200 edits on 50,000 objects). |
