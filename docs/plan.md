@@ -1,6 +1,6 @@
 # Execution plan
 
-**Status:** 2026-10-14. Current phase: **W (xfig window parity)**, W1–W3 done, next W5, then A8 and B0 (fig2dev) and the rest of phase A. Overall parity ≈60 %.
+**Status:** 2026-10-14. Current phase: **W (xfig window parity)**, W1–W3 done, next S1–S2 (fixes from the source map), then W5, then A8 and B0 (fig2dev) and the rest of phase A. Overall parity ≈60 %.
 
 This is the committed work plan. [`gaps.md`](gaps.md) ranks every known
 shortfall; this file groups them into phases with task ids, acceptance
@@ -15,6 +15,23 @@ criteria and estimates. Commit messages use the task id (`A1: shared undo snapsh
   passes, the app has been run and screenshotted (for UI-visible work), and
   the progress docs are updated (see `CLAUDE.md` › Roadmap and progress docs).
 - Estimates are focused hours, not calendar time.
+- Port from xfig's and fig2dev's sources (`old/`, xfig licence) where they
+  cover the task: [`source-map.md`](source-map.md) names the C file for each
+  area. A task that touches an "own" row reviews it against that file;
+  accepted behaviour differences are recorded in the map.
+
+## Phase S: source review (≈20 h)
+
+The source map compares every xfig and fig2dev file with RustFig. These
+tasks fix what it found; the per-area reviews ride along with the W, B and D
+tasks that touch each area.
+
+| Id | Task | Acceptance | Hours |
+|----|------|------------|------:|
+| S0 | ✅ 2026-10-14. **Source map** `docs/source-map.md`: every xfig and fig2dev C file with its RustFig module, status and task. | Every C file listed. | 4 |
+| S1 | **Draw order as xfig:** within a depth, arcs, compounds (recursively), ellipses, lines, splines, texts (`u_redraw.c`); gray depths drawn behind all active ones; `.fig` written in xfig's type order (`f_save.c`). | Render tests for type order, compound order and gray layers; a saved file lists objects in xfig's order. | 4 |
+| S2 | **Mouse indicator as xfig** (`w_mousefun.c`): left label left of the mouse, middle above, right label right; xfig's capitalisation. | Screenshot next to the manual's image. | 2 |
+| S3 | **Startup options and resources** (`main.c`, `resources.c`, `xfigmain.c`): the command-line options users pass (`-metric`, `-specialtext`, `-latexfonts`, `-startfontsize`, `-exportLanguage`, `-startgridmode`, `-startposnmode`, `-zoom`, arrow defaults, …) set the same defaults in RustFig; saved with E1 settings. | `rustfig -metric -specialtext …` starts with the same indicator settings as xfig; tests per option. | 10 |
 
 ## Phase A: hardening (≈84 h)
 
@@ -95,6 +112,7 @@ covered by W2.
 | D6 | **Library objects**: browse a directory of .fig files with thumbnails, place them as compounds; copy a selection to a library. | Place an object from a sample library; undo removes it. | 30 |
 | D7 | **Point positioning modes**: latex lines, manhattan, mountain, 45° constraint with Shift. | Tests per mode. | 10 |
 | D8 | **Linked move**: moving a box drags the attached line end points (xfig's smart links). | Test with a box and two attached lines. | 10 |
+| D10 | **Remaining mode options** found by the source map: dimension lines (Shift+left in polyline mode, `d_line.c`), align to canvas (`e_align.c`), array copy (`e_copy.c`), anchor point for flip/rotate and number of rotated copies (`e_flip.c`, `e_rotate.c`), scaling one edge (`e_scale.c`), lengths shown while drawing (`w_msgpanel.c`). | A test per option; mouse hints list them. | 16 |
 | D9 | Arrowhead types 10–14 with exact shapes; dash-dot tick styles. | Visual review against the xfig manual. | 6 |
 
 ## Phase E: UI completeness, M7 (≈56 h)
@@ -169,7 +187,7 @@ is an optional extra, used in two ways.
 
 ## Order and milestones
 
-1. Phase W, xfig window parity, first: W1 → W2 → W3 → W5 → W6 → W4 → W7, with D7 and D8 alongside W5. W1 starts with the A4 groundwork (app construction separated from eframe, replaceable file dialogs, a first `egui_kittest` test) so every W task lands with UI tests.
+1. Phase W, xfig window parity, first: W1 → W2 → W3 → S1 → S2 → W5 → W6 → W4 → W7, with D7 and D8 alongside W5. W1 starts with the A4 groundwork (app construction separated from eframe, replaceable file dialogs, a first `egui_kittest` test) so every W task lands with UI tests.
 2. A8 and B0 (fig2dev reference tests, then the fig2dev export backend).
 3. A1 and A9 (undo memory, per-command cost), A2 and A3 (CI, web build), the rest of A4.
 4. A5–A7, then B1, B2, C1–C3: the first release candidate for LaTeX users, on desktop and web.
@@ -192,6 +210,7 @@ is an optional extra, used in two ways.
 | 2026-10-13 | First plan, after M0–M3. |
 | 2026-10-13 | Added A8 (fig2dev reference tests) and B0 (fig2dev export backend) with design notes. |
 | 2026-10-14 | A3: the web build compiles locally with rustup's toolchain; xtask uses the running toolchain's rustc. |
+| 2026-10-14 | Added phase S (source map S0 done; S1–S3) and D10; tasks port from xfig's sources where they can. |
 | 2026-10-14 | xfig and fig2dev sources may now be read and ported (user decision; xfig licence, `LICENSE-xfig`). |
 | 2026-10-14 | W3 landed: depth panel with counts, drag-toggle, All On/Off/Toggle, Gray/Blank; hidden depths can't be picked (Add Point could before); export of active layers only. |
 | 2026-10-14 | W2 landed: xfig three-button semantics per mode, modern scheme as a setting (View › xfig mouse buttons), Alt/Ctrl+click for middle/right, indicator with one column per button. |

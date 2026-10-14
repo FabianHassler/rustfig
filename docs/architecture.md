@@ -1,6 +1,7 @@
 # Architecture
 
-**Status:** 2026-10-13.
+**Status:** 2026-10-14. Which xfig and fig2dev source file each module
+corresponds to: [source-map.md](source-map.md).
 
 RustFig is a Cargo workspace of layered crates. A crate may depend only on
 lower layers; nothing below L6 may depend on egui, eframe, winit or rfd.

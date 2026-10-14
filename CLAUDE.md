@@ -10,7 +10,7 @@ RustFig is an open-source, Rust-native reimplementation of xfig: close to the or
 
 ## Using xfig's sources (decided 2026-10-14)
 
-- xfig and fig2dev are under the xfig licence (SPDX `Xfig`): use, modify, sublicense and redistribute freely, as long as the copyright and permission notice stay intact. RustFig may read, port and reuse their code, comments and data tables.
+- xfig and fig2dev are under the xfig licence (SPDX `Xfig`): use, modify, sublicense and redistribute freely, as long as the copyright and permission notice stay intact. RustFig may read, port and reuse their code, comments and data tables. [`docs/source-map.md`](docs/source-map.md) maps every C file to its RustFig module, status and plan task; update it when you port or review a file.
 - References in `old/` (gitignored, never commit it): the C sources (`old/xfig-3.2.9a/src/`, `old/fig2dev-3.2.9a/fig2dev/`), the format specs (`doc/FORMAT3.2` and older), the HTML manual with screenshots of every panel (`doc/html/`, `doc/html/images/`), `xfig.man.in`, the app defaults (`app-defaults/`), and fig2dev's man pages. Before building UI, look at the manual's image of that panel; with the user's permission, compare with the real xfig (`~/bin/xfig`, XQuartz).
 - Ported code: translate into idiomatic Rust that follows this file's rules (no panics, `Result`, layering) rather than transliterating C. Put a comment at the top of the Rust item or file naming the source, e.g. `// Ported from xfig src/u_draw.c (xfig licence, see LICENSE-xfig).` Copyright holders not yet listed go into `LICENSE-xfig`.
 - Some files under `old/` are not under the xfig licence (fig2dev's `lib/` replacement C functions; several figure libraries in `Libraries/` carry their own notice or none). Check the header before reusing; library figures follow the asset rules below.
@@ -85,6 +85,7 @@ The progress docs follow craftrules' [`standards/progress-docs.md`](https://gith
 - [`ROADMAP.md`](ROADMAP.md): stage, headline numbers, dimensions, features, languages, upcoming, progress log.
 - [`docs/plan.md`](docs/plan.md): phased tasks with ids, acceptance criteria and hours; the user's decisions.
 - [`docs/target-app-parity.md`](docs/target-app-parity.md): the authoritative parity assessment (area table, methodology, calibration, evidence of what ships).
+- [`docs/source-map.md`](docs/source-map.md): every xfig/fig2dev C file → RustFig module, status, task.
 - [`docs/gaps.md`](docs/gaps.md): every known shortfall, ranked. [`docs/roadmap.md`](docs/roadmap.md): milestones and current focus.
 - Checklists: [`ui-parity.md`](docs/ui-parity.md), [`file-format-parity.md`](docs/file-format-parity.md), [`hardware-parity.md`](docs/hardware-parity.md), [`localization-parity.md`](docs/localization-parity.md), [`effects-parity.md`](docs/effects-parity.md), [`type-parity.md`](docs/type-parity.md); [`architecture.md`](docs/architecture.md), [`development.md`](docs/development.md), [`mcp.md`](docs/mcp.md).
 
