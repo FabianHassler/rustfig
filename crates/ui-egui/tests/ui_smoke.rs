@@ -370,3 +370,19 @@ fn rulers_pan_and_units_box() {
     assert_eq!(h.state().engine.doc().settings.units, rustfig_model::Units::Metric);
     h.get_by_label("Units: 1cm = 1.00cm");
 }
+
+#[test]
+fn snap_menu_arms_a_snap_mode() {
+    let mut h = harness(app());
+    h.get_by_label("Snap Mode: None");
+    h.get_by_label("Snap").click();
+    h.run_steps(2);
+    h.get_by_label("Endpoint").click();
+    h.run_steps(2);
+    h.get_by_label("Snap Mode: Endpoint");
+    h.get_by_label("Snap").click();
+    h.run_steps(2);
+    h.get_by_label("Hold").click();
+    h.run_steps(2);
+    h.get_by_label("Snap Mode: Endpoint (held)");
+}

@@ -197,6 +197,24 @@ pub fn font_combo(ui: &mut egui::Ui, id: &str, font: i32, postscript: bool) -> O
 /// object count. Pressing a checkbox and dragging over others sets them all
 /// to the new state of the first one.
 pub fn depth_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
+    // xfig's Snap Mode indicator sits above the depth panel (`w_snap.c`).
+    let snap = app.engine.snap_indicator();
+    ui.label(RichText::new("Snap Mode").strong());
+    let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 20.0), Sense::hover());
+    ui.painter()
+        .rect_stroke(r, 2.0, egui::Stroke::new(1.0_f32, tk.muted), egui::StrokeKind::Inside);
+    let armed = snap != "None";
+    ui.painter().text(
+        r.left_center() + vec2(6.0, 0.0),
+        egui::Align2::LEFT_CENTER,
+        snap,
+        egui::FontId::proportional(12.0),
+        if armed { tk.selection } else { ui.visuals().text_color() },
+    );
+    let held = if app.engine.snap_held() { " (held)" } else { "" };
+    resp.on_hover_text("Choose a snap in the Snap menu")
+        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, format!("Snap Mode: {snap}{held}")));
+    ui.separator();
     ui.heading("Depths");
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing.x = 4.0;

@@ -12,11 +12,13 @@ pub mod guard;
 mod history;
 pub mod import;
 mod indicator;
+pub mod snap;
 pub mod tools;
 mod view;
 
 pub use error::EngineError;
 pub use indicator::{GridMode, Indicator, SnapMode};
+pub use snap::ObjectSnap;
 pub use tools::{Button, Key, MouseHints, MouseScheme, Overlay, ToolEvent, ToolKind};
 pub use view::{UnitScale, View};
 
@@ -50,6 +52,21 @@ pub struct Engine {
     pub view: View,
     /// Ruler units and figure scale.
     pub unit_scale: UnitScale,
+    /// The Snap menu's mode for the next point (xfig's `snap_mode`).
+    object_snap: Option<ObjectSnap>,
+    /// Keep the snap mode after it was used (Snap › Hold).
+    snap_held: bool,
+    /// Intersect: the first object, waiting for the second.
+    intersect_first: Option<Object>,
+    /// Points placed by an object snap during the current operation; grid
+    /// rounding leaves them alone.
+    exact_points: Vec<Point>,
+    /// The release that follows a snapped press happens at the snapped
+    /// point, so the tool sees a click there.
+    release_at: Option<Point>,
+    /// Where the user clicked when the press was snapped: tools pick the
+    /// object there and measure from the snapped point.
+    snap_click: Option<Point>,
     tool: ToolKind,
     tool_state: tools::ToolState,
     mouse_scheme: tools::MouseScheme,
@@ -86,6 +103,12 @@ impl Engine {
             indicator: Indicator::default(),
             view: View::default(),
             unit_scale: UnitScale::default(),
+            object_snap: None,
+            snap_held: false,
+            intersect_first: None,
+            exact_points: Vec::new(),
+            release_at: None,
+            snap_click: None,
             tool: ToolKind::Select,
             tool_state: tools::ToolState::Idle,
             mouse_scheme: tools::MouseScheme::default(),
@@ -422,7 +445,107 @@ impl Engine {
 
     /// Snap a point according to the positioning mode.
     pub fn snap(&self, p: Point) -> Point {
+        if self.exact_points.contains(&p) {
+            return p;
+        }
         self.indicator.snap_point(p, self.doc.settings.units)
+    }
+
+    /// The Snap menu's mode, if one is armed.
+    pub fn object_snap(&self) -> Option<ObjectSnap> {
+        self.object_snap
+    }
+
+    /// Whether Snap › Hold keeps the mode after use.
+    pub fn snap_held(&self) -> bool {
+        self.snap_held
+    }
+
+    /// Arm a snap mode for the next point (or disarm with `None`).
+    pub fn set_object_snap(&mut self, mode: Option<ObjectSnap>) {
+        self.object_snap = mode;
+        self.intersect_first = None;
+    }
+
+    /// Snap › Hold (keep the mode) or Snap › Release (`false`: also disarm).
+    pub fn set_snap_held(&mut self, held: bool) {
+        self.snap_held = held;
+        if !held {
+            self.set_object_snap(None);
+        }
+    }
+
+    /// The Snap Mode indicator's text (xfig's labels).
+    pub fn snap_indicator(&self) -> &'static str {
+        match self.object_snap {
+            None => "None",
+            Some(ObjectSnap::Intersect) if self.intersect_first.is_some() => "I'sect 2",
+            Some(m) => m.label(),
+        }
+    }
+
+    /// The leaf object nearest `p` within `tol` on a visible depth.
+    fn snap_target(&self, p: Point, tol: f64) -> Option<Object> {
+        fn walk<'a>(objs: &'a [Object], e: &Engine, p: Point, best: &mut Option<(f64, &'a Object)>) {
+            for o in objs {
+                match &o.kind {
+                    ObjectKind::Compound(c) => walk(&c.objects, e, p, best),
+                    _ if !e.is_visible(o) => {}
+                    _ => {
+                        let d = o.distance(p);
+                        if d.is_finite() && best.is_none_or(|(bd, _)| d < bd) {
+                            *best = Some((d, o));
+                        }
+                    }
+                }
+            }
+        }
+        let mut best = None;
+        walk(&self.doc.objects, self, p, &mut best);
+        best.filter(|(d, _)| *d <= tol).map(|(_, o)| o.clone())
+    }
+
+    /// Apply the armed object snap to a press at `click`: the snapped
+    /// point, or `None` when nothing was found (the press is then ignored,
+    /// as in xfig, and the message says why).
+    pub(crate) fn apply_object_snap(&mut self, click: Point, tol: f64, current: Option<Point>) -> Option<Point> {
+        let mode = self.object_snap?;
+        let Some(target) = self.snap_target(click, tol) else {
+            self.set_status("No point found.");
+            return None;
+        };
+        let result = if mode == ObjectSnap::Intersect {
+            match self.intersect_first.take() {
+                None => {
+                    self.intersect_first = Some(target);
+                    self.set_status("Select second object.");
+                    return None;
+                }
+                Some(first) => snap::intersect(&first, &target, click),
+            }
+        } else {
+            snap::snap(mode, &target, click, current)
+        };
+        match result {
+            Ok(p) if p.is_finite() => {
+                if !self.snap_held {
+                    self.object_snap = None;
+                }
+                if self.exact_points.len() < 256 {
+                    self.exact_points.push(p);
+                }
+                self.release_at = Some(p);
+                Some(p)
+            }
+            Ok(_) => {
+                self.set_status("No point found.");
+                None
+            }
+            Err(msg) => {
+                self.set_status(msg);
+                None
+            }
+        }
     }
 }
 

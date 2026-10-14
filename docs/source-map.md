@@ -120,7 +120,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `u_redraw.c` | 731 | redraw order, gray layers | `render::Scene::build` | ported: draw order, gray layers first | — |
 | `u_bound.c` | 653 | bounding boxes | `model` | own | review |
 | `u_geom.c` | 1072 | normals, slopes, latex/manhattan endpoints, closeness | `geom` | partial: latex/manhattan modes | D7 |
-| `u_quartic.c` | 298 | quartic solver (intersections) | — | missing | W4 |
+| `u_quartic.c` | 298 | quartic solver (intersections) | `snap.rs` (flattened outlines) | modern | — |
 | `u_elastic.c` | 1004 | rubber-band feedback while drawing | `Engine::overlay` | own | review |
 | `u_drag.c` | 861 | dragging objects | tools, overlay | own | review |
 | `u_markers.c` | 462 | object markers, tag highlight | `ui-egui/canvas` handles | own | review |
@@ -151,8 +151,8 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_msgpanel.c` | 881 | message panel, lengths while drawing | `panels::message_panel` | partial: show lengths | D10 |
 | `w_layers.c` | 903 | depth panel | `panels::depth_panel` | own | review (Front/Back labels) |
 | `w_rulers.c` | 1479 | rulers and units box | `ui-egui/rulers`, `view.set_scale` | ported: tick tables, labels, marker, ruler buttons, units box, Unit menu | — |
-| `w_snap.c`, `w_intersect.c` | 2.8 k | Snap menu (object snaps) | `indicator` positioning only | partial | W4 |
-| `w_keyboard.c` | 518 | type coordinates for the next point | — | missing | W4 |
+| `w_snap.c`, `w_intersect.c` | 2.8 k | Snap menu (object snaps) | `engine/snap.rs`, `snap.*` commands | ported (curves on flattened outlines instead of the quartic solver) | — |
+| `w_keyboard.c` | 518 | type coordinates for the next point | — | missing | D10 |
 | `w_zoom.c` | 202 | zoom panel | `cmd/view` | partial: zoom panel | E3 |
 | `w_grid.c` | 238 | grid drawing | canvas | own | — |
 | `w_canvas.c` | 1218 | canvas input, key bindings | `ui-egui/canvas` | own | review |
@@ -204,6 +204,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 |------|------|
 | 2026-10-14 | First version. |
 | 2026-10-14 | S1: draw and save order ported (`u_redraw.c`, `f_save.c`). |
+| 2026-10-14 | W4: object snaps ported (`w_snap.c`, `w_intersect.c`). |
 | 2026-10-14 | W6: rulers and units box ported (`w_rulers.c`, `u_pan.c`). |
 | 2026-10-14 | W5: attribute panel ported (`w_indpanel.c`, masks from `w_modepanel.c`). |
 | 2026-10-14 | S2: mouse indicator ported (`w_mousefun.c`, `set_mousefun` wording); notes from the real xfig. |

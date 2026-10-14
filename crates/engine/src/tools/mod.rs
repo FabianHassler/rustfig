@@ -516,6 +516,27 @@ impl Engine {
         self.mouse_scheme = scheme;
     }
 
+    /// The point being drawn from (xfig's `cur_point`): the last point of a
+    /// line being entered, the first corner of a drag shape, or where a move
+    /// started.
+    fn current_point(&self) -> Option<Point> {
+        match &self.tool_state {
+            ToolState::Points { pts, center, .. } => pts.last().copied().or(*center),
+            ToolState::Drag { start, .. }
+            | ToolState::MoveObjs { start, .. }
+            | ToolState::PointDrag { start, .. }
+            | ToolState::Scale { start, .. } => Some(*start),
+            _ => None,
+        }
+    }
+
+    /// The object under a press: at `pos`, or for a snapped press also at
+    /// the point the user actually clicked.
+    fn pick(&self, pos: Point, tol: f64) -> Option<ObjectId> {
+        self.hit_test(pos, tol)
+            .or_else(|| self.snap_click.and_then(|c| self.hit_test(c, tol)))
+    }
+
     fn xfig_buttons(&self) -> bool {
         self.mouse_scheme == MouseScheme::Xfig
     }
@@ -536,7 +557,18 @@ impl Engine {
 
     /// Feed an event to the active tool.
     pub fn tool_event(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
-        match crate::guard::catch(|| self.dispatch(ev)) {
+        let r = self.tool_event_inner(ev);
+        // Snapped points belong to the operation in progress.
+        if !self.tool_busy() {
+            self.exact_points.clear();
+        }
+        r
+    }
+
+    fn tool_event_inner(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
+        let r = crate::guard::catch(|| self.dispatch(ev));
+        self.snap_click = None;
+        match r {
             Ok(r) => {
                 if r.is_err() {
                     self.tool_state = ToolState::Idle;
@@ -558,6 +590,29 @@ impl Engine {
             self.tool_state = ToolState::Idle;
             return Ok(());
         }
+        // The Snap menu: a press (not with the right button) moves to the
+        // snapped point, or is ignored when nothing was found (xfig's
+        // `snap_process` in `w_canvas.c`).
+        let ev = match ev {
+            ToolEvent::Press { pos, button, shift }
+                if button != Button::Right && self.object_snap().is_some() && pos.is_finite() =>
+            {
+                let tol = self.pick_tol() * 1.5;
+                let current = self.current_point();
+                match self.apply_object_snap(pos, tol, current) {
+                    Some(p) => {
+                        self.snap_click = Some(pos);
+                        ToolEvent::Press { pos: p, button, shift }
+                    }
+                    None => return Ok(()),
+                }
+            }
+            ToolEvent::Release { pos, button } => ToolEvent::Release {
+                pos: self.release_at.take().unwrap_or(pos),
+                button,
+            },
+            other => other,
+        };
         // In the modern scheme the middle button pans; the UI handles it.
         let middle = matches!(
             ev,
@@ -949,7 +1004,7 @@ impl Engine {
                 }
                 // Clicking an existing text edits it.
                 let tol = self.pick_tol();
-                if let Some(id) = self.hit_test(pos, tol) {
+                if let Some(id) = self.pick(pos, tol) {
                     if let Some(Object {
                         kind: ObjectKind::Text(t),
                         ..
@@ -1098,7 +1153,7 @@ impl Engine {
                         }
                     }
                 }
-                match self.hit_test(pos, tol) {
+                match self.pick(pos, tol) {
                     Some(id) => {
                         let mut sel = self.selection().to_vec();
                         if shift {
@@ -1136,7 +1191,7 @@ impl Engine {
                 Ok(())
             }
             ToolEvent::DoubleClick { pos } => {
-                if let Some(id) = self.hit_test(pos, tol) {
+                if let Some(id) = self.pick(pos, tol) {
                     self.tool_state = ToolState::Idle;
                     self.set_selection(vec![id]);
                     self.request(UiRequest::EditObject { id });
@@ -1385,7 +1440,7 @@ impl Engine {
                     self.tool_state = ToolState::Idle;
                 } else if copy {
                     // xfig: copy the object to the cut buffer.
-                    if let Some(id) = self.hit_test(pos, tol) {
+                    if let Some(id) = self.pick(pos, tol) {
                         self.set_selection(vec![id]);
                         self.execute("edit.copy", &json!({"ids": [id.0]}))?;
                     }
@@ -1408,7 +1463,7 @@ impl Engine {
                 self.tool_state = ToolState::Idle;
                 return self.commit_move(&ids, start, pos, copy, c);
             }
-            if let Some(id) = self.hit_test(pos, tol) {
+            if let Some(id) = self.pick(pos, tol) {
                 self.set_selection(vec![id]);
                 self.tool_state = ToolState::MoveObjs {
                     ids: vec![id],
@@ -1543,7 +1598,7 @@ impl Engine {
                 return self.commit_scale(id, center, start, pos);
             }
             let tol = self.pick_tol();
-            if let Some(id) = self.hit_test(pos, tol) {
+            if let Some(id) = self.pick(pos, tol) {
                 if let Some(o) = self.doc().get(id) {
                     let bb = o.geometry_bbox();
                     // Left: about the corner opposite the one nearest the
@@ -1595,7 +1650,7 @@ impl Engine {
                     if self.tool_busy() {
                         return Ok(());
                     }
-                    match self.hit_test(pos, tol) {
+                    match self.pick(pos, tol) {
                         Some(id) => {
                             // Tag or untag.
                             let mut sel = self.selection().to_vec();
@@ -1655,7 +1710,7 @@ impl Engine {
                 Button::Right if self.tool_busy() => self.tool_state = ToolState::Idle,
                 Button::Left if self.tool_busy() => {}
                 Button::Left | Button::Right => {
-                    if let Some(id) = self.hit_test(pos, tol) {
+                    if let Some(id) = self.pick(pos, tol) {
                         // Right: xfig's "del to cut buf".
                         let cmd = if button == Button::Right {
                             "edit.cut"
@@ -1688,7 +1743,7 @@ impl Engine {
             }
             return Ok(());
         }
-        let Some(id) = self.hit_test(pos, tol) else {
+        let Some(id) = self.pick(pos, tol) else {
             return Ok(());
         };
         let ids = json!([id.0]);

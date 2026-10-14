@@ -406,29 +406,36 @@ pub fn menu_buttons(app: &mut App, ui: &mut egui::Ui) {
 }
 
 /// The Snap menu: point positioning and grid (object snaps follow in W4).
+/// xfig's Snap menu (`snap_menu_items` in `w_cmdpanel.c`): Hold and
+/// Release, then the snap modes for the next clicked point. Point
+/// positioning and the grid are on the attribute panel, as in xfig.
 pub fn snap_menu(app: &mut App, ui: &mut egui::Ui) {
-    let units = app.engine.doc().settings.units;
-    ui.label(egui::RichText::new("Point positioning").small());
-    for m in rustfig_engine::SnapMode::ALL {
-        let on = app.engine.indicator.snap == m;
-        if ui.radio(on, m.label(units)).clicked() {
-            app.run("indicator.set", json!({ "snap": m }));
-            ui.close();
-        }
-    }
-    ui.separator();
-    ui.label(egui::RichText::new("Grid").small());
-    if ui.radio(app.engine.indicator.grid.is_none(), "off").clicked() {
-        app.run("indicator.set", json!({ "grid": Value::Null }));
+    use rustfig_engine::ObjectSnap as S;
+    let held = app.engine.snap_held();
+    if ui
+        .add(egui::Button::new("Hold").selected(held))
+        .on_hover_text("Keep the snap mode until Release")
+        .clicked()
+    {
+        app.run("snap.hold", json!({}));
         ui.close();
     }
-    for m in rustfig_engine::SnapMode::ALL.iter().skip(1) {
-        if ui
-            .radio(app.engine.indicator.grid == Some(*m), m.label(units))
-            .clicked()
-        {
-            app.run("indicator.set", json!({ "grid": m }));
-            ui.close();
+    if ui.button("Release").clicked() {
+        app.run("snap.release", json!({}));
+        ui.close();
+    }
+    let current = app.engine.object_snap();
+    for group in [
+        &[S::Endpoint, S::Midpoint, S::Nearest, S::Focus][..],
+        &[S::Normal, S::Tangent, S::Intersect, S::Diameter][..],
+    ] {
+        ui.separator();
+        for m in group {
+            let label = if *m == S::Intersect { "Intersection" } else { m.label() };
+            if ui.add(egui::Button::new(label).selected(current == Some(*m))).clicked() {
+                app.run("snap.mode", json!({ "mode": m.name() }));
+                ui.close();
+            }
         }
     }
 }

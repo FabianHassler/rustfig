@@ -31,6 +31,55 @@ pub(super) fn commands() -> Vec<Command> {
         run: event,
     });
     v.push(Command {
+        id: "snap.mode",
+        label: "Snap to",
+        menu: "",
+        shortcut: "",
+        params: "{\"mode\": endpoint|midpoint|nearest|focus|diameter|normal|tangent|intersect|none}  — applies to the next clicked point (xfig's Snap menu)",
+        mutates: false,
+        enabled: always,
+        run: |e, p| {
+            let name = super::string(p, "mode")?;
+            let mode = if name == "none" {
+                None
+            } else {
+                Some(
+                    crate::ObjectSnap::from_name(&name)
+                        .ok_or_else(|| EngineError::bad_params(format!("unknown snap mode {name:?}")))?,
+                )
+            };
+            e.set_object_snap(mode);
+            e.set_status(format!("Snap: {}", e.snap_indicator()));
+            Ok(json!({"snap": e.snap_indicator()}))
+        },
+    });
+    v.push(Command {
+        id: "snap.hold",
+        label: "Hold",
+        menu: "",
+        shortcut: "",
+        params: "{}  — keep the snap mode after it is used",
+        mutates: false,
+        enabled: always,
+        run: |e, _| {
+            e.set_snap_held(true);
+            Ok(json!({"held": true}))
+        },
+    });
+    v.push(Command {
+        id: "snap.release",
+        label: "Release",
+        menu: "",
+        shortcut: "",
+        params: "{}  — stop holding and disarm the snap mode",
+        mutates: false,
+        enabled: always,
+        run: |e, _| {
+            e.set_snap_held(false);
+            Ok(json!({"held": false}))
+        },
+    });
+    v.push(Command {
         id: "tool.mouse_buttons",
         label: "xfig mouse buttons (3 buttons)",
         menu: "View",
