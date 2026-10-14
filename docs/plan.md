@@ -132,7 +132,8 @@ covered by W2.
 
 ## fig2dev: design notes for A8 and B0
 
-fig2dev 3.2.9a is installed here (`/opt/homebrew/bin/fig2dev`). It is
+fig2dev (3.2.9a at the time of writing; Homebrew, apt and most TeX
+distributions ship it) is
 xfig's own converter: xfig's Export menu saves a `.fig` file and runs it.
 RustFig keeps its native PDF, SVG, EPS and PNG exporters (needed for the
 web build, WYSIWYG with the canvas, and machines without fig2dev). fig2dev

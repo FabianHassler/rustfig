@@ -37,7 +37,19 @@ const ASSET_EXTS: &[&str] = &[
 const FONT_EXTS: &[&str] = &["ttf", "otf", "woff", "woff2", "ttc", "pfb", "afm"];
 const SKIP_DIRS: &[&str] = &["target", ".git", ".cargo-home", "old", "plan", "dist", "node_modules"];
 
+/// The workspace root, found at run time: the nearest directory at or above
+/// the current one whose Cargo.toml declares `[workspace]`. A path fixed at
+/// compile time would go stale when the checkout moves and the xtask binary
+/// isn't rebuilt.
 fn root() -> PathBuf {
+    let is_root = |d: &Path| {
+        std::fs::read_to_string(d.join("Cargo.toml")).is_ok_and(|m| m.lines().any(|l| l.trim() == "[workspace]"))
+    };
+    if let Ok(cwd) = std::env::current_dir() {
+        if let Some(d) = cwd.ancestors().find(|d| is_root(d)) {
+            return d.to_path_buf();
+        }
+    }
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .map(Path::to_path_buf)
