@@ -98,22 +98,24 @@ impl LineKind {
     /// Dash pattern in Fig units for a given style value (1/80 inch) and
     /// line width. Empty for solid lines. Dots are zero-length dashes, meant
     /// to be drawn with round caps.
-    pub fn dash_pattern(self, style_val: f64, width: f64) -> Vec<f64> {
+    /// Dash array in Fig units for a style value in 1/80 inch.
+    // Ported from fig2dev dev/genps.c `set_style` (xfig licence, see LICENSE-xfig).
+    pub fn dash_pattern(self, style_val: f64, _width: f64) -> Vec<f64> {
         let unit = rustfig_geom::FIG_PER_STYLE_UNIT;
         let v = if style_val.is_finite() && style_val > 0.0 {
             style_val * unit
         } else {
             4.0 * unit
         };
-        let dot = width.max(1.0) * 0.01;
-        let gap = v.max(width * 1.5);
+        // A dot is 1/80 inch long.
+        let dot = unit;
         match self {
             LineKind::Default | LineKind::Solid => Vec::new(),
             LineKind::Dashed => vec![v, v],
-            LineKind::Dotted => vec![dot, gap],
-            LineKind::DashDotted => vec![v, gap / 2.0, dot, gap / 2.0],
-            LineKind::DashDoubleDotted => vec![v, gap / 2.0, dot, gap / 2.0, dot, gap / 2.0],
-            LineKind::DashTripleDotted => vec![v, gap / 2.0, dot, gap / 2.0, dot, gap / 2.0, dot, gap / 2.0],
+            LineKind::Dotted => vec![dot, v],
+            LineKind::DashDotted => vec![v, v * 0.5, dot, v * 0.5],
+            LineKind::DashDoubleDotted => vec![v, v * 0.45, dot, v * 0.333, dot, v * 0.45],
+            LineKind::DashTripleDotted => vec![v, v * 0.4, dot, v * 0.3, dot, v * 0.3, dot, v * 0.4],
         }
     }
 }

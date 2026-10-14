@@ -10,7 +10,7 @@ mod hit;
 mod xspline;
 
 pub use arc::{arc_from_three_points, flatten_arc, flatten_ellipse, ArcGeom};
-pub use arrow::{arrowhead, ArrowFill, ArrowShape};
+pub use arrow::{arrowhead, ArrowFill, ArrowShape, ArrowSpec, ARROW_TYPES};
 pub use hit::{dist_to_polyline, dist_to_segment, point_in_polygon, polygon_area, polyline_length, segments_intersect};
 pub use xspline::{flatten_xspline, XSPLINE_MAX_POINTS};
 

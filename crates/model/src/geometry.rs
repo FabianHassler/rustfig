@@ -47,7 +47,7 @@ pub fn flatten_object(o: &Object) -> Vec<FlatPath> {
                     closed: false,
                 }];
             };
-            let mut pts = flatten_arc(&g, FLATTEN_TOL);
+            let mut pts = flatten_arc(&arc_geom(a, g), FLATTEN_TOL);
             if a.pie {
                 pts.push(g.center);
             }
@@ -55,4 +55,20 @@ pub fn flatten_object(o: &Object) -> Vec<FlatPath> {
         }
         ObjectKind::Text(_) | ObjectKind::Compound(_) => Vec::new(),
     }
+}
+
+/// The arc as fig2dev draws it: around the circle through the three points,
+/// from the first to the last point in the direction of the arc's direction
+/// flag, even when the middle point lies on the other side (as in files not
+/// written by xfig).
+pub fn arc_geom(a: &crate::Arc, g: rustfig_geom::ArcGeom) -> rustfig_geom::ArcGeom {
+    if g.counter_clockwise() == a.ccw {
+        return g;
+    }
+    let sweep = if g.sweep > 0.0 {
+        g.sweep - std::f64::consts::TAU
+    } else {
+        g.sweep + std::f64::consts::TAU
+    };
+    rustfig_geom::ArcGeom { sweep, ..g }
 }

@@ -1,6 +1,6 @@
 # Execution plan
 
-**Status:** 2026-10-14. Phase W (xfig window parity) and A8 done; next D9 and B0 (porting fig2dev), then the rest of phase A. Overall parity ≈60 %.
+**Status:** 2026-10-14. Phase W (xfig window parity), A8 and D9 done; next B0 (porting fig2dev), then the rest of phase A. Overall parity ≈60 %.
 
 This is the committed work plan. [`gaps.md`](gaps.md) ranks every known
 shortfall; this file groups them into phases with task ids, acceptance
@@ -115,7 +115,7 @@ covered by W2.
 | D8 | **Linked move**: moving a box drags the attached line end points (xfig's smart links). | Test with a box and two attached lines. | 10 |
 | D10 | **Remaining mode options** found by the source map: dimension lines (Shift+left in polyline mode, `d_line.c`), align to canvas (`e_align.c`), array copy (`e_copy.c`), anchor point for flip/rotate and number of rotated copies (`e_flip.c`, `e_rotate.c`), scaling one edge (`e_scale.c`), lengths shown while drawing (`w_msgpanel.c`), typed coordinates for the next point (`w_keyboard.c`). | A test per option; mouse hints list them. | 16 |
 | D11 | **Every remaining xfig function** (goal decided 2026-10-14: all of xfig's functions): Digitize (`w_digitize.c`, tablet input against a scanned figure), screen capture into a picture object (`w_capture.c`, through the OS screenshot facilities), Show vertex numbers, Show info balloons, Autorefresh mode (`w_cmdpanel.c`), edit the figure comments from Edit mode, Unzoom semantics. Modern equivalents where the X11 way no longer works, decided per item. | Each menu entry and mode works; none is greyed out any more. | 24 |
-| D9 | **Arrowheads and arcs as fig2dev draws them** (found by A8): arrowhead types 4–14 with fig2dev's shapes (`bound.c` `arrow_shapes`, `u_draw.c`), arrows on pie-wedge arcs, arcs follow the direction flag when the middle point disagrees; dash-dot tick styles. | The `arrows` and `arcs` reference fixtures score below 0.005. | 8 |
+| D9 | ✅ 2026-10-14. **Arrowheads, arcs and dashes as fig2dev draws them** (found by A8): arrowheads ported from fig2dev `bound.c` (`arrow_shapes`, `calc_arrow`: all 15 types, tip moved back by the miter, half heads flush with the line, type 9's half fill) and `genps.c` (hollow heads filled white); arrows on pie-wedge arcs; polylines aim the head along their last segment; arcs follow their direction flag; dash patterns and dotted caps from `genps.c` `set_style`. Scores: arrows 0.0169 → 0.0077, arcs 0.0087 → 0.0041. | The `arrows` and `arcs` reference fixtures score below 0.01 (fig2dev's SVG rounds coordinates, so not below 0.005). | 8 |
 
 ## Phase E: UI completeness, M7 (≈56 h)
 
@@ -177,13 +177,13 @@ is an optional extra, used in two ways.
 - **Comparing:** trim to the ink, scale to a common size, grey, blur by 1 px; the mean absolute difference and the share of strongly differing pixels.
 - **Baselines** `fixtures/scores.json`; the test fails when a score gets worse by more than 0.02. `UPDATE_REFERENCE=1` rewrites them after an intended change.
 - **Review output:** `target/fig2dev-reference/<fixture>/{fig2dev,rustfig,diff}.png` (diff: red only in fig2dev, blue only in RustFig).
-- **Expected differences:** fonts (RustFig's fallback faces versus fig2dev's PostScript names), pattern phase.
+- **Expected differences:** fonts (RustFig's fallback faces versus fig2dev's PostScript names), pattern phase, and where fig2dev's SVG driver departs from its PostScript driver, which RustFig follows (dash lengths).
 - **CI:** install fig2dev on the Linux runner (A2) so the comparison runs there; it skips elsewhere.
 
 ## Order and milestones
 
 1. ✅ Phase W, xfig window parity (W1–W7, S0–S2), done 2026-10-14.
-2. ✅ A8 (fig2dev reference tests), then D9 (the arrowhead and arc differences it found) and B0 (start of the fig2dev port).
+2. ✅ A8 (fig2dev reference tests), ✅ D9 (the arrowhead, arc and dash differences it found), then B0 (start of the fig2dev port).
 3. A1 and A9 (undo memory, per-command cost), A2 and A3 (CI on Linux, Windows and macOS; web build), the rest of A4, A5–A7.
 4. E1 and S3 (preferences, xfig's command-line options).
 5. B1–B9 (fig2dev's drivers ported: LaTeX exports, bitmaps, PostScript; modern printing), C1–C3 (web): the first release candidate, on desktop and web.
@@ -200,6 +200,7 @@ is an optional extra, used in two ways.
 - Outlook, not planned (2026-10-14): a WYSIWYG editor for LaTeX text in figures.
 - New heavy dependencies (PDF rendering, spell checking, localization framework).
 - CI cost (decided 2026-10-13): Linux runs on every push; Windows and macOS run only for releases (A2).
+- PostScript is the reference (decided 2026-10-14): where fig2dev's drivers disagree (for example the SVG driver draws dashes at 2/3 of their length), RustFig follows `genps.c`, which matches xfig's screen. The A8 tests compare with fig2dev's SVG, so such differences are expected there.
 - fig2dev is ported to Rust (decided 2026-10-14, replacing the 2026-10-13 plan to call it as an external program): no runtime dependence on fig2dev or ghostscript. The installed fig2dev serves only as the optional reference in the A8 tests.
 - Publishing (demo site, crate names, releases) and the product name/branding.
 - Licence changes and any asset of unclear provenance.
@@ -211,6 +212,7 @@ is an optional extra, used in two ways.
 | 2026-10-13 | First plan, after M0–M3. |
 | 2026-10-13 | Added A8 (fig2dev reference tests) and B0 (fig2dev export backend) with design notes. |
 | 2026-10-14 | A3: the web build compiles locally with rustup's toolchain; xtask uses the running toolchain's rustc. |
+| 2026-10-14 | D9 landed: fig2dev's arrowheads, pie-arc arrows, arc direction flag, PostScript dash patterns. Decision: PostScript (`genps.c`) is the reference where fig2dev's drivers disagree. |
 | 2026-10-14 | A8 landed (fig2dev reference tests, no ghostscript). Decision: fig2dev is ported to Rust, no runtime fig2dev or ghostscript: B0 rewritten, B6 without ghostscript, B9 added (remaining drivers), D9 widened by A8's findings. |
 | 2026-10-14 | Decision: preferences are stored as TOML (E1). |
 | 2026-10-14 | Decisions: every xfig function, modern printing (B5), bundled libraries (D6), preferences (E1) and xfig options (S3) without user-specific defaults; D11 added; outlook: WYSIWYG LaTeX. |

@@ -115,7 +115,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 
 | File | Lines | What it does | RustFig | Status | Task |
 |---|---:|---|---|---|---|
-| `u_draw.c` | 2237 | drawing every object type, arrowheads, dash patterns | `render`, `geom` arrows | own; arrow types ≥ 4 differ from fig2dev (A8) | D9 |
+| `u_draw.c` | 2237 | drawing every object type, arrowheads, dash patterns | `render`, `geom` arrows | arrowheads ported from fig2dev `bound.c` (D9); own otherwise | — |
 | `u_draw_spline.c` | 384 | X-spline evaluation | `geom` xspline (from the paper) | own | review (step size) |
 | `u_redraw.c` | 731 | redraw order, gray layers | `render::Scene::build` | ported: draw order, gray layers first | — |
 | `u_bound.c` | 653 | bounding boxes | `model` | own | review |
@@ -182,10 +182,10 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `localmath.c`, `messages.c` | 114 | math helpers, error messages | `geom`, errors | n/a | — |
 | `read.c` | 2048 | Fig reader (second reference) | `format/fig_read` | own | review |
 | `read1_3.c` | 549 | Fig 1.3 reader | — | missing | G1 |
-| `bound.c` | 1156 | bounds incl. arrows and text | `render` | own | review |
+| `bound.c` | 1156 | bounds incl. arrows and text | `geom/arrow` (`arrow_shapes`, `calc_arrow` ported), `render` | arrows ported (D9); bounds own | B0 |
 | `trans_spline.c` | 661 | splines to polylines for exporters | `geom` | own | review |
 | `colors.c` | 851 | colour names | `model` | own | — |
-| `dev/genps.c`, `genpdf.c` | 2.9 k | PostScript/PDF with page layout | `render/eps`, `render/pdf` | partial: page layout, multi-page | B4 |
+| `dev/genps.c`, `genpdf.c` | 2.9 k | PostScript/PDF with page layout; the reference where drivers disagree | `render/eps`, `render/pdf`; `set_style` → `LineKind::dash_pattern`, `linewidth_adj` → `geom::stroke_width`, arrow fills | partial: page layout, multi-page | B4 |
 | `dev/genpstex.c` | 176 | PS/PDF + LaTeX overlay (pstex, pdftex) | — | missing | B2 |
 | `dev/gentikz.c` | 1870 | TikZ | — | missing | B1 |
 | `dev/genpict2e.c`, `genlatex.c`, `genepic.c`, `genpictex.c`, `genpstricks.c` | 9.1 k | LaTeX picture languages | — | missing | B3 (pict2e, PSTricks), B9 (the rest) |

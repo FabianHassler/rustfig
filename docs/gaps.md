@@ -1,6 +1,6 @@
 # Known gaps (ranked work list)
 
-**Status:** 2026-10-14 (A8: fig2dev reference tests landed). Ranked by user impact per hour. Pick work from the top.
+**Status:** 2026-10-14 (A8 and D9 landed). Ranked by user impact per hour. Pick work from the top.
 
 | # | Gap | Area | Impact | Hours |
 |---|-----|------|--------|------:|
@@ -18,7 +18,6 @@
 | 12 | Point positioning modes: latex lines, manhattan, mountain; linked move | Attributes | Low | 20 |
 | 13 | Read Fig 1.x/2.x files | File format | Low | 24 |
 | 14 | EPS/PDF/XBM/XPM/PCX picture objects (currently a crossed box) | File format | Low | 24 |
-| 15 | Arrowheads differ from fig2dev's from type 4 on, no arrows on pie-wedge arcs, arcs ignore the direction flag when the middle point disagrees (found by the A8 reference tests; D9) | Rendering | Medium | 8 |
 | 16 | Windows and Linux smoke tests in CI | Platforms | Low | 8 |
 | 17 | Localization of UI strings | Localization | Low | 24 |
 | 18 | Spell check | Text | Low | 16 |
@@ -30,6 +29,7 @@
 
 | Date | Note |
 |------|------|
+| 2026-10-14 | D9 closed #15 (arrowheads, pie-arc arrows, arc direction, dash patterns as fig2dev's PostScript driver). |
 | 2026-10-14 | A8 closed the comparison gap and found arrowhead, pie-arc and line-width differences (line widths fixed); fig2dev to be ported (#1, #21). |
 | 2026-10-13 | First list. |
 | 2026-10-13 | Added #0 (xfig window parity, phase W). |

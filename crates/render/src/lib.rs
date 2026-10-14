@@ -15,7 +15,7 @@ mod textcache;
 
 pub use export::{export, export_bounds, ExportFormat, ExportOptions};
 
-use rustfig_geom::{arrowhead, ArrowShape, Point, Rect, FIG_PER_POINT};
+use rustfig_geom::{arrowhead, ArrowShape, ArrowSpec, Point, Rect, FIG_PER_POINT};
 use rustfig_model::{
     area_fill_color, flatten_object, Arrow, CapStyle, ColorRef, Document, JoinStyle, Justify, LineKind, Object,
     ObjectKind, PolyKind, RasterImage, Rgb, Style,
@@ -262,21 +262,24 @@ pub fn line_width(thickness: f64) -> f64 {
     rustfig_geom::stroke_width(thickness)
 }
 
-fn stroke_for(doc: &Document, s: &Style) -> Option<Stroke> {
+/// The stroke for an object's style. `round_dots`: fig2dev draws dotted
+/// ellipses and closed splines with round caps (dots); other objects use
+/// their cap style.
+fn stroke_for(doc: &Document, s: &Style, round_dots: bool) -> Option<Stroke> {
     if s.thickness <= 0 {
         return None;
     }
     let width = line_width(f64::from(s.thickness));
     let dash = s.line.dash_pattern(s.style_val, width);
-    let dotted = matches!(
-        s.line,
-        LineKind::Dotted | LineKind::DashDotted | LineKind::DashDoubleDotted | LineKind::DashTripleDotted
-    );
     Some(Stroke {
         width,
         color: color(doc, s.pen_color),
         dash,
-        cap: if dotted { CapStyle::Round } else { s.cap },
+        cap: if round_dots && s.line == LineKind::Dotted {
+            CapStyle::Round
+        } else {
+            s.cap
+        },
         join: s.join,
     })
 }
@@ -296,6 +299,25 @@ fn arrow_from(pts: &[Point], tip: Point, min: f64) -> Option<Point> {
     last
 }
 
+/// The arrowhead at the end of `pts`. Polylines point the head along their
+/// last segment, as fig2dev does; curves along the chord of the head's length.
+fn head_at_end(pts: &[Point], a: &Arrow, line_thickness: f64, poly: bool) -> Option<ArrowShape> {
+    let tip = *pts.last()?;
+    let from = if poly {
+        pts.iter().rev().find(|p| p.dist(tip) > 1e-6).copied()?
+    } else {
+        arrow_from(pts, tip, a.height)?
+    };
+    let spec = ArrowSpec {
+        kind: a.kind,
+        style: a.style,
+        thickness: a.thickness,
+        width: a.width,
+        height: a.height,
+    };
+    arrowhead(tip, from, &spec, line_thickness)
+}
+
 fn arrow_prims(doc: &Document, style: &Style, a: &Arrow, shape: ArrowShape, out: &mut Vec<Prim>) {
     let pen = color(doc, style.pen_color);
     let fill = match shape.fill {
@@ -303,20 +325,31 @@ fn arrow_prims(doc: &Document, style: &Style, a: &Arrow, shape: ArrowShape, out:
         rustfig_geom::ArrowFill::White => Some(Fill::Solid(Rgba::opaque(Rgb::WHITE))),
         rustfig_geom::ArrowFill::Pen => Some(Fill::Solid(pen)),
     };
+    let stroke = Stroke {
+        width: line_width(a.thickness).max(1.0),
+        color: pen,
+        dash: Vec::new(),
+        cap: CapStyle::Butt,
+        join: JoinStyle::Miter,
+    };
     out.push(Prim::Path {
         subpaths: vec![SubPath {
             pts: shape.outline,
             closed: shape.closed,
         }],
         fill,
-        stroke: Some(Stroke {
-            width: line_width(a.thickness).max(1.0),
-            color: pen,
-            dash: Vec::new(),
-            cap: CapStyle::Butt,
-            join: JoinStyle::Miter,
-        }),
+        stroke: Some(stroke.clone()),
     });
+    if let Some(part) = shape.pen_part {
+        out.push(Prim::Path {
+            subpaths: vec![SubPath {
+                pts: part,
+                closed: true,
+            }],
+            fill: Some(Fill::Solid(pen)),
+            stroke: Some(stroke),
+        });
+    }
 }
 
 fn object_prims(doc: &Document, o: &Object, opts: &SceneOptions, out: &mut Vec<Prim>) {
@@ -384,7 +417,7 @@ fn object_prims(doc: &Document, o: &Object, opts: &SceneOptions, out: &mut Vec<P
                 }
             }
             if p.style.thickness > 0 {
-                if let Some(stroke) = stroke_for(doc, &p.style) {
+                if let Some(stroke) = stroke_for(doc, &p.style, false) {
                     out.push(Prim::Path {
                         subpaths: vec![SubPath {
                             pts: corners.to_vec(),
@@ -401,39 +434,51 @@ fn object_prims(doc: &Document, o: &Object, opts: &SceneOptions, out: &mut Vec<P
             let Some(style) = o.style() else { return };
             let mut paths = flatten_object(o);
             let fill = fill_for(doc, style);
-            let stroke = stroke_for(doc, style);
+            let round_dots = match &o.kind {
+                ObjectKind::Ellipse(_) => true,
+                ObjectKind::Spline(s) => s.closed,
+                _ => false,
+            };
+            let stroke = stroke_for(doc, style, round_dots);
             let (fwd, back) = match &o.kind {
                 ObjectKind::Polyline(p) if p.kind == PolyKind::Polyline => (p.forward_arrow, p.backward_arrow),
                 ObjectKind::Spline(s) if !s.closed => (s.forward_arrow, s.backward_arrow),
-                ObjectKind::Arc(a) if !a.pie => (a.forward_arrow, a.backward_arrow),
+                ObjectKind::Arc(a) => (a.forward_arrow, a.backward_arrow),
                 _ => (None, None),
             };
             let mut heads = Vec::new();
+            let line_thk = f64::from(style.thickness);
+            let poly = matches!(&o.kind, ObjectKind::Polyline(_));
+            // Pie wedges carry their arrows on the arc (fig2dev draws them).
+            let pie_arc = match &o.kind {
+                ObjectKind::Arc(a) if a.pie && (fwd.is_some() || back.is_some()) => {
+                    let mut open = o.clone();
+                    if let ObjectKind::Arc(oa) = &mut open.kind {
+                        oa.pie = false;
+                    }
+                    flatten_object(&open).into_iter().next().map(|p| p.pts)
+                }
+                _ => None,
+            };
             if let Some(path) = paths.first_mut() {
-                if !path.closed && path.pts.len() >= 2 {
+                let open = !path.closed && path.pts.len() >= 2;
+                let src = if open { Some(path.pts.clone()) } else { pie_arc };
+                if let Some(src) = src.filter(|s| s.len() >= 2) {
                     if let Some(a) = fwd {
-                        if let Some(tip) = path.pts.last().copied() {
-                            if let Some(from) = arrow_from(&path.pts, tip, a.height) {
-                                if let Some(sh) = arrowhead(tip, from, a.kind, a.style, a.width, a.height) {
-                                    if let Some(l) = path.pts.last_mut() {
-                                        *l = sh.line_end;
-                                    }
-                                    heads.push((a, sh));
-                                }
+                        if let Some(sh) = head_at_end(&src, &a, line_thk, poly) {
+                            if let Some(l) = path.pts.last_mut().filter(|_| open) {
+                                *l = sh.line_end;
                             }
+                            heads.push((a, sh));
                         }
                     }
                     if let Some(a) = back {
-                        if let Some(tip) = path.pts.first().copied() {
-                            let rev: Vec<Point> = path.pts.iter().rev().copied().collect();
-                            if let Some(from) = arrow_from(&rev, tip, a.height) {
-                                if let Some(sh) = arrowhead(tip, from, a.kind, a.style, a.width, a.height) {
-                                    if let Some(f) = path.pts.first_mut() {
-                                        *f = sh.line_end;
-                                    }
-                                    heads.push((a, sh));
-                                }
+                        let rev: Vec<Point> = src.iter().rev().copied().collect();
+                        if let Some(sh) = head_at_end(&rev, &a, line_thk, poly) {
+                            if let Some(f) = path.pts.first_mut().filter(|_| open) {
+                                *f = sh.line_end;
                             }
+                            heads.push((a, sh));
                         }
                     }
                 }

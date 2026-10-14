@@ -10,7 +10,7 @@ mod geometry;
 mod object;
 
 pub use color::{area_fill_color, Rgb, STANDARD_COLORS, STANDARD_COLOR_NAMES};
-pub use geometry::{flatten_object, FlatPath};
+pub use geometry::{arc_geom, flatten_object, FlatPath};
 pub use object::*;
 
 use rustfig_geom::{Point, Rect};

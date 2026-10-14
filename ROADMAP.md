@@ -20,7 +20,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Overall parity (weighted) | ≈61 % |
 | Commands (all reachable from the control channel and MCP) | 132 engine (incl. 38 tool modes) + 17 UI |
 | Interactive tools (xfig modes) | 38 |
-| Tests | 153 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
+| Tests | 156 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 3.0–3.2, write 3.2 |
 | Export formats | PDF, SVG, EPS, PNG |
 | Perf, 50k paths (render fit / hit test / open) | 330 ms / 0.1 ms / 17 ms |
@@ -61,7 +61,7 @@ English only. See [localization parity](docs/localization-parity.md).
 
 The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 [docs/gaps.md](docs/gaps.md). Next up:
-1. Arrowheads and arcs as fig2dev draws them (D9, found by the A8 reference tests), then the fig2dev port (B0): every export language in Rust, no fig2dev or ghostscript at runtime.
+1. The fig2dev port (B0): every export language in Rust, no fig2dev or ghostscript at runtime.
 2. Phase A, hardening: shared undo snapshots, per-command cost, CI (Linux on every push, all OSes for releases), web build, UI tests, export polish, crash recovery, no UI stalls on large drawings.
 3. Preferences that survive restarts (E1) and xfig's command-line options (S3).
 4. Phase B: fig2dev's drivers ported (LaTeX exports, bitmaps, PostScript, the rest), modern printing (PDF to the system print dialog).
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-14 | D9: arrowheads ported from fig2dev (all 15 types, as its PostScript driver draws them), arrows on pie wedges, arcs follow their direction flag, PostScript dash patterns. 156 tests. |
 | 2026-10-14 | A8: fig2dev reference tests (11 fixtures, fig2dev's SVG rasterised with resvg, no ghostscript); line widths now follow fig2dev. Decision: fig2dev is ported to Rust, no fig2dev or ghostscript at runtime. 153 tests. |
 | 2026-10-14 | Scope set: every xfig function, cross-platform, no user-specific defaults; modern printing; xfig's libraries bundled; preferences planned (E1, S3); outlook: WYSIWYG LaTeX. |
 | 2026-10-14 | Starts with no mode, as xfig: "READY. Select a mode or load a file", empty mouse indicator, canvas clicks ignored until a mode is chosen. |
