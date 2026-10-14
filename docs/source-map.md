@@ -17,13 +17,13 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 
 ## Findings so far
 
-1. **Draw order within a depth differs.** xfig keeps one list per object type
+1. **Draw order within a depth differed** (fixed in S1). xfig keeps one list per object type
    and, for each depth from back to front, draws arcs, compounds (recursively,
    same order inside), ellipses, lines, splines, texts (`u_redraw.c`
    `redisplay_objects`); `f_save.c` writes the same order. RustFig draws in
    file order within a depth. Same picture for files xfig wrote; different for
    objects created in RustFig. Fix: a sort key in `Scene::build` (S1).
-2. **Gray depths are drawn behind everything.** xfig draws all inactive
+2. **Gray depths are drawn behind everything** (fixed in S1). xfig draws all inactive
    layers in gray first, then the active ones (`u_redraw.c`); RustFig keeps
    them at their own depth (S1).
 3. **Mouse indicator layout.** xfig puts the left label left of the mouse,
@@ -92,7 +92,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 |---|---:|---|---|---|---|
 | `f_read.c` | 2034 | Fig 3.x reader (all quirks) | `format/fig_read` | own | review |
 | `f_readold.c` | 537 | Fig 1.x/2.x reader | — | missing | G1 |
-| `f_save.c` | 665 | Fig 3.2 writer (type order) | `format/fig_write` | own; order differs | S1 |
+| `f_save.c` | 665 | Fig 3.2 writer (type order) | `format/fig_write` | own; type order ported | review |
 | `f_load.c` | 384 | load, merge | `cmd/file` | own | review |
 | `f_util.c` | 1291 | directories, image colours, `~/.xfigrc` | — | missing: settings | S3/E1 |
 | `f_picobj.c` | 970 | picture loading and caching | `engine/import` | own | review |
@@ -108,7 +108,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 |---|---:|---|---|---|---|
 | `u_draw.c` | 2237 | drawing every object type, arrowheads, dash patterns | `render`, `geom` arrows | own; arrow shapes 0–14 to check | D9 |
 | `u_draw_spline.c` | 384 | X-spline evaluation | `geom` xspline (from the paper) | own | review (step size) |
-| `u_redraw.c` | 731 | redraw order, gray layers | `render::Scene::build` | own; order differs | S1 |
+| `u_redraw.c` | 731 | redraw order, gray layers | `render::Scene::build` | ported: draw order, gray layers first | — |
 | `u_bound.c` | 653 | bounding boxes | `model` | own | review |
 | `u_geom.c` | 1072 | normals, slopes, latex/manhattan endpoints, closeness | `geom` | partial: latex/manhattan modes | D7 |
 | `u_quartic.c` | 298 | quartic solver (intersections) | — | missing | W4 |
@@ -194,3 +194,4 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | Date | Note |
 |------|------|
 | 2026-10-14 | First version. |
+| 2026-10-14 | S1: draw and save order ported (`u_redraw.c`, `f_save.c`). |

@@ -222,7 +222,7 @@ fn object(out: &mut String, o: &Object) {
                 (b.min, b.max)
             };
             let _ = writeln!(out, "6 {} {} {} {}", i(a.x), i(a.y), i(z.x), i(z.y));
-            for child in &c.objects {
+            for child in rustfig_model::xfig_order(&c.objects) {
                 object(out, child);
             }
             out.push_str("-6\n");
@@ -255,7 +255,8 @@ pub fn write_fig(doc: &Document) -> String {
     for c in &colors {
         let _ = writeln!(out, "0 {} {}", c.number, c.rgb.to_hex());
     }
-    for o in &doc.objects {
+    // xfig's order: by type, as its object lists are saved (`f_save.c`).
+    for o in rustfig_model::xfig_order(&doc.objects) {
         object(&mut out, o);
     }
     out

@@ -274,6 +274,21 @@ impl Document {
     }
 
     /// Visit every leaf object (depth-first, file order).
+    /// Leaves in xfig's list order: at every level, objects by type
+    /// ([`Object::xfig_type_rank`]), keeping their order within a type.
+    /// A stable sort of these by depth gives xfig's drawing order.
+    pub fn for_each_leaf_xfig_order<'a>(&'a self, f: &mut dyn FnMut(&'a Object)) {
+        fn walk<'a>(objs: &'a [Object], f: &mut dyn FnMut(&'a Object)) {
+            for o in xfig_order(objs) {
+                match &o.kind {
+                    ObjectKind::Compound(c) => walk(&c.objects, f),
+                    _ => f(o),
+                }
+            }
+        }
+        walk(&self.objects, f);
+    }
+
     pub fn for_each_leaf<'a>(&'a self, f: &mut dyn FnMut(&'a Object)) {
         fn walk<'a>(objs: &'a [Object], f: &mut dyn FnMut(&'a Object)) {
             for o in objs {
@@ -329,6 +344,13 @@ impl Document {
 /// Convenience to build a point.
 pub fn pt(x: f64, y: f64) -> Point {
     Point::new(x, y)
+}
+
+/// Objects in xfig's list order: by type, keeping the order within a type.
+pub fn xfig_order(objs: &[Object]) -> Vec<&Object> {
+    let mut v: Vec<&Object> = objs.iter().collect();
+    v.sort_by_key(|o| o.xfig_type_rank());
+    v
 }
 
 #[cfg(test)]

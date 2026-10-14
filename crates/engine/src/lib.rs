@@ -338,7 +338,8 @@ impl Engine {
     /// Topmost top-level object within `tol` Fig units of `p`.
     pub fn hit_test(&self, p: Point, tol: f64) -> Option<ObjectId> {
         let boxes = self.object_bboxes();
-        let mut best: Option<(i32, f64, usize)> = None;
+        // (depth, xfig type rank, index): the front-most is the one drawn last.
+        let mut best: Option<(i32, u8, usize)> = None;
         for (i, o) in self.doc.objects.iter().enumerate() {
             let Some(bb) = boxes.1.get(i) else { break };
             if !bb.expand(tol).contains(p) || !self.is_visible(o) {
@@ -348,14 +349,13 @@ impl Engine {
             if d > tol {
                 continue;
             }
-            let depth = o.depth();
-            // Prefer the front-most (smallest depth), then the latest drawn.
+            let key = (o.depth(), o.xfig_type_rank(), i);
             let better = match best {
                 None => true,
-                Some((bd, _, bi)) => depth < bd || (depth == bd && i > bi),
+                Some((bd, br, bi)) => key.0 < bd || (key.0 == bd && (key.1, key.2) > (br, bi)),
             };
             if better {
-                best = Some((depth, d, i));
+                best = Some(key);
             }
         }
         best.and_then(|(_, _, i)| self.doc.objects.get(i)).map(|o| o.id)

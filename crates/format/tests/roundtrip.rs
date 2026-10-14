@@ -99,3 +99,17 @@ fn errors_have_lines() {
     assert!(read_fig(b"#FIG 2.1\n80 2\n").is_err());
     assert!(read_any(b"garbage").is_err());
 }
+
+#[test]
+fn objects_are_saved_in_xfig_type_order() {
+    // A text listed before a polyline: xfig saves lines before texts.
+    let fig = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+4 0 0 50 -1 0 12 0.0000 4 135 405 600 600 Hi\\001\n\
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2\n\t 0 0 1200 1200\n";
+    let doc = read_fig(fig.as_bytes()).unwrap();
+    assert!(matches!(doc.objects[0].kind, ObjectKind::Text(_)));
+    let out = write_fig(&doc);
+    let line = out.find("\n2 ").unwrap();
+    let text = out.find("\n4 ").unwrap();
+    assert!(line < text, "lines are written before texts:\n{out}");
+}

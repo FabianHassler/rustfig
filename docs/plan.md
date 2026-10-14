@@ -1,6 +1,6 @@
 # Execution plan
 
-**Status:** 2026-10-14. Current phase: **W (xfig window parity)**, W1–W3 done, next S1–S2 (fixes from the source map), then W5, then A8 and B0 (fig2dev) and the rest of phase A. Overall parity ≈60 %.
+**Status:** 2026-10-14. Current phase: **W (xfig window parity)**, W1–W3 done, next S2 (mouse indicator layout), then W5, then A8 and B0 (fig2dev) and the rest of phase A. Overall parity ≈60 %.
 
 This is the committed work plan. [`gaps.md`](gaps.md) ranks every known
 shortfall; this file groups them into phases with task ids, acceptance
@@ -29,7 +29,7 @@ tasks that touch each area.
 | Id | Task | Acceptance | Hours |
 |----|------|------------|------:|
 | S0 | ✅ 2026-10-14. **Source map** `docs/source-map.md`: every xfig and fig2dev C file with its RustFig module, status and task. | Every C file listed. | 4 |
-| S1 | **Draw order as xfig:** within a depth, arcs, compounds (recursively), ellipses, lines, splines, texts (`u_redraw.c`); gray depths drawn behind all active ones; `.fig` written in xfig's type order (`f_save.c`). | Render tests for type order, compound order and gray layers; a saved file lists objects in xfig's order. | 4 |
+| S1 | ✅ 2026-10-14 (`Object::xfig_type_rank`, `Document::for_each_leaf_xfig_order`, `xfig_order`; hit testing follows the same order). **Draw order as xfig:** within a depth, arcs, compounds (recursively), ellipses, lines, splines, texts (`u_redraw.c`); gray depths drawn behind all active ones; `.fig` written in xfig's type order (`f_save.c`). | Render tests for type order, compound order and gray layers; a saved file lists objects in xfig's order. | 4 |
 | S2 | **Mouse indicator as xfig** (`w_mousefun.c`): left label left of the mouse, middle above, right label right; xfig's capitalisation. | Screenshot next to the manual's image. | 2 |
 | S3 | **Startup options and resources** (`main.c`, `resources.c`, `xfigmain.c`): the command-line options users pass (`-metric`, `-specialtext`, `-latexfonts`, `-startfontsize`, `-exportLanguage`, `-startgridmode`, `-startposnmode`, `-zoom`, arrow defaults, …) set the same defaults in RustFig; saved with E1 settings. | `rustfig -metric -specialtext …` starts with the same indicator settings as xfig; tests per option. | 10 |
 
@@ -210,6 +210,7 @@ is an optional extra, used in two ways.
 | 2026-10-13 | First plan, after M0–M3. |
 | 2026-10-13 | Added A8 (fig2dev reference tests) and B0 (fig2dev export backend) with design notes. |
 | 2026-10-14 | A3: the web build compiles locally with rustup's toolchain; xtask uses the running toolchain's rustc. |
+| 2026-10-14 | S1 landed: xfig's draw, save and pick order. |
 | 2026-10-14 | Added phase S (source map S0 done; S1–S3) and D10; tasks port from xfig's sources where they can. |
 | 2026-10-14 | xfig and fig2dev sources may now be read and ported (user decision; xfig licence, `LICENSE-xfig`). |
 | 2026-10-14 | W3 landed: depth panel with counts, drag-toggle, All On/Off/Toggle, Gray/Blank; hidden depths can't be picked (Add Point could before); export of active layers only. |

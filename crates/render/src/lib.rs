@@ -208,14 +208,16 @@ pub struct Scene {
 impl Scene {
     pub fn build(doc: &Document, opts: &SceneOptions) -> Scene {
         let mut leaves: Vec<(&Object, bool)> = Vec::with_capacity(doc.leaf_count());
-        doc.for_each_leaf(&mut |o| {
+        doc.for_each_leaf_xfig_order(&mut |o| {
             let hidden = opts.hidden_depths.contains(&o.depth());
             if !hidden || opts.gray_hidden {
                 leaves.push((o, hidden));
             }
         });
-        // Deeper objects first; stable keeps file order within a depth.
-        leaves.sort_by_key(|(o, _)| std::cmp::Reverse(o.depth()));
+        // xfig's order: depths that are off (gray) behind everything, then
+        // back to front; within a depth, the stable sort keeps xfig's type
+        // order from the walk above (`u_redraw.c` `redisplay_objects`).
+        leaves.sort_by_key(|(o, gray)| (!*gray, std::cmp::Reverse(o.depth())));
         let mut prims = Vec::with_capacity(leaves.len());
         for (o, gray) in leaves {
             let first = prims.len();
@@ -507,6 +509,84 @@ mod tests {
             panic!()
         };
         assert_eq!(st.color.r, 255);
+    }
+
+    fn rect_at(depth: i32, pen: i32, x: f64) -> Object {
+        let mut st = Style::default();
+        st.depth = depth;
+        st.pen_color = ColorRef(pen);
+        Object::new(ObjectKind::Polyline(Polyline::rect(
+            st,
+            Point::new(x, 0.0),
+            Point::new(x + 10.0, 10.0),
+        )))
+    }
+
+    fn stroke_pens(s: &Scene) -> Vec<u8> {
+        s.prims
+            .iter()
+            .filter_map(|p| match p {
+                Prim::Path { stroke: Some(st), .. } => Some(st.color.r),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn xfig_draw_order_within_a_depth() {
+        use rustfig_model::{Arc as FigArc, Compound};
+        // Same depth: a line listed before an arc, and a compound holding a
+        // line. xfig draws arcs, then compounds, then lines.
+        let mut doc = Document::new();
+        doc.objects.push(rect_at(50, 4, 0.0)); // red line
+        let mut st = Style::default();
+        st.depth = 50;
+        st.pen_color = ColorRef(1); // blue arc
+        let arc = FigArc::through(
+            st,
+            Point::new(0.0, 0.0),
+            Point::new(5.0, 5.0),
+            Point::new(10.0, 0.0),
+            false,
+        )
+        .unwrap();
+        doc.objects.push(Object::new(ObjectKind::Arc(arc)));
+        doc.objects.push(Object::new(ObjectKind::Compound(Compound {
+            objects: vec![rect_at(50, 2, 20.0)], // green line in a compound
+        })));
+        let s = Scene::build(&doc, &SceneOptions::default());
+        // Red channel of each stroke: blue arc 0, green compound member 0, red line 255.
+        let order: Vec<u8> = s
+            .prims
+            .iter()
+            .filter_map(|p| match p {
+                Prim::Path { stroke: Some(st), .. } => Some(if st.color.b == 255 {
+                    1
+                } else if st.color.g == 255 {
+                    2
+                } else {
+                    4
+                }),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(order, vec![1, 2, 4]);
+    }
+
+    #[test]
+    fn gray_depths_are_drawn_behind_active_ones() {
+        let mut doc = Document::new();
+        doc.objects.push(rect_at(90, 4, 0.0)); // active, at the back
+        doc.objects.push(rect_at(10, 4, 0.0)); // off, in front
+        let opts = SceneOptions {
+            hidden_depths: [10].into_iter().collect(),
+            gray_hidden: true,
+            ..SceneOptions::default()
+        };
+        let pens = stroke_pens(&Scene::build(&doc, &opts));
+        // The gray (r == g == b, light) one comes first.
+        assert!(pens[0] >= 170 && pens[0] < 255, "{pens:?}");
+        assert_eq!(pens[1], 255);
     }
 
     #[test]

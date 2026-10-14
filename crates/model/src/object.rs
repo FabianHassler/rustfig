@@ -616,6 +616,21 @@ impl Object {
         }
     }
 
+    /// Position of the object's type in xfig's object lists: within a depth
+    /// xfig draws arcs, compounds, ellipses, lines, splines, then texts
+    /// (one list per type; `u_redraw.c`), and saves them in that order
+    /// (`f_save.c`).
+    pub fn xfig_type_rank(&self) -> u8 {
+        match &self.kind {
+            ObjectKind::Arc(_) => 0,
+            ObjectKind::Compound(_) => 1,
+            ObjectKind::Ellipse(_) => 2,
+            ObjectKind::Polyline(_) => 3,
+            ObjectKind::Spline(_) => 4,
+            ObjectKind::Text(_) => 5,
+        }
+    }
+
     /// Short type name ("polyline", "box", "text", ...).
     pub fn type_name(&self) -> &'static str {
         match &self.kind {
