@@ -20,6 +20,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}",
     },
     UiCommand {
+        id: "app.global_settings",
+        label: "Global settings…",
+        shortcut: "",
+        params: "{}",
+    },
+    UiCommand {
         id: "app.toggle_xfig_keys",
         label: "xfig keyboard accelerators",
         shortcut: "",
@@ -174,6 +180,7 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.search" => app.dialogs.search.open = true,
         "app.document_settings" => app.dialogs.settings_open = true,
         "app.unit_panel" => app.unit_panel_open = true,
+        "app.global_settings" => app.dialogs.global_open = true,
         "app.toggle_xfig_keys" => {
             app.xfig_keys = p.get("on").and_then(Value::as_bool).unwrap_or(!app.xfig_keys);
         }
@@ -305,6 +312,124 @@ const LAYOUT: &[(&str, &[&str])] = &[
     ("Help", &["app.commands", "app.about"]),
 ];
 
+/// An entry of xfig's menus (`file_menu_items` … in `w_cmdpanel.c`).
+#[derive(Clone, Copy)]
+pub enum XfigItem {
+    /// xfig's label and the RustFig command it runs.
+    Cmd(&'static str, &'static str),
+    /// An entry RustFig doesn't have yet: label, xfig's accelerator, plan task.
+    Missing(&'static str, &'static str, &'static str),
+    Sep,
+}
+
+/// xfig's menus, word for word and in order, for the classic layout. The
+/// Snap menu is [`snap_menu`]. RustFig's own menus (Object, Tools) are in
+/// the modern layout; its preferences are under Edit › Global settings.
+pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
+    use XfigItem::{Cmd, Missing, Sep};
+    &[
+        (
+            "File",
+            &[
+                Cmd("New", "app.new"),
+                Cmd("Open...", "app.open"),
+                Cmd("Merge...", "app.merge"),
+                Missing("Digitize...", "Meta-Z", "—"),
+                Cmd("Save", "app.save"),
+                Cmd("Save As...", "app.save_as"),
+                Cmd("Export...", "app.export"),
+                Missing("Print...", "Meta-P", "B5"),
+                Cmd("Exit", "app.quit"),
+            ],
+        ),
+        (
+            "Edit",
+            &[
+                Cmd("Undo", "edit.undo"),
+                Cmd("Paste Objects", "edit.paste"),
+                Missing("Paste Text", "F18/F20", "E7"),
+                Cmd("Search/Replace...", "app.search"),
+                Missing("Spell Check...", "Meta-K", "F5"),
+                Cmd("Delete All", "edit.delete_all"),
+                Sep,
+                Cmd("Global settings...", "app.global_settings"),
+                Cmd("Set units...", "app.unit_panel"),
+            ],
+        ),
+        (
+            "View",
+            &[
+                Missing("Manage Styles...", "Ctrl-Y", "E6"),
+                Cmd("Redraw", "app.redraw"),
+                Cmd("Portrait/Landscape", "doc.toggle_orientation"),
+                Cmd("Zoom In", "view.zoom_in"),
+                Cmd("Zoom Out", "view.zoom_out"),
+                Cmd("Zoom to Fit canvas", "view.zoom_fit"),
+                Cmd("Unzoom", "view.zoom_actual"),
+                Cmd("Pan to origin", "view.pan_origin"),
+                Missing("Character map", "", "E5"),
+                Sep,
+                Cmd("Show page borders", "view.toggle_page_border"),
+                Cmd("Show depth manager", "app.toggle_depths"),
+                Missing("Show info balloons", "Meta-Y", "—"),
+                Missing("Show line lengths", "Meta-L", "D10"),
+                Missing("Show vertex numbers", "", "—"),
+                Missing("Autorefresh mode", "", "—"),
+            ],
+        ),
+        (
+            "Help",
+            &[
+                Cmd("RustFig Reference (commands)...", "app.commands"),
+                Cmd("About RustFig...", "app.about"),
+            ],
+        ),
+    ]
+};
+
+fn xfig_menu(app: &mut App, ui: &mut egui::Ui, items: &[XfigItem]) {
+    for item in items {
+        match *item {
+            XfigItem::Sep => {
+                ui.separator();
+            }
+            XfigItem::Cmd(label, id) => {
+                let text = match checked(app, id) {
+                    Some(true) => format!("✔ {label}"),
+                    Some(false) => format!("    {label}"),
+                    None => label.to_string(),
+                };
+                let shortcut = if app.xfig_keys {
+                    xfig_accelerator(id).map(xfig_key_label)
+                } else {
+                    None
+                }
+                .unwrap_or_else(|| display_shortcut(label_of(id).1));
+                let mut b = egui::Button::new(text);
+                if !shortcut.is_empty() {
+                    b = b.shortcut_text(shortcut);
+                }
+                if ui.add_enabled(app.enabled(id), b).clicked() {
+                    ui.close();
+                    app.run(id, json!({}));
+                }
+            }
+            XfigItem::Missing(label, accel, task) => {
+                let mut b = egui::Button::new(label);
+                if !accel.is_empty() {
+                    b = b.shortcut_text(accel);
+                }
+                let why = if task == "—" {
+                    "Not available in RustFig".to_string()
+                } else {
+                    format!("Not available yet (plan task {task})")
+                };
+                ui.add_enabled(false, b).on_disabled_hover_text(why);
+            }
+        }
+    }
+}
+
 /// Menu labels that differ from the command labels, using xfig's wording.
 const MENU_LABELS: &[(&str, &str)] = &[
     ("app.quit", "Exit"),
@@ -395,6 +520,16 @@ pub fn menu_bar(app: &mut App, ui: &mut egui::Ui) {
 
 /// The menu buttons alone, laid out in the current row.
 pub fn menu_buttons(app: &mut App, ui: &mut egui::Ui) {
+    if app.classic() {
+        // xfig's menus: File, Edit, View, Snap, Help.
+        for (name, items) in XFIG_MENUS {
+            if *name == "Help" {
+                ui.menu_button("Snap", |ui| snap_menu(app, ui));
+            }
+            ui.menu_button(*name, |ui| xfig_menu(app, ui, items));
+        }
+        return;
+    }
     {
         for (name, list) in LAYOUT {
             if *name == "Object" {
@@ -513,6 +648,10 @@ pub const XFIG_KEYS: &[(&str, &str)] = &[
     ("Alt+C", "doc.toggle_orientation"),
     ("PhysCtrl+Z", "view.zoom_fit"),
     ("Alt+B", "view.toggle_page_border"),
+    ("Alt+G", "app.global_settings"),
+    ("Shift+U", "app.unit_panel"),
+    ("Shift+Z", "view.zoom_in"),
+    ("Z", "view.zoom_out"),
     ("PhysCtrl+S", "tool.scale"),
     ("PhysCtrl+C", "tool.copy"),
     ("PhysCtrl+A", "tool.add_point"),
@@ -667,6 +806,17 @@ mod tests {
                     continue;
                 }
                 assert!(cmd::find(id).is_some() || find_ui(id).is_some(), "unknown id {id}");
+            }
+        }
+    }
+
+    #[test]
+    fn xfig_menus_reach_commands() {
+        for (_, items) in XFIG_MENUS {
+            for item in *items {
+                if let XfigItem::Cmd(_, id) = item {
+                    assert!(cmd::find(id).is_some() || find_ui(id).is_some(), "unknown {id}");
+                }
             }
         }
     }

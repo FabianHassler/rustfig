@@ -66,6 +66,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-14 | Main menus cloned from xfig (`w_cmdpanel.c`): File, Edit, View, Snap, Help with xfig's entries, order, dividers and accelerators; entries RustFig lacks greyed with their plan task; Edit › Global settings holds RustFig's preferences; the Object and Tools menus remain in the modern layout. |
 | 2026-10-14 | Mode panel with xfig's own icons (`w_icons.c` bitmaps) in xfig's order; xfig modes RustFig lacks (library, open compound, join/split, chop, tangent, measure) shown greyed with their plan task; RustFig's tools without an xfig mode (Select, Open/close, X-splines, separate ellipse tools) are in the Tools menu only. |
 | 2026-10-14 | W7: xfig's keyboard accelerators (`app-defaults/Fig`): Meta (Alt/Option) menu keys, physical-Ctrl mode keys, xfig's mode letters (s spline, Shift-a arrows, …); menus show "Meta-N"; on by default, View › xfig keyboard accelerators. Phase W done. 143 tests. |
 | 2026-10-14 | W4: xfig's Snap menu (`w_snap.c`, `w_intersect.c`): Hold, Release, Endpoint, Midpoint, Nearest, Focus, Normal, Tangent, Intersection, Diameter for the next clicked point, with the Snap Mode box above the depth panel; curves use their flattened outlines, so splines snap too. 141 tests. |

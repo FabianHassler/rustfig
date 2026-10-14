@@ -191,11 +191,14 @@ fn polyline_with_xfig_buttons() {
 }
 
 #[test]
-fn mouse_buttons_menu_switches_scheme() {
+fn global_settings_switch_the_mouse_scheme() {
     let mut h = harness(app());
     h.get_by_label_contains("middle: —");
-    h.get_by_label("View").click();
+    // xfig's Edit › Global settings holds RustFig's preferences.
+    h.get_by_label("Edit").click();
     h.run_steps(2);
+    h.get_by_label_contains("Global settings...").click();
+    h.run_steps(4);
     h.get_by_label_contains("xfig mouse buttons").click();
     h.run_steps(2);
     assert_eq!(h.state().engine.mouse_scheme(), rustfig_engine::MouseScheme::Modern);
@@ -440,4 +443,21 @@ fn xfig_keys_select_modes_and_run_menu_entries() {
     h.state_mut().engine.set_tool(ToolKind::Select);
     press_key(&mut h, egui::Key::S, ctrl);
     assert_ne!(h.state().engine.tool(), ToolKind::Scale);
+}
+
+#[test]
+fn classic_menus_are_xfigs() {
+    let mut h = harness(app());
+    // xfig has no Object or Tools menu.
+    assert!(h.query_by_label("Object").is_none());
+    assert!(h.query_by_label("Tools").is_none());
+    h.get_by_label("File").click();
+    h.run_steps(2);
+    // (Labels include xfig's accelerator, e.g. "Open... Meta-O".)
+    for entry in ["Open...", "Merge...", "Save As...", "Export...", "Exit"] {
+        h.get_by_label_contains(entry);
+    }
+    // Entries RustFig doesn't have yet are there, greyed out.
+    use egui_kittest::kittest::NodeT;
+    assert!(h.get_by_label_contains("Print...").accesskit_node().is_disabled());
 }

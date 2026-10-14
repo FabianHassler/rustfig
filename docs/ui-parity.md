@@ -55,7 +55,7 @@
 ## Main window (xfig screen map)
 | xfig | RustFig | Plan |
 |---|---|---|
-| Main menus File, Edit, View, Snap, Help | ✅ in xfig's order with xfig labels (Object and Tools as extras); Snap: Hold, Release, Endpoint, Midpoint, Nearest, Focus, Normal, Tangent, Intersection, Diameter, with the Snap Mode box | — |
+| Main menus File, Edit, View, Snap, Help | ✅ classic layout: xfig's menus word for word and in order (`w_cmdpanel.c`), missing entries greyed with their task, RustFig preferences under Edit › Global settings; Object and Tools menus only in the modern layout; Snap: Hold, Release, Endpoint, Midpoint, Nearest, Focus, Normal, Tangent, Intersection, Diameter, with the Snap Mode box | — |
 | Current file name | ✅ next to the menus, marks unsaved changes | — |
 | Message panel | ✅ under the menus; click for the history | — |
 | Mouse-function indicator | ✅ xfig's layout and wording, each button's current function per tool and state, checked against the tools by a test | — |
@@ -79,3 +79,4 @@
 | 2026-10-14 | W4: Snap menu. |
 | 2026-10-14 | W7: xfig accelerators. |
 | 2026-10-14 | Mode panel: xfig's icons and order; modes not yet available shown greyed. |
+| 2026-10-14 | Main menus cloned from xfig. |

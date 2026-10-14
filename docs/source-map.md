@@ -143,7 +143,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 
 | File | Lines | What it does | RustFig | Status | Task |
 |---|---:|---|---|---|---|
-| `w_cmdpanel.c` | 1860 | main menus | `ui-egui/menus` | own | review |
+| `w_cmdpanel.c` | 1860 | main menus | `menus::XFIG_MENUS` (classic layout) | ported: entries, order, dividers, accelerators | — |
 | `w_modepanel.c` | 905 | mode panel, mode keys, per-mode attribute masks | `panels::mode_panel`, `ToolKind::shortcut`, `attributes_for` | own; keys and masks ported | review |
 | `w_icons.c` | 3270 | mode and attribute icon bitmaps | `ui-egui/xfig_icons.rs` (mode icons, verbatim), `panels::mode_panel` (xfig's order) | ported: mode icons; attribute icons still drawn in code | — |
 | `w_indpanel.c` | 4865 | attribute (indicator) panel, choice panels | `ui-egui/attributes` | ported: buttons, order, per-mode masks, choice panels; missing: Angle Geom, Smart Links, copy counts, dimension line, tangent length, colour editor | D7, D8, D10, D4, E4 |

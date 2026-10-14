@@ -83,6 +83,8 @@ pub struct Dialogs {
     pub commands_open: bool,
     pub about_open: bool,
     pub messages_open: bool,
+    /// Edit › Global settings (RustFig's preferences).
+    pub global_open: bool,
     command_filter: String,
 }
 
@@ -238,7 +240,43 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     commands_dialog(app, ctx);
     about_dialog(app, ctx);
     messages_dialog(app, ctx);
+    global_dialog(app, ctx);
     unsaved_dialog(app, ctx);
+}
+
+/// xfig's Global settings panel holds its preferences; RustFig's are its
+/// layout, mouse and keyboard choices.
+fn global_dialog(app: &mut App, ctx: &egui::Context) {
+    if !app.dialogs.global_open {
+        return;
+    }
+    let mut open = true;
+    egui::Window::new("Global settings")
+        .open(&mut open)
+        .resizable(false)
+        .collapsible(false)
+        .show(ctx, |ui| {
+            for (id, label, on) in [
+                ("app.toggle_layout", "Classic xfig layout", app.classic()),
+                (
+                    "tool.mouse_buttons",
+                    "xfig mouse buttons (3 buttons)",
+                    app.engine.mouse_scheme() == rustfig_engine::MouseScheme::Xfig,
+                ),
+                ("app.toggle_xfig_keys", "xfig keyboard accelerators", app.xfig_keys),
+                ("app.toggle_indicator", "Show attribute panel", app.show_indicator),
+            ] {
+                let mut v = on;
+                if ui.checkbox(&mut v, label).changed() {
+                    app.run(id, serde_json::json!({}));
+                }
+            }
+            ui.separator();
+            if ui.button("Units and page…").clicked() {
+                app.run("app.document_settings", serde_json::json!({}));
+            }
+        });
+    app.dialogs.global_open &= open;
 }
 
 fn edit_dialog(app: &mut App, ctx: &egui::Context) {
