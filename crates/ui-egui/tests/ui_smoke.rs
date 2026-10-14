@@ -209,3 +209,87 @@ fn two_button_mapping() {
         Some(Button::Right)
     );
 }
+
+fn with_depths() -> App {
+    let mut a = app();
+    for (y, d) in [(0, 10), (900, 20), (1800, 20), (2700, 30)] {
+        a.engine
+            .execute(
+                "shape.rectangle",
+                &json!({"x": 0, "y": y, "width": 600, "height": 300, "depth": d}),
+            )
+            .unwrap();
+    }
+    a
+}
+
+#[test]
+fn depth_panel_rows_buttons_and_display() {
+    let mut h = harness(with_depths());
+    h.get_by_label("Depth 20 (2 objects)");
+    h.get_by_label("Depth 10 (1 object)").click();
+    h.run_steps(2);
+    assert_eq!(
+        h.state().engine.hidden_depths.iter().copied().collect::<Vec<_>>(),
+        vec![10]
+    );
+    h.get_by_label("Toggle").click();
+    h.run_steps(2);
+    assert_eq!(
+        h.state().engine.hidden_depths.iter().copied().collect::<Vec<_>>(),
+        vec![20, 30]
+    );
+    h.get_by_label("All On").click();
+    h.run_steps(2);
+    assert!(h.state().engine.hidden_depths.is_empty());
+    h.get_by_label("All Off").click();
+    h.run_steps(2);
+    assert_eq!(h.state().engine.hidden_depths.len(), 3);
+    h.get_by_label("Blank").click();
+    h.run_steps(2);
+    assert!(!h.state().engine.gray_hidden_depths);
+}
+
+#[test]
+fn dragging_across_depth_checkboxes_switches_them_all() {
+    let mut h = harness(with_depths());
+    let first = h.get_by_label("Depth 10 (1 object)").rect().center();
+    let last = h.get_by_label("Depth 30 (1 object)").rect().center();
+    h.hover_at(first);
+    h.run_steps(1);
+    h.event(egui::Event::PointerButton {
+        pos: first,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: egui::Modifiers::NONE,
+    });
+    h.run_steps(1);
+    for i in 1..=6 {
+        h.hover_at(first.lerp(last, i as f32 / 6.0));
+        h.run_steps(1);
+    }
+    h.event(egui::Event::PointerButton {
+        pos: last,
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: egui::Modifiers::NONE,
+    });
+    h.run_steps(2);
+    // The first checkbox was on, so the sweep turned every one off, once.
+    assert_eq!(h.state().engine.hidden_depths.len(), 3);
+}
+
+#[test]
+fn a_mouse_click_on_a_depth_toggles_it_once() {
+    let mut h = harness(with_depths());
+    let at = h.get_by_label("Depth 20 (2 objects)").rect().center();
+    click_button(&mut h, at, egui::PointerButton::Primary, egui::Modifiers::NONE);
+    h.run_steps(2);
+    assert_eq!(
+        h.state().engine.hidden_depths.iter().copied().collect::<Vec<_>>(),
+        vec![20]
+    );
+    click_button(&mut h, at, egui::PointerButton::Primary, egui::Modifiers::NONE);
+    h.run_steps(2);
+    assert!(h.state().engine.hidden_depths.is_empty());
+}

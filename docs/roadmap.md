@@ -1,6 +1,6 @@
 # Milestones
 
-**Status:** 2026-10-14. Current focus: **phase W (xfig window parity**, W1–W2 done), then phase A (hardening) and M4 (exports). Task-level plan: [plan.md](plan.md).
+**Status:** 2026-10-14. Current focus: **phase W (xfig window parity**, W1–W3 done), then phase A (hardening) and M4 (exports). Task-level plan: [plan.md](plan.md).
 
 | Milestone | Content | State |
 |-----------|---------|-------|
@@ -19,4 +19,4 @@
 | Date | Note |
 |------|------|
 | 2026-10-13 | M0–M3 landed. |
-| 2026-10-14 | Phase W: W1 (layout) and W2 (mouse buttons) landed. |
+| 2026-10-14 | Phase W: W1 (layout), W2 (mouse buttons) and W3 (depth panel) landed. |

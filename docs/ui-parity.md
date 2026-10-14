@@ -62,7 +62,7 @@
 | Three-button mouse semantics | ✅ xfig's per-mode functions (default) or a modern scheme (View › xfig mouse buttons); Alt+click = middle, Ctrl+click = right. Missing: dimension lines, rotate/flip anchor, array copy, align to canvas | D |
 | Units box | 🟡 shows the units, opens units and page settings; xfig's scale panel missing | W6 |
 | Top and side rulers | ❌ | W6 |
-| Depth panel: checkboxes, drag-toggle, All On/Off/Toggle, Gray/Blank | 🟡 checkboxes, shown by default in the classic layout | W3 |
+| Depth panel: checkboxes, drag-toggle, All On/Off/Toggle, Gray/Blank | ✅ with object counts; hidden depths can't be picked; export of active layers only | — |
 | Attribute panel: graphical buttons, per-mode attributes | 🟡 all attributes always shown as plain widgets | W5 |
 | xfig accelerators (Meta-key) | 🟡 platform shortcuts and xfig mode letters | W7 |
 
@@ -73,3 +73,4 @@
 | 2026-10-13 | Added the main-window section (plan phase W). |
 | 2026-10-13 | W1: classic layout, message panel, mouse indicator, units box. |
 | 2026-10-14 | W2: three-button mouse semantics and the modern scheme. |
+| 2026-10-14 | W3: depth panel. |

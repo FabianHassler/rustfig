@@ -174,6 +174,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     let t = view.transform().then(&Affine::scale(f64::from(ppp), f64::from(ppp)));
     let scene_opts = SceneOptions {
         hidden_depths: app.engine.hidden_depths.clone(),
+        gray_hidden: app.engine.gray_hidden_depths,
         screen: true,
     };
     if app.canvas.doc_key.as_ref() != Some(&key) {

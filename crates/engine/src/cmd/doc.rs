@@ -1,9 +1,12 @@
 //! Document settings, colours and depth visibility.
 
-use super::{always, num, opt_bool, string, CmdResult, Command};
+use super::{always, num, opt_bool, opt_num, string, CmdResult, Command};
 use crate::{Engine, EngineError};
 use rustfig_model::{Orientation, PaperSize, Rgb, Units};
 use serde_json::{json, Value};
+
+/// Depths 0–999: the most a depth list can sensibly name.
+const MAX_DEPTHS: usize = 1000;
 
 pub(super) fn commands() -> Vec<Command> {
     vec![
@@ -133,27 +136,50 @@ pub(super) fn commands() -> Vec<Command> {
         },
         Command {
             id: "depth.set_visible",
-            label: "Show/hide depth",
+            label: "Show/hide depths",
             menu: "",
             shortcut: "",
-            params: "{\"depth\": 0-999, \"visible\": bool}",
+            params: "{\"depth\"?: 0-999, \"depths\"?: [0-999], \"visible\": bool}  — objects on depths that are off can't be picked or edited",
             mutates: false,
             enabled: always,
             run: |e, p| {
-                let d = num(p, "depth")?.round() as i32;
-                let vis = opt_bool(p, "visible")?.unwrap_or(true);
-                if vis {
-                    e.hidden_depths.remove(&d);
-                } else {
-                    e.hidden_depths.insert(d);
+                let mut depths = Vec::new();
+                if let Some(d) = opt_num(p, "depth")? {
+                    depths.push(d);
                 }
-                e.bump_revision();
-                Ok(json!({}))
+                if let Some(list) = p.get("depths") {
+                    let list = list
+                        .as_array()
+                        .ok_or_else(|| EngineError::bad_params("depths must be an array of numbers"))?;
+                    if list.len() > MAX_DEPTHS {
+                        return Err(EngineError::bad_params("too many depths"));
+                    }
+                    for v in list {
+                        depths.push(v.as_f64().ok_or_else(|| EngineError::bad_params("depths must be numbers"))?);
+                    }
+                }
+                if depths.is_empty() {
+                    return Err(EngineError::bad_params("give depth or depths"));
+                }
+                let vis = opt_bool(p, "visible")?.unwrap_or(true);
+                for d in depths {
+                    if !d.is_finite() {
+                        return Err(EngineError::bad_params("depth must be a number"));
+                    }
+                    let d = (d.round() as i32).clamp(0, rustfig_model::MAX_DEPTH);
+                    if vis {
+                        e.hidden_depths.remove(&d);
+                    } else {
+                        e.hidden_depths.insert(d);
+                    }
+                }
+                e.depths_changed();
+                Ok(json!({"hidden_depths": e.hidden_depths.iter().collect::<Vec<_>>()}))
             },
         },
         Command {
             id: "depth.show_all",
-            label: "Show All Depths",
+            label: "All Depths On",
             menu: "View",
             shortcut: "",
             params: "{}",
@@ -161,6 +187,53 @@ pub(super) fn commands() -> Vec<Command> {
             enabled: always,
             run: |e, _| {
                 e.hidden_depths.clear();
+                e.depths_changed();
+                Ok(json!({}))
+            },
+        },
+        Command {
+            id: "depth.hide_all",
+            label: "All Depths Off",
+            menu: "",
+            shortcut: "",
+            params: "{}  — every depth in use",
+            mutates: false,
+            enabled: always,
+            run: |e, _| {
+                e.hidden_depths = e.doc().depths().into_iter().collect();
+                e.depths_changed();
+                Ok(json!({}))
+            },
+        },
+        Command {
+            id: "depth.toggle_all",
+            label: "Toggle Depths",
+            menu: "",
+            shortcut: "",
+            params: "{}  — depths in use that are on go off and vice versa",
+            mutates: false,
+            enabled: always,
+            run: |e, _| {
+                let used = e.doc().depths();
+                e.hidden_depths = used.into_iter().filter(|d| !e.hidden_depths.contains(d)).collect();
+                e.depths_changed();
+                Ok(json!({}))
+            },
+        },
+        Command {
+            id: "depth.set_display",
+            label: "Display of depths that are off",
+            menu: "",
+            shortcut: "",
+            params: "{\"mode\": gray|blank}  — gray: drawn in gray; blank: not drawn",
+            mutates: false,
+            enabled: always,
+            run: |e, p| {
+                e.gray_hidden_depths = match string(p, "mode")?.as_str() {
+                    "gray" => true,
+                    "blank" => false,
+                    o => return Err(EngineError::bad_params(format!("unknown mode {o:?} (gray or blank)"))),
+                };
                 e.bump_revision();
                 Ok(json!({}))
             },
@@ -180,6 +253,7 @@ fn info(e: &mut Engine, _: &Value) -> CmdResult {
         "colors": d.colors.len(),
         "depths": d.depths(),
         "hidden_depths": e.hidden_depths.iter().collect::<Vec<_>>(),
+        "hidden_depth_display": if e.gray_hidden_depths { "gray" } else { "blank" },
         "orientation": format!("{:?}", s.orientation),
         "units": format!("{:?}", s.units),
         "paper": s.paper.name(),

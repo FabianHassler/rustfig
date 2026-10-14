@@ -57,6 +57,9 @@ pub struct Engine {
     revision: u64,
     /// Depths hidden in the depth manager.
     pub hidden_depths: BTreeSet<i32>,
+    /// Draw objects on hidden depths in gray (xfig's "Gray"); otherwise
+    /// they aren't drawn ("Blank").
+    pub gray_hidden_depths: bool,
     pub show_page_border: bool,
     requests: Vec<UiRequest>,
     status: String,
@@ -88,6 +91,7 @@ impl Engine {
             modified: false,
             revision: 1,
             hidden_depths: BTreeSet::new(),
+            gray_hidden_depths: true,
             show_page_border: true,
             requests: Vec::new(),
             status: String::new(),
@@ -355,6 +359,31 @@ impl Engine {
             }
         }
         best.and_then(|(_, _, i)| self.doc.objects.get(i)).map(|o| o.id)
+    }
+
+    /// After depths were switched on or off: objects that became hidden
+    /// leave the selection, and work in progress is dropped (it may be on
+    /// one of them).
+    pub fn depths_changed(&mut self) {
+        let sel: Vec<ObjectId> = self
+            .selection
+            .iter()
+            .copied()
+            .filter(|id| self.doc.get(*id).is_some_and(|o| self.is_visible(o)))
+            .collect();
+        self.selection = sel;
+        if !self.is_typing() {
+            self.tool_state = tools::ToolState::Idle;
+        }
+        self.bump_revision();
+    }
+
+    /// Number of objects (leaves) at each depth in use, front to back.
+    pub fn depth_counts(&self) -> Vec<(i32, usize)> {
+        let mut m = std::collections::BTreeMap::new();
+        self.doc
+            .for_each_leaf(&mut |o| *m.entry(o.depth()).or_insert(0usize) += 1);
+        m.into_iter().collect()
     }
 
     /// Whether any leaf of the object is on a visible depth.

@@ -3,6 +3,7 @@
 use crate::{raster, Rgba, Scene, SceneOptions};
 use rustfig_geom::Rect;
 use rustfig_model::{Document, Rgb, Units};
+use std::collections::BTreeSet;
 
 /// Export formats rendered from a scene.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -50,6 +51,11 @@ pub struct ExportOptions {
     pub dpi: f64,
     /// Background colour; `None` is transparent (bitmaps) or no background.
     pub background: Option<Rgb>,
+    /// Depths to leave out (xfig's "active layers only").
+    pub hidden_depths: BTreeSet<i32>,
+    /// With depths left out: size the page by the whole figure rather than
+    /// by the active layers alone.
+    pub whole_figure_bounds: bool,
 }
 
 impl Default for ExportOptions {
@@ -59,6 +65,8 @@ impl Default for ExportOptions {
             margin: 0.0,
             dpi: 150.0,
             background: None,
+            hidden_depths: BTreeSet::new(),
+            whole_figure_bounds: false,
         }
     }
 }
@@ -75,8 +83,18 @@ pub fn export_bounds(scene: &Scene, margin: f64) -> Rect {
 
 /// Render a document in the given format.
 pub fn export(doc: &Document, format: ExportFormat, opts: &ExportOptions) -> Result<Vec<u8>, String> {
-    let scene = Scene::build(doc, &SceneOptions::default());
-    let bounds = export_bounds(&scene, opts.margin);
+    let scene = Scene::build(
+        doc,
+        &SceneOptions {
+            hidden_depths: opts.hidden_depths.clone(),
+            ..SceneOptions::default()
+        },
+    );
+    let bounds = if opts.whole_figure_bounds && !opts.hidden_depths.is_empty() {
+        export_bounds(&Scene::build(doc, &SceneOptions::default()), opts.margin)
+    } else {
+        export_bounds(&scene, opts.margin)
+    };
     if bounds.is_empty() {
         return Err("the drawing is empty".into());
     }

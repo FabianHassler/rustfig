@@ -114,7 +114,44 @@ impl TextPrim {
     }
 }
 
+impl Rgba {
+    /// The light gray xfig uses for depths that are off: darker colours
+    /// stay a little darker, so shapes remain readable.
+    pub fn grayed(self) -> Rgba {
+        let lum = (u32::from(self.r) * 299 + u32::from(self.g) * 587 + u32::from(self.b) * 114) / 1000;
+        let v = (170 + lum * 70 / 255).min(255) as u8;
+        Rgba {
+            r: v,
+            g: v,
+            b: v,
+            a: self.a,
+        }
+    }
+}
+
 impl Prim {
+    /// Recolour in gray (objects on depths that are off).
+    pub fn gray_out(&mut self) {
+        match self {
+            Prim::Path { fill, stroke, .. } => {
+                match fill {
+                    Some(Fill::Solid(c)) => *c = c.grayed(),
+                    Some(Fill::Pattern { fg, bg, .. }) => {
+                        *fg = fg.grayed();
+                        *bg = bg.grayed();
+                    }
+                    None => {}
+                }
+                if let Some(s) = stroke {
+                    s.color = s.color.grayed();
+                }
+            }
+            Prim::Text(t) => t.color = t.color.grayed(),
+            // Pictures keep their pixels; they can't be picked either way.
+            Prim::Image { .. } => {}
+        }
+    }
+
     /// Bounding box in Fig units (including half the stroke width).
     pub fn bbox(&self) -> Rect {
         match self {
@@ -153,8 +190,11 @@ impl Prim {
 /// Options for building a scene.
 #[derive(Debug, Clone, Default)]
 pub struct SceneOptions {
-    /// Depths not to draw (the depth manager's hidden layers).
+    /// Depths that are off in the depth manager.
     pub hidden_depths: BTreeSet<i32>,
+    /// Draw objects on hidden depths in gray instead of leaving them out
+    /// (xfig's depth panel "Gray" setting).
+    pub gray_hidden: bool,
     /// Draw for the screen: hidden texts appear as a placeholder.
     pub screen: bool,
 }
@@ -167,17 +207,24 @@ pub struct Scene {
 
 impl Scene {
     pub fn build(doc: &Document, opts: &SceneOptions) -> Scene {
-        let mut leaves: Vec<&Object> = Vec::with_capacity(doc.leaf_count());
+        let mut leaves: Vec<(&Object, bool)> = Vec::with_capacity(doc.leaf_count());
         doc.for_each_leaf(&mut |o| {
-            if !opts.hidden_depths.contains(&o.depth()) {
-                leaves.push(o);
+            let hidden = opts.hidden_depths.contains(&o.depth());
+            if !hidden || opts.gray_hidden {
+                leaves.push((o, hidden));
             }
         });
         // Deeper objects first; stable keeps file order within a depth.
-        leaves.sort_by_key(|o| std::cmp::Reverse(o.depth()));
+        leaves.sort_by_key(|(o, _)| std::cmp::Reverse(o.depth()));
         let mut prims = Vec::with_capacity(leaves.len());
-        for o in leaves {
+        for (o, gray) in leaves {
+            let first = prims.len();
             object_prims(doc, o, opts, &mut prims);
+            if gray {
+                if let Some(new) = prims.get_mut(first..) {
+                    new.iter_mut().for_each(Prim::gray_out);
+                }
+            }
         }
         Scene { prims }
     }
@@ -460,6 +507,31 @@ mod tests {
             panic!()
         };
         assert_eq!(st.color.r, 255);
+    }
+
+    #[test]
+    fn hidden_depths_blank_or_gray() {
+        let mut doc = Document::new();
+        let mut st = Style::default();
+        st.depth = 30;
+        st.pen_color = ColorRef(4);
+        doc.objects.push(Object::new(ObjectKind::Polyline(Polyline::rect(
+            st,
+            Point::ZERO,
+            Point::new(10.0, 10.0),
+        ))));
+        let mut opts = SceneOptions {
+            hidden_depths: [30].into_iter().collect(),
+            ..SceneOptions::default()
+        };
+        assert!(Scene::build(&doc, &opts).prims.is_empty());
+        opts.gray_hidden = true;
+        let s = Scene::build(&doc, &opts);
+        let Prim::Path { stroke: Some(st), .. } = &s.prims[0] else {
+            panic!()
+        };
+        let c = st.color;
+        assert!(c.r == c.g && c.g == c.b && c.r >= 170, "{c:?} is not a light gray");
     }
 
     #[test]

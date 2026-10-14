@@ -56,6 +56,8 @@ pub struct App {
     pub layout: Layout,
     pub show_depths: bool,
     pub show_indicator: bool,
+    /// While dragging across depth checkboxes: the state they are set to.
+    depth_drag: Option<bool>,
     pub pending: Option<Pending>,
     /// File pickers (native dialogs; replaced in tests).
     pub file_dialogs: Box<dyn dialogs::FileDialogs>,
@@ -78,6 +80,7 @@ impl App {
             layout: Layout::Classic,
             show_depths: true,
             show_indicator: true,
+            depth_drag: None,
             pending: None,
             file_dialogs: Box::new(dialogs::NativeDialogs),
             quit_confirmed: false,
@@ -267,7 +270,7 @@ impl App {
         if self.show_depths {
             egui::SidePanel::right("depths")
                 .default_width(140.0)
-                .show(ctx, |ui| panels::depth_panel(self, ui));
+                .show(ctx, |ui| panels::depth_panel(self, ui, &tokens));
         }
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE)

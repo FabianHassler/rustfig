@@ -45,6 +45,10 @@ pub struct ExportState {
     pub margin: f64,
     pub dpi: f64,
     pub white_background: bool,
+    /// Leave out depths that are off (xfig's "active layers only").
+    pub active_layers_only: bool,
+    /// With active layers only: size the page by the whole figure.
+    pub whole_figure_bounds: bool,
 }
 
 impl Default for ExportState {
@@ -56,6 +60,8 @@ impl Default for ExportState {
             margin: 0.0,
             dpi: 150.0,
             white_background: false,
+            active_layers_only: false,
+            whole_figure_bounds: false,
         }
     }
 }
@@ -417,6 +423,7 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
     }
     let mut open = true;
     let mut go = false;
+    let some_hidden = !app.engine.hidden_depths.is_empty();
     let st = &mut app.dialogs.export;
     egui::Window::new("Export")
         .open(&mut open)
@@ -456,6 +463,21 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
                     ui.label("Background");
                     ui.checkbox(&mut st.white_background, "white (otherwise transparent)");
                     ui.end_row();
+                    ui.label("Depths");
+                    ui.vertical(|ui| {
+                        ui.add_enabled_ui(some_hidden, |ui| {
+                            ui.checkbox(&mut st.active_layers_only, "active layers only")
+                                .on_disabled_hover_text("Every depth is on");
+                            ui.add_enabled_ui(st.active_layers_only, |ui| {
+                                ui.horizontal(|ui| {
+                                    ui.label("bounds:");
+                                    ui.radio_value(&mut st.whole_figure_bounds, true, "whole figure");
+                                    ui.radio_value(&mut st.whole_figure_bounds, false, "active layers");
+                                });
+                            });
+                        });
+                    });
+                    ui.end_row();
                 });
             ui.separator();
             if ui.button("Export…").clicked() {
@@ -482,6 +504,8 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
                 "magnification": st.magnification,
                 "margin": st.margin,
                 "dpi": st.dpi,
+                "active_layers_only": st.active_layers_only && !app.engine.hidden_depths.is_empty(),
+                "whole_figure_bounds": st.whole_figure_bounds,
             });
             if st.white_background {
                 p["background"] = json!("#ffffff");

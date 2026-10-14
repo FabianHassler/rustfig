@@ -1478,6 +1478,9 @@ impl Engine {
     fn find_segment(&self, p: Point, tol: f64) -> Option<(ObjectId, usize)> {
         let mut best: Option<(f64, ObjectId, usize)> = None;
         for o in &self.doc().objects {
+            if !self.is_visible(o) {
+                continue;
+            }
             let closed = match &o.kind {
                 ObjectKind::Polyline(pl) if pl.kind == PolyKind::Polyline => false,
                 ObjectKind::Polyline(pl) if pl.kind == PolyKind::Polygon => true,

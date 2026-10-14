@@ -1,6 +1,6 @@
 //! File commands: new, open, merge, save, export.
 
-use super::{always, has_objects, num_or, opt_num, opt_str, string, CmdResult, Command};
+use super::{always, has_objects, num_or, opt_bool, opt_num, opt_str, string, CmdResult, Command};
 use crate::{import, Engine, EngineError};
 use rustfig_format::FileFormat;
 use rustfig_model::{Document, ObjectKind, Rgb};
@@ -85,7 +85,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Export…",
             menu: "",
             shortcut: "",
-            params: "{\"path\": string, \"format\"?: \"svg\"|\"eps\"|\"pdf\"|\"png\", \"magnification\"?: percent, \"margin\"?: fig units, \"dpi\"?: number, \"background\"?: \"#rrggbb\"}",
+            params: "{\"path\": string, \"format\"?: \"svg\"|\"eps\"|\"pdf\"|\"png\", \"magnification\"?: percent, \"margin\"?: fig units, \"dpi\"?: number, \"background\"?: \"#rrggbb\", \"active_layers_only\"?: bool, \"whole_figure_bounds\"?: bool}  — active_layers_only leaves out depths that are off; whole_figure_bounds then still sizes the page by the whole figure",
             mutates: false,
             enabled: has_objects,
             run: export_file,
@@ -238,7 +238,7 @@ fn save_data(e: &mut Engine, p: &Value) -> CmdResult {
     Ok(json!({"data": text}))
 }
 
-fn export_options(p: &Value) -> Result<ExportOptions, EngineError> {
+fn export_options(e: &Engine, p: &Value) -> Result<ExportOptions, EngineError> {
     let background = match opt_str(p, "background")? {
         Some(s) => Some(Rgb::from_hex(s).ok_or_else(|| EngineError::bad_params("background must be #rrggbb"))?),
         None => None,
@@ -248,11 +248,17 @@ fn export_options(p: &Value) -> Result<ExportOptions, EngineError> {
         margin: num_or(p, "margin", 0.0)?,
         dpi: num_or(p, "dpi", 150.0)?,
         background,
+        hidden_depths: if opt_bool(p, "active_layers_only")?.unwrap_or(false) {
+            e.hidden_depths.clone()
+        } else {
+            Default::default()
+        },
+        whole_figure_bounds: opt_bool(p, "whole_figure_bounds")?.unwrap_or(false),
     })
 }
 
 fn render(e: &Engine, format: ExportFormat, p: &Value) -> Result<Vec<u8>, EngineError> {
-    let opts = export_options(p)?;
+    let opts = export_options(e, p)?;
     rustfig_render::export(e.doc(), format, &opts).map_err(EngineError::format)
 }
 

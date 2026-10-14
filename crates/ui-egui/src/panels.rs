@@ -410,26 +410,112 @@ pub fn indicator_panel(app: &mut App, ui: &mut egui::Ui) {
     ui.add_space(2.0);
 }
 
-pub fn depth_panel(app: &mut App, ui: &mut egui::Ui) {
+/// xfig's depth panel: All On / All Off / Toggle, Gray or Blank display of
+/// depths that are off, and one checkbox row per depth in use with its
+/// object count. Pressing a checkbox and dragging over others sets them all
+/// to the new state of the first one.
+pub fn depth_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     ui.heading("Depths");
-    ui.horizontal(|ui| {
-        if ui.button("Show all").clicked() {
-            app.run("depth.show_all", json!({}));
-        }
-    });
-    ui.separator();
-    let depths = app.engine.doc().depths();
-    egui::ScrollArea::vertical().show(ui, |ui| {
-        if depths.is_empty() {
-            ui.label("No objects");
-        }
-        for d in depths {
-            let mut vis = !app.engine.hidden_depths.contains(&d);
-            if ui.checkbox(&mut vis, format!("{d}")).changed() {
-                app.run("depth.set_visible", json!({"depth": d, "visible": vis}));
+    ui.horizontal_wrapped(|ui| {
+        ui.spacing_mut().item_spacing.x = 4.0;
+        for (label, cmd, tip) in [
+            ("All On", "depth.show_all", "Show and edit every depth"),
+            ("All Off", "depth.hide_all", "Hide every depth"),
+            ("Toggle", "depth.toggle_all", "Switch every depth"),
+        ] {
+            if ui.small_button(label).on_hover_text(tip).clicked() {
+                app.run(cmd, json!({}));
             }
         }
     });
+    ui.horizontal(|ui| {
+        let gray = app.engine.gray_hidden_depths;
+        if ui
+            .radio(gray, "Gray")
+            .on_hover_text("Draw depths that are off in gray")
+            .clicked()
+        {
+            app.run("depth.set_display", json!({"mode": "gray"}));
+        }
+        if ui
+            .radio(!gray, "Blank")
+            .on_hover_text("Don't draw depths that are off")
+            .clicked()
+        {
+            app.run("depth.set_display", json!({"mode": "blank"}));
+        }
+    });
+    ui.separator();
+    let counts = app.engine.depth_counts();
+    let (pressed, down, pos) = ui.input(|i| {
+        (
+            i.pointer.primary_pressed(),
+            i.pointer.primary_down(),
+            i.pointer.interact_pos(),
+        )
+    });
+    let mut sweep: Vec<i32> = Vec::new();
+    egui::ScrollArea::vertical().show(ui, |ui| {
+        if counts.is_empty() {
+            ui.label(RichText::new("No objects").color(tk.muted));
+        }
+        let text = ui.visuals().text_color();
+        for (d, n) in counts {
+            let shown = !app.engine.hidden_depths.contains(&d);
+            let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 20.0), Sense::click());
+            let over = pos.is_some_and(|p| rect.contains(p) && ui.clip_rect().contains(p));
+            if pressed && over && app.depth_drag.is_none() {
+                app.depth_drag = Some(!shown);
+            }
+            if app.depth_drag.is_some_and(|target| down && over && shown != target) {
+                sweep.push(d);
+            }
+            // Keyboard or accessibility clicks (a pointer press was handled above).
+            if resp.clicked() && app.depth_drag.is_none() {
+                app.run("depth.set_visible", json!({"depth": d, "visible": !shown}));
+            }
+            let p = ui.painter();
+            if resp.hovered() {
+                p.rect_filled(rect, 2.0, ui.visuals().widgets.hovered.weak_bg_fill);
+            }
+            let bx = egui::Rect::from_center_size(egui::pos2(rect.left() + 10.0, rect.center().y), vec2(13.0, 13.0));
+            p.rect_stroke(bx, 2.0, egui::Stroke::new(1.0_f32, tk.muted), egui::StrokeKind::Inside);
+            if shown {
+                p.rect_filled(bx.shrink(3.0), 1.0, tk.selection);
+            }
+            let color = if shown { text } else { tk.muted };
+            let font = egui::FontId::proportional(13.0);
+            p.text(
+                egui::pos2(bx.right() + 6.0, rect.center().y),
+                egui::Align2::LEFT_CENTER,
+                d.to_string(),
+                font.clone(),
+                color,
+            );
+            p.text(
+                egui::pos2(rect.right() - 4.0, rect.center().y),
+                egui::Align2::RIGHT_CENTER,
+                n.to_string(),
+                egui::FontId::proportional(11.0),
+                tk.muted,
+            );
+            let objects = if n == 1 { "object" } else { "objects" };
+            resp.on_hover_text(format!("Depth {d}: {n} {objects}")).widget_info(|| {
+                egui::WidgetInfo::selected(
+                    egui::WidgetType::Checkbox,
+                    true,
+                    shown,
+                    format!("Depth {d} ({n} {objects})"),
+                )
+            });
+        }
+    });
+    if let (Some(target), false) = (app.depth_drag, sweep.is_empty()) {
+        app.run("depth.set_visible", json!({"depths": sweep, "visible": target}));
+    }
+    if !down {
+        app.depth_drag = None;
+    }
 }
 
 /// The classic xfig top strip: menus and the current file on the first row,
