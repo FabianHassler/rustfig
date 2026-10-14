@@ -4,6 +4,7 @@
 //! [`App::run`], which executes engine commands or the UI-only commands in
 //! [`menus::UI_COMMANDS`].
 
+pub mod attributes;
 pub mod canvas;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod control;
@@ -58,6 +59,9 @@ pub struct App {
     pub show_indicator: bool,
     /// While dragging across depth checkboxes: the state they are set to.
     depth_drag: Option<bool>,
+    /// Mouse hints shown instead of the tool's while the pointer is over a
+    /// panel with its own button functions (the attribute buttons).
+    pub hint_override: Option<(&'static str, &'static str, &'static str)>,
     pub pending: Option<Pending>,
     /// File pickers (native dialogs; replaced in tests).
     pub file_dialogs: Box<dyn dialogs::FileDialogs>,
@@ -81,6 +85,7 @@ impl App {
             show_depths: true,
             show_indicator: true,
             depth_drag: None,
+            hint_override: None,
             pending: None,
             file_dialogs: Box::new(dialogs::NativeDialogs),
             quit_confirmed: false,
@@ -261,7 +266,7 @@ impl App {
             egui::TopBottomPanel::bottom("status").show(ctx, |ui| panels::status_bar(self, ui, &tokens));
         }
         if self.show_indicator {
-            egui::TopBottomPanel::bottom("indicator").show(ctx, |ui| panels::indicator_panel(self, ui));
+            egui::TopBottomPanel::bottom("indicator").show(ctx, |ui| attributes::attribute_panel(self, ui, &tokens));
         }
         egui::SidePanel::left("modes")
             .resizable(false)

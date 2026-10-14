@@ -109,6 +109,11 @@ pub struct Indicator {
     /// Align modes for the align command: "none", "left", "center", "right" / "top", "center", "bottom".
     pub align_h: String,
     pub align_v: String,
+    /// Arcs are pie wedges rather than open (xfig's "Arc Type").
+    pub pie_arc: bool,
+    /// Line spacing of the text tool as a multiple of the font's (xfig's
+    /// "Text Step").
+    pub text_step: f64,
 }
 
 impl Default for Indicator {
@@ -141,6 +146,8 @@ impl Default for Indicator {
             snap: SnapMode::Small,
             align_h: "center".into(),
             align_v: "none".into(),
+            pie_arc: false,
+            text_step: 1.0,
         }
     }
 }
@@ -214,6 +221,9 @@ impl Indicator {
             if p.kind == PolyKind::ArcBox {
                 self.box_radius = p.radius;
             }
+        }
+        if let ObjectKind::Arc(a) = &o.kind {
+            self.pie_arc = a.pie;
         }
     }
 

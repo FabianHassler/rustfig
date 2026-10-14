@@ -293,3 +293,53 @@ fn a_mouse_click_on_a_depth_toggles_it_once() {
     h.run_steps(2);
     assert!(h.state().engine.hidden_depths.is_empty());
 }
+
+#[test]
+fn attribute_panel_shows_the_modes_attributes() {
+    let mut h = harness(app());
+    let select = |h: &mut Harness<'static, App>, tool: ToolKind| {
+        h.state_mut().engine.set_tool(tool);
+        h.run_steps(2);
+    };
+    select(&mut h, ToolKind::Polyline);
+    h.get_by_label("Line Width: 1");
+    h.get_by_label("Arrow Mode: none");
+    h.get_by_label_contains("Zoom: ");
+    assert!(h.query_by_label_contains("Text Size").is_none());
+    select(&mut h, ToolKind::Text);
+    h.get_by_label("Text Size: 12");
+    h.get_by_label("Text Step: 1.0");
+    assert!(h.query_by_label_contains("Line Style").is_none());
+    // Delete has only Zoom and Grid Mode, as in xfig.
+    select(&mut h, ToolKind::Delete);
+    assert!(h.query_by_label_contains("Point Posn").is_none());
+    h.get_by_label_contains("Grid Mode: ");
+}
+
+#[test]
+fn attribute_buttons_step_and_choose() {
+    let mut h = harness(app());
+    h.state_mut().engine.set_tool(ToolKind::Polyline);
+    h.run_steps(2);
+    let at = h.get_by_label("Line Width: 1").rect().center();
+    // Right button: next/increase; middle: previous/decrease.
+    click_button(&mut h, at, egui::PointerButton::Secondary, egui::Modifiers::NONE);
+    click_button(&mut h, at, egui::PointerButton::Secondary, egui::Modifiers::NONE);
+    assert_eq!(h.state().engine.indicator.thickness, 3);
+    click_button(&mut h, at, egui::PointerButton::Middle, egui::Modifiers::NONE);
+    assert_eq!(h.state().engine.indicator.thickness, 2);
+    // Hovering shows xfig's button functions in the mouse indicator.
+    h.get_by_label_contains("Left: Menu; middle: Dec/Prev; right: Inc/Next");
+    // Left click opens the choice panel; pick a line style.
+    h.get_by_label("Line Style: solid").click();
+    h.run_steps(2);
+    h.get_by_label("dashed").click();
+    h.run_steps(2);
+    assert_eq!(h.state().engine.indicator.line, rustfig_model::LineKind::Dashed);
+    h.get_by_label_contains("Arrow Type: ").click();
+    h.run_steps(2);
+    h.get_by_label("solid type 1").click();
+    h.run_steps(2);
+    let a = h.state().engine.indicator.arrow;
+    assert_eq!((a.kind, a.style), (1, 1));
+}

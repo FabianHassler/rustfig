@@ -4,9 +4,9 @@
 use crate::theme::Tokens;
 use crate::{icons, App};
 use egui::{vec2, Color32, RichText, Sense};
-use rustfig_engine::{SnapMode, ToolKind};
-use rustfig_model::{CapStyle, Document, JoinStyle, Justify, LineKind, Rgb, STANDARD_COLORS, STANDARD_COLOR_NAMES};
-use serde_json::{json, Value};
+use rustfig_engine::ToolKind;
+use rustfig_model::{Document, LineKind, Rgb, STANDARD_COLORS, STANDARD_COLOR_NAMES};
+use serde_json::json;
 
 pub fn mode_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     egui::ScrollArea::vertical().show(ui, |ui| {
@@ -190,224 +190,6 @@ pub fn font_combo(ui: &mut egui::Ui, id: &str, font: i32, postscript: bool) -> O
             }
         });
     chosen
-}
-
-fn set(app: &mut App, field: &str, v: Value) {
-    let mut m = serde_json::Map::new();
-    m.insert(field.to_string(), v);
-    app.run("indicator.set", Value::Object(m));
-}
-
-pub fn indicator_panel(app: &mut App, ui: &mut egui::Ui) {
-    let ind = app.engine.indicator.clone();
-    let units = app.engine.doc().settings.units;
-    ui.add_space(2.0);
-    ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = vec2(6.0, 4.0);
-        ui.label("Line");
-        if let Some(k) = line_combo(ui, "ind_line", ind.line) {
-            set(app, "line", json!(k));
-        }
-        let mut th = ind.thickness;
-        if ui
-            .add(egui::DragValue::new(&mut th).range(0..=100).prefix("w "))
-            .changed()
-        {
-            set(app, "thickness", json!(th));
-        }
-        if ind.line != LineKind::Solid {
-            let mut sv = ind.style_val;
-            if ui
-                .add(
-                    egui::DragValue::new(&mut sv)
-                        .range(0.5..=100.0)
-                        .speed(0.1)
-                        .prefix("dash "),
-                )
-                .changed()
-            {
-                set(app, "style_val", json!(sv));
-            }
-        }
-        ui.separator();
-        ui.label("Pen");
-        if let Some(c) = color_combo(ui, "ind_pen", app.engine.doc(), ind.pen_color) {
-            set(app, "pen_color", json!(c));
-        }
-        ui.label("Fill");
-        if let Some(c) = color_combo(ui, "ind_fill", app.engine.doc(), ind.fill_color) {
-            set(app, "fill_color", json!(c));
-        }
-        if let Some(f) = fill_combo(ui, "ind_area", ind.area_fill) {
-            set(app, "area_fill", json!(f));
-        }
-        ui.separator();
-        let mut depth = ind.depth;
-        if ui
-            .add(egui::DragValue::new(&mut depth).range(0..=999).prefix("depth "))
-            .changed()
-        {
-            set(app, "depth", json!(depth));
-        }
-        ui.separator();
-        let mut fwd = ind.forward_arrow;
-        if ui
-            .toggle_value(&mut fwd, "fwd arrow")
-            .on_hover_text("Forward arrow")
-            .changed()
-        {
-            set(app, "forward_arrow", json!(fwd));
-        }
-        let mut back = ind.backward_arrow;
-        if ui
-            .toggle_value(&mut back, "back arrow")
-            .on_hover_text("Backward arrow")
-            .changed()
-        {
-            set(app, "backward_arrow", json!(back));
-        }
-        if ind.forward_arrow || ind.backward_arrow {
-            let names = [
-                "stick",
-                "triangle",
-                "indented",
-                "pointed",
-                "circle",
-                "half circle",
-                "square",
-                "diamond",
-                "bar",
-                "fork",
-            ];
-            let mut a = ind.arrow;
-            let cur = usize::try_from(a.kind)
-                .ok()
-                .and_then(|i| names.get(i))
-                .copied()
-                .unwrap_or("?");
-            egui::ComboBox::from_id_salt("ind_arrow")
-                .selected_text(cur)
-                .width(80.0)
-                .show_ui(ui, |ui| {
-                    for (i, n) in names.iter().enumerate() {
-                        if ui.selectable_label(a.kind == i as i32, *n).clicked() {
-                            a.kind = i as i32;
-                        }
-                    }
-                });
-            let mut filled = a.style == 1;
-            ui.checkbox(&mut filled, "filled");
-            a.style = i32::from(filled);
-            ui.add(egui::DragValue::new(&mut a.width).range(10.0..=2000.0).prefix("aw "));
-            ui.add(egui::DragValue::new(&mut a.height).range(10.0..=2000.0).prefix("ah "));
-            if a != ind.arrow {
-                set(app, "arrow", json!(a));
-            }
-        }
-        ui.separator();
-        egui::ComboBox::from_id_salt("ind_cap")
-            .selected_text(format!("cap: {:?}", ind.cap))
-            .width(110.0)
-            .show_ui(ui, |ui| {
-                for c in [CapStyle::Butt, CapStyle::Round, CapStyle::Projecting] {
-                    if ui.selectable_label(c == ind.cap, format!("{c:?}")).clicked() {
-                        set(app, "cap", json!(c));
-                    }
-                }
-            });
-        egui::ComboBox::from_id_salt("ind_join")
-            .selected_text(format!("join: {:?}", ind.join))
-            .width(110.0)
-            .show_ui(ui, |ui| {
-                for j in [JoinStyle::Miter, JoinStyle::Round, JoinStyle::Bevel] {
-                    if ui.selectable_label(j == ind.join, format!("{j:?}")).clicked() {
-                        set(app, "join", json!(j));
-                    }
-                }
-            });
-        ui.separator();
-        if let Some((f, ps)) = font_combo(ui, "ind_font", ind.font, ind.postscript) {
-            set(app, "font", json!(f));
-            set(app, "postscript", json!(ps));
-        }
-        let mut size = ind.font_size;
-        if ui
-            .add(egui::DragValue::new(&mut size).range(1.0..=500.0).suffix(" pt"))
-            .changed()
-        {
-            set(app, "font_size", json!(size));
-        }
-        for (j, label) in [(Justify::Left, "L"), (Justify::Center, "C"), (Justify::Right, "R")] {
-            if ui
-                .selectable_label(ind.justify == j, label)
-                .on_hover_text(format!("{j:?} justified"))
-                .clicked()
-            {
-                set(app, "justify", json!(j));
-            }
-        }
-        let mut ta = ind.text_angle;
-        if ui
-            .add(egui::DragValue::new(&mut ta).range(-360.0..=360.0).suffix("°"))
-            .on_hover_text("Text angle")
-            .changed()
-        {
-            set(app, "text_angle", json!(ta));
-        }
-        ui.separator();
-        let mut r = ind.box_radius;
-        if ui
-            .add(egui::DragValue::new(&mut r).range(0..=200).prefix("radius "))
-            .changed()
-        {
-            set(app, "box_radius", json!(r));
-        }
-        let mut sides = ind.sides;
-        if ui
-            .add(egui::DragValue::new(&mut sides).range(3..=100).prefix("sides "))
-            .changed()
-        {
-            set(app, "sides", json!(sides));
-        }
-        let mut rot = ind.rotate_angle;
-        if ui
-            .add(
-                egui::DragValue::new(&mut rot)
-                    .range(-360.0..=360.0)
-                    .prefix("rotate ")
-                    .suffix("°"),
-            )
-            .changed()
-        {
-            set(app, "rotate_angle", json!(rot));
-        }
-        ui.separator();
-        egui::ComboBox::from_id_salt("ind_snap")
-            .selected_text(format!("snap: {}", ind.snap.label(units)))
-            .width(110.0)
-            .show_ui(ui, |ui| {
-                for m in SnapMode::ALL {
-                    if ui.selectable_label(m == ind.snap, m.label(units)).clicked() {
-                        set(app, "snap", json!(m));
-                    }
-                }
-            });
-        let grid_label = ind.grid.map(|g| g.label(units)).unwrap_or("off");
-        egui::ComboBox::from_id_salt("ind_grid")
-            .selected_text(format!("grid: {grid_label}"))
-            .width(110.0)
-            .show_ui(ui, |ui| {
-                if ui.selectable_label(ind.grid.is_none(), "off").clicked() {
-                    set(app, "grid", Value::Null);
-                }
-                for m in SnapMode::ALL.iter().skip(1) {
-                    if ui.selectable_label(ind.grid == Some(*m), m.label(units)).clicked() {
-                        set(app, "grid", json!(m));
-                    }
-                }
-            });
-    });
-    ui.add_space(2.0);
 }
 
 /// xfig's depth panel: All On / All Off / Toggle, Gray or Blank display of
@@ -605,7 +387,15 @@ const INDICATOR_SIZE: egui::Vec2 = vec2(380.0, 44.0);
 /// LICENSE-xfig): buttons 4.5 % of the width wide and half the height high,
 /// starting at 45 % of the height.
 pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
-    let h = app.engine.mouse_hints();
+    let mut h = app.engine.mouse_hints();
+    if let Some((left, middle, right)) = app.hint_override {
+        h = rustfig_engine::MouseHints {
+            left,
+            middle,
+            right,
+            keyboard: h.keyboard,
+        };
+    }
     let xfig = app.engine.mouse_scheme() == rustfig_engine::MouseScheme::Xfig;
     let (rect, resp) = ui.allocate_exact_size(INDICATOR_SIZE, Sense::hover());
     let p = ui.painter_at(rect);

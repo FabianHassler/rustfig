@@ -48,7 +48,7 @@
 | View: zoom, fit, pan to origin, page border, portrait/landscape | ✅ | ✅ |
 | View: depth manager | right panel | ✅ |
 | View: character map, style manager | — | ❌ |
-| Indicator panel (line, colours, fill, depth, arrows, caps, joins, fonts, justification, angle, radius, sides, rotation, grid, positioning) | bottom panel | 🟡 no latex/manhattan positioning |
+| Indicator panel (line, colours, fill, depth, arrows, caps, joins, fonts, justification, angle, radius, sides, rotation, grid, positioning, arc type, text step, text flags) | xfig's buttons, per mode | 🟡 no Angle Geom (latex/manhattan), Smart Links, copy counts |
 | Rulers | — | ❌ |
 | Mouse-function panel | top strip, one column per button | ✅ |
 
@@ -63,7 +63,7 @@
 | Units box | 🟡 shows the units, opens units and page settings; xfig's scale panel missing | W6 |
 | Top and side rulers | ❌ | W6 |
 | Depth panel: checkboxes, drag-toggle, All On/Off/Toggle, Gray/Blank | ✅ with object counts; hidden depths can't be picked; export of active layers only | — |
-| Attribute panel: graphical buttons, per-mode attributes | 🟡 all attributes always shown as plain widgets | W5 |
+| Attribute panel: graphical buttons, per-mode attributes | ✅ xfig's buttons and order, per-mode masks, choice panels; middle/right buttons step values | — |
 | xfig accelerators (Meta-key) | 🟡 platform shortcuts and xfig mode letters | W7 |
 
 ## Revision history
@@ -74,3 +74,4 @@
 | 2026-10-13 | W1: classic layout, message panel, mouse indicator, units box. |
 | 2026-10-14 | W2: three-button mouse semantics and the modern scheme. |
 | 2026-10-14 | W3: depth panel. |
+| 2026-10-14 | W5: attribute panel. |

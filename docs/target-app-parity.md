@@ -1,6 +1,6 @@
 # Target-app parity assessment: RustFig vs xfig 3.2.9
 
-**Status:** 2026-10-14, overall **≈60 %** (W3 landed). Revised whenever a task lands.
+**Status:** 2026-10-14, overall **≈60 %** (W5 landed). Revised whenever a task lands.
 
 ## Methodology
 
@@ -21,7 +21,7 @@ the score.
 |------|-------:|------:|---------|------:|
 | Drawing modes | 12 | 88 % | library objects; dimension lines (Shift+left in polyline mode); xfig's click-to-close rules for some shapes | 14 |
 | Editing modes | 12 | 70 % | anchor point for flip/rotate (right button), array copy, align to canvas, figure comments from Edit mode, open compound (edit in place), join/split lines, chop, tangent/normal, angle/length/area measure modes, copy to library | 56 |
-| Attributes / indicator | 10 | 70 % | colour editor UI, point positioning modes (latex, manhattan, mountain), linked move, arrow types 10–14 exact shapes, dash-dot tick styles | 40 |
+| Attributes / indicator | 10 | 75 % | colour editor UI, Angle Geom (latex, manhattan, mountain), smart links, copy counts, arrow types 10–14 exact shapes, dash-dot tick styles | 34 |
 | File format | 10 | 85 % | reading Fig 1.x/2.x, exact pre-3.2 spline conversion | 24 |
 | Export | 12 | 35 % | PostScript (multi-page, print layout), LaTeX family (TikZ, PSTricks, pict2e, eepic), GIF/JPEG/TIFF/PPM/XBM/XPM, CGM/EMF/HPGL/MetaPost/DXF | 120 |
 | Text | 10 | 55 % | character map, LaTeX special-text export, exact PostScript font metrics, compose keys, spell check | 60 |
@@ -43,6 +43,7 @@ the score.
 - Automation: control channel `crates/ui-egui/src/control.rs`, MCP `crates/mcp/`, CLI `apps/cli/`.
 - Main window: classic xfig layout (`crates/ui-egui/src/panels.rs` `classic_top`), mouse hints from the engine (`Engine::mouse_hints`), headless UI tests in `crates/ui-egui/tests/ui_smoke.rs`.
 - Depth panel: `panels::depth_panel` (counts, drag-toggle, All On/Off/Toggle, Gray/Blank), `Engine::depths_changed`; tests in `crates/engine/tests/depths.rs` (picking, selection, buttons, active-layer export) and `ui_smoke.rs` (rows, buttons, drag, click).
+- Attribute panel: `ui-egui/attributes` (ported from `w_indpanel.c`), tests `attribute_panel_shows_the_modes_attributes` and `attribute_buttons_step_and_choose` in `ui_smoke.rs`.
 - Mouse buttons: xfig's three-button semantics per mode and a modern scheme (`MouseScheme`, `tool.mouse_buttons`, View menu); `mouse_hints_match_behaviour` in `crates/engine/src/tools/mod.rs` presses every button in every tool, state and scheme and checks the indicator against what happened; Alt/Ctrl+click map to middle/right (`canvas::tool_button`), tested in `ui_smoke.rs`.
 - Verified on macOS by driving the app over the control channel and reviewing screenshots.
 
@@ -52,5 +53,6 @@ the score.
 |------|--------:|------|
 | 2026-10-13 | 58 % | First assessment. |
 | 2026-10-13 | 58 % | W1: View & navigation 75 → 80 % (rounds to the same overall). |
+| 2026-10-14 | 60 % | W5: Attributes 70 → 75 % (xfig's attribute panel per mode, arc type, text step). |
 | 2026-10-14 | 60 % | W3: View & navigation 85 → 88 % (depth panel parity, active-layer export). |
 | 2026-10-14 | 60 % | W2: View & navigation 80 → 85 %, Drawing 85 → 88 % (freehand, arc by centre), Editing 65 → 70 % (delete region, cut buffer, copy & flip/rotate, update settings, break and tag, scale about corner or centre). |

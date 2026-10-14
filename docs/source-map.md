@@ -146,7 +146,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_cmdpanel.c` | 1860 | main menus | `ui-egui/menus` | own | review |
 | `w_modepanel.c` | 905 | mode panel | `panels::mode_panel` | own | review |
 | `w_icons.c` | 3270 | mode and attribute icon bitmaps | `ui-egui/icons` (drawn in code) | own | port bitmaps for xfig's look (W5) |
-| `w_indpanel.c` | 4865 | attribute (indicator) panel, choice panels | `panels::indicator` | partial | W5 |
+| `w_indpanel.c` | 4865 | attribute (indicator) panel, choice panels | `ui-egui/attributes` | ported: buttons, order, per-mode masks, choice panels; missing: Angle Geom, Smart Links, copy counts, dimension line, tangent length, colour editor | D7, D8, D10, D4, E4 |
 | `w_mousefun.c` | 432 | mouse-function indicator | `panels::mouse_indicator`, `Engine::mouse_hints` | ported: layout and wording | — |
 | `w_msgpanel.c` | 881 | message panel, lengths while drawing | `panels::message_panel` | partial: show lengths | D10 |
 | `w_layers.c` | 903 | depth panel | `panels::depth_panel` | own | review (Front/Back labels) |
@@ -156,7 +156,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_zoom.c` | 202 | zoom panel | `cmd/view` | partial: zoom panel | E3 |
 | `w_grid.c` | 238 | grid drawing | canvas | own | — |
 | `w_canvas.c` | 1218 | canvas input, key bindings | `ui-egui/canvas` | own | review |
-| `w_cursor.c` | 144 | cursors per mode | canvas | partial | W5 |
+| `w_cursor.c` | 144 | cursors per mode | canvas | partial | — |
 | `w_color.c` | 2592 | colour panel and editor | indicator combo | partial: colour editor | E4 |
 | `w_export.c` | 2054 | export panel | `dialogs::export` | partial | B7 |
 | `w_print.c` | 1542 | print panel | — | modern: PDF to the system print dialog | B5 |
@@ -164,7 +164,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_library.c` | 1831 | library panel | — | missing | D6 |
 | `w_srchrepl.c` | 966 | search/replace, spell check | `dialogs::search` | partial: spell check | F5 |
 | `w_style.c` | 1026 | style manager | — | missing | E6 |
-| `w_fontpanel.c` | 424 | font menus | indicator | partial | W5 |
+| `w_fontpanel.c` | 424 | font menus | `attributes` Text Font panel | own | review |
 | `w_help.c` | 219 | Help menu | menus | own | — |
 | `w_capture.c` | 676 | screen capture into a picture | — | n/a (system screenshot) | — |
 | `w_digitize.c` | 471 | digitising tablet | — | n/a | — |
@@ -204,4 +204,5 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 |------|------|
 | 2026-10-14 | First version. |
 | 2026-10-14 | S1: draw and save order ported (`u_redraw.c`, `f_save.c`). |
+| 2026-10-14 | W5: attribute panel ported (`w_indpanel.c`, masks from `w_modepanel.c`). |
 | 2026-10-14 | S2: mouse indicator ported (`w_mousefun.c`, `set_mousefun` wording); notes from the real xfig. |

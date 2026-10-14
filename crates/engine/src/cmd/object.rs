@@ -255,6 +255,9 @@ fn update(e: &mut Engine, p: &Value) -> CmdResult {
                 pl.radius = ind.box_radius;
             }
         }
+        if let ObjectKind::Arc(a) = &mut o.kind {
+            a.pie = ind.pie_arc;
+        }
     })?;
     Ok(json!({"count": n}))
 }

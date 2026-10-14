@@ -20,7 +20,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Overall parity (weighted) | ≈60 % |
 | Commands (all reachable from the control channel and MCP) | 128 engine (incl. 38 tool modes) + 15 UI |
 | Interactive tools (xfig modes) | 38 |
-| Tests | 122 (unit, integration, property-based fuzzing, headless UI) |
+| Tests | 125 (unit, integration, property-based fuzzing, headless UI) |
 | Fig format | read 3.0–3.2, write 3.2 |
 | Export formats | PDF, SVG, EPS, PNG |
 | Perf, 50k paths (render fit / hit test / open) | 330 ms / 0.1 ms / 17 ms |
@@ -31,7 +31,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 |-----------|--------|---------|
 | Drawing modes | 88 % | all xfig shapes except library objects; freehand and arc by centre |
 | Editing modes | 70 % | missing open-compound, join/split, chop, tangent, measure modes |
-| Attributes panel | 70 % | missing colour editor, latex/manhattan positioning |
+| Attributes panel | 75 % | xfig's per-mode buttons; missing colour editor, latex/manhattan positioning, smart links |
 | File format | 85 % | Fig 1.x/2.x read missing |
 | Export | 35 % | LaTeX family, bitmaps besides PNG, print missing |
 | Text | 55 % | fallback fonts, no character map or LaTeX special text |
@@ -57,7 +57,7 @@ English only. See [localization parity](docs/localization-parity.md).
 
 The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 [docs/gaps.md](docs/gaps.md). Next up:
-1. Phase W, xfig window parity (W1 layout, W2 mouse buttons, W3 depth panel done): Snap menu, per-mode attribute panel, rulers.
+1. Phase W, xfig window parity (W1 layout, W2 mouse buttons, W3 depth panel, W5 attribute panel done): rulers, Snap menu, xfig accelerators.
 2. fig2dev: reference tests comparing RustFig with xfig's converter (A8), then fig2dev as an optional export backend (B0).
 3. Phase A, hardening: shared undo snapshots, per-command cost, CI (Linux on every push, all OSes for releases), web build, UI tests, export polish, crash recovery, no UI stalls on large drawings.
 4. Phase B, exports for LaTeX users: TikZ, PDF/EPS + LaTeX overlay, PostScript layout, printing.
@@ -67,6 +67,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-14 | W5: xfig's attribute panel (`w_indpanel.c`): its buttons in its order with value pictures, only the attributes the mode uses, choice panels (fill styles and patterns, colours, line styles, arrows, fonts, …), middle/right buttons step values; new Arc Type and Text Step. 125 tests. |
 | 2026-10-14 | S2: xfig's mouse indicator layout and wording; ellipses finish with either button, text mode's middle button finishes and right cancels, as in xfig. |
 | 2026-10-14 | S0–S1: source map of xfig and fig2dev (`docs/source-map.md`); xfig's draw, save and pick order (by object type within a depth, gray depths behind). 121 tests. |
 | 2026-10-14 | W3: xfig's depth panel (object counts, drag across checkboxes, All On/Off/Toggle, Gray/Blank); depths that are off can't be picked or edited; export of active layers only. 118 tests. |

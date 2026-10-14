@@ -742,7 +742,7 @@ impl Engine {
                     [*a, *b, *c]
                 }
             };
-            let mut arc = Arc::through(style, a, b, c, false)?;
+            let mut arc = Arc::through(style, a, b, c, self.indicator.pie_arc)?;
             arc.forward_arrow = fa;
             arc.backward_arrow = ba;
             ObjectKind::Arc(arc)
@@ -1011,7 +1011,13 @@ impl Engine {
                         // Finish this line and start a new text object below it.
                         let origin = *origin;
                         self.finish_text()?;
-                        let size = self.indicator.font_size * rustfig_geom::FIG_PER_POINT * rustfig_text::LINE_SPACING;
+                        let step = if self.indicator.text_step.is_finite() {
+                            self.indicator.text_step.clamp(0.0, 100.0)
+                        } else {
+                            1.0
+                        };
+                        let size =
+                            self.indicator.font_size * rustfig_geom::FIG_PER_POINT * rustfig_text::LINE_SPACING * step;
                         let a = self.indicator.text_angle.to_radians();
                         let next = origin + Affine::rotate(a).apply_vec(Point::new(0.0, size));
                         self.tool_state = ToolState::Text {
@@ -2446,6 +2452,37 @@ mod tests {
         // Right at rest enters a single point.
         click(&mut e, 2400.0, 2400.0, Button::Right);
         assert_eq!(e.doc().objects[2].points().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn arc_type_and_text_step() {
+        let mut e = Engine::new();
+        e.indicator.pie_arc = true;
+        e.set_tool(ToolKind::Arc);
+        click(&mut e, 0.0, 0.0, Button::Left);
+        click(&mut e, 600.0, 600.0, Button::Left);
+        click(&mut e, 1200.0, 0.0, Button::Left);
+        let ObjectKind::Arc(a) = objects_of(&e)[0] else {
+            panic!()
+        };
+        assert!(a.pie);
+        // Text step 2: the next line starts twice as far down.
+        e.set_tool(ToolKind::Text);
+        let start = |e: &mut Engine, step: f64| {
+            e.indicator.text_step = step;
+            click(e, 6000.0, 6000.0, Button::Left);
+            e.tool_event(ToolEvent::Text("a".into())).unwrap();
+            e.tool_event(ToolEvent::Key(Key::Enter)).unwrap();
+            let ToolState::Text { origin, .. } = &e.tool_state else {
+                panic!()
+            };
+            let dy = origin.y - 6000.0;
+            e.tool_event(ToolEvent::Key(Key::Escape)).unwrap();
+            dy
+        };
+        let one = start(&mut e, 1.0);
+        let two = start(&mut e, 2.0);
+        assert!((two - 2.0 * one).abs() < 1e-6, "{one} {two}");
     }
 
     #[test]
