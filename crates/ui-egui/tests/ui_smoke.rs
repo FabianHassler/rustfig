@@ -30,7 +30,9 @@ fn classic_layout_has_xfig_regions() {
         h.get_by_label(menu);
     }
     h.get_by_label("(untitled)");
-    h.get_by_label_contains("Left: select / drag");
+    // xfig starts with no mode: an empty mouse indicator and its message.
+    h.get_by_label_contains("Left: —; middle: —; right: —");
+    h.get_by_label("READY. Select a mode or load a file");
     h.get_by_label("Units: 1in = 1.00in");
     h.get_by_label("Top ruler");
     h.get_by_label("Side ruler");

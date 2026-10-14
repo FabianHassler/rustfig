@@ -13,6 +13,9 @@ use serde_json::json;
 /// The tools, in mode-panel order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ToolKind {
+    /// No mode chosen yet: xfig starts like this ("READY. Select a mode or
+    /// load a file"); canvas clicks do nothing. Not a command or a button.
+    None,
     Select,
     CircleRadius,
     CircleDiameter,
@@ -97,6 +100,7 @@ impl ToolKind {
 
     pub fn id(self) -> &'static str {
         match self {
+            ToolKind::None => "tool.none",
             ToolKind::Select => "tool.select",
             ToolKind::CircleRadius => "tool.circle_radius",
             ToolKind::CircleDiameter => "tool.circle_diameter",
@@ -144,6 +148,7 @@ impl ToolKind {
 
     pub fn label(self) -> &'static str {
         match self {
+            ToolKind::None => "No mode",
             ToolKind::Select => "Select",
             ToolKind::CircleRadius => "Circle (radius)",
             ToolKind::CircleDiameter => "Circle (diameter)",
@@ -630,6 +635,9 @@ impl Engine {
             return Ok(());
         }
         let tool = self.tool;
+        if tool == ToolKind::None {
+            return Ok(());
+        }
         if tool == ToolKind::Text {
             return self.text_event(ev);
         }
@@ -2339,6 +2347,25 @@ mod tests {
 
     fn objects_of(e: &Engine) -> Vec<&ObjectKind> {
         e.doc().objects.iter().map(|o| &o.kind).collect()
+    }
+
+    #[test]
+    fn starts_with_no_mode_like_xfig() {
+        let mut e = Engine::new();
+        assert_eq!(e.tool(), ToolKind::None);
+        assert_eq!(e.status(), "READY. Select a mode or load a file");
+        e.execute(
+            "shape.rectangle",
+            &json!({"x": 0, "y": 0, "width": 1200, "height": 1200}),
+        )
+        .unwrap();
+        for b in [Button::Left, Button::Middle, Button::Right] {
+            click(&mut e, 0.0, 0.0, b);
+        }
+        assert!(!e.tool_busy());
+        assert!(e.selection().len() <= 1 && e.doc().objects.len() == 1);
+        let h = e.mouse_hints();
+        assert!(h.left.is_empty() && h.right.is_empty());
     }
 
     #[test]

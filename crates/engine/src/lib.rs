@@ -109,7 +109,7 @@ impl Engine {
             exact_points: Vec::new(),
             release_at: None,
             snap_click: None,
-            tool: ToolKind::Select,
+            tool: ToolKind::None,
             tool_state: tools::ToolState::Idle,
             mouse_scheme: tools::MouseScheme::default(),
             clipboard: Vec::new(),
@@ -120,7 +120,7 @@ impl Engine {
             gray_hidden_depths: true,
             show_page_border: true,
             requests: Vec::new(),
-            status: String::new(),
+            status: "READY. Select a mode or load a file".to_string(),
             changed: false,
             bbox_cache: std::cell::RefCell::new((0, Vec::new())),
         }

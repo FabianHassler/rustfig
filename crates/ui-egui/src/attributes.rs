@@ -189,7 +189,8 @@ pub fn attributes_for(tool: ToolKind) -> Vec<Attr> {
         ToolKind::Select => &[MIN2, TEXT0, LINE1, ARROWS, &[BoxRadius, ArcType]],
         ToolKind::RotateCcw | ToolKind::RotateCw => &[MIN2, &[RotnAngle]],
         ToolKind::Arrow => &[&[LineWidth, ArrowType, ArrowSize]],
-        ToolKind::Break
+        ToolKind::None
+        | ToolKind::Break
         | ToolKind::Delete
         | ToolKind::DeletePoint
         | ToolKind::Edit

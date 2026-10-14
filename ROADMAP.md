@@ -20,7 +20,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Overall parity (weighted) | ≈61 % |
 | Commands (all reachable from the control channel and MCP) | 132 engine (incl. 38 tool modes) + 17 UI |
 | Interactive tools (xfig modes) | 38 |
-| Tests | 143 (unit, integration, property-based fuzzing, headless UI) |
+| Tests | 146 (unit, integration, property-based fuzzing, headless UI) |
 | Fig format | read 3.0–3.2, write 3.2 |
 | Export formats | PDF, SVG, EPS, PNG |
 | Perf, 50k paths (render fit / hit test / open) | 330 ms / 0.1 ms / 17 ms |
@@ -66,6 +66,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-14 | Starts with no mode, as xfig: "READY. Select a mode or load a file", empty mouse indicator, canvas clicks ignored until a mode is chosen. |
 | 2026-10-14 | Attribute panel pictures are xfig's bitmaps (`w_icons.c`) on the buttons and in the choice panels; Arrow Mode in xfig's order (none, forward, both, backward); Grid Mode offers xfig's four grid steps. |
 | 2026-10-14 | Main menus cloned from xfig (`w_cmdpanel.c`): File, Edit, View, Snap, Help with xfig's entries, order, dividers and accelerators; entries RustFig lacks greyed with their plan task; Edit › Global settings holds RustFig's preferences; the Object and Tools menus remain in the modern layout. |
 | 2026-10-14 | Mode panel with xfig's own icons (`w_icons.c` bitmaps) in xfig's order; xfig modes RustFig lacks (library, open compound, join/split, chop, tangent, measure) shown greyed with their plan task; RustFig's tools without an xfig mode (Select, Open/close, X-splines, separate ellipse tools) are in the Tools menu only. |
