@@ -137,6 +137,8 @@ fn dialogs_open() {
         ("app.document_settings", "Document Settings"),
         ("app.commands", "Commands"),
         ("app.about", "About RustFig"),
+        ("app.global_settings", "Global settings"),
+        ("app.unit_panel", "Unit menu"),
     ] {
         h.state_mut().run(cmd, json!({}));
         h.run_steps(2);
@@ -486,4 +488,70 @@ fn export_dialog_lists_xfigs_languages() {
     let text = std::fs::read_to_string(&out).unwrap();
     assert!(text.starts_with("\\makebox["), "{text}");
     std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn edit_attributes_dialog_opens_for_the_selection() {
+    let mut h = harness(app());
+    h.state_mut()
+        .engine
+        .execute("shape.rectangle", &json!({"x": 0, "y": 0, "width": 600, "height": 300}))
+        .unwrap();
+    h.state_mut().engine.execute("edit.select_all", &json!({})).unwrap();
+    h.state_mut().run("app.edit_selected", json!({}));
+    h.run_steps(2);
+    assert!(h.query_all_by_label("Edit box").count() >= 1);
+}
+
+#[test]
+fn file_dialogs_save_open_merge_and_cancel() {
+    let dir = std::env::temp_dir().join(format!("rustfig-ui-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("a.fig").to_string_lossy().into_owned();
+    let mut a = app();
+    a.file_dialogs = Box::new(ScriptedDialogs::new([
+        Some(path.clone()), // Save As
+        Some(path.clone()), // Open
+        Some(path.clone()), // Merge
+        None,               // Import picture: cancelled
+    ]));
+    let mut h = harness(a);
+    h.state_mut()
+        .engine
+        .execute("shape.rectangle", &json!({"x": 0, "y": 0, "width": 600, "height": 300}))
+        .unwrap();
+    h.state_mut().run("app.save_as", json!({}));
+    h.run_steps(2);
+    assert!(std::path::Path::new(&path).exists());
+    assert!(!h.state().engine.is_modified());
+    h.state_mut().run("app.open", json!({}));
+    h.run_steps(2);
+    assert_eq!(h.state().engine.doc().objects.len(), 1);
+    h.state_mut().run("app.merge", json!({}));
+    h.run_steps(2);
+    assert_eq!(h.state().engine.doc().objects.len(), 2);
+    h.state_mut().run("app.import_picture", json!({}));
+    h.run_steps(2);
+    assert_eq!(h.state().engine.doc().objects.len(), 2);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn quit_asks_about_unsaved_changes() {
+    let mut h = harness(app());
+    h.state_mut().run("app.quit", json!({}));
+    h.run_steps(2);
+    assert!(h.state().quit_requested(), "nothing to save: quits at once");
+    let mut h = harness(app());
+    h.state_mut()
+        .engine
+        .execute("shape.rectangle", &json!({"x": 0, "y": 0, "width": 600, "height": 300}))
+        .unwrap();
+    h.state_mut().run("app.quit", json!({}));
+    h.run_steps(2);
+    assert!(!h.state().quit_requested());
+    h.get_by_label("Save changes?");
+    h.get_by_label("Discard").click();
+    h.run_steps(2);
+    assert!(h.state().quit_requested());
 }

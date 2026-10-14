@@ -208,6 +208,11 @@ impl App {
     }
 
     /// Ask before discarding unsaved changes.
+    /// Whether quitting was confirmed (the window closes on the next frame).
+    pub fn quit_requested(&self) -> bool {
+        self.quit_confirmed
+    }
+
     pub fn guard_unsaved(&mut self, action: Pending) {
         if self.engine.is_modified() {
             self.pending = Some(action);
