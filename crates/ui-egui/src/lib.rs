@@ -14,6 +14,7 @@ pub mod menus;
 pub mod panels;
 pub mod rulers;
 pub mod theme;
+pub mod xfig_icons;
 
 use rustfig_engine::{Engine, UiRequest};
 use serde_json::{json, Value};
@@ -63,6 +64,8 @@ pub struct App {
     /// Mouse hints shown instead of the tool's while the pointer is over a
     /// panel with its own button functions (the attribute buttons).
     pub hint_override: Option<(&'static str, &'static str, &'static str)>,
+    /// Textures of xfig's mode icons, made on first use.
+    pub(crate) icon_textures: std::collections::HashMap<&'static str, egui::TextureHandle>,
     /// xfig's keyboard accelerators (Meta menu keys, Ctrl mode keys).
     pub xfig_keys: bool,
     /// The Unit/Scale settings window (right click on the units box).
@@ -96,6 +99,7 @@ impl App {
             hint_shown: None,
             unit_panel_open: false,
             xfig_keys: true,
+            icon_textures: std::collections::HashMap::new(),
             pending: None,
             file_dialogs: Box::new(dialogs::NativeDialogs),
             quit_confirmed: false,

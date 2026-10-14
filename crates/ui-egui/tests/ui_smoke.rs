@@ -61,6 +61,10 @@ fn layout_toggle_command() {
 fn every_tool_button_selects_its_tool() {
     let mut h = harness(app());
     for t in ToolKind::ALL {
+        // The mode panel scrolls in a small window, as a user would.
+        h.get_by_label(t.label()).scroll_to_me();
+        // Scrolling is animated: let it settle.
+        h.run_steps(30);
         h.get_by_label(t.label()).click();
         h.run_steps(2);
         assert_eq!(h.state().engine.tool(), t, "button {}", t.label());

@@ -78,3 +78,4 @@
 | 2026-10-14 | W6: rulers and units box. |
 | 2026-10-14 | W4: Snap menu. |
 | 2026-10-14 | W7: xfig accelerators. |
+| 2026-10-14 | Mode panel: xfig's icons and order; modes not yet available shown greyed. |

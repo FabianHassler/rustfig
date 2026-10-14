@@ -20,8 +20,10 @@ SIGGRAPH '95.
 
 Assets
 ------
-This repository contains no image, icon or font files. Tool icons,
-fill patterns and colour tables are generated in code (see ASSETS.md).
+This repository contains no image, icon or font files. Fill patterns and
+colour tables are generated in code; the mode panel icons are xfig's
+bitmaps from w_icons.c, kept as byte arrays in source code under the xfig
+licence (see ASSETS.md and LICENSE-xfig).
 
 Fonts used at run time
 ----------------------
