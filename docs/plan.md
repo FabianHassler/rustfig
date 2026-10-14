@@ -202,7 +202,7 @@ is an optional extra, used in two ways.
 - Scope (decided 2026-10-14): RustFig makes **every xfig function** available, with xfig's behaviour and standard defaults; modernisations are deliberate decisions. It is a general, cross-platform tool: no user's personal options or platform special cases are built in; personal choices go into the preferences (E1, S3).
 - Printing (decided 2026-10-14): modernised, PDF to the operating system's print dialog (B5).
 - Libraries (decided 2026-10-14): xfig's figure libraries are copied into the repository and bundled (D6), keeping each library's notes.
-- Preferences file format (open): a human-readable settings file (TOML, editable like xfig's resources) or egui's built-in storage (no new dependency, not meant for hand editing). Recommended: TOML.
+- Preferences file format (decided 2026-10-14): TOML, a human-readable settings file that can be edited by hand like xfig's resources (E1).
 - Outlook, not planned (2026-10-14): a WYSIWYG editor for LaTeX text in figures.
 - New heavy dependencies (PDF rendering, spell checking, localization framework).
 - CI cost (decided 2026-10-13): Linux runs on every push; Windows and macOS run only for releases (A2).
@@ -217,6 +217,7 @@ is an optional extra, used in two ways.
 | 2026-10-13 | First plan, after M0–M3. |
 | 2026-10-13 | Added A8 (fig2dev reference tests) and B0 (fig2dev export backend) with design notes. |
 | 2026-10-14 | A3: the web build compiles locally with rustup's toolchain; xtask uses the running toolchain's rustc. |
+| 2026-10-14 | Decision: preferences are stored as TOML (E1). |
 | 2026-10-14 | Decisions: every xfig function, modern printing (B5), bundled libraries (D6), preferences (E1) and xfig options (S3) without user-specific defaults; D11 added; outlook: WYSIWYG LaTeX. |
 | 2026-10-14 | W7 landed: xfig keymap; phase W done. |
 | 2026-10-14 | W4 landed: xfig's Snap menu and Snap Mode box. |
