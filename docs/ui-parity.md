@@ -64,7 +64,7 @@
 | Top and side rulers | ✅ ported from `w_rulers.c` | — |
 | Depth panel: checkboxes, drag-toggle, All On/Off/Toggle, Gray/Blank | ✅ with object counts; hidden depths can't be picked; export of active layers only | — |
 | Attribute panel: graphical buttons, per-mode attributes | ✅ xfig's buttons and order, per-mode masks, choice panels; middle/right buttons step values | — |
-| xfig accelerators (Meta-key) | 🟡 platform shortcuts and xfig mode letters | W7 |
+| xfig accelerators (Meta-key) | ✅ xfig keymap (on by default): Meta = Alt/Option menu keys, physical Ctrl mode keys, xfig's mode letters; menus show "Meta-N"; platform shortcuts stay | — |
 
 ## Revision history
 | Date | Note |
@@ -77,3 +77,4 @@
 | 2026-10-14 | W5: attribute panel. |
 | 2026-10-14 | W6: rulers and units box. |
 | 2026-10-14 | W4: Snap menu. |
+| 2026-10-14 | W7: xfig accelerators. |

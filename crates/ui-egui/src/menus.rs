@@ -20,6 +20,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}",
     },
     UiCommand {
+        id: "app.toggle_xfig_keys",
+        label: "xfig keyboard accelerators",
+        shortcut: "",
+        params: "{\"on\"?: bool}  — Meta (Alt/Option) menu keys and xfig's Ctrl mode keys",
+    },
+    UiCommand {
         id: "app.unit_panel",
         label: "Unit/Scale settings…",
         shortcut: "",
@@ -168,6 +174,9 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.search" => app.dialogs.search.open = true,
         "app.document_settings" => app.dialogs.settings_open = true,
         "app.unit_panel" => app.unit_panel_open = true,
+        "app.toggle_xfig_keys" => {
+            app.xfig_keys = p.get("on").and_then(Value::as_bool).unwrap_or(!app.xfig_keys);
+        }
         "app.toggle_depths" => app.show_depths = !app.show_depths,
         "app.redraw" => app.canvas.invalidate(),
         "app.toggle_layout" => {
@@ -258,6 +267,7 @@ const LAYOUT: &[(&str, &[&str])] = &[
             "-",
             "app.toggle_layout",
             "tool.mouse_buttons",
+            "app.toggle_xfig_keys",
         ],
     ),
     (
@@ -315,6 +325,7 @@ fn checked(app: &App, id: &str) -> Option<bool> {
         "view.toggle_grid" => Some(app.engine.indicator.grid.is_some()),
         "app.toggle_indicator" => Some(app.show_indicator),
         "app.toggle_layout" => Some(app.classic()),
+        "app.toggle_xfig_keys" => Some(app.xfig_keys),
         "tool.mouse_buttons" => Some(app.engine.mouse_scheme() == rustfig_engine::MouseScheme::Xfig),
         _ => None,
     }
@@ -338,7 +349,10 @@ fn label_of(id: &str) -> (&'static str, &'static str) {
 }
 
 fn entry(app: &mut App, ui: &mut egui::Ui, id: &str) {
-    let (label, shortcut) = label_of(id);
+    let (label, platform) = label_of(id);
+    // With xfig's keymap the menus show its accelerators, as xfig does.
+    let xfig = app.xfig_keys.then(|| xfig_accelerator(id)).flatten();
+    let shortcut = xfig.map(xfig_key_label).unwrap_or_else(|| display_shortcut(platform));
     let text = match checked(app, id) {
         Some(true) => format!("✔ {label}"),
         Some(false) => format!("    {label}"),
@@ -346,7 +360,7 @@ fn entry(app: &mut App, ui: &mut egui::Ui, id: &str) {
     };
     let mut b = egui::Button::new(text);
     if !shortcut.is_empty() {
-        b = b.shortcut_text(display_shortcut(shortcut));
+        b = b.shortcut_text(shortcut);
     }
     let enabled = app.enabled(id);
     if ui.add_enabled(enabled, b).clicked() {
@@ -405,7 +419,6 @@ pub fn menu_buttons(app: &mut App, ui: &mut egui::Ui) {
     }
 }
 
-/// The Snap menu: point positioning and grid (object snaps follow in W4).
 /// xfig's Snap menu (`snap_menu_items` in `w_cmdpanel.c`): Hold and
 /// Release, then the snap modes for the next clicked point. Point
 /// positioning and the grid are on the attribute panel, as in xfig.
@@ -476,6 +489,95 @@ pub fn parse_shortcut(s: &str) -> Option<egui::KeyboardShortcut> {
     key.map(|k| egui::KeyboardShortcut::new(mods, k))
 }
 
+/// xfig's keyboard accelerators (`app-defaults/Fig` and the mode tooltips
+/// in `w_modepanel.c`): Meta (Alt/Option) + letter for menu entries, and
+/// physical Ctrl + letter for some modes. Specs use "Alt", "Shift" and
+/// "PhysCtrl" (the Control key itself, also on macOS where the platform's
+/// shortcuts use Cmd); xfig entries RustFig has no command for yet (print,
+/// spell check, global settings, named styles) are left out.
+pub const XFIG_KEYS: &[(&str, &str)] = &[
+    ("Alt+N", "app.new"),
+    ("Alt+O", "app.open"),
+    ("Alt+M", "app.merge"),
+    ("Alt+S", "app.save"),
+    ("Alt+A", "app.save_as"),
+    ("Alt+X", "app.export"),
+    ("Shift+Alt+X", "app.export"),
+    ("Alt+Q", "app.quit"),
+    ("Alt+U", "edit.undo"),
+    ("Alt+T", "edit.paste"),
+    ("Alt+I", "app.search"),
+    ("Alt+D", "edit.delete_all"),
+    ("PhysCtrl+L", "app.redraw"),
+    ("Alt+R", "app.redraw"),
+    ("Alt+C", "doc.toggle_orientation"),
+    ("PhysCtrl+Z", "view.zoom_fit"),
+    ("Alt+B", "view.toggle_page_border"),
+    ("PhysCtrl+S", "tool.scale"),
+    ("PhysCtrl+C", "tool.copy"),
+    ("PhysCtrl+A", "tool.add_point"),
+    ("PhysCtrl+E", "tool.edit"),
+    ("PhysCtrl+R", "tool.rotate_cw"),
+    ("PhysCtrl+P", "tool.picture"),
+];
+
+/// (alt, shift, physical ctrl, key) of an xfig key spec.
+fn parse_xfig_key(spec: &str) -> Option<(bool, bool, bool, egui::Key)> {
+    let (mut alt, mut shift, mut ctrl, mut key) = (false, false, false, None);
+    for part in spec.split('+') {
+        match part {
+            "Alt" => alt = true,
+            "Shift" => shift = true,
+            "PhysCtrl" => ctrl = true,
+            k => key = egui::Key::from_name(k),
+        }
+    }
+    key.map(|k| (alt, shift, ctrl, k))
+}
+
+/// How xfig's menus print an accelerator: "Meta-N", "Shift-Meta-X", "Ctrl-L".
+pub fn xfig_key_label(spec: &str) -> String {
+    spec.replace("PhysCtrl", "Ctrl")
+        .replace("Alt", "Meta")
+        .replace('+', "-")
+}
+
+/// The xfig accelerator shown for a command in the menus.
+pub fn xfig_accelerator(id: &str) -> Option<&'static str> {
+    XFIG_KEYS.iter().find(|(_, c)| *c == id).map(|(k, _)| *k)
+}
+
+/// Consume one key press matching an xfig spec exactly.
+fn take_xfig_key(ctx: &egui::Context, spec: &str) -> bool {
+    let Some((alt, shift, ctrl, key)) = parse_xfig_key(spec) else {
+        return false;
+    };
+    ctx.input_mut(|i| {
+        let pos = i.events.iter().position(|e| match e {
+            egui::Event::Key {
+                key: k,
+                pressed: true,
+                modifiers: m,
+                ..
+            } => {
+                *k == key
+                    && m.alt == alt
+                    && m.shift == shift
+                    && m.ctrl == ctrl
+                    && !(cfg!(target_os = "macos") && m.mac_cmd)
+            }
+            _ => false,
+        });
+        match pos {
+            Some(p) => {
+                i.events.remove(p);
+                true
+            }
+            None => false,
+        }
+    })
+}
+
 /// Keyboard handling: typing goes to the text tool; otherwise shortcuts run commands.
 pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
     if ctx.wants_keyboard_input() {
@@ -521,6 +623,15 @@ pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
             }
         }
     }
+    // xfig's accelerators first: on Windows and Linux they take Ctrl+S,
+    // Ctrl+C, … from the platform shortcuts while the xfig keymap is on.
+    if app.xfig_keys {
+        for (spec, id) in XFIG_KEYS {
+            if take_xfig_key(ctx, spec) && app.enabled(id) {
+                app.run(id, json!({}));
+            }
+        }
+    }
     // Most specific shortcuts (more modifiers) first, so Ctrl+Shift+Z beats Ctrl+Z.
     let mut all: Vec<(&'static str, egui::KeyboardShortcut)> = cmd::all()
         .iter()
@@ -558,6 +669,21 @@ mod tests {
                 assert!(cmd::find(id).is_some() || find_ui(id).is_some(), "unknown id {id}");
             }
         }
+    }
+
+    #[test]
+    fn xfig_keys_reach_commands_and_are_unique() {
+        let mut seen = std::collections::BTreeSet::new();
+        for (spec, id) in XFIG_KEYS {
+            assert!(parse_xfig_key(spec).is_some(), "{spec}");
+            assert!(
+                cmd::find(id).is_some() || find_ui(id).is_some(),
+                "{spec} -> unknown {id}"
+            );
+            assert!(seen.insert(*spec), "{spec} twice");
+        }
+        assert_eq!(xfig_key_label("Shift+Alt+X"), "Shift-Meta-X");
+        assert_eq!(xfig_accelerator("edit.undo"), Some("Alt+U"));
     }
 
     #[test]

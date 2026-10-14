@@ -386,3 +386,44 @@ fn snap_menu_arms_a_snap_mode() {
     h.run_steps(2);
     h.get_by_label("Snap Mode: Endpoint (held)");
 }
+
+fn press_key(h: &mut Harness<'static, App>, key: egui::Key, modifiers: egui::Modifiers) {
+    h.event(egui::Event::Key {
+        key,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers,
+    });
+    h.run_steps(2);
+}
+
+#[test]
+fn xfig_keys_select_modes_and_run_menu_entries() {
+    let mut h = harness(app());
+    press_key(&mut h, egui::Key::S, egui::Modifiers::NONE);
+    assert_eq!(h.state().engine.tool(), ToolKind::SplineApprox, "xfig: s = spline");
+    press_key(&mut h, egui::Key::A, egui::Modifiers::SHIFT);
+    assert_eq!(h.state().engine.tool(), ToolKind::Arrow, "xfig: Shift-a = arrows");
+    // xfig's Ctrl mode keys use the Control key itself.
+    let ctrl = egui::Modifiers {
+        ctrl: true,
+        ..egui::Modifiers::NONE
+    };
+    press_key(&mut h, egui::Key::S, ctrl);
+    assert_eq!(h.state().engine.tool(), ToolKind::Scale, "xfig: Ctrl-s = scale");
+    // Meta-U (Alt/Option) undoes.
+    h.state_mut()
+        .run("shape.rectangle", json!({"x": 0, "y": 0, "width": 600, "height": 300}));
+    press_key(&mut h, egui::Key::U, egui::Modifiers::ALT);
+    assert!(h.state().engine.doc().objects.is_empty(), "Meta-U undoes");
+    // The menus show xfig's accelerators.
+    h.get_by_label("Edit").click();
+    h.run_steps(2);
+    h.get_by_label_contains("Meta-U");
+    // Turned off, Ctrl-s no longer picks Scale.
+    h.state_mut().run("app.toggle_xfig_keys", json!({"on": false}));
+    h.state_mut().engine.set_tool(ToolKind::Select);
+    press_key(&mut h, egui::Key::S, ctrl);
+    assert_ne!(h.state().engine.tool(), ToolKind::Scale);
+}

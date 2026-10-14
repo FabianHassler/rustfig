@@ -185,13 +185,20 @@ impl ToolKind {
         }
     }
 
-    /// Single-key accelerators, after xfig's.
+    /// Single-key accelerators: xfig's mode keys (the tooltips in xfig's
+    /// `w_modepanel.c`). xfig's Ctrl-key modes (Scale, Copy, Add point,
+    /// Edit, Rotate clockwise, Picture) are in the UI's xfig keymap, since
+    /// Ctrl+S, Ctrl+C, … are the platform's on Windows and Linux.
     pub fn shortcut(self) -> &'static str {
         match self {
-            ToolKind::Select => "S",
             ToolKind::CircleRadius => "C",
             ToolKind::EllipseRadii => "E",
-            ToolKind::SplineApprox => "I",
+            ToolKind::CircleDiameter => "Shift+C",
+            ToolKind::EllipseDiameter => "Shift+E",
+            ToolKind::SplineApprox => "S",
+            ToolKind::SplineApproxClosed => "Shift+S",
+            ToolKind::SplineInterp => "I",
+            ToolKind::SplineInterpClosed => "Shift+I",
             ToolKind::Polygon => "P",
             ToolKind::Polyline => "L",
             ToolKind::Box => "B",
@@ -201,22 +208,17 @@ impl ToolKind {
             ToolKind::Text => "T",
             ToolKind::Glue => "G",
             ToolKind::Break => "Shift+G",
-            ToolKind::Scale => "Shift+S",
             ToolKind::Align => "A",
             ToolKind::Move => "M",
-            ToolKind::Copy => "Shift+C",
             ToolKind::MovePoint => "Shift+M",
-            ToolKind::AddPoint => "Shift+A",
             ToolKind::DeletePoint => "Shift+D",
             ToolKind::Delete => "D",
             ToolKind::Update => "U",
-            ToolKind::Edit => "Shift+E",
             ToolKind::FlipV => "F",
             ToolKind::FlipH => "Shift+F",
             ToolKind::RotateCcw => "Shift+R",
             ToolKind::Convert => "V",
-            ToolKind::OpenClose => "O",
-            ToolKind::Arrow => "W",
+            ToolKind::Arrow => "Shift+A",
             _ => "",
         }
     }

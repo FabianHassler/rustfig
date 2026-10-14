@@ -63,6 +63,8 @@ pub struct App {
     /// Mouse hints shown instead of the tool's while the pointer is over a
     /// panel with its own button functions (the attribute buttons).
     pub hint_override: Option<(&'static str, &'static str, &'static str)>,
+    /// xfig's keyboard accelerators (Meta menu keys, Ctrl mode keys).
+    pub xfig_keys: bool,
     /// The Unit/Scale settings window (right click on the units box).
     pub unit_panel_open: bool,
     /// The override set during the previous frame, shown in this one.
@@ -93,6 +95,7 @@ impl App {
             hint_override: None,
             hint_shown: None,
             unit_panel_open: false,
+            xfig_keys: true,
             pending: None,
             file_dialogs: Box::new(dialogs::NativeDialogs),
             quit_confirmed: false,

@@ -1,6 +1,6 @@
 # Execution plan
 
-**Status:** 2026-10-14. Current phase: **W (xfig window parity)**, W1–W6 done, next W7 (xfig accelerators), then A8 and B0 (fig2dev) and the rest of phase A. Overall parity ≈60 %.
+**Status:** 2026-10-14. Phase W (xfig window parity) done; next A8 and B0 (fig2dev), then the rest of phase A. Overall parity ≈60 %.
 
 This is the committed work plan. [`gaps.md`](gaps.md) ranks every known
 shortfall; this file groups them into phases with task ids, acceptance
@@ -70,7 +70,7 @@ match it, with the modern additions kept but optional.
 | W4 | ✅ 2026-10-14 (`engine/snap.rs`, ported from `w_snap.c`/`w_intersect.c`; normals, tangents and intersections of curves on the flattened outline; splines snap too; `snap.mode`, `snap.hold`, `snap.release`; Snap Mode box). **Snap menu**: Hold, Release, Endpoint, Midpoint, Nearest, Focus, Diametric, Normal, Tangent, Intersect, applied to the next clicked point in drawing and editing modes (replaces E10). | Tests per snap mode on lines, arcs, ellipses and splines. | 16 |
 | W5 | ✅ 2026-10-14 (`ui-egui/attributes`, ported from `w_indpanel.c`; Arc Type and Text Step added; the attributes of later features — Angle Geom D7, Smart Links D8, copy counts and dimension line D10, tangent length D4 — appear with them). **Attribute panel parity**: xfig-style buttons that show the current value graphically and open a choice panel; only the attributes relevant to the current mode are shown, like xfig; adds the missing ones: point positioning (D7), linked move (D8), text flags (rigid, special, hidden), arrow mode and arrow-type panel, latex/manhattan line modes, depth. | Screenshot review per mode; switching modes changes the visible attributes. | 16 |
 | W6 | ✅ 2026-10-14 (`ui-egui/rulers`, ported from `w_rulers.c` and `u_pan.c`; `view.set_scale`, `app.unit_panel`). **Rulers** (top and side) with cursor tracking, unit ticks and click-to-pan (replaces E2); **units box**: click to change units and scale. | Screenshot review; units change updates rulers and coordinates. | 10 |
-| W7 | **Menu accelerators** matching xfig's (Meta-key shortcuts in the menus, e.g. Meta-N, Meta-U undo, Meta-T paste) as an optional keymap next to the platform-standard one. | Tests that the xfig keymap reaches the documented commands. | 6 |
+| W7 | ✅ 2026-10-14 (`menus::XFIG_KEYS` from `app-defaults/Fig`; mode letters corrected to xfig's; `app.toggle_xfig_keys`, on by default). **Menu accelerators** matching xfig's (Meta-key shortcuts in the menus, e.g. Meta-N, Meta-U undo, Meta-T paste) as an optional keymap next to the platform-standard one. | Tests that the xfig keymap reaches the documented commands. | 6 |
 
 Global settings (Edit › Global settings, E1), the character map (View, E5)
 and Manage styles (View, E6) complete the xfig menus. E8 (mouse hint bar) is
@@ -210,6 +210,7 @@ is an optional extra, used in two ways.
 | 2026-10-13 | First plan, after M0–M3. |
 | 2026-10-13 | Added A8 (fig2dev reference tests) and B0 (fig2dev export backend) with design notes. |
 | 2026-10-14 | A3: the web build compiles locally with rustup's toolchain; xtask uses the running toolchain's rustc. |
+| 2026-10-14 | W7 landed: xfig keymap; phase W done. |
 | 2026-10-14 | W4 landed: xfig's Snap menu and Snap Mode box. |
 | 2026-10-14 | W6 landed: xfig's rulers, units box and Unit menu. |
 | 2026-10-14 | W5 landed: xfig's attribute panel. |

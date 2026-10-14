@@ -4,7 +4,6 @@
 
 | # | Gap | Area | Impact | Hours |
 |---|-----|------|--------|------:|
-| 0 | Main window differs from xfig: no xfig accelerators (plan phase W; W1–W6 done) | UI | Medium | 6 |
 | 1 | LaTeX exports: TikZ, PSTricks, pict2e (special text passed through). Quick route: the fig2dev backend (plan B0, 8 h), then native exporters | Export | High: xfig's main audience writes LaTeX | 40 |
 | 2 | Web build: compiles locally (2026-10-14); still to do: the wasm check in CI, trunk packaging and browser open/save/download | Platforms | High | 24 |
 | 3 | PostScript output with page layout (orientation, centring, multi-page) and printing | Export/Printing | High | 30 |
@@ -41,4 +40,5 @@
 | 2026-10-14 | #0 shrank: W5 landed. |
 | 2026-10-14 | #0 and #8 shrank: W6 landed. |
 | 2026-10-14 | #0 shrank: W4 landed. |
+| 2026-10-14 | #0 closed: W7 landed, phase W done. |
 | 2026-10-13 | Linked #1 to the fig2dev backend (B0); added #21 (reference tests, A8). |
