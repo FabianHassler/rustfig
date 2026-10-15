@@ -7,18 +7,18 @@
   "eps_mean": {
     "count": 2568,
     "median": 0.0028,
-    "p95": 0.0286
+    "p95": 0.0283
   },
   "eps_strong": {
     "count": 2568,
     "median": 0.0001,
-    "p95": 0.0123
+    "p95": 0.0114
   },
   "figures": 2569,
   "pdf_mean": {
     "count": 2568,
-    "median": 0.0028,
-    "p95": 0.0283
+    "median": 0.0027,
+    "p95": 0.0281
   },
   "png_mean": {
     "count": 2568,

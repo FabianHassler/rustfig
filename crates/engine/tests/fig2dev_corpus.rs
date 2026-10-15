@@ -164,7 +164,7 @@ fn run_one(path: &Path) -> (Outcome, Option<Rasters>) {
         }
     };
     let mut rasters = None;
-    match fig2dev::convert(&fig, "eps", &xfig_args(), dir) {
+    match fig2dev::convert(&fig, "eps", &xfig_args(&fig), dir) {
         Err(e) => o.errors.push(e),
         Ok(ref_eps) => {
             let ref_png = fig2dev::rasterise(&ref_eps, false, DPI, false);
@@ -200,7 +200,7 @@ fn run_one(path: &Path) -> (Outcome, Option<Rasters>) {
             }
         }
     }
-    let pdf = fig2dev::convert(&fig, "pdf", &xfig_args(), dir)
+    let pdf = fig2dev::convert(&fig, "pdf", &xfig_args(&fig), dir)
         .and_then(|p| fig2dev::rasterise(&p, true, DPI, false))
         .and_then(|rp| {
             let ours = rustfig(&doc, ExportFormat::Pdf)?;
@@ -244,8 +244,18 @@ fn summary(results: &[Outcome]) -> Value {
 }
 
 /// The options xfig passes to fig2dev: `-F`, true font sizes (`u_print.c`).
-fn xfig_args() -> Vec<String> {
-    vec!["-F".to_string()]
+/// fig2dev's arguments: xfig's `-F` (true point sizes), and the input
+/// encoding the Fig 3.2 format prescribes: ISO-8859-1 unless the file says
+/// `#encoding: UTF-8` (as RustFig reads it). Without `-E`, fig2dev guesses
+/// from the locale, and in a UTF-8 locale drops Latin-1 characters such as
+/// the Ø of the Mechanical_DIN library.
+fn xfig_args(fig: &[u8]) -> Vec<String> {
+    let utf8 = fig.windows(16).take(4096).any(|w| w == b"encoding: UTF-8\n");
+    let mut args = vec!["-F".to_string()];
+    if !utf8 {
+        args.extend(["-E".to_string(), "1".to_string()]);
+    }
+    args
 }
 
 fn round(x: f64) -> f64 {
