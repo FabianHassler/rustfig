@@ -44,7 +44,10 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/engine/src/tools/mod.rs: xfig src/w_modepanel.c, src/d_*.c, src/e_*.c, src/w_canvas.c
 - crates/fig2dev/src/bound.rs: fig2dev/bound.c, fig2dev/bound.h, fig2dev/localmath.c
 - crates/fig2dev/src/drivers/gbx.rs: fig2dev/dev/gengbx.c
+- crates/fig2dev/src/drivers/latex.rs: fig2dev/dev/genlatex.c
+- crates/fig2dev/src/drivers/pictex.rs: fig2dev/dev/genpictex.c, fig2dev/localmath.c
 - crates/fig2dev/src/drivers/shape.rs: fig2dev/dev/genshape.c
+- crates/fig2dev/src/drivers/textyl.rs: fig2dev/dev/gentextyl.c, fig2dev/localmath.c
 - crates/fig2dev/src/gendev.rs: fig2dev/fig2dev.c, fig2dev/fig2dev.h, fig2dev/drivers.h
 - crates/fig2dev/src/object.rs: fig2dev/object.h
 - crates/fig2dev/src/read.rs: fig2dev/read.c, fig2dev/read1_3.c, fig2dev/free.c, fig2dev/messages.c
