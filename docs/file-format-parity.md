@@ -1,6 +1,6 @@
 # File format parity checklist
 
-**Status:** 2026-10-15 (B0: fig2dev's options on every export).
+**Status:** 2026-10-15 (B10: standalone fig2dev).
 
 | Format | Read | Write | Notes |
 |---|---|---|---|
@@ -16,6 +16,7 @@
 | LaTeX box (fig2dev `box`) | — | ✅ | ported from `genbox.c`; fig2dev's bounds |
 | fig2dev options (`file.export` `options`, CLI `--option`) | — | 🟡 | ported: depths `-D`/`-K`, `-m`, `-Z`, `-s`, border `-b`, background `-g` (X11 names), grayscale `-N`, title `-n`, font `-f`, `-F`; page layout and previews (B4), bitmap options (B6) refused with their task |
 | PostScript (print) | — | ❌ | gap #3 |
+| standalone `fig2dev` (`apps/fig2dev`) | — | 🟡 | fig2dev 3.2.9a's command line, messages and exit codes, input from files or stdin with `-E` encodings; writes the ported languages, the others fail naming their task (B10) |
 | LaTeX (TikZ, PSTricks, pict2e, epic/eepic, latex, pictex, pstex/pdftex) | — | ❌ | being ported from fig2dev (B1–B3, B9); gap #1 |
 | GIF/JPEG/TIFF/PPM/XBM/XPM | — | ❌ | gap #10 |
 | CGM/EMF/HPGL/MetaPost/METAFONT/DXF/Gerber/map/Tk/PIC/tpic/textyl/shape/SLD | — | ❌ | being ported from fig2dev (B9) |
@@ -29,4 +30,5 @@ Fuzzing: `crates/format/tests/prop_format.rs`, `crates/engine/tests/import_fuzz.
 |---|---|
 | 2026-10-13 | First checklist. |
 | 2026-10-14 | xfig's language list; LaTeX box and pspdf. |
+| 2026-10-15 | Standalone fig2dev (B10). |
 | 2026-10-15 | fig2dev's options. |

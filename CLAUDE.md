@@ -28,7 +28,7 @@ RustFig is an open-source, Rust-native reimplementation of xfig: close to the or
 | L4 | `rustfig-engine` | `crates/engine` | commands, undo, selection, indicator, view, tools, guard |
 | L5 | `rustfig-mcp` | `crates/mcp` | MCP server over stdio |
 | L6 | `rustfig-ui-egui` | `crates/ui-egui` | egui app: canvas, panels, menus, dialogs, control channel |
-| L7 | `rustfig`, `rustfig-cli` | `apps/` | desktop/web app; CLI (convert, info, perf, bench, mcp) |
+| L7 | `rustfig`, `rustfig-cli`, `fig2dev` | `apps/` | desktop/web app; CLI (convert, info, perf, bench, mcp); standalone fig2dev |
 | — | `xtask` | `xtask/` | `cargo xtask ci \| layers \| assets \| licences \| wasm` |
 
 Coordinates are Fig units (1200 per inch; metric drawings use 450 per cm), y grows downwards; line thickness is in 1/80 inch, drawn as fig2dev draws it (`geom::stroke_width`: 1/160 inch for thickness 1, (t − 1)/80 inch above).
@@ -74,6 +74,7 @@ Coordinates are Fig units (1200 per inch; metric drawings use 450 per cm), y gro
   - Tools: `{"command":"tool.box"}`, then `{"command":"tool.event","params":{"type":"press","x":0,"y":0}}` (types `press`, `move`, `release`, `double_click`, `key`, `text`; `"button": "left"|"middle"|"right"`; Fig coordinates). Mouse buttons follow `Engine::mouse_scheme()` (xfig's three buttons by default; `tool.mouse_buttons` switches to the modern scheme).
   - `{"id":2,"method":"ui.screenshot","params":{"path":"/abs/path/shot.png"}}` (write it inside your scratchpad or the project, so you can read it).
   - Other methods: `engine.commands`, `ui.run` (UI commands too), `ui.state`, `app.ping` (`crates/ui-egui/src/control.rs`).
+- `fig2dev` (`apps/fig2dev`): fig2dev 3.2.9a's command line on the ported drivers (`cargo run -p fig2dev -- -L eps in.fig out.eps`). Its options follow `fig2dev.c` and the drivers' sources, not the man page. fig2dev's own test suite: `cargo test -p fig2dev --test fig2dev_suite -- --ignored --nocapture` (report in `target/fig2dev-suite.txt`).
 - CLI: `rustfig-cli convert in.fig out.{fig,rustfig,svg,eps,pdf,png,box} [--format LANG] [--option KEY=VALUE]…` (fig2dev's options by name or letter), `rustfig-cli formats [LANG]`, `rustfig-cli info FILE`.
 - **Performance:** `rustfig-cli perf` checks the budgets (scene build, render fit/pan/zoom, hit test, save/open .fig, SVG export) on a synthetic 50k-path document; `rustfig-cli bench FILE` times one file. Run them before and after renderer, format or geometry changes, on an idle machine (on Linux the report warns when the load average makes timings noisy).
 - MCP: `rustfig-cli mcp` (see `docs/mcp.md`).

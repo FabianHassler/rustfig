@@ -176,10 +176,10 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 
 | File | Lines | What it does | RustFig | Status | Task |
 |---|---:|---|---|---|---|
-| `fig2dev.c` | 1136 | command line, option parsing per language, driver dispatch | `render/options.rs` (option table, `-D`/`-K`/`-m`/`-Z`/`-s`), `render/export.rs` (applies them), `apps/cli` `convert --option` | ported: options of the languages written today; driver dispatch is `file.export` | B0 |
+| `fig2dev.c` | 1136 | command line, option parsing per language, driver dispatch | `render/options.rs` (option table, `-D`/`-K`/`-m`/`-Z`/`-s`), `render/export.rs` (applies them), `apps/cli` `convert --option` | ported: options of the languages written today; driver dispatch is `file.export`; the whole command line (`get_args`, `main`, `help_msg`, messages, exit codes) in `apps/fig2dev` | B0, B10 |
 | `iso2tex.c` | 236 | Latin-1 characters to TeX sequences | — | missing | B1–B3 |
 | `creationdate.c` | 114 | creation date for reproducible output (`SOURCE_DATE_EPOCH`) | — | missing | B4 |
-| `localmath.c`, `messages.c` | 114 | math helpers, error messages | `geom`, errors | n/a | — |
+| `localmath.c`, `messages.c` | 114 | math helpers, error messages | `geom`, errors; `apps/fig2dev` (messages) | n/a | — |
 | `read.c` | 2048 | Fig reader (second reference) | `format/fig_read` | own | review |
 | `read1_3.c` | 549 | Fig 1.3 reader | — | missing | G1 |
 | `bound.c` | 1156 | bounds incl. arrows and text | `geom/arrow` (`arrow_shapes`, `calc_arrow`), `render/bound` (`compound_bound`, `arc_bound`, `ellipse_bound`, `line_bound`, `text_bound`, `arrow_bound`) | ported (D9, B0); ellipse extents analytic instead of the scan | — |
@@ -206,6 +206,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 |------|------|
 | 2026-10-14 | First version. |
 | 2026-10-15 | W8: xfig's bindings audited (`keys-parity.md`); `CompKeyDB` ported. |
+| 2026-10-15 | `fig2dev.c` command line ported as `apps/fig2dev` (B10). |
 | 2026-10-15 | `fig2dev.c` options and `colors.c` ported (B0). |
 | 2026-10-14 | S1: draw and save order ported (`u_redraw.c`, `f_save.c`). |
 | 2026-10-14 | Attribute panel: xfig's pictures (`w_icons.c`), xfig's arrow-mode order and grid choices. |

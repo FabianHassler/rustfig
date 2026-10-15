@@ -17,7 +17,7 @@ lower layers; nothing below L6 may depend on egui, eframe, winit or rfd.
 | L4 | `rustfig-engine` | session: commands, undo, selection, indicator, view, tools, guard, picture import |
 | L5 | `rustfig-mcp` | MCP server over stdio |
 | L6 | `rustfig-ui-egui` | egui app: canvas, panels, menus, dialogs, control channel |
-| L7 | `rustfig` (app), `rustfig-cli` | binaries |
+| L7 | `rustfig` (app), `rustfig-cli`, `fig2dev` | binaries |
 
 ## Everything is a command
 

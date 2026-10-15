@@ -15,6 +15,7 @@ const LAYERS: &[(&str, &str, u32)] = &[
     ("rustfig-ui-egui", "crates/ui-egui", 6),
     ("rustfig", "apps/rustfig", 7),
     ("rustfig-cli", "apps/cli", 7),
+    ("fig2dev", "apps/fig2dev", 7),
 ];
 
 /// Dependencies allowed only from layer 6 up.

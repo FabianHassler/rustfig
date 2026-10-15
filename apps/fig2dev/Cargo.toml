@@ -1,0 +1,18 @@
+[package]
+name = "fig2dev"
+description = "fig2dev's command line on RustFig's ported drivers"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+rustfig-engine.workspace = true
+rustfig-format.workspace = true
+rustfig-render.workspace = true
+rustfig-model.workspace = true

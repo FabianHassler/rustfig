@@ -43,6 +43,7 @@ the score.
 - Export bounds as fig2dev's (`crates/render/src/bound.rs`, ported from `bound.c`): bounding boxes equal fig2dev's on 2,532 of 2,568 sample figures.
 - True curves in SVG, PDF and EPS: `crates/geom/src/curves.rs`, `SubPath::curve`; test `ellipses_export_as_curves`.
 - fig2dev's options: `crates/render/src/options.rs`, applied in `export.rs`; tests `fig2dev_options_change_the_output`, `depth_options_select_objects_and_bounds`, `bad_options_are_refused` in `crates/engine/tests/export_languages.rs`; bounding boxes with `-b`, `-m`, `-Z`, `-D -K` checked equal to fig2dev's.
+- Standalone `fig2dev` (B10): `apps/fig2dev` with fig2dev 3.2.9a's command line; tests in `apps/fig2dev/tests/cli.rs`; fig2dev's own suite in `apps/fig2dev/tests/fig2dev_suite.rs` (opt-in).
 - Export languages: `crates/render/src/languages.rs` (xfig's list and suffixes), `drivers/latex_box.rs`, `file.export_formats`; tests in `crates/engine/tests/export_languages.rs` and `export_dialog_lists_xfigs_languages` in `ui_smoke.rs`.
 - Corpus comparison with fig2dev's EPS and PDF on xfig's ≈2,550 sample figures: `crates/engine/tests/fig2dev_corpus.rs` (opt-in), baseline `fixtures/corpus-scores.json`, report `target/fig2dev-reference/corpus/`.
 - Reference comparison with fig2dev: `crates/engine/tests/fig2dev_reference.rs`, 11 fixtures with recorded scores (`fixtures/scores.json`); arrowheads, arcs and dashes ported from fig2dev (D9): `geom/arrow.rs`, `model` `dash_pattern`.
@@ -61,6 +62,7 @@ the score.
 | Date | Overall | Note |
 |------|--------:|------|
 | 2026-10-15 | ≈61 % | W8, W9: xfig's key and mouse bindings; attribute pictures as vectors, arrow types 10–14 selectable (Attributes 75 → 77 %). |
+| 2026-10-15 | ≈61 % | B10: standalone fig2dev (Export stays 40 %: no new language). |
 | 2026-10-15 | ≈61 % | B0: fig2dev's export options (Export 39 → 40 %). |
 | 2026-10-15 | ≈61 % | D12: fill patterns from fig2dev. |
 | 2026-10-14 | ≈61 % | B0: fig2dev's export bounds (Export 37 → 39 %). |

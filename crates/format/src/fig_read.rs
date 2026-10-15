@@ -25,6 +25,9 @@ struct Reader<'a> {
     /// Minor version (0, 1 or 2 for 3.x).
     minor: u32,
     utf8: bool,
+    /// Single-byte characters (octal escapes, bytes of a non-UTF-8 file)
+    /// are ISO-8859-2 rather than ISO-8859-1.
+    latin2: bool,
     scale: f64,
 }
 
@@ -374,7 +377,8 @@ impl<'a> Reader<'a> {
                         bytes.push(v);
                     } else {
                         let mut buf = [0u8; 4];
-                        bytes.extend_from_slice(char::from(v).encode_utf8(&mut buf).as_bytes());
+                        let c = if self.latin2 { latin2(v) } else { char::from(v) };
+                        bytes.extend_from_slice(c.encode_utf8(&mut buf).as_bytes());
                     }
                     continue;
                 }
@@ -483,9 +487,67 @@ pub(crate) fn decode(src: &[u8]) -> (String, bool) {
     }
 }
 
+/// The encoding of a Fig file's text (fig2dev's `-E`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TextEncoding {
+    /// UTF-8 if the file says `#encoding: UTF-8` (or its bytes are UTF-8),
+    /// ISO-8859-1 otherwise, as the Fig 3.2 format prescribes.
+    #[default]
+    Auto,
+    Utf8,
+    Latin1,
+    Latin2,
+}
+
+impl TextEncoding {
+    /// fig2dev's names for `-E`: `0`, `utf8`, `UTF8`, `utf-8` (and any
+    /// case of `UTF-8`), `1` or `ISO-8859-1`, `2` or `ISO-8859-2`.
+    pub fn from_name(s: &str) -> Option<TextEncoding> {
+        let n = s.trim().to_ascii_lowercase().replace('_', "-");
+        match n.as_str() {
+            "0" | "utf8" | "utf-8" => Some(TextEncoding::Utf8),
+            "1" | "iso-8859-1" | "iso8859-1" | "latin1" | "latin-1" => Some(TextEncoding::Latin1),
+            "2" | "iso-8859-2" | "iso8859-2" | "latin2" | "latin-2" => Some(TextEncoding::Latin2),
+            _ => None,
+        }
+    }
+}
+
+/// ISO-8859-2: 0xA0–0xFF as Unicode (the lower half is ASCII and C1).
+const LATIN2_HIGH: [u16; 96] = [
+    0x00A0, 0x0104, 0x02D8, 0x0141, 0x00A4, 0x013D, 0x015A, 0x00A7, 0x00A8, 0x0160, 0x015E, 0x0164, 0x0179, 0x00AD,
+    0x017D, 0x017B, 0x00B0, 0x0105, 0x02DB, 0x0142, 0x00B4, 0x013E, 0x015B, 0x02C7, 0x00B8, 0x0161, 0x015F, 0x0165,
+    0x017A, 0x02DD, 0x017E, 0x017C, 0x0154, 0x00C1, 0x00C2, 0x0102, 0x00C4, 0x0139, 0x0106, 0x00C7, 0x010C, 0x00C9,
+    0x0118, 0x00CB, 0x011A, 0x00CD, 0x00CE, 0x010E, 0x0110, 0x0143, 0x0147, 0x00D3, 0x00D4, 0x0150, 0x00D6, 0x00D7,
+    0x0158, 0x016E, 0x00DA, 0x0170, 0x00DC, 0x00DD, 0x0162, 0x00DF, 0x0155, 0x00E1, 0x00E2, 0x0103, 0x00E4, 0x013A,
+    0x0107, 0x00E7, 0x010D, 0x00E9, 0x0119, 0x00EB, 0x011B, 0x00ED, 0x00EE, 0x010F, 0x0111, 0x0144, 0x0148, 0x00F3,
+    0x00F4, 0x0151, 0x00F6, 0x00F7, 0x0159, 0x016F, 0x00FA, 0x0171, 0x00FC, 0x00FD, 0x0163, 0x02D9,
+];
+
+/// An ISO-8859-2 byte as a character.
+fn latin2(b: u8) -> char {
+    match b {
+        0xA0..=0xFF => LATIN2_HIGH
+            .get(usize::from(b - 0xA0))
+            .and_then(|&u| char::from_u32(u32::from(u)))
+            .unwrap_or(char::from(b)),
+        _ => char::from(b),
+    }
+}
+
 /// Parse a Fig file (versions 3.0 to 3.2).
 pub fn read_fig(src: &[u8]) -> Result<Document, FormatError> {
-    let (text, valid_utf8) = decode(src);
+    read_fig_encoded(src, TextEncoding::Auto)
+}
+
+/// Parse a Fig file whose text is in `enc` (fig2dev's `-E`).
+pub fn read_fig_encoded(src: &[u8], enc: TextEncoding) -> Result<Document, FormatError> {
+    let (text, valid_utf8) = match enc {
+        TextEncoding::Auto => decode(src),
+        TextEncoding::Utf8 => (String::from_utf8_lossy(src).into_owned(), true),
+        TextEncoding::Latin1 => (src.iter().map(|&b| char::from(b)).collect(), false),
+        TextEncoding::Latin2 => (src.iter().map(|&b| latin2(b)).collect(), false),
+    };
     let text = text.replace("\r\n", "\n").replace('\r', "\n");
     let lines: Vec<&str> = text.split('\n').collect();
     let first = lines.first().copied().unwrap_or("");
@@ -509,6 +571,7 @@ pub fn read_fig(src: &[u8]) -> Result<Document, FormatError> {
         col: 0,
         minor,
         utf8: false,
+        latin2: enc == TextEncoding::Latin2,
         scale: 1.0,
     };
     let mut doc = Document::new();
@@ -527,6 +590,12 @@ pub fn read_fig(src: &[u8]) -> Result<Document, FormatError> {
     }
     if !valid_utf8 {
         r.utf8 = false;
+    }
+    // fig2dev's -E overrides the file's own `#encoding` line.
+    match enc {
+        TextEncoding::Auto => {}
+        TextEncoding::Utf8 => r.utf8 = true,
+        TextEncoding::Latin1 | TextEncoding::Latin2 => r.utf8 = false,
     }
     let mut settings = DocSettings::default();
     let header_line = |r: &mut Reader| -> R<String> {

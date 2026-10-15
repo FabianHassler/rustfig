@@ -5,7 +5,7 @@ mod fig_read;
 mod fig_write;
 mod native;
 
-pub use fig_read::{read_fig, MAX_NESTING, MAX_POINTS, MAX_TEXT_BYTES};
+pub use fig_read::{read_fig, read_fig_encoded, TextEncoding, MAX_NESTING, MAX_POINTS, MAX_TEXT_BYTES};
 pub use fig_write::write_fig;
 pub use native::{read_native, write_native, NATIVE_VERSION};
 

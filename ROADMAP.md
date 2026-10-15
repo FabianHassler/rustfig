@@ -20,7 +20,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Overall parity (weighted) | ≈61 % |
 | Commands (all reachable from the control channel and MCP) | 133 engine (incl. 38 tool modes) + 17 UI |
 | Interactive tools (xfig modes) | 38 |
-| Tests | 230 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
+| Tests | 238 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 3.0–3.2, write 3.2 |
 | Export formats | PDF, SVG, EPS, PNG, EPS+PDF pair, LaTeX box (7 of xfig's 40 languages, PostScript without page layout yet; the rest being ported from fig2dev) |
 | Perf, 50k paths (render fit / hit test / open / edit + undo) | 260 ms / 0.1 ms / 20 ms / 0.9 ms |
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-15 | B10: a standalone `fig2dev` with fig2dev 3.2.9a's command line, messages and exit codes (`-E` input encodings too); fig2dev's own test suite runs against it: 15 pass, 35 wait for unported languages. 238 tests. |
 | 2026-10-15 | Start values follow xfig's code: point positioning magnet (1/16 inch), no alignment, stick arrows, dot gap 3 apart from dash length 4. 230 tests. |
 | 2026-10-15 | E1: preferences survive restarts: settings.toml with xfig's resources under xfig's names (editable in Edit › Global settings › xfig resources), RustFig's switches, recent files (File menu) and your own colours in every colour menu; browser storage on the web. 228 tests. |
 | 2026-10-15 | A7: panning and zooming a 50,000-object drawing stays at 1–3 ms per frame (was 330 ms): cached scene, the last image moved at once, the exact one rendered in the background. Phase A done. |

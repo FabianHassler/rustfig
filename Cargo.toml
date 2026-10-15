@@ -11,9 +11,10 @@ members = [
     "crates/ui-egui",
     "apps/rustfig",
     "apps/cli",
+    "apps/fig2dev",
     "xtask",
 ]
-default-members = ["apps/rustfig", "apps/cli"]
+default-members = ["apps/rustfig", "apps/cli", "apps/fig2dev"]
 
 [workspace.package]
 version = "0.1.0"

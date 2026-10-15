@@ -126,3 +126,36 @@ fn header_without_centring_line() {
     let flush = src.replace("Portrait\n", "Portrait\nFlush left\n");
     assert!(!rustfig_format::read_fig(flush.as_bytes()).unwrap().settings.center);
 }
+
+/// fig2dev's -E: the text's encoding, overriding the file's own line.
+#[test]
+fn text_encodings() {
+    use rustfig_format::{read_fig_encoded, TextEncoding};
+    let fig = |text: &str| {
+        format!("#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n4 0 0 50 -1 0 12 0.0000 4 135 405 0 0 {text}\\001\n")
+    };
+    let text_of = |src: &[u8], enc| match &read_fig_encoded(src, enc).unwrap().objects[0].kind {
+        rustfig_model::ObjectKind::Text(t) => t.text.clone(),
+        _ => panic!(),
+    };
+    // \330 is Ø in ISO-8859-1, Ř in ISO-8859-2.
+    let src = fig("\\330 6,4");
+    assert_eq!(text_of(src.as_bytes(), TextEncoding::Auto), "Ø 6,4");
+    assert_eq!(text_of(src.as_bytes(), TextEncoding::Latin1), "Ø 6,4");
+    assert_eq!(text_of(src.as_bytes(), TextEncoding::Latin2), "Ř 6,4");
+    // Raw ISO-8859-2 bytes.
+    let mut raw = fig("X").into_bytes();
+    let at = raw.iter().position(|&b| b == b'X').unwrap();
+    raw[at] = 0xB9; // š in ISO-8859-2, ¹ in ISO-8859-1
+    assert_eq!(text_of(&raw, TextEncoding::Latin2), "š");
+    assert_eq!(text_of(&raw, TextEncoding::Latin1), "¹");
+    for (name, enc) in [
+        ("0", TextEncoding::Utf8),
+        ("utf-8", TextEncoding::Utf8),
+        ("1", TextEncoding::Latin1),
+        ("ISO-8859-2", TextEncoding::Latin2),
+    ] {
+        assert_eq!(TextEncoding::from_name(name), Some(enc), "{name}");
+    }
+    assert_eq!(TextEncoding::from_name("KOI8-R"), None);
+}

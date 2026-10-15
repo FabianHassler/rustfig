@@ -48,8 +48,13 @@ pub struct OptionSpec {
     /// fig2dev's option letter.
     pub letter: char,
     pub arg: Arg,
-    /// The languages taking it; empty means every language.
+    /// The languages accepting it (fig2dev's driver takes the letter);
+    /// empty means every language.
     pub langs: &'static [&'static str],
+    /// The languages where it has an effect; empty means all of `langs`.
+    /// Elsewhere fig2dev accepts and ignores it (`genps.c` ignores the page
+    /// options for EPS and the bounding box for PostScript, for example).
+    pub effect: &'static [&'static str],
     /// fig2dev's help text.
     pub help: &'static str,
     pub support: Support,
@@ -59,6 +64,12 @@ impl OptionSpec {
     /// Whether `lang` takes this option.
     pub fn applies_to(&self, lang: &str) -> bool {
         self.langs.is_empty() || self.langs.contains(&lang)
+    }
+
+    /// Whether it does something for `lang` (it is accepted and ignored
+    /// where it doesn't).
+    pub fn effective_for(&self, lang: &str) -> bool {
+        self.applies_to(lang) && (self.effect.is_empty() || self.effect.contains(&lang))
     }
 }
 
@@ -75,6 +86,28 @@ const fn opt(
         letter,
         arg,
         langs,
+        effect: &[],
+        help,
+        support,
+    }
+}
+
+/// An option accepted by `langs` but effective only for `effect`.
+const fn opt_for(
+    key: &'static str,
+    letter: char,
+    arg: Arg,
+    langs: &'static [&'static str],
+    effect: &'static [&'static str],
+    help: &'static str,
+    support: Support,
+) -> OptionSpec {
+    OptionSpec {
+        key,
+        letter,
+        arg,
+        langs,
+        effect,
         help,
         support,
     }
@@ -94,47 +127,56 @@ const PS_AND_BITMAPS: &[&str] = &[
 const PAGE: &[&str] = &["ps", "pdf"];
 /// EPS options (a PDF is converted from EPS unless in page mode).
 const EPS: &[&str] = &["eps", "pdf", "pspdf"];
+/// Previews: PostScript and EPS, not PDF.
+const PREVIEW: &[&str] = &["ps", "eps", "pspdf"];
 const BITMAPS: &[&str] = &["gif", "jpeg", "pcx", "png", "ppm", "tiff", "xbm", "xpm"];
 
-/// fig2dev's options for the languages RustFig writes or is porting next.
+/// fig2dev's options, as its sources accept them (`get_args` in
+/// fig2dev.c, `gen_ps_eps_option` in genps.c, `genpdf_option`,
+/// `genbitmaps_option`, `gensvg_option`, `genbox_option`), for the
+/// languages RustFig writes or is porting next.
 #[rustfmt::skip]
 pub const OPTIONS: &[OptionSpec] = &[
-    // General options (fig2dev.c).
+    // General options (fig2dev.c); -G also reaches every driver.
     opt("depths", 'D', Depths, ALL, "include or exclude depths listed (+list or -list)", Ported),
     opt("adjust_bbox", 'K', Flag, ALL, "adjust bounding box according to the depths selected with depths (-D)", Ported),
     opt("magnification", 'm', Number, ALL, "set magnification (1 = 100 %); not with max_size (-Z)", Ported),
     opt("font_size", 's', Number, ALL, "set default font size in points", Ported),
     opt("max_size", 'Z', Size, ALL, "scale the figure so that its largest dimension is maxdim inches/cm; append w or : for the width, h or prepend : for the height", Ported),
-    opt("grid", 'G', Text, PS_AND_BITMAPS, "draw light gray grid with thin/thick lines at minor/major units (e.g. .25:1cm)", Planned("B4")),
-    // PostScript, EPS and PDF (genps.c, genpdf.c); the bitmaps share some.
+    opt_for("grid", 'G', Text, ALL, PS_AND_BITMAPS, "draw light gray grid with thin/thick lines at minor/major units (e.g. .25:1cm)", Planned("B4")),
+    // PostScript, EPS and PDF (gen_ps_eps_option, genpdf_option); the
+    // bitmaps share some (genbitmaps_option).
     opt("border", 'b', Number, PS_AND_BITMAPS, "specify width of blank border around figure (points, 1/72 inch)", Ported),
     opt("background", 'g', Color, PS_AND_BITMAPS, "set background color", Ported),
     opt("grayscale", 'N', Flag, PS_AND_BITMAPS, "convert all colors to grayscale", Ported),
     opt("correct_font_size", 'F', Flag, PS_AND_BITMAPS, "use correct font sizes (points instead of 1/80 inch); xfig sets it, so it is on unless false", Ported),
     opt("title", 'n', Text, PS, "set title part of PostScript output to name", Ported),
     opt("font", 'f', Font, PS, "set default font", Ported),
-    opt("ascii_preview", 'A', Flag, &["ps", "eps", "pspdf"], "add ASCII preview (produce EPSI file; not for PDF output)", Planned("B4")),
-    opt("color_tiff_preview", 'C', Text, &["ps", "eps", "pspdf"], "add color TIFF preview (for Microsoft apps; not for PDF output)", Planned("B4")),
-    opt("tiff_preview", 'T', Flag, &["ps", "eps", "pspdf"], "add monochrome TIFF preview (for Microsoft apps; not for PDF)", Planned("B4")),
+    opt_for("ascii_preview", 'A', Flag, PS, PREVIEW, "add ASCII preview (produce EPSI file; not for PDF output)", Planned("B4")),
+    opt_for("color_tiff_preview", 'C', Text, PS, PREVIEW, "add color TIFF preview (for Microsoft apps; not for PDF output)", Planned("B4")),
+    opt_for("tiff_preview", 'T', Flag, PS, PREVIEW, "add monochrome TIFF preview (for Microsoft apps; not for PDF)", Planned("B4")),
     opt("composite_fonts", 'j', Flag, PS, "enable composite fonts for japanese or korean text", Planned("B8")),
-    opt("bbox", 'B', Text, EPS, "force width, height and origin in absolute coordinates (\"Wx [Wy X0 Y0]\")", Planned("B4")),
-    opt("relative_bbox", 'R', Text, EPS, "force width, height and origin in relative coordinates (\"Wx [Wy X0 Y0]\")", Planned("B4")),
-    opt("center", 'c', Flag, PAGE, "center figure on page", Planned("B4")),
-    opt("edge", 'e', Flag, PAGE, "put figure at left page edge", Planned("B4")),
-    opt("landscape", 'l', Flag, PAGE, "force landscape mode", Planned("B4")),
-    opt("portrait", 'p', Flag, PAGE, "force portrait mode", Planned("B4")),
-    opt("multi_page", 'M', Flag, PAGE, "generate multiple pages for large figure", Planned("B4")),
-    opt("single_page", 'o', Flag, PAGE, "generate single page even for large figure", Planned("B4")),
-    opt("overlap", 'O', Flag, PAGE, "overlap pages when multiple pages are generated", Planned("B4")),
-    opt("x_offset", 'x', Number, PAGE, "shift figure horizontally by offset points", Planned("B4")),
-    opt("y_offset", 'y', Number, PAGE, "shift figure vertically by offset points", Planned("B4")),
-    opt("paper_size", 'z', Text, &["ps", "pdf", "svg"], "set the paper size (Letter, A4, ...)", Planned("B4")),
-    opt("page_mode", 'P', Flag, &["pdf"], "generate a full page instead of a figure-sized one", Planned("B4")),
-    opt("pdf_version", 'Y', Number, &["pdf", "pspdf"], "set the PDF minor version (1-7)", Planned("B4")),
-    // Bitmaps (genbitmaps.c).
+    opt_for("bbox", 'B', Text, PS, EPS, "force width, height and origin in absolute coordinates (\"Wx [Wy X0 Y0]\")", Planned("B4")),
+    opt_for("relative_bbox", 'R', Text, PS, EPS, "force width, height and origin in relative coordinates (\"Wx [Wy X0 Y0]\")", Planned("B4")),
+    opt_for("center", 'c', Flag, PS, PAGE, "center figure on page", Planned("B4")),
+    opt_for("edge", 'e', Flag, PS, PAGE, "put figure at left page edge", Planned("B4")),
+    opt_for("landscape", 'l', Text, PS, PAGE, "force landscape mode (takes an argument it ignores)", Planned("B4")),
+    opt_for("portrait", 'p', Text, PS, PAGE, "force portrait mode (takes an argument it ignores)", Planned("B4")),
+    opt_for("multi_page", 'M', Flag, PS, PAGE, "generate multiple pages for large figure", Planned("B4")),
+    opt_for("single_page", 'o', Flag, PS, PAGE, "generate single page even for large figure", Planned("B4")),
+    opt_for("overlap", 'O', Flag, PS, PAGE, "overlap pages when multiple pages are generated", Planned("B4")),
+    opt_for("x_offset", 'x', Number, PS, PAGE, "shift figure horizontally by offset points", Planned("B4")),
+    opt_for("y_offset", 'y', Number, PS, PAGE, "shift figure vertically by offset points", Planned("B4")),
+    opt_for("paper_size", 'z', Text, PS, PAGE, "set the paper size (Letter, A4, ...)", Planned("B4")),
+    opt_for("page_mode", 'P', Flag, PS, &["pdf"], "generate a full page instead of a figure-sized one", Planned("B4")),
+    opt_for("pdf_version", 'Y', Number, PS, &["pdf", "pspdf"], "set the PDF minor version (1-7)", Planned("B4")),
+    // SVG (gensvg_option).
+    opt("paper_size", 'z', Text, &["svg"], "set the paper size (Letter, A4, ...)", Planned("B9")),
+    // Bitmaps (genbitmaps_option): -q and -t are accepted by every bitmap
+    // language, with a warning outside JPEG and GIF.
     opt("smoothing", 'S', Number, BITMAPS, "smoothing factor 1, 2 or 4", Planned("B6")),
-    opt("quality", 'q', Number, &["jpeg"], "set JPEG quality (1-100)", Planned("B6")),
-    opt("transparent", 't', Color, &["gif"], "set the GIF transparent color (#rrggbb)", Planned("B6")),
+    opt_for("quality", 'q', Number, BITMAPS, &["jpeg"], "set JPEG quality (1-100)", Planned("B6")),
+    opt_for("transparent", 't', Color, BITMAPS, &["gif"], "set the GIF transparent color (#rrggbb)", Planned("B6")),
 ];
 
 /// The options `lang` takes, in fig2dev's order.
@@ -314,6 +356,10 @@ pub fn parse_options(lang: &Language, items: &[(&str, OptionValue<'_>)]) -> Resu
                 known.join(", ")
             )
         })?;
+        if !spec.effective_for(lang.id) {
+            // fig2dev accepts it for this language and does nothing.
+            continue;
+        }
         if let Support::Planned(task) = spec.support {
             return Err(format!(
                 "option {} (fig2dev -{}) is not available yet: it is being ported (plan task {task})",
