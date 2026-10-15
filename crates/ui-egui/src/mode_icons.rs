@@ -62,6 +62,11 @@ impl Ic {
         self.poly(PolyKind::Polyline, pen(PX), pts)
     }
 
+    /// A two-pixel-wide polyline (thickness 3).
+    fn wide(&mut self, pts: &[(f64, f64)]) -> &mut Ic {
+        self.poly(PolyKind::Polyline, pen(3), pts)
+    }
+
     /// A dotted line through pixel centres: one pixel on, one off.
     fn dotted(&mut self, pts: &[(f64, f64)]) -> &mut Ic {
         let st = Style {
@@ -105,9 +110,36 @@ impl Ic {
     }
 
     fn ellipse(&mut self, cx: f64, cy: f64, rx: f64, ry: f64) -> &mut Ic {
+        self.ellipse_styled(pen(PX), cx, cy, rx, ry)
+    }
+
+    /// A two-pixel-wide ellipse.
+    fn wide_ellipse(&mut self, cx: f64, cy: f64, rx: f64, ry: f64) -> &mut Ic {
+        self.ellipse_styled(pen(3), cx, cy, rx, ry)
+    }
+
+    fn dotted_ellipse(&mut self, cx: f64, cy: f64, rx: f64, ry: f64) -> &mut Ic {
+        let st = Style {
+            line: LineKind::Dotted,
+            style_val: 1.0,
+            ..pen(PX)
+        };
+        self.ellipse_styled(st, cx, cy, rx, ry)
+    }
+
+    fn dotted_rect(&mut self, x0: f64, y0: f64, x1: f64, y1: f64) -> &mut Ic {
+        let st = Style {
+            line: LineKind::Dotted,
+            style_val: 1.0,
+            ..pen(PX)
+        };
+        self.poly(PolyKind::Box, st, &[(x0, y0), (x1, y0), (x1, y1), (x0, y1)])
+    }
+
+    fn ellipse_styled(&mut self, style: Style, cx: f64, cy: f64, rx: f64, ry: f64) -> &mut Ic {
         self.push(ObjectKind::Ellipse(Ellipse {
             kind: EllipseKind::EllipseRadii,
-            style: pen(PX),
+            style,
             direction: 1,
             angle: 0.0,
             center: c(cx, cy),
@@ -174,8 +206,37 @@ impl Ic {
 
 /// The mode icons traced so far (the others keep xfig's bitmap).
 pub const TRACED: &[&str] = &[
-    "ellrad", "elldia", "cirrad", "cirdia", "c_spl", "spl", "c_intspl", "intspl", "polygon", "line", "box", "arc_box",
-    "regpoly", "arc", "picobj", "text",
+    "ellrad",
+    "elldia",
+    "cirrad",
+    "cirdia",
+    "c_spl",
+    "spl",
+    "c_intspl",
+    "intspl",
+    "polygon",
+    "line",
+    "box",
+    "arc_box",
+    "regpoly",
+    "arc",
+    "picobj",
+    "text",
+    "glue",
+    "break",
+    "scale",
+    "align",
+    "move",
+    "copy",
+    "addpt",
+    "edit",
+    "flip_y",
+    "convert",
+    "autoarrow",
+    "tangent",
+    "lenmeas",
+    "c_xspl",
+    "xspl",
 ];
 
 /// Whether `name` has a vector drawing.
@@ -231,6 +292,34 @@ const ESS: &[(f64, f64)] = &[
     (10.5, 24.5),
     (7.0, 20.0),
 ];
+
+/// The sample objects inside the Glue and Break icons: an S, an ellipse,
+/// a T, a box and an arc.
+fn glue_contents(ic: &mut Ic) -> &mut Ic {
+    ic.curve(
+        false,
+        &[
+            (15.0, 9.0),
+            (14.0, 7.5),
+            (11.5, 7.0),
+            (9.0, 7.8),
+            (8.0, 9.8),
+            (9.2, 11.2),
+            (11.5, 12.0),
+            (14.0, 13.2),
+            (15.0, 14.8),
+            (14.0, 16.4),
+            (11.5, 17.0),
+            (9.0, 16.4),
+            (8.2, 15.0),
+        ],
+    )
+    .ellipse(22.0, 9.0, 4.0, 3.0)
+    .line(&[(17.0, 18.0), (23.0, 18.0)])
+    .line(&[(20.0, 18.0), (20.0, 25.0)])
+    .rect(8.0, 21.0, 15.0, 25.0)
+    .arc((24.0, 15.0), (27.0, 20.0), (24.0, 25.0))
+}
 
 /// The vector drawing of xfig's mode icon `name` (`Xbm::name`), if it has
 /// been traced; others keep their bitmap.
@@ -337,6 +426,172 @@ pub fn drawing(name: &str) -> Option<Vec<Object>> {
             .pixels(26, 11, 33, 19)
             .pixels(4, 20, 9, 28)
             .done(),
+        // Glue: the sample objects in a compound's frame with its corners.
+        "glue" => {
+            let mut ic = Ic::new(&xi::GLUE);
+            ic.rect(4.0, 4.0, 30.0, 28.0)
+                .marker(4.0, 4.0, 3.0)
+                .marker(30.0, 4.0, 3.0)
+                .marker(4.0, 28.0, 3.0)
+                .marker(30.0, 28.0, 3.0);
+            glue_contents(&mut ic).done()
+        }
+        // Break: the same objects in a dotted frame.
+        "break" => {
+            let mut ic = Ic::new(&xi::BREAK);
+            ic.dotted_rect(4.0, 4.0, 30.0, 28.0);
+            glue_contents(&mut ic).done()
+        }
+        "scale" => Ic::new(&xi::SCALE)
+            .polygon(&[(6.0, 6.0), (8.5, 11.0), (4.0, 11.0)])
+            .polygon(&[(26.0, 3.0), (32.0, 16.0), (20.0, 16.0)])
+            .line(&[(12.0, 8.0), (21.0, 8.0)])
+            .line(&[(14.0, 6.0), (12.0, 8.0), (14.0, 10.0)])
+            .line(&[(19.0, 6.0), (21.0, 8.0), (19.0, 10.0)])
+            .pixels(3, 19, 33, 29)
+            .done(),
+        "align" => Ic::new(&xi::ALIGN)
+            .polygon(&[(8.0, 8.0), (11.0, 15.0), (5.0, 15.0)])
+            .rect(14.0, 9.0, 17.0, 15.0)
+            .ellipse(26.0, 9.0, 6.0, 6.0)
+            .dotted(&[(2.0, 16.0), (32.0, 16.0)])
+            .pixels(3, 17, 33, 29)
+            .done(),
+        // Move: the dotted original, an arrow, the moved object.
+        "move" => Ic::new(&xi::MOVE)
+            .dotted_ellipse(7.5, 10.0, 3.5, 7.0)
+            .line(&[(14.0, 11.0), (21.0, 11.0)])
+            .line(&[(19.0, 9.0), (21.0, 11.0), (19.0, 13.0)])
+            .wide_ellipse(27.0, 10.5, 3.5, 7.0)
+            .pixels(5, 20, 31, 29)
+            .done(),
+        // Copy: the object, an arrow, its copy.
+        "copy" => Ic::new(&xi::COPY)
+            .wide_ellipse(8.5, 9.5, 3.5, 7.0)
+            .line(&[(14.0, 10.0), (21.0, 10.0)])
+            .line(&[(19.0, 8.0), (21.0, 10.0), (19.0, 12.0)])
+            .wide_ellipse(27.5, 9.5, 3.5, 7.0)
+            .pixels(5, 18, 30, 29)
+            .done(),
+        // Add point: a new point pushed into a line.
+        "addpt" => Ic::new(&xi::ADDPT)
+            .wide(&[(3.5, 21.5), (14.5, 10.5), (21.5, 10.5), (32.5, 21.5)])
+            .poly(
+                PolyKind::Box,
+                pen(3),
+                &[(15.5, 5.5), (19.5, 5.5), (19.5, 8.5), (15.5, 8.5)],
+            )
+            .line(&[(17.0, 15.0), (17.0, 22.0)])
+            .line(&[(15.0, 16.0), (17.0, 14.0), (19.0, 16.0)])
+            .dotted(&[(3.0, 25.0), (31.0, 25.0)])
+            .done(),
+        // Edit: an ellipse, a dotted pointer, the edit panel.
+        "edit" => Ic::new(&xi::EDIT)
+            .wide_ellipse(8.5, 8.0, 4.0, 3.5)
+            .dotted(&[(13.0, 13.0), (21.0, 17.0)])
+            .dotted(&[(13.0, 4.0), (22.0, 4.0)])
+            .rect(23.0, 4.0, 31.0, 17.0)
+            .pixels(24, 5, 30, 16)
+            .pixels(7, 19, 30, 29)
+            .done(),
+        // Flip up/down: a triangle, its mirror image, the axis, a turning arrow.
+        "flip_y" => Ic::new(&xi::FLIP_Y)
+            .polygon(&[(14.0, 4.0), (18.0, 13.0), (10.0, 13.0)])
+            .polygon(&[(10.0, 17.0), (18.0, 17.0), (14.0, 26.0)])
+            .dotted(&[(4.0, 15.0), (26.0, 15.0)])
+            .arc((26.0, 8.0), (31.0, 15.0), (26.0, 22.0))
+            .pixels(24, 6, 29, 10)
+            .pixels(24, 20, 29, 24)
+            .done(),
+        // Convert: a polyline and its spline, a box and its rounded form.
+        "convert" => Ic::new(&xi::CONVERT)
+            .curve(
+                false,
+                &[
+                    (7.0, 3.0),
+                    (4.0, 4.0),
+                    (3.0, 6.0),
+                    (4.0, 8.0),
+                    (6.5, 9.5),
+                    (8.0, 11.5),
+                    (7.5, 13.5),
+                    (4.0, 15.0),
+                ],
+            )
+            .line(&[(31.0, 3.0), (26.0, 8.0), (30.0, 12.0), (27.0, 15.0)])
+            .line(&[(10.0, 10.0), (24.0, 10.0)])
+            .line(&[(12.0, 8.0), (10.0, 10.0), (12.0, 12.0)])
+            .line(&[(22.0, 8.0), (24.0, 10.0), (22.0, 12.0)])
+            .rect(3.0, 18.0, 14.0, 27.0)
+            .round_rect(21.0, 18.0, 32.0, 27.0, 4)
+            .line(&[(9.0, 22.0), (26.0, 22.0)])
+            .line(&[(11.0, 20.0), (9.0, 22.0), (11.0, 24.0)])
+            .line(&[(24.0, 20.0), (26.0, 22.0), (24.0, 24.0)])
+            .done(),
+        // Arrows: a line given an arrowhead.
+        "autoarrow" => Ic::new(&xi::AUTOARROW)
+            .line(&[(10.0, 4.0), (10.0, 27.0)])
+            .polygon(&[(10.0, 6.0), (14.5, 18.0), (5.5, 18.0)])
+            .pixels(17, 4, 33, 28)
+            .done(),
+        // Tangent: a curve, its tangent and normal at a point.
+        "tangent" => Ic::new(&xi::TANGENT)
+            .arc((13.0, 4.0), (22.5, 15.0), (13.0, 26.0))
+            .line(&[(24.0, 3.0), (24.0, 28.0)])
+            .line(&[(3.0, 15.0), (29.0, 15.0)])
+            .marker(23.0, 15.0, 3.0)
+            .pixels(4, 9, 8, 13)
+            .pixels(25, 3, 31, 7)
+            .done(),
+        // Length: a curve over a ruler.
+        "lenmeas" => Ic::new(&xi::LENMEAS)
+            .pixels(2, 3, 33, 16)
+            .line(&[(3.0, 26.0), (33.0, 26.0)])
+            .line(&[(3.0, 23.0), (3.0, 26.0)])
+            .line(&[(8.0, 23.0), (8.0, 26.0)])
+            .line(&[(13.0, 23.0), (13.0, 26.0)])
+            .line(&[(18.0, 23.0), (18.0, 26.0)])
+            .line(&[(23.0, 23.0), (23.0, 26.0)])
+            .line(&[(28.0, 23.0), (28.0, 26.0)])
+            .line(&[(33.0, 23.0), (33.0, 26.0)])
+            .done(),
+        // X-splines: their control polygons, closed and open.
+        "c_xspl" => Ic::new(&xi::C_XSPL)
+            .polygon(&[
+                (3.0, 3.0),
+                (11.0, 3.0),
+                (16.0, 12.0),
+                (18.0, 12.0),
+                (25.0, 3.0),
+                (33.0, 3.0),
+                (27.0, 12.0),
+                (27.0, 17.0),
+                (33.0, 27.0),
+                (24.0, 27.0),
+                (19.0, 18.0),
+                (16.0, 18.0),
+                (11.0, 27.0),
+                (3.0, 27.0),
+                (8.0, 17.0),
+                (8.0, 12.0),
+            ])
+            .done(),
+        "xspl" => Ic::new(&xi::XSPL)
+            .line(&[(23.0, 5.0), (11.0, 5.0), (11.0, 13.0), (19.0, 13.0)])
+            .curve(
+                false,
+                &[
+                    (19.0, 13.0),
+                    (22.0, 15.0),
+                    (24.0, 19.0),
+                    (24.0, 22.0),
+                    (21.5, 25.0),
+                    (17.0, 26.0),
+                    (13.0, 25.0),
+                    (10.0, 23.0),
+                ],
+            )
+            .done(),
         // Pixel art in xfig: the camera and the serif T stay as pixels.
         "picobj" => Ic::new(&xi::PICOBJ).pixels(0, 0, 35, 31).done(),
         "text" => Ic::new(&xi::TEXT).pixels(0, 0, 35, 31).done(),
@@ -401,6 +656,21 @@ mod tests {
         &xi::ARC,
         &xi::PICOBJ,
         &xi::TEXT,
+        &xi::GLUE,
+        &xi::BREAK,
+        &xi::SCALE,
+        &xi::ALIGN,
+        &xi::MOVE,
+        &xi::COPY,
+        &xi::ADDPT,
+        &xi::EDIT,
+        &xi::FLIP_Y,
+        &xi::CONVERT,
+        &xi::AUTOARROW,
+        &xi::TANGENT,
+        &xi::LENMEAS,
+        &xi::C_XSPL,
+        &xi::XSPL,
     ];
 
     #[test]
