@@ -188,13 +188,14 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `dev/genps.c`, `genpdf.c` | 2.9 k | PostScript/PDF with page layout; the reference where drivers disagree | `render/eps`, `render/pdf`; `set_style` → `LineKind::dash_pattern`, `linewidth_adj` → `geom::stroke_width`, arrow fills, `PSFONTMAG` → metric text keeps its point size (`SceneOptions::text_scale`) | partial: page layout, multi-page | B4 |
 | `dev/genpstex.c` | 176 | PS/PDF + LaTeX overlay (pstex, pdftex) | — | missing | B2 |
 | `dev/gentikz.c` | 1870 | TikZ | — | missing | B1 |
-| `dev/genpict2e.c`, `genepic.c`, `genpstricks.c` | 6.5 k | LaTeX picture languages | — | missing | B3 (pict2e, PSTricks), B9 (epic) |
+| `dev/genpict2e.c`, `genpstricks.c` | 4.6 k | LaTeX picture languages | — | missing | B3 |
+| `dev/genepic.c`, `gentpic.c`, `genpic.c`, `picfonts.h`, `picpsfonts.h` | 3.5 k | epic/eepic/eepicemu, tpic, pic | `fig2dev/drivers/{epic,tpic,pic}` | ported | B9 |
 | `dev/genlatex.c`, `genpictex.c`, `gentextyl.c` | 2.9 k | LaTeX picture, PiCTeX, TeXtyl | `fig2dev/drivers/{latex,pictex,textyl}` | ported | B9 |
 | `dev/gensvg.c` | 1331 | SVG | `render/svg`; `geom::stroke_width` ported from `linewidth_adj` | own; reference-tested (A8) | review |
 | `dev/genbitmaps.c` | 593 | GIF, JPEG, PNG, PPM, TIFF, XBM, XPM via ghostscript | `render/drivers/bitmaps`, `render/export` (own renderer, no ghostscript) | ported | B6 |
 | `dev/psprolog.h` | 936 | PostScript prolog, the 22 fill patterns | `render/pattern` (`FILL_PAT01`…`22` ported) | patterns ported (D12) | — |
 | `dev/genbox.c` | 78 | LaTeX box | `render/drivers/latex_box` | ported | — |
-| `dev/genemf.c`, `gencgm.c`, `gendxf.c`, `genibmgl.c`, `genmp.c`, `genmf.c`, `genmap.c`, `gentk.c`, `genptk.c`, `gentpic.c`, `genpic.c`, `genge.c` | ≈15 k | EMF, CGM, DXF, HPGL, MetaPost, METAFONT, image maps, Tk, … | — | missing | B9 |
+| `dev/genemf.c`, `gencgm.c`, `gendxf.c`, `genibmgl.c`, `genmp.c`, `genmf.c`, `genmap.c`, `gentk.c`, `genptk.c`, `genge.c` | ≈15 k | EMF, CGM, DXF, HPGL, MetaPost, METAFONT, image maps, Tk, … | — | missing | B9 |
 | `dev/gengbx.c` | 0.9 k | Gerber (`-L gbx`) | `crates/fig2dev/src/drivers/gbx.rs` | ported | B9 |
 | `dev/genshape.c` | 0.9 k | LaTeX shape macros (`-L shape`) | `crates/fig2dev/src/drivers/shape.rs` | ported | B9 |
 | `dev/encode.c` | 236 | ASCII85 and deflate streams for PostScript/PDF | `render/eps`, `render/pdf` | own | review |
