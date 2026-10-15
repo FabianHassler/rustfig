@@ -35,15 +35,16 @@ pub enum VIcon {
         pie: bool,
     },
     Justify(Justify),
-    /// One of xfig's mode icons, by its bitmap name (`mode_icons`).
-    Mode(&'static str),
+    /// One of xfig's bitmaps traced as a vector drawing (`mode_icons`), by
+    /// its name.
+    Traced(&'static str),
 }
 
 impl VIcon {
     /// Size in icon pixels.
     fn size(self) -> (usize, usize) {
         match self {
-            VIcon::Mode(name) => crate::mode_icons::size(name),
+            VIcon::Traced(name) => crate::mode_icons::size(name),
             _ => (32, 32),
         }
     }
@@ -123,7 +124,7 @@ fn drawing(icon: VIcon) -> Vec<Object> {
         VIcon::Arc { pie } => Arc::through(style(2), px(16.0, 3.0), px(22.0, 16.0), px(16.0, 29.0), pie)
             .map(|a| vec![Object::new(ObjectKind::Arc(a))])
             .unwrap_or_default(),
-        VIcon::Mode(name) => crate::mode_icons::drawing(name).unwrap_or_default(),
+        VIcon::Traced(name) => crate::mode_icons::drawing(name).unwrap_or_default(),
         VIcon::Justify(j) => {
             // Lines of text of different lengths, aligned as `j` aligns them.
             let st = style(3);

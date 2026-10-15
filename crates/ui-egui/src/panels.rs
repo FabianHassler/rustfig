@@ -181,7 +181,7 @@ fn tool_button(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, t: ToolKind, icon:
 /// has been traced (W9), else xfig's bitmap.
 fn paint_mode_icon(ui: &egui::Ui, vector: bool, icon: &'static xfig_icons::Xbm, rect: egui::Rect, ink: Color32) {
     if vector && crate::mode_icons::traced(icon.name) {
-        crate::vector_icons::paint(ui, crate::vector_icons::VIcon::Mode(icon.name), rect, ink);
+        crate::vector_icons::paint(ui, crate::vector_icons::VIcon::Traced(icon.name), rect, ink);
     } else {
         xfig_icons::paint(ui, icon, rect, ink);
     }

@@ -730,10 +730,10 @@ fn arrow_type_pic(app: &App, n: i32) -> Pic {
 fn value_icon(app: &App, a: Attr) -> Option<Pic> {
     let ind = &app.engine.indicator;
     Some(match a {
-        Attr::Grid => Pic::Bitmap(grid_icon(ind.grid)),
-        Attr::PointPosn => Pic::Bitmap(posn_icon(ind.snap)),
-        Attr::HAlign => Pic::Bitmap(align_icon(&ind.align_h, true)),
-        Attr::VAlign => Pic::Bitmap(align_icon(&ind.align_v, false)),
+        Attr::Grid => Pic::traced(app, grid_icon(ind.grid)),
+        Attr::PointPosn => Pic::traced(app, posn_icon(ind.snap)),
+        Attr::HAlign => Pic::traced(app, align_icon(&ind.align_h, true)),
+        Attr::VAlign => Pic::traced(app, align_icon(&ind.align_v, false)),
         Attr::ArcType => arc_pic(app, ind.pie_arc),
         Attr::LineStyle => Pic::of(app, line_icon(ind.line), VIcon::Line(ind.line)),
         Attr::JoinStyle => Pic::of(app, join_icon(ind.join), VIcon::Join(ind.join)),
@@ -759,6 +759,15 @@ impl Pic {
     fn of(app: &App, bitmap: &'static Xbm, vector: VIcon) -> Pic {
         if app.vector_icons {
             Pic::Vector(vector)
+        } else {
+            Pic::Bitmap(bitmap)
+        }
+    }
+
+    /// xfig's bitmap, or its traced vector drawing when vectors are on.
+    fn traced(app: &App, bitmap: &'static Xbm) -> Pic {
+        if app.vector_icons && crate::mode_icons::traced(bitmap.name) {
+            Pic::Vector(VIcon::Traced(bitmap.name))
         } else {
             Pic::Bitmap(bitmap)
         }
@@ -963,7 +972,7 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                     (
                         ind.grid == *g,
                         g.map_or("none", |m| m.label(u)).to_string(),
-                        Pic::Bitmap(grid_icon(*g)),
+                        Pic::traced(app, grid_icon(*g)),
                     )
                 })
                 .collect();
@@ -975,7 +984,7 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             let u = units(app);
             let items: Vec<_> = SnapMode::ALL
                 .iter()
-                .map(|m| (ind.snap == *m, m.label(u).to_string(), Pic::Bitmap(posn_icon(*m))))
+                .map(|m| (ind.snap == *m, m.label(u).to_string(), Pic::traced(app, posn_icon(*m))))
                 .collect();
             if let Some(m) = icon_choices(ui, "posn", &items, 6).and_then(|i| SnapMode::ALL.get(i)) {
                 set(app, json!({ "snap": m }));
@@ -990,7 +999,7 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             };
             let items: Vec<_> = list
                 .iter()
-                .map(|v| (cur == *v, (*v).to_string(), Pic::Bitmap(align_icon(v, horizontal))))
+                .map(|v| (cur == *v, (*v).to_string(), Pic::traced(app, align_icon(v, horizontal))))
                 .collect();
             if let Some(v) = icon_choices(ui, field, &items, 4).and_then(|i| list.get(i)) {
                 let mut m = serde_json::Map::new();

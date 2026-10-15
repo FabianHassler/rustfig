@@ -227,60 +227,74 @@ impl Ic {
     }
 }
 
-/// The mode icons traced so far (the others keep xfig's bitmap).
-pub const TRACED: &[&str] = &[
-    "ellrad",
-    "elldia",
-    "cirrad",
-    "cirdia",
-    "c_spl",
-    "spl",
-    "c_intspl",
-    "intspl",
-    "polygon",
-    "line",
-    "box",
-    "arc_box",
-    "regpoly",
-    "arc",
-    "picobj",
-    "text",
-    "glue",
-    "break",
-    "scale",
-    "align",
-    "move",
-    "copy",
-    "addpt",
-    "edit",
-    "flip_y",
-    "convert",
-    "autoarrow",
-    "tangent",
-    "lenmeas",
-    "c_xspl",
-    "xspl",
-    "delete",
-    "update",
-    "movept",
-    "flip_x",
-    "rotCW",
-    "rotCCW",
+/// xfig's bitmaps traced so far (mode icons and attribute pictures); the
+/// others keep their bitmap.
+pub const TRACED: &[&Xbm] = &[
+    &xi::ELLRAD,
+    &xi::ELLDIA,
+    &xi::CIRRAD,
+    &xi::CIRDIA,
+    &xi::C_SPL,
+    &xi::SPL,
+    &xi::C_INTSPL,
+    &xi::INTSPL,
+    &xi::POLYGON,
+    &xi::LINE,
+    &xi::BOX,
+    &xi::ARC_BOX,
+    &xi::REGPOLY,
+    &xi::ARC,
+    &xi::PICOBJ,
+    &xi::TEXT,
+    &xi::GLUE,
+    &xi::BREAK,
+    &xi::SCALE,
+    &xi::ALIGN,
+    &xi::MOVE,
+    &xi::COPY,
+    &xi::ADDPT,
+    &xi::EDIT,
+    &xi::FLIP_Y,
+    &xi::CONVERT,
+    &xi::AUTOARROW,
+    &xi::TANGENT,
+    &xi::LENMEAS,
+    &xi::C_XSPL,
+    &xi::XSPL,
+    &xi::DELETE,
+    &xi::UPDATE,
+    &xi::MOVEPT,
+    &xi::FLIP_X,
+    &xi::ROTCW,
+    &xi::ROTCCW,
+    &xi::NONE,
+    &xi::ANY,
+    &xi::FINE_GRID,
+    &xi::GRID1,
+    &xi::GRID2,
+    &xi::GRID3,
+    &xi::GRID4,
+    &xi::VALIGNT,
+    &xi::VALIGNC,
+    &xi::VALIGNB,
+    &xi::HALIGNL,
+    &xi::HALIGNC,
+    &xi::HALIGNR,
 ];
+
+/// The traced bitmap called `name`.
+pub fn bitmap(name: &str) -> Option<&'static Xbm> {
+    TRACED.iter().find(|b| b.name == name).copied()
+}
 
 /// Whether `name` has a vector drawing.
 pub fn traced(name: &str) -> bool {
-    TRACED.contains(&name)
+    bitmap(name).is_some()
 }
 
-/// Size in pixels of xfig's mode icon `name` (36×32; the library icon is
-/// twice as wide).
+/// Size in pixels of the traced bitmap `name` (36×32 for unknown names).
 pub fn size(name: &str) -> (usize, usize) {
-    if name == xi::LIBRARY.name {
-        (xi::LIBRARY.width, xi::LIBRARY.height)
-    } else {
-        (36, 32)
-    }
+    bitmap(name).map_or((36, 32), |b| (b.width, b.height))
 }
 
 /// The figure eight of the closed spline icons (traced).
@@ -358,6 +372,19 @@ fn rotate(ic: &mut Ic, mirror: bool) -> &mut Ic {
         .arc(m((19.0, 8.5)), m((14.0, 12.0)), m((21.0, 15.0)))
         .line(&[m((21.0, 12.0)), m((25.0, 12.0)), m((25.0, 14.0))])
         .polygon(&[m((19.0, 2.0)), m((23.0, 6.5)), m((19.0, 11.0))])
+}
+
+/// A grid picture: vertical lines at `xs` from `y.0` to `y.1`, horizontal
+/// lines at `ys` from `x.0` to `x.1`.
+fn grid(b: &'static Xbm, xs: &[f64], ys: &[f64], x: (f64, f64), y: (f64, f64)) -> Vec<Object> {
+    let mut ic = Ic::new(b);
+    for &gx in xs {
+        ic.line(&[(gx, y.0), (gx, y.1)]);
+    }
+    for &gy in ys {
+        ic.line(&[(x.0, gy), (x.1, gy)]);
+    }
+    ic.done()
 }
 
 /// The vector drawing of xfig's mode icon `name` (`Xbm::name`), if it has
@@ -700,6 +727,80 @@ pub fn drawing(name: &str) -> Option<Vec<Object>> {
             let mut ic = Ic::new(&xi::ROTCCW);
             rotate(&mut ic, true).pixels(2, 20, 34, 29).done()
         }
+        // Attribute pictures: no grid / any position (a framed word) …
+        "none" => Ic::new(&xi::NONE)
+            .rect(3.0, 4.0, 28.0, 27.0)
+            .pixels(5, 10, 26, 21)
+            .done(),
+        "any" => Ic::new(&xi::ANY)
+            .rect(3.0, 4.0, 28.0, 27.0)
+            .pixels(5, 10, 26, 21)
+            .done(),
+        // … grids of xfig's spacings …
+        "fine_grid" => grid(
+            &xi::FINE_GRID,
+            &[3.0, 6.0, 9.0, 12.0, 15.0, 18.0, 21.0, 24.0, 27.0],
+            &[4.0, 7.0, 10.0, 13.0, 16.0, 19.0, 22.0, 25.0, 28.0],
+            (0.0, 31.0),
+            (0.0, 31.0),
+        ),
+        "grid1" => grid(
+            &xi::GRID1,
+            &[5.0, 9.0, 13.0, 17.0, 21.0, 25.0],
+            &[5.0, 9.0, 13.0, 17.0, 21.0, 25.0],
+            (1.0, 29.0),
+            (1.0, 29.0),
+        ),
+        "grid2" => grid(
+            &xi::GRID2,
+            &[3.0, 8.0, 13.0, 18.0, 23.0, 28.0],
+            &[4.0, 9.0, 14.0, 19.0, 24.0, 29.0],
+            (0.0, 31.0),
+            (0.0, 31.0),
+        ),
+        "grid3" => grid(
+            &xi::GRID3,
+            &[5.0, 15.0, 25.0],
+            &[5.0, 15.0, 25.0],
+            (0.0, 31.0),
+            (0.0, 31.0),
+        ),
+        "grid4" => grid(&xi::GRID4, &[6.0, 26.0], &[6.0, 26.0], (0.0, 31.0), (0.0, 31.0)),
+        // … and alignment: two boxes and the arrow pointing at the edge or centre.
+        "valignt" => Ic::new(&xi::VALIGNT)
+            .rect(3.0, 3.0, 12.0, 12.0)
+            .rect(24.0, 3.0, 28.0, 20.0)
+            .line(&[(15.0, 3.0), (21.0, 3.0)])
+            .line(&[(15.0, 4.0), (18.0, 10.0), (21.0, 4.0)])
+            .done(),
+        "valignc" => Ic::new(&xi::VALIGNC)
+            .rect(3.0, 11.0, 12.0, 20.0)
+            .rect(24.0, 7.0, 28.0, 24.0)
+            .line(&[(21.0, 12.0), (15.0, 15.0), (21.0, 18.0), (21.0, 12.0)])
+            .done(),
+        "valignb" => Ic::new(&xi::VALIGNB)
+            .rect(3.0, 19.0, 12.0, 28.0)
+            .rect(24.0, 11.0, 28.0, 28.0)
+            .line(&[(15.0, 28.0), (21.0, 28.0)])
+            .line(&[(15.0, 27.0), (18.0, 21.0), (21.0, 27.0)])
+            .done(),
+        "halignl" => Ic::new(&xi::HALIGNL)
+            .rect(3.0, 3.0, 14.0, 12.0)
+            .rect(3.0, 24.0, 23.0, 28.0)
+            .line(&[(3.0, 15.0), (3.0, 21.0)])
+            .line(&[(4.0, 15.0), (10.0, 18.0), (4.0, 21.0)])
+            .done(),
+        "halignc" => Ic::new(&xi::HALIGNC)
+            .rect(10.0, 3.0, 21.0, 12.0)
+            .rect(5.0, 24.0, 26.0, 28.0)
+            .polygon(&[(16.0, 15.0), (19.0, 21.0), (13.0, 21.0)])
+            .done(),
+        "halignr" => Ic::new(&xi::HALIGNR)
+            .rect(17.0, 3.0, 28.0, 12.0)
+            .rect(8.0, 24.0, 28.0, 28.0)
+            .line(&[(28.0, 15.0), (28.0, 21.0)])
+            .line(&[(27.0, 15.0), (21.0, 18.0), (27.0, 21.0)])
+            .done(),
         // Pixel art in xfig: the camera and the serif T stay as pixels.
         "picobj" => Ic::new(&xi::PICOBJ).pixels(0, 0, 35, 31).done(),
         "text" => Ic::new(&xi::TEXT).pixels(0, 0, 35, 31).done(),
@@ -747,62 +848,18 @@ mod tests {
         )
     }
 
-    const BITMAPS: &[&Xbm] = &[
-        &xi::ELLRAD,
-        &xi::ELLDIA,
-        &xi::CIRRAD,
-        &xi::CIRDIA,
-        &xi::C_SPL,
-        &xi::SPL,
-        &xi::C_INTSPL,
-        &xi::INTSPL,
-        &xi::POLYGON,
-        &xi::LINE,
-        &xi::BOX,
-        &xi::ARC_BOX,
-        &xi::REGPOLY,
-        &xi::ARC,
-        &xi::PICOBJ,
-        &xi::TEXT,
-        &xi::GLUE,
-        &xi::BREAK,
-        &xi::SCALE,
-        &xi::ALIGN,
-        &xi::MOVE,
-        &xi::COPY,
-        &xi::ADDPT,
-        &xi::EDIT,
-        &xi::FLIP_Y,
-        &xi::CONVERT,
-        &xi::AUTOARROW,
-        &xi::TANGENT,
-        &xi::LENMEAS,
-        &xi::C_XSPL,
-        &xi::XSPL,
-        &xi::DELETE,
-        &xi::UPDATE,
-        &xi::MOVEPT,
-        &xi::FLIP_X,
-        &xi::ROTCW,
-        &xi::ROTCCW,
-    ];
-
     #[test]
-    fn traced_names_have_drawings() {
-        for name in TRACED {
-            assert!(drawing(name).is_some_and(|d| !d.is_empty()), "{name}");
-            assert!(
-                BITMAPS.iter().any(|b| b.name == *name),
-                "{name} not checked against its bitmap"
-            );
+    fn traced_bitmaps_have_drawings() {
+        for b in TRACED {
+            assert!(drawing(b.name).is_some_and(|d| !d.is_empty()), "{}", b.name);
+            assert_eq!(size(b.name), (b.width, b.height));
         }
-        assert_eq!(BITMAPS.len(), TRACED.len());
     }
 
     #[test]
     fn traced_icons_match_xfigs_bitmaps() {
         let mut report = Vec::new();
-        for b in BITMAPS {
+        for b in TRACED {
             let (covered, inside) = overlap(b);
             report.push(format!("{:12} covered {covered:.2} inside {inside:.2}", b.name));
             assert!(covered >= 0.9 && inside >= 0.9, "{}", report.join("\n"));
@@ -818,7 +875,7 @@ mod tests {
     fn icon_sheet() {
         let path = std::env::var("RUSTFIG_ICON_SHEET").unwrap_or_else(|_| "icon_sheet.png".into());
         let (cw, ch) = (36 * 5 + 16, 32 * 3 + 8);
-        let rows = BITMAPS.len();
+        let rows = TRACED.len();
         let (w, h) = (cw * 2, ch * rows.div_ceil(2));
         let mut pm = rustfig_render::raster::Pixmap::new(w as u32, h as u32).unwrap();
         pm.data_mut().fill(255);
@@ -831,7 +888,7 @@ mod tests {
                 d[o + 2] = 255 - v;
             }
         };
-        for (i, b) in BITMAPS.iter().enumerate() {
+        for (i, b) in TRACED.iter().enumerate() {
             let (ox, oy) = ((i % 2) * cw, (i / 2) * ch);
             for y in 0..b.height {
                 for x in 0..b.width {
