@@ -249,6 +249,12 @@ fn languages(cmd: &str) -> Vec<String> {
     out
 }
 
+/// Whether RustFig writes `lang`: RustFig's renderers, or a driver in
+/// rustfig-fig2dev.
+fn ported(lang: &str) -> bool {
+    PORTED.contains(&lang) || rustfig_fig2dev::drivers::driver(lang).is_some()
+}
+
 const PORTED: &[&str] = &[
     "box", "eps", "gif", "jpeg", "pcx", "pdf", "png", "ppm", "ps", "svg", "tiff", "xbm", "xpm",
 ];
@@ -303,7 +309,7 @@ fn run_case(case: &Case, bin_dir: &Path, work: &Path) -> Outcome {
                 stdout,
                 stderr,
             } => {
-                if let Some(l) = languages(cmd).into_iter().find(|l| !PORTED.contains(&l.as_str())) {
+                if let Some(l) = languages(cmd).into_iter().find(|l| !ported(l)) {
                     return Outcome::NotPorted(l);
                 }
                 let out = sh(&format!("{prelude}{cmd}"));
