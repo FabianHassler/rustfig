@@ -22,7 +22,8 @@
 | Gerber, shape | — | ✅ | ported from fig2dev (B9): byte-identical to fig2dev 3.2.9a on 2,549/2,552 (Gerber) and 2,551/2,552 (shape) of xfig's samples, with fig2dev's depth order |
 | LaTeX picture (`latex`), PiCTeX, TeXtyl | — | ✅ | ported from fig2dev (B9): identical to fig2dev 3.2.9a on ≈7,590 of 7,701 runs (2,552 samples × 3 option sets); the rest differ in Latin-1 text (written as UTF-8) and one ellipse bound |
 | CGM, HPGL (`ibmgl`), DXF | — | ✅ | ported from fig2dev (B9): identical to fig2dev 3.2.9a on 1,231 of 1,254 runs (tests/data, every 25th library figure, several option sets); the rest differ in escaped high bytes in text and fig2dev's out-of-bounds reads; `-a` (ralcgm) not run |
-| EMF/MetaPost/METAFONT/map/Tk/PIC/tpic/SLD | — | ❌ | being ported from fig2dev (B9) |
+| MetaPost (`mp`, `mmp`), METAFONT, ge, image map | — | ✅ | ported from fig2dev (B9): mf and map identical to fig2dev 3.2.9a on all 342 runs each, mp on 672/684, ge on 192/228; the rest are escaped high bytes in text and fig2dev's out-of-bounds reads (ge user colours, pre-3.2 interpolated splines) |
+| EMF/Tk | — | ❌ | being ported from fig2dev (B9) |
 | epic, eepic, eepicemu, tpic, pic | — | ✅ | ported from fig2dev (B9): identical to fig2dev 3.2.9a on ≈99% of runs (every sample, several option sets); the rest differ in Latin-1 text, one ellipse bound, ±1 point in some closed X-splines |
 | Picture import PNG/JPEG/GIF/BMP/TIFF/PNM | ✅ | — | |
 | Picture import EPS/PDF/XPM/XBM/PCX | ❌ | — | gap #14 |
