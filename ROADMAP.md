@@ -62,7 +62,7 @@ English only. See [localization parity](docs/localization-parity.md).
 The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 [docs/gaps.md](docs/gaps.md). Next up:
 1. The rest of the fig2dev port (B0: export languages ✅, bounds ✅; options, colour and font tables next), checked against fig2dev's EPS and PDF on xfig's ≈2,550 sample figures (A10 ✅): every export language in Rust, no fig2dev or ghostscript at runtime.
-2. Phase A, hardening: shared undo snapshots and per-command cost (done), CI (Linux on every push, all OSes for releases), web build, UI tests, export polish, crash recovery, no UI stalls on large drawings.
+2. Phase A, hardening: shared undo snapshots, per-command cost, CI (Linux on every push, all OSes for releases), the web build check and UI tests are done; export polish, crash recovery and no UI stalls on large drawings remain.
 3. Preferences that survive restarts (E1) and xfig's command-line options (S3).
 4. Phase B: fig2dev's drivers ported (LaTeX exports, bitmaps, PostScript, the rest), modern printing (PDF to the system print dialog).
 5. Phase C, web: trunk packaging and browser file I/O.
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-15 | A2, A3: GitHub Actions CI (every push, Linux, wasm check, fig2dev reference tests, perf budgets) and release builds for Linux, Windows and macOS. |
 | 2026-10-15 | W8 started: every xfig key and mouse binding audited (`docs/keys-parity.md`); arrow keys pan, Home pans to the origin, Home/End in text, Shift-Meta-X exports with the current settings, the wheel steps indicator values, Escape closes panels. 195 tests. |
 | 2026-10-15 | A4: headless UI tests open every dialog, drive Save As/Open/Merge/Import through scripted file dialogs and check the unsaved-changes prompt on Quit. 191 tests. |
 | 2026-10-15 | A9: commands re-measure only the texts they changed, and hit testing recomputes only changed boxes: a one-object edit among 5,000 texts 1.7 → 0.4 ms. 188 tests. |
