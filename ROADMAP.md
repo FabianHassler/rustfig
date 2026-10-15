@@ -62,7 +62,7 @@ English only. See [localization parity](docs/localization-parity.md).
 The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 [docs/gaps.md](docs/gaps.md). Next up:
 1. The rest of the fig2dev port (B0: export languages ✅, bounds ✅; options, colour and font tables next), checked against fig2dev's EPS and PDF on xfig's ≈2,550 sample figures (A10 ✅): every export language in Rust, no fig2dev or ghostscript at runtime.
-2. Phase A, hardening: shared undo snapshots, per-command cost, CI (Linux on every push, all OSes for releases), the web build check and UI tests are done; export polish and crash recovery are done; no UI stalls on large drawings (A7) remains.
+2. ✅ Phase A, hardening (done 2026-10-15): shared undo snapshots, per-command cost, CI (Linux on every push, all OSes for releases), the web build check, UI tests, export curves, crash recovery, stall-free panning on large drawings.
 3. Preferences that survive restarts (E1) and xfig's command-line options (S3).
 4. Phase B: fig2dev's drivers ported (LaTeX exports, bitmaps, PostScript, the rest), modern printing (PDF to the system print dialog).
 5. Phase C, web: trunk packaging and browser file I/O.
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-15 | A7: panning and zooming a 50,000-object drawing stays at 1–3 ms per frame (was 330 ms): cached scene, the last image moved at once, the exact one rendered in the background. Phase A done. |
 | 2026-10-15 | A6: crash recovery: unsaved drawings are copied a few seconds after each change; after a crash or kill the next start offers to restore them (OS file locks tell running instances from stopped ones). 219 tests. |
 | 2026-10-15 | A5: ellipses, arcs and rounded boxes are true curves in SVG, PDF and EPS (an ellipse SVG 169 KB → 2 KB); corpus EPS median difference to fig2dev 0.0031 → 0.0028. 214 tests. |
 | 2026-10-15 | W9 done: all 107 of xfig's icon bitmaps redrawn as vectors (sharp on HiDPI; xfig's bitmaps optional), and RustFig has an application icon, drawn in code. 210 tests. |

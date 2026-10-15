@@ -76,6 +76,9 @@ pub struct App {
     /// Drawings left by instances that stopped without saving, offered at
     /// start: (recovery id, the file they came from).
     pub recoverable: Vec<(String, Option<String>)>,
+    /// How long the last frames took on the UI thread (ms), newest last,
+    /// at most 120 (native; `ui.state` reports them).
+    pub frame_times: std::collections::VecDeque<f64>,
     /// xfig's compose key while typing text (`menus::compose_text`).
     pub(crate) compose: menus::Compose,
     pub show_indicator: bool,
@@ -119,6 +122,7 @@ impl App {
             #[cfg(not(target_arch = "wasm32"))]
             autosave: None,
             recoverable: Vec::new(),
+            frame_times: std::collections::VecDeque::new(),
             compose: menus::Compose::default(),
             show_indicator: true,
             depth_drag: None,
@@ -332,7 +336,16 @@ impl eframe::App for App {
 impl App {
     /// Run one UI frame (guarded against panics).
     pub fn ui(&mut self, ctx: &egui::Context) {
+        #[cfg(not(target_arch = "wasm32"))]
+        let start = std::time::Instant::now();
         let frame_result = rustfig_engine::guard::catch(|| self.frame(ctx));
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if self.frame_times.len() >= 120 {
+                self.frame_times.pop_front();
+            }
+            self.frame_times.push_back(start.elapsed().as_secs_f64() * 1000.0);
+        }
         if let Err(msg) = frame_result {
             // xfig's emergency save: keep the work before reporting.
             #[cfg(not(target_arch = "wasm32"))]

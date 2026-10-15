@@ -21,10 +21,42 @@ struct DocKey {
     hide: Vec<ObjectId>,
 }
 
+impl DocKey {
+    /// The view the raster was made for.
+    fn view(&self, ppp: f32) -> rustfig_engine::View {
+        let mut v = rustfig_engine::View {
+            zoom: f64::from_bits(self.zoom),
+            origin: Point::new(f64::from_bits(self.ox), f64::from_bits(self.oy)),
+            ..Default::default()
+        };
+        v.size = (self.w as f64 / f64::from(ppp), self.h as f64 / f64::from(ppp));
+        v
+    }
+
+    /// Same drawing, maybe another view.
+    fn same_drawing(&self, o: &DocKey) -> bool {
+        self.revision == o.revision && self.hide == o.hide
+    }
+}
+
+/// A document raster being made on a background thread (A7).
+#[cfg(not(target_arch = "wasm32"))]
+struct Job {
+    key: DocKey,
+    /// The raster and how long it took (ms).
+    rx: std::sync::mpsc::Receiver<(egui::ColorImage, f64)>,
+}
+
 #[derive(Default)]
 pub struct CanvasState {
     doc_tex: Option<TextureHandle>,
+    /// What `doc_tex` shows (it may lag behind the view while a new raster
+    /// is made; it is then drawn moved and scaled to the current view).
     doc_key: Option<DocKey>,
+    /// The scene of the current drawing, kept across pans and zooms.
+    scene: Option<(DocKey, std::sync::Arc<Scene>)>,
+    #[cfg(not(target_arch = "wasm32"))]
+    job: Option<Job>,
     ov_tex: Option<TextureHandle>,
     ov_key: Option<(Overlay, DocKey)>,
     /// Pointer position in Fig units, if over the canvas.
@@ -43,6 +75,7 @@ impl CanvasState {
     pub fn invalidate(&mut self) {
         self.doc_key = None;
         self.ov_key = None;
+        self.scene = None;
     }
 }
 
@@ -50,16 +83,9 @@ fn to_pos(p: Point, origin: Pos2) -> Pos2 {
     pos2(origin.x + p.x as f32, origin.y + p.y as f32)
 }
 
-/// Render `doc` (minus `hide`) into a texture of `w`×`h` physical pixels.
-fn render_doc(
-    doc: &Document,
-    opts: &SceneOptions,
-    hide: &[ObjectId],
-    t: Affine,
-    w: usize,
-    h: usize,
-) -> egui::ColorImage {
-    let scene = if hide.is_empty() {
+/// The scene of `doc` minus `hide`.
+fn build_scene(doc: &Document, opts: &SceneOptions, hide: &[ObjectId]) -> Scene {
+    if hide.is_empty() {
         Scene::build(doc, opts)
     } else {
         let mut d = Document {
@@ -71,8 +97,20 @@ fn render_doc(
         };
         d.objects = doc.objects.iter().filter(|o| !hide.contains(&o.id)).cloned().collect();
         Scene::build(&d, opts)
-    };
-    rasterize_scene(&scene, t, w, h)
+    }
+}
+
+/// A render that took this long or more goes to a background thread next
+/// time (native), so pans and zooms never wait for it.
+const SYNC_RENDER_MS: f64 = 20.0;
+
+/// Show `img`, the raster for `key`.
+fn set_doc_texture(app: &mut App, ctx: &egui::Context, img: egui::ColorImage, key: DocKey) {
+    match &mut app.canvas.doc_tex {
+        Some(tex) => tex.set(img, TextureOptions::NEAREST),
+        None => app.canvas.doc_tex = Some(ctx.load_texture("doc", img, TextureOptions::NEAREST)),
+    }
+    app.canvas.doc_key = Some(key);
 }
 
 fn rasterize_scene(scene: &Scene, t: Affine, w: usize, h: usize) -> egui::ColorImage {
@@ -181,19 +219,81 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         screen: true,
         text_scale: None,
     };
-    if app.canvas.doc_key.as_ref() != Some(&key) {
-        let start = web_time_now();
-        let img = render_doc(app.engine.doc(), &scene_opts, &overlay.hide, t, w, h);
-        app.canvas.render_ms = web_time_now() - start;
-        match &mut app.canvas.doc_tex {
-            Some(tex) => tex.set(img, TextureOptions::NEAREST),
-            None => app.canvas.doc_tex = Some(ui.ctx().load_texture("doc", img, TextureOptions::NEAREST)),
+    // The scene: rebuilt only when the drawing changes, not on pan or zoom.
+    let scene = match &app.canvas.scene {
+        Some((k, sc)) if k.same_drawing(&key) => std::sync::Arc::clone(sc),
+        _ => {
+            let sc = std::sync::Arc::new(build_scene(app.engine.doc(), &scene_opts, &overlay.hide));
+            app.canvas.scene = Some((key.clone(), std::sync::Arc::clone(&sc)));
+            sc
         }
-        app.canvas.doc_key = Some(key.clone());
+    };
+    // A background render that finished: show it (the newest view wins).
+    #[cfg(not(target_arch = "wasm32"))]
+    if let Some(job) = &app.canvas.job {
+        match job.rx.try_recv() {
+            Ok((img, ms)) => {
+                let k = job.key.clone();
+                app.canvas.job = None;
+                app.canvas.render_ms = ms;
+                if k.same_drawing(&key) {
+                    set_doc_texture(app, ui.ctx(), img, k);
+                }
+            }
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => app.canvas.job = None,
+            Err(std::sync::mpsc::TryRecvError::Empty) => {}
+        }
+    }
+    if app.canvas.doc_key.as_ref() != Some(&key) {
+        #[cfg(not(target_arch = "wasm32"))]
+        let busy = app.canvas.job.is_some();
+        #[cfg(target_arch = "wasm32")]
+        let busy = false;
+        // Slow drawings render in the background (native); while a render
+        // runs, the next starts when it is done.
+        let background =
+            cfg!(not(target_arch = "wasm32")) && app.canvas.render_ms >= SYNC_RENDER_MS && app.canvas.doc_tex.is_some();
+        if background {
+            #[cfg(not(target_arch = "wasm32"))]
+            if !busy {
+                let (tx, rx) = std::sync::mpsc::channel();
+                let (sc, ctx, k) = (std::sync::Arc::clone(&scene), ui.ctx().clone(), key.clone());
+                let spawned = std::thread::Builder::new()
+                    .name("rustfig-render".into())
+                    .spawn(move || {
+                        let start = std::time::Instant::now();
+                        let img = rasterize_scene(&sc, t, w, h);
+                        let ms = start.elapsed().as_secs_f64() * 1000.0;
+                        // The canvas may be gone (app closing): nothing to do.
+                        let _ = tx.send((img, ms));
+                        ctx.request_repaint();
+                    });
+                match spawned {
+                    Ok(_) => app.canvas.job = Some(Job { key: k, rx }),
+                    Err(_) => {
+                        let img = rasterize_scene(&scene, t, w, h);
+                        set_doc_texture(app, ui.ctx(), img, key.clone());
+                    }
+                }
+            }
+            #[cfg(target_arch = "wasm32")]
+            let _ = busy;
+        } else if !busy {
+            let start = web_time_now();
+            let img = rasterize_scene(&scene, t, w, h);
+            app.canvas.render_ms = web_time_now() - start;
+            set_doc_texture(app, ui.ctx(), img, key.clone());
+        }
     }
     let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
-    if let Some(tex) = &app.canvas.doc_tex {
-        painter.image(tex.id(), rect, uv, Color32::WHITE);
+    if let (Some(tex), Some(shown)) = (&app.canvas.doc_tex, &app.canvas.doc_key) {
+        // The raster where its view puts it in the current one: exact when
+        // the views agree, moved and scaled while a new raster is made.
+        let old = shown.view(ppp);
+        let tl = view.to_screen(old.to_fig(Point::ZERO));
+        let br = view.to_screen(old.to_fig(Point::new(old.size.0, old.size.1)));
+        let r = Rect::from_min_max(to_pos(tl, origin), to_pos(br, origin));
+        painter.image(tex.id(), r, uv, Color32::WHITE);
     }
 
     // Overlay raster (previews, text being typed).

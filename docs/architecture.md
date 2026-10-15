@@ -39,6 +39,10 @@ an unsaved drawing in the platform's recovery folder, next to an OS-locked
 `ID.lock`; `ui-egui::autosave` writes it after a 3-second pause and from the
 panic guard, and the next start offers drawings whose lock is free.
 
+Canvas (A7): the scene is kept per drawing revision; on pan and zoom the last
+raster is drawn moved and scaled to the new view at once, and the exact one is
+rendered on a background thread when rendering is slow (native).
+
 Tools (`crates/engine/src/tools`) turn pointer and key events (in Fig units)
 into commands. While busy they expose an `Overlay` (preview objects, guides,
 handles, the text being typed), which the UI renders with the same renderer.
