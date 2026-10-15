@@ -4,7 +4,7 @@ use crate::pattern::{coverage, PatternFrame};
 use crate::{Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
 use pdf_writer::types::{LineCapStyle, LineJoinStyle};
 use pdf_writer::{Content, Filter, Finish, Name, Pdf, Rect as PdfRect, Ref, Str, TextStr};
-use rustfig_geom::{Point, Rect};
+use rustfig_geom::{Point, Rect, Seg};
 use rustfig_model::{CapStyle, JoinStyle, Justify, RasterImage};
 
 /// The standard fonts used for text, by resource name.
@@ -92,12 +92,31 @@ impl Ctx {
 
     fn path(&mut self, subs: &[SubPath]) {
         for s in subs {
-            for (i, q) in s.pts.iter().enumerate() {
-                let (x, y) = self.p(*q);
-                if i == 0 {
-                    self.c.move_to(x, y);
-                } else {
-                    self.c.line_to(x, y);
+            if let Some(curve) = &s.curve {
+                for seg in curve {
+                    match *seg {
+                        Seg::Move(q) => {
+                            let (x, y) = self.p(q);
+                            self.c.move_to(x, y);
+                        }
+                        Seg::Line(q) => {
+                            let (x, y) = self.p(q);
+                            self.c.line_to(x, y);
+                        }
+                        Seg::Cubic(a, b, q) => {
+                            let ((x1, y1), (x2, y2), (x3, y3)) = (self.p(a), self.p(b), self.p(q));
+                            self.c.cubic_to(x1, y1, x2, y2, x3, y3);
+                        }
+                    }
+                }
+            } else {
+                for (i, q) in s.pts.iter().enumerate() {
+                    let (x, y) = self.p(*q);
+                    if i == 0 {
+                        self.c.move_to(x, y);
+                    } else {
+                        self.c.line_to(x, y);
+                    }
                 }
             }
             if s.closed && !s.pts.is_empty() {
@@ -253,7 +272,14 @@ pub fn to_pdf(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>
                             fig_per_pt: 1.0 / c.k,
                         };
                         let (lines, line_width) = coverage(*kind, &region, &frame);
-                        let lines: Vec<SubPath> = lines.into_iter().map(|pts| SubPath { pts, closed: false }).collect();
+                        let lines: Vec<SubPath> = lines
+                            .into_iter()
+                            .map(|pts| SubPath {
+                                pts,
+                                closed: false,
+                                curve: None,
+                            })
+                            .collect();
                         c.path(&lines);
                         c.stroke(&Stroke {
                             width: line_width,

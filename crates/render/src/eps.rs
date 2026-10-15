@@ -2,7 +2,7 @@
 
 use crate::pattern::{coverage, PatternFrame};
 use crate::{Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
-use rustfig_geom::{Point, Rect};
+use rustfig_geom::{Point, Rect, Seg};
 use rustfig_model::{CapStyle, JoinStyle, Justify};
 use std::fmt::Write as _;
 
@@ -31,9 +31,37 @@ impl Ctx {
     fn path(&mut self, subs: &[SubPath]) {
         self.out.push_str("newpath\n");
         for s in subs {
-            for (i, q) in s.pts.iter().enumerate() {
-                let (x, y) = self.p(*q);
-                let _ = writeln!(self.out, "{} {} {}", n(x), n(y), if i == 0 { "m" } else { "l" });
+            if let Some(curve) = &s.curve {
+                for seg in curve {
+                    let _ = match *seg {
+                        Seg::Move(q) => {
+                            let (x, y) = self.p(q);
+                            writeln!(self.out, "{} {} m", n(x), n(y))
+                        }
+                        Seg::Line(q) => {
+                            let (x, y) = self.p(q);
+                            writeln!(self.out, "{} {} l", n(x), n(y))
+                        }
+                        Seg::Cubic(a, b, q) => {
+                            let ((x1, y1), (x2, y2), (x3, y3)) = (self.p(a), self.p(b), self.p(q));
+                            writeln!(
+                                self.out,
+                                "{} {} {} {} {} {} curveto",
+                                n(x1),
+                                n(y1),
+                                n(x2),
+                                n(y2),
+                                n(x3),
+                                n(y3)
+                            )
+                        }
+                    };
+                }
+            } else {
+                for (i, q) in s.pts.iter().enumerate() {
+                    let (x, y) = self.p(*q);
+                    let _ = writeln!(self.out, "{} {} {}", n(x), n(y), if i == 0 { "m" } else { "l" });
+                }
             }
             if s.closed && !s.pts.is_empty() {
                 self.out.push_str("closepath\n");
@@ -284,7 +312,14 @@ pub fn to_eps(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>
                             fig_per_pt: 1.0 / c.k,
                         };
                         let (lines, line_width) = coverage(*kind, &region, &frame);
-                        let lines: Vec<SubPath> = lines.into_iter().map(|pts| SubPath { pts, closed: false }).collect();
+                        let lines: Vec<SubPath> = lines
+                            .into_iter()
+                            .map(|pts| SubPath {
+                                pts,
+                                closed: false,
+                                curve: None,
+                            })
+                            .collect();
                         c.path(&lines);
                         c.stroke(&Stroke {
                             width: line_width,

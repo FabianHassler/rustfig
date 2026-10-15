@@ -299,3 +299,45 @@ mod metric_text_tests {
         assert!((text_scene_size(Units::Inches) - 12.0).abs() < 1e-9);
     }
 }
+
+#[cfg(test)]
+mod curve_tests {
+    use super::*;
+    use rustfig_geom::Point;
+    use rustfig_model::{Ellipse, EllipseKind, Object, ObjectKind, Style};
+    use std::sync::Arc;
+
+    fn ellipse_doc() -> Document {
+        let mut doc = Document::new();
+        doc.objects.push(Arc::new(Object::new(ObjectKind::Ellipse(Ellipse {
+            kind: EllipseKind::EllipseRadii,
+            style: Style::default(),
+            direction: 1,
+            angle: 0.3,
+            center: Point::new(1200.0, 1200.0),
+            radii: Point::new(900.0, 500.0),
+            start: Point::new(1200.0, 1200.0),
+            end: Point::new(2100.0, 1200.0),
+        }))));
+        doc
+    }
+
+    /// A5: ellipses reach the vector formats as four curves, not hundreds of
+    /// points; the raster backend draws the same flattened outline as before.
+    #[test]
+    fn ellipses_export_as_curves() {
+        let doc = ellipse_doc();
+        let opts = ExportOptions::default();
+        let svg = String::from_utf8(export(&doc, ExportFormat::Svg, &opts).unwrap()).unwrap();
+        assert_eq!(svg.matches('C').count(), 4, "{svg}");
+        assert!(svg.len() < 3000, "{} bytes", svg.len());
+        let eps = String::from_utf8(export(&doc, ExportFormat::Eps, &opts).unwrap()).unwrap();
+        assert_eq!(eps.matches("curveto").count(), 4);
+        let scene = Scene::build(&doc, &SceneOptions::default());
+        let Some(crate::Prim::Path { subpaths, .. }) = scene.prims.first() else {
+            panic!("no path")
+        };
+        assert!(subpaths[0].curve.is_some());
+        assert!(subpaths[0].pts.len() > 100, "the raster keeps the flattening");
+    }
+}

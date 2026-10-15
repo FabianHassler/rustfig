@@ -128,7 +128,14 @@ fn draw_path(
                 if let Some(inv) = t.invert() {
                     let vis = Rect::from_points(bb.intersection_or_empty(&view).corners().map(|p| inv.apply(p)));
                     let (lines, line_width) = coverage(*kind, &vis, &opts.pattern);
-                    let subs: Vec<SubPath> = lines.into_iter().map(|pts| SubPath { pts, closed: false }).collect();
+                    let subs: Vec<SubPath> = lines
+                        .into_iter()
+                        .map(|pts| SubPath {
+                            pts,
+                            closed: false,
+                            curve: None,
+                        })
+                        .collect();
                     if let Some(lp) = build_path(&subs, t) {
                         let st = tiny_skia::Stroke {
                             width: f((line_width * scale).max(0.5)),

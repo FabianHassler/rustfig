@@ -23,7 +23,7 @@ mod textcache;
 
 pub use export::{export, export_bounds, ExportFormat, ExportOptions};
 
-use rustfig_geom::{arrowhead, ArrowShape, ArrowSpec, Point, Rect, FIG_PER_POINT};
+use rustfig_geom::{arrowhead, ArrowShape, ArrowSpec, Point, Rect, Seg, FIG_PER_POINT};
 use rustfig_model::{
     area_fill_color, flatten_object, Arrow, CapStyle, ColorRef, Document, JoinStyle, Justify, LineKind, Object,
     ObjectKind, PolyKind, RasterImage, Rgb, Style,
@@ -81,6 +81,10 @@ pub struct Stroke {
 pub struct SubPath {
     pub pts: Vec<Point>,
     pub closed: bool,
+    /// The exact outline as lines and curves, for the vector backends
+    /// (ellipses, arcs, rounded boxes); `pts` is its flattening, which the
+    /// raster backend draws.
+    pub curve: Option<Vec<Seg>>,
 }
 
 /// A drawing primitive in Fig coordinates.
@@ -388,6 +392,7 @@ fn arrow_prims(doc: &Document, style: &Style, a: &Arrow, shape: ArrowShape, out:
         subpaths: vec![SubPath {
             pts: shape.outline,
             closed: shape.closed,
+            curve: None,
         }],
         fill,
         stroke: Some(stroke.clone()),
@@ -397,6 +402,7 @@ fn arrow_prims(doc: &Document, style: &Style, a: &Arrow, shape: ArrowShape, out:
             subpaths: vec![SubPath {
                 pts: part,
                 closed: true,
+                curve: None,
             }],
             fill: Some(Fill::Solid(pen)),
             stroke: Some(stroke),
@@ -447,14 +453,17 @@ fn object_prims(doc: &Document, o: &Object, opts: &SceneOptions, out: &mut Vec<P
                             SubPath {
                                 pts: corners.to_vec(),
                                 closed: true,
+                                curve: None,
                             },
                             SubPath {
                                 pts: vec![a, c],
                                 closed: false,
+                                curve: None,
                             },
                             SubPath {
                                 pts: vec![b, d],
                                 closed: false,
+                                curve: None,
                             },
                         ],
                         fill: None,
@@ -474,6 +483,7 @@ fn object_prims(doc: &Document, o: &Object, opts: &SceneOptions, out: &mut Vec<P
                         subpaths: vec![SubPath {
                             pts: corners.to_vec(),
                             closed: true,
+                            curve: None,
                         }],
                         fill: None,
                         stroke: Some(stroke),
@@ -536,6 +546,10 @@ fn object_prims(doc: &Document, o: &Object, opts: &SceneOptions, out: &mut Vec<P
                 }
             }
             let closed_any = paths.iter().any(|p| p.closed);
+            // The exact outline for the vector backends, unless arrowheads
+            // shortened the line (then the flattened, shortened one is drawn).
+            let shortened = !heads.is_empty() && !matches!(&o.kind, ObjectKind::Arc(a) if a.pie);
+            let mut exact = if shortened { None } else { exact_outline(o) };
             let subpaths: Vec<SubPath> = paths
                 .into_iter()
                 .filter(|p| !p.pts.is_empty())
@@ -547,7 +561,11 @@ fn object_prims(doc: &Document, o: &Object, opts: &SceneOptions, out: &mut Vec<P
                             pts.push(q + Point::new(0.01, 0.0));
                         }
                     }
-                    SubPath { pts, closed: p.closed }
+                    SubPath {
+                        pts,
+                        closed: p.closed,
+                        curve: exact.take(),
+                    }
                 })
                 .collect();
             let single_dot = subpaths
@@ -576,6 +594,26 @@ fn object_prims(doc: &Document, o: &Object, opts: &SceneOptions, out: &mut Vec<P
 /// Font size in Fig units for a size in points.
 pub fn font_px(size: f64) -> f64 {
     size * FIG_PER_POINT
+}
+
+/// An object's outline as lines and curves, where it has curves (ellipses,
+/// arcs, rounded boxes); others are exact as their points.
+fn exact_outline(o: &Object) -> Option<Vec<Seg>> {
+    match &o.kind {
+        ObjectKind::Ellipse(e) => Some(rustfig_geom::ellipse_path(e.center, e.radii.x, e.radii.y, e.angle)),
+        ObjectKind::Arc(a) => {
+            let g = rustfig_geom::arc_from_three_points(a.points[0], a.points[1], a.points[2])?;
+            Some(rustfig_geom::arc_path(&rustfig_model::arc_geom(a, g), a.pie))
+        }
+        ObjectKind::Polyline(p) if p.kind == PolyKind::ArcBox => {
+            let r = Rect::from_points(p.points.iter().copied());
+            Some(rustfig_geom::round_rect_path(
+                &r,
+                f64::from(p.radius.max(0)) * rustfig_geom::FIG_PER_STYLE_UNIT,
+            ))
+        }
+        _ => None,
+    }
 }
 
 #[cfg(test)]

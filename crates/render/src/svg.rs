@@ -2,7 +2,7 @@
 
 use crate::pattern::{coverage, PatternFrame};
 use crate::{Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
-use rustfig_geom::{Point, Rect};
+use rustfig_geom::{Point, Rect, Seg};
 use rustfig_model::{CapStyle, JoinStyle, Justify, RasterImage};
 use std::fmt::Write as _;
 
@@ -40,8 +40,20 @@ fn rgb(c: Rgba) -> String {
 pub(crate) fn path_data(subs: &[SubPath]) -> String {
     let mut d = String::new();
     for s in subs {
-        for (i, p) in s.pts.iter().enumerate() {
-            let _ = write!(d, "{}{} {} ", if i == 0 { "M" } else { "L" }, n(p.x), n(p.y));
+        if let Some(curve) = &s.curve {
+            for seg in curve {
+                let _ = match *seg {
+                    Seg::Move(p) => write!(d, "M{} {} ", n(p.x), n(p.y)),
+                    Seg::Line(p) => write!(d, "L{} {} ", n(p.x), n(p.y)),
+                    Seg::Cubic(a, b, p) => {
+                        write!(d, "C{} {} {} {} {} {} ", n(a.x), n(a.y), n(b.x), n(b.y), n(p.x), n(p.y))
+                    }
+                };
+            }
+        } else {
+            for (i, p) in s.pts.iter().enumerate() {
+                let _ = write!(d, "{}{} {} ", if i == 0 { "M" } else { "L" }, n(p.x), n(p.y));
+            }
         }
         if s.closed && !s.pts.is_empty() {
             d.push_str("Z ");
@@ -224,7 +236,14 @@ pub fn to_svg(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>
                         let _ = writeln!(out, "<path d=\"{d}\" fill=\"{}\" fill-rule=\"evenodd\"/>", rgb(*bg));
                         let region = Rect::from_points(subpaths.iter().flat_map(|s| s.pts.iter().copied()));
                         let (lines, line_width) = coverage(*kind, &region, &PatternFrame::export(&b, scale));
-                        let lines: Vec<SubPath> = lines.into_iter().map(|pts| SubPath { pts, closed: false }).collect();
+                        let lines: Vec<SubPath> = lines
+                            .into_iter()
+                            .map(|pts| SubPath {
+                                pts,
+                                closed: false,
+                                curve: None,
+                            })
+                            .collect();
                         let _ = writeln!(
                             out,
                             "<path clip-path=\"url(#c{clip_id})\" d=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{}\"/>",

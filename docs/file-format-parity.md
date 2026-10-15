@@ -8,9 +8,9 @@
 | Fig 3.1, 3.0 | ✅ | — | old splines converted to X-splines (shape ±1) |
 | Fig 2.1 and older | ❌ | — | gap #13 |
 | RustFig native (`.rustfig`, JSON) | ✅ | ✅ | versioned envelope |
-| PDF | — | ✅ | vector, standard-14 fonts, images with alpha |
-| SVG | — | ✅ | vector, patterns via clip paths, embedded PNG images |
-| EPS | — | ✅ | Level 2, ISO-Latin-1 fonts |
+| PDF | — | ✅ | vector with true curves (ellipses, arcs, rounded boxes), standard-14 fonts, images with alpha |
+| SVG | — | ✅ | vector with true curves, patterns via clip paths, embedded PNG images |
+| EPS | — | ✅ | Level 2, true curves, ISO-Latin-1 fonts |
 | PNG | — | ✅ | any resolution up to 20 000 px edge |
 | EPS and PDF together (xfig's pspdf) | — | ✅ | two files, NAME.eps and NAME.pdf |
 | LaTeX box (fig2dev `box`) | — | ✅ | ported from `genbox.c`; fig2dev's bounds |
