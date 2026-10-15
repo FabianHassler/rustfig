@@ -84,6 +84,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}",
     },
     UiCommand {
+        id: "app.export_now",
+        label: "Export with current settings",
+        shortcut: "",
+        params: "{}  — xfig's ExportFile: next to the figure, the export panel's language and settings",
+    },
+    UiCommand {
         id: "app.quit",
         label: "Quit",
         shortcut: "Ctrl+Q",
@@ -176,6 +182,7 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
             }
         }
         "app.export" => app.dialogs.export.open = true,
+        "app.export_now" => dialogs::export_now(app),
         "app.quit" => app.guard_unsaved(Pending::Quit),
         "app.edit_selected" => match app.engine.selection().first().copied() {
             Some(id) => app.dialogs.open_edit(&app.engine, id),
@@ -641,7 +648,7 @@ pub const XFIG_KEYS: &[(&str, &str)] = &[
     ("Alt+S", "app.save"),
     ("Alt+A", "app.save_as"),
     ("Alt+X", "app.export"),
-    ("Shift+Alt+X", "app.export"),
+    ("Shift+Alt+X", "app.export_now"),
     ("Alt+Q", "app.quit"),
     ("Alt+U", "edit.undo"),
     ("Alt+T", "edit.paste"),
@@ -721,11 +728,45 @@ fn take_xfig_key(ctx: &egui::Context, spec: &str) -> bool {
     })
 }
 
+/// xfig's canvas keys (`w_canvas.c`): the arrow keys pan by a ruler step
+/// (Shift: five), Home pans to the origin. While text is typed, Left, Right
+/// and Home move the caret instead.
+fn pan_keys(app: &mut App, ctx: &egui::Context, typing: bool) {
+    let units = app.engine.doc().settings.units;
+    let zoom = app.engine.view.zoom;
+    let s = app.engine.view.px_per_fig();
+    // Shift first: a pattern without Shift may match Shift+key too.
+    for shift in [true, false] {
+        let mods = if shift {
+            egui::Modifiers::SHIFT
+        } else {
+            egui::Modifiers::NONE
+        };
+        let step = crate::rulers::pan_step(units, zoom, shift) * s;
+        // xfig: Left is `pan_right` (the drawing moves right), Up `pan_down`.
+        let keys = [
+            (egui::Key::ArrowLeft, step, 0.0, false),
+            (egui::Key::ArrowRight, -step, 0.0, false),
+            (egui::Key::ArrowUp, 0.0, step, true),
+            (egui::Key::ArrowDown, 0.0, -step, true),
+        ];
+        for (key, dx, dy, while_typing) in keys {
+            if (!typing || while_typing) && ctx.input_mut(|i| i.consume_key(mods, key)) {
+                app.run("view.pan", json!({"dx": dx, "dy": dy}));
+            }
+        }
+    }
+    if !typing && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Home)) {
+        app.run("view.pan_origin", json!({}));
+    }
+}
+
 /// Keyboard handling: typing goes to the text tool; otherwise shortcuts run commands.
 pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
     if ctx.wants_keyboard_input() {
         return;
     }
+    dialogs::escape_closes_panels(app, ctx);
     if app.engine.is_typing() {
         let events = ctx.input(|i| i.events.clone());
         for ev in events {
@@ -739,6 +780,8 @@ pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
                     egui::Key::Delete => Some(ToolEvent::Key(Key::Delete)),
                     egui::Key::ArrowLeft => Some(ToolEvent::Key(Key::Left)),
                     egui::Key::ArrowRight => Some(ToolEvent::Key(Key::Right)),
+                    egui::Key::Home => Some(ToolEvent::Key(Key::Home)),
+                    egui::Key::End => Some(ToolEvent::Key(Key::End)),
                     _ => None,
                 },
                 _ => None,
@@ -749,8 +792,11 @@ pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
                 }
             }
         }
+        // xfig pans with Up and Down even while text is typed.
+        pan_keys(app, ctx, true);
         return;
     }
+    pan_keys(app, ctx, false);
     // Keys a busy tool wants (finish, cancel, remove last point).
     if app.engine.tool_busy() {
         let keys = [

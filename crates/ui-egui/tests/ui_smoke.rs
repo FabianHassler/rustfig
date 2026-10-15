@@ -555,3 +555,57 @@ fn quit_asks_about_unsaved_changes() {
     h.run_steps(2);
     assert!(h.state().quit_requested());
 }
+
+/// W8: xfig's canvas keys (`w_canvas.c`): arrows pan, Shift five times as
+/// far, Home to the origin.
+#[test]
+fn arrow_keys_pan_and_home_returns() {
+    let mut h = harness(app());
+    let o0 = h.state().engine.view.origin;
+    press_key(&mut h, egui::Key::ArrowLeft, egui::Modifiers::NONE);
+    let o1 = h.state().engine.view.origin;
+    // Left is xfig's pan_right: the drawing moves right, the origin left.
+    assert!(o1.x < o0.x && o1.y == o0.y, "{o0:?} {o1:?}");
+    press_key(&mut h, egui::Key::ArrowUp, egui::Modifiers::SHIFT);
+    let o2 = h.state().engine.view.origin;
+    assert!(o2.y < o1.y);
+    assert!(
+        ((o1.y - o2.y) - 5.0 * (o0.x - o1.x)).abs() < 1e-6,
+        "{o0:?} {o1:?} {o2:?}"
+    );
+    press_key(&mut h, egui::Key::Home, egui::Modifiers::NONE);
+    let o3 = h.state().engine.view.origin;
+    assert_ne!(o3, o2);
+    h.state_mut().run("view.pan_origin", json!({}));
+    assert_eq!(h.state().engine.view.origin, o3, "Home is view.pan_origin");
+}
+
+/// W8: xfig's ExportFile (Shift-Meta-X) exports without the panel.
+#[test]
+fn export_now_writes_next_to_the_figure() {
+    let dir = std::env::temp_dir().join(format!("rustfig-export-now-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let fig = dir.join("drawing.fig").to_string_lossy().into_owned();
+    let mut h = harness(app());
+    h.state_mut()
+        .run("shape.rectangle", json!({"x": 0, "y": 0, "width": 600, "height": 300}));
+    h.state_mut().run("app.save_as", json!({"path": fig}));
+    h.state_mut().run("app.export_now", json!({}));
+    h.run_steps(2);
+    assert!(dir.join("drawing.pdf").exists());
+    assert_eq!(h.query_all_by_label("Export").count(), 0, "no panel");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// W8: Escape closes xfig's panels (Cancel).
+#[test]
+fn escape_closes_panels() {
+    let mut h = harness(app());
+    h.state_mut().run("app.export", json!({}));
+    h.state_mut().run("app.search", json!({}));
+    h.run_steps(2);
+    assert!(h.query_all_by_label("Search and Replace").count() >= 1);
+    press_key(&mut h, egui::Key::Escape, egui::Modifiers::NONE);
+    assert!(!h.state().dialogs.search.open);
+    assert!(!h.state().dialogs.export.open);
+}

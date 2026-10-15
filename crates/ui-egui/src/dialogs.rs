@@ -233,6 +233,25 @@ impl FileDialogs for ScriptedDialogs {
     }
 }
 
+/// xfig's Escape: close the panels (Cancel), when no text field has the
+/// keyboard (there Escape just leaves the field). Runs before the shortcuts,
+/// so an open panel takes Escape from Edit › Select none.
+pub(crate) fn escape_closes_panels(app: &mut App, ctx: &egui::Context) {
+    if ctx.wants_keyboard_input() || app.engine.is_typing() || app.engine.tool_busy() {
+        return;
+    }
+    let d = &mut app.dialogs;
+    let any = d.export.open || d.search.open || d.settings_open || d.commands_open || d.about_open || d.global_open;
+    if any && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
+        d.export.open = false;
+        d.search.open = false;
+        d.settings_open = false;
+        d.commands_open = false;
+        d.about_open = false;
+        d.global_open = false;
+    }
+}
+
 pub fn show(app: &mut App, ctx: &egui::Context) {
     edit_dialog(app, ctx);
     export_dialog(app, ctx);
@@ -553,23 +572,44 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
             .to_string();
         let ext = language(st.format).map_or(st.format, |l| l.extension);
         if let Some(path) = app.file_dialogs.save_file(&format!("{stem}.{ext}"), ext, &[ext]) {
-            let mut p = json!({
-                "path": path,
-                "format": st.format,
-                "magnification": st.magnification,
-                "margin": st.margin,
-                "dpi": st.dpi,
-                "active_layers_only": st.active_layers_only && !app.engine.hidden_depths.is_empty(),
-                "whole_figure_bounds": st.whole_figure_bounds,
-            });
-            if st.white_background {
-                p["background"] = json!("#ffffff");
-            }
+            let p = export_params(app, &st, &path);
             if app.run("file.export", p).is_some() {
                 app.dialogs.export.open = false;
             }
         }
     }
+}
+
+/// `file.export` parameters for the export panel's settings.
+fn export_params(app: &App, st: &ExportState, path: &str) -> serde_json::Value {
+    let mut p = json!({
+        "path": path,
+        "format": st.format,
+        "magnification": st.magnification,
+        "margin": st.margin,
+        "dpi": st.dpi,
+        "active_layers_only": st.active_layers_only && !app.engine.hidden_depths.is_empty(),
+        "whole_figure_bounds": st.whole_figure_bounds,
+    });
+    if st.white_background {
+        p["background"] = json!("#ffffff");
+    }
+    p
+}
+
+/// xfig's ExportFile (Shift-Meta-X): export with the panel's current
+/// settings to the figure's name with the language's suffix, without the
+/// panel; a figure not saved yet opens the panel instead.
+pub fn export_now(app: &mut App) {
+    let st = app.dialogs.export.clone();
+    let ext = language(st.format).map_or(st.format, |l| l.extension);
+    let Some(fig) = app.engine.path().map(str::to_string) else {
+        app.dialogs.export.open = true;
+        return;
+    };
+    let target = std::path::Path::new(&fig).with_extension(ext);
+    let p = export_params(app, &st, &target.to_string_lossy());
+    app.run("file.export", p);
 }
 
 fn search_dialog(app: &mut App, ctx: &egui::Context) {
@@ -584,11 +624,21 @@ fn search_dialog(app: &mut App, ctx: &egui::Context) {
         .collapsible(false)
         .show(ctx, |ui| {
             egui::Grid::new("search_grid").num_columns(2).show(ui, |ui| {
+                // xfig: Return in the search field searches, in the
+                // replace field replaces (`w_srchrepl.c`).
+                let enter =
+                    |r: &egui::Response, ui: &egui::Ui| r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
                 ui.label("Find");
-                ui.text_edit_singleline(&mut st.find);
+                let r = ui.text_edit_singleline(&mut st.find);
+                if enter(&r, ui) {
+                    action = Some(false);
+                }
                 ui.end_row();
                 ui.label("Replace with");
-                ui.text_edit_singleline(&mut st.replace);
+                let r = ui.text_edit_singleline(&mut st.replace);
+                if enter(&r, ui) {
+                    action = Some(true);
+                }
                 ui.end_row();
             });
             ui.checkbox(&mut st.case_sensitive, "Match case");

@@ -297,6 +297,10 @@ pub enum Key {
     Delete,
     Left,
     Right,
+    /// Start of the text being typed (xfig's `*Text*translations`).
+    Home,
+    /// End of the text being typed.
+    End,
 }
 
 /// A mouse button as the tools see it. The UI maps two-button mice and
@@ -1076,6 +1080,8 @@ impl Engine {
                     }
                     Key::Left => *cursor = cursor.saturating_sub(1),
                     Key::Right => *cursor = (*cursor + 1).min(text.chars().count()),
+                    Key::Home => *cursor = 0,
+                    Key::End => *cursor = text.chars().count(),
                     Key::Enter => {
                         // Finish this line and start a new text object below it.
                         let origin = *origin;
@@ -2278,6 +2284,23 @@ mod tests {
         };
         assert_eq!(t.text, "Hello!");
         assert_eq!(e.doc().objects.len(), 1);
+    }
+
+    #[test]
+    fn home_and_end_move_the_caret() {
+        let mut e = Engine::new();
+        e.set_tool(ToolKind::Text);
+        press(&mut e, 600.0, 600.0);
+        e.tool_event(ToolEvent::Text("ell".into())).unwrap();
+        e.tool_event(ToolEvent::Key(Key::Home)).unwrap();
+        e.tool_event(ToolEvent::Text("H".into())).unwrap();
+        e.tool_event(ToolEvent::Key(Key::End)).unwrap();
+        e.tool_event(ToolEvent::Text("o".into())).unwrap();
+        e.tool_event(ToolEvent::Key(Key::Escape)).unwrap();
+        let ObjectKind::Text(t) = &e.doc().objects[0].kind else {
+            panic!()
+        };
+        assert_eq!(t.text, "Hello");
     }
 
     #[test]

@@ -274,6 +274,22 @@ fn button(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) -> bool {
         step(app, a, 1);
     } else if resp.middle_clicked() {
         step(app, a, -1);
+    } else if resp.hovered() {
+        // xfig's wheel (`Fig*ind_panel*Command.translations`): up is the
+        // middle button, down the right one; one step per wheel notch.
+        let dy = ui.input(|i| i.raw_scroll_delta.y);
+        if dy != 0.0 {
+            let id = resp.id.with("wheel");
+            let acc = ui.data(|d| d.get_temp::<f32>(id).unwrap_or(0.0)) + dy;
+            let notch = 40.0;
+            let steps = (acc / notch).trunc();
+            ui.data_mut(|d| d.insert_temp(id, acc - steps * notch));
+            if steps > 0.0 {
+                step(app, a, -1);
+            } else if steps < 0.0 {
+                step(app, a, 1);
+            }
+        }
     }
     let close = if a.is_choice() {
         egui::PopupCloseBehavior::CloseOnClick
@@ -286,7 +302,7 @@ fn button(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) -> bool {
         .show(|ui| choice_panel(app, ui, tk, a));
     let hovered = resp.hovered();
     resp.on_hover_text(format!(
-        "{summary}\nClick: choose · middle button: previous/decrease · right button: next/increase"
+        "{summary}\nClick: choose · middle button or wheel up: previous/decrease · right button or wheel down: next/increase"
     ))
     .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, summary.clone()));
     hovered

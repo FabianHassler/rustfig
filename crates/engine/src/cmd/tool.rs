@@ -193,6 +193,8 @@ fn event(e: &mut Engine, p: &Value) -> CmdResult {
             "delete" => Key::Delete,
             "left" => Key::Left,
             "right" => Key::Right,
+            "home" => Key::Home,
+            "end" => Key::End,
             o => return Err(EngineError::bad_params(format!("unknown key {o:?}"))),
         }),
         "text" => ToolEvent::Text(super::string(p, "text")?),
