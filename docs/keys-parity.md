@@ -39,16 +39,16 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside.
 | Meta-B | Show page borders | `view.toggle_page_border` | ✅ |
 | Meta-Y | Show balloons (tooltips) | — | ❌ W8 |
 | Meta-L | Show line lengths while drawing | — | ❌ W8 (needs the length display) |
-| Meta-F/E/V/H | Pop up the File/Edit/View/Help menu | — | ❌ W8 |
+| Meta-F/E/V/H | Pop up the File/Edit/View/Help menu | `menus::XFIG_MENU_KEYS` | ✅ |
 
 ## Letters while a menu is open (`Fig*commands*…*translations`)
 
 | Menu | Letters | Status |
 |---|---|---|
-| File | n o m d s a e p x; 1–9 recent files | ❌ W8 (letters); recent files E1 |
-| Edit | u p t f s d g n | ❌ W8 |
-| View | s r t i o f u p c d n b l a, v v | ❌ W8; the commands exist except named styles (E6), character map (E5), balloons, lengths, auto refresh, vertex numbers (W8) |
-| Help | x m h a | ❌ W8; xfig's manuals (D11) |
+| File | n o m d s a e p x; 1–9 recent files | ✅ letters (`XFIG_MENU_LETTERS`; d, p wait for D11, B5); ❌ recent files E1 |
+| Edit | u p t f s d g n | ✅ (t waits for E7, s for D11) |
+| View | s r t i o f u p c d n b l a, v v | ✅ for the entries RustFig has; named styles (E6), character map (E5), balloons, lengths, auto refresh, vertex numbers (W8) wait for their features |
+| Help | x m h a | ✅ x (command reference), a (about); m, h: xfig's manuals (D11) |
 
 ## Canvas (`w_canvas.c`)
 
@@ -100,4 +100,5 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside.
 
 | Date | Note |
 |---|---|
+| 2026-10-15 | Menus: Meta-F/E/V/H and the letters inside them; plain-letter shortcuts are off while a menu or popup is open. |
 | 2026-10-15 | First audit (W8): arrows, Home, Home/End in text, Shift-Meta-X, wheel on indicator buttons, Escape in panels and Return in the search panel added. |

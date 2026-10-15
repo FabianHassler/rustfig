@@ -65,6 +65,8 @@ pub struct App {
     pub hint_override: Option<(&'static str, &'static str, &'static str)>,
     /// xfig's keyboard accelerators (Meta menu keys, Ctrl mode keys).
     pub xfig_keys: bool,
+    /// A classic menu to pop up on the next frame (xfig's Meta-F/E/V/H).
+    pub open_menu: Option<&'static str>,
     /// The Unit/Scale settings window (right click on the units box).
     pub unit_panel_open: bool,
     /// The override set during the previous frame, shown in this one.
@@ -96,6 +98,7 @@ impl App {
             hint_shown: None,
             unit_panel_open: false,
             xfig_keys: true,
+            open_menu: None,
             pending: None,
             file_dialogs: Box::new(dialogs::NativeDialogs),
             quit_confirmed: false,

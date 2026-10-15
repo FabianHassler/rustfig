@@ -398,7 +398,78 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
     ]
 };
 
-fn xfig_menu(app: &mut App, ui: &mut egui::Ui, items: &[XfigItem]) {
+/// The letters that pick an entry while one of xfig's menus is open
+/// (`Fig*commands*File*translations` … in `app-defaults/Fig`): menu, letter,
+/// and the entry's command or, for an entry RustFig lacks, its label.
+pub const XFIG_MENU_LETTERS: &[(&str, char, &str)] = &[
+    ("File", 'n', "app.new"),
+    ("File", 'o', "app.open"),
+    ("File", 'm', "app.merge"),
+    ("File", 'd', "Digitize..."),
+    ("File", 's', "app.save"),
+    ("File", 'a', "app.save_as"),
+    ("File", 'e', "app.export"),
+    ("File", 'p', "Print..."),
+    ("File", 'x', "app.quit"),
+    ("Edit", 'u', "edit.undo"),
+    ("Edit", 'p', "edit.paste"),
+    ("Edit", 't', "Paste Text"),
+    ("Edit", 'f', "app.search"),
+    ("Edit", 's', "Spell Check..."),
+    ("Edit", 'd', "edit.delete_all"),
+    ("Edit", 'g', "app.global_settings"),
+    ("Edit", 'n', "app.unit_panel"),
+    ("View", 's', "Manage Styles..."),
+    ("View", 'r', "app.redraw"),
+    ("View", 't', "doc.toggle_orientation"),
+    ("View", 'i', "view.zoom_in"),
+    ("View", 'o', "view.zoom_out"),
+    ("View", 'f', "view.zoom_fit"),
+    ("View", 'u', "view.zoom_actual"),
+    ("View", 'p', "view.pan_origin"),
+    ("View", 'c', "Character map"),
+    ("View", 'd', "app.toggle_depths"),
+    ("View", 'n', "Show info balloons"),
+    ("View", 'b', "view.toggle_page_border"),
+    ("View", 'l', "Show line lengths"),
+    ("View", 'a', "Autorefresh mode"),
+    ("Help", 'x', "app.commands"),
+    ("Help", 'a', "app.about"),
+];
+
+/// The menus Meta (Alt) + letter pops up (`Fig*commands*File*accelerators` …).
+const XFIG_MENU_KEYS: &[(&str, &str)] = &[
+    ("Alt+F", "File"),
+    ("Alt+E", "Edit"),
+    ("Alt+V", "View"),
+    ("Alt+H", "Help"),
+];
+
+/// The command xfig's letter picks in the open `menu`, if RustFig has it.
+pub fn xfig_menu_letter(menu: &str, letter: char) -> Option<&'static str> {
+    XFIG_MENU_LETTERS
+        .iter()
+        .find(|(m, l, _)| *m == menu && *l == letter)
+        .map(|(_, _, c)| *c)
+        .filter(|c| cmd::find(c).is_some() || find_ui(c).is_some())
+}
+
+fn xfig_menu(app: &mut App, ui: &mut egui::Ui, menu: &str, items: &[XfigItem]) {
+    // A letter picks its entry, as in xfig.
+    for (m, letter, _) in XFIG_MENU_LETTERS.iter().filter(|(m, _, _)| *m == menu) {
+        let Some(key) = egui::Key::from_name(&letter.to_ascii_uppercase().to_string()) else {
+            continue;
+        };
+        if ui.input_mut(|i| i.consume_key(egui::Modifiers::NONE, key)) {
+            if let Some(id) = xfig_menu_letter(m, *letter) {
+                if app.enabled(id) {
+                    ui.close();
+                    app.run(id, json!({}));
+                    return;
+                }
+            }
+        }
+    }
     for item in items {
         match *item {
             XfigItem::Sep => {
@@ -537,7 +608,12 @@ pub fn menu_buttons(app: &mut App, ui: &mut egui::Ui) {
             if *name == "Help" {
                 ui.menu_button("Snap", |ui| snap_menu(app, ui));
             }
-            ui.menu_button(*name, |ui| xfig_menu(app, ui, items));
+            let resp = ui.menu_button(*name, |ui| xfig_menu(app, ui, name, items)).response;
+            if app.open_menu == Some(*name) {
+                app.open_menu = None;
+                egui::Popup::close_all(ui.ctx());
+                egui::Popup::open_id(ui.ctx(), egui::Popup::default_response_id(&resp));
+            }
         }
         return;
     }
@@ -811,6 +887,18 @@ pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
                 }
             }
         }
+    }
+    // Meta-F/E/V/H pop up xfig's menus; while a menu or another popup is
+    // open, letters belong to it, not to the shortcuts (xfig's mode keys).
+    if app.xfig_keys && app.classic() {
+        for (spec, menu) in XFIG_MENU_KEYS {
+            if take_xfig_key(ctx, spec) {
+                app.open_menu = Some(menu);
+            }
+        }
+    }
+    if egui::Popup::is_any_open(ctx) {
+        return;
     }
     // xfig's accelerators first: on Windows and Linux they take Ctrl+S,
     // Ctrl+C, … from the platform shortcuts while the xfig keymap is on.

@@ -609,3 +609,34 @@ fn escape_closes_panels() {
     assert!(!h.state().dialogs.search.open);
     assert!(!h.state().dialogs.export.open);
 }
+
+/// W8: Meta-V pops up xfig's View menu; a letter picks its entry.
+#[test]
+fn xfig_menu_keys_and_letters() {
+    let mut h = harness(app());
+    let z0 = h.state().engine.view.zoom;
+    press_key(&mut h, egui::Key::V, egui::Modifiers::ALT);
+    h.run_steps(2);
+    assert!(h.query_all_by_label_contains("Zoom In").count() >= 1, "View menu open");
+    press_key(&mut h, egui::Key::I, egui::Modifiers::NONE);
+    assert!(h.state().engine.view.zoom > z0, "i is Zoom In");
+    assert_eq!(h.query_all_by_label_contains("Zoom In").count(), 0, "menu closed");
+    // With no menu open, i is not Zoom In.
+    let z1 = h.state().engine.view.zoom;
+    press_key(&mut h, egui::Key::I, egui::Modifiers::NONE);
+    assert_eq!(h.state().engine.view.zoom, z1);
+}
+
+#[test]
+fn xfig_menu_letters_name_menu_entries() {
+    use rustfig_ui_egui::menus::{XfigItem, XFIG_MENUS, XFIG_MENU_LETTERS};
+    for (menu, letter, target) in XFIG_MENU_LETTERS {
+        let items = XFIG_MENUS.iter().find(|(m, _)| m == menu).map(|(_, i)| *i).unwrap();
+        let found = items.iter().any(|i| match i {
+            XfigItem::Cmd(_, id) => id == target,
+            XfigItem::Missing(label, _, _) => label == target,
+            XfigItem::Sep => false,
+        });
+        assert!(found, "{menu} {letter}: {target} isn't in the menu");
+    }
+}
