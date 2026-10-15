@@ -10,6 +10,7 @@ pub mod canvas;
 pub mod control;
 pub mod dialogs;
 pub mod menus;
+pub mod mode_icons;
 pub mod panels;
 pub mod rulers;
 pub mod theme;

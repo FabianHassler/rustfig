@@ -129,7 +129,7 @@ fn slot_grid(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, id: &str, slots: &[S
     egui::Grid::new(id).spacing(vec2(2.0, 2.0)).show(ui, |ui| {
         for (i, slot) in slots.iter().filter(|s| !wide(s)).enumerate() {
             match slot {
-                Slot::Missing(icon, tip, task) => missing_button(ui, tk, icon, tip, task, SLOT),
+                Slot::Missing(icon, tip, task) => missing_button(ui, app.vector_icons, tk, icon, tip, task, SLOT),
                 Slot::Tool(t, icon) => tool_button(app, ui, tk, *t, icon),
             }
             if i % 2 == 1 {
@@ -139,7 +139,15 @@ fn slot_grid(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, id: &str, slots: &[S
     });
     for slot in slots.iter().filter(|s| wide(s)) {
         if let Slot::Missing(icon, tip, task) = slot {
-            missing_button(ui, tk, icon, tip, task, vec2(SLOT.x * 2.0 + 2.0, SLOT.y));
+            missing_button(
+                ui,
+                app.vector_icons,
+                tk,
+                icon,
+                tip,
+                task,
+                vec2(SLOT.x * 2.0 + 2.0, SLOT.y),
+            );
         }
     }
 }
@@ -156,7 +164,7 @@ fn tool_button(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, t: ToolKind, icon:
     };
     ui.painter().rect_filled(rect, 2.0, bg);
     let ink = if active { tk.icon_active } else { tk.icon };
-    xfig_icons::paint(ui, icon, rect, ink);
+    paint_mode_icon(ui, app.vector_icons, icon, rect, ink);
     let tip = if t.shortcut().is_empty() {
         t.label().to_string()
     } else {
@@ -169,8 +177,19 @@ fn tool_button(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, t: ToolKind, icon:
     }
 }
 
+/// A mode icon: the vector redraw when vector pictures are on and the icon
+/// has been traced (W9), else xfig's bitmap.
+fn paint_mode_icon(ui: &egui::Ui, vector: bool, icon: &'static xfig_icons::Xbm, rect: egui::Rect, ink: Color32) {
+    if vector && crate::mode_icons::traced(icon.name) {
+        crate::vector_icons::paint(ui, crate::vector_icons::VIcon::Mode(icon.name), rect, ink);
+    } else {
+        xfig_icons::paint(ui, icon, rect, ink);
+    }
+}
+
 fn missing_button(
     ui: &mut egui::Ui,
+    vector: bool,
     tk: &Tokens,
     icon: &'static xfig_icons::Xbm,
     tip: &str,
@@ -180,7 +199,7 @@ fn missing_button(
     let (rect, resp) = ui.allocate_exact_size(size, Sense::hover());
     ui.painter()
         .rect_filled(rect, 2.0, ui.visuals().widgets.noninteractive.bg_fill);
-    xfig_icons::paint(ui, icon, rect, tk.muted.gamma_multiply(0.6));
+    paint_mode_icon(ui, vector, icon, rect, tk.muted.gamma_multiply(0.6));
     let text = format!("{tip} (not available yet, plan task {task})");
     resp.on_hover_text(text.clone())
         .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, false, text.clone()));

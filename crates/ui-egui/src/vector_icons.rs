@@ -16,9 +16,7 @@ use rustfig_render::{Scene, SceneOptions};
 use std::sync::Arc as Shared;
 
 /// Fig units per icon pixel (xfig's pictures are 32×32 pixels).
-const U: f64 = 15.0;
-/// The icon box: 32 pixels square.
-const SIDE: f64 = 32.0 * U;
+const U: f64 = crate::mode_icons::U;
 
 /// A picture of an attribute value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -37,6 +35,18 @@ pub enum VIcon {
         pie: bool,
     },
     Justify(Justify),
+    /// One of xfig's mode icons, by its bitmap name (`mode_icons`).
+    Mode(&'static str),
+}
+
+impl VIcon {
+    /// Size in icon pixels.
+    fn size(self) -> (usize, usize) {
+        match self {
+            VIcon::Mode(name) => crate::mode_icons::size(name),
+            _ => (32, 32),
+        }
+    }
 }
 
 fn style(thickness: i32) -> Style {
@@ -113,6 +123,7 @@ fn drawing(icon: VIcon) -> Vec<Object> {
         VIcon::Arc { pie } => Arc::through(style(2), px(16.0, 3.0), px(22.0, 16.0), px(16.0, 29.0), pie)
             .map(|a| vec![Object::new(ObjectKind::Arc(a))])
             .unwrap_or_default(),
+        VIcon::Mode(name) => crate::mode_icons::drawing(name).unwrap_or_default(),
         VIcon::Justify(j) => {
             // Lines of text of different lengths, aligned as `j` aligns them.
             let st = style(3);
@@ -131,16 +142,32 @@ fn drawing(icon: VIcon) -> Vec<Object> {
     }
 }
 
-/// The picture rendered `size_px` pixels square: white, with the ink's
-/// darkness as alpha (drawn black on white, so white fills vanish).
-pub fn image(icon: VIcon, size_px: usize) -> Option<egui::ColorImage> {
-    let size = size_px.clamp(8, 512);
+/// The picture rendered at `scale` device pixels per icon pixel: white,
+/// with the ink's darkness as alpha (drawn black on white, so white fills
+/// vanish).
+pub fn image(icon: VIcon, scale: f32) -> Option<egui::ColorImage> {
+    let (w, h) = icon.size();
+    render_objects(drawing(icon), w, h, scale)
+}
+
+/// Render `objs` (Fig units, 15 per icon pixel) into a `w`×`h`-pixel icon
+/// at `scale` device pixels per icon pixel.
+pub fn render_objects(objs: Vec<Object>, w: usize, h: usize, scale: f32) -> Option<egui::ColorImage> {
+    let scale = if scale.is_finite() {
+        scale.clamp(0.25, 16.0)
+    } else {
+        1.0
+    };
+    let (pw, ph) = (
+        ((w as f32 * scale).round() as usize).clamp(1, 1024),
+        ((h as f32 * scale).round() as usize).clamp(1, 1024),
+    );
     let mut doc = Document::new();
-    doc.objects = drawing(icon).into_iter().map(Shared::new).collect();
+    doc.objects = objs.into_iter().map(Shared::new).collect();
     let scene = Scene::build(&doc, &SceneOptions::default());
-    let mut pm = Pixmap::new(size as u32, size as u32)?;
+    let mut pm = Pixmap::new(pw as u32, ph as u32)?;
     pm.data_mut().fill(255); // opaque white
-    let k = size as f64 / SIDE;
+    let k = pw as f64 / (w as f64 * U);
     rasterize(
         &scene,
         &mut pm,
@@ -159,34 +186,38 @@ pub fn image(icon: VIcon, size_px: usize) -> Option<egui::ColorImage> {
         })
         .collect();
     Some(egui::ColorImage {
-        size: [size, size],
-        source_size: egui::vec2(size as f32, size as f32),
+        size: [pw, ph],
+        source_size: egui::vec2(pw as f32, ph as f32),
         pixels,
     })
 }
 
-/// Paint `icon` in the square centred in `rect`, tinted, at the screen's
-/// pixel density (made once per icon and size, kept in egui's memory).
+/// Paint `icon` centred in `rect` at its natural size (one icon pixel per
+/// point, as xfig's bitmaps), shrunk if `rect` is smaller, tinted, at the
+/// screen's pixel density (made once per icon and scale, kept in egui's
+/// memory).
 pub fn paint(ui: &egui::Ui, icon: VIcon, rect: egui::Rect, tint: egui::Color32) {
-    let side = rect.width().min(rect.height()).min(36.0);
-    let ppp = ui.ctx().pixels_per_point();
-    let size_px = (side * ppp).round().max(8.0) as usize;
-    let id = egui::Id::new(("vector-icon", icon, size_px));
+    let (w, h) = icon.size();
+    let fit = (rect.width() / w as f32).min(rect.height() / h as f32).min(1.0);
+    let scale = fit * ui.ctx().pixels_per_point();
+    // Cache key: the scale in 1/8 device pixels per icon pixel.
+    let key = (scale * 8.0).round() as i32;
+    let id = egui::Id::new(("vector-icon", icon, key));
     let cached: Option<egui::TextureHandle> = ui.ctx().data(|d| d.get_temp(id));
     let tex = match cached {
         Some(t) => t,
         None => {
-            let Some(img) = image(icon, size_px) else { return };
-            let t = ui.ctx().load_texture(
-                format!("vector-icon-{icon:?}-{size_px}"),
-                img,
-                egui::TextureOptions::LINEAR,
-            );
+            let Some(img) = image(icon, key as f32 / 8.0) else {
+                return;
+            };
+            let t = ui
+                .ctx()
+                .load_texture(format!("vector-icon-{icon:?}-{key}"), img, egui::TextureOptions::LINEAR);
             ui.ctx().data_mut(|d| d.insert_temp(id, t.clone()));
             t
         }
     };
-    let r = egui::Rect::from_center_size(rect.center(), egui::vec2(side, side));
+    let r = egui::Rect::from_center_size(rect.center(), egui::vec2(w as f32 * fit, h as f32 * fit));
     ui.painter().image(
         tex.id(),
         r,
@@ -200,7 +231,7 @@ mod tests {
     use super::*;
 
     fn ink(icon: VIcon) -> usize {
-        let img = image(icon, 32).unwrap();
+        let img = image(icon, 1.0).unwrap();
         img.pixels.iter().filter(|p| p.a() > 100).count()
     }
 
@@ -257,8 +288,8 @@ mod tests {
 
     #[test]
     fn sharper_at_higher_density() {
-        let lo = image(VIcon::Join(JoinStyle::Round), 32).unwrap();
-        let hi = image(VIcon::Join(JoinStyle::Round), 96).unwrap();
+        let lo = image(VIcon::Join(JoinStyle::Round), 1.0).unwrap();
+        let hi = image(VIcon::Join(JoinStyle::Round), 3.0).unwrap();
         assert_eq!(hi.size, [96, 96]);
         let a = |img: &egui::ColorImage| img.pixels.iter().filter(|p| p.a() > 100).count() as f64;
         // The same shape: ink grows with the area (×9), within anti-aliasing.
