@@ -23,7 +23,7 @@ the score.
 | Editing modes | 12 | 70 % | anchor point for flip/rotate (right button), array copy, align to canvas, figure comments from Edit mode, open compound (edit in place), join/split lines, chop, tangent/normal, angle/length/area measure modes, copy to library | 56 |
 | Attributes / indicator | 10 | 77 % | colour editor UI, Angle Geom (latex, manhattan, mountain), smart links, copy counts | 30 |
 | File format | 10 | 85 % | reading Fig 1.x/2.x, exact pre-3.2 spline conversion | 24 |
-| Export | 12 | 40 % | to be ported from fig2dev, no ghostscript (B0–B9): PostScript (multi-page, print layout, page options, EPSI/TIFF previews), LaTeX family (TikZ, PSTricks, pict2e, eepic, …), GIF/JPEG/TIFF/PPM/XBM/XPM, CGM/EMF/HPGL/MetaPost/DXF and the rest | 137 |
+| Export | 12 | 40 % | to be ported from fig2dev, no ghostscript (B0–B9): PostScript (multi-page, print layout, page options, EPSI/TIFF previews), LaTeX family (TikZ, PSTricks, pict2e, eepic, …), CGM/EMF/HPGL/MetaPost/DXF and the rest | 137 |
 | Text | 10 | 55 % | character map, LaTeX special-text export, exact PostScript font metrics, compose keys, spell check | 60 |
 | View & navigation | 8 | 96 % | zoom box (Ctrl+left), pan to origin with Ctrl+middle | 4 |
 | Undo | 4 | 100 % | — | 0 |
@@ -43,6 +43,8 @@ the score.
 - Export bounds as fig2dev's (`crates/render/src/bound.rs`, ported from `bound.c`): bounding boxes equal fig2dev's on 2,532 of 2,568 sample figures.
 - True curves in SVG, PDF and EPS: `crates/geom/src/curves.rs`, `SubPath::curve`; test `ellipses_export_as_curves`.
 - fig2dev's options: `crates/render/src/options.rs`, applied in `export.rs`; tests `fig2dev_options_change_the_output`, `depth_options_select_objects_and_bounds`, `bad_options_are_refused` in `crates/engine/tests/export_languages.rs`; bounding boxes with `-b`, `-m`, `-Z`, `-D -K` checked equal to fig2dev's.
+- Bitmap languages (B6): `crates/render/src/drivers/bitmaps.rs`; tests in `crates/engine/tests/export_bitmaps.rs`.
+- fig2dev port (B9): `crates/fig2dev` (reader, bounds, spline conversion, helpers); tests in `crates/fig2dev/tests/`.
 - Standalone `fig2dev` (B10): `apps/fig2dev` with fig2dev 3.2.9a's command line; tests in `apps/fig2dev/tests/cli.rs`; fig2dev's own suite in `apps/fig2dev/tests/fig2dev_suite.rs` (opt-in).
 - Export languages: `crates/render/src/languages.rs` (xfig's list and suffixes), `drivers/latex_box.rs`, `file.export_formats`; tests in `crates/engine/tests/export_languages.rs` and `export_dialog_lists_xfigs_languages` in `ui_smoke.rs`.
 - Corpus comparison with fig2dev's EPS and PDF on xfig's ≈2,550 sample figures: `crates/engine/tests/fig2dev_corpus.rs` (opt-in), baseline `fixtures/corpus-scores.json`, report `target/fig2dev-reference/corpus/`.

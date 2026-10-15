@@ -249,7 +249,9 @@ fn languages(cmd: &str) -> Vec<String> {
     out
 }
 
-const PORTED: &[&str] = &["box", "eps", "pdf", "png", "ps", "svg"];
+const PORTED: &[&str] = &[
+    "box", "eps", "gif", "jpeg", "pcx", "pdf", "png", "ppm", "ps", "svg", "tiff", "xbm", "xpm",
+];
 
 enum Outcome {
     Pass,

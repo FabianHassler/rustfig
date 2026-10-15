@@ -217,7 +217,7 @@ pub const LANGUAGES: &[Language] = &[
         "gif",
         &[],
         Bitmap,
-        Planned("B6"),
+        Available,
     ),
     lang(
         "jpeg",
@@ -225,15 +225,15 @@ pub const LANGUAGES: &[Language] = &[
         "jpg",
         &["jpeg"],
         Bitmap,
-        Planned("B6"),
+        Available,
     ),
-    lang("pcx", "PCX (PC Paintbrush)", "pcx", &[], Bitmap, Planned("B6")),
+    lang("pcx", "PCX (PC Paintbrush)", "pcx", &[], Bitmap, Available),
     lang("png", "PNG (Portable Network Graphics)", "png", &[], Bitmap, Available),
-    lang("ppm", "PPM (Portable Pixmap)", "ppm", &[], Bitmap, Planned("B6")),
+    lang("ppm", "PPM (Portable Pixmap)", "ppm", &[], Bitmap, Available),
     lang("sld", "SLD (AutoCad Slide)", "sld", &[], Bitmap, Planned("B9")),
-    lang("tiff", "TIFF (no compression)", "tif", &["tiff"], Bitmap, Planned("B6")),
-    lang("xbm", "XBM (X11 Bitmap)", "xbm", &[], Bitmap, Planned("B6")),
-    lang("xpm", "XPM (X11 Pixmap)", "xpm", &[], Bitmap, Planned("B6")),
+    lang("tiff", "TIFF (no compression)", "tif", &["tiff"], Bitmap, Available),
+    lang("xbm", "XBM (X11 Bitmap)", "xbm", &[], Bitmap, Available),
+    lang("xpm", "XPM (X11 Pixmap)", "xpm", &[], Bitmap, Available),
 ];
 
 /// The language with this id (fig2dev's `-L` name), ignoring case.

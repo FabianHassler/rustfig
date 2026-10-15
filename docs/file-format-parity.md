@@ -1,6 +1,6 @@
 # File format parity checklist
 
-**Status:** 2026-10-15 (B10: standalone fig2dev).
+**Status:** 2026-10-15 (B6: bitmaps; B10: standalone fig2dev).
 
 | Format | Read | Write | Notes |
 |---|---|---|---|
@@ -18,7 +18,7 @@
 | PostScript (print) | — | ❌ | gap #3 |
 | standalone `fig2dev` (`apps/fig2dev`) | — | 🟡 | fig2dev 3.2.9a's command line, messages and exit codes, input from files or stdin with `-E` encodings; writes the ported languages, the others fail naming their task (B10) |
 | LaTeX (TikZ, PSTricks, pict2e, epic/eepic, latex, pictex, pstex/pdftex) | — | ❌ | being ported from fig2dev (B1–B3, B9); gap #1 |
-| GIF/JPEG/TIFF/PPM/XBM/XPM | — | ❌ | gap #10 |
+| GIF/JPEG/TIFF/PPM/PCX/XBM/XPM | — | ✅ | from RustFig's renderer (B6): sizes and options `-S`, `-q`, `-t`, `-b`, `-g`, `-N` as fig2dev; checked against RustFig's PNG |
 | CGM/EMF/HPGL/MetaPost/METAFONT/DXF/Gerber/map/Tk/PIC/tpic/textyl/shape/SLD | — | ❌ | being ported from fig2dev (B9) |
 | Picture import PNG/JPEG/GIF/BMP/TIFF/PNM | ✅ | — | |
 | Picture import EPS/PDF/XPM/XBM/PCX | ❌ | — | gap #14 |
@@ -30,5 +30,6 @@ Fuzzing: `crates/format/tests/prop_format.rs`, `crates/engine/tests/import_fuzz.
 |---|---|
 | 2026-10-13 | First checklist. |
 | 2026-10-14 | xfig's language list; LaTeX box and pspdf. |
+| 2026-10-15 | Bitmap languages (B6). |
 | 2026-10-15 | Standalone fig2dev (B10). |
 | 2026-10-15 | fig2dev's options. |

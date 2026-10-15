@@ -140,7 +140,8 @@ pub struct Ctx {
     /// Converts line thickness from screen resolution (set by the reader).
     pub thick_scale: f32,
     pub user_colors: Vec<UserColor>,
-    /// `user_col_indx`: the colour number → index into `user_colors`.
+    /// `user_col_indx[i]`: the file's colour number of `user_colors[i]`
+    /// (objects use `NUM_STD_COLS + i`, as in fig2dev).
     pub user_col_indx: Vec<i32>,
     pub v2_flag: bool,
     pub v21_flag: bool,
@@ -157,7 +158,10 @@ pub struct Ctx {
     pub max_dimension: f64,
     /// Lines fig2dev writes on stderr, in order.
     pub messages: Vec<String>,
-    /// The directory of the input file, for pictures with relative names.
+    /// The directory relative picture names are resolved against when
+    /// the figure doesn't come from a file. The reader already prefixes
+    /// relative names with the directory of `from` (as read.c does), so
+    /// leave this `None` when `from` is set.
     pub dir: Option<std::path::PathBuf>,
 }
 

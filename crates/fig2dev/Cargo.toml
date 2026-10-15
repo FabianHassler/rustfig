@@ -13,3 +13,5 @@ workspace = true
 
 [dependencies]
 rustfig-model.workspace = true
+image.workspace = true
+miniz_oxide = "0.8"

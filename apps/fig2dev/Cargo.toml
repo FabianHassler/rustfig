@@ -16,3 +16,4 @@ rustfig-engine.workspace = true
 rustfig-format.workspace = true
 rustfig-render.workspace = true
 rustfig-model.workspace = true
+rustfig-fig2dev.workspace = true

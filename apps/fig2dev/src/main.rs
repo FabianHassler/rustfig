@@ -50,14 +50,14 @@ const DRIVERS: &[(&str, Option<&str>, Writer)] = &[
     ("eps", None, Writer::Format(ExportFormat::Eps)),
     ("gbx", None, Writer::Planned("B9")),
     ("ge", None, Writer::Planned("B9")),
-    ("gif", None, Writer::Planned("B6")),
+    ("gif", None, Writer::Format(ExportFormat::Gif)),
     ("ibmgl", None, Writer::Planned("B9")),
-    ("jpeg", Some("jpg"), Writer::Planned("B6")),
+    ("jpeg", Some("jpg"), Writer::Format(ExportFormat::Jpeg)),
     ("latex", None, Writer::Planned("B9")),
     ("map", None, Writer::Planned("B9")),
     ("mf", None, Writer::Planned("B9")),
     ("mp", None, Writer::Planned("B9")),
-    ("pcx", None, Writer::Planned("B6")),
+    ("pcx", None, Writer::Format(ExportFormat::Pcx)),
     ("pdf", None, Writer::Format(ExportFormat::Pdf)),
     ("pdftex", None, Writer::Planned("B2")),
     ("pdftex_t", None, Writer::Planned("B2")),
@@ -65,7 +65,7 @@ const DRIVERS: &[(&str, Option<&str>, Writer)] = &[
     ("pict2e", None, Writer::Planned("B3")),
     ("pictex", None, Writer::Planned("B9")),
     ("png", None, Writer::Format(ExportFormat::Png)),
-    ("ppm", None, Writer::Planned("B6")),
+    ("ppm", None, Writer::Format(ExportFormat::Ppm)),
     // PostScript pages: RustFig writes the figure as EPS-style PostScript
     // until the page layout is ported (B4).
     ("ps", None, Writer::Format(ExportFormat::Eps)),
@@ -77,12 +77,12 @@ const DRIVERS: &[(&str, Option<&str>, Writer)] = &[
     ("sld", None, Writer::Planned("B9")),
     ("svg", None, Writer::Format(ExportFormat::Svg)),
     ("textyl", None, Writer::Planned("B9")),
-    ("tiff", Some("tif"), Writer::Planned("B6")),
+    ("tiff", Some("tif"), Writer::Format(ExportFormat::Tiff)),
     ("tikz", None, Writer::Planned("B1")),
     ("tk", None, Writer::Planned("B9")),
     ("tpic", None, Writer::Planned("B9")),
-    ("xbm", None, Writer::Planned("B6")),
-    ("xpm", None, Writer::Planned("B6")),
+    ("xbm", None, Writer::Format(ExportFormat::Xbm)),
+    ("xpm", None, Writer::Format(ExportFormat::Xpm)),
 ];
 
 const BITMAP_DRIVERS: &[&str] = &["gif", "jpeg", "pcx", "png", "ppm", "sld", "tiff", "xbm", "xpm"];
@@ -245,6 +245,9 @@ struct Run {
     magspec: bool,
     maxdimspec: bool,
     warnings: Vec<String>,
+    /// Every option in order, for the drivers in `rustfig-fig2dev`, which
+    /// take them as fig2dev's drivers do.
+    raw: Vec<Opt>,
 }
 
 enum OwnedValue {
@@ -269,7 +272,18 @@ impl Run {
             return Err(Exit(msg));
         };
         if !spec.effective_for(lang) {
-            return Ok(()); // fig2dev accepts it here and does nothing
+            // fig2dev accepts it here and does nothing; genbitmaps says so
+            // for -q and -t.
+            match c {
+                'q' => self
+                    .warnings
+                    .push("-q option only allowed for jpeg quality; ignored".into()),
+                't' => self
+                    .warnings
+                    .push("-t option only allowed for GIF transparent color; ignored".into()),
+                _ => {}
+            }
+            return Ok(());
         }
         if let Support::Planned(task) = spec.support {
             self.warnings.push(format!(
@@ -288,14 +302,14 @@ impl Run {
 }
 
 /// fig2dev's `get_args` and `main`.
-fn run(args: Vec<String>) -> Result<(), Exit> {
+fn run(args: Vec<String>) -> Result<u8, Exit> {
     if args.is_empty() {
         eprint!("{USAGE}");
-        return Ok(());
+        return Ok(0);
     }
     if args.first().map(String::as_str) == Some("--version") {
         println!("fig2dev Version {VERSION}");
-        return Ok(());
+        return Ok(0);
     }
     let mut run = Run {
         lang: args.last().and_then(|l| guess_from_suffix(l)),
@@ -304,19 +318,21 @@ fn run(args: Vec<String>) -> Result<(), Exit> {
         magspec: false,
         maxdimspec: false,
         warnings: Vec::new(),
+        raw: Vec::new(),
     };
     let (opts, operands) = getopt(&args).map_err(|e| Exit(format!("{e}\n{USAGE}")))?;
+    run.raw = opts.clone();
     for (c, arg) in opts {
         let text = || arg.clone().unwrap_or_default();
         match c {
             'h' => {
                 print_version();
                 print_help(run.lang);
-                return Ok(());
+                return Ok(0);
             }
             'V' => {
                 print_version();
-                return Ok(());
+                return Ok(0);
             }
             'D' => run.items.push(("depths".into(), OwnedValue::Text(text()))),
             'K' => run.items.push(("adjust_bbox".into(), OwnedValue::Bool(true))),
@@ -358,6 +374,10 @@ fn run(args: Vec<String>) -> Result<(), Exit> {
                 let Some(lang) = run.lang else {
                     return Err(Exit("No graphics language specified.".into()));
                 };
+                if rustfig_fig2dev::drivers::driver(lang).is_some() {
+                    // The ported driver takes its options itself.
+                    continue;
+                }
                 if c == 'G' {
                     // Parsed in fig2dev.c, drawn by the driver (not ported).
                     run.driver_option(lang, c, arg)?;
@@ -380,7 +400,9 @@ fn run(args: Vec<String>) -> Result<(), Exit> {
     for w in &run.warnings {
         eprintln!("{w}");
     }
+    let ported = rustfig_fig2dev::drivers::driver(lang);
     let format = match find_driver(lang).map(|d| d.2) {
+        _ if ported.is_some() => ExportFormat::Eps,
         Some(Writer::Format(f)) => f,
         Some(Writer::Planned(task)) => {
             return Err(Exit(format!(
@@ -408,6 +430,48 @@ fn run(args: Vec<String>) -> Result<(), Exit> {
     if src.len() > rustfig_format::MAX_FILE_BYTES {
         return Err(Exit("fig2dev: input file is too large".into()));
     }
+
+    // fig2dev's reader: its checks, repairs and messages, and the figure
+    // for the drivers in rustfig-fig2dev.
+    let mut ctx = rustfig_fig2dev::Ctx {
+        from: from.cloned(),
+        to: to.cloned(),
+        lang: lang.to_string(),
+        ..rustfig_fig2dev::Ctx::default()
+    };
+    let mut dev = ported;
+    for (c, arg) in &run.raw {
+        let arg = arg.as_deref();
+        let general = ctx.general_option(*c, arg).map_err(Exit)?;
+        if !general && !matches!(c, 'h' | 'V' | '?') {
+            if let Some(d) = dev.as_mut() {
+                d.option(&mut ctx, *c, arg).map_err(Exit)?;
+            }
+        }
+    }
+    // After the options, so that -m counts (fig2dev's get_args).
+    ctx.font_size *= ctx.fontmag;
+    let objects = rustfig_fig2dev::read::readfp_fig(&mut ctx, &src);
+    for m in ctx.messages.drain(..) {
+        eprintln!("{m}");
+    }
+    let Ok(objects) = objects else {
+        return Ok(1);
+    };
+    if let Some(d) = dev.as_mut() {
+        if to.is_some_and(|t| t.ends_with(".fig")) {
+            return Err(Exit("Outfile is a .fig file, aborting".into()));
+        }
+        let status = rustfig_fig2dev::convert(&mut ctx, d.as_mut(), &objects);
+        for m in ctx.messages.drain(..) {
+            eprintln!("{m}");
+        }
+        let status = status.map_err(Exit)?;
+        write_output(to, &status.output)?;
+        // exit(status): the low byte, as the shell sees it.
+        return Ok(status.exit as u8);
+    }
+
     let mut doc = read_fig_encoded(&src, run.encoding).map_err(|e| Exit(format!("fig2dev: {e}")))?;
     let base = from.and_then(|f| std::path::Path::new(f).parent().map(std::path::Path::to_path_buf));
     for w in rustfig_engine::import::load_all_pictures(&mut doc, base.as_deref()) {
@@ -418,6 +482,10 @@ fn run(args: Vec<String>) -> Result<(), Exit> {
     let mut items: Vec<(String, OwnedValue)> = Vec::new();
     if option_spec(lang, "correct_font_size").is_some_and(|s| s.effective_for(lang)) {
         items.push(("correct_font_size".into(), OwnedValue::Bool(false)));
+    }
+    // genbitmaps smooths only with -S (ghostscript's default is hard edges).
+    if option_spec(lang, "smoothing").is_some_and(|s| s.effective_for(lang)) {
+        items.push(("smoothing".into(), OwnedValue::Text("0".into())));
     }
     items.extend(run.items);
     let borrowed: Vec<(&str, OptionValue<'_>)> = items
@@ -446,18 +514,23 @@ fn run(args: Vec<String>) -> Result<(), Exit> {
     };
     let out = rustfig_render::export(&doc, format, &opts).map_err(|e| Exit(format!("fig2dev: {e}")))?;
 
-    // Write the result.
+    write_output(to, &out)?;
+    Ok(0)
+}
+
+/// Write the result to `to` or stdout.
+fn write_output(to: Option<&String>, out: &[u8]) -> Result<(), Exit> {
     match to {
         Some(path) => {
             if path.ends_with(".fig") {
                 return Err(Exit("Outfile is a .fig file, aborting".into()));
             }
-            std::fs::write(path, &out).map_err(|_| Exit(format!("Couldn't open {path}")))?;
+            std::fs::write(path, out).map_err(|_| Exit(format!("Couldn't open {path}")))?;
         }
         None => {
             let mut stdout = std::io::stdout().lock();
             stdout
-                .write_all(&out)
+                .write_all(out)
                 .and_then(|()| stdout.flush())
                 .map_err(|e| Exit(format!("fig2dev: {e}")))?;
         }
@@ -468,7 +541,7 @@ fn run(args: Vec<String>) -> Result<(), Exit> {
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match run(args) {
-        Ok(()) => ExitCode::SUCCESS,
+        Ok(code) => ExitCode::from(code),
         Err(Exit(msg)) => {
             eprintln!("{msg}");
             ExitCode::FAILURE

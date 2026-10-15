@@ -56,6 +56,15 @@ fn language_from_the_output_suffix() {
         ("out.svg", &b"<?xml"[..]),
         ("out.pdf", b"%PDF"),
         ("out.png", b"\x89PNG"),
+        ("out.gif", b"GIF8"),
+        ("out.jpg", &[0xff, 0xd8]),
+        ("out.jpeg", &[0xff, 0xd8]),
+        ("out.pcx", &[0x0a, 5]),
+        ("out.ppm", b"P6"),
+        ("out.tif", b"II*\0"),
+        ("out.tiff", b"II*\0"),
+        ("out.xbm", b"#define"),
+        ("out.xpm", b"/* XPM */"),
     ] {
         let out: PathBuf = dir.join(name);
         let o = fig2dev(&[input.to_str().unwrap(), out.to_str().unwrap()], "");
@@ -136,4 +145,58 @@ fn every_postscript_option_parses() {
         assert!(!err(&o).contains("unknown"), "{args:?}: {}", err(&o));
         assert!(bbox(&o).starts_with("%%BoundingBox:"), "{args:?}");
     }
+}
+
+/// genbitmaps' options: size at 80 dpi times the magnification, -b in
+/// pixels, -S, -q and -t, with fig2dev's warnings and errors.
+#[test]
+fn bitmap_options() {
+    let ppm_size = |args: &[&str]| -> (u32, u32) {
+        let mut a = vec!["-L", "ppm"];
+        a.extend_from_slice(args);
+        let o = fig2dev(&a, FIG);
+        assert!(o.status.success(), "{args:?}: {}", err(&o));
+        let text = String::from_utf8_lossy(o.stdout.get(..20).unwrap_or(&o.stdout)).into_owned();
+        let v: Vec<u32> = text
+            .split_whitespace()
+            .skip(1)
+            .take(2)
+            .map(|n| n.parse().unwrap())
+            .collect();
+        (v[0], v[1])
+    };
+    // As fig2dev 3.2.9a with ghostscript: 1 inch × 0.5 inch plus the line
+    // width and (int)(size + 0.9) rounding.
+    assert_eq!(ppm_size(&[]), (82, 42));
+    assert_eq!(ppm_size(&["-b", "5"]), (92, 52));
+    assert_eq!(ppm_size(&["-m", "2"]).0, 164);
+    // Without -S the edges are hard: only black and white.
+    let ppm = |args: &[&str]| {
+        let mut a = vec!["-L", "ppm"];
+        a.extend_from_slice(args);
+        fig2dev(&a, FIG).stdout
+    };
+    let grey = |b: &[u8]| b.iter().skip(13).any(|v| *v != 0 && *v != 255);
+    assert!(!grey(&ppm(&[])));
+    assert!(grey(&ppm(&["-S", "4"])));
+    let o = fig2dev(&["-L", "ppm", "-S", "3"], FIG);
+    assert_eq!(o.status.code(), Some(1));
+    assert!(err(&o).contains("should be 1, 2 or 4"), "{}", err(&o));
+    // -q and -t outside JPEG and GIF: warned about and ignored.
+    let o = fig2dev(&["-L", "png", "-q", "50", "-t", "#ffffff"], FIG);
+    assert!(o.status.success());
+    assert!(
+        err(&o).contains("-q option only allowed for jpeg quality; ignored"),
+        "{}",
+        err(&o)
+    );
+    assert!(
+        err(&o).contains("-t option only allowed for GIF transparent color; ignored"),
+        "{}",
+        err(&o)
+    );
+    let o = fig2dev(&["-L", "jpeg", "-q", "30"], FIG);
+    assert!(o.status.success() && o.stdout.starts_with(&[0xff, 0xd8]), "{}", err(&o));
+    let o = fig2dev(&["-L", "gif", "-t", "#ffffff"], FIG);
+    assert!(o.status.success() && o.stdout.starts_with(b"GIF8"), "{}", err(&o));
 }

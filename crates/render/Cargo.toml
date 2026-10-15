@@ -17,3 +17,4 @@ rustfig-text.workspace = true
 tiny-skia.workspace = true
 pdf-writer.workspace = true
 miniz_oxide = "0.8"
+image.workspace = true

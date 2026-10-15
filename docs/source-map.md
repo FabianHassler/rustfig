@@ -177,28 +177,28 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | File | Lines | What it does | RustFig | Status | Task |
 |---|---:|---|---|---|---|
 | `fig2dev.c` | 1136 | command line, option parsing per language, driver dispatch | `render/options.rs` (option table, `-D`/`-K`/`-m`/`-Z`/`-s`), `render/export.rs` (applies them), `apps/cli` `convert --option` | ported: options of the languages written today; driver dispatch is `file.export`; the whole command line (`get_args`, `main`, `help_msg`, messages, exit codes) in `apps/fig2dev` | B0, B10 |
-| `iso2tex.c` | 236 | Latin-1 characters to TeX sequences | — | missing | B1–B3 |
-| `creationdate.c` | 114 | creation date for reproducible output (`SOURCE_DATE_EPOCH`) | — | missing | B4 |
+| `iso2tex.c` | 236 | Latin-1 characters to TeX sequences | `fig2dev/util/iso2tex` | ported | B9 |
+| `creationdate.c` | 114 | creation date for reproducible output (`SOURCE_DATE_EPOCH`) | `fig2dev/util/creationdate` | ported | B9 |
 | `localmath.c`, `messages.c` | 114 | math helpers, error messages | `geom`, errors; `apps/fig2dev` (messages) | n/a | — |
-| `read.c` | 2048 | Fig reader (second reference) | `format/fig_read` | own | review |
-| `read1_3.c` | 549 | Fig 1.3 reader | — | missing | G1 |
-| `bound.c` | 1156 | bounds incl. arrows and text | `geom/arrow` (`arrow_shapes`, `calc_arrow`), `render/bound` (`compound_bound`, `arc_bound`, `ellipse_bound`, `line_bound`, `text_bound`, `arrow_bound`) | ported (D9, B0); ellipse extents analytic instead of the scan | — |
-| `trans_spline.c` | 661 | splines to polylines for exporters | `geom` | own | review |
+| `read.c` | 2048 | Fig reader (second reference) | `format/fig_read` (RustFig's reader); `fig2dev/read` (port, for the drivers and the standalone fig2dev) | ported | B9 |
+| `read1_3.c` | 549 | Fig 1.3 reader | `fig2dev/read/read1_3` | ported | B9 |
+| `bound.c` | 1156 | bounds incl. arrows and text | `geom/arrow` (`arrow_shapes`, `calc_arrow`), `render/bound` (`compound_bound`, `arc_bound`, `ellipse_bound`, `line_bound`, `text_bound`, `arrow_bound`); `fig2dev/bound` (port on fig2dev's objects, for the drivers) | ported (D9, B0); ellipse extents analytic instead of the scan | — |
+| `trans_spline.c` | 661 | splines to polylines for exporters | `fig2dev/trans_spline` | ported | B9 |
 | `colors.c` | 851 | colour names | `model/xcolors.rs` (`x_color`: X11 names and `#rgb` forms of `lookup_X_color`), `Rgba::luminance_gray` (`rgb2luminance`) | ported | — |
 | `dev/genps.c`, `genpdf.c` | 2.9 k | PostScript/PDF with page layout; the reference where drivers disagree | `render/eps`, `render/pdf`; `set_style` → `LineKind::dash_pattern`, `linewidth_adj` → `geom::stroke_width`, arrow fills, `PSFONTMAG` → metric text keeps its point size (`SceneOptions::text_scale`) | partial: page layout, multi-page | B4 |
 | `dev/genpstex.c` | 176 | PS/PDF + LaTeX overlay (pstex, pdftex) | — | missing | B2 |
 | `dev/gentikz.c` | 1870 | TikZ | — | missing | B1 |
 | `dev/genpict2e.c`, `genlatex.c`, `genepic.c`, `genpictex.c`, `genpstricks.c` | 9.1 k | LaTeX picture languages | — | missing | B3 (pict2e, PSTricks), B9 (the rest) |
 | `dev/gensvg.c` | 1331 | SVG | `render/svg`; `geom::stroke_width` ported from `linewidth_adj` | own; reference-tested (A8) | review |
-| `dev/genbitmaps.c` | 593 | GIF, JPEG, PNG, PPM, TIFF, XBM, XPM via ghostscript | `render` PNG (own renderer, no ghostscript) | partial | B6 |
+| `dev/genbitmaps.c` | 593 | GIF, JPEG, PNG, PPM, TIFF, XBM, XPM via ghostscript | `render/drivers/bitmaps`, `render/export` (own renderer, no ghostscript) | ported | B6 |
 | `dev/psprolog.h` | 936 | PostScript prolog, the 22 fill patterns | `render/pattern` (`FILL_PAT01`…`22` ported) | patterns ported (D12) | — |
 | `dev/genbox.c` | 78 | LaTeX box | `render/drivers/latex_box` | ported | — |
 | `dev/genemf.c`, `gencgm.c`, `gendxf.c`, `genibmgl.c`, `genmp.c`, `genmf.c`, `genmap.c`, `gentk.c`, `genptk.c`, `genshape.c`, `gentextyl.c`, `gentpic.c`, `genpic.c`, `gengbx.c`, `genge.c` | ≈17 k | EMF, CGM, DXF, HPGL, MetaPost, METAFONT, image maps, Tk, shapes, … | — | missing | B9 |
 | `dev/encode.c` | 236 | ASCII85 and deflate streams for PostScript/PDF | `render/eps`, `render/pdf` | own | review |
 | `dev/tkpattern.c` | 122 | Tk fill patterns | — | missing | B9 |
 | `dev/xtmpfile.c` | 150 | temporary files | — | n/a | — |
-| `dev/read*.c`, `readpics.c` | 3 k | pictures embedded in exports | `image` crate | modern | — |
-| `dev/psfonts.c`, `texfonts.c`, `setfigfont.c`, `textconvert.c` | 1 k | font names and LaTeX font selection for exports | `text` | partial | B8 |
+| `dev/read*.c`, `readpics.c` | 3 k | pictures embedded in exports | `fig2dev/util/readpics` (`image` crate; EPS/PDF boxes, PCX, XBM, XPM, .gz/.Z) | ported | B9 |
+| `dev/psfonts.c`, `texfonts.c`, `setfigfont.c`, `textconvert.c` | 1 k | font names and LaTeX font selection for exports | `fig2dev/util/{psfonts,texfonts,setfigfont}` | ported | B9 |
 
 ## Revision history
 
@@ -206,6 +206,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 |------|------|
 | 2026-10-14 | First version. |
 | 2026-10-15 | W8: xfig's bindings audited (`keys-parity.md`); `CompKeyDB` ported. |
+| 2026-10-15 | B9 wave 1: `read.c`, `read1_3.c`, `bound.c`, `trans_spline.c`, `iso2tex.c`, `creationdate.c`, `dev/` font and picture helpers ported into `rustfig-fig2dev`; `genbitmaps.c` (B6). |
 | 2026-10-15 | `fig2dev.c` command line ported as `apps/fig2dev` (B10). |
 | 2026-10-15 | `fig2dev.c` options and `colors.c` ported (B0). |
 | 2026-10-14 | S1: draw and save order ported (`u_redraw.c`, `f_save.c`). |

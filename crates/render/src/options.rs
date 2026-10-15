@@ -146,7 +146,10 @@ pub const OPTIONS: &[OptionSpec] = &[
     opt_for("grid", 'G', Text, ALL, PS_AND_BITMAPS, "draw light gray grid with thin/thick lines at minor/major units (e.g. .25:1cm)", Planned("B4")),
     // PostScript, EPS and PDF (gen_ps_eps_option, genpdf_option); the
     // bitmaps share some (genbitmaps_option).
-    opt("border", 'b', Number, PS_AND_BITMAPS, "specify width of blank border around figure (points, 1/72 inch)", Ported),
+    opt("border", 'b', Number, PS, "specify width of blank border around figure (points, 1/72 inch)", Ported),
+    // genbitmaps_option: the bitmaps' border is in pixels (1/80 inch times
+    // the magnification).
+    opt("border", 'b', Number, BITMAPS, "specify width of blank border around figure (pixels)", Ported),
     opt("background", 'g', Color, PS_AND_BITMAPS, "set background color", Ported),
     opt("grayscale", 'N', Flag, PS_AND_BITMAPS, "convert all colors to grayscale", Ported),
     opt("correct_font_size", 'F', Flag, PS_AND_BITMAPS, "use correct font sizes (points instead of 1/80 inch); xfig sets it, so it is on unless false", Ported),
@@ -174,9 +177,9 @@ pub const OPTIONS: &[OptionSpec] = &[
     opt("paper_size", 'z', Text, &["svg"], "set the paper size (Letter, A4, ...)", Planned("B9")),
     // Bitmaps (genbitmaps_option): -q and -t are accepted by every bitmap
     // language, with a warning outside JPEG and GIF.
-    opt("smoothing", 'S', Number, BITMAPS, "smoothing factor 1, 2 or 4", Planned("B6")),
-    opt_for("quality", 'q', Number, BITMAPS, &["jpeg"], "set JPEG quality (1-100)", Planned("B6")),
-    opt_for("transparent", 't', Color, BITMAPS, &["gif"], "set the GIF transparent color (#rrggbb)", Planned("B6")),
+    opt("smoothing", 'S', Number, BITMAPS, "specify smoothing factor (1 = none, 2 = some, 4 = more)", Ported),
+    opt_for("quality", 'q', Number, BITMAPS, &["jpeg"], "specify image quality factor (1-100)", Ported),
+    opt_for("transparent", 't', Color, BITMAPS, &["gif"], "specify GIF transparent color in hexadecimal (e.g. #ff0000=red)", Ported),
 ];
 
 /// The options `lang` takes, in fig2dev's order.
@@ -307,7 +310,8 @@ pub struct DriverOptions {
     pub max_size: Option<MaxSize>,
     /// Every text set to this size in points (`-s`).
     pub font_size: Option<f64>,
-    /// Blank border around the figure, in points (`-b`).
+    /// Blank border around the figure (`-b`): points for PostScript, PDF
+    /// and SVG, pixels (1/80 inch times the magnification) for bitmaps.
     pub border: f64,
     pub background: Option<Rgb>,
     pub grayscale: bool,
@@ -318,6 +322,13 @@ pub struct DriverOptions {
     pub correct_font_size: bool,
     /// The PostScript font replacing the default and Times-Roman (`-f`).
     pub font: Option<i32>,
+    /// fig2dev's `-S` (0 or 1 none, 2 some, 4 more); `None` antialiases
+    /// as RustFig draws on screen.
+    pub smoothing: Option<u32>,
+    /// JPEG quality, 1 to 100 (`-q`; fig2dev's default is 75).
+    pub quality: Option<u8>,
+    /// The GIF transparent colour (`-t`); without it, the figure's own.
+    pub transparent: Option<Rgb>,
 }
 
 impl Default for DriverOptions {
@@ -334,6 +345,9 @@ impl Default for DriverOptions {
             title: None,
             correct_font_size: true,
             font: None,
+            smoothing: None,
+            quality: None,
+            transparent: None,
         }
     }
 }
@@ -416,6 +430,22 @@ pub fn parse_options(lang: &Language, items: &[(&str, OptionValue<'_>)]) -> Resu
                 o.font = Some(rustfig_text::ps_font_number(t.trim()).ok_or_else(|| {
                     format!("{t:?} is not a standard PostScript font name (like Helvetica or Times-Bold)")
                 })?);
+            }
+            "smoothing" => {
+                let v = number(0.0, 4.0)?;
+                if ![0.0, 1.0, 2.0, 4.0].contains(&v) {
+                    return Err(format!("bad value for smoothing (-S): {v}, should be 1, 2 or 4"));
+                }
+                o.smoothing = Some(v as u32);
+            }
+            "quality" => {
+                // fig2dev clamps the quality to 1..100.
+                let v = number(-1.0e9, 1.0e9)?;
+                o.quality = Some(v.round().clamp(1.0, 100.0) as u8);
+            }
+            "transparent" => {
+                let t = text()?;
+                o.transparent = Some(x_color(t).ok_or_else(|| format!("can't parse color {t:?}"))?);
             }
             other => return Err(format!("option {other} is not handled (internal error)")),
         }

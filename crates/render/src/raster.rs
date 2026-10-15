@@ -35,10 +35,10 @@ fn color(c: Rgba) -> Color {
     Color::from_rgba8(c.r, c.g, c.b, c.a)
 }
 
-fn paint(c: Rgba) -> Paint<'static> {
+fn paint(c: Rgba, anti_alias: bool) -> Paint<'static> {
     Paint {
         shader: Shader::SolidColor(color(c)),
-        anti_alias: true,
+        anti_alias,
         ..Paint::default()
     }
 }
@@ -108,6 +108,7 @@ fn draw_path(
     fill: Option<&Fill>,
     stroke: Option<&Stroke>,
     opts: &RasterOptions,
+    aa: bool,
 ) {
     let t = &opts.transform;
     let scale = t.mean_scale();
@@ -119,11 +120,11 @@ fn draw_path(
     }
     let Some(path) = build_path(subpaths, t) else { return };
     match fill {
-        Some(Fill::Solid(c)) => pm.fill_path(&path, &paint(*c), FillRule::EvenOdd, Transform::identity(), None),
+        Some(Fill::Solid(c)) => pm.fill_path(&path, &paint(*c, aa), FillRule::EvenOdd, Transform::identity(), None),
         Some(Fill::Pattern { kind, fg, bg }) => {
-            pm.fill_path(&path, &paint(*bg), FillRule::EvenOdd, Transform::identity(), None);
+            pm.fill_path(&path, &paint(*bg, aa), FillRule::EvenOdd, Transform::identity(), None);
             if let Some(mut mask) = Mask::new(pm.width(), pm.height()) {
-                mask.fill_path(&path, FillRule::EvenOdd, true, Transform::identity());
+                mask.fill_path(&path, FillRule::EvenOdd, aa, Transform::identity());
                 // Pattern lines over the visible part of the shape, in Fig units.
                 if let Some(inv) = t.invert() {
                     let vis = Rect::from_points(bb.intersection_or_empty(&view).corners().map(|p| inv.apply(p)));
@@ -141,7 +142,7 @@ fn draw_path(
                             width: f((line_width * scale).max(0.5)),
                             ..tiny_skia::Stroke::default()
                         };
-                        pm.stroke_path(&lp, &paint(*fg), &st, Transform::identity(), Some(&mask));
+                        pm.stroke_path(&lp, &paint(*fg, aa), &st, Transform::identity(), Some(&mask));
                     }
                 }
             }
@@ -150,7 +151,7 @@ fn draw_path(
     }
     if let Some(s) = stroke {
         let st = sk_stroke(s, scale, opts.min_line_px);
-        pm.stroke_path(&path, &paint(s.color), &st, Transform::identity(), None);
+        pm.stroke_path(&path, &paint(s.color, aa), &st, Transform::identity(), None);
     }
 }
 
@@ -197,7 +198,7 @@ pub(crate) fn text_ops_fig(t: &TextPrim) -> (Vec<PathOp>, bool, f64) {
     (ops, shaped.synthetic_bold, crate::font_px(t.size) * 0.04)
 }
 
-fn draw_text(pm: &mut Pixmap, t: &TextPrim, opts: &RasterOptions) {
+fn draw_text(pm: &mut Pixmap, t: &TextPrim, opts: &RasterOptions, aa: bool) {
     let tr = &opts.transform;
     let view = Rect::new(Point::ZERO, Point::new(f64::from(pm.width()), f64::from(pm.height())));
     let bb = Rect::from_points(crate::Prim::Text(t.clone()).bbox().corners().map(|p| tr.apply(p)));
@@ -235,14 +236,20 @@ fn draw_text(pm: &mut Pixmap, t: &TextPrim, opts: &RasterOptions) {
         }
     }
     let Some(path) = pb.finish() else { return };
-    pm.fill_path(&path, &paint(t.color), FillRule::Winding, Transform::identity(), None);
+    pm.fill_path(
+        &path,
+        &paint(t.color, aa),
+        FillRule::Winding,
+        Transform::identity(),
+        None,
+    );
     if bold {
         let st = tiny_skia::Stroke {
             width: f(bold_w * tr.mean_scale()),
             line_join: LineJoin::Round,
             ..tiny_skia::Stroke::default()
         };
-        pm.stroke_path(&path, &paint(t.color), &st, Transform::identity(), None);
+        pm.stroke_path(&path, &paint(t.color, aa), &st, Transform::identity(), None);
     }
 }
 
@@ -304,12 +311,18 @@ fn draw_image(pm: &mut Pixmap, corners: &[Point; 4], img: &Arc<RasterImage>, fli
     pm.draw_pixmap(0, 0, src.as_ref(), &paint, ts, None);
 }
 
-/// Draw a scene onto a pixmap.
+/// Draw a scene onto a pixmap, antialiased.
 pub fn rasterize(scene: &Scene, pm: &mut Pixmap, opts: &RasterOptions) {
+    rasterize_aa(scene, pm, opts, true);
+}
+
+/// Draw a scene onto a pixmap, antialiased or not (fig2dev's bitmaps
+/// without smoothing are not).
+pub fn rasterize_aa(scene: &Scene, pm: &mut Pixmap, opts: &RasterOptions, aa: bool) {
     for p in &scene.prims {
         match p {
-            Prim::Path { subpaths, fill, stroke } => draw_path(pm, subpaths, fill.as_ref(), stroke.as_ref(), opts),
-            Prim::Text(t) => draw_text(pm, t, opts),
+            Prim::Path { subpaths, fill, stroke } => draw_path(pm, subpaths, fill.as_ref(), stroke.as_ref(), opts, aa),
+            Prim::Text(t) => draw_text(pm, t, opts, aa),
             Prim::Image {
                 corners,
                 image,
@@ -333,27 +346,120 @@ pub fn render_region(
     }
     let w = (bounds.width() * px_per_fig).ceil();
     let h = (bounds.height() * px_per_fig).ceil();
+    let (w, h) = checked_size(w, h)?;
+    render_sized(
+        scene,
+        bounds,
+        px_per_fig,
+        (w, h),
+        background,
+        pattern,
+        Smoothing::Antialias,
+    )
+}
+
+/// A bitmap size in pixels, checked against the export limits.
+pub fn checked_size(w: f64, h: f64) -> Result<(u32, u32), String> {
     if !(w.is_finite() && h.is_finite()) || w < 1.0 || h < 1.0 {
         return Err("image would be empty".into());
     }
     if w > f64::from(MAX_EDGE) || h > f64::from(MAX_EDGE) || w * h > MAX_PIXELS as f64 {
         return Err(format!("image too large ({w}x{h} pixels); lower the resolution"));
     }
-    let mut pm = Pixmap::new(w as u32, h as u32).ok_or("cannot allocate image")?;
+    Ok((w as u32, h as u32))
+}
+
+/// How a bitmap's edges are smoothed (fig2dev's `-S`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Smoothing {
+    /// tiny-skia's antialiasing (RustFig's default).
+    Antialias,
+    /// Hard edges (fig2dev without `-S`, or `-S 1`).
+    None,
+    /// Hard edges drawn at this many times the resolution, then averaged
+    /// (`-S 2`, `-S 4`: ghostscript's `TextAlphaBits`/`GraphicsAlphaBits`).
+    Supersample(u32),
+}
+
+/// Render the region `bounds` (Fig units) at `px_per_fig` into a pixmap of
+/// `size` pixels, smoothed as asked.
+pub fn render_sized(
+    scene: &Scene,
+    bounds: &Rect,
+    px_per_fig: f64,
+    size: (u32, u32),
+    background: Option<Rgba>,
+    pattern: PatternFrame,
+    smoothing: Smoothing,
+) -> Result<Pixmap, String> {
+    if bounds.is_empty() || !(px_per_fig.is_finite() && px_per_fig > 0.0) {
+        return Err("nothing to render".into());
+    }
+    let (w, h) = checked_size(f64::from(size.0), f64::from(size.1))?;
+    let (k, aa) = match smoothing {
+        Smoothing::Antialias => (1, true),
+        Smoothing::None => (1, false),
+        Smoothing::Supersample(k) => (k.clamp(1, 4), false),
+    };
+    let (kw, kh) = (w.saturating_mul(k), h.saturating_mul(k));
+    if u64::from(kw) * u64::from(kh) > MAX_PIXELS {
+        return Err(format!(
+            "image too large to smooth ({w}x{h} pixels at {k}x); lower the resolution or the smoothing"
+        ));
+    }
+    let mut pm = Pixmap::new(kw, kh).ok_or("cannot allocate image")?;
     if let Some(bg) = background {
         pm.fill(color(bg));
     }
-    let transform = Affine::translate(-bounds.min.x, -bounds.min.y).then(&Affine::scale(px_per_fig, px_per_fig));
-    rasterize(
+    let ks = f64::from(k);
+    let transform =
+        Affine::translate(-bounds.min.x, -bounds.min.y).then(&Affine::scale(px_per_fig * ks, px_per_fig * ks));
+    rasterize_aa(
         scene,
         &mut pm,
         &RasterOptions {
             transform,
-            min_line_px: 0.5,
+            min_line_px: 0.5 * ks,
             pattern,
         },
+        aa,
     );
-    Ok(pm)
+    if k == 1 {
+        Ok(pm)
+    } else {
+        downsample(&pm, k, w, h)
+    }
+}
+
+/// Average `k`×`k` blocks of premultiplied pixels into a `w`×`h` pixmap.
+fn downsample(src: &Pixmap, k: u32, w: u32, h: u32) -> Result<Pixmap, String> {
+    let mut out = Pixmap::new(w, h).ok_or("cannot allocate image")?;
+    let sw = src.width() as usize;
+    let data = src.data();
+    let (k, w) = (k as usize, w as usize);
+    let n = (k * k) as u32;
+    let dst = out.data_mut();
+    for (y, row) in dst.chunks_exact_mut(w * 4).enumerate() {
+        for (x, px) in row.as_chunks_mut::<4>().0.iter_mut().enumerate() {
+            let mut sum = [0u32; 4];
+            for sy in y * k..(y + 1) * k {
+                let start = (sy * sw + x * k) * 4;
+                let Some(block) = data.get(start..start + k * 4) else {
+                    continue;
+                };
+                for p in block.as_chunks::<4>().0 {
+                    for (s, v) in sum.iter_mut().zip(p) {
+                        *s += u32::from(*v);
+                    }
+                }
+            }
+            for (d, s) in px.iter_mut().zip(sum) {
+                // Averages of premultiplied values stay premultiplied.
+                *d = ((s + n / 2) / n) as u8;
+            }
+        }
+    }
+    Ok(out)
 }
 
 /// Un-premultiplied RGBA bytes of a pixmap.

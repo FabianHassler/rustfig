@@ -3,7 +3,7 @@
 
 use crate::panels::{color_combo, fill_combo, font_combo, line_combo};
 use crate::{menus, App};
-use rustfig_engine::render::languages::{language, LANGUAGES};
+use rustfig_engine::render::languages::{language, Kind, LANGUAGES};
 use rustfig_engine::Engine;
 use rustfig_model::{CapStyle, JoinStyle, Justify, LineKind, ObjectId, ObjectKind, PaperSize, PolyKind};
 use serde_json::{json, Value};
@@ -50,6 +50,11 @@ pub struct ExportState {
     pub active_layers_only: bool,
     /// With active layers only: size the page by the whole figure.
     pub whole_figure_bounds: bool,
+    /// Bitmap smoothing (fig2dev's `-S`: 1 none, 2 some, 4 more); `None`
+    /// antialiases as the canvas does.
+    pub smoothing: Option<u32>,
+    /// JPEG quality (fig2dev's `-q`).
+    pub jpeg_quality: u32,
 }
 
 impl Default for ExportState {
@@ -63,6 +68,8 @@ impl Default for ExportState {
             white_background: false,
             active_layers_only: false,
             whole_figure_bounds: false,
+            smoothing: None,
+            jpeg_quality: 75,
         }
     }
 }
@@ -768,9 +775,38 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
                             .suffix(" fig units"),
                     );
                     ui.end_row();
-                    if st.format == "png" {
+                    let bitmap = language(st.format).is_some_and(|l| l.kind == Kind::Bitmap);
+                    if bitmap {
                         ui.label("Resolution");
                         ui.add(egui::DragValue::new(&mut st.dpi).range(10.0..=2400.0).suffix(" dpi"));
+                        ui.end_row();
+                        // xfig's smoothing menu, plus RustFig's antialiasing.
+                        let choices: [(Option<u32>, &str); 4] = [
+                            (None, "Antialiased"),
+                            (Some(1), "No smoothing"),
+                            (Some(2), "Some smoothing"),
+                            (Some(4), "More smoothing"),
+                        ];
+                        let current = choices
+                            .iter()
+                            .find(|(v, _)| *v == st.smoothing)
+                            .map_or("Antialiased", |(_, t)| *t);
+                        ui.label("Smoothing");
+                        let combo = egui::ComboBox::from_id_salt("export_smoothing")
+                            .selected_text(current)
+                            .show_ui(ui, |ui| {
+                                for (v, t) in choices {
+                                    ui.selectable_value(&mut st.smoothing, v, t);
+                                }
+                            });
+                        combo
+                            .response
+                            .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, current));
+                        ui.end_row();
+                    }
+                    if st.format == "jpeg" {
+                        ui.label("Image quality");
+                        ui.add(egui::DragValue::new(&mut st.jpeg_quality).range(1..=100).suffix(" %"));
                         ui.end_row();
                     }
                     ui.label("Background");
@@ -838,6 +874,18 @@ fn export_params(app: &App, st: &ExportState, path: &str) -> serde_json::Value {
     });
     if st.white_background {
         p["background"] = json!("#ffffff");
+    }
+    let mut options = serde_json::Map::new();
+    if language(st.format).is_some_and(|l| l.kind == Kind::Bitmap) {
+        if let Some(s) = st.smoothing {
+            options.insert("smoothing".into(), json!(s));
+        }
+    }
+    if st.format == "jpeg" {
+        options.insert("quality".into(), json!(st.jpeg_quality));
+    }
+    if !options.is_empty() {
+        p["options"] = Value::Object(options);
     }
     p
 }

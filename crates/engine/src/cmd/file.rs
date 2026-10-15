@@ -441,10 +441,6 @@ fn formats_of(lang: &Language) -> Result<Vec<ExportFormat>, EngineError> {
         .ok_or_else(|| EngineError::internal(format!("no writer for {}", lang.id)))
 }
 
-fn is_text(f: ExportFormat) -> bool {
-    matches!(f, ExportFormat::Svg | ExportFormat::Eps | ExportFormat::LatexBox)
-}
-
 fn export_file(e: &mut Engine, p: &Value) -> CmdResult {
     let path = string(p, "path")?;
     let lang = export_language(p, Some(&path))?;
@@ -481,7 +477,7 @@ fn export_data(e: &mut Engine, p: &Value) -> CmdResult {
     let mut files = Vec::new();
     for f in &formats {
         let bytes = render(e, lang, *f, p)?;
-        files.push(if is_text(*f) {
+        files.push(if f.is_text() {
             json!({"extension": f.extension(), "data": String::from_utf8_lossy(&bytes)})
         } else {
             json!({"extension": f.extension(), "base64": base64(&bytes)})

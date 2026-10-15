@@ -1,8 +1,9 @@
 //! One entry point for every export format.
 //
 // Ported from fig2dev fig2dev.c (`main`: `-Z`, metric magnification),
-// read.c (`-s`) and dev/genps.c (`-f`, `PSFONTMAG`) (xfig licence, see
-// LICENSE-xfig).
+// read.c (`-s`, the GIF transparent colour), dev/genps.c (`-f`,
+// `PSFONTMAG`) and dev/genbitmaps.c (bitmap size and border) (xfig
+// licence, see LICENSE-xfig).
 
 use crate::options::{DriverOptions, SizeDim};
 use crate::{raster, Rgba, Scene, SceneOptions};
@@ -19,6 +20,13 @@ pub enum ExportFormat {
     Png,
     /// fig2dev's LaTeX box (`-L box`).
     LatexBox,
+    Gif,
+    Jpeg,
+    Pcx,
+    Ppm,
+    Tiff,
+    Xbm,
+    Xpm,
 }
 
 impl ExportFormat {
@@ -29,6 +37,13 @@ impl ExportFormat {
             "pdf" => Some(ExportFormat::Pdf),
             "png" => Some(ExportFormat::Png),
             "box" => Some(ExportFormat::LatexBox),
+            "gif" => Some(ExportFormat::Gif),
+            "jpeg" | "jpg" => Some(ExportFormat::Jpeg),
+            "pcx" => Some(ExportFormat::Pcx),
+            "ppm" => Some(ExportFormat::Ppm),
+            "tiff" | "tif" => Some(ExportFormat::Tiff),
+            "xbm" => Some(ExportFormat::Xbm),
+            "xpm" => Some(ExportFormat::Xpm),
             _ => None,
         }
     }
@@ -45,7 +60,30 @@ impl ExportFormat {
             ExportFormat::Pdf => "pdf",
             ExportFormat::Png => "png",
             ExportFormat::LatexBox => "box",
+            ExportFormat::Gif => "gif",
+            ExportFormat::Jpeg => "jpg",
+            ExportFormat::Pcx => "pcx",
+            ExportFormat::Ppm => "ppm",
+            ExportFormat::Tiff => "tif",
+            ExportFormat::Xbm => "xbm",
+            ExportFormat::Xpm => "xpm",
         }
+    }
+
+    /// Whether it is a bitmap (fig2dev's genbitmaps languages and PNG).
+    pub fn is_bitmap(self) -> bool {
+        !matches!(
+            self,
+            ExportFormat::Svg | ExportFormat::Eps | ExportFormat::Pdf | ExportFormat::LatexBox
+        )
+    }
+
+    /// Whether the output is text (the rest is binary).
+    pub fn is_text(self) -> bool {
+        matches!(
+            self,
+            ExportFormat::Svg | ExportFormat::Eps | ExportFormat::LatexBox | ExportFormat::Xbm | ExportFormat::Xpm
+        )
     }
 }
 
@@ -176,10 +214,14 @@ pub fn export(doc: &Document, format: ExportFormat, opts: &ExportOptions) -> Res
     } else {
         0.0
     };
-    let border = if d.border.is_finite() {
-        d.border.clamp(0.0, 72_000.0) * 1200.0 / 72.0 / scale
-    } else {
+    let border = if !d.border.is_finite() {
         0.0
+    } else if format.is_bitmap() {
+        // genbitmaps: pixels at 80 dpi before the magnification, so
+        // `THICK_SCALE` (15) Fig units each.
+        d.border.clamp(0.0, 72_000.0) * 15.0
+    } else {
+        d.border.clamp(0.0, 72_000.0) * 1200.0 / 72.0 / scale
     };
     let bounds = raw.expand(m + border);
     let mut bg = d.background.or(opts.background).map(Rgba::opaque);
@@ -193,23 +235,67 @@ pub fn export(doc: &Document, format: ExportFormat, opts: &ExportOptions) -> Res
         ExportFormat::Eps => crate::eps::to_eps(&scene, &bounds, scale, bg, title).into_bytes(),
         ExportFormat::Pdf => crate::pdf::to_pdf(&scene, &bounds, scale, bg, title),
         ExportFormat::LatexBox => crate::drivers::latex_box::to_box(&doc.comments, &bounds, scale).into_bytes(),
-        ExportFormat::Png => {
+        ExportFormat::Png
+        | ExportFormat::Gif
+        | ExportFormat::Jpeg
+        | ExportFormat::Pcx
+        | ExportFormat::Ppm
+        | ExportFormat::Tiff
+        | ExportFormat::Xbm
+        | ExportFormat::Xpm => {
             let dpi = if opts.dpi.is_finite() {
                 opts.dpi.clamp(1.0, 4800.0)
             } else {
                 150.0
             };
             let px_per_fig = dpi / 1200.0 * scale;
-            let pm = raster::render_region(
+            // genbitmaps sizes the image as `(int)(size + 0.9)`.
+            let (w, h) = raster::checked_size(
+                (bounds.width() * px_per_fig + 0.9).floor(),
+                (bounds.height() * px_per_fig + 0.9).floor(),
+            )?;
+            let smoothing = match d.smoothing {
+                None => raster::Smoothing::Antialias,
+                Some(0 | 1) => raster::Smoothing::None,
+                Some(k) => raster::Smoothing::Supersample(k),
+            };
+            let pm = raster::render_sized(
                 &scene,
                 &bounds,
                 px_per_fig,
+                (w, h),
                 bg,
                 crate::pattern::PatternFrame::export(&bounds, scale),
+                smoothing,
             )?;
-            raster::encode_png(&pm)?
+            if format == ExportFormat::Png {
+                raster::encode_png(&pm)?
+            } else {
+                let transparent = d.transparent.or_else(|| figure_transparent_color(doc));
+                crate::drivers::bitmaps::encode(
+                    format,
+                    &pm,
+                    &crate::drivers::bitmaps::Encoding {
+                        quality: d.quality.unwrap_or(crate::drivers::bitmaps::DEFAULT_JPEG_QUALITY),
+                        transparent,
+                        dpi,
+                    },
+                )?
+            }
         }
     })
+}
+
+/// The figure's GIF transparent colour (its header line), as fig2dev's
+/// `read_objects` takes it: a standard colour, or a user colour the
+/// figure defines; the special values (none, default, background) give none.
+fn figure_transparent_color(doc: &Document) -> Option<Rgb> {
+    let n = doc.settings.transparent_color;
+    if n < 0 {
+        return None;
+    }
+    let defined = n < 32 || doc.colors.iter().any(|c| c.number == n);
+    defined.then(|| doc.rgb(rustfig_model::ColorRef(n)))
 }
 
 /// The document with fig2dev's `-s` (every text at one size, its stored

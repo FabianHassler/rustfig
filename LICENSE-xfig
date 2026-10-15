@@ -9,6 +9,8 @@ Copyright (c) 1991 by Micah Beck
 Parts Copyright (c) 1989-2015 by Brian V. Smith
 Parts Copyright (c) 1991 by Paul King
 Parts Copyright (c) 1991 by Henning Spruth
+Parts Copyright (c) 1988 by Frank Schmuck
+Copyright (c) 1992 by Herbert Bauer and B. Raichle
 Parts Copyright (c) 1992 by Brian Boyter
 Parts Copyright (c) 1995 by C. Blanc and C. Schlick
 Parts Copyright (c) 2002 by Anthony Starks
@@ -38,8 +40,19 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/engine/src/prefs.rs: xfig src/main.c (resources, options), doc/xfig.man.in (resource table)
 - crates/engine/src/snap.rs: xfig src/w_snap.c, src/w_intersect.c
 - crates/engine/src/tools/mod.rs: xfig src/w_modepanel.c, src/d_*.c, src/e_*.c, src/w_canvas.c
+- crates/fig2dev/src/bound.rs: fig2dev/bound.c, fig2dev/bound.h, fig2dev/localmath.c
 - crates/fig2dev/src/gendev.rs: fig2dev/fig2dev.c, fig2dev/fig2dev.h, fig2dev/drivers.h
 - crates/fig2dev/src/object.rs: fig2dev/object.h
+- crates/fig2dev/src/read.rs: fig2dev/read.c, fig2dev/read1_3.c, fig2dev/free.c, fig2dev/messages.c
+- crates/fig2dev/src/read/read1_3.rs: fig2dev/read1_3.c
+- crates/fig2dev/src/trans_spline.rs: fig2dev/trans_spline.c, fig2dev/trans_spline.h
+- crates/fig2dev/src/util/creationdate.rs: fig2dev/creationdate.c
+- crates/fig2dev/src/util/iso2tex.rs: fig2dev/iso2tex.c
+- crates/fig2dev/src/util/latex.rs: fig2dev/dev/genlatex.h, fig2dev/dev/genlatex.c
+- crates/fig2dev/src/util/psfonts.rs: fig2dev/dev/psfonts.c
+- crates/fig2dev/src/util/readpics.rs: fig2dev/dev/readpics.c, fig2dev/dev/readeps.c, fig2dev/dev/readpcx.c, fig2dev/dev/readpng.c, fig2dev/dev/genps.c
+- crates/fig2dev/src/util/setfigfont.rs: fig2dev/dev/setfigfont.c
+- crates/fig2dev/src/util/texfonts.rs: fig2dev/dev/texfonts.c, fig2dev/dev/textconvert.c
 - crates/format/src/fig_read.rs: xfig src/f_read.c; fig2dev/read.c
 - crates/format/src/fig_write.rs: xfig src/f_save.c
 - crates/geom/src/arrow.rs: fig2dev/bound.c, fig2dev/dev/genps.c
@@ -49,7 +62,8 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/model/src/xcolors.rs: fig2dev/colors.c
 - crates/render/src/bound.rs: fig2dev/bound.c, fig2dev/read.c
 - crates/render/src/drivers/latex_box.rs: fig2dev/dev/genbox.c
-- crates/render/src/export.rs: fig2dev/fig2dev.c, fig2dev/read.c, fig2dev/dev/genps.c
+- crates/render/src/drivers/bitmaps.rs: fig2dev/dev/genbitmaps.c
+- crates/render/src/export.rs: fig2dev/fig2dev.c, fig2dev/read.c, fig2dev/dev/genps.c, fig2dev/dev/genbitmaps.c
 - crates/render/src/languages.rs: xfig src/mode.c, src/w_export.c
 - crates/render/src/lib.rs: xfig src/u_redraw.c; fig2dev/dev/genps.c, fig2dev/colors.c
 - crates/render/src/options.rs: fig2dev/fig2dev.c, fig2dev/dev/genps.c, genpdf.c, genbitmaps.c, gensvg.c

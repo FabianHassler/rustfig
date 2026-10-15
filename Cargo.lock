@@ -1135,6 +1135,7 @@ name = "fig2dev"
 version = "0.1.0"
 dependencies = [
  "rustfig-engine",
+ "rustfig-fig2dev",
  "rustfig-format",
  "rustfig-model",
  "rustfig-render",
@@ -2829,6 +2830,8 @@ dependencies = [
 name = "rustfig-fig2dev"
 version = "0.1.0"
 dependencies = [
+ "image",
+ "miniz_oxide 0.8.9",
  "rustfig-model",
 ]
 
@@ -2872,6 +2875,7 @@ dependencies = [
 name = "rustfig-render"
 version = "0.1.0"
 dependencies = [
+ "image",
  "miniz_oxide 0.8.9",
  "pdf-writer",
  "rustfig-geom",
