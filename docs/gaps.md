@@ -22,6 +22,7 @@
 | 17 | Localization of UI strings | Localization | Low | 24 |
 | 18 | Spell check | Text | Low | 16 |
 | 19 | Accessibility (screen-reader labels for canvas objects) | Platforms | Low | 16 |
+| 23 | Start values differing from xfig's defaults (found by E1): point positioning starts at 1/8 inch, xfig's `startposnmode` default is 1 (magnet, 1/16 inch); text step 1.0 vs xfig's 1.2; to be checked against the rest of the resource table | Attributes | Low | 2 |
 | 21 | fig2dev's other output languages (EMF, CGM, DXF, HPGL, MetaPost, epic, …) not ported yet (B9) | Export | Low | 60 |
 | 20 | Real PostScript font metrics when craft-fonts lacks a face (synthetic bold/italic today); the A10 corpus shows text widths as the main remaining difference from fig2dev | Text | Medium | 12 |
 

@@ -20,7 +20,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Overall parity (weighted) | ≈61 % |
 | Commands (all reachable from the control channel and MCP) | 133 engine (incl. 38 tool modes) + 17 UI |
 | Interactive tools (xfig modes) | 38 |
-| Tests | 219 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
+| Tests | 228 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 3.0–3.2, write 3.2 |
 | Export formats | PDF, SVG, EPS, PNG, EPS+PDF pair, LaTeX box (7 of xfig's 40 languages, PostScript without page layout yet; the rest being ported from fig2dev) |
 | Perf, 50k paths (render fit / hit test / open / edit + undo) | 260 ms / 0.1 ms / 20 ms / 0.9 ms |
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-15 | E1: preferences survive restarts: settings.toml with xfig's resources under xfig's names (editable in Edit › Global settings › xfig resources), RustFig's switches, recent files (File menu) and your own colours in every colour menu; browser storage on the web. 228 tests. |
 | 2026-10-15 | A7: panning and zooming a 50,000-object drawing stays at 1–3 ms per frame (was 330 ms): cached scene, the last image moved at once, the exact one rendered in the background. Phase A done. |
 | 2026-10-15 | A6: crash recovery: unsaved drawings are copied a few seconds after each change; after a crash or kill the next start offers to restore them (OS file locks tell running instances from stopped ones). 219 tests. |
 | 2026-10-15 | A5: ellipses, arcs and rounded boxes are true curves in SVG, PDF and EPS (an ellipse SVG 169 KB → 2 KB); corpus EPS median difference to fig2dev 0.0031 → 0.0028. 214 tests. |

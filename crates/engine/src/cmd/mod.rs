@@ -8,6 +8,7 @@ mod edit;
 pub(crate) mod file;
 mod indicator;
 mod object;
+mod prefs;
 pub(crate) mod shape;
 
 pub use shape::STYLE_PARAMS;
@@ -68,6 +69,7 @@ pub fn all() -> &'static [Command] {
         v.extend(doc::commands());
         v.extend(indicator::commands());
         v.extend(tool::commands());
+        v.extend(prefs::commands());
         v
     })
 }

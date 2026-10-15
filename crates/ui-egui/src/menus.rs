@@ -468,6 +468,28 @@ pub fn xfig_menu_letter(menu: &str, letter: char) -> Option<&'static str> {
         .filter(|c| cmd::find(c).is_some() || find_ui(c).is_some())
 }
 
+/// Recent files (xfig lists them at the end of its File menu, numbered;
+/// 1–9 open them while the menu is open).
+fn recent_files(app: &mut App, ui: &mut egui::Ui) {
+    let files = app.engine.prefs.rustfig.recent_files.clone();
+    if files.is_empty() {
+        return;
+    }
+    ui.separator();
+    for (i, f) in files.iter().enumerate() {
+        let name = std::path::Path::new(f)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or(f.as_str());
+        let digit = egui::Key::from_name(&(i + 1).to_string());
+        let key = digit.is_some_and(|k| ui.input_mut(|inp| inp.consume_key(egui::Modifiers::NONE, k)));
+        if ui.button(format!("{} {name}", i + 1)).on_hover_text(f).clicked() || key {
+            ui.close();
+            app.run("app.open", json!({ "path": f }));
+        }
+    }
+}
+
 fn xfig_menu(app: &mut App, ui: &mut egui::Ui, menu: &str, items: &[XfigItem]) {
     // A letter picks its entry, as in xfig.
     for (m, letter, _) in XFIG_MENU_LETTERS.iter().filter(|(m, _, _)| *m == menu) {
@@ -523,6 +545,9 @@ fn xfig_menu(app: &mut App, ui: &mut egui::Ui, menu: &str, items: &[XfigItem]) {
                 ui.add_enabled(false, b).on_disabled_hover_text(why);
             }
         }
+    }
+    if menu == "File" {
+        recent_files(app, ui);
     }
 }
 
@@ -637,7 +662,12 @@ pub fn menu_buttons(app: &mut App, ui: &mut egui::Ui) {
             if *name == "Object" {
                 ui.menu_button("Snap", |ui| snap_menu(app, ui));
             }
-            ui.menu_button(*name, |ui| entries(app, ui, list));
+            ui.menu_button(*name, |ui| {
+                entries(app, ui, list);
+                if *name == "File" {
+                    recent_files(app, ui);
+                }
+            });
             if *name == "Object" {
                 ui.menu_button("Tools", |ui| {
                     ui.menu_button("Draw", |ui| {

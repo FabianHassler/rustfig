@@ -16,6 +16,7 @@ pub mod menus;
 pub mod mode_icons;
 pub mod panels;
 pub mod rulers;
+pub mod settings;
 pub mod theme;
 pub mod vector_icons;
 pub mod xfig_icons;
@@ -79,6 +80,9 @@ pub struct App {
     /// How long the last frames took on the UI thread (ms), newest last,
     /// at most 120 (native; `ui.state` reports them).
     pub frame_times: std::collections::VecDeque<f64>,
+    /// Where the preferences are kept (E1); nowhere until `App::new` or a
+    /// test sets one.
+    pub settings: settings::Settings,
     /// xfig's compose key while typing text (`menus::compose_text`).
     pub(crate) compose: menus::Compose,
     pub show_indicator: bool,
@@ -123,6 +127,7 @@ impl App {
             autosave: None,
             recoverable: Vec::new(),
             frame_times: std::collections::VecDeque::new(),
+            settings: settings::Settings::default(),
             compose: menus::Compose::default(),
             show_indicator: true,
             depth_drag: None,
@@ -166,6 +171,8 @@ impl App {
         if let Some(dir) = rustfig_engine::recovery::default_dir() {
             app.enable_recovery(dir);
         }
+        app.settings = settings::Settings::platform();
+        settings::load_and_apply(&mut app);
         app
     }
 
@@ -388,6 +395,7 @@ impl App {
         dialogs::show(self, ctx);
         panels::mode_popup(self, ctx, &tokens);
         self.handle_requests();
+        settings::tick(self);
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(a) = &mut self.autosave {
             if let Some(wait) = a.tick(&self.engine, std::time::Instant::now()) {

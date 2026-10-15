@@ -812,3 +812,77 @@ fn recovery_after_a_crash() {
     assert!(!dir.join(format!("{id}.rustfig")).exists(), "old copy gone");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+fn settings_file(name: &str) -> std::path::PathBuf {
+    let dir = std::env::temp_dir().join(format!("rustfig-settings-{name}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    dir.join("settings.toml")
+}
+
+fn app_with_settings(path: &std::path::Path) -> App {
+    let mut a = app();
+    a.settings = rustfig_ui_egui::settings::Settings::file(path.to_path_buf());
+    rustfig_ui_egui::settings::load_and_apply(&mut a);
+    a
+}
+
+/// E1: settings changed in one session are there in the next.
+#[test]
+fn settings_survive_a_restart() {
+    let path = settings_file("restart");
+    {
+        let mut h = harness(app_with_settings(&path));
+        h.state_mut().run("app.toggle_layout", json!({ "classic": false }));
+        h.state_mut()
+            .run("prefs.set", json!({ "resource": "startfontsize", "value": 18 }));
+        h.state_mut()
+            .run("prefs.set", json!({ "resource": "startgridmode", "value": "2" }));
+        h.state_mut()
+            .run("prefs.add_color", json!({ "name": "Rust", "rgb": "#d2692a" }));
+        h.run_steps(2);
+    }
+    let text = std::fs::read_to_string(&path).unwrap();
+    assert!(text.contains("startfontsize = 18"), "{text}");
+    assert!(text.contains("layout = \"modern\""), "{text}");
+    let a = app_with_settings(&path);
+    assert!(!a.classic());
+    assert_eq!(a.engine.indicator.font_size, 18.0);
+    assert!(a.engine.indicator.grid.is_some());
+    assert_eq!(a.engine.prefs.rustfig.user_colors[0].name, "Rust");
+    let _ = std::fs::remove_dir_all(path.parent().unwrap());
+}
+
+/// E1: a damaged settings file gives xfig's defaults and a message.
+#[test]
+fn damaged_settings_fall_back_to_defaults() {
+    let path = settings_file("damaged");
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(&path, "[xfig\nstartfontsize = ").unwrap();
+    let a = app_with_settings(&path);
+    assert!(a.classic());
+    assert!(a
+        .message
+        .as_ref()
+        .is_some_and(|m| m.text.contains("using xfig's defaults")));
+    let _ = std::fs::remove_dir_all(path.parent().unwrap());
+}
+
+/// E1: saved files are listed in the File menu and reopen from it.
+#[test]
+fn recent_files_in_the_file_menu() {
+    let path = settings_file("recent");
+    let fig = path.with_file_name("drawing.fig").to_string_lossy().into_owned();
+    let mut h = harness(app_with_settings(&path));
+    h.state_mut()
+        .run("shape.rectangle", json!({"x": 0, "y": 0, "width": 600, "height": 300}));
+    h.state_mut().run("app.save_as", json!({ "path": fig }));
+    h.state_mut().run("app.new", json!({}));
+    h.run_steps(2);
+    assert!(h.state().engine.doc().objects.is_empty());
+    h.get_by_label("File").click();
+    h.run_steps(2);
+    h.get_by_label_contains("1 drawing.fig").click();
+    h.run_steps(2);
+    assert_eq!(h.state().engine.doc().objects.len(), 1);
+    let _ = std::fs::remove_dir_all(path.parent().unwrap());
+}

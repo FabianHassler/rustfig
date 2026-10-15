@@ -12,6 +12,7 @@ pub mod guard;
 mod history;
 pub mod import;
 mod indicator;
+pub mod prefs;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod recovery;
 pub mod snap;
@@ -82,6 +83,10 @@ pub struct Engine {
     /// Where crash-recovery copies live (`recovery`); `None` is the
     /// platform's folder.
     pub recovery_dir: Option<std::path::PathBuf>,
+    /// Preferences (E1): xfig's resources and RustFig's settings.
+    pub prefs: prefs::Prefs,
+    /// Set when `prefs` changed and should be written.
+    pub prefs_dirty: bool,
     /// Draw objects on hidden depths in gray (xfig's "Gray"); otherwise
     /// they aren't drawn ("Blank").
     pub gray_hidden_depths: bool,
@@ -126,6 +131,8 @@ impl Engine {
             revision: 1,
             hidden_depths: BTreeSet::new(),
             recovery_dir: None,
+            prefs: prefs::Prefs::default(),
+            prefs_dirty: false,
             gray_hidden_depths: true,
             show_page_border: true,
             requests: Vec::new(),

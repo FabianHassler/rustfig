@@ -1041,6 +1041,32 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                         }
                     }
                 });
+            // The user's own colours (E1): picking one adds it to the drawing.
+            let user = app.engine.prefs.rustfig.user_colors.clone();
+            if !user.is_empty() {
+                ui.label(egui::RichText::new("Your colours").small());
+                egui::Grid::new(("user_colors", field))
+                    .spacing(vec2(2.0, 2.0))
+                    .show(ui, |ui| {
+                        for (i, uc) in user.iter().enumerate() {
+                            let rgb = rustfig_model::Rgb::from_hex(&uc.rgb).unwrap_or(rustfig_model::Rgb::BLACK);
+                            let col = Color32::from_rgb(rgb.r, rgb.g, rgb.b);
+                            if cell(ui, vec2(34.0, 20.0), false, &uc.name, |p, r| {
+                                p.rect_filled(r, 1.0, col);
+                            }) {
+                                if let Some(r) = app.run("color.add", json!({ "rgb": uc.rgb })) {
+                                    chosen = r
+                                        .get("color")
+                                        .and_then(Value::as_i64)
+                                        .and_then(|c| i32::try_from(c).ok());
+                                }
+                            }
+                            if i % 7 == 6 {
+                                ui.end_row();
+                            }
+                        }
+                    });
+            }
             if let Some(c) = chosen {
                 let mut m = serde_json::Map::new();
                 m.insert(field.into(), json!(c));

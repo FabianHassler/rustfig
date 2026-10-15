@@ -86,6 +86,13 @@ pub struct Dialogs {
     pub messages_open: bool,
     /// Edit › Global settings (RustFig's preferences).
     pub global_open: bool,
+    /// The xfig resources window (E1).
+    pub resources_open: bool,
+    resource_filter: String,
+    /// Values being typed into the resources window, by resource.
+    resource_edits: std::collections::BTreeMap<&'static str, String>,
+    /// The user colour being added: name and colour.
+    new_color: (String, [u8; 3]),
     command_filter: String,
 }
 
@@ -319,6 +326,7 @@ fn recovery_dialog(app: &mut App, ctx: &egui::Context) {
 
 pub fn show(app: &mut App, ctx: &egui::Context) {
     recovery_dialog(app, ctx);
+    resources_dialog(app, ctx);
     edit_dialog(app, ctx);
     export_dialog(app, ctx);
     search_dialog(app, ctx);
@@ -363,11 +371,148 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
                 }
             }
             ui.separator();
-            if ui.button("Units and page…").clicked() {
-                app.run("app.document_settings", serde_json::json!({}));
+            ui.horizontal(|ui| {
+                if ui.button("Units and page…").clicked() {
+                    app.run("app.document_settings", serde_json::json!({}));
+                }
+                if ui
+                    .button("xfig resources…")
+                    .on_hover_text("All of xfig's settings (its X resources and command-line options)")
+                    .clicked()
+                {
+                    app.dialogs.resources_open = true;
+                }
+            });
+            if ui
+                .button("Use current attributes as defaults")
+                .on_hover_text(
+                    "The attribute panel's values become the start values (startfontsize, startlinewidth, …)",
+                )
+                .clicked()
+            {
+                app.run("prefs.use_current_attributes", serde_json::json!({}));
             }
+            ui.separator();
+            user_colors_editor(app, ui);
+            ui.separator();
+            ui.label(
+                egui::RichText::new(format!("Saved in {}", app.settings.location()))
+                    .small()
+                    .weak(),
+            );
         });
     app.dialogs.global_open &= open;
+}
+
+/// The colours kept for every drawing (E1): offered in every colour menu.
+fn user_colors_editor(app: &mut App, ui: &mut egui::Ui) {
+    ui.label(egui::RichText::new("Your colours").strong());
+    let colors = app.engine.prefs.rustfig.user_colors.clone();
+    if colors.is_empty() {
+        ui.label(egui::RichText::new("None yet: add colours to have them in every drawing.").weak());
+    }
+    let mut remove = None;
+    egui::Grid::new("user_colors").num_columns(3).show(ui, |ui| {
+        for c in &colors {
+            let rgb = rustfig_model::Rgb::from_hex(&c.rgb).unwrap_or(rustfig_model::Rgb::BLACK);
+            let (r, _) = ui.allocate_exact_size(egui::vec2(18.0, 14.0), egui::Sense::hover());
+            ui.painter()
+                .rect_filled(r, 2.0, egui::Color32::from_rgb(rgb.r, rgb.g, rgb.b));
+            ui.label(format!("{}  {}", c.name, c.rgb));
+            if ui.small_button("Remove").clicked() {
+                remove = Some(c.name.clone());
+            }
+            ui.end_row();
+        }
+    });
+    if let Some(name) = remove {
+        app.run("prefs.remove_color", json!({ "name": name }));
+    }
+    ui.horizontal(|ui| {
+        let (name, rgb) = &mut app.dialogs.new_color;
+        ui.color_edit_button_srgb(rgb);
+        ui.add(egui::TextEdit::singleline(name).hint_text("name").desired_width(120.0));
+        let hex = format!("#{:02x}{:02x}{:02x}", rgb[0], rgb[1], rgb[2]);
+        let ready = !name.trim().is_empty();
+        if ui.add_enabled(ready, egui::Button::new("Add colour")).clicked() {
+            let p = json!({ "name": name.trim(), "rgb": hex });
+            app.dialogs.new_color.0.clear();
+            app.run("prefs.add_color", p);
+        }
+    });
+}
+
+/// Every xfig resource with its value, default, option and what RustFig
+/// does with it; values can be edited (E1).
+fn resources_dialog(app: &mut App, ctx: &egui::Context) {
+    if !app.dialogs.resources_open {
+        return;
+    }
+    let mut open = true;
+    let mut commit: Option<(&'static str, Option<String>)> = None;
+    let values = app.engine.prefs.xfig.clone();
+    egui::Window::new("xfig resources")
+        .open(&mut open)
+        .default_size([620.0, 460.0])
+        .show(ctx, |ui| {
+            ui.label("xfig's settings under xfig's names. A value set here is kept for every start; xfig's command-line options override it for one run. Empty means xfig's default.");
+            ui.add(egui::TextEdit::singleline(&mut app.dialogs.resource_filter).hint_text("filter"));
+            let filter = app.dialogs.resource_filter.to_lowercase();
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                egui::Grid::new("resources").striped(true).num_columns(4).show(ui, |ui| {
+                    ui.strong("Resource");
+                    ui.strong("Value");
+                    ui.strong("Option");
+                    ui.strong("In RustFig");
+                    ui.end_row();
+                    for r in rustfig_engine::prefs::RESOURCES {
+                        if !filter.is_empty() && !r.name.to_lowercase().contains(&filter) && !r.option.contains(&filter) {
+                            continue;
+                        }
+                        ui.label(r.name);
+                        let current = values
+                            .iter()
+                            .find(|(k, _)| k.eq_ignore_ascii_case(r.name))
+                            .map(|(_, v)| match v {
+                                toml_str if toml_str.is_str() => toml_str.as_str().unwrap_or_default().to_string(),
+                                other => other.to_string(),
+                            })
+                            .unwrap_or_default();
+                        let text = app.dialogs.resource_edits.entry(r.name).or_insert_with(|| current.clone());
+                        let resp = ui.add(
+                            egui::TextEdit::singleline(text)
+                                .hint_text(r.default)
+                                .desired_width(140.0),
+                        );
+                        if resp.lost_focus() && *text != current {
+                            let t = text.trim().to_string();
+                            commit = Some((r.name, (!t.is_empty()).then_some(t)));
+                        }
+                        ui.label(egui::RichText::new(r.option).small());
+                        let status = match r.status {
+                            rustfig_engine::prefs::Status::Applied => "applied".to_string(),
+                            rustfig_engine::prefs::Status::Planned(t) => format!("kept; in use with {t}"),
+                        };
+                        ui.label(egui::RichText::new(status).small());
+                        ui.end_row();
+                    }
+                });
+            });
+        });
+    if let Some((name, value)) = commit {
+        let v = match value {
+            Some(t) => json!(t),
+            None => serde_json::Value::Null,
+        };
+        if app.run("prefs.set", json!({ "resource": name, "value": v })).is_none() {
+            // Refused: show the stored value again.
+            app.dialogs.resource_edits.remove(name);
+        }
+    }
+    if !open {
+        app.dialogs.resources_open = false;
+        app.dialogs.resource_edits.clear();
+    }
 }
 
 fn edit_dialog(app: &mut App, ctx: &egui::Context) {

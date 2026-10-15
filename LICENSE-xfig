@@ -34,6 +34,7 @@ notice. xfig's sources are cited as src/..., fig2dev's as fig2dev/... (its
 drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 `cargo xtask licences` checks that this list and those comments agree.
 
+- crates/engine/src/prefs.rs: xfig src/main.c (resources, options), doc/xfig.man.in (resource table)
 - crates/engine/src/snap.rs: xfig src/w_snap.c, src/w_intersect.c
 - crates/engine/src/tools/mod.rs: xfig src/w_modepanel.c, src/d_*.c, src/e_*.c, src/w_canvas.c
 - crates/format/src/fig_read.rs: xfig src/f_read.c; fig2dev/read.c

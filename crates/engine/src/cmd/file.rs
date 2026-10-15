@@ -176,6 +176,8 @@ fn open(e: &mut Engine, p: &Value) -> CmdResult {
     let warnings = import::load_all_pictures(&mut doc, base.as_deref());
     let count = doc.objects.len();
     e.replace_document(doc, Some(path.clone()));
+    e.prefs.add_recent(&path);
+    e.prefs_dirty = true;
     let r = e.doc().bbox();
     e.view.fit(&r);
     e.set_status(format!("Opened {path}"));
@@ -329,6 +331,8 @@ fn save(e: &mut Engine, p: &Value) -> CmdResult {
     write_atomic(&path, text.as_bytes())?;
     e.set_path(Some(path.clone()));
     e.set_modified(false);
+    e.prefs.add_recent(&path);
+    e.prefs_dirty = true;
     e.set_status(format!("Saved {path}"));
     Ok(json!({"path": path}))
 }

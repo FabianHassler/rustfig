@@ -33,6 +33,7 @@ rustfig-mcp = { path = "crates/mcp" }
 rustfig-ui-egui = { path = "crates/ui-egui" }
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1"
+toml = { version = "1", default-features = false, features = ["parse", "display", "serde"] }
 tiny-skia = "0.11"
 ttf-parser = "0.25"
 epaint_default_fonts = "0.33"
