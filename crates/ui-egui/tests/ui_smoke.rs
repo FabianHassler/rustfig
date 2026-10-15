@@ -271,6 +271,10 @@ fn depth_panel_rows_buttons_and_display() {
     h.get_by_label("Blank").click();
     h.run_steps(2);
     assert!(!h.state().engine.gray_hidden_depths);
+    // xfig's right button sets the depth of new objects (W8).
+    h.get_by_label("Depth 30 (1 object)").click_secondary();
+    h.run_steps(2);
+    assert_eq!(h.state().engine.indicator.depth, 30);
 }
 
 #[test]
@@ -639,4 +643,27 @@ fn xfig_menu_letters_name_menu_entries() {
         });
         assert!(found, "{menu} {letter}: {target} isn't in the menu");
     }
+}
+
+/// W8: the edit popup's keys (`e_edit.c`): Ctrl+Return is Done, Escape Cancel.
+#[test]
+fn edit_popup_keys() {
+    let mut h = harness(app());
+    h.state_mut()
+        .engine
+        .execute("shape.rectangle", &json!({"x": 0, "y": 0, "width": 600, "height": 300}))
+        .unwrap();
+    h.state_mut().engine.execute("edit.select_all", &json!({})).unwrap();
+    h.state_mut().run("app.edit_selected", json!({}));
+    h.run_steps(2);
+    assert!(h.state().dialogs.edit.is_some());
+    press_key(&mut h, egui::Key::Escape, egui::Modifiers::NONE);
+    assert!(h.state().dialogs.edit.is_none(), "Escape cancels");
+    assert!(!h.state().engine.selection().is_empty(), "and doesn't deselect");
+    h.state_mut().run("app.edit_selected", json!({}));
+    h.run_steps(2);
+    press_key(&mut h, egui::Key::Enter, egui::Modifiers::NONE);
+    assert!(h.state().dialogs.edit.is_some(), "Return applies and stays");
+    press_key(&mut h, egui::Key::Enter, egui::Modifiers::COMMAND);
+    assert!(h.state().dialogs.edit.is_none(), "Ctrl+Return is Done");
 }

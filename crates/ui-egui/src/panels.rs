@@ -361,6 +361,11 @@ pub fn depth_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
             if resp.clicked() && app.depth_drag.is_none() {
                 app.run("depth.set_visible", json!({"depth": d, "visible": !shown}));
             }
+            // xfig's right button sets the depth new objects get
+            // (`SetDepthToLayer` in `w_layers.c`).
+            if resp.secondary_clicked() {
+                app.run("indicator.set", json!({"depth": d}));
+            }
             let p = ui.painter();
             if resp.hovered() {
                 p.rect_filled(rect, 2.0, ui.visuals().widgets.hovered.weak_bg_fill);

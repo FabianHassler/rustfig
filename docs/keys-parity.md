@@ -77,7 +77,7 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside.
 | Search panel | Escape, Meta-C, Meta-Q | close | ✅ Escape; ❌ Meta-C/Q (W8) |
 | Export, Global, Document, Commands, About panels | Escape | cancel | ✅ |
 | Export panel | Return | export; in Magnification: apply | ❌ W8 |
-| Edit popup (`e_edit.c`) | Return / Ctrl+Return / Escape | apply / done / cancel | ❌ W8 |
+| Edit popup (`e_edit.c`) | Return / Ctrl+Return / Escape | apply / done / cancel | ✅ (Return in a multi-line field is a new line) |
 | Edit popup | middle button | close the comments popup | ❌ W8 |
 | Unit panel (`w_rulers.c`) | Return / Escape | set / cancel | ❌ W8 |
 | Indicator value panels (`w_indpanel.c`) | Return / Escape / Meta-Q | set / cancel / cancel | ❌ W8 |
@@ -92,7 +92,7 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside.
 | Spell check panel | Escape, u, v, x | close, update, convert, chop | ❌ D11 |
 | Mode panel | middle/right button on a mode | (xfig's PressMiddle/PressRight) | review in W8 |
 | Depth panel (`w_layers.c`) | left click, left drag | toggle, sweep | ✅ (W3) |
-| Depth panel | right click | set the current depth to that layer | ❌ W8 |
+| Depth panel | right click | set the depth of new objects to that layer | ✅ (`indicator.set`) |
 | Rulers (`w_rulers.c`) | left, middle drag, right; Meta+right drag | pan, drag, pan; drag | ✅ (W6) |
 | Units box | left / right | pan to origin / Unit menu | ✅ (W6) |
 
@@ -100,5 +100,6 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside.
 
 | Date | Note |
 |---|---|
+| 2026-10-15 | Edit popup Return/Ctrl+Return/Escape; depth panel right click. |
 | 2026-10-15 | Menus: Meta-F/E/V/H and the letters inside them; plain-letter shortcuts are off while a menu or popup is open. |
 | 2026-10-15 | First audit (W8): arrows, Home, Home/End in text, Shift-Meta-X, wheel on indicator buttons, Escape in panels and Return in the search panel added. |

@@ -20,7 +20,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Overall parity (weighted) | ≈61 % |
 | Commands (all reachable from the control channel and MCP) | 133 engine (incl. 38 tool modes) + 17 UI |
 | Interactive tools (xfig modes) | 38 |
-| Tests | 197 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
+| Tests | 198 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 3.0–3.2, write 3.2 |
 | Export formats | PDF, SVG, EPS, PNG, EPS+PDF pair, LaTeX box (7 of xfig's 40 languages, PostScript without page layout yet; the rest being ported from fig2dev) |
 | Perf, 50k paths (render fit / hit test / open / edit + undo) | 260 ms / 0.1 ms / 20 ms / 0.9 ms |

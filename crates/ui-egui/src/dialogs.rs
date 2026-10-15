@@ -241,8 +241,16 @@ pub(crate) fn escape_closes_panels(app: &mut App, ctx: &egui::Context) {
         return;
     }
     let d = &mut app.dialogs;
-    let any = d.export.open || d.search.open || d.settings_open || d.commands_open || d.about_open || d.global_open;
+    let any = d.export.open
+        || d.search.open
+        || d.settings_open
+        || d.commands_open
+        || d.about_open
+        || d.global_open
+        || d.edit.is_some();
     if any && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
+        // The edit popup's Escape is Cancel (`e_edit.c`): nothing applied.
+        d.edit = None;
         d.export.open = false;
         d.search.open = false;
         d.settings_open = false;
@@ -432,6 +440,27 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                 }
             });
         });
+    // xfig's edit popup (`e_edit.c`): Return applies, Ctrl+Return is Done.
+    // A single-line field gives up the focus on Return; a multi-line one
+    // keeps it, and Return there is a new line.
+    let (enter, command) = ctx.input(|i| {
+        i.events
+            .iter()
+            .find_map(|e| match e {
+                egui::Event::Key {
+                    key: egui::Key::Enter,
+                    pressed: true,
+                    modifiers,
+                    ..
+                } => Some((true, modifiers.command)),
+                _ => None,
+            })
+            .unwrap_or((false, false))
+    });
+    if enter && ctx.memory(|m| m.focused()).is_none() && !app.engine.is_typing() {
+        apply = true;
+        close |= command;
+    }
     if apply {
         let mut p = json!({
             "ids": [st.id.0],
