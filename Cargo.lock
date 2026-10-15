@@ -2826,6 +2826,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustfig-fig2dev"
+version = "0.1.0"
+dependencies = [
+ "rustfig-model",
+]
+
+[[package]]
 name = "rustfig-format"
 version = "0.1.0"
 dependencies = [

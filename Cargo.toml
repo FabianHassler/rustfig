@@ -6,6 +6,7 @@ members = [
     "crates/text",
     "crates/format",
     "crates/render",
+    "crates/fig2dev",
     "crates/engine",
     "crates/mcp",
     "crates/ui-egui",
@@ -29,6 +30,7 @@ rustfig-model = { path = "crates/model" }
 rustfig-text = { path = "crates/text" }
 rustfig-format = { path = "crates/format" }
 rustfig-render = { path = "crates/render" }
+rustfig-fig2dev = { path = "crates/fig2dev" }
 rustfig-engine = { path = "crates/engine" }
 rustfig-mcp = { path = "crates/mcp" }
 rustfig-ui-egui = { path = "crates/ui-egui" }
