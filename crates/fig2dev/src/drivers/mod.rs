@@ -3,12 +3,15 @@
 
 use crate::Driver;
 
+pub use help::{help, DriverHelp, OptionHelp};
+
 pub mod cgm;
 pub mod dxf;
 pub mod emf;
 pub mod epic;
 pub mod gbx;
 pub mod ge;
+pub mod help;
 pub mod ibmgl;
 pub mod latex;
 pub mod map;

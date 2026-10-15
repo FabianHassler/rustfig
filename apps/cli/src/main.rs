@@ -4,7 +4,7 @@ use rustfig_engine::Engine;
 use rustfig_geom::Point;
 use rustfig_model::{Document, Object, ObjectKind, PolyKind, Polyline, Style};
 use rustfig_render::{raster, ExportFormat, ExportOptions, Scene, SceneOptions};
-use serde_json::json;
+use serde_json::{json, Value};
 use std::process::ExitCode;
 use std::time::Instant;
 
@@ -122,18 +122,17 @@ fn formats(lang: Option<&str>) -> Result<(), String> {
             "{} options (--option KEY=VALUE; KEY may be the fig2dev letter):",
             f["id"].as_str().unwrap_or_default()
         );
+        let id = f["id"].as_str().unwrap_or_default();
         for o in f["options"].as_array().into_iter().flatten() {
-            let status = match o["task"].as_str() {
-                Some(t) => format!(" [not yet: {t}]"),
-                None => String::new(),
-            };
+            if !option_shown(id, o) {
+                continue;
+            }
             println!(
-                "  -{} {:18} {:7} {}{}",
+                "  -{} {:18} {:7} {}",
                 o["letter"].as_str().unwrap_or_default(),
                 o["key"].as_str().unwrap_or_default(),
                 o["arg"].as_str().unwrap_or_default(),
                 o["help"].as_str().unwrap_or_default(),
-                status
             );
         }
         return Ok(());
@@ -153,6 +152,21 @@ fn formats(lang: Option<&str>) -> Result<(), String> {
         );
     }
     Ok(())
+}
+
+/// Whether `formats LANG` lists option `o` (from `file.export_formats`)
+/// of language `lang`: only options RustFig honours and that do something
+/// for `lang` (fig2dev accepts some and ignores them, like the page
+/// options for EPS).
+fn option_shown(lang: &str, o: &Value) -> bool {
+    if o["available"].as_bool() != Some(true) {
+        return false;
+    }
+    let key = o["key"].as_str().unwrap_or_default();
+    let letter = o["letter"].as_str().unwrap_or_default();
+    rustfig_render::options::options_for(lang)
+        .find(|s| s.key == key && s.letter.to_string() == letter)
+        .is_some_and(|s| s.effective_for(lang))
 }
 
 fn info(args: &[String]) -> Result<(), String> {
@@ -372,4 +386,43 @@ fn bench(args: &[String]) -> Result<(), String> {
     measure_doc(e.doc(), &mut report, 1.0)?;
     report.print();
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The keys `formats LANG` lists.
+    fn shown(lang: &str) -> Vec<String> {
+        let mut e = Engine::new();
+        let v = e.execute("file.export_formats", &json!({})).unwrap();
+        let f = v["formats"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|f| f["id"] == lang)
+            .unwrap()
+            .clone();
+        f["options"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|o| option_shown(lang, o))
+            .map(|o| o["key"].as_str().unwrap().to_string())
+            .collect()
+    }
+
+    #[test]
+    fn formats_lists_only_effective_options() {
+        let eps = shown("eps");
+        assert!(eps.contains(&"border".to_string()), "{eps:?}");
+        for k in ["center", "page_mode", "paper_size", "grid", "quality"] {
+            assert!(!eps.contains(&k.to_string()), "eps lists {k}: {eps:?}");
+        }
+        let png = shown("png");
+        assert!(png.contains(&"smoothing".to_string()), "{png:?}");
+        assert!(!png.contains(&"quality".to_string()), "-q is JPEG only: {png:?}");
+        assert!(shown("jpeg").contains(&"quality".to_string()));
+        assert!(!shown("svg").contains(&"paper_size".to_string()), "planned");
+    }
 }

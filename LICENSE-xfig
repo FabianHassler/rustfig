@@ -51,6 +51,7 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/fig2dev/src/drivers/epic.rs: fig2dev/dev/genepic.c
 - crates/fig2dev/src/drivers/gbx.rs: fig2dev/dev/gengbx.c
 - crates/fig2dev/src/drivers/ge.rs: fig2dev/dev/genge.c
+- crates/fig2dev/src/drivers/help.rs: fig2dev/fig2dev.c, fig2dev/dev/gencgm.c, gendxf.c, genepic.c, gengbx.c, genibmgl.c, genlatex.c, genmap.c, genmf.c, genmp.c, genpic.c, genpictex.c, genshape.c, gentextyl.c, gentpic.c
 - crates/fig2dev/src/drivers/ibmgl.rs: fig2dev/dev/genibmgl.c
 - crates/fig2dev/src/drivers/latex.rs: fig2dev/dev/genlatex.c
 - crates/fig2dev/src/drivers/map.rs: fig2dev/dev/genmap.c

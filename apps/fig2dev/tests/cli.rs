@@ -200,3 +200,55 @@ fn bitmap_options() {
     let o = fig2dev(&["-L", "gif", "-t", "#ffffff"], FIG);
     assert!(o.status.success() && o.stdout.starts_with(b"GIF8"), "{}", err(&o));
 }
+
+fn help(args: &[&str]) -> String {
+    let o = fig2dev(args, "");
+    assert!(o.status.success(), "{}", err(&o));
+    String::from_utf8_lossy(&o.stdout).into_owned()
+}
+
+#[test]
+fn help_lists_only_effective_options() {
+    let all = help(&["-h"]);
+    assert!(all.contains("Available languages are:") && all.contains(" mp"), "{all}");
+    assert!(all.contains("Use fig2dev -L language -h"), "{all}");
+    assert!(!all.contains(" Options:"), "no language sections: {all}");
+    assert!(!all.contains("METAPOST") && !all.contains("EPS Options"), "{all}");
+
+    let eps = help(&["-L", "eps", "-h"]);
+    assert!(eps.contains("EPS Options:") && eps.contains("  -b num"), "{eps}");
+    assert!(eps.contains("  -D +/-list"), "{eps}");
+    for page_only in ["  -P", "  -c ", "  -z ", "  -M ", "  -G "] {
+        assert!(!eps.contains(page_only), "eps lists {page_only}: {eps}");
+    }
+
+    let mp = help(&["-L", "mp", "-h"]);
+    assert!(mp.contains("METAPOST Options:"), "{mp}");
+    for line in [
+        "  -d file     add file content",
+        "  -i file",
+        "  -M          multipage",
+        "  -o ",
+        "  -p number",
+    ] {
+        assert!(mp.contains(line), "mp lacks {line}: {mp}");
+    }
+    assert!(!mp.contains("EPS Options"), "{mp}");
+
+    let epic = help(&["-L", "eepic", "-h"]);
+    assert!(
+        epic.contains("EPIC, EEPIC and EEPICEMU Options:") && epic.contains("  -S scale"),
+        "{epic}"
+    );
+
+    let tikz = help(&["-L", "tikz", "-h"]);
+    assert!(tikz.contains("not available in RustFig's fig2dev yet"), "{tikz}");
+    assert!(!tikz.contains("  -D "), "{tikz}");
+
+    for out in [&all, &eps, &mp, &epic, &tikz] {
+        assert!(
+            !out.contains("no effect here") && !out.contains("not in RustFig yet"),
+            "{out}"
+        );
+    }
+}

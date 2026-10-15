@@ -167,8 +167,80 @@ fn print_version() {
     println!("fig2dev Version {VERSION} (RustFig {})", env!("CARGO_PKG_VERSION"));
 }
 
-/// fig2dev's help (`help_msg`): general options, then the options of the
-/// chosen language (or of every language RustFig writes).
+/// fig2dev's general options (fig2dev.c `help_msg`): letter and lines.
+const GENERAL_HELP: &[(char, &str)] = &[
+    ('h', "  -h          print this message, fig2dev version number and exit"),
+    ('V', "  -V          print fig2dev version number and exit"),
+    ('D', "  -D +/-list  include or exclude depths listed"),
+    (
+        'K',
+        "  -K          adjust bounding box according to selected depths\n                      given with '-D +/-list' option",
+    ),
+    ('E', "  -E enc      set the character encoding of the input file"),
+    (
+        'G',
+        "  -G minor[:major][unit]    draw light gray grid with thin/thick lines at\n                minor/major units (e.g., -G .25:1cm)",
+    ),
+    ('m', "  -m mag      set magnification.  This may not be used with the -Z option"),
+    ('s', "  -s size     set default font size in points"),
+    (
+        'Z',
+        "  -Z maxdim   scale the figure so that the maximum dimension (width or height)\n                is maxdim inches/cm.  This may not be used with the -m option\n  -Z <width>w   append 'w' or a colon (':') to specify the width, append 'h' or\n  -Z <height>h  prepend a colon to specify the height",
+    ),
+];
+
+/// Whether RustFig's fig2dev writes `lang`.
+fn writes(lang: &str) -> bool {
+    rustfig_fig2dev::drivers::help(lang).is_some() || matches!(find_driver(lang).map(|d| d.2), Some(Writer::Format(_)))
+}
+
+/// Whether general option `c` does something for `lang`: -h and -V always,
+/// -G where the grid is drawn, the others for every language RustFig writes.
+fn general_effective(c: char, lang: &str) -> bool {
+    match c {
+        'h' | 'V' => true,
+        'G' => match rustfig_fig2dev::drivers::help(lang) {
+            Some(h) => h.grid,
+            None => OPTIONS
+                .iter()
+                .any(|o| o.letter == 'G' && o.support == Support::Ported && o.effective_for(lang)),
+        },
+        _ => writes(lang),
+    }
+}
+
+/// The options of `lang` that do something in RustFig, as help lines,
+/// with the section title; general options are left out.
+fn language_help(lang: &str) -> (String, Vec<String>) {
+    if let Some(h) = rustfig_fig2dev::drivers::help(lang) {
+        let lines = h
+            .options
+            .iter()
+            .map(|o| rustfig_fig2dev::drivers::help::format_option(o.letter, o.arg, o.text))
+            .collect();
+        return (h.title.to_string(), lines);
+    }
+    let general: Vec<char> = GENERAL_HELP.iter().map(|g| g.0).chain(['L']).collect();
+    let lines = OPTIONS
+        .iter()
+        .filter(|o| o.support == Support::Ported && o.effective_for(lang) && !general.contains(&o.letter))
+        .map(|o| {
+            let arg = match o.arg {
+                Arg::Flag => "",
+                Arg::Number => "num",
+                Arg::Color => "color",
+                Arg::Font => "font",
+                Arg::Text | Arg::Depths | Arg::Size => "arg",
+            };
+            rustfig_fig2dev::drivers::help::format_option(o.letter, arg, o.help)
+        })
+        .collect();
+    (lang.to_uppercase(), lines)
+}
+
+/// fig2dev's help (`help_msg`): with a language, the general options that
+/// do something for it and its own options that RustFig honours; without
+/// one, the general options and the languages.
 fn print_help(lang: Option<&str>) {
     print!("{USAGE}");
     println!("General Options (all drivers):");
@@ -185,52 +257,28 @@ fn print_help(lang: Option<&str>) {
         n += name.len() + 1;
     }
     println!();
-    println!("  -h          print this message, fig2dev version number and exit");
-    println!("  -V          print fig2dev version number and exit");
-    println!("  -D +/-list  include or exclude depths listed");
-    println!("  -K          adjust bounding box according to selected depths");
-    println!("                      given with '-D +/-list' option");
-    println!("  -E enc      set the character encoding of the input file");
-    println!("  -G minor[:major][unit]    draw light gray grid with thin/thick lines at");
-    println!("                minor/major units (e.g., -G .25:1cm)");
-    println!("  -m mag      set magnification.  This may not be used with the -Z option");
-    println!("  -s size     set default font size in points");
-    println!("  -Z maxdim   scale the figure so that the maximum dimension (width or height)");
-    println!("                is maxdim inches/cm.  This may not be used with the -m option");
-    println!("  -Z <width>w   append 'w' or a colon (':') to specify the width, append 'h' or");
-    println!("  -Z <height>h  prepend a colon to specify the height");
-    let general = ['D', 'K', 'E', 'G', 'm', 's', 'Z', 'L', 'h', 'V'];
-    let langs: Vec<&str> = match lang {
-        Some(l) => vec![l],
-        None => DRIVERS
-            .iter()
-            .filter(|(_, _, w)| matches!(w, Writer::Format(_)))
-            .map(|(n, _, _)| *n)
-            .collect(),
-    };
-    for l in langs {
-        let opts: Vec<_> = OPTIONS
-            .iter()
-            .filter(|o| o.applies_to(l) && !general.contains(&o.letter))
-            .collect();
-        if opts.is_empty() {
-            continue;
+    for (c, text) in GENERAL_HELP {
+        let shown = match lang {
+            Some(l) => general_effective(*c, l),
+            None => DRIVERS.iter().any(|(l, _, _)| general_effective(*c, l)),
+        };
+        if shown {
+            println!("{text}");
         }
-        println!("\n{} Options:", l.to_uppercase());
-        for o in opts {
-            let arg = match o.arg {
-                Arg::Flag => "",
-                Arg::Number => " num",
-                Arg::Color => " color",
-                Arg::Font => " font",
-                Arg::Text | Arg::Depths | Arg::Size => " arg",
-            };
-            let note = match o.support {
-                Support::Ported if o.effective_for(l) => String::new(),
-                Support::Ported => " (no effect here)".to_string(),
-                Support::Planned(t) => format!(" (not in RustFig yet: {t})"),
-            };
-            println!("  -{}{arg:<10} {}{note}", o.letter, o.help);
+    }
+    let Some(lang) = lang else {
+        println!("\nUse fig2dev -L language -h for the options of one language.");
+        return;
+    };
+    if let Some((_, _, Writer::Planned(task))) = find_driver(lang).filter(|_| !writes(lang)) {
+        println!("\nThe {lang} language is not available in RustFig's fig2dev yet (plan task {task}).");
+        return;
+    }
+    let (title, lines) = language_help(lang);
+    if !lines.is_empty() {
+        println!("\n{title} Options:");
+        for l in lines {
+            println!("{l}");
         }
     }
 }
