@@ -155,7 +155,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_keyboard.c` | 518 | type coordinates for the next point | — | missing | D10 |
 | `w_zoom.c` | 202 | zoom panel | `cmd/view` | partial: zoom panel | E3 |
 | `w_grid.c` | 238 | grid drawing | canvas | own | — |
-| `w_canvas.c` | 1218 | canvas input, key bindings | `ui-egui/canvas` | own | review |
+| `w_canvas.c` | 1218 | canvas input, key bindings, compose key | `ui-egui/canvas`, `menus::pan_keys`, `menus::Compose`, `rustfig_text::compose` (CompKeyDB) | own; keys ported (W8) | — |
 | `w_cursor.c` | 144 | cursors per mode | canvas | partial | — |
 | `w_color.c` | 2592 | colour panel and editor | indicator combo | partial: colour editor | E4 |
 | `w_export.c` | 2054 | export panel | `dialogs::export` (language menu in xfig's order), default suffixes in `render/languages` | partial | B7 |
@@ -205,6 +205,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | Date | Note |
 |------|------|
 | 2026-10-14 | First version. |
+| 2026-10-15 | W8: xfig's bindings audited (`keys-parity.md`); `CompKeyDB` ported. |
 | 2026-10-15 | `fig2dev.c` options and `colors.c` ported (B0). |
 | 2026-10-14 | S1: draw and save order ported (`u_redraw.c`, `f_save.c`). |
 | 2026-10-14 | Attribute panel: xfig's pictures (`w_icons.c`), xfig's arrow-mode order and grid choices. |

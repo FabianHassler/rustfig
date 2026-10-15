@@ -1222,7 +1222,25 @@ fn value_entry(app: &mut App, ui: &mut Ui, ind: &Indicator, a: Attr) {
     if integer {
         dv = dv.fixed_decimals(0);
     }
-    if ui.add(dv).changed() {
+    let resp = ui.add(dv);
+    let mut changed = resp.changed();
+    if resp.hovered() {
+        // xfig's spinners (`Fig*spinner_form*Text.translations`): wheel up
+        // decreases, wheel down increases, one step per notch.
+        let dy = ui.input(|i| i.raw_scroll_delta.y);
+        if dy != 0.0 {
+            let id = resp.id.with("wheel");
+            let acc = ui.data(|d| d.get_temp::<f32>(id).unwrap_or(0.0)) + dy;
+            let notches = (acc / 40.0).trunc();
+            ui.data_mut(|d| d.insert_temp(id, acc - notches * 40.0));
+            if notches != 0.0 {
+                let step = if a == Attr::TextStep { 0.1 } else { 1.0 };
+                v = (v - f64::from(notches) * step).clamp(lo, hi);
+                changed = true;
+            }
+        }
+    }
+    if changed {
         let value = if integer { json!(v.round() as i64) } else { json!(v) };
         let mut m = serde_json::Map::new();
         m.insert(field.into(), value);

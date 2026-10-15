@@ -247,7 +247,9 @@ pub(crate) fn escape_closes_panels(app: &mut App, ctx: &egui::Context) {
         || d.commands_open
         || d.about_open
         || d.global_open
-        || d.edit.is_some();
+        || d.edit.is_some()
+        || d.messages_open
+        || app.unit_panel_open;
     if any && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
         // The edit popup's Escape is Cancel (`e_edit.c`): nothing applied.
         d.edit = None;
@@ -257,6 +259,8 @@ pub(crate) fn escape_closes_panels(app: &mut App, ctx: &egui::Context) {
         d.commands_open = false;
         d.about_open = false;
         d.global_open = false;
+        d.messages_open = false;
+        app.unit_panel_open = false;
     }
 }
 
@@ -590,6 +594,14 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
             }
         });
     app.dialogs.export.open = open;
+    // xfig's Return in the export panel exports (`ExportFile`).
+    if open
+        && ctx.input(|i| i.key_pressed(egui::Key::Enter))
+        && ctx.memory(|m| m.focused()).is_none()
+        && !app.engine.is_typing()
+    {
+        go = true;
+    }
     if go {
         let st = app.dialogs.export.clone();
         let stem = app
@@ -821,7 +833,9 @@ fn messages_dialog(app: &mut App, ctx: &egui::Context) {
                 }
             });
         });
-    app.dialogs.messages_open = open;
+    // xfig's Return dismisses the message panel (`w_msgpanel.c`).
+    let enter = ctx.input(|i| i.key_pressed(egui::Key::Enter)) && ctx.memory(|m| m.focused()).is_none();
+    app.dialogs.messages_open = open && !(enter && !app.engine.is_typing());
 }
 
 fn about_dialog(app: &mut App, ctx: &egui::Context) {

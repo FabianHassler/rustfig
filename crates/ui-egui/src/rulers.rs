@@ -471,7 +471,10 @@ fn unit_panel(app: &mut App, ui: &mut Ui) {
             }
             ui.end_row();
         });
-    if ui.button("Close").clicked() {
+    // xfig's Return (SetUnits) closes the panel; the settings already
+    // apply as they change. Escape closes it too (`dialogs`).
+    let enter = ui.input(|i| i.key_pressed(egui::Key::Enter)) && ui.ctx().memory(|m| m.focused()).is_none();
+    if ui.button("Close").clicked() || enter {
         app.unit_panel_open = false;
     }
 }

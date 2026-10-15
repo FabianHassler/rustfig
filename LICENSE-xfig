@@ -50,6 +50,7 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/render/src/lib.rs: xfig src/u_redraw.c; fig2dev/dev/genps.c, fig2dev/colors.c
 - crates/render/src/options.rs: fig2dev/fig2dev.c, fig2dev/dev/genps.c, genpdf.c, genbitmaps.c, gensvg.c
 - crates/render/src/pattern.rs: fig2dev/dev/psprolog.h
+- crates/text/src/compose.rs: xfig CompKeyDB, src/w_canvas.c
 - crates/text/src/fonts.rs: xfig src/u_fonts.c; fig2dev/dev/psfonts.c
 - crates/ui-egui/src/attributes.rs: xfig src/w_indpanel.c, src/w_indpanel.h, src/w_modepanel.c, src/w_icons.c
 - crates/ui-egui/src/menus.rs: xfig src/w_cmdpanel.c, src/w_modepanel.c, app-defaults/Fig

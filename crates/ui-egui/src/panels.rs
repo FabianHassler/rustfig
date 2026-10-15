@@ -86,6 +86,41 @@ pub fn mode_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     });
 }
 
+/// xfig's mode menus popped up by Alt+wheel (`PopupModePanel` in
+/// `w_modepanel.c`): the drawing or editing mode buttons at the pointer.
+/// Picking a mode, Escape, a click elsewhere or the wheel the other way
+/// (`Fig*draw_menu*translations`) closes it.
+pub fn mode_popup(app: &mut App, ctx: &egui::Context, tk: &Tokens) {
+    let Some((drawing, pos)) = app.mode_popup else { return };
+    let tool = app.engine.tool();
+    let resp = egui::Area::new(egui::Id::new("xfig_mode_popup"))
+        .order(egui::Order::Foreground)
+        .fixed_pos(pos)
+        .show(ctx, |ui| {
+            egui::Frame::popup(ui.style()).show(ui, |ui| {
+                let title = if drawing { "Drawing modes" } else { "Editing modes" };
+                ui.label(RichText::new(title).small().color(tk.muted));
+                if drawing {
+                    slot_grid(app, ui, tk, "popup_draw_tools", &DRAWING);
+                } else {
+                    slot_grid(app, ui, tk, "popup_edit_tools", &EDITING);
+                }
+            });
+        })
+        .response;
+    let (escape, clicked_outside, wheel) = ctx.input(|i| {
+        (
+            i.key_pressed(egui::Key::Escape),
+            i.pointer.any_pressed() && i.pointer.interact_pos().is_some_and(|p| !resp.rect.contains(p)),
+            i.raw_scroll_delta.y,
+        )
+    });
+    let away = (drawing && wheel < 0.0) || (!drawing && wheel > 0.0);
+    if app.engine.tool() != tool || escape || clicked_outside || away {
+        app.mode_popup = None;
+    }
+}
+
 const SLOT: egui::Vec2 = vec2(38.0, 34.0);
 
 fn slot_grid(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, id: &str, slots: &[Slot]) {

@@ -120,6 +120,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}",
     },
     UiCommand {
+        id: "app.toggle_balloons",
+        label: "Show info balloons",
+        shortcut: "",
+        params: "{}  — xfig's tooltips (Meta-Y)",
+    },
+    UiCommand {
         id: "app.toggle_indicator",
         label: "Attribute Panel",
         shortcut: "",
@@ -196,6 +202,7 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
             app.xfig_keys = p.get("on").and_then(Value::as_bool).unwrap_or(!app.xfig_keys);
         }
         "app.toggle_depths" => app.show_depths = !app.show_depths,
+        "app.toggle_balloons" => app.show_balloons = !app.show_balloons,
         "app.redraw" => app.canvas.invalidate(),
         "app.toggle_layout" => {
             let classic = p.get("classic").and_then(Value::as_bool).unwrap_or(!app.classic());
@@ -382,7 +389,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Sep,
                 Cmd("Show page borders", "view.toggle_page_border"),
                 Cmd("Show depth manager", "app.toggle_depths"),
-                Missing("Show info balloons", "Meta-Y", "—"),
+                Cmd("Show info balloons", "app.toggle_balloons"),
                 Missing("Show line lengths", "Meta-L", "D10"),
                 Missing("Show vertex numbers", "", "—"),
                 Missing("Autorefresh mode", "", "—"),
@@ -429,7 +436,7 @@ pub const XFIG_MENU_LETTERS: &[(&str, char, &str)] = &[
     ("View", 'p', "view.pan_origin"),
     ("View", 'c', "Character map"),
     ("View", 'd', "app.toggle_depths"),
-    ("View", 'n', "Show info balloons"),
+    ("View", 'n', "app.toggle_balloons"),
     ("View", 'b', "view.toggle_page_border"),
     ("View", 'l', "Show line lengths"),
     ("View", 'a', "Autorefresh mode"),
@@ -529,6 +536,7 @@ fn checked(app: &App, id: &str) -> Option<bool> {
     match id {
         "view.toggle_page_border" => Some(app.engine.show_page_border),
         "app.toggle_depths" => Some(app.show_depths),
+        "app.toggle_balloons" => Some(app.show_balloons),
         "view.toggle_grid" => Some(app.engine.indicator.grid.is_some()),
         "app.toggle_indicator" => Some(app.show_indicator),
         "app.toggle_layout" => Some(app.classic()),
@@ -735,6 +743,7 @@ pub const XFIG_KEYS: &[(&str, &str)] = &[
     ("Alt+C", "doc.toggle_orientation"),
     ("PhysCtrl+Z", "view.zoom_fit"),
     ("Alt+B", "view.toggle_page_border"),
+    ("Alt+Y", "app.toggle_balloons"),
     ("Alt+G", "app.global_settings"),
     ("Shift+U", "app.unit_panel"),
     ("Shift+Z", "view.zoom_in"),
@@ -804,6 +813,59 @@ fn take_xfig_key(ctx: &egui::Context, spec: &str) -> bool {
     })
 }
 
+/// xfig's compose key (`CompKeyDB`, `w_canvas.c`): Meta (Alt) pressed and
+/// released on its own while typing arms it; the next two characters make
+/// one (`rustfig_text::compose`), or are typed as they are if they make
+/// none.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Compose {
+    #[default]
+    Off,
+    /// Alt is down and nothing else was pressed yet.
+    AltAlone,
+    Armed,
+    First(char),
+}
+
+impl Compose {
+    fn watch_alt(&mut self, alt: bool, events: &[egui::Event]) {
+        let other_key = events
+            .iter()
+            .any(|e| matches!(e, egui::Event::Key { pressed: true, .. } | egui::Event::Text(_)));
+        *self = match (*self, alt) {
+            (Compose::Off, true) if !other_key => Compose::AltAlone,
+            (Compose::AltAlone, true) if other_key => Compose::Off,
+            (Compose::AltAlone, false) => Compose::Armed,
+            (s, _) => s,
+        };
+    }
+}
+
+/// Typed text after the compose key: what reaches the text tool, if anything.
+fn compose_text(app: &mut App, text: String) -> Option<String> {
+    let mut out = String::new();
+    for c in text.chars() {
+        app.compose = match app.compose {
+            Compose::Armed => Compose::First(c),
+            Compose::First(a) => {
+                match rustfig_text::compose(a, c) {
+                    Some(x) => out.push(x),
+                    None => {
+                        out.push(a);
+                        out.push(c);
+                    }
+                }
+                Compose::Off
+            }
+            other => {
+                out.push(c);
+                other
+            }
+        };
+    }
+    (!out.is_empty()).then_some(out)
+}
+
 /// xfig's canvas keys (`w_canvas.c`): the arrow keys pan by a ruler step
 /// (Shift: five), Home pans to the origin. While text is typed, Left, Right
 /// and Home move the caret instead.
@@ -843,11 +905,16 @@ pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
         return;
     }
     dialogs::escape_closes_panels(app, ctx);
+    if app.mode_popup.is_some() && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
+        app.mode_popup = None;
+    }
     if app.engine.is_typing() {
         let events = ctx.input(|i| i.events.clone());
+        let alt = ctx.input(|i| i.modifiers.alt);
+        app.compose.watch_alt(alt, &events);
         for ev in events {
             let tev = match ev {
-                egui::Event::Text(t) => Some(ToolEvent::Text(t)),
+                egui::Event::Text(t) => compose_text(app, t).map(ToolEvent::Text),
                 egui::Event::Paste(t) => Some(ToolEvent::Text(t)),
                 egui::Event::Key { key, pressed: true, .. } => match key {
                     egui::Key::Enter => Some(ToolEvent::Key(Key::Enter)),
@@ -872,6 +939,7 @@ pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
         pan_keys(app, ctx, true);
         return;
     }
+    app.compose = Compose::Off;
     pan_keys(app, ctx, false);
     // Keys a busy tool wants (finish, cancel, remove last point).
     if app.engine.tool_busy() {

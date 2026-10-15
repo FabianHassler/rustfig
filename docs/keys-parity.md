@@ -1,6 +1,6 @@
 # xfig key and mouse bindings checklist (W8)
 
-**Status:** 2026-10-15. First audit. Every binding xfig defines, from
+**Status:** 2026-10-15. Audit complete: every binding works, is replaced by a modern equivalent, or waits for the feature it needs (task named). Every binding xfig defines, from
 `app-defaults/Fig` and the 78 translation tables (210 bindings) in xfig's
 `src/*.c`, with what RustFig does. X plumbing (window-manager close
 messages, expose and resize events, highlight on enter/leave) is left out:
@@ -37,8 +37,8 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside.
 | Shift-Z / Z / Ctrl-Z | Zoom in / out / fit | `view.zoom_in`, `view.zoom_out`, `view.zoom_fit` | ✅ |
 | Ctrl-Y | Named styles | — | ❌ E6 (style manager) |
 | Meta-B | Show page borders | `view.toggle_page_border` | ✅ |
-| Meta-Y | Show balloons (tooltips) | — | ❌ W8 |
-| Meta-L | Show line lengths while drawing | — | ❌ W8 (needs the length display) |
+| Meta-Y | Show balloons (tooltips) | `app.toggle_balloons` | ✅ |
+| Meta-L | Show line lengths while drawing | — | ❌ D10 (the length display) |
 | Meta-F/E/V/H | Pop up the File/Edit/View/Help menu | `menus::XFIG_MENU_KEYS` | ✅ |
 
 ## Letters while a menu is open (`Fig*commands*…*translations`)
@@ -47,7 +47,7 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside.
 |---|---|---|
 | File | n o m d s a e p x; 1–9 recent files | ✅ letters (`XFIG_MENU_LETTERS`; d, p wait for D11, B5); ❌ recent files E1 |
 | Edit | u p t f s d g n | ✅ (t waits for E7, s for D11) |
-| View | s r t i o f u p c d n b l a, v v | ✅ for the entries RustFig has; named styles (E6), character map (E5), balloons, lengths, auto refresh, vertex numbers (W8) wait for their features |
+| View | s r t i o f u p c d n b l a, v v | ✅ for the entries RustFig has (n: balloons); named styles (E6), character map (E5), lengths (D10), auto refresh and vertex numbers (D11) wait for their features |
 | Help | x m h a | ✅ x (command reference), a (about); m, h: xfig's manuals (D11) |
 
 ## Canvas (`w_canvas.c`)
@@ -60,9 +60,9 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside.
 | Wheel / Shift+wheel | pan vertically / horizontally | ✅ |
 | Ctrl+wheel | zoom | ✅ |
 | Ctrl+left/middle/right | zoom area / pan to origin / unzoom | ❌ E3 (zoom box) |
-| Alt+wheel up/down | pop up the drawing/editing mode menus | ❌ W8 |
+| Alt+wheel up/down | pop up the drawing/editing mode menus | ✅ (`panels::mode_popup`; closes on a mode, Escape, a click elsewhere or the wheel the other way) |
 | Ctrl-K | keyboard coordinate entry panel (`w_keyboard.c`) | ❌ D11 |
-| Meta (Compose) + two keys | compose characters (`CompKeyDB`) | ❌ W8 |
+| Meta (Compose) alone, then two keys | compose characters (`CompKeyDB`, 97 sequences) | ✅ (`rustfig_text::compose`); on macOS Option's own dead keys work too |
 | F18, F20 (Sun Paste keys) | paste | ↻ Ctrl/Cmd+V |
 
 ## Panels and fields
@@ -70,27 +70,27 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside.
 | Where | Binding | xfig action | Status |
 |---|---|---|---|
 | Text fields (`*Text*translations`) | Delete, Home, End | delete forward, line start, line end | ✅ (egui) |
-| Numeric fields (`resources.c`, `w_indpanel.c`, export, print) | Ctrl-U | multiply the next step by 4 | ❌ W8 |
-| Text fields | Ctrl-X | clear the field | ❌ W8 |
+| Numeric fields (`resources.c`, `w_indpanel.c`, export, print) | Ctrl-U | Athena's repeat-four prefix | not needed (no equivalent in modern fields) |
+| Text fields | Ctrl-X | clear the field | ↻ Ctrl/Cmd+A then Delete (Ctrl/Cmd+X is Cut on every platform today) |
 | Text fields | Ctrl-J, Ctrl-M, Return | no new line | ↻ single-line fields |
 | Search panel | Return in Find / Replace | search / replace | ✅ |
-| Search panel | Escape, Meta-C, Meta-Q | close | ✅ Escape; ❌ Meta-C/Q (W8) |
+| Search panel | Escape, Meta-C, Meta-Q | close | ✅ Escape; Meta-C/Q not ported (Meta-Q quits, Meta-C changes orientation in RustFig's global keymap) |
 | Export, Global, Document, Commands, About panels | Escape | cancel | ✅ |
-| Export panel | Return | export; in Magnification: apply | ❌ W8 |
+| Export panel | Return | export; in Magnification: apply | ✅ (fields apply as they change) |
 | Edit popup (`e_edit.c`) | Return / Ctrl+Return / Escape | apply / done / cancel | ✅ (Return in a multi-line field is a new line) |
-| Edit popup | middle button | close the comments popup | ❌ W8 |
-| Unit panel (`w_rulers.c`) | Return / Escape | set / cancel | ❌ W8 |
-| Indicator value panels (`w_indpanel.c`) | Return / Escape / Meta-Q | set / cancel / cancel | ❌ W8 |
+| Edit popup | middle button | close the comments popup | ↻ comments are edited inline in the popup |
+| Unit panel (`w_rulers.c`) | Return / Escape | set / cancel | ✅ both close it (settings apply as they change) |
+| Indicator value panels (`w_indpanel.c`) | Return / Escape / Meta-Q | set / cancel / cancel | ✅ values apply as they change, Escape closes (egui popups); Meta-Q not ported (it quits in the global keymap) |
 | Indicator buttons | wheel up / down | previous / next value (middle / right button) | ✅ |
-| Indicator spinners | wheel | step the value | ❌ W8 |
-| Font panel | Escape | cancel | ❌ W8 |
-| Message panel | Return, Escape | dismiss | ❌ W8 |
+| Indicator spinners | wheel | step the value (up decreases) | ✅ |
+| Font panel | Escape | cancel | ✅ (egui popup) |
+| Message panel | Return, Escape | dismiss | ✅ |
 | File panel, directory browser | Return, double-click, right click (parent) | load/save/merge, change directory | ↻ the system's file dialogs |
 | Colour panel (`w_color.c`) | Return, double-click, lock toggles | set colour | ❌ E4 (colour editor) |
 | Library panel | Return, double-click, Escape | place object, dismiss | ❌ D6 (libraries) |
 | Keyboard panel (`w_keyboard.c`) | Return, Escape, Up/Down, Ctrl-P/N | enter, ignore, history | ❌ D11 |
 | Spell check panel | Escape, u, v, x | close, update, convert, chop | ❌ D11 |
-| Mode panel | middle/right button on a mode | (xfig's PressMiddle/PressRight) | review in W8 |
+| Mode panel | middle/right button on a mode | nothing (`notused_middle`, `notused_right`) | ✅ (nothing either) |
 | Depth panel (`w_layers.c`) | left click, left drag | toggle, sweep | ✅ (W3) |
 | Depth panel | right click | set the depth of new objects to that layer | ✅ (`indicator.set`) |
 | Rulers (`w_rulers.c`) | left, middle drag, right; Meta+right drag | pan, drag, pan; drag | ✅ (W6) |
@@ -100,6 +100,7 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside.
 
 | Date | Note |
 |---|---|
+| 2026-10-15 | Balloons toggle, Alt+wheel mode menus, compose key, Unit panel and spinner keys; Ctrl-U and Ctrl-X decided. |
 | 2026-10-15 | Edit popup Return/Ctrl+Return/Escape; depth panel right click. |
 | 2026-10-15 | Menus: Meta-F/E/V/H and the letters inside them; plain-letter shortcuts are off while a menu or popup is open. |
 | 2026-10-15 | First audit (W8): arrows, Home, Home/End in text, Shift-Meta-X, wheel on indicator buttons, Escape in panels and Return in the search panel added. |

@@ -57,6 +57,13 @@ pub struct App {
     pub messages: Vec<Message>,
     pub layout: Layout,
     pub show_depths: bool,
+    /// xfig's "Show info balloons" (Meta-Y): tooltips on or off.
+    pub show_balloons: bool,
+    /// xfig's mode menu popped up by Alt+wheel over the canvas: drawing
+    /// (wheel up) or editing modes, at the pointer.
+    pub mode_popup: Option<(bool, egui::Pos2)>,
+    /// xfig's compose key while typing text (`menus::compose_text`).
+    pub(crate) compose: menus::Compose,
     pub show_indicator: bool,
     /// While dragging across depth checkboxes: the state they are set to.
     depth_drag: Option<bool>,
@@ -92,6 +99,9 @@ impl App {
             messages: Vec::new(),
             layout: Layout::Classic,
             show_depths: true,
+            show_balloons: true,
+            mode_popup: None,
+            compose: menus::Compose::default(),
             show_indicator: true,
             depth_drag: None,
             hint_override: None,
@@ -273,6 +283,7 @@ impl App {
     }
 
     fn frame(&mut self, ctx: &egui::Context) {
+        apply_balloons(ctx, self.show_balloons);
         #[cfg(not(target_arch = "wasm32"))]
         self.poll_control(ctx);
         let tokens = theme::Tokens::for_dark(ctx.style().visuals.dark_mode);
@@ -301,6 +312,7 @@ impl App {
             .frame(egui::Frame::NONE)
             .show(ctx, |ui| canvas::show(self, ui, &tokens));
         dialogs::show(self, ctx);
+        panels::mode_popup(self, ctx, &tokens);
         self.handle_requests();
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(self.window_title()));
         if ctx.input(|i| i.viewport().close_requested()) && !self.quit_confirmed && self.engine.is_modified() {
@@ -362,5 +374,17 @@ impl App {
             let _ = r.reply.send(msg.to_string()); // the client may have gone away
             ctx.request_repaint();
         }
+    }
+}
+
+/// Tooltip delay with balloons on (egui's default) and a delay that never
+/// passes with them off.
+const BALLOON_DELAY: f32 = 0.5;
+const NO_BALLOONS: f32 = 1.0e9;
+
+fn apply_balloons(ctx: &egui::Context, on: bool) {
+    let want = if on { BALLOON_DELAY } else { NO_BALLOONS };
+    if ctx.style().interaction.tooltip_delay != want {
+        ctx.style_mut(|s| s.interaction.tooltip_delay = want);
     }
 }

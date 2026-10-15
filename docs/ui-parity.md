@@ -66,7 +66,7 @@
 | Attribute panel: graphical buttons, per-mode attributes | ✅ xfig's buttons and order, per-mode masks, choice panels; middle/right buttons step values | — |
 | xfig accelerators (Meta-key) | ✅ xfig keymap (on by default): Meta = Alt/Option menu keys, physical Ctrl mode keys, xfig's mode letters; menus show "Meta-N"; platform shortcuts stay | — |
 | Icons at HiDPI | xfig's 1-bit bitmaps, jagged above 1× | W9 |
-| xfig's other key and mouse bindings (menu letters, panel keys, wheel bindings, compose keys) | 🟡 audited in [keys-parity.md](keys-parity.md); canvas keys, quick export, wheel on indicator, Escape in panels done | W8 |
+| xfig's other key and mouse bindings (menu letters, panel keys, wheel bindings, compose keys) | ✅ audited in [keys-parity.md](keys-parity.md): each works, is replaced, or waits for a named task | — |
 
 ## Revision history
 | Date | Note |

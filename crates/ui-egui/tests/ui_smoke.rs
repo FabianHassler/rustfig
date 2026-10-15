@@ -667,3 +667,89 @@ fn edit_popup_keys() {
     press_key(&mut h, egui::Key::Enter, egui::Modifiers::COMMAND);
     assert!(h.state().dialogs.edit.is_none(), "Ctrl+Return is Done");
 }
+
+/// W8: Alt+wheel over the canvas pops up xfig's mode menus.
+#[test]
+fn alt_wheel_pops_up_the_mode_menus() {
+    let mut h = harness(app());
+    let centre = pos2(700.0, 450.0);
+    h.event(egui::Event::PointerMoved(centre));
+    h.run_steps(2);
+    h.input_mut().modifiers = egui::Modifiers::ALT;
+    h.event(egui::Event::MouseWheel {
+        unit: egui::MouseWheelUnit::Line,
+        delta: vec2(0.0, 1.0),
+        modifiers: egui::Modifiers::ALT,
+    });
+    h.run_steps(3);
+    assert!(
+        matches!(h.state().mode_popup, Some((true, _))),
+        "wheel up: drawing modes"
+    );
+    h.input_mut().modifiers = egui::Modifiers::NONE;
+    press_key(&mut h, egui::Key::Escape, egui::Modifiers::NONE);
+    assert!(h.state().mode_popup.is_none(), "Escape closes it");
+}
+
+/// W8: View › Show info balloons (Meta-Y) switches the tooltips.
+#[test]
+fn balloons_toggle() {
+    let mut h = harness(app());
+    assert!(h.ctx.style().interaction.tooltip_delay < 5.0);
+    h.state_mut().run("app.toggle_balloons", json!({}));
+    h.run_steps(2);
+    assert!(!h.state().show_balloons);
+    assert!(h.ctx.style().interaction.tooltip_delay > 1.0e6);
+    press_key(&mut h, egui::Key::Y, egui::Modifiers::ALT);
+    assert!(h.state().show_balloons, "Meta-Y");
+    assert!(h.ctx.style().interaction.tooltip_delay < 5.0);
+}
+
+/// W8: xfig's compose key: Alt alone, then two characters (`CompKeyDB`).
+#[test]
+fn compose_key_makes_one_character() {
+    let mut h = harness(app());
+    h.state_mut().engine.set_tool(ToolKind::Text);
+    h.state_mut()
+        .engine
+        .tool_event(rustfig_engine::ToolEvent::Press {
+            pos: rustfig_geom::Point::new(600.0, 600.0),
+            button: rustfig_engine::Button::Left,
+            shift: false,
+        })
+        .unwrap();
+    h.run_steps(1);
+    assert!(h.state().engine.is_typing());
+    h.input_mut().modifiers = egui::Modifiers::ALT;
+    h.run_steps(1);
+    h.input_mut().modifiers = egui::Modifiers::NONE;
+    h.run_steps(1);
+    for t in ["a", "\"", "b"] {
+        h.event(egui::Event::Text(t.into()));
+        h.run_steps(1);
+    }
+    let text = match h.state().engine.overlay().text.map(|t| t.object.kind) {
+        Some(rustfig_model::ObjectKind::Text(t)) => t.text,
+        _ => String::new(),
+    };
+    assert_eq!(text, "äb");
+}
+
+/// W8: Return in the export panel exports (xfig's ExportFile).
+#[test]
+fn return_exports_from_the_panel() {
+    let dir = std::env::temp_dir().join(format!("rustfig-export-return-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let out = dir.join("f.pdf").to_string_lossy().into_owned();
+    let mut a = app();
+    a.file_dialogs = Box::new(ScriptedDialogs::new([Some(out.clone())]));
+    let mut h = harness(a);
+    h.state_mut()
+        .run("shape.rectangle", json!({"x": 0, "y": 0, "width": 600, "height": 300}));
+    h.state_mut().run("app.export", json!({}));
+    h.run_steps(2);
+    press_key(&mut h, egui::Key::Enter, egui::Modifiers::NONE);
+    assert!(std::path::Path::new(&out).exists());
+    assert!(!h.state().dialogs.export.open);
+    let _ = std::fs::remove_dir_all(&dir);
+}

@@ -357,6 +357,10 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
                 let z = app.engine.view.zoom * f64::from(zoom);
                 app.engine.view.zoom_about(z, anchor);
             }
+        } else if let (true, Some(p)) = (ui.input(|i| i.modifiers.alt) && scroll.y != 0.0, hover) {
+            // xfig's Alt (Meta) + wheel pops up the drawing (up) or
+            // editing (down) modes at the pointer (`Fig*canvas.translations`).
+            app.mode_popup = Some((scroll.y > 0.0, p));
         } else if scroll != egui::Vec2::ZERO {
             app.engine.view.pan_pixels(f64::from(scroll.x), f64::from(scroll.y));
         }

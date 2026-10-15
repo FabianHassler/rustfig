@@ -20,7 +20,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Overall parity (weighted) | ≈61 % |
 | Commands (all reachable from the control channel and MCP) | 133 engine (incl. 38 tool modes) + 17 UI |
 | Interactive tools (xfig modes) | 38 |
-| Tests | 198 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
+| Tests | 203 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 3.0–3.2, write 3.2 |
 | Export formats | PDF, SVG, EPS, PNG, EPS+PDF pair, LaTeX box (7 of xfig's 40 languages, PostScript without page layout yet; the rest being ported from fig2dev) |
 | Perf, 50k paths (render fit / hit test / open / edit + undo) | 260 ms / 0.1 ms / 20 ms / 0.9 ms |
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-15 | W8 done: every xfig key and mouse binding works, has a modern equivalent, or waits for a named task; added the menu keys and letters, Meta-Y balloons, Alt+wheel mode menus, the compose key (97 sequences), wheel on spinners, Return/Escape in panels. 203 tests. |
 | 2026-10-15 | A2, A3: GitHub Actions CI (every push, Linux, wasm check, fig2dev reference tests, perf budgets) and release builds for Linux, Windows and macOS. |
 | 2026-10-15 | W8 started: every xfig key and mouse binding audited (`docs/keys-parity.md`); arrow keys pan, Home pans to the origin, Home/End in text, Shift-Meta-X exports with the current settings, the wheel steps indicator values, Escape closes panels. 195 tests. |
 | 2026-10-15 | A4: headless UI tests open every dialog, drive Save As/Open/Merge/Import through scripted file dialogs and check the unsaved-changes prompt on Quit. 191 tests. |

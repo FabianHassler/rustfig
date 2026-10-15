@@ -6,7 +6,10 @@
 //! uses the open fonts shipped in the `epaint_default_fonts` crate and
 //! synthesises bold and italic styles.
 
+mod compose;
 mod fonts;
+
+pub use compose::compose;
 
 pub use fonts::{
     latex_font_name, ps_font_display_name, ps_font_name, ps_font_number, FontRequest, Generic, LATEX_FONT_COUNT,
