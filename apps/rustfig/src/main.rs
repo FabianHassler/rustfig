@@ -28,11 +28,15 @@ fn main() -> eframe::Result<()> {
             startup_error = Some(e.message);
         }
     }
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_inner_size([1280.0, 860.0])
+        .with_min_inner_size([640.0, 480.0])
+        .with_title("RustFig");
+    if let Some(icon) = rustfig_ui_egui::app_icon::icon_data() {
+        viewport = viewport.with_icon(icon);
+    }
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_inner_size([1280.0, 860.0])
-            .with_min_inner_size([640.0, 480.0])
-            .with_title("RustFig"),
+        viewport,
         ..Default::default()
     };
     eframe::run_native(

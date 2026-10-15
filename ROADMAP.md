@@ -20,7 +20,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Overall parity (weighted) | ≈61 % |
 | Commands (all reachable from the control channel and MCP) | 133 engine (incl. 38 tool modes) + 17 UI |
 | Interactive tools (xfig modes) | 38 |
-| Tests | 209 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
+| Tests | 210 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 3.0–3.2, write 3.2 |
 | Export formats | PDF, SVG, EPS, PNG, EPS+PDF pair, LaTeX box (7 of xfig's 40 languages, PostScript without page layout yet; the rest being ported from fig2dev) |
 | Perf, 50k paths (render fit / hit test / open / edit + undo) | 260 ms / 0.1 ms / 20 ms / 0.9 ms |
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-15 | W9 done: all 107 of xfig's icon bitmaps redrawn as vectors (sharp on HiDPI; xfig's bitmaps optional), and RustFig has an application icon, drawn in code. 210 tests. |
 | 2026-10-15 | W9 started: the attribute pictures (line styles, joins, caps, arrows, arcs, justification) are drawn as vectors at the screen's density by RustFig's own renderer; arrowhead types 10–14 can be chosen. 207 tests. |
 | 2026-10-15 | W8 done: every xfig key and mouse binding works, has a modern equivalent, or waits for a named task; added the menu keys and letters, Meta-Y balloons, Alt+wheel mode menus, the compose key (97 sequences), wheel on spinners, Return/Escape in panels. 203 tests. |
 | 2026-10-15 | A2, A3: GitHub Actions CI (every push, Linux, wasm check, fig2dev reference tests, perf budgets) and release builds for Linux, Windows and macOS. |

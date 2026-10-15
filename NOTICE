@@ -26,7 +26,9 @@ colour tables are generated in code; the mode panel icons are xfig's
 bitmaps from w_icons.c, kept as byte arrays in source code under the xfig
 licence (see ASSETS.md and LICENSE-xfig). The attribute pictures are also
 drawn as vectors in code (ui-egui/src/vector_icons.rs), RustFig's own work
-after xfig's compositions.
+after xfig's compositions, and xfig's mode icons are traced as vectors
+(ui-egui/src/mode_icons.rs). The application icon is an original drawing
+generated in code (ui-egui/src/app_icon.rs), MIT OR Apache-2.0.
 
 Fonts used at run time
 ----------------------

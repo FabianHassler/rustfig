@@ -4,6 +4,7 @@
 //! [`App::run`], which executes engine commands or the UI-only commands in
 //! [`menus::UI_COMMANDS`].
 
+pub mod app_icon;
 pub mod attributes;
 pub mod canvas;
 #[cfg(not(target_arch = "wasm32"))]

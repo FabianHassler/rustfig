@@ -267,6 +267,13 @@ pub const TRACED: &[&Xbm] = &[
     &xi::FLIP_X,
     &xi::ROTCW,
     &xi::ROTCCW,
+    &xi::OPEN_COMP,
+    &xi::JOIN_SPLIT,
+    &xi::ANGLEMEAS,
+    &xi::DELETEPT,
+    &xi::CHOP,
+    &xi::AREAMEAS,
+    &xi::LIBRARY,
     &xi::NONE,
     &xi::ANY,
     &xi::FINE_GRID,
@@ -801,6 +808,61 @@ pub fn drawing(name: &str) -> Option<Vec<Object>> {
             .line(&[(28.0, 15.0), (28.0, 21.0)])
             .line(&[(27.0, 15.0), (21.0, 18.0), (27.0, 21.0)])
             .done(),
+        // Open compound: the compound's bracketed frame with its contents.
+        "open_comp" => Ic::new(&xi::OPEN_COMP)
+            .line(&[(3.0, 6.0), (19.0, 6.0)])
+            .line(&[(3.0, 18.0), (19.0, 18.0)])
+            .line(&[(4.0, 6.0), (4.0, 18.0)])
+            .line(&[(18.0, 6.0), (18.0, 18.0)])
+            .pixels(3, 5, 19, 5)
+            .pixels(3, 19, 19, 19)
+            .pixels(5, 7, 17, 17)
+            .pixels(20, 19, 33, 29)
+            .done(),
+        // Join or split: two lines and two curves meeting at a point.
+        "join_split" => Ic::new(&xi::JOIN_SPLIT)
+            .line(&[(3.0, 3.0), (9.0, 12.0), (11.0, 10.0)])
+            .fill_rect(11.0, 6.0, 14.0, 9.0, false)
+            .curve(
+                false,
+                &[(15.0, 4.0), (18.0, 5.0), (21.0, 7.0), (23.5, 9.0), (26.5, 11.0)],
+            )
+            .line(&[(32.0, 3.0), (28.0, 10.0), (26.5, 11.0)])
+            .line(&[(3.0, 19.0), (8.0, 27.0)])
+            .curve(
+                false,
+                &[
+                    (15.0, 20.0),
+                    (17.0, 21.0),
+                    (19.5, 22.5),
+                    (21.5, 24.0),
+                    (23.5, 26.0),
+                    (25.0, 27.0),
+                ],
+            )
+            .line(&[(32.0, 20.0), (28.0, 27.0), (26.5, 28.0)])
+            .pixels(16, 10, 20, 18)
+            .done(),
+        // Angle: three numbered points, their rays and the arc between.
+        "anglemeas" => Ic::new(&xi::ANGLEMEAS)
+            .line(&[(11.0, 5.5), (18.0, 10.5)])
+            .line(&[(21.0, 13.0), (24.0, 14.0)])
+            .line(&[(19.0, 19.0), (10.0, 24.5)])
+            .ellipse(18.5, 15.0, 3.5, 4.0)
+            .marker(9.0, 5.0, 3.0)
+            .fill_rect(24.0, 14.0, 27.0, 16.0, false)
+            .marker(9.0, 25.0, 3.0)
+            .pixels(3, 3, 7, 10)
+            .pixels(28, 11, 33, 19)
+            .pixels(2, 19, 7, 27)
+            .done(),
+        // Pixel drawings in xfig, kept as crisp pixels: the pencil of delete
+        // point, the blade of chop, the hatching of area, the books of the
+        // library.
+        "deletept" => Ic::new(&xi::DELETEPT).pixels(0, 0, 35, 31).done(),
+        "chop" => Ic::new(&xi::CHOP).pixels(0, 0, 35, 31).done(),
+        "areameas" => Ic::new(&xi::AREAMEAS).pixels(0, 0, 35, 31).done(),
+        "library" => Ic::new(&xi::LIBRARY).pixels(0, 0, 72, 31).done(),
         // Pixel art in xfig: the camera and the serif T stay as pixels.
         "picobj" => Ic::new(&xi::PICOBJ).pixels(0, 0, 35, 31).done(),
         "text" => Ic::new(&xi::TEXT).pixels(0, 0, 35, 31).done(),
