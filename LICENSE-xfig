@@ -13,7 +13,9 @@ Parts Copyright (c) 1988 by Frank Schmuck
 Copyright (c) 1992 by Herbert Bauer and B. Raichle
 Parts Copyright (c) 1992 by Brian Boyter
 Parts Copyright (c) 1995 by C. Blanc and C. Schlick
+Copyright (c) 1999 by T. Sato
 Parts Copyright (c) 2002 by Anthony Starks
+Copyright (c) 2002 by Christian Gollwitzer
 Parts Copyright (c) 2002-2006 by Martin Kroeker
 Parts Copyright (c) 2004 by Chris Moller
 Parts Copyright (c) 2015-2024 by Thomas Loimer
@@ -41,6 +43,8 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/engine/src/snap.rs: xfig src/w_snap.c, src/w_intersect.c
 - crates/engine/src/tools/mod.rs: xfig src/w_modepanel.c, src/d_*.c, src/e_*.c, src/w_canvas.c
 - crates/fig2dev/src/bound.rs: fig2dev/bound.c, fig2dev/bound.h, fig2dev/localmath.c
+- crates/fig2dev/src/drivers/gbx.rs: fig2dev/dev/gengbx.c
+- crates/fig2dev/src/drivers/shape.rs: fig2dev/dev/genshape.c
 - crates/fig2dev/src/gendev.rs: fig2dev/fig2dev.c, fig2dev/fig2dev.h, fig2dev/drivers.h
 - crates/fig2dev/src/object.rs: fig2dev/object.h
 - crates/fig2dev/src/read.rs: fig2dev/read.c, fig2dev/read1_3.c, fig2dev/free.c, fig2dev/messages.c
