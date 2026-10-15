@@ -82,8 +82,10 @@ pub struct Indicator {
     /// -1 no fill, 0–40 shade/tint, 41–62 pattern.
     pub area_fill: i32,
     pub depth: i32,
-    /// Dash length / dot gap in 1/80 inch.
+    /// Dash length in 1/80 inch (xfig's `cur_dashlength`).
     pub style_val: f64,
+    /// Gap between dots of dotted lines in 1/80 inch (xfig's `cur_dotgap`).
+    pub dot_gap: f64,
     pub cap: CapStyle,
     pub join: JoinStyle,
     pub forward_arrow: bool,
@@ -125,12 +127,19 @@ impl Default for Indicator {
             fill_color: 7,
             area_fill: -1,
             depth: 50,
+            // xfig's start values (mode.c, main.c's resource defaults).
             style_val: 4.0,
+            dot_gap: 3.0,
             cap: CapStyle::Butt,
             join: JoinStyle::Miter,
             forward_arrow: false,
             backward_arrow: false,
-            arrow: Arrow::default(),
+            // xfig's startarrowtype 0: the stick arrow.
+            arrow: Arrow {
+                kind: 0,
+                style: 0,
+                ..Arrow::default()
+            },
             font: 0,
             font_size: 12.0,
             postscript: true,
@@ -143,8 +152,9 @@ impl Default for Indicator {
             sides: 6,
             rotate_angle: 90.0,
             grid: None,
-            snap: SnapMode::Small,
-            align_h: "center".into(),
+            // xfig's startposnmode 1: magnet (1/16 inch, 1 mm).
+            snap: SnapMode::Fine,
+            align_h: "none".into(),
             align_v: "none".into(),
             pie_arc: false,
             text_step: 1.0,
@@ -165,6 +175,7 @@ impl Indicator {
             area_fill: self.area_fill.clamp(-1, 62),
             style_val: match self.line {
                 LineKind::Solid | LineKind::Default => 0.0,
+                LineKind::Dotted => self.dot_gap,
                 _ => self.style_val,
             },
             cap: self.cap,
@@ -205,7 +216,11 @@ impl Indicator {
             self.depth = s.depth;
             self.area_fill = s.area_fill;
             if s.style_val > 0.0 {
-                self.style_val = s.style_val;
+                if s.line == LineKind::Dotted {
+                    self.dot_gap = s.style_val;
+                } else {
+                    self.style_val = s.style_val;
+                }
             }
             self.cap = s.cap;
             self.join = s.join;
@@ -255,14 +270,43 @@ impl Indicator {
     }
 }
 
+/// xfig's arrow type choices (`arrowtype_choices` in `w_indpanel.c`): 0 is
+/// the stick arrow, then each type 1–14 hollow and filled. Returns (kind,
+/// style); the `startarrowtype` resource is such a choice.
+pub fn arrow_choice(n: i32) -> (i32, i32) {
+    if n <= 0 {
+        (0, 0)
+    } else {
+        let n = n.min(28);
+        ((n + 1) / 2, if n % 2 == 1 { 0 } else { 1 })
+    }
+}
+
+/// The choice of arrow `kind` and `style` (the inverse of [`arrow_choice`]).
+pub fn arrow_choice_of(kind: i32, style: i32) -> i32 {
+    if kind <= 0 {
+        0
+    } else {
+        kind * 2 - 1 + i32::from(style == 1)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn snapping() {
+        // xfig's default: magnet, 1/16 inch.
         let ind = Indicator::default();
+        assert_eq!(ind.snap, SnapMode::Fine);
         let p = ind.snap_point(Point::new(160.0, 220.0), Units::Inches);
+        assert_eq!(p, Point::new(150.0, 225.0));
+        let eighth = Indicator {
+            snap: SnapMode::Small,
+            ..Indicator::default()
+        };
+        let p = eighth.snap_point(Point::new(160.0, 220.0), Units::Inches);
         assert_eq!(p, Point::new(150.0, 150.0));
         let any = Indicator {
             snap: SnapMode::Any,
@@ -272,6 +316,37 @@ mod tests {
             any.snap_point(Point::new(1.5, 2.5), Units::Inches),
             Point::new(1.5, 2.5)
         );
+    }
+
+    /// The start values are xfig's (`mode.c`, `main.c`'s resource defaults,
+    /// `object.h`): gap 23.
+    #[test]
+    fn start_values_are_xfigs() {
+        let i = Indicator::default();
+        assert_eq!(i.snap, SnapMode::Fine, "startposnmode 1 (magnet)");
+        assert_eq!(i.grid, None, "startgridmode 0");
+        assert_eq!((i.arrow.kind, i.arrow.style), (0, 0), "startarrowtype 0");
+        assert_eq!((i.arrow.width, i.arrow.height), (60.0, 120.0), "DEF_ARROW_WID/HT 4, 8");
+        assert_eq!((i.style_val, i.dot_gap), (4.0, 3.0), "DEF_DASHLENGTH, DEF_DOTGAP");
+        assert_eq!(i.text_step, 1.0, "cur_textstep (the man page's 1.2 is wrong)");
+        assert_eq!((i.font_size, i.thickness, i.depth, i.box_radius), (12.0, 1, 50, 7));
+        assert_eq!((i.area_fill, i.pen_color, i.fill_color), (-1, 0, 7));
+        assert_eq!((i.align_h.as_str(), i.align_v.as_str()), ("none", "none"));
+        assert_eq!((i.sides, i.rotate_angle), (6, 90.0));
+    }
+
+    #[test]
+    fn dotted_lines_use_the_dot_gap() {
+        let i = Indicator {
+            line: LineKind::Dotted,
+            ..Indicator::default()
+        };
+        assert_eq!(i.style().style_val, 3.0);
+        let d = Indicator {
+            line: LineKind::Dashed,
+            ..Indicator::default()
+        };
+        assert_eq!(d.style().style_val, 4.0);
     }
 
     #[test]

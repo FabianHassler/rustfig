@@ -9,7 +9,7 @@
 use crate::theme::Tokens;
 use crate::App;
 use egui::{pos2, vec2, Color32, Painter, Pos2, Rect, Sense, Stroke, Ui};
-use rustfig_engine::{Indicator, SnapMode, ToolKind};
+use rustfig_engine::{arrow_choice, arrow_choice_of, Indicator, SnapMode, ToolKind};
 use rustfig_model::{area_fill_color, CapStyle, ColorRef, Document, JoinStyle, Justify, LineKind, Rgb};
 use serde_json::{json, Value};
 
@@ -339,24 +339,6 @@ fn color_name(c: i32) -> String {
 fn color32(doc: &Document, c: i32) -> Color32 {
     let rgb = doc.rgb(ColorRef(c));
     Color32::from_rgb(rgb.r, rgb.g, rgb.b)
-}
-
-/// xfig's arrow type list: 0 is the stick arrow, then each type hollow and
-/// filled. Returns (kind, style).
-fn arrow_choice(n: i32) -> (i32, i32) {
-    if n <= 0 {
-        (0, 0)
-    } else {
-        ((n + 1) / 2, if n % 2 == 1 { 0 } else { 1 })
-    }
-}
-
-fn arrow_choice_of(kind: i32, style: i32) -> i32 {
-    if kind <= 0 {
-        0
-    } else {
-        kind * 2 - 1 + i32::from(style == 1)
-    }
 }
 
 /// xfig's arrow type choices: type 0, then types 1–14 hollow and filled
@@ -1134,8 +1116,9 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             if let Some(k) = icon_choices(ui, "line", &items, 6).and_then(|i| LineKind::ALL.get(i)) {
                 set(app, json!({ "line": k }));
             }
-            // xfig: "Default dash length" / "Default dot gap".
-            let mut sv = ind.style_val;
+            // xfig: "Default dash length" / "Default dot gap", kept apart.
+            let dotted = ind.line == LineKind::Dotted;
+            let mut sv = if dotted { ind.dot_gap } else { ind.style_val };
             ui.horizontal(|ui| {
                 ui.label(if ind.line == LineKind::Dotted {
                     "Dot gap"
@@ -1151,7 +1134,11 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                     )
                     .changed()
                 {
-                    set(app, json!({ "style_val": sv }));
+                    if dotted {
+                        set(app, json!({ "dot_gap": sv }));
+                    } else {
+                        set(app, json!({ "style_val": sv }));
+                    }
                 }
             });
         }

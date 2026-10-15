@@ -20,7 +20,7 @@ pub mod tools;
 mod view;
 
 pub use error::EngineError;
-pub use indicator::{GridMode, Indicator, SnapMode};
+pub use indicator::{arrow_choice, arrow_choice_of, GridMode, Indicator, SnapMode};
 pub use snap::ObjectSnap;
 pub use tools::{Button, Key, MouseHints, MouseScheme, Overlay, ToolEvent, ToolKind};
 pub use view::{UnitScale, View};

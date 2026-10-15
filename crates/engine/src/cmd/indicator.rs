@@ -21,7 +21,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Set current attributes",
             menu: "",
             shortcut: "",
-            params: "{any indicator field: line, thickness, pen_color, fill_color, area_fill, depth, style_val, cap, join, forward_arrow, backward_arrow, arrow, font, font_size, postscript, justify, text_angle, box_radius, sides, rotate_angle, grid, snap, align_h, align_v, pie_arc, text_step}",
+            params: "{any indicator field: line, thickness, pen_color, fill_color, area_fill, depth, style_val, cap, join, forward_arrow, backward_arrow, arrow, font, font_size, postscript, justify, text_angle, box_radius, dot_gap, sides, rotate_angle, grid, snap, align_h, align_v, pie_arc, text_step}",
             mutates: false,
             enabled: always,
             run: set,
@@ -74,6 +74,9 @@ fn set(e: &mut Engine, p: &Value) -> CmdResult {
     }
     if !ind.style_val.is_finite() {
         ind.style_val = 4.0;
+    }
+    if !ind.dot_gap.is_finite() {
+        ind.dot_gap = 3.0;
     }
     e.indicator = ind;
     Ok(json!({}))

@@ -22,7 +22,6 @@
 | 17 | Localization of UI strings | Localization | Low | 24 |
 | 18 | Spell check | Text | Low | 16 |
 | 19 | Accessibility (screen-reader labels for canvas objects) | Platforms | Low | 16 |
-| 23 | Start values differing from xfig's defaults (found by E1): point positioning starts at 1/8 inch, xfig's `startposnmode` default is 1 (magnet, 1/16 inch); text step 1.0 vs xfig's 1.2; to be checked against the rest of the resource table | Attributes | Low | 2 |
 | 21 | fig2dev's other output languages (EMF, CGM, DXF, HPGL, MetaPost, epic, …) not ported yet (B9) | Export | Low | 60 |
 | 20 | Real PostScript font metrics when craft-fonts lacks a face (synthetic bold/italic today); the A10 corpus shows text widths as the main remaining difference from fig2dev | Text | Medium | 12 |
 
@@ -30,6 +29,7 @@
 
 | Date | Note |
 |------|------|
+| 2026-10-15 | #23 closed: start values are xfig's (positioning magnet 1/16 inch, alignment none, stick arrows, dot gap 3 apart from dash length 4); the man page's text step 1.2 is a documentation error, xfig's code starts at 1.0 as RustFig does. |
 | 2026-10-15 | D12 closed #22 (fill patterns as fig2dev's). |
 | 2026-10-14 | Export bounds now fig2dev's (B0); the corpus's largest remaining difference is fill patterns (#22). |
 | 2026-10-14 | A10: corpus comparison with fig2dev on xfig's sample figures; metric text size fixed. Remaining differences: export bounding box (B0 `bound.c`), text widths (#20, B8). |

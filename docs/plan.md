@@ -220,6 +220,7 @@ is an optional extra, used in two ways.
 | 2026-10-14 | A3: the web build compiles locally with rustup's toolchain; xtask uses the running toolchain's rustc. |
 | 2026-10-15 | D12 landed: fig2dev's fill patterns; corpus EPS median 0.0031, 95th percentile 0.031 (both PostScript files rasterised alike). |
 | 2026-10-15 | A4 done: UI smoke tests cover every dialog, the file dialogs and quitting. |
+| 2026-10-15 | Gap 23 closed: start values follow xfig's code. |
 | 2026-10-15 | E1 done: preferences as xfig resources in TOML; user colours; recent files. |
 | 2026-10-15 | A7 done: no UI stalls; phase A complete. |
 | 2026-10-15 | A6 done: crash recovery. |

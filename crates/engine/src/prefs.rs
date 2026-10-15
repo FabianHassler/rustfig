@@ -170,7 +170,7 @@ pub const RESOURCES: &[Resource] = &[
     r("startlinewidth", Int, "1", "-startlinewidth", Applied),
     r("startposnmode", Int, "1", "-startposnmode", Applied),
     r("startpsFont", Str, "Times-Roman", "-startpsFont", Applied),
-    r("starttextstep", Float, "1.2", "-starttextstep", Applied),
+    r("starttextstep", Float, "1.0", "-starttextstep", Applied),
     r("trackCursor", Bool, "true", "-track, -notrack", Planned("E9")),
     r("transparent_color", Int, "-2", "-transparent_color", Planned("B6")),
     r("userscale", Float, "1.0", "-userscale", Applied),
@@ -349,7 +349,10 @@ impl Prefs {
         set("rigidtext", toml::Value::Boolean(ind.rigid_text));
         set("justify", toml::Value::Boolean(ind.justify == Justify::Right));
         let unit = rustfig_geom::FIG_PER_STYLE_UNIT;
-        set("startarrowtype", toml::Value::Integer(i64::from(ind.arrow.kind)));
+        set(
+            "startarrowtype",
+            toml::Value::Integer(i64::from(crate::arrow_choice_of(ind.arrow.kind, ind.arrow.style))),
+        );
         set("startarrowthick", toml::Value::Float(ind.arrow.thickness));
         set("startarrowwidth", toml::Value::Float(ind.arrow.width / unit));
         set("startarrowlength", toml::Value::Float(ind.arrow.height / unit));
@@ -463,8 +466,12 @@ impl Prefs {
             ind.justify = if right { Justify::Right } else { Justify::Left };
         }
         let unit = rustfig_geom::FIG_PER_STYLE_UNIT;
-        if let Some(k) = self.int("startarrowtype").and_then(|k| i32::try_from(k).ok()) {
-            ind.arrow.kind = k.clamp(0, 14);
+        // startarrowtype is a choice of xfig's arrow list (0 stick, then
+        // each type hollow and filled).
+        if let Some(n) = self.int("startarrowtype").and_then(|k| i32::try_from(k).ok()) {
+            let (kind, style) = crate::arrow_choice(n.clamp(0, 28));
+            ind.arrow.kind = kind;
+            ind.arrow.style = style;
         }
         if let Some(t) = self.float("startarrowthick").filter(|t| (0.0..=100.0).contains(t)) {
             ind.arrow.thickness = t;
