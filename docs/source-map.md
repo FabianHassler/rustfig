@@ -195,7 +195,8 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `dev/genbitmaps.c` | 593 | GIF, JPEG, PNG, PPM, TIFF, XBM, XPM via ghostscript | `render/drivers/bitmaps`, `render/export` (own renderer, no ghostscript) | ported | B6 |
 | `dev/psprolog.h` | 936 | PostScript prolog, the 22 fill patterns | `render/pattern` (`FILL_PAT01`…`22` ported) | patterns ported (D12) | — |
 | `dev/genbox.c` | 78 | LaTeX box | `render/drivers/latex_box` | ported | — |
-| `dev/genemf.c`, `gencgm.c`, `gendxf.c`, `genibmgl.c`, `genmp.c`, `genmf.c`, `genmap.c`, `gentk.c`, `genptk.c`, `genge.c` | ≈15 k | EMF, CGM, DXF, HPGL, MetaPost, METAFONT, image maps, Tk, … | — | missing | B9 |
+| `dev/gencgm.c`, `genibmgl.c`, `gendxf.c` | 3 k | CGM, HPGL (`ibmgl`), DXF | `fig2dev/drivers/{cgm,ibmgl,dxf}` | ported | B9 |
+| `dev/genemf.c`, `genmp.c`, `genmf.c`, `genmap.c`, `gentk.c`, `genptk.c`, `genge.c` | ≈15 k | EMF, MetaPost, METAFONT, image maps, Tk, … | — | missing | B9 |
 | `dev/gengbx.c` | 0.9 k | Gerber (`-L gbx`) | `crates/fig2dev/src/drivers/gbx.rs` | ported | B9 |
 | `dev/genshape.c` | 0.9 k | LaTeX shape macros (`-L shape`) | `crates/fig2dev/src/drivers/shape.rs` | ported | B9 |
 | `dev/encode.c` | 236 | ASCII85 and deflate streams for PostScript/PDF | `render/eps`, `render/pdf` | own | review |
