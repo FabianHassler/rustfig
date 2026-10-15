@@ -753,3 +753,28 @@ fn return_exports_from_the_panel() {
     assert!(!h.state().dialogs.export.open);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// W9: all of xfig's 29 arrow choices (types 0–14), with vector pictures
+/// or xfig's bitmaps.
+#[test]
+fn arrow_types_up_to_14_in_both_picture_modes() {
+    for vector in [true, false] {
+        let mut a = app();
+        a.vector_icons = vector;
+        let mut h = harness(a);
+        h.state_mut().engine.set_tool(ToolKind::Polyline);
+        h.run_steps(2);
+        h.get_by_label_contains("Arrow Type: ").click();
+        h.run_steps(2);
+        h.get_by_label("hollow type 13").click();
+        h.run_steps(2);
+        let a = h.state().engine.indicator.arrow;
+        assert_eq!((a.kind, a.style), (13, 0), "vector {vector}");
+        h.get_by_label_contains("Arrow Type: ").click();
+        h.run_steps(2);
+        h.get_by_label("solid type 14").click();
+        h.run_steps(2);
+        let a = h.state().engine.indicator.arrow;
+        assert_eq!((a.kind, a.style), (14, 1), "vector {vector}");
+    }
+}

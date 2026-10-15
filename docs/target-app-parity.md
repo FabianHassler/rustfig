@@ -21,7 +21,7 @@ the score.
 |------|-------:|------:|---------|------:|
 | Drawing modes | 12 | 88 % | library objects; dimension lines (Shift+left in polyline mode); xfig's click-to-close rules for some shapes | 14 |
 | Editing modes | 12 | 70 % | anchor point for flip/rotate (right button), array copy, align to canvas, figure comments from Edit mode, open compound (edit in place), join/split lines, chop, tangent/normal, angle/length/area measure modes, copy to library | 56 |
-| Attributes / indicator | 10 | 75 % | colour editor UI, Angle Geom (latex, manhattan, mountain), smart links, copy counts, arrow types 10–14 exact shapes, dash-dot tick styles | 34 |
+| Attributes / indicator | 10 | 77 % | colour editor UI, Angle Geom (latex, manhattan, mountain), smart links, copy counts | 30 |
 | File format | 10 | 85 % | reading Fig 1.x/2.x, exact pre-3.2 spline conversion | 24 |
 | Export | 12 | 40 % | to be ported from fig2dev, no ghostscript (B0–B9): PostScript (multi-page, print layout, page options, EPSI/TIFF previews), LaTeX family (TikZ, PSTricks, pict2e, eepic, …), GIF/JPEG/TIFF/PPM/XBM/XPM, CGM/EMF/HPGL/MetaPost/DXF and the rest | 137 |
 | Text | 10 | 55 % | character map, LaTeX special-text export, exact PostScript font metrics, compose keys, spell check | 60 |
@@ -59,6 +59,7 @@ the score.
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-15 | ≈61 % | W8, W9: xfig's key and mouse bindings; attribute pictures as vectors, arrow types 10–14 selectable (Attributes 75 → 77 %). |
 | 2026-10-15 | ≈61 % | B0: fig2dev's export options (Export 39 → 40 %). |
 | 2026-10-15 | ≈61 % | D12: fill patterns from fig2dev. |
 | 2026-10-14 | ≈61 % | B0: fig2dev's export bounds (Export 37 → 39 %). |

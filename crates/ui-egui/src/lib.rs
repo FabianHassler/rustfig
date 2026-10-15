@@ -13,6 +13,7 @@ pub mod menus;
 pub mod panels;
 pub mod rulers;
 pub mod theme;
+pub mod vector_icons;
 pub mod xfig_icons;
 
 use rustfig_engine::{Engine, UiRequest};
@@ -59,6 +60,9 @@ pub struct App {
     pub show_depths: bool,
     /// xfig's "Show info balloons" (Meta-Y): tooltips on or off.
     pub show_balloons: bool,
+    /// Attribute pictures drawn as vectors at the screen's density (W9);
+    /// off shows xfig's 1-bit bitmaps.
+    pub vector_icons: bool,
     /// xfig's mode menu popped up by Alt+wheel over the canvas: drawing
     /// (wheel up) or editing modes, at the pointer.
     pub mode_popup: Option<(bool, egui::Pos2)>,
@@ -100,6 +104,7 @@ impl App {
             layout: Layout::Classic,
             show_depths: true,
             show_balloons: true,
+            vector_icons: true,
             mode_popup: None,
             compose: menus::Compose::default(),
             show_indicator: true,

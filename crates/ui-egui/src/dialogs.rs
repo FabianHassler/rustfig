@@ -297,6 +297,11 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
                 ),
                 ("app.toggle_xfig_keys", "xfig keyboard accelerators", app.xfig_keys),
                 ("app.toggle_indicator", "Show attribute panel", app.show_indicator),
+                (
+                    "app.toggle_vector_icons",
+                    "Sharp attribute pictures (off: xfig's bitmaps)",
+                    app.vector_icons,
+                ),
             ] {
                 let mut v = on;
                 if ui.checkbox(&mut v, label).changed() {

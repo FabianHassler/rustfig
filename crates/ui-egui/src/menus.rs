@@ -120,6 +120,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}",
     },
     UiCommand {
+        id: "app.toggle_vector_icons",
+        label: "Sharp attribute pictures",
+        shortcut: "",
+        params: "{}  — vector pictures at the screen's density, or xfig's bitmaps",
+    },
+    UiCommand {
         id: "app.toggle_balloons",
         label: "Show info balloons",
         shortcut: "",
@@ -203,6 +209,7 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         }
         "app.toggle_depths" => app.show_depths = !app.show_depths,
         "app.toggle_balloons" => app.show_balloons = !app.show_balloons,
+        "app.toggle_vector_icons" => app.vector_icons = !app.vector_icons,
         "app.redraw" => app.canvas.invalidate(),
         "app.toggle_layout" => {
             let classic = p.get("classic").and_then(Value::as_bool).unwrap_or(!app.classic());

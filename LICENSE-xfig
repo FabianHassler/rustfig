@@ -56,4 +56,5 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/ui-egui/src/menus.rs: xfig src/w_cmdpanel.c, src/w_modepanel.c, app-defaults/Fig
 - crates/ui-egui/src/panels.rs: xfig src/w_modepanel.c, src/w_mousefun.c, src/w_layers.c, src/w_snap.c, src/w_icons.c
 - crates/ui-egui/src/rulers.rs: xfig src/w_rulers.c, src/u_pan.c
+- crates/ui-egui/src/vector_icons.rs: xfig src/w_icons.c (compositions of the attribute pictures)
 - crates/ui-egui/src/xfig_icons.rs: xfig src/w_icons.c, src/w_indpanel.c (bitmaps copied verbatim)
