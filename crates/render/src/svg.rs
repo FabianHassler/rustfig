@@ -171,13 +171,11 @@ pub(crate) fn image_png(img: &RasterImage) -> Option<Vec<u8>> {
     if data.len() != expected {
         return None;
     }
-    for px in data.chunks_exact_mut(4) {
-        if let [r, g, b, a] = px {
-            let al = u16::from(*a);
-            *r = ((u16::from(*r) * al + 127) / 255) as u8;
-            *g = ((u16::from(*g) * al + 127) / 255) as u8;
-            *b = ((u16::from(*b) * al + 127) / 255) as u8;
-        }
+    for [r, g, b, a] in data.as_chunks_mut::<4>().0.iter_mut() {
+        let al = u16::from(*a);
+        *r = ((u16::from(*r) * al + 127) / 255) as u8;
+        *g = ((u16::from(*g) * al + 127) / 255) as u8;
+        *b = ((u16::from(*b) * al + 127) / 255) as u8;
     }
     tiny_skia::Pixmap::from_vec(data, size)?.encode_png().ok()
 }

@@ -34,6 +34,11 @@ at 200 steps and about 256 MB. After a command, `execute` re-measures the
 texts of the objects it changed (A9); the hit-test box cache keeps each box
 with its object, so only changed objects are recomputed.
 
+Crash recovery (native, A6): `engine::recovery` keeps each instance's copy of
+an unsaved drawing in the platform's recovery folder, next to an OS-locked
+`ID.lock`; `ui-egui::autosave` writes it after a 3-second pause and from the
+panic guard, and the next start offers drawings whose lock is free.
+
 Tools (`crates/engine/src/tools`) turn pointer and key events (in Fig units)
 into commands. While busy they expose an `Overlay` (preview objects, guides,
 handles, the text being typed), which the UI renders with the same renderer.

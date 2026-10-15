@@ -5,7 +5,7 @@
 mod arrange;
 mod doc;
 mod edit;
-mod file;
+pub(crate) mod file;
 mod indicator;
 mod object;
 pub(crate) mod shape;

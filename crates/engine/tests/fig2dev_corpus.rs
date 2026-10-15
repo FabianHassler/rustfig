@@ -340,7 +340,7 @@ fn corpus_matches_fig2dev() {
                 let (o, _) = run_one(path);
                 results.lock().unwrap().push((i, o));
                 let d = done.fetch_add(1, Ordering::Relaxed) + 1;
-                if d % 100 == 0 {
+                if d.is_multiple_of(100) {
                     eprintln!("  {d}/{}", figs.len());
                 }
             });

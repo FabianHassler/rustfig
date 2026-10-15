@@ -141,7 +141,7 @@ pub fn rgba(size: u32) -> Option<Vec<u8>> {
     );
     // tiny-skia keeps premultiplied alpha; window icons want it straight.
     let mut out = pm.data().to_vec();
-    for px in out.chunks_exact_mut(4) {
+    for px in out.as_chunks_mut::<4>().0.iter_mut() {
         let a = u32::from(px.get(3).copied().unwrap_or(0));
         if a > 0 && a < 255 {
             for c in px.iter_mut().take(3) {

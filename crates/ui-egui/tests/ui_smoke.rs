@@ -778,3 +778,37 @@ fn arrow_types_up_to_14_in_both_picture_modes() {
         assert_eq!((a.kind, a.style), (14, 1), "vector {vector}");
     }
 }
+
+/// A6: a drawing left by an instance that stopped is offered at the next
+/// start and restored unsaved, under the name of its file.
+#[test]
+fn recovery_after_a_crash() {
+    use rustfig_engine::recovery::Recovery;
+    let dir = std::env::temp_dir().join(format!("rustfig-ui-recovery-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    // The instance that crashed: it kept a copy, then stopped beating.
+    let mut crashed = Engine::new();
+    crashed
+        .execute("shape.rectangle", &json!({"x": 0, "y": 0, "width": 600, "height": 300}))
+        .unwrap();
+    let rec = Recovery::new(dir.clone());
+    rec.save(crashed.doc(), Some("/somewhere/plan.fig")).unwrap();
+    let id = rec.id().to_string();
+    drop(rec); // the process ends: its lock is released
+
+    let mut a = app();
+    a.enable_recovery(dir.clone());
+    assert_eq!(a.recoverable.len(), 1);
+    let mut h = harness(a);
+    h.get_by_label("Recover unsaved drawings");
+    h.get_by_label("plan.fig");
+    h.get_by_label("Restore").click();
+    h.run_steps(2);
+    let e = &h.state().engine;
+    assert_eq!(e.doc().objects.len(), 1);
+    assert!(e.is_modified(), "restored drawings are unsaved");
+    assert_eq!(e.path(), Some("/somewhere/plan.fig"));
+    assert!(h.state().recoverable.is_empty());
+    assert!(!dir.join(format!("{id}.rustfig")).exists(), "old copy gone");
+    let _ = std::fs::remove_dir_all(&dir);
+}

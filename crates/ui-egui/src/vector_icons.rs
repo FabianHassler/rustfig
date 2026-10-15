@@ -180,7 +180,9 @@ pub fn render_objects(objs: Vec<Object>, w: usize, h: usize, scale: f32) -> Opti
     );
     let pixels = pm
         .data()
-        .chunks_exact(4)
+        .as_chunks::<4>()
+        .0
+        .iter()
         .map(|p| {
             let dark = 255 - p.first().copied().unwrap_or(255);
             egui::Color32::from_rgba_premultiplied(dark, dark, dark, dark)

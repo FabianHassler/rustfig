@@ -264,13 +264,11 @@ fn image_pixmap(img: &Arc<RasterImage>) -> Option<Pixmap> {
             return None;
         }
         let mut data = img.rgba.clone();
-        for px in data.chunks_exact_mut(4) {
-            if let [r, g, b, a] = px {
-                let al = u16::from(*a);
-                *r = ((u16::from(*r) * al + 127) / 255) as u8;
-                *g = ((u16::from(*g) * al + 127) / 255) as u8;
-                *b = ((u16::from(*b) * al + 127) / 255) as u8;
-            }
+        for [r, g, b, a] in data.as_chunks_mut::<4>().0.iter_mut() {
+            let al = u16::from(*a);
+            *r = ((u16::from(*r) * al + 127) / 255) as u8;
+            *g = ((u16::from(*g) * al + 127) / 255) as u8;
+            *b = ((u16::from(*b) * al + 127) / 255) as u8;
         }
         let pm = Pixmap::from_vec(data, size)?;
         if c.len() > 64 {
@@ -384,13 +382,11 @@ pub fn encode_rgba_png(width: u32, height: u32, rgba: &[u8]) -> Result<Vec<u8>, 
         return Err("pixel buffer has the wrong size".into());
     }
     let mut data = rgba.to_vec();
-    for px in data.chunks_exact_mut(4) {
-        if let [r, g, b, a] = px {
-            let al = u16::from(*a);
-            *r = ((u16::from(*r) * al + 127) / 255) as u8;
-            *g = ((u16::from(*g) * al + 127) / 255) as u8;
-            *b = ((u16::from(*b) * al + 127) / 255) as u8;
-        }
+    for [r, g, b, a] in data.as_chunks_mut::<4>().0.iter_mut() {
+        let al = u16::from(*a);
+        *r = ((u16::from(*r) * al + 127) / 255) as u8;
+        *g = ((u16::from(*g) * al + 127) / 255) as u8;
+        *b = ((u16::from(*b) * al + 127) / 255) as u8;
     }
     let pm = Pixmap::from_vec(data, size).ok_or("cannot build image")?;
     encode_png(&pm)

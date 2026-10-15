@@ -264,7 +264,61 @@ pub(crate) fn escape_closes_panels(app: &mut App, ctx: &egui::Context) {
     }
 }
 
+/// Drawings a stopped RustFig left unsaved (A6): restore or discard each.
+fn recovery_dialog(app: &mut App, ctx: &egui::Context) {
+    if app.recoverable.is_empty() {
+        return;
+    }
+    let mut open = true;
+    let mut action: Option<(usize, bool)> = None;
+    egui::Window::new("Recover unsaved drawings")
+        .open(&mut open)
+        .collapsible(false)
+        .resizable(false)
+        .show(ctx, |ui| {
+            ui.label("RustFig stopped without saving these drawings. Restore one to keep working on it, then save it.");
+            ui.add_space(4.0);
+            egui::Grid::new("recoverable").num_columns(3).show(ui, |ui| {
+                for (i, (_, original)) in app.recoverable.iter().enumerate() {
+                    let name = original
+                        .as_deref()
+                        .and_then(|o| std::path::Path::new(o).file_name())
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("Untitled");
+                    ui.label(name);
+                    if ui.button("Restore").clicked() {
+                        action = Some((i, true));
+                    }
+                    if ui.button("Discard").clicked() {
+                        action = Some((i, false));
+                    }
+                    ui.end_row();
+                }
+            });
+        });
+    if let Some((i, restore)) = action {
+        if let Some((id, _)) = app.recoverable.get(i).cloned() {
+            if restore && app.engine.is_modified() {
+                app.error("Save or close the current drawing before restoring another");
+                return;
+            }
+            let ok = !restore || app.run("file.recover", json!({ "id": id })).is_some();
+            if ok {
+                // The restored drawing is this instance's now (its own
+                // copy follows); the old files go.
+                app.run("file.discard_recovery", json!({ "id": id }));
+                app.recoverable.remove(i);
+            }
+        }
+    }
+    if !open {
+        // Later: the files stay and are offered again at the next start.
+        app.recoverable.clear();
+    }
+}
+
 pub fn show(app: &mut App, ctx: &egui::Context) {
+    recovery_dialog(app, ctx);
     edit_dialog(app, ctx);
     export_dialog(app, ctx);
     search_dialog(app, ctx);

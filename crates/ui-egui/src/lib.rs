@@ -6,6 +6,8 @@
 
 pub mod app_icon;
 pub mod attributes;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod autosave;
 pub mod canvas;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod control;
@@ -68,6 +70,12 @@ pub struct App {
     /// xfig's mode menu popped up by Alt+wheel over the canvas: drawing
     /// (wheel up) or editing modes, at the pointer.
     pub mode_popup: Option<(bool, egui::Pos2)>,
+    /// Crash-recovery copies of the drawing (A6); `None` until enabled.
+    #[cfg(not(target_arch = "wasm32"))]
+    autosave: Option<autosave::AutoSave>,
+    /// Drawings left by instances that stopped without saving, offered at
+    /// start: (recovery id, the file they came from).
+    pub recoverable: Vec<(String, Option<String>)>,
     /// xfig's compose key while typing text (`menus::compose_text`).
     pub(crate) compose: menus::Compose,
     pub show_indicator: bool,
@@ -108,6 +116,9 @@ impl App {
             show_balloons: true,
             vector_icons: true,
             mode_popup: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            autosave: None,
+            recoverable: Vec::new(),
             compose: menus::Compose::default(),
             show_indicator: true,
             depth_drag: None,
@@ -147,7 +158,35 @@ impl App {
         }
         #[cfg(target_arch = "wasm32")]
         let _ = control_port;
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(dir) = rustfig_engine::recovery::default_dir() {
+            app.enable_recovery(dir);
+        }
         app
+    }
+
+    /// Keep crash-recovery copies in `dir` and offer the drawings that
+    /// stopped instances left there (A6).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn enable_recovery(&mut self, dir: std::path::PathBuf) {
+        self.engine.recovery_dir = Some(dir.clone());
+        self.autosave = Some(autosave::AutoSave::new(dir));
+        if let Ok(v) = self.engine.execute("file.recoverable", &serde_json::json!({})) {
+            self.recoverable = v
+                .get("drawings")
+                .and_then(serde_json::Value::as_array)
+                .into_iter()
+                .flatten()
+                .filter_map(|d| {
+                    let id = d.get("id")?.as_str()?.to_string();
+                    let original = d
+                        .get("original")
+                        .and_then(serde_json::Value::as_str)
+                        .map(str::to_string);
+                    Some((id, original))
+                })
+                .collect();
+        }
     }
 
     /// Whether the classic xfig layout is active.
@@ -278,6 +317,16 @@ impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.ui(ctx);
     }
+
+    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        // Unsaved work the user didn't discard keeps its recovery copy.
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(a) = &mut self.autosave {
+            if self.quit_confirmed || !self.engine.is_modified() {
+                a.finish();
+            }
+        }
+    }
 }
 
 impl App {
@@ -285,6 +334,11 @@ impl App {
     pub fn ui(&mut self, ctx: &egui::Context) {
         let frame_result = rustfig_engine::guard::catch(|| self.frame(ctx));
         if let Err(msg) = frame_result {
+            // xfig's emergency save: keep the work before reporting.
+            #[cfg(not(target_arch = "wasm32"))]
+            if let Some(a) = &mut self.autosave {
+                a.emergency(&self.engine);
+            }
             self.error(format!("internal error (please report): {msg}"));
         }
     }
@@ -321,6 +375,12 @@ impl App {
         dialogs::show(self, ctx);
         panels::mode_popup(self, ctx, &tokens);
         self.handle_requests();
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(a) = &mut self.autosave {
+            if let Some(wait) = a.tick(&self.engine, std::time::Instant::now()) {
+                ctx.request_repaint_after(wait);
+            }
+        }
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(self.window_title()));
         if ctx.input(|i| i.viewport().close_requested()) && !self.quit_confirmed && self.engine.is_modified() {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);

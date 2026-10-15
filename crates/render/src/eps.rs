@@ -193,18 +193,16 @@ fn image(c: &mut Ctx, corners: &[Point; 4], img: &rustfig_model::RasterImage, fl
         "{w} {h} 8 [{w} 0 0 {h} 0 0] {{currentfile picstr readhexstring pop}} false 3 colorimage"
     );
     let mut col = 0;
-    for px in img.rgba.chunks_exact(4) {
-        if let [r, g, b, a] = px {
-            let blend = |v: u8| -> u8 {
-                let a = u16::from(*a);
-                ((u16::from(v) * a + 255 * (255 - a) + 127) / 255) as u8
-            };
-            let _ = write!(c.out, "{:02x}{:02x}{:02x}", blend(*r), blend(*g), blend(*b));
-            col += 6;
-            if col >= 72 {
-                c.out.push('\n');
-                col = 0;
-            }
+    for &[r, g, b, a] in img.rgba.as_chunks::<4>().0 {
+        let blend = |v: u8| -> u8 {
+            let a = u16::from(a);
+            ((u16::from(v) * a + 255 * (255 - a) + 127) / 255) as u8
+        };
+        let _ = write!(c.out, "{:02x}{:02x}{:02x}", blend(r), blend(g), blend(b));
+        col += 6;
+        if col >= 72 {
+            c.out.push('\n');
+            col = 0;
         }
     }
     c.out.push_str("\ngrestore\n");

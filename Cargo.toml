@@ -20,7 +20,7 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/FabianHassler/rustfig"
-rust-version = "1.85"
+rust-version = "1.89"
 
 [workspace.dependencies]
 rustfig-geom = { path = "crates/geom" }

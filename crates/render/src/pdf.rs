@@ -196,11 +196,9 @@ fn image(c: &mut Ctx, corners: &[Point; 4], img: &RasterImage, flipped: bool, im
     let name = format!("Im{}", images.len());
     let mut rgb = Vec::with_capacity(expected / 4 * 3);
     let mut alpha = Vec::with_capacity(expected / 4);
-    for px in img.rgba.chunks_exact(4) {
-        if let [r, g, b, a] = px {
-            rgb.extend_from_slice(&[*r, *g, *b]);
-            alpha.push(*a);
-        }
+    for &[r, g, b, a] in img.rgba.as_chunks::<4>().0 {
+        rgb.extend_from_slice(&[r, g, b]);
+        alpha.push(a);
     }
     let opaque = alpha.iter().all(|a| *a == 255);
     let [tl, tr, _, bl] = corners.map(|p| {

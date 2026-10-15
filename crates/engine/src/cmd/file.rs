@@ -44,6 +44,36 @@ pub(super) fn commands() -> Vec<Command> {
             run: open_data,
         },
         Command {
+            id: "file.recover",
+            label: "Recover unsaved drawing",
+            menu: "",
+            shortcut: "",
+            params: "{\"id\": string}  — open a drawing kept for crash recovery (see file.recoverable); it opens unsaved, under the name of the file it came from",
+            mutates: false,
+            enabled: always,
+            run: recover,
+        },
+        Command {
+            id: "file.recoverable",
+            label: "Recoverable drawings",
+            menu: "",
+            shortcut: "",
+            params: "{}  — returns {\"drawings\": [{\"id\", \"original\"}]}: drawings left by RustFig instances that stopped without saving",
+            mutates: false,
+            enabled: always,
+            run: recoverable,
+        },
+        Command {
+            id: "file.discard_recovery",
+            label: "Discard recovered drawing",
+            menu: "",
+            shortcut: "",
+            params: "{\"id\": string}  — delete a drawing kept for crash recovery",
+            mutates: false,
+            enabled: always,
+            run: discard_recovery,
+        },
+        Command {
             id: "file.merge",
             label: "Merge…",
             menu: "",
@@ -150,6 +180,77 @@ fn open(e: &mut Engine, p: &Value) -> CmdResult {
     e.view.fit(&r);
     e.set_status(format!("Opened {path}"));
     Ok(json!({"objects": count, "warnings": warnings}))
+}
+
+/// The recovery folder and a validated recovery id (letters, digits and
+/// dashes only, so it can't name a file outside the folder).
+#[cfg(not(target_arch = "wasm32"))]
+fn recovery_id(e: &Engine, p: &Value) -> Result<(std::path::PathBuf, String), EngineError> {
+    let id = string(p, "id")?;
+    if id.is_empty() || id.len() > 64 || !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
+        return Err(EngineError::bad_params("not a recovery id"));
+    }
+    let dir = e
+        .recovery_dir
+        .clone()
+        .or_else(crate::recovery::default_dir)
+        .ok_or_else(|| EngineError::io("no folder for recovery files"))?;
+    Ok((dir, id))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn recover(e: &mut Engine, p: &Value) -> CmdResult {
+    let (dir, id) = recovery_id(e, p)?;
+    let file = dir.join(format!("{id}.rustfig"));
+    let mut doc = parse(&read_file(&file.to_string_lossy())?)?;
+    let original = std::fs::read_to_string(dir.join(format!("{id}.path")))
+        .ok()
+        .filter(|s| !s.is_empty());
+    let base = original
+        .as_deref()
+        .and_then(|o| Path::new(o).parent())
+        .map(Path::to_path_buf);
+    let warnings = import::load_all_pictures(&mut doc, base.as_deref());
+    e.replace_document(doc, original.clone());
+    e.set_modified(true);
+    let r = e.doc().bbox();
+    e.view.fit(&r);
+    e.set_status("Recovered an unsaved drawing; save it to keep it");
+    Ok(json!({"original": original, "warnings": warnings}))
+}
+
+#[cfg(target_arch = "wasm32")]
+fn recover(_: &mut Engine, _: &Value) -> CmdResult {
+    Err(EngineError::bad_params("crash recovery is not available on the web"))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn recoverable(e: &mut Engine, _: &Value) -> CmdResult {
+    let Some(dir) = e.recovery_dir.clone().or_else(crate::recovery::default_dir) else {
+        return Ok(json!({"drawings": []}));
+    };
+    let list: Vec<Value> = crate::recovery::orphans(&dir, None)
+        .into_iter()
+        .map(|o| json!({"id": o.id, "original": o.original}))
+        .collect();
+    Ok(json!({ "drawings": list }))
+}
+
+#[cfg(target_arch = "wasm32")]
+fn recoverable(_: &mut Engine, _: &Value) -> CmdResult {
+    Ok(json!({"drawings": []}))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn discard_recovery(e: &mut Engine, p: &Value) -> CmdResult {
+    let (dir, id) = recovery_id(e, p)?;
+    crate::recovery::discard(&dir, &id);
+    Ok(json!({}))
+}
+
+#[cfg(target_arch = "wasm32")]
+fn discard_recovery(_: &mut Engine, _: &Value) -> CmdResult {
+    Ok(json!({}))
 }
 
 fn open_data(e: &mut Engine, p: &Value) -> CmdResult {

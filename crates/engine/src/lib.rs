@@ -12,6 +12,8 @@ pub mod guard;
 mod history;
 pub mod import;
 mod indicator;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod recovery;
 pub mod snap;
 pub mod tools;
 mod view;
@@ -77,6 +79,9 @@ pub struct Engine {
     revision: u64,
     /// Depths hidden in the depth manager.
     pub hidden_depths: BTreeSet<i32>,
+    /// Where crash-recovery copies live (`recovery`); `None` is the
+    /// platform's folder.
+    pub recovery_dir: Option<std::path::PathBuf>,
     /// Draw objects on hidden depths in gray (xfig's "Gray"); otherwise
     /// they aren't drawn ("Blank").
     pub gray_hidden_depths: bool,
@@ -120,6 +125,7 @@ impl Engine {
             modified: false,
             revision: 1,
             hidden_depths: BTreeSet::new(),
+            recovery_dir: None,
             gray_hidden_depths: true,
             show_page_border: true,
             requests: Vec::new(),
