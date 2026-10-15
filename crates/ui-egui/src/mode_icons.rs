@@ -136,6 +136,29 @@ impl Ic {
         self.poly(PolyKind::Box, st, &[(x0, y0), (x1, y0), (x1, y1), (x0, y1)])
     }
 
+    /// A filled ellipse (black, or white to punch a hole into black).
+    fn fill_ellipse(&mut self, cx: f64, cy: f64, rx: f64, ry: f64, white: bool) -> &mut Ic {
+        let st = Style {
+            area_fill: 20,
+            fill_color: if white { ColorRef::WHITE } else { ColorRef::BLACK },
+            ..pen(0)
+        };
+        self.ellipse_styled(st, cx, cy, rx, ry)
+    }
+
+    /// A filled rectangle over pixels x0..=x1, y0..=y1 (black or white).
+    fn fill_rect(&mut self, x0: f64, y0: f64, x1: f64, y1: f64, white: bool) -> &mut Ic {
+        let st = Style {
+            area_fill: 20,
+            fill_color: if white { ColorRef::WHITE } else { ColorRef::BLACK },
+            ..pen(0)
+        };
+        let pts = [(x0, y0), (x1 + 1.0, y0), (x1 + 1.0, y1 + 1.0), (x0, y1 + 1.0)]
+            .map(|(x, y)| Point::new(x * U, y * U))
+            .to_vec();
+        self.push(ObjectKind::Polyline(Polyline::new(PolyKind::Box, st, pts)))
+    }
+
     fn ellipse_styled(&mut self, style: Style, cx: f64, cy: f64, rx: f64, ry: f64) -> &mut Ic {
         self.push(ObjectKind::Ellipse(Ellipse {
             kind: EllipseKind::EllipseRadii,
@@ -237,6 +260,12 @@ pub const TRACED: &[&str] = &[
     "lenmeas",
     "c_xspl",
     "xspl",
+    "delete",
+    "update",
+    "movept",
+    "flip_x",
+    "rotCW",
+    "rotCCW",
 ];
 
 /// Whether `name` has a vector drawing.
@@ -319,6 +348,16 @@ fn glue_contents(ic: &mut Ic) -> &mut Ic {
     .line(&[(20.0, 18.0), (20.0, 25.0)])
     .rect(8.0, 21.0, 15.0, 25.0)
     .arc((24.0, 15.0), (27.0, 20.0), (24.0, 25.0))
+}
+
+/// The rotate icons: a curved band ending in an arrowhead; `mirror` for
+/// counter-clockwise (x mirrored about the icon's centre).
+fn rotate(ic: &mut Ic, mirror: bool) -> &mut Ic {
+    let m = |(x, y): (f64, f64)| if mirror { (36.0 - x, y) } else { (x, y) };
+    ic.arc(m((19.0, 5.0)), m((11.0, 12.0)), m((24.0, 15.5)))
+        .arc(m((19.0, 8.5)), m((14.0, 12.0)), m((21.0, 15.0)))
+        .line(&[m((21.0, 12.0)), m((25.0, 12.0)), m((25.0, 14.0))])
+        .polygon(&[m((19.0, 2.0)), m((23.0, 6.5)), m((19.0, 11.0))])
 }
 
 /// The vector drawing of xfig's mode icon `name` (`Xbm::name`), if it has
@@ -592,6 +631,75 @@ pub fn drawing(name: &str) -> Option<Vec<Object>> {
                 ],
             )
             .done(),
+        // Delete: a skull and crossbones.
+        "delete" => Ic::new(&xi::DELETE)
+            .fill_ellipse(16.5, 6.5, 4.6, 3.6, false)
+            .fill_rect(14.0, 6.0, 15.0, 7.0, true)
+            .fill_rect(18.0, 6.0, 19.0, 7.0, true)
+            .fill_rect(15.0, 9.0, 18.0, 13.0, false)
+            .curve(
+                false,
+                &[
+                    (10.0, 11.0),
+                    (11.0, 13.0),
+                    (13.5, 14.2),
+                    (16.5, 15.0),
+                    (19.5, 14.2),
+                    (22.0, 13.0),
+                    (23.5, 12.0),
+                ],
+            )
+            .curve(
+                false,
+                &[
+                    (10.0, 18.0),
+                    (11.5, 17.0),
+                    (14.0, 16.3),
+                    (16.5, 16.0),
+                    (19.5, 16.3),
+                    (22.5, 17.0),
+                    (23.0, 18.0),
+                ],
+            )
+            .pixels(2, 20, 34, 29)
+            .done(),
+        // Update: an object, its attributes copied into the indicator panel.
+        "update" => Ic::new(&xi::UPDATE)
+            .pixels(4, 3, 13, 11)
+            .rect(16.0, 3.0, 32.0, 11.0)
+            .pixels(17, 4, 31, 10)
+            .line(&[(8.0, 14.0), (8.0, 17.0), (24.0, 17.0), (24.0, 14.0)])
+            .line(&[(6.0, 15.0), (8.0, 13.0), (10.0, 15.0)])
+            .line(&[(22.0, 15.0), (24.0, 13.0), (26.0, 15.0)])
+            .pixels(2, 19, 34, 29)
+            .done(),
+        // Move point: the dotted original, the point and its two lines moved.
+        "movept" => Ic::new(&xi::MOVEPT)
+            .pixels(4, 3, 16, 29)
+            .line(&[(13.0, 6.0), (21.0, 6.0)])
+            .line(&[(19.0, 4.0), (21.0, 6.0), (19.0, 8.0)])
+            .poly(
+                PolyKind::Box,
+                pen(3),
+                &[(25.5, 3.5), (29.5, 3.5), (29.5, 7.5), (25.5, 7.5)],
+            )
+            .wide(&[(8.0, 28.0), (26.0, 10.0)])
+            .wide(&[(27.5, 9.0), (27.5, 28.5)])
+            .done(),
+        // Flip left/right: the mirrored figure stays as pixels; its axis is a line.
+        "flip_x" => Ic::new(&xi::FLIP_X)
+            .pixels(3, 2, 16, 29)
+            .pixels(18, 2, 33, 29)
+            .dotted(&[(17.0, 2.0), (17.0, 29.0)])
+            .done(),
+        "rotCW" => {
+            let mut ic = Ic::new(&xi::ROTCW);
+            rotate(&mut ic, false).pixels(2, 20, 34, 29).done()
+        }
+        "rotCCW" => {
+            let mut ic = Ic::new(&xi::ROTCCW);
+            rotate(&mut ic, true).pixels(2, 20, 34, 29).done()
+        }
         // Pixel art in xfig: the camera and the serif T stay as pixels.
         "picobj" => Ic::new(&xi::PICOBJ).pixels(0, 0, 35, 31).done(),
         "text" => Ic::new(&xi::TEXT).pixels(0, 0, 35, 31).done(),
@@ -671,6 +779,12 @@ mod tests {
         &xi::LENMEAS,
         &xi::C_XSPL,
         &xi::XSPL,
+        &xi::DELETE,
+        &xi::UPDATE,
+        &xi::MOVEPT,
+        &xi::FLIP_X,
+        &xi::ROTCW,
+        &xi::ROTCCW,
     ];
 
     #[test]
