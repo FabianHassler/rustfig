@@ -11,5 +11,4 @@ publish = false
 workspace = true
 
 [dependencies]
-ttf-parser.workspace = true
-epaint_default_fonts.workspace = true
+figbase.workspace = true

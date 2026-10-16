@@ -12,7 +12,8 @@ publish = false
 workspace = true
 
 [dependencies]
-rustfig-geom.workspace = true
+figbase.workspace = true
+# Only for to_model.rs, which goes in plan B12 stage 3.
 rustfig-model.workspace = true
 image.workspace = true
 miniz_oxide = "0.8"

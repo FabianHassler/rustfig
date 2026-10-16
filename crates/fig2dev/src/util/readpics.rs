@@ -776,7 +776,7 @@ fn xpm_color(def: &str) -> Option<[u8; 4]> {
     if value.eq_ignore_ascii_case("none") {
         return Some([0, 0, 0, 0]);
     }
-    let c = rustfig_model::x_color(value)?;
+    let c = figbase::color::x_color(value)?;
     Some([c.r, c.g, c.b, 255])
 }
 

@@ -41,7 +41,7 @@ the score.
 - Rendering: `crates/render/` (scene, tiny-skia raster, SVG, EPS, PDF; all 22 fill patterns; arrowheads; dashes); line widths as fig2dev (`geom::stroke_width`).
 - Fill patterns as fig2dev's PostScript (`crates/render/src/pattern.rs`, from `psprolog.h`).
 - Export bounds as fig2dev's (`crates/render/src/bound.rs`, ported from `bound.c`): bounding boxes equal fig2dev's on 2,532 of 2,568 sample figures.
-- True curves in SVG, PDF and EPS: `crates/geom/src/curves.rs`, `SubPath::curve`; test `ellipses_export_as_curves`.
+- True curves in SVG, PDF and EPS: `crates/figbase/src/geom/curves.rs`, `SubPath::curve`; test `ellipses_export_as_curves`.
 - fig2dev's options: `crates/render/src/options.rs`, applied in `export.rs`; tests `fig2dev_options_change_the_output`, `depth_options_select_objects_and_bounds`, `bad_options_are_refused` in `crates/engine/tests/export_languages.rs`; bounding boxes with `-b`, `-m`, `-Z`, `-D -K` checked equal to fig2dev's.
 - Bitmap languages (B6): `crates/render/src/drivers/bitmaps.rs`; tests in `crates/engine/tests/export_bitmaps.rs`.
 - fig2dev port (B9): `crates/fig2dev` (reader, bounds, spline conversion, helpers); tests in `crates/fig2dev/tests/`.

@@ -5,7 +5,7 @@
 //! approximate the point (B-spline like), negative values interpolate it, and 0
 //! gives a sharp corner through the point.
 
-use crate::Point;
+use crate::geom::Point;
 
 /// Upper bound on the number of points produced by one flattening.
 pub const XSPLINE_MAX_POINTS: usize = 2_000_000;
@@ -166,7 +166,15 @@ mod tests {
         let out = flatten_xspline(&p, &[0.0; 4], false, 5.0);
         // Every point lies on the control polygon.
         for q in out {
-            let d = crate::dist_to_polyline(q, &p, false);
+            let d = p
+                .windows(2)
+                .map(|w| {
+                    let (a, b) = (w[0], w[1]);
+                    let ab = b - a;
+                    let t = ((q - a).dot(ab) / ab.dot(ab)).clamp(0.0, 1.0);
+                    q.dist(a + ab * t)
+                })
+                .fold(f64::INFINITY, f64::min);
             assert!(d < 1e-6, "{q:?} {d}");
         }
     }

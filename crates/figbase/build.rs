@@ -2,8 +2,8 @@
 //!
 //! When `CRAFT_FONTS_DIR` is set to an absolute path of a checkout of
 //! <https://github.com/storytold/craft-fonts>, every `.ttf`/`.otf` file under
-//! it is embedded into `rustfig_text::CRAFT_FONTS`. Without it the list is
-//! empty and RustFig falls back to the fonts bundled with its dependencies.
+//! it is embedded into `figbase::text::CRAFT_FONTS`. Without it the list is
+//! empty and figbase falls back to the fonts bundled with its dependencies.
 
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};

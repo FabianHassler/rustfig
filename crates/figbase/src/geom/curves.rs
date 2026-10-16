@@ -2,7 +2,7 @@
 //! (plan A5): an ellipse is four curves instead of hundreds of points. The
 //! raster backend keeps the flattened outlines.
 
-use crate::{Affine, ArcGeom, Point, Rect};
+use crate::geom::{Affine, ArcGeom, Point, Rect};
 use std::f64::consts::{FRAC_PI_2, TAU};
 
 /// One step of a path.
@@ -92,7 +92,7 @@ pub fn round_rect_path(r: &Rect, radius: f64) -> Vec<Seg> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{flatten_arc, flatten_ellipse};
+    use crate::geom::{flatten_arc, flatten_ellipse};
 
     /// Points along a cubic.
     fn sample(segs: &[Seg]) -> Vec<Point> {

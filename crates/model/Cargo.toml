@@ -11,6 +11,7 @@ publish = false
 workspace = true
 
 [dependencies]
+figbase.workspace = true
 rustfig-geom.workspace = true
 serde.workspace = true
 

@@ -31,7 +31,7 @@
 use crate::gendev::{FIG_COLOR_NAMES, NUM_STD_COLS};
 use crate::object::{self as f, Compound};
 use crate::Ctx;
-use rustfig_geom::Point;
+use figbase::geom::Point;
 use rustfig_model::{
     pt, Arc, Arrow, CapStyle, ColorRef, DocSettings, Document, Ellipse, EllipseKind, JoinStyle, Justify, LineKind,
     Object, ObjectKind, Orientation, PaperSize, Picture, PolyKind, Polyline, Rgb, Spline, SplineKind, Style, Text,

@@ -3,8 +3,10 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
-/// Workspace crates and their layers.
-const LAYERS: &[(&str, &str, u32)] = &[
+/// Workspace crates and their layers. `figbase` (layer -1, "base") holds
+/// what fig2dev and RustFig share and sits below every RustFig layer.
+const LAYERS: &[(&str, &str, i32)] = &[
+    ("figbase", "crates/figbase", -1),
     ("rustfig-geom", "crates/geom", 0),
     ("rustfig-model", "crates/model", 1),
     ("rustfig-text", "crates/text", 1),
@@ -103,6 +105,14 @@ fn dependencies(manifest: &str) -> Vec<String> {
     deps
 }
 
+fn layer_name(layer: i32) -> String {
+    if layer < 0 {
+        "base".to_string()
+    } else {
+        format!("L{layer}")
+    }
+}
+
 fn layers() -> Result<(), String> {
     let mut errors = Vec::new();
     for (name, dir, layer) in LAYERS {
@@ -111,11 +121,15 @@ fn layers() -> Result<(), String> {
         for dep in dependencies(&manifest) {
             if let Some((_, _, dl)) = LAYERS.iter().find(|(n, _, _)| *n == dep) {
                 if dl >= layer && dep != *name {
-                    errors.push(format!("{name} (L{layer}) depends on {dep} (L{dl})"));
+                    errors.push(format!(
+                        "{name} ({}) depends on {dep} ({})",
+                        layer_name(*layer),
+                        layer_name(*dl)
+                    ));
                 }
             }
             if *layer < 6 && UI_ONLY.contains(&dep.as_str()) {
-                errors.push(format!("{name} (L{layer}) depends on UI crate {dep}"));
+                errors.push(format!("{name} ({}) depends on UI crate {dep}", layer_name(*layer)));
             }
         }
     }

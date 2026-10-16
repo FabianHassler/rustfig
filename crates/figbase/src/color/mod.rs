@@ -1,7 +1,12 @@
-//! Colours: RGB values, the 32 standard Fig colours and area-fill shading.
+//! Colours: RGB values, the 32 standard Fig colours, area-fill shading and
+//! X11 colour names.
 //
 // The standard colours and area-fill shading follow xfig src/u_colors.c and
 // fig2dev colors.c (xfig licence, see LICENSE-xfig).
+
+mod xcolors;
+
+pub use xcolors::{x_color, x_color_names};
 
 use serde::{Deserialize, Serialize};
 

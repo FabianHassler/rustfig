@@ -75,13 +75,14 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/fig2dev/src/util/readpics.rs: fig2dev/dev/readpics.c, fig2dev/dev/readeps.c, fig2dev/dev/readpcx.c, fig2dev/dev/readpng.c, fig2dev/dev/genps.c
 - crates/fig2dev/src/util/setfigfont.rs: fig2dev/dev/setfigfont.c
 - crates/fig2dev/src/util/texfonts.rs: fig2dev/dev/texfonts.c, fig2dev/dev/textconvert.c
+- crates/figbase/src/color/mod.rs: xfig src/u_colors.c; fig2dev/colors.c
+- crates/figbase/src/color/xcolors.rs: fig2dev/colors.c
+- crates/figbase/src/geom/arrow.rs: fig2dev/bound.c, fig2dev/dev/genps.c
+- crates/figbase/src/geom/mod.rs: fig2dev/dev/genps.c, fig2dev/dev/gensvg.c
+- crates/figbase/src/text/fonts.rs: xfig src/u_fonts.c; fig2dev/dev/psfonts.c
 - crates/format/src/fig_read.rs: xfig src/f_read.c; fig2dev/read.c
 - crates/format/src/fig_write.rs: xfig src/f_save.c
-- crates/geom/src/arrow.rs: fig2dev/bound.c, fig2dev/dev/genps.c
-- crates/geom/src/lib.rs: fig2dev/dev/genps.c, fig2dev/dev/gensvg.c
-- crates/model/src/color.rs: xfig src/u_colors.c; fig2dev/colors.c
 - crates/model/src/object.rs: xfig src/u_redraw.c, src/f_save.c; fig2dev/dev/genps.c
-- crates/model/src/xcolors.rs: fig2dev/colors.c
 - crates/render/src/bound.rs: fig2dev/bound.c, fig2dev/read.c
 - crates/render/src/drivers/latex_box.rs: fig2dev/dev/genbox.c
 - crates/render/src/drivers/bitmaps.rs: fig2dev/dev/genbitmaps.c
@@ -92,7 +93,6 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/render/src/options.rs: fig2dev/fig2dev.c, fig2dev/dev/genps.c, genpdf.c, genbitmaps.c, gensvg.c
 - crates/render/src/pattern.rs: fig2dev/dev/psprolog.h
 - crates/text/src/compose.rs: xfig CompKeyDB, src/w_canvas.c
-- crates/text/src/fonts.rs: xfig src/u_fonts.c; fig2dev/dev/psfonts.c
 - crates/ui-egui/src/attributes.rs: xfig src/w_indpanel.c, src/w_indpanel.h, src/w_modepanel.c, src/w_icons.c
 - crates/ui-egui/src/menus.rs: xfig src/w_cmdpanel.c, src/w_modepanel.c, app-defaults/Fig
 - crates/ui-egui/src/mode_icons.rs: xfig src/w_icons.c (traced mode icons)

@@ -1,6 +1,6 @@
 //! Circular arcs and ellipses.
 
-use crate::{Affine, Point};
+use crate::geom::{Affine, Point};
 use std::f64::consts::TAU;
 
 /// A circular arc through three points, from `p1` via `p2` to `p3`.
@@ -138,7 +138,7 @@ mod tests {
     #[test]
     fn ellipse_extent() {
         let pts = flatten_ellipse(Point::ZERO, 200.0, 100.0, 0.0, 5.0);
-        let r = crate::Rect::from_points(pts);
+        let r = crate::geom::Rect::from_points(pts);
         assert!((r.width() - 400.0).abs() < 1.0);
         assert!((r.height() - 200.0).abs() < 1.0);
     }

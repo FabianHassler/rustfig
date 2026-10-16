@@ -1,0 +1,17 @@
+[package]
+name = "figbase"
+description = "What fig2dev and RustFig share: Fig geometry, font tables and metrics, colours"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+serde.workspace = true
+ttf-parser.workspace = true
+epaint_default_fonts.workspace = true

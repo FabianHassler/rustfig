@@ -1142,6 +1142,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "figbase"
+version = "0.1.0"
+dependencies = [
+ "epaint_default_fonts",
+ "serde",
+ "ttf-parser",
+]
+
+[[package]]
 name = "find-msvc-tools"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2831,9 +2840,9 @@ dependencies = [
 name = "rustfig-fig2dev"
 version = "0.1.0"
 dependencies = [
+ "figbase",
  "image",
  "miniz_oxide 0.8.9",
- "rustfig-geom",
  "rustfig-model",
 ]
 
@@ -2852,7 +2861,7 @@ dependencies = [
 name = "rustfig-geom"
 version = "0.1.0"
 dependencies = [
- "serde",
+ "figbase",
 ]
 
 [[package]]
@@ -2868,6 +2877,7 @@ dependencies = [
 name = "rustfig-model"
 version = "0.1.0"
 dependencies = [
+ "figbase",
  "rustfig-geom",
  "serde",
  "serde_json",
@@ -2890,8 +2900,7 @@ dependencies = [
 name = "rustfig-text"
 version = "0.1.0"
 dependencies = [
- "epaint_default_fonts",
- "ttf-parser",
+ "figbase",
 ]
 
 [[package]]

@@ -46,7 +46,7 @@ it, so `cargo +toolchain xtask …` stays on that toolchain.
 Fonts are never committed here. They live in
 [storytold/craft-fonts](https://github.com/storytold/craft-fonts). Build with
 `CRAFT_FONTS_DIR="$PWD/../craft-fonts" cargo xtask ci` (absolute path) to embed
-them; `crates/text/build.rs` generates `rustfig_text::CRAFT_FONTS`. Without
+them; `crates/figbase/build.rs` generates `figbase::text::CRAFT_FONTS`. Without
 it RustFig uses Ubuntu Light and Hack from the `epaint_default_fonts` crate,
 with synthetic bold and italic. Everything builds and tests with
 `CRAFT_FONTS` empty.

@@ -3,7 +3,7 @@
 // Ported from fig2dev colors.c (`defaultXcolors`, `lookup_X_color`), whose
 // table is X11's rgb.txt (xfig licence, see LICENSE-xfig).
 
-use crate::Rgb;
+use super::Rgb;
 
 /// X11's colour database, blanks stripped, in rgb.txt's order.
 #[rustfmt::skip]

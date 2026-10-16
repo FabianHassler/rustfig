@@ -3,7 +3,7 @@
 // Ported from fig2dev bound.c (`arrow_shapes`, `calc_arrow`) and the arrow
 // painting in dev/genps.c (xfig licence, see LICENSE-xfig).
 
-use crate::{stroke_width, Point};
+use crate::geom::{stroke_width, Point};
 
 /// How an arrowhead is painted.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
