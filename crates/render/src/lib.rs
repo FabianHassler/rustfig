@@ -2,23 +2,18 @@
 //!
 //! [`build_scene`] turns a document into fig2dev's display list
 //! ([`Scene`], from `rustfig-fig2dev`), which the canvas rasterises
-//! ([`raster`], the same rasteriser fig2dev's bitmap languages use) and the
-//! exports write ([`export`]). The same scene drives the canvas and every
-//! export, so what you see is what you export.
+//! ([`raster`], the same rasteriser fig2dev's bitmap languages use). The
+//! exports don't come from here: the engine writes the document as Fig
+//! text and runs fig2dev (plan B12), whose scene builder draws fig2dev's
+//! objects with the same primitives.
 //
 // Ported from xfig src/u_redraw.c (drawing order, gray depths) and fig2dev
 // dev/genps.c (`PSFONTMAG` text sizes, arrows on pie arcs) (xfig licence,
 // see LICENSE-xfig).
 
-pub mod bound;
-pub mod export;
-
-pub use export::{export, export_bounds, ExportFormat, ExportOptions};
 pub use rustfig_fig2dev::scene::{
-    eps, font_px, head_at_end, line_width, pattern, pdf, raster, svg, Fill, Prim, Rgba, Scene, Stroke, SubPath,
-    TextPrim,
+    font_px, head_at_end, line_width, pattern, raster, Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim,
 };
-pub use rustfig_fig2dev::{languages, options};
 
 use rustfig_fig2dev::scene::{fill, picture_prims, shape_prims, stroke, Shape};
 use rustfig_geom::{ArrowSpec, Rect, Seg};

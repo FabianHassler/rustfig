@@ -1,16 +1,18 @@
-//! B6: fig2dev's bitmap languages from RustFig's renderer. Every bitmap
-//! format carries the pixels of RustFig's PNG of the same figure, and the
-//! PNG matches RustFig's EPS rasterised by ghostscript (when installed):
-//! RustFig's own EPS is the reference, not fig2dev's ghostscript output.
+//! B6: fig2dev's bitmap languages from RustFig's renderer, exported as
+//! `file.export` exports (Fig text through RustFig's fig2dev, plan B12).
+//! Every bitmap format carries the pixels of RustFig's PNG of the same
+//! figure, and the PNG matches RustFig's EPS rasterised by ghostscript
+//! (when installed): RustFig's own EPS is the reference, not fig2dev's
+//! ghostscript output.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 mod support;
 
 use image::{ImageFormat, RgbImage, RgbaImage};
-use rustfig_engine::model::{Document, Rgb};
-use rustfig_engine::render::options::{parse_options, OptionValue};
-use rustfig_engine::render::{export, languages::language, ExportFormat, ExportOptions};
+use rustfig_engine::fig2dev::languages::language;
+use rustfig_engine::fig2dev::options::{parse_options, OptionValue};
+use rustfig_engine::model::Document;
 use rustfig_engine::Engine;
 use serde_json::json;
 use std::path::{Path, PathBuf};
@@ -27,17 +29,14 @@ fn fixture(name: &str) -> Document {
 
 const FIXTURES: &[&str] = &["lines", "fills", "arrows", "colours", "text", "metric"];
 
-/// Export options for `lang` with fig2dev options, at 80 dpi as fig2dev.
-fn options(lang: &str, items: &[(&str, OptionValue<'_>)]) -> ExportOptions {
-    ExportOptions {
-        dpi: 80.0,
-        fig2dev: parse_options(language(lang).unwrap(), items).unwrap(),
-        ..ExportOptions::default()
-    }
-}
-
-fn render(doc: &Document, format: ExportFormat, opts: &ExportOptions) -> Vec<u8> {
-    export(doc, format, opts).unwrap()
+/// `doc` exported to `lang` by fig2dev with options `items` (letter and
+/// argument; "" for a flag), at fig2dev's 80 dpi.
+fn render(doc: &Document, lang: &str, items: &[(char, &str)]) -> Vec<u8> {
+    let args: Vec<(char, Option<String>)> = items
+        .iter()
+        .map(|(c, a)| (*c, (!a.is_empty()).then(|| a.to_string())))
+        .collect();
+    rustfig_engine::fig2dev::export(doc, lang, &args, None).unwrap().0
 }
 
 fn decode(bytes: &[u8], f: ImageFormat) -> RgbaImage {
@@ -144,28 +143,19 @@ fn every_bitmap_carries_the_pngs_pixels() {
     for name in FIXTURES {
         let doc = fixture(name);
         for smoothing in [None, Some("1"), Some("4")] {
-            let items: Vec<(&str, OptionValue<'_>)> = smoothing
-                .map(|s| ("smoothing", OptionValue::Text(s)))
-                .into_iter()
-                .collect();
-            let png = on_white(&decode(
-                &render(&doc, ExportFormat::Png, &options("png", &items)),
-                ImageFormat::Png,
-            ));
-            let get = |lang: &str, f: ExportFormat| render(&doc, f, &options(lang, &items));
+            let items: Vec<(char, &str)> = smoothing.map(|s| ('S', s)).into_iter().collect();
+            let png = on_white(&decode(&render(&doc, "png", &items), ImageFormat::Png));
+            let get = |lang: &str| render(&doc, lang, &items);
             let ctx = format!("{name} smoothing {smoothing:?}");
             // Lossless formats: the same pixels.
-            for (lang, f, fmt) in [
-                ("ppm", ExportFormat::Ppm, ImageFormat::Pnm),
-                ("tiff", ExportFormat::Tiff, ImageFormat::Tiff),
-            ] {
-                let img = decode(&get(lang, f), fmt);
+            for (lang, fmt) in [("ppm", ImageFormat::Pnm), ("tiff", ImageFormat::Tiff)] {
+                let img = decode(&get(lang), fmt);
                 assert_eq!(on_white(&img), png, "{lang} {ctx}");
             }
-            assert_eq!(read_pcx(&get("pcx", ExportFormat::Pcx)), png, "pcx {ctx}");
-            assert_eq!(read_xpm(&get("xpm", ExportFormat::Xpm)), png, "xpm {ctx}");
+            assert_eq!(read_pcx(&get("pcx")), png, "pcx {ctx}");
+            assert_eq!(read_xpm(&get("xpm")), png, "xpm {ctx}");
             // GIF: exact up to 256 colours, quantised beyond.
-            let gif = on_white(&decode(&get("gif", ExportFormat::Gif), ImageFormat::Gif));
+            let gif = on_white(&decode(&get("gif"), ImageFormat::Gif));
             if colours(&png) <= 256 {
                 assert_eq!(gif, png, "gif {ctx}");
             } else {
@@ -173,11 +163,11 @@ fn every_bitmap_carries_the_pngs_pixels() {
                 assert!(d < 4.0, "gif {ctx}: mean difference {d}");
             }
             // JPEG: lossy.
-            let jpeg = on_white(&decode(&get("jpeg", ExportFormat::Jpeg), ImageFormat::Jpeg));
+            let jpeg = on_white(&decode(&get("jpeg"), ImageFormat::Jpeg));
             let d = mean_diff(&jpeg, &png);
             assert!(d < 8.0, "jpeg {ctx}: mean difference {d}");
             // XBM: the PNG thresholded.
-            let xbm = read_xbm(&get("xbm", ExportFormat::Xbm));
+            let xbm = read_xbm(&get("xbm"));
             assert_eq!(xbm.dimensions(), png.dimensions(), "xbm {ctx}");
             for (a, b) in xbm.pixels().zip(png.pixels()) {
                 let [r, g, bl] = b.0.map(f64::from);
@@ -192,82 +182,64 @@ fn every_bitmap_carries_the_pngs_pixels() {
 fn bitmaps_are_sized_as_genbitmaps_sizes_them() {
     // fig2dev: 80 dpi times the magnification, (int)(size + 0.9) pixels.
     let doc = fixture("lines");
-    let size = |items: &[(&str, OptionValue<'_>)]| {
-        let img = decode(
-            &render(&doc, ExportFormat::Ppm, &options("ppm", items)),
-            ImageFormat::Pnm,
-        );
-        img.dimensions()
-    };
+    let size = |items: &[(char, &str)]| decode(&render(&doc, "ppm", items), ImageFormat::Pnm).dimensions();
     let (w, h) = size(&[]);
-    let b = rustfig_engine::render::bound::fig2dev_bounds(&doc, &Default::default(), true);
-    assert_eq!(w, (b.width() / 15.0 + 0.9).floor() as u32);
-    assert_eq!(h, (b.height() / 15.0 + 0.9).floor() as u32);
+    // fig2dev's bounds of the figure (1200 units per inch).
+    let mut ctx = rustfig_fig2dev::Ctx::default();
+    let fig = rustfig_engine::format::write_fig(&doc);
+    let objects = rustfig_fig2dev::read::readfp_fig(&mut ctx, fig.as_bytes()).unwrap();
+    let (llx, lly, urx, ury) = rustfig_fig2dev::bound::compound_bound(&ctx, &objects, true);
+    assert_eq!(w, (f64::from(urx - llx) / 15.0 + 0.9).floor() as u32);
+    assert_eq!(h, (f64::from(ury - lly) / 15.0 + 0.9).floor() as u32);
     // -m 2 doubles it; -b 5 adds five pixels on each side.
-    let (w2, _) = size(&[("m", OptionValue::Text("2"))]);
+    let (w2, _) = size(&[('m', "2")]);
     assert!(w2.abs_diff(2 * w) <= 1, "{w2} {w}");
-    let (wb, hb) = size(&[("b", OptionValue::Text("5"))]);
+    let (wb, hb) = size(&[('b', "5")]);
     assert_eq!((wb, hb), (w + 10, h + 10));
 }
 
 #[test]
 fn smoothing_changes_the_edges() {
     let doc = fixture("arrows");
-    let img = |s: &str| {
-        on_white(&decode(
-            &render(&doc, ExportFormat::Ppm, &options("ppm", &[("S", OptionValue::Text(s))])),
-            ImageFormat::Pnm,
-        ))
-    };
+    let img = |s: &str| on_white(&decode(&render(&doc, "ppm", &[('S', s)]), ImageFormat::Pnm));
     let (hard, some, more) = (img("1"), img("2"), img("4"));
     assert_eq!(img("0"), hard, "0 and 1 both mean none");
     // Hard edges keep the figure's few colours; smoothing adds grey levels.
     assert!(colours(&hard) < colours(&some), "{} {}", colours(&hard), colours(&some));
     assert!(colours(&some) < colours(&more), "{} {}", colours(&some), colours(&more));
     assert_ne!(some, more);
-    // And RustFig's default (no -S) antialiases.
-    let aa = on_white(&decode(
-        &render(&doc, ExportFormat::Ppm, &options("ppm", &[])),
-        ImageFormat::Pnm,
-    ));
-    assert!(colours(&aa) > colours(&hard));
+    // fig2dev's default (no -S) is hard edges.
+    let plain = on_white(&decode(&render(&doc, "ppm", &[]), ImageFormat::Pnm));
+    assert_eq!(plain, hard);
 }
 
 #[test]
 fn background_border_and_grayscale() {
     let doc = fixture("colours");
-    let img = |items: &[(&str, OptionValue<'_>)]| {
-        on_white(&decode(
-            &render(&doc, ExportFormat::Ppm, &options("ppm", items)),
-            ImageFormat::Pnm,
-        ))
-    };
-    let bg = img(&[("g", OptionValue::Text("red")), ("b", OptionValue::Text("4"))]);
+    let img = |items: &[(char, &str)]| on_white(&decode(&render(&doc, "ppm", items), ImageFormat::Pnm));
+    let bg = img(&[('g', "red"), ('b', "4")]);
     assert_eq!(bg.get_pixel(0, 0).0, [255, 0, 0]);
-    let plain = img(&[("b", OptionValue::Text("4"))]);
+    let plain = img(&[('b', "4")]);
     assert_eq!(plain.get_pixel(0, 0).0, [255, 255, 255], "white without -g");
-    let gray = img(&[("N", OptionValue::Bool(true))]);
+    let gray = img(&[('N', "")]);
     assert!(gray.pixels().all(|p| p.0[0] == p.0[1] && p.0[1] == p.0[2]));
 }
 
 #[test]
 fn gif_transparent_colour_from_the_option_or_the_figure() {
     let mut doc = fixture("lines");
-    let corner_alpha = |doc: &Document, items: &[(&str, OptionValue<'_>)]| {
-        let gif = decode(
-            &render(doc, ExportFormat::Gif, &options("gif", items)),
-            ImageFormat::Gif,
-        );
+    let corner_alpha = |doc: &Document, items: &[(char, &str)]| {
+        let gif = decode(&render(doc, "gif", items), ImageFormat::Gif);
         gif.get_pixel(0, 0).0[3]
     };
     assert_eq!(corner_alpha(&doc, &[]), 255);
-    assert_eq!(corner_alpha(&doc, &[("t", OptionValue::Text("#ffffff"))]), 0);
-    assert_eq!(corner_alpha(&doc, &[("t", OptionValue::Text("#ff0000"))]), 255);
+    assert_eq!(corner_alpha(&doc, &[('t', "#ffffff")]), 0);
+    assert_eq!(corner_alpha(&doc, &[('t', "#ff0000")]), 255);
     // The figure's own transparent colour (header line 9): 7 is white.
     doc.settings.transparent_color = 7;
     assert_eq!(corner_alpha(&doc, &[]), 0);
     // -t overrides it.
-    assert_eq!(corner_alpha(&doc, &[("t", OptionValue::Text("black"))]), 255);
+    assert_eq!(corner_alpha(&doc, &[('t', "black")]), 255);
     // None (-2), default (-1) and an undefined user colour give none.
     for n in [-2, -1, 40] {
         doc.settings.transparent_color = n;
@@ -278,19 +250,12 @@ fn gif_transparent_colour_from_the_option_or_the_figure() {
 #[test]
 fn jpeg_quality_option() {
     let doc = fixture("fills");
-    let size = |q: &str| {
-        render(
-            &doc,
-            ExportFormat::Jpeg,
-            &options("jpeg", &[("q", OptionValue::Text(q))]),
-        )
-        .len()
-    };
+    let size = |q: &str| render(&doc, "jpeg", &[('q', q)]).len();
     assert!(size("20") < size("95"));
     // fig2dev clamps the quality; -q has no effect outside JPEG.
     assert_eq!(size("500"), size("100"));
-    let png = |items: &[(&str, OptionValue<'_>)]| render(&doc, ExportFormat::Png, &options("png", items));
-    assert_eq!(png(&[("q", OptionValue::Text("10"))]), png(&[]));
+    let png = |items: &[(char, &str)]| render(&doc, "png", items);
+    assert_eq!(png(&[('q', "10")]), png(&[]));
     assert!(parse_options(language("gif").unwrap(), &[("S", OptionValue::Text("3"))]).is_err());
 }
 
@@ -352,13 +317,9 @@ fn png_matches_rustfigs_eps() {
     let dpi = 80;
     for name in FIXTURES {
         let doc = fixture(name);
-        let opts = ExportOptions {
-            dpi: f64::from(dpi),
-            background: Some(Rgb::WHITE),
-            ..ExportOptions::default()
-        };
-        let png = render(&doc, ExportFormat::Png, &opts);
-        let eps = render(&doc, ExportFormat::Eps, &ExportOptions::default());
+        // At 80 dpi (fig2dev's), on white, smoothed as the export panel does.
+        let png = render(&doc, "png", &[('F', ""), ('g', "white"), ('S', "4")]);
+        let eps = render(&doc, "eps", &[('F', "")]);
         let gs = fig2dev::rasterise(&eps, false, dpi, true).unwrap();
         let c = compare::compare(&gs, &png).unwrap();
         eprintln!("{name}: mean {:.4} strong {:.4}", c.score.mean, c.score.strong);

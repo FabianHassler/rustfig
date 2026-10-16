@@ -11,8 +11,8 @@ const LAYERS: &[(&str, &str, i32)] = &[
     ("rustfig-model", "crates/model", 1),
     ("rustfig-text", "crates/text", 1),
     ("rustfig-format", "crates/format", 2),
+    ("rustfig-fig2dev", "crates/fig2dev", 0),
     ("rustfig-render", "crates/render", 3),
-    ("rustfig-fig2dev", "crates/fig2dev", 2),
     ("rustfig-engine", "crates/engine", 4),
     ("rustfig-mcp", "crates/mcp", 5),
     ("rustfig-ui-egui", "crates/ui-egui", 6),
@@ -20,6 +20,11 @@ const LAYERS: &[(&str, &str, i32)] = &[
     ("rustfig-cli", "apps/cli", 7),
     ("fig2dev", "apps/fig2dev", 7),
 ];
+
+/// fig2dev's crate and app are a program of their own (plan B12): among
+/// the workspace crates they use only these (and each other).
+const FIG2DEV_CRATES: &[&str] = &["rustfig-fig2dev", "fig2dev"];
+const FIG2DEV_MAY_USE: &[&str] = &["figbase", "rustfig-fig2dev"];
 
 /// Dependencies allowed only from layer 6 up.
 const UI_ONLY: &[&str] = &[
@@ -127,6 +132,13 @@ fn layers() -> Result<(), String> {
                         layer_name(*dl)
                     ));
                 }
+            }
+            let workspace_crate = LAYERS.iter().any(|(n, _, _)| *n == dep);
+            if FIG2DEV_CRATES.contains(name) && workspace_crate && !FIG2DEV_MAY_USE.contains(&dep.as_str()) {
+                errors.push(format!(
+                    "{name} depends on {dep}: fig2dev uses no workspace crate but {}",
+                    FIG2DEV_MAY_USE.join(" and ")
+                ));
             }
             if *layer < 6 && UI_ONLY.contains(&dep.as_str()) {
                 errors.push(format!("{name} ({}) depends on UI crate {dep}", layer_name(*layer)));

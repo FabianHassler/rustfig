@@ -28,10 +28,10 @@
 //! - Text flags as fig2dev reads them: before Fig 2.1, texts in the
 //!   default font are special (LaTeX) texts, the others PostScript texts.
 
-use crate::gendev::{FIG_COLOR_NAMES, NUM_STD_COLS};
-use crate::object::{self as f, Compound};
-use crate::Ctx;
-use figbase::geom::Point;
+use rustfig_fig2dev::gendev::{FIG_COLOR_NAMES, NUM_STD_COLS};
+use rustfig_fig2dev::object::{self as f, Compound};
+use rustfig_fig2dev::Ctx;
+use rustfig_geom::Point;
 use rustfig_model::{
     pt, Arc, Arrow, CapStyle, ColorRef, DocSettings, Document, Ellipse, EllipseKind, JoinStyle, Justify, LineKind,
     Object, ObjectKind, Orientation, PaperSize, Picture, PolyKind, Polyline, Rgb, Spline, SplineKind, Style, Text,
@@ -48,7 +48,7 @@ struct Conv<'a> {
     thick_factor: i32,
 }
 
-/// The figure `objects` read by [`crate::read::readfp_fig`] into `ctx`, as a
+/// The figure `objects` read by [`rustfig_fig2dev::read::readfp_fig`] into `ctx`, as a
 /// RustFig document (see the module documentation for what is lost).
 pub fn to_document(ctx: &Ctx, objects: &Compound) -> Document {
     let scale = if ctx.ppi.is_finite() && ctx.ppi > 0.0 {
@@ -59,7 +59,7 @@ pub fn to_document(ctx: &Ctx, objects: &Compound) -> Document {
     let c = Conv {
         ctx,
         scale,
-        thick_factor: crate::round(f64::from(ctx.thick_scale)),
+        thick_factor: rustfig_fig2dev::round(f64::from(ctx.thick_scale)),
     };
     let mut doc = Document::new();
     doc.settings = settings(ctx);
@@ -414,18 +414,17 @@ fn with_comments(kind: ObjectKind, comments: &[String]) -> Object {
     o
 }
 
-pub use crate::util::readpics::{load_picture as read_picture, pic_to_raster, LoadedPicture};
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rustfig_fig2dev::util::readpics::{load_picture as read_picture, pic_to_raster};
 
     fn read(src: &str, from: Option<&str>) -> (Ctx, Document) {
         let mut ctx = Ctx {
             from: from.map(str::to_string),
             ..Ctx::default()
         };
-        let objs = crate::read::readfp_fig(&mut ctx, src.as_bytes()).unwrap();
+        let objs = rustfig_fig2dev::read::readfp_fig(&mut ctx, src.as_bytes()).unwrap();
         let doc = to_document(&ctx, &objs);
         (ctx, doc)
     }

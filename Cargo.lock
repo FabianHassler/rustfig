@@ -2840,7 +2840,6 @@ dependencies = [
  "image",
  "miniz_oxide 0.8.9",
  "pdf-writer",
- "rustfig-model",
  "tiny-skia 0.11.4",
 ]
 

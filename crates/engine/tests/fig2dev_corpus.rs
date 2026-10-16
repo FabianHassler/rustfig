@@ -6,9 +6,16 @@
 //! (test-only; RustFig never runs them) and skips without them.
 //!
 //! Corpus: the A8 fixtures, fig2dev's `tests/data`, xfig's `Libraries` (from
-//! `old/` until D6 copies them into `libraries/`). `RUSTFIG_CORPUS_FILTER`
+//! `old/` until D6 copies them into `libraries/`). `RUSTFIG_CORPUS_LIST=FILE`
+//! takes the figures listed in FILE instead (one path per line, relative to
+//! the workspace root; `#` starts a comment line); `RUSTFIG_CORPUS_FILTER`
 //! keeps paths containing a substring; `RUSTFIG_CORPUS_LIMIT=N` takes an even
 //! sample of N figures.
+//!
+//! RustFig's exports go the way `file.export` takes them: the document
+//! written as Fig text, read by RustFig's fig2dev and written by its
+//! driver, with the options xfig passes (`-F`; for the PNG `-m` for
+//! 150 dpi, `-g white` and `-S 4`, the export panel's smoothing).
 //!
 //! For each figure: fig2dev's EPS and RustFig's EPS, both rasterised by
 //! ghostscript without graphics anti-aliasing (so only the writers differ;
@@ -23,8 +30,6 @@
 
 mod support;
 
-use rustfig_engine::model::Rgb;
-use rustfig_engine::render::{export, ExportFormat, ExportOptions};
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -66,17 +71,28 @@ fn figures_in(dir: &Path, out: &mut Vec<PathBuf>) {
 fn corpus() -> Vec<PathBuf> {
     let r = root();
     let mut figs = Vec::new();
-    for dir in [
-        "crates/engine/tests/fixtures",
-        "old/fig2dev-3.2.9a/fig2dev/tests/data",
-        "libraries",
-        "old/xfig-3.2.9a/Libraries",
-    ] {
-        // Prefer the bundled copy of the libraries once D6 lands.
-        if dir.starts_with("old/xfig") && r.join("libraries").is_dir() {
-            continue;
+    if let Some(list) = std::env::var_os("RUSTFIG_CORPUS_LIST") {
+        let text = std::fs::read_to_string(&list)
+            .unwrap_or_else(|e| panic!("RUSTFIG_CORPUS_LIST {}: {e}", Path::new(&list).display()));
+        figs = text
+            .lines()
+            .map(str::trim)
+            .filter(|l| !l.is_empty() && !l.starts_with('#'))
+            .map(|l| r.join(l))
+            .collect();
+    } else {
+        for dir in [
+            "crates/engine/tests/fixtures",
+            "old/fig2dev-3.2.9a/fig2dev/tests/data",
+            "libraries",
+            "old/xfig-3.2.9a/Libraries",
+        ] {
+            // Prefer the bundled copy of the libraries once D6 lands.
+            if dir.starts_with("old/xfig") && r.join("libraries").is_dir() {
+                continue;
+            }
+            figures_in(&r.join(dir), &mut figs);
         }
-        figures_in(&r.join(dir), &mut figs);
     }
     if let Ok(f) = std::env::var("RUSTFIG_CORPUS_FILTER") {
         figs.retain(|p| p.to_string_lossy().contains(&f));
@@ -128,13 +144,18 @@ struct Rasters {
     eps: Vec<u8>,
 }
 
-fn rustfig(doc: &rustfig_engine::model::Document, f: ExportFormat) -> Result<Vec<u8>, String> {
-    let opts = ExportOptions {
-        dpi: f64::from(DPI),
-        background: Some(Rgb::from_hex("#ffffff").ok_or("colour")?),
-        ..Default::default()
-    };
-    export(doc, f, &opts)
+/// RustFig's export of `doc` to `lang`, as `file.export` makes it.
+fn rustfig(doc: &rustfig_engine::model::Document, lang: &str, dir: Option<&Path>) -> Result<Vec<u8>, String> {
+    let s = |v: &str| Some(v.to_string());
+    let mut args = vec![('F', None)];
+    if lang == "png" {
+        args.extend([
+            ('m', Some((f64::from(DPI) / 80.0).to_string())),
+            ('g', s("#ffffff")),
+            ('S', s("4")),
+        ]);
+    }
+    rustfig_engine::fig2dev::export(doc, lang, &args, dir).map(|(bytes, _)| bytes)
 }
 
 fn run_one(path: &Path) -> (Outcome, Option<Rasters>) {
@@ -168,7 +189,7 @@ fn run_one(path: &Path) -> (Outcome, Option<Rasters>) {
         Err(e) => o.errors.push(e),
         Ok(ref_eps) => {
             let ref_png = fig2dev::rasterise(&ref_eps, false, DPI, false);
-            let our_eps = rustfig(&doc, ExportFormat::Eps);
+            let our_eps = rustfig(&doc, "eps", dir);
             match (&ref_png, &our_eps) {
                 (Ok(rp), Ok(oe)) => {
                     if let (Some((w1, h1)), Some((w2, h2))) = (bbox_size(&ref_eps), bbox_size(oe)) {
@@ -189,7 +210,7 @@ fn run_one(path: &Path) -> (Outcome, Option<Rasters>) {
                     }
                     // RustFig's anti-aliased PNG against fig2dev's EPS, anti-aliased too.
                     let png = fig2dev::rasterise(&ref_eps, false, DPI, true)
-                        .and_then(|aa| compare::compare(&aa, &rustfig(&doc, ExportFormat::Png)?));
+                        .and_then(|aa| compare::compare(&aa, &rustfig(&doc, "png", dir)?));
                     match png {
                         Ok(c) => o.png = Some(c.score),
                         Err(e) => o.errors.push(format!("RustFig's PNG: {e}")),
@@ -203,7 +224,7 @@ fn run_one(path: &Path) -> (Outcome, Option<Rasters>) {
     let pdf = fig2dev::convert(&fig, "pdf", &xfig_args(&fig), dir)
         .and_then(|p| fig2dev::rasterise(&p, true, DPI, false))
         .and_then(|rp| {
-            let ours = rustfig(&doc, ExportFormat::Pdf)?;
+            let ours = rustfig(&doc, "pdf", dir)?;
             let op = fig2dev::rasterise(&ours, true, DPI, false)?;
             compare::compare(&rp, &op)
         });

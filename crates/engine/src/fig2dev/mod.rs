@@ -1,24 +1,29 @@
-//! fig2dev's reader and drivers in the engine (`rustfig-fig2dev`):
+//! fig2dev in the engine (`rustfig-fig2dev`, a program of its own that
+//! RustFig depends on, plan B12):
 //!
+//! - Every export goes through fig2dev: the document is written as Fig 3.2
+//!   (`rustfig_format`), read by fig2dev's reader and handed to the
+//!   language's driver with fig2dev's options ([`export`]), as xfig hands
+//!   a figure to fig2dev. A language is available as soon as
+//!   `rustfig_fig2dev::drivers::driver` provides it; the combined LaTeX
+//!   exports (`pstex`, `pdftex`, `pspdftex`) need both halves.
 //! - Fig files before 3.0 (1.3, 1.4, 2.0, 2.1, which RustFig's own reader
 //!   doesn't read) open through fig2dev's reader, converted to a document
-//!   by `to_model` (plan G1, S3).
-//! - The languages whose fig2dev driver is ported export through it: the
-//!   document is written as Fig 3.2, read by fig2dev's reader and handed
-//!   to the driver with fig2dev's options, as xfig hands a figure to
-//!   fig2dev. Availability follows the crate: a language is available as
-//!   soon as `rustfig_fig2dev::drivers::driver` provides it.
-//! - The combined LaTeX exports (`pstex`, `pdftex`, `pspdftex`): the
-//!   graphics through RustFig's EPS or PDF renderer without special texts,
-//!   the LaTeX part through the `pstex_t` driver, as xfig runs fig2dev
-//!   (`u_print.c`).
+//!   by [`to_model`] (plan G1, S3).
 //! - Pictures as fig2dev reads them (`readpics.c`), where the `image`
 //!   crate can't.
+//!
+//! fig2dev's language and option tables are re-exported here
+//! ([`languages`], [`options`]) for the export dialog and the CLI.
 
-use rustfig_fig2dev::to_model::{read_picture, LoadedPicture};
+pub mod to_model;
+
+pub use rustfig_fig2dev::util::readpics::LoadedPicture;
+pub use rustfig_fig2dev::{languages, options};
+
+use languages::Language;
 use rustfig_fig2dev::{read, Ctx};
 use rustfig_model::Document;
-use rustfig_render::languages::Language;
 use std::path::Path;
 
 /// Whether `src` is a Fig file older than 3.0: `#FIG 1.x`/`#FIG 2.x`, or
@@ -39,7 +44,7 @@ pub fn read_old_fig(src: &[u8]) -> Result<(Document, Vec<String>), String> {
     let mut ctx = Ctx::default();
     match read::readfp_fig(&mut ctx, src) {
         Ok(objects) => {
-            let doc = rustfig_fig2dev::to_model::to_document(&ctx, &objects);
+            let doc = to_model::to_document(&ctx, &objects);
             Ok((doc, std::mem::take(&mut ctx.messages)))
         }
         Err(_) if ctx.messages.is_empty() => Err("not a Fig file fig2dev can read".into()),
@@ -52,20 +57,23 @@ pub fn driver_available(id: &str) -> bool {
     rustfig_fig2dev::drivers::driver(id).is_some()
 }
 
-/// Whether RustFig can export `lang`: with its own renderers, through a
-/// ported fig2dev driver, or (the combined LaTeX languages) both.
+/// Whether RustFig can export `lang`: fig2dev's driver for it is ported
+/// (for the combined languages, the drivers of both halves).
 pub fn language_available(lang: &Language) -> bool {
     match lang.id {
-        "pstex" | "pdftex" | "pspdftex" => driver_available("pstex_t"),
-        id => lang.available() || driver_available(id),
+        "pstex" => driver_available("pstex") && driver_available("pstex_t"),
+        "pdftex" => driver_available("pdftex") && driver_available("pdftex_t"),
+        "pspdftex" => driver_available("pstex") && driver_available("pdftex") && driver_available("pstex_t"),
+        "pspdf" => driver_available("eps") && driver_available("pdf"),
+        id => driver_available(id),
     }
 }
 
-/// Export `doc` with fig2dev's driver for `lang`: `options` are fig2dev's
-/// option letters and arguments, in order (general ones too); `dir` is
-/// where relative picture names are found. The output and fig2dev's
-/// messages.
-pub fn export_driver(
+/// Export `doc` with fig2dev's driver for `lang` (fig2dev's `-L` name):
+/// `options` are fig2dev's option letters and arguments, in order (general
+/// ones too); `dir` is where relative picture names are found. The output
+/// and fig2dev's messages (its warnings); fig2dev's errors are `Err`.
+pub fn export(
     doc: &Document,
     lang: &str,
     options: &[(char, Option<String>)],
@@ -103,46 +111,7 @@ pub fn export_driver(
 /// Read picture `path` as fig2dev does (`.gz`/`.Z` variants, XBM, XPM,
 /// PCX, EPS, PDF and the common bitmaps).
 pub fn load_picture(path: &Path) -> Result<LoadedPicture, String> {
-    read_picture(&Ctx::default(), &path.to_string_lossy())
-}
-
-/// The EPS pictures of `doc` that RustFig can't draw, for embedding in EPS
-/// output (by file name; relative names relative to `dir`).
-pub fn eps_pictures(
-    doc: &Document,
-    dir: Option<&Path>,
-) -> std::collections::BTreeMap<String, rustfig_render::export::EmbeddedEps> {
-    let mut out = std::collections::BTreeMap::new();
-    doc.for_each_leaf(&mut |o| {
-        let rustfig_model::ObjectKind::Polyline(p) = &o.kind else {
-            return;
-        };
-        let Some(pic) = p
-            .picture
-            .as_ref()
-            .filter(|pic| pic.image.is_none() && !pic.file.is_empty())
-        else {
-            return;
-        };
-        if out.contains_key(&pic.file) {
-            return;
-        }
-        let path = crate::import::resolve(&pic.file, dir);
-        if let Ok(LoadedPicture::Eps { llx, lly, urx, ury, ps }) = load_picture(&path) {
-            out.insert(
-                pic.file.clone(),
-                rustfig_render::export::EmbeddedEps {
-                    title: pic.file.clone(),
-                    llx,
-                    lly,
-                    urx,
-                    ury,
-                    ps,
-                },
-            );
-        }
-    });
-    out
+    rustfig_fig2dev::util::readpics::load_picture(&Ctx::default(), &path.to_string_lossy())
 }
 
 #[cfg(test)]

@@ -21,13 +21,13 @@ RustFig is an open-source, Rust-native reimplementation of xfig: close to the or
 | Layer | Crate | Path | Role |
 |---|---|---|---|
 | base | `figbase` | `crates/figbase` | shared by fig2dev and RustFig: geometry (points, transforms, X-splines, arcs, arrowheads, line widths), Fig fonts (tables, metrics, glyph outlines, craft-fonts), colours, line/text styles, decoded pictures |
+| L0 | `rustfig-fig2dev` | `crates/fig2dev` | fig2dev as a program of its own (uses only figbase; `cargo xtask layers` checks): reader, options and driver table; the scene (display list) with the EPS, PDF, SVG and bitmap writers, the rasteriser (tiny-skia) and fill patterns |
 | L0 | `rustfig-geom` | `crates/geom` | figbase's geometry + hit testing |
 | L1 | `rustfig-model` | `crates/model` | document model, styles, colours, object transforms, flattening |
 | L1 | `rustfig-text` | `crates/text` | Fig font tables, font selection, metrics, glyph outlines |
 | L2 | `rustfig-format` | `crates/format` | Fig 3.0–3.2 read, Fig 3.2 write, native `.rustfig` JSON |
-| L2 | `rustfig-fig2dev` | `crates/fig2dev` | fig2dev's reader, options and driver table; the scene (display list) with the EPS, PDF, SVG and bitmap writers, the rasteriser (tiny-skia) and fill patterns |
-| L3 | `rustfig-render` | `crates/render` | document → scene (canvas and exports); RustFig's export entry point (`export`) |
-| L4 | `rustfig-engine` | `crates/engine` | commands, undo, selection, indicator, view, tools, guard |
+| L3 | `rustfig-render` | `crates/render` | document → scene for the canvas (fig2dev's display list and rasteriser) |
+| L4 | `rustfig-engine` | `crates/engine` | commands, undo, selection, indicator, view, tools, guard; exports (Fig text → fig2dev's `convert`, `engine::fig2dev`), fig2dev objects → document for old Fig files (`fig2dev/to_model.rs`) |
 | L5 | `rustfig-mcp` | `crates/mcp` | MCP server over stdio |
 | L6 | `rustfig-ui-egui` | `crates/ui-egui` | egui app: canvas, panels, menus, dialogs, control channel |
 | L7 | `rustfig`, `rustfig-cli`, `fig2dev` | `apps/` | desktop/web app; CLI (convert, info, perf, bench, mcp); standalone fig2dev |

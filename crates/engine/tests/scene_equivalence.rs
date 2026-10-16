@@ -6,9 +6,9 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+use rustfig_engine::render::{build_scene, Scene, SceneOptions};
 use rustfig_fig2dev::scene::build::TextOptions;
 use rustfig_fig2dev::Ctx;
-use rustfig_render::{build_scene, Scene, SceneOptions};
 use std::path::Path;
 
 fn sorted(scene: &Scene) -> Vec<String> {
@@ -20,7 +20,7 @@ fn sorted(scene: &Scene) -> Vec<String> {
 fn check(name: &str, src: &[u8]) {
     let mut ctx = Ctx::default();
     let objects = rustfig_fig2dev::read::readfp_fig(&mut ctx, src).unwrap();
-    let doc = rustfig_fig2dev::to_model::to_document(&ctx, &objects);
+    let doc = rustfig_engine::fig2dev::to_model::to_document(&ctx, &objects);
     let ours = build_scene(&doc, &SceneOptions::default());
     let (theirs, _) = rustfig_fig2dev::scene::build(&mut ctx, &objects, TextOptions::default());
     assert_eq!(ours.prims.len(), theirs.prims.len(), "{name}");
@@ -32,7 +32,7 @@ fn check(name: &str, src: &[u8]) {
 
 #[test]
 fn fig2devs_builder_draws_as_rustfigs() {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../engine/tests/fixtures");
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
     let mut n = 0;
     for e in std::fs::read_dir(&dir).unwrap() {
         let p = e.unwrap().path();

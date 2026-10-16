@@ -140,7 +140,9 @@ pub fn apply_ui(app: &mut App) {
         app.show_depths = b;
     }
     if let Some(l) = p.str("exportLanguage") {
-        match rustfig_engine::render::languages::language(&l).filter(|l| l.available()) {
+        match rustfig_engine::fig2dev::languages::language(&l)
+            .filter(|l| rustfig_engine::fig2dev::language_available(l))
+        {
             Some(lang) => app.dialogs.export.format = lang.id,
             None => app.info(format!(
                 "exportLanguage: {l} can't be exported yet; using {}",

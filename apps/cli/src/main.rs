@@ -3,7 +3,7 @@
 use rustfig_engine::Engine;
 use rustfig_geom::Point;
 use rustfig_model::{Document, Object, ObjectKind, PolyKind, Polyline, Style};
-use rustfig_render::{raster, ExportFormat, ExportOptions, SceneOptions};
+use rustfig_render::{raster, SceneOptions};
 use serde_json::{json, Value};
 use std::process::ExitCode;
 use std::time::Instant;
@@ -164,7 +164,7 @@ fn option_shown(lang: &str, o: &Value) -> bool {
     }
     let key = o["key"].as_str().unwrap_or_default();
     let letter = o["letter"].as_str().unwrap_or_default();
-    match rustfig_render::options::options_for(lang).find(|s| s.key == key && s.letter.to_string() == letter) {
+    match rustfig_engine::fig2dev::options::options_for(lang).find(|s| s.key == key && s.letter.to_string() == letter) {
         Some(s) => s.effective_for(lang),
         // An option of a ported fig2dev driver, by letter.
         None => key == letter,
@@ -357,7 +357,8 @@ fn measure_doc(doc: &Document, report: &mut Report, scale_budget: f64) -> Result
     let (parsed, ms) = time(|| rustfig_format::read_fig(text.as_bytes()));
     parsed.map_err(|e| e.to_string())?;
     report.add("open .fig", ms, 1200.0 * scale_budget);
-    let (svg, ms) = time(|| rustfig_render::export(doc, ExportFormat::Svg, &ExportOptions::default()));
+    // As `file.export` exports: Fig text through fig2dev's reader and driver.
+    let (svg, ms) = time(|| rustfig_engine::fig2dev::export(doc, "svg", &[], None));
     svg?;
     report.add("export SVG", ms, 1500.0 * scale_budget);
     Ok(())

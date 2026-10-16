@@ -22,7 +22,6 @@ pub mod object;
 pub mod options;
 pub mod read;
 pub mod scene;
-pub mod to_model;
 pub mod trans_spline;
 pub mod util;
 

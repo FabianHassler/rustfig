@@ -3,7 +3,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use rustfig_engine::render::languages::LANGUAGES;
+use rustfig_engine::fig2dev::{language_available, languages::LANGUAGES};
 use rustfig_engine::Engine;
 use serde_json::json;
 
@@ -38,13 +38,22 @@ fn formats_list_every_language_in_xfigs_order() {
 #[test]
 fn every_available_language_exports() {
     let mut e = drawing();
-    for l in LANGUAGES.iter().filter(|l| l.available()) {
-        let r = e.execute("file.export_data", &json!({"format": l.id})).unwrap();
+    for l in LANGUAGES.iter().filter(|l| language_available(l)) {
+        let r = e.execute("file.export_data", &json!({"format": l.id}));
+        if l.id == "shape" {
+            // fig2dev's shape driver needs the figure's shape comments.
+            assert!(r.unwrap_err().message.contains("No shape found"));
+            continue;
+        }
+        let r = r.unwrap();
         if l.id == "pspdf" {
             let files = r["files"].as_array().unwrap();
             assert_eq!(files.len(), 2);
             assert_eq!(files[0]["extension"], "eps");
             assert!(files[1]["base64"].as_str().is_some());
+        } else if let Some(files) = r["files"].as_array() {
+            // The combined LaTeX languages: graphics and LaTeX part.
+            assert!(files.len() >= 2, "{}", l.id);
         } else {
             assert!(r.get("data").or(r.get("base64")).is_some(), "{}", l.id);
         }
@@ -176,10 +185,17 @@ fn bad_options_are_refused() {
             .message
     };
     assert!(err(&mut e, "eps", json!({"nonsense": 1})).contains("no option"));
-    assert!(err(&mut e, "eps", json!({"ascii_preview": true})).contains("B4"));
+    // Options not ported yet: fig2dev's driver warns and goes on.
+    let r = e
+        .execute(
+            "file.export_data",
+            &json!({"format": "eps", "options": {"ascii_preview": true}}),
+        )
+        .unwrap();
+    assert!(r["warnings"][0].as_str().unwrap().contains("B4"), "{r}");
     assert!(err(&mut e, "svg", json!({"title": "x"})).contains("no option"));
     assert!(err(&mut e, "eps", json!({"border": "wide"})).contains("number"));
-    assert!(err(&mut e, "eps", json!({"m": 2, "Z": 3})).contains("only one"));
+    // fig2dev takes -m and -Z together; -Z sizes the figure.
     assert!(e
         .execute("file.export_data", &json!({"format": "eps", "options": [1]}))
         .is_err());

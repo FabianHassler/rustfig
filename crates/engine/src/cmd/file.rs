@@ -1,12 +1,16 @@
 //! File commands: new, open, merge, save, export.
+//
+// Ported from xfig src/u_print.c (the fig2dev options an export passes)
+// (xfig licence, see LICENSE-xfig).
 
 use super::{always, has_objects, num_or, opt_bool, opt_num, opt_str, string, CmdResult, Command};
+use crate::fig2dev::languages::{language, language_for_path, Language, Status, LANGUAGES};
+use crate::fig2dev::options::{option_spec, options_for, Arg, Support};
 use crate::{import, Engine, EngineError};
+use rustfig_fig2dev::drivers::scene;
+use rustfig_fig2dev::scene::ExportFormat;
 use rustfig_format::FileFormat;
 use rustfig_model::{Document, ObjectKind, Rgb};
-use rustfig_render::languages::{language, language_for_path, Language, Status, LANGUAGES};
-use rustfig_render::options::{option_spec, options_for, parse_options, Arg, DriverOptions, OptionValue, Support};
-use rustfig_render::{ExportFormat, ExportOptions};
 use serde_json::{json, Value};
 use std::path::Path;
 use std::sync::Arc;
@@ -376,74 +380,31 @@ fn option_items(p: &Value) -> Result<Vec<(&str, &Value)>, EngineError> {
     }
 }
 
-/// fig2dev's options from the `options` object (see `file.export_formats`)
-/// for RustFig's renderer of `lang`. With `only_known`, options `lang`
-/// doesn't take are left to the other half of a combined export.
-fn driver_options(lang: &Language, p: &Value, only_known: bool) -> Result<DriverOptions, EngineError> {
-    let mut parsed = Vec::new();
-    for (k, v) in option_items(p)? {
-        if only_known && option_spec(lang.id, k).is_none() {
-            continue;
-        }
-        parsed.push((
-            k,
-            match v {
-                Value::Bool(b) => OptionValue::Bool(*b),
-                Value::Number(n) => OptionValue::Number(n.as_f64().unwrap_or(f64::NAN)),
-                Value::String(s) => OptionValue::Text(s),
-                _ => {
-                    return Err(EngineError::bad_params(format!(
-                        "option {k} must be a boolean, number or string"
-                    )))
-                }
-            },
-        ));
-    }
-    parse_options(lang, &parsed).map_err(EngineError::bad_params)
-}
-
-fn export_options(e: &Engine, lang: &Language, p: &Value, only_known: bool) -> Result<ExportOptions, EngineError> {
-    let background = match opt_str(p, "background")? {
-        Some(s) => Some(Rgb::from_hex(s).ok_or_else(|| EngineError::bad_params("background must be #rrggbb"))?),
-        None => None,
-    };
-    Ok(ExportOptions {
-        magnification: opt_num(p, "magnification")?,
-        margin: num_or(p, "margin", 0.0)?,
-        dpi: num_or(p, "dpi", 150.0)?,
-        background,
-        hidden_depths: if opt_bool(p, "active_layers_only")?.unwrap_or(false) {
-            e.hidden_depths.clone()
-        } else {
-            Default::default()
-        },
-        whole_figure_bounds: opt_bool(p, "whole_figure_bounds")?.unwrap_or(false),
-        fig2dev: driver_options(lang, p, only_known)?,
-        ..ExportOptions::default()
-    })
-}
-
 /// The directory of the document, where relative picture names point.
 fn doc_dir(e: &Engine) -> Option<std::path::PathBuf> {
     e.path().and_then(|p| Path::new(p).parent()).map(Path::to_path_buf)
 }
 
-/// One file an export writes.
+/// Which share of an export one fig2dev run writes.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Half {
+    /// The whole figure.
+    Whole,
+    /// The graphics of a combined LaTeX export (fig2dev's `pstex` or
+    /// `pdftex`: no special texts); only the options it knows reach it.
+    Graphics,
+    /// The LaTeX part (`pstex_t`, `pdftex_t`) next to graphics in the
+    /// given language, whose own options stay with the graphics.
+    Latex(&'static str),
+}
+
+/// One file an export writes: fig2dev's driver for `lang`; `graphics` is
+/// `pstex_t`'s `-p`.
 #[derive(Debug, Clone, PartialEq)]
-enum Part {
-    /// RustFig's renderer, for the language `lang` (whose options apply);
-    /// `skip_special` leaves special texts out (the graphics of pstex,
-    /// pdftex).
-    Render {
-        format: ExportFormat,
-        lang: &'static str,
-        skip_special: bool,
-    },
-    /// fig2dev's driver for `lang`; `graphics` is `pstex_t`'s `-p`.
-    Driver {
-        lang: &'static str,
-        graphics: Option<String>,
-    },
+struct Part {
+    lang: &'static str,
+    half: Half,
+    graphics: Option<String>,
 }
 
 /// The file name of `path` (after the last separator).
@@ -456,31 +417,24 @@ fn file_name(path: &str) -> &str {
 /// writes the graphics to PATH and the LaTeX part to PATH_t (pdftex
 /// likewise); pspdftex writes NAME_SUFFIX.eps and NAME_SUFFIX.pdf (the
 /// first dot of the file name made a `_`) and the LaTeX part to PATH.
-fn parts(lang: &Language, path: &str) -> Result<Vec<(String, Part)>, EngineError> {
-    let render = |format, lang, skip_special| Part::Render {
-        format,
-        lang,
-        skip_special,
-    };
-    Ok(match lang.id {
+fn parts(lang: &Language, path: &str) -> Vec<(String, Part)> {
+    let part = |lang, half, graphics| Part { lang, half, graphics };
+    match lang.id {
         "pspdf" => vec![
-            (with_extension(path, "eps"), render(ExportFormat::Eps, "eps", false)),
-            (with_extension(path, "pdf"), render(ExportFormat::Pdf, "pdf", false)),
+            (with_extension(path, "eps"), part("eps", Half::Whole, None)),
+            (with_extension(path, "pdf"), part("pdf", Half::Whole, None)),
         ],
         "pstex" | "pdftex" => {
-            let (format, graphics_lang, driver) = if lang.id == "pstex" {
-                (ExportFormat::Eps, "eps", "pstex_t")
+            let (graphics, graphics_lang, latex) = if lang.id == "pstex" {
+                ("pstex", "eps", "pstex_t")
             } else {
-                (ExportFormat::Pdf, "pdf", "pdftex_t")
+                ("pdftex", "pdf", "pdftex_t")
             };
             vec![
-                (path.to_string(), render(format, graphics_lang, true)),
+                (path.to_string(), part(graphics, Half::Graphics, None)),
                 (
                     format!("{path}_t"),
-                    Part::Driver {
-                        lang: driver,
-                        graphics: Some(file_name(path).to_string()),
-                    },
+                    part(latex, Half::Latex(graphics_lang), Some(file_name(path).to_string())),
                 ),
             ]
         }
@@ -489,57 +443,71 @@ fn parts(lang: &Language, path: &str) -> Result<Vec<(String, Part)>, EngineError
             let stem = name.replacen('.', "_", 1);
             let dir = path.get(..path.len() - name.len()).unwrap_or("");
             vec![
-                (format!("{dir}{stem}.eps"), render(ExportFormat::Eps, "eps", true)),
-                (format!("{dir}{stem}.pdf"), render(ExportFormat::Pdf, "pdf", true)),
-                (
-                    path.to_string(),
-                    Part::Driver {
-                        lang: "pstex_t",
-                        graphics: Some(stem),
-                    },
-                ),
+                (format!("{dir}{stem}.eps"), part("pstex", Half::Graphics, None)),
+                (format!("{dir}{stem}.pdf"), part("pdftex", Half::Graphics, None)),
+                (path.to_string(), part("pstex_t", Half::Latex("eps"), Some(stem))),
             ]
         }
-        id if lang.available() => {
-            let format =
-                ExportFormat::from_name(id).ok_or_else(|| EngineError::internal(format!("no writer for {id}")))?;
-            vec![(path.to_string(), render(format, lang.id, false))]
-        }
-        _ => vec![(
-            path.to_string(),
-            Part::Driver {
-                lang: lang.id,
-                graphics: None,
-            },
-        )],
-    })
+        id => vec![(path.to_string(), part(id, Half::Whole, None))],
+    }
+}
+
+/// Whether fig2dev's driver for `drv` takes option `letter` (`key` in the
+/// option table).
+fn takes(drv: &str, key: &str, letter: char) -> bool {
+    let olang = scene::options_lang(drv);
+    option_spec(olang, key).is_some_and(|s| s.letter == letter && s.effective_for(olang))
+        || rustfig_fig2dev::drivers::help::help(drv).is_some_and(|h| h.options.iter().any(|o| o.letter == letter))
+}
+
+/// A number as an option argument (`2`, not `2.0`, for whole numbers).
+fn number_arg(v: f64) -> String {
+    if v.fract() == 0.0 && v.abs() < 1e15 {
+        format!("{}", v as i64)
+    } else {
+        format!("{v}")
+    }
 }
 
 /// fig2dev's option letters and arguments for driver `drv` from the
-/// export's parameters: `options` by key (the general ones) or letter, the
-/// magnification (percent) as `-m`, the active layers as `-D`. For the
-/// LaTeX half of a combined export (`graphics_lang` set), options of the
-/// graphics language stay with the graphics, except the border.
-fn driver_args(
-    e: &Engine,
-    drv: &str,
-    p: &Value,
-    graphics_lang: Option<&str>,
-) -> Result<Vec<(char, Option<String>)>, EngineError> {
-    let mut args = Vec::new();
+/// export's parameters, as xfig makes them up (`u_print.c`): `options` by
+/// key or letter; RustFig's settings mapped onto fig2dev's options: the
+/// magnification (percent) as `-m`, the bitmap resolution as `-m` too
+/// (fig2dev's bitmaps are 80 dpi at 100 %), the margin (Fig units) as
+/// `-b` points, the background as `-g`, the active layers as `-D` (and
+/// `-K` unless the page takes the whole figure); `-F` (true font sizes)
+/// as xfig always passes it to the PostScript, PDF and bitmap drivers.
+fn driver_args(e: &Engine, drv: &str, half: Half, p: &Value) -> Result<Vec<(char, Option<String>)>, EngineError> {
+    let mut args: Vec<(char, Option<String>)> = Vec::new();
+    // Letters given, also those switched off (`false`).
+    let mut given = Vec::new();
+    let olang = scene::options_lang(drv);
     let help = rustfig_fig2dev::drivers::help::help(drv);
     for (k, v) in option_items(p)? {
-        let general = option_spec(drv, k).filter(|s| s.langs.is_empty());
-        // In a combined export, the graphics' options stay with them,
-        // except the border, which both halves take (xfig passes it on).
-        let graphics_spec = graphics_lang
-            .and_then(|g| option_spec(g, k))
-            .filter(|s| !s.langs.is_empty());
-        let letter = match (general, graphics_spec) {
-            (Some(s), _) => s.letter,
-            (None, Some(s)) if s.letter == 'b' => 'b',
-            (None, Some(_)) => continue,
-            (None, None) => {
+        let letter = match half {
+            Half::Latex(g) => {
+                let general = option_spec(drv, k).filter(|s| s.langs.is_empty());
+                // In a combined export, the graphics' options stay with
+                // them, except the border, which both halves take (xfig
+                // passes it on).
+                let graphics_spec = option_spec(g, k).filter(|s| !s.langs.is_empty());
+                match (general, graphics_spec) {
+                    (Some(s), _) => Some(s.letter),
+                    (None, Some(s)) if s.letter == 'b' => Some('b'),
+                    (None, Some(_)) => continue,
+                    (None, None) => None,
+                }
+            }
+            Half::Graphics => match option_spec(olang, k) {
+                Some(s) => Some(s.letter),
+                // An option of the LaTeX half.
+                None => continue,
+            },
+            Half::Whole => option_spec(olang, k).map(|s| s.letter),
+        };
+        let letter = match letter {
+            Some(l) => l,
+            None => {
                 let key = k.strip_prefix('-').unwrap_or(k);
                 let mut cs = key.chars();
                 match (cs.next(), cs.next()) {
@@ -552,7 +520,10 @@ fn driver_args(
                 }
             }
         };
-        if general.is_none() {
+        // RustFig's own drivers check their options with fig2dev's
+        // messages; the ported ones are checked against their help.
+        let general = option_spec(drv, k).is_some_and(|s| s.langs.is_empty());
+        if !general && !scene::writes(drv) {
             if let Some(h) = help {
                 if !h.options.iter().any(|o| o.letter == letter) {
                     let known: Vec<String> = h.options.iter().map(|o| o.letter.to_string()).collect();
@@ -563,10 +534,11 @@ fn driver_args(
                 }
             }
         }
+        given.push(letter);
         let arg = match v {
             Value::Bool(true) => None,
             Value::Bool(false) | Value::Null => continue,
-            Value::Number(n) => Some(n.to_string()),
+            Value::Number(n) => Some(number_arg(n.as_f64().unwrap_or(f64::NAN))),
             Value::String(s) => Some(s.clone()),
             _ => {
                 return Err(EngineError::bad_params(format!(
@@ -579,49 +551,91 @@ fn driver_args(
         }
         args.push((letter, arg));
     }
-    let given = |args: &[(char, Option<String>)], c: char| args.iter().any(|(l, _)| *l == c);
+    let has = |given: &[char], c: char| given.contains(&c);
+    // -m: the magnification, times the resolution for bitmaps.
+    let mut mag = None;
     if let Some(m) = opt_num(p, "magnification")? {
         if !(m.is_finite() && m > 0.0 && m <= 100_000.0) {
             return Err(EngineError::bad_params("magnification must be a positive percentage"));
         }
-        if !given(&args, 'm') && !given(&args, 'Z') {
-            args.push(('m', Some((m / 100.0).to_string())));
+        mag = Some(m / 100.0);
+    }
+    let bitmap = scene::writes(drv) && ExportFormat::from_name(olang).is_some_and(ExportFormat::is_bitmap);
+    if let Some(dpi) = opt_num(p, "dpi")? {
+        if !(dpi.is_finite() && dpi > 0.0 && dpi <= 100_000.0) {
+            return Err(EngineError::bad_params("dpi must be a positive number"));
+        }
+        if bitmap && !has(&given, 'Z') {
+            let m = match args.iter().rposition(|(l, _)| *l == 'm') {
+                // An explicit -m: scale it.
+                Some(i) => {
+                    let (_, a) = args.remove(i);
+                    rustfig_fig2dev::gendev::atof(a.as_deref().unwrap_or(""))
+                }
+                None => mag.unwrap_or(e.doc().settings.magnification / 100.0),
+            };
+            mag = Some(m * dpi / 80.0);
+            given.retain(|c| *c != 'm');
         }
     }
-    if opt_bool(p, "active_layers_only")?.unwrap_or(false) && !e.hidden_depths.is_empty() && !given(&args, 'D') {
+    if let Some(m) = mag {
+        if !has(&given, 'm') && !has(&given, 'Z') {
+            args.push(('m', Some(format!("{m}"))));
+        }
+    }
+    // -b: the margin, in points (xfig's export margin is in points).
+    let margin = num_or(p, "margin", 0.0)?;
+    if !(margin.is_finite() && (0.0..=1.0e7).contains(&margin)) {
+        return Err(EngineError::bad_params(
+            "margin must be a number of fig units, 0 or more",
+        ));
+    }
+    if margin > 0.0 && takes(drv, "border", 'b') {
+        let points = margin * 72.0 / 1200.0;
+        match args.iter_mut().find(|(l, _)| *l == 'b') {
+            Some((_, a)) => {
+                let b = rustfig_fig2dev::gendev::atof(a.as_deref().unwrap_or("")) + points;
+                *a = Some(number_arg(b));
+            }
+            None => args.push(('b', Some(number_arg(points)))),
+        }
+    }
+    if let Some(bg) = opt_str(p, "background")? {
+        if Rgb::from_hex(bg).is_none() {
+            return Err(EngineError::bad_params("background must be #rrggbb"));
+        }
+        if !has(&given, 'g') && takes(drv, "background", 'g') {
+            args.push(('g', Some(bg.to_string())));
+        }
+    }
+    if opt_bool(p, "active_layers_only")?.unwrap_or(false) && !e.hidden_depths.is_empty() && !has(&given, 'D') {
         let list: Vec<String> = e.hidden_depths.iter().map(i32::to_string).collect();
         args.push(('D', Some(format!("-{}", list.join(",")))));
+        if !opt_bool(p, "whole_figure_bounds")?.unwrap_or(false) && !has(&given, 'K') {
+            args.push(('K', None));
+        }
+    }
+    if scene::writes(drv) && !has(&given, 'F') && takes(drv, "correct_font_size", 'F') {
+        args.push(('F', None));
     }
     Ok(args)
 }
 
-/// Write one part of an export; the bytes and fig2dev's messages.
+/// Write one part of an export through fig2dev; the bytes and fig2dev's
+/// messages.
 fn write_part(e: &Engine, part: &Part, p: &Value) -> Result<(Vec<u8>, Vec<String>), EngineError> {
-    match part {
-        Part::Render {
-            format,
-            lang,
-            skip_special,
-        } => {
-            let l = language(lang).ok_or_else(|| EngineError::internal(format!("no language {lang}")))?;
-            let mut opts = export_options(e, l, p, *skip_special)?;
-            opts.skip_special_text = *skip_special;
-            if *format == ExportFormat::Eps {
-                opts.embedded_eps = crate::fig2dev::eps_pictures(e.doc(), doc_dir(e).as_deref());
-            }
-            let bytes = rustfig_render::export(e.doc(), *format, &opts).map_err(EngineError::format)?;
-            Ok((bytes, Vec::new()))
-        }
-        Part::Driver { lang, graphics } => {
-            let graphics_lang = graphics
-                .as_ref()
-                .map(|_| if *lang == "pstex_t" { "eps" } else { "pdf" });
-            let mut args = driver_args(e, lang, p, graphics_lang)?;
-            if let Some(g) = graphics {
-                args.push(('p', Some(g.clone())));
-            }
-            crate::fig2dev::export_driver(e.doc(), lang, &args, doc_dir(e).as_deref()).map_err(EngineError::format)
-        }
+    let mut args = driver_args(e, part.lang, part.half, p)?;
+    if let Some(g) = &part.graphics {
+        args.push(('p', Some(g.clone())));
+    }
+    crate::fig2dev::export(e.doc(), part.lang, &args, doc_dir(e).as_deref()).map_err(EngineError::format)
+}
+
+/// Whether `part` writes text (the rest comes back as base64).
+fn is_text(part: &Part, bytes: &[u8]) -> bool {
+    match ExportFormat::from_name(scene::options_lang(part.lang)) {
+        Some(f) if scene::writes(part.lang) => f.is_text(),
+        _ => std::str::from_utf8(bytes).is_ok(),
     }
 }
 
@@ -651,7 +665,7 @@ fn export_language(p: &Value, path: Option<&str>) -> Result<&'static Language, E
 fn export_file(e: &mut Engine, p: &Value) -> CmdResult {
     let path = string(p, "path")?;
     let lang = export_language(p, Some(&path))?;
-    let parts = parts(lang, &path)?;
+    let parts = parts(lang, &path);
     // Write every part before touching a file, so a failure leaves none.
     let mut outputs = Vec::with_capacity(parts.len());
     let mut warnings = Vec::new();
@@ -683,16 +697,13 @@ fn with_extension(path: &str, ext: &str) -> String {
 fn export_data(e: &mut Engine, p: &Value) -> CmdResult {
     let lang = export_language(p, None)?;
     let virtual_path = format!("figure.{}", lang.extension);
-    let parts = parts(lang, &virtual_path)?;
+    let parts = parts(lang, &virtual_path);
     let mut files = Vec::new();
     let mut warnings = Vec::new();
     for (target, part) in &parts {
         let (bytes, msgs) = write_part(e, part, p)?;
         warnings.extend(msgs);
-        let text = match part {
-            Part::Render { format, .. } => format.is_text(),
-            Part::Driver { .. } => std::str::from_utf8(&bytes).is_ok(),
-        };
+        let text = is_text(part, &bytes);
         let extension = target.rsplit_once('.').map_or("", |(_, x)| x);
         files.push(if text {
             json!({"name": target, "extension": extension, "data": String::from_utf8_lossy(&bytes)})

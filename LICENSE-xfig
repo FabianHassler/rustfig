@@ -42,6 +42,7 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 `cargo xtask licences` checks that this list and those comments agree.
 
 - apps/fig2dev/src/main.rs: fig2dev/fig2dev.c, fig2dev/drivers.h, fig2dev/messages.c
+- crates/engine/src/cmd/file.rs: xfig src/u_print.c
 - crates/engine/src/prefs.rs: xfig src/main.c (resources, options), doc/xfig.man.in (resource table)
 - crates/engine/src/snap.rs: xfig src/w_snap.c, src/w_intersect.c
 - crates/engine/src/tools/mod.rs: xfig src/w_modepanel.c, src/d_*.c, src/e_*.c, src/w_canvas.c
@@ -94,8 +95,6 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/format/src/fig_read.rs: xfig src/f_read.c; fig2dev/read.c
 - crates/format/src/fig_write.rs: xfig src/f_save.c
 - crates/model/src/object.rs: xfig src/u_redraw.c, src/f_save.c
-- crates/render/src/bound.rs: fig2dev/bound.c, fig2dev/read.c
-- crates/render/src/export.rs: fig2dev/fig2dev.c, fig2dev/read.c, fig2dev/dev/genps.c, fig2dev/dev/genbitmaps.c
 - crates/render/src/lib.rs: xfig src/u_redraw.c; fig2dev/dev/genps.c
 - crates/text/src/compose.rs: xfig CompKeyDB, src/w_canvas.c
 - crates/ui-egui/src/attributes.rs: xfig src/w_indpanel.c, src/w_indpanel.h, src/w_modepanel.c, src/w_icons.c

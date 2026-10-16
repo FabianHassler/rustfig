@@ -97,7 +97,7 @@ impl Server {
                     .clamp(10.0, 600.0);
                 match self.engine.execute(
                     "file.export_data",
-                    &json!({"format": "png", "dpi": dpi, "margin": 60, "background": "#ffffff"}),
+                    &json!({"format": "png", "dpi": dpi, "margin": 60, "background": "#ffffff", "options": {"smoothing": 4}}),
                 ) {
                     Ok(v) => match v.get("base64").and_then(Value::as_str) {
                         Some(b) => json!({"content": [{"type": "image", "data": b, "mimeType": "image/png"}]}),

@@ -12,8 +12,6 @@
 
 mod support;
 
-use rustfig_engine::model::Rgb;
-use rustfig_engine::render::{export, ExportFormat, ExportOptions};
 use serde_json::{json, Map, Value};
 use std::path::{Path, PathBuf};
 use support::{compare, fig2dev};
@@ -109,15 +107,14 @@ fn reference_png(fig: &[u8], dir: &Path) -> Vec<u8> {
     pix.encode_png().unwrap()
 }
 
-/// RustFig's PNG export at a similar size, on white.
+/// RustFig's PNG export at a similar size, on white, as `file.export`
+/// makes it at 150 dpi (fig2dev's `-m` for 80 dpi at 100 %) with the
+/// export panel's smoothing.
 fn rustfig_png(fig: &[u8]) -> Vec<u8> {
     let doc = rustfig_engine::format::read_fig(fig).unwrap();
-    let opts = ExportOptions {
-        dpi: 150.0,
-        background: Some(Rgb::from_hex("#ffffff").unwrap()),
-        ..Default::default()
-    };
-    export(&doc, ExportFormat::Png, &opts).unwrap()
+    let s = |v: &str| Some(v.to_string());
+    let args = [('F', None), ('m', s("1.875")), ('g', s("#ffffff")), ('S', s("4"))];
+    rustfig_engine::fig2dev::export(&doc, "png", &args, None).unwrap().0
 }
 
 #[test]
