@@ -1,11 +1,12 @@
 //! PDF backend (pdf-writer). Text uses the standard 14 PDF fonts.
 
-use crate::pattern::{coverage, PatternFrame};
-use crate::{Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
+use super::pattern::{coverage, PatternFrame};
+use super::{Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
+use figbase::geom::{Point, Rect, Seg};
+use figbase::image::RasterImage;
+use figbase::style::{CapStyle, JoinStyle, Justify};
 use pdf_writer::types::{LineCapStyle, LineJoinStyle};
 use pdf_writer::{Content, Filter, Finish, Name, Pdf, Rect as PdfRect, Ref, Str, TextStr};
-use rustfig_geom::{Point, Rect, Seg};
-use rustfig_model::{CapStyle, JoinStyle, Justify, RasterImage};
 
 /// The standard fonts used for text, by resource name.
 const BASE14: [(&str, &str); 14] = [
@@ -154,11 +155,11 @@ impl Ctx {
 fn text(c: &mut Ctx, t: &TextPrim) {
     let idx = base14_index(t);
     let Some((res, _)) = BASE14.get(idx) else { return };
-    let size = crate::font_px(t.size) * c.k;
+    let size = super::font_px(t.size) * c.k;
     let (x, y) = c.p(t.origin);
     let (s, co) = t.angle.sin_cos();
     c.fill_rgb(t.color);
-    let shaped = crate::textcache::shaped(t);
+    let shaped = super::textcache::shaped(t);
     for (i, line) in t.text.split('\n').enumerate() {
         // Line widths come from RustFig's own font metrics.
         let w = shaped.line_widths.get(i).copied().unwrap_or(0.0) * c.k;
@@ -167,7 +168,7 @@ fn text(c: &mut Ctx, t: &TextPrim) {
             Justify::Center => -w / 2.0,
             Justify::Right => -w,
         };
-        let dy = -(i as f64) * size * rustfig_text::LINE_SPACING;
+        let dy = -(i as f64) * size * figbase::text::LINE_SPACING;
         // Rotate (dx, dy) by the text angle (counter-clockwise, y up).
         let ox = f64::from(x) + dx * co - dy * s;
         let oy = f64::from(y) + dx * s + dy * co;

@@ -4,16 +4,16 @@
 //! fig2dev's `genbitmaps.c` wrote EPS, rendered it with ghostscript at
 //! 80 dpi times the magnification and piped the pixmap through netpbm
 //! (`ppmtogif`, `pbmtoxbm`, `ppmtoxpm`, `ppmtopcx`, ...). Here the scene is
-//! rasterised by [`crate::raster`] (the size, border and smoothing follow
-//! genbitmaps; see [`crate::export`]) and encoded below: GIF, JPEG and TIFF
+//! rasterised by [`super::raster`] (the size, border and smoothing follow
+//! genbitmaps; see [`super::output`]) and encoded below: GIF, JPEG and TIFF
 //! with the `image` crate, PPM, PCX, XBM and XPM by hand. Images without
 //! an alpha channel are composed over white, as ghostscript's are.
 //
 // Ported from fig2dev dev/genbitmaps.c (xfig licence, see LICENSE-xfig).
 
-use crate::export::ExportFormat;
-use crate::raster::Pixmap;
-use rustfig_model::Rgb;
+use super::raster::Pixmap;
+use super::ExportFormat;
+use figbase::color::Rgb;
 use std::collections::HashMap;
 use std::io::Cursor;
 

@@ -10,7 +10,7 @@ use rustfig_model::{
     SplineKind, Style, UserColor,
 };
 use rustfig_render::raster::{rasterize, Pixmap, RasterOptions};
-use rustfig_render::{Scene, SceneOptions};
+use rustfig_render::SceneOptions;
 use std::sync::Arc;
 
 /// The drawing's side in Fig units (one icon "pixel" at 64 px = 15 units).
@@ -127,7 +127,7 @@ fn drawing() -> Document {
 /// The icon as straight (not premultiplied) RGBA, `size` pixels square.
 pub fn rgba(size: u32) -> Option<Vec<u8>> {
     let size = size.clamp(16, 1024);
-    let scene = Scene::build(&drawing(), &SceneOptions::default());
+    let scene = rustfig_render::build_scene(&drawing(), &SceneOptions::default());
     let mut pm = Pixmap::new(size, size)?;
     let k = f64::from(size) / SIDE;
     rasterize(

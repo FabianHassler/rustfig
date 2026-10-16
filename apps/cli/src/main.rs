@@ -3,7 +3,7 @@
 use rustfig_engine::Engine;
 use rustfig_geom::Point;
 use rustfig_model::{Document, Object, ObjectKind, PolyKind, Polyline, Style};
-use rustfig_render::{raster, ExportFormat, ExportOptions, Scene, SceneOptions};
+use rustfig_render::{raster, ExportFormat, ExportOptions, SceneOptions};
 use serde_json::{json, Value};
 use std::process::ExitCode;
 use std::time::Instant;
@@ -279,7 +279,7 @@ impl Report {
 
 fn measure_doc(doc: &Document, report: &mut Report, scale_budget: f64) -> Result<(), String> {
     let (scene, ms) = time(|| {
-        Scene::build(
+        rustfig_render::build_scene(
             doc,
             &SceneOptions {
                 screen: true,

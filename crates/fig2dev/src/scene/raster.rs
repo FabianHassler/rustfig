@@ -1,10 +1,11 @@
 //! Raster backend (tiny-skia): canvas drawing and bitmap export.
 
-use crate::pattern::{coverage, PatternFrame};
-use crate::{textcache, Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
-use rustfig_geom::{Affine, Point, Rect};
-use rustfig_model::{CapStyle, JoinStyle, Justify, RasterImage};
-use rustfig_text::PathOp;
+use super::pattern::{coverage, PatternFrame};
+use super::{textcache, Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
+use figbase::geom::{Affine, Point, Rect};
+use figbase::image::RasterImage;
+use figbase::style::{CapStyle, JoinStyle, Justify};
+use figbase::text::PathOp;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -195,13 +196,13 @@ pub(crate) fn text_ops_fig(t: &TextPrim) -> (Vec<PathOp>, bool, f64) {
             });
         }
     }
-    (ops, shaped.synthetic_bold, crate::font_px(t.size) * 0.04)
+    (ops, shaped.synthetic_bold, super::font_px(t.size) * 0.04)
 }
 
 fn draw_text(pm: &mut Pixmap, t: &TextPrim, opts: &RasterOptions, aa: bool) {
     let tr = &opts.transform;
     let view = Rect::new(Point::ZERO, Point::new(f64::from(pm.width()), f64::from(pm.height())));
-    let bb = Rect::from_points(crate::Prim::Text(t.clone()).bbox().corners().map(|p| tr.apply(p)));
+    let bb = Rect::from_points(super::Prim::Text(t.clone()).bbox().corners().map(|p| tr.apply(p)));
     if !bb.intersects(&view) {
         return;
     }
@@ -502,27 +503,32 @@ pub fn encode_rgba_png(width: u32, height: u32, rgba: &[u8]) -> Result<Vec<u8>, 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::SceneOptions;
-    use rustfig_model::{Document, Object, ObjectKind, Polyline, Style};
+    use figbase::color::Rgb;
 
     #[test]
     fn draws_a_filled_box() {
-        let mut doc = Document::new();
-        let mut s = Style::default();
-        s.area_fill = 20;
-        s.fill_color = rustfig_model::ColorRef(4);
-        doc.objects
-            .push(std::sync::Arc::new(Object::new(ObjectKind::Polyline(Polyline::rect(
-                s,
-                Point::new(0.0, 0.0),
-                Point::new(1200.0, 1200.0),
-            )))));
-        let scene = Scene::build(&doc, &SceneOptions::default());
+        let corners = [
+            Point::new(0.0, 0.0),
+            Point::new(1200.0, 0.0),
+            Point::new(1200.0, 1200.0),
+            Point::new(0.0, 1200.0),
+        ];
+        let scene = Scene {
+            prims: vec![Prim::Path {
+                subpaths: vec![SubPath {
+                    pts: corners.to_vec(),
+                    closed: true,
+                    curve: None,
+                }],
+                fill: Some(Fill::Solid(Rgba::opaque(Rgb::new(255, 0, 0)))),
+                stroke: None,
+            }],
+        };
         let pm = render_region(
             &scene,
-            &doc.bbox(),
+            &Rect::from_points(corners),
             0.05,
-            Some(Rgba::opaque(rustfig_model::Rgb::WHITE)),
+            Some(Rgba::opaque(Rgb::WHITE)),
             PatternFrame::screen(),
         )
         .unwrap();

@@ -9,7 +9,7 @@
 // Ported from fig2dev dev/psprolog.h (`FILL_PAT01` … `FILL_PAT22`)
 // (xfig licence, see LICENSE-xfig).
 
-use rustfig_geom::{Point, Rect, FIG_PER_POINT};
+use figbase::geom::{Point, Rect, FIG_PER_POINT};
 use std::f64::consts::PI;
 
 /// Most tiles generated for one fill; larger regions get coarser tiles.

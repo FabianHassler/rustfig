@@ -1,0 +1,310 @@
+//! The languages RustFig's own writers produce from the scene: EPS (and
+//! `ps` until the page layout is ported, plan B4a), PDF, SVG, the LaTeX box,
+//! the graphics halves of `pstex` and `pdftex`, PNG and fig2dev's bitmap
+//! languages (`genbitmaps.c`, without ghostscript).
+//!
+//! Options are taken as fig2dev's drivers take them (`genps_option`,
+//! `genbitmaps_option`, `gensvg_option`, `genbox_option`), with the table
+//! in [`crate::options`]. The objects arrive from [`crate::convert`]
+//! deepest first and become scene primitives ([`crate::scene::build`]);
+//! the trailer writes the scene on the page fig2dev's bounds give.
+//
+// Ported from fig2dev dev/genps.c (`genps_option`, `-f`, `PSFONTMAG`),
+// dev/genbitmaps.c (`genbitmaps_option`, size and border), dev/genpstex.c
+// (special texts left to `pstex_t`) and fig2dev.c (`-b`, `-g`, `-N`) (xfig
+// licence, see LICENSE-xfig).
+
+use crate::languages::{language, Language};
+use crate::object::{Arc, Compound, Ellipse, Line, Spline, Text};
+use crate::options::{option_spec, parse_options, Arg, DriverOptions, OptionValue, Support};
+use crate::scene::build::{file_scale, transparent_color, Builder, TextOptions};
+use crate::scene::{write, ExportFormat, Page, Rgba};
+use crate::{Ctx, Driver, Out};
+use figbase::color::x_color;
+use figbase::geom::{Point, Rect};
+
+/// The languages this driver writes, with their format.
+const LANGUAGES: &[(&str, ExportFormat)] = &[
+    ("box", ExportFormat::LatexBox),
+    ("eps", ExportFormat::Eps),
+    ("gif", ExportFormat::Gif),
+    ("jpeg", ExportFormat::Jpeg),
+    ("pcx", ExportFormat::Pcx),
+    ("pdf", ExportFormat::Pdf),
+    // The graphics halves of the combined LaTeX languages (genpstex.c):
+    // EPS and PDF without special texts.
+    ("pdftex", ExportFormat::Pdf),
+    ("png", ExportFormat::Png),
+    ("ppm", ExportFormat::Ppm),
+    // PostScript pages: written as EPS-style PostScript until the page
+    // layout is ported (B4a).
+    ("ps", ExportFormat::Eps),
+    ("pstex", ExportFormat::Eps),
+    ("svg", ExportFormat::Svg),
+    ("tiff", ExportFormat::Tiff),
+    ("xbm", ExportFormat::Xbm),
+    ("xpm", ExportFormat::Xpm),
+];
+
+/// genbitmaps' languages: unknown options are warnings there.
+const BITMAP_LANGUAGES: &[&str] = &["gif", "jpeg", "pcx", "png", "ppm", "sld", "tiff", "xbm", "xpm"];
+
+/// The driver for `lang`, if RustFig's writers produce it.
+pub fn new(lang: &str) -> Option<Box<dyn Driver>> {
+    let &(lang, format) = LANGUAGES.iter().find(|(l, _)| *l == lang)?;
+    Some(Box::new(SceneDriver {
+        lang,
+        format,
+        items: Vec::new(),
+        options: None,
+        builder: None,
+        comments: Vec::new(),
+    }))
+}
+
+/// Whether `lang` is one of this driver's languages.
+pub fn writes(lang: &str) -> bool {
+    LANGUAGES.iter().any(|(l, _)| *l == lang)
+}
+
+/// The name the driver uses in its messages (`Err_badarg`): genps speaks
+/// for ps, eps and pdf.
+pub fn driver_name(lang: &str) -> &str {
+    match lang {
+        "eps" | "pdf" | "pstex" | "pdftex" => "ps",
+        other => other,
+    }
+}
+
+/// The language whose options a language takes: pstex takes geneps's
+/// options, pdftex genpdf's (genpstex.c).
+pub fn options_lang(lang: &str) -> &str {
+    match lang {
+        "pstex" => "eps",
+        "pdftex" => "pdf",
+        other => other,
+    }
+}
+
+/// An option's value as given.
+#[derive(Debug, Clone)]
+enum Value {
+    Bool(bool),
+    Text(String),
+}
+
+/// One of the scene languages.
+#[derive(Debug)]
+pub struct SceneDriver {
+    lang: &'static str,
+    format: ExportFormat,
+    /// The options given, by key, in order.
+    items: Vec<(String, Value)>,
+    /// The options read when the figure starts.
+    options: Option<DriverOptions>,
+    builder: Option<Builder>,
+    /// The whole-figure comments (the LaTeX box writes them).
+    comments: Vec<String>,
+}
+
+impl SceneDriver {
+    fn language(&self) -> Result<&'static Language, String> {
+        language(match options_lang(self.lang) {
+            "ps" => "eps",
+            l => l,
+        })
+        .ok_or_else(|| format!("fig2dev: no writer for {}", self.lang))
+    }
+
+    /// The options given so far, with fig2dev's defaults first: font sizes
+    /// in 1/80 inch unless `-F` says points, and no smoothing for the
+    /// bitmaps unless `-S` (ghostscript's default is hard edges).
+    fn parse(&self) -> Result<DriverOptions, String> {
+        let olang = options_lang(self.lang);
+        let mut all: Vec<(&str, OptionValue<'_>)> = Vec::new();
+        if option_spec(olang, "correct_font_size").is_some_and(|s| s.effective_for(olang)) {
+            all.push(("correct_font_size", OptionValue::Bool(false)));
+        }
+        if option_spec(olang, "smoothing").is_some_and(|s| s.effective_for(olang)) {
+            all.push(("smoothing", OptionValue::Text("0")));
+        }
+        all.extend(self.items.iter().map(|(k, v)| {
+            (
+                k.as_str(),
+                match v {
+                    Value::Bool(b) => OptionValue::Bool(*b),
+                    Value::Text(t) => OptionValue::Text(t.as_str()),
+                },
+            )
+        }));
+        parse_options(self.language()?, &all).map_err(|e| format!("fig2dev: {e}"))
+    }
+
+    fn builder(&mut self) -> Result<&mut Builder, String> {
+        self.builder
+            .as_mut()
+            .ok_or_else(|| "fig2dev: objects before the header (internal error)".to_string())
+    }
+}
+
+impl Driver for SceneDriver {
+    /// `genps_option`, `genbitmaps_option`, `gensvg_option`: the option is
+    /// checked now, so that a bad value stops fig2dev before it reads the
+    /// figure.
+    fn option(&mut self, ctx: &mut Ctx, c: char, arg: Option<&str>) -> Result<(), String> {
+        // -L and -G reach every driver; they are handled globally.
+        if c == 'L' {
+            return Ok(());
+        }
+        let lang = options_lang(self.lang);
+        let Some(spec) = option_spec(lang, &c.to_string()).filter(|s| s.letter == c) else {
+            let msg = format!("Argument -{c} unknown to {} driver.", driver_name(self.lang));
+            if BITMAP_LANGUAGES.contains(&lang) {
+                // genbitmaps_option warns and goes on.
+                ctx.warn(msg);
+                return Ok(());
+            }
+            return Err(msg);
+        };
+        if !spec.effective_for(lang) {
+            // fig2dev accepts it here and does nothing; genbitmaps says so
+            // for -q and -t.
+            match c {
+                'q' => ctx.warn("-q option only allowed for jpeg quality; ignored"),
+                't' => ctx.warn("-t option only allowed for GIF transparent color; ignored"),
+                _ => {}
+            }
+            return Ok(());
+        }
+        if let Support::Planned(task) = spec.support {
+            ctx.warn(format!(
+                "fig2dev: option -{c} is not implemented in RustFig yet (plan task {task}); ignored"
+            ));
+            return Ok(());
+        }
+        if c == 'g' {
+            // A colour lookup_X_color doesn't know is warned about and
+            // ignored.
+            let name = arg.unwrap_or("");
+            if x_color(name).is_none() {
+                ctx.warn(format!("Can't parse color '{name}', ignoring background option"));
+                return Ok(());
+            }
+        }
+        let value = match (spec.arg, arg) {
+            (Arg::Flag, _) => Value::Bool(true),
+            (_, Some(a)) => Value::Text(a.to_string()),
+            (_, None) => Value::Bool(true),
+        };
+        self.items.push((spec.key.to_string(), value));
+        self.parse().map(|_| ())
+    }
+
+    fn start(&mut self, ctx: &mut Ctx, _out: &mut Out, objects: &Compound) -> Result<(), String> {
+        if self.lang == "ps" {
+            ctx.warn(
+                "fig2dev: PostScript page layout is not ported yet (plan task B4); writing the figure as EPS-style PostScript",
+            );
+        }
+        let o = self.parse()?;
+        // Without -F, fig2dev reads font sizes as 1/80 inch (`PSFONTMAG`);
+        // with it, metric figures keep their text's point size.
+        let unit_fix = if ctx.metric { 80.0 / 76.2 } else { 1.0 };
+        let text = TextOptions {
+            scale: if o.correct_font_size {
+                1.0 / unit_fix
+            } else {
+                72.0 / 80.0
+            },
+            font: o.font,
+            skip_special: matches!(self.lang, "pstex" | "pdftex"),
+        };
+        self.builder = Some(Builder::new(ctx, text));
+        self.options = Some(o);
+        self.comments = objects.comments.clone();
+        Ok(())
+    }
+
+    fn arc(&mut self, ctx: &mut Ctx, _out: &mut Out, a: &Arc) -> Result<(), String> {
+        self.builder()?.arc(ctx, a);
+        Ok(())
+    }
+
+    fn ellipse(&mut self, ctx: &mut Ctx, _out: &mut Out, e: &Ellipse) -> Result<(), String> {
+        self.builder()?.ellipse(ctx, e);
+        Ok(())
+    }
+
+    fn line(&mut self, ctx: &mut Ctx, _out: &mut Out, l: &Line) -> Result<(), String> {
+        self.builder()?.line(ctx, l);
+        Ok(())
+    }
+
+    fn spline(&mut self, ctx: &mut Ctx, _out: &mut Out, s: &Spline) -> Result<(), String> {
+        self.builder()?.spline(ctx, s);
+        Ok(())
+    }
+
+    fn text(&mut self, ctx: &mut Ctx, _out: &mut Out, t: &Text) -> Result<(), String> {
+        self.builder()?.text(ctx, t);
+        Ok(())
+    }
+
+    fn end(&mut self, ctx: &mut Ctx, out: &mut Out) -> Result<i32, String> {
+        let (Some(o), Some(mut b)) = (self.options.take(), self.builder.take()) else {
+            return Err("fig2dev: no header written (internal error)".into());
+        };
+        let mut scene = b.scene();
+        // fig2dev's bounds, in Fig units of 1200 per inch.
+        let k = file_scale(ctx);
+        let raw = Rect::from_points([
+            Point::new(f64::from(ctx.llx) * k, f64::from(ctx.lly) * k),
+            Point::new(f64::from(ctx.urx) * k, f64::from(ctx.ury) * k),
+        ]);
+        // The magnification after -m or -Z, with the metric correction.
+        let scale = if ctx.mag.is_finite() {
+            ctx.mag.clamp(0.001, 1000.0 * 80.0 / 76.2)
+        } else {
+            1.0
+        };
+        // `-b`: points on the page; for the bitmaps pixels at 80 dpi
+        // before the magnification, so `THICK_SCALE` (15) Fig units each.
+        let border = if !o.border.is_finite() {
+            0.0
+        } else if self.format.is_bitmap() {
+            o.border.clamp(0.0, 72_000.0) * 15.0
+        } else {
+            o.border.clamp(0.0, 72_000.0) * 1200.0 / 72.0 / scale
+        };
+        let mut bg = o.background.map(Rgba::opaque);
+        if o.grayscale {
+            scene.map_colors(Rgba::luminance_gray);
+            bg = bg.map(Rgba::luminance_gray);
+        }
+        let transparent = o.transparent.or_else(|| transparent_color(ctx));
+        let bytes = write(
+            &scene,
+            self.format,
+            &Page {
+                bounds: raw.expand(border),
+                scale,
+                background: bg,
+                title: o.title.as_deref(),
+                embedded_eps: &b.embedded_eps,
+                comments: &self.comments,
+                // genbitmaps: ghostscript at 80 dpi times the magnification.
+                dpi: 80.0,
+                smoothing: o.smoothing,
+                quality: o.quality,
+                transparent,
+            },
+        )
+        .map_err(|e| format!("fig2dev: {e}"))?;
+        out.bytes(&bytes);
+        Ok(0)
+    }
+
+    fn text_include(&self) -> bool {
+        true
+    }
+}

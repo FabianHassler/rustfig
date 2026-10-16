@@ -1,7 +1,7 @@
 //! Cache of shaped text, keyed by font, size and string.
 
-use crate::TextPrim;
-use rustfig_text::{Metrics, Shaped};
+use super::TextPrim;
+use figbase::text::{Metrics, Shaped};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -25,7 +25,7 @@ pub(crate) fn shaped(t: &TextPrim) -> Rc<Shaped> {
         if c.len() >= MAX_ENTRIES {
             c.clear();
         }
-        let s = Rc::new(rustfig_text::shape(&t.request(), t.size, &t.text));
+        let s = Rc::new(figbase::text::shape(&t.request(), t.size, &t.text));
         c.insert(key, s.clone());
         s
     })

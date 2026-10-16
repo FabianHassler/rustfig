@@ -569,7 +569,9 @@ pub struct Status {
     pub exit: i32,
 }
 
-enum Obj<'a> {
+/// One object of the figure, as the drivers receive it.
+#[derive(Clone, Copy, Debug)]
+pub enum Obj<'a> {
     Arc(&'a Arc),
     Ellipse(&'a Ellipse),
     Line(&'a Line),
@@ -598,6 +600,17 @@ fn compound_dump<'a>(com: &'a Compound, out: &mut Vec<(i32, Obj<'a>)>) {
     out.extend(com.lines.iter().map(|l| (l.depth, Obj::Line(l))));
     out.extend(com.splines.iter().map(|s| (s.depth, Obj::Spline(s))));
     out.extend(com.texts.iter().map(|t| (t.depth, Obj::Text(t))));
+}
+
+/// Every object with its depth in the order the drivers draw them
+/// (`gendev_objects`): deepest first; objects of one depth in
+/// `compound_dump`'s order.
+pub fn drawing_order(objects: &Compound) -> Vec<(i32, Obj<'_>)> {
+    let mut recs = Vec::new();
+    compound_dump(objects, &mut recs);
+    // Deepest first; stable, so objects of one depth keep their order.
+    recs.sort_by_key(|r| std::cmp::Reverse(r.0));
+    recs
 }
 
 /// fig2dev's `main` after reading the figure, and `gendev_objects`: the
@@ -641,8 +654,7 @@ pub fn convert(ctx: &mut Ctx, dev: &mut dyn Driver, objects: &Compound) -> Resul
         ctx.mag *= 80.0 / 76.2;
     }
 
-    let mut recs = Vec::new();
-    compound_dump(objects, &mut recs);
+    let recs = drawing_order(objects);
     let mut out = Out::new();
     if recs.is_empty() {
         ctx.warn("fig2dev: No objects in Fig file");
@@ -651,9 +663,6 @@ pub fn convert(ctx: &mut Ctx, dev: &mut dyn Driver, objects: &Compound) -> Resul
             exit: -1,
         });
     }
-    // Deepest first; stable, so objects of one depth keep their order.
-    recs.sort_by_key(|r| std::cmp::Reverse(r.0));
-
     dev.start(ctx, &mut out, objects)?;
     let (major, minor) = (ctx.grid_major_spacing, ctx.grid_minor_spacing);
     dev.grid(ctx, &mut out, major, minor)?;

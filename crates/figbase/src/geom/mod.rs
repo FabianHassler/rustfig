@@ -12,6 +12,9 @@ pub use arrow::{arrowhead, ArrowFill, ArrowShape, ArrowSpec, ARROW_TYPES};
 pub use curves::{arc_path, ellipse_path, round_rect_path, Seg};
 pub use xspline::{flatten_xspline, XSPLINE_MAX_POINTS};
 
+/// Flattening tolerance in Fig units (about 1/240 inch).
+pub const FLATTEN_TOL: f64 = 5.0;
+
 use serde::{Deserialize, Serialize};
 use std::ops::{Add, Mul, Neg, Sub};
 

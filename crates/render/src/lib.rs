@@ -1,256 +1,29 @@
-//! RustFig rendering (layer L3).
+//! RustFig rendering (layer L3): the scene of a document.
 //!
-//! A [`Scene`] is a flat, depth-sorted list of drawing primitives built from
-//! a document. Backends turn it into pixels ([`raster`]), SVG, EPS or PDF.
-//! The same scene drives the canvas and every export, so what you see is
-//! what you export.
+//! [`build_scene`] turns a document into fig2dev's display list
+//! ([`Scene`], from `rustfig-fig2dev`), which the canvas rasterises
+//! ([`raster`], the same rasteriser fig2dev's bitmap languages use) and the
+//! exports write ([`export`]). The same scene drives the canvas and every
+//! export, so what you see is what you export.
 //
 // Ported from xfig src/u_redraw.c (drawing order, gray depths) and fig2dev
-// dev/genps.c (`PSFONTMAG` text sizes, arrows on pie arcs) and colors.c
-// (`rgb2luminance`) (xfig licence, see LICENSE-xfig).
+// dev/genps.c (`PSFONTMAG` text sizes, arrows on pie arcs) (xfig licence,
+// see LICENSE-xfig).
 
 pub mod bound;
-pub mod drivers;
-pub mod eps;
 pub mod export;
-pub mod languages;
-pub mod options;
-pub mod pattern;
-pub mod pdf;
-pub mod raster;
-pub mod svg;
-mod textcache;
 
 pub use export::{export, export_bounds, ExportFormat, ExportOptions};
-
-use rustfig_geom::{arrowhead, ArrowShape, ArrowSpec, Point, Rect, Seg, FIG_PER_POINT};
-use rustfig_model::{
-    area_fill_color, flatten_object, Arrow, CapStyle, ColorRef, Document, JoinStyle, Justify, LineKind, Object,
-    ObjectKind, PolyKind, RasterImage, Rgb, Style,
+pub use rustfig_fig2dev::scene::{
+    eps, font_px, head_at_end, line_width, pattern, pdf, raster, svg, Fill, Prim, Rgba, Scene, Stroke, SubPath,
+    TextPrim,
 };
+pub use rustfig_fig2dev::{languages, options};
+
+use rustfig_fig2dev::scene::{fill, picture_prims, shape_prims, stroke, Shape};
+use rustfig_geom::{ArrowSpec, Rect, Seg};
+use rustfig_model::{flatten_object, Arrow, ColorRef, Document, Object, ObjectKind, PolyKind, Style};
 use std::collections::BTreeSet;
-use std::sync::Arc;
-
-/// A colour with alpha.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Rgba {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-    pub a: u8,
-}
-
-impl Rgba {
-    pub const fn opaque(c: Rgb) -> Rgba {
-        Rgba {
-            r: c.r,
-            g: c.g,
-            b: c.b,
-            a: 255,
-        }
-    }
-    pub fn rgb(self) -> Rgb {
-        Rgb::new(self.r, self.g, self.b)
-    }
-}
-
-/// How a closed path is filled.
-#[derive(Debug, Clone, PartialEq)]
-pub enum Fill {
-    Solid(Rgba),
-    /// Fig pattern 41–62: `fg` lines over a `bg` background.
-    Pattern {
-        kind: i32,
-        fg: Rgba,
-        bg: Rgba,
-    },
-}
-
-/// How a path is stroked. Lengths are Fig units.
-#[derive(Debug, Clone, PartialEq)]
-pub struct Stroke {
-    pub width: f64,
-    pub color: Rgba,
-    pub dash: Vec<f64>,
-    pub cap: CapStyle,
-    pub join: JoinStyle,
-}
-
-/// One polyline of a path.
-#[derive(Debug, Clone, PartialEq)]
-pub struct SubPath {
-    pub pts: Vec<Point>,
-    pub closed: bool,
-    /// The exact outline as lines and curves, for the vector backends
-    /// (ellipses, arcs, rounded boxes); `pts` is its flattening, which the
-    /// raster backend draws.
-    pub curve: Option<Vec<Seg>>,
-}
-
-/// A drawing primitive in Fig coordinates.
-#[derive(Debug, Clone, PartialEq)]
-pub enum Prim {
-    Path {
-        subpaths: Vec<SubPath>,
-        fill: Option<Fill>,
-        stroke: Option<Stroke>,
-    },
-    Text(TextPrim),
-    Image {
-        /// Top-left, top-right, bottom-right, bottom-left of the picture box.
-        corners: [Point; 4],
-        image: Arc<RasterImage>,
-        /// Transposed (Fig "flipped" pictures).
-        flipped: bool,
-    },
-    /// A picture without pixels (an EPS or PDF file, or one that could
-    /// not be read). The placeholder drawn for it follows as the next
-    /// primitive; the EPS backend embeds the file instead when the export
-    /// supplies it ([`crate::export::EmbeddedEps`]).
-    PictureRef {
-        /// Top-left, top-right, bottom-right, bottom-left of the picture box.
-        corners: [Point; 4],
-        flipped: bool,
-        /// The picture's file name, as in the figure.
-        file: String,
-    },
-}
-
-/// A text run.
-#[derive(Debug, Clone, PartialEq)]
-pub struct TextPrim {
-    pub origin: Point,
-    /// Radians, counter-clockwise.
-    pub angle: f64,
-    /// Points.
-    pub size: f64,
-    pub justify: Justify,
-    pub font: i32,
-    pub postscript: bool,
-    pub text: String,
-    pub color: Rgba,
-}
-
-impl TextPrim {
-    pub fn request(&self) -> rustfig_text::FontRequest {
-        rustfig_text::FontRequest::for_fig(self.font, self.postscript)
-    }
-}
-
-impl Rgba {
-    /// The light gray xfig uses for depths that are off: darker colours
-    /// stay a little darker, so shapes remain readable.
-    pub fn grayed(self) -> Rgba {
-        let lum = (u32::from(self.r) * 299 + u32::from(self.g) * 587 + u32::from(self.b) * 114) / 1000;
-        let v = (170 + lum * 70 / 255).min(255) as u8;
-        Rgba {
-            r: v,
-            g: v,
-            b: v,
-            a: self.a,
-        }
-    }
-}
-
-impl Rgba {
-    /// The gray of fig2dev's `-N` (`colors.c` `rgb2luminance`).
-    pub fn luminance_gray(self) -> Rgba {
-        let lum = 0.3 * f64::from(self.r) + 0.59 * f64::from(self.g) + 0.11 * f64::from(self.b);
-        let v = lum.round().clamp(0.0, 255.0) as u8;
-        Rgba {
-            r: v,
-            g: v,
-            b: v,
-            a: self.a,
-        }
-    }
-}
-
-impl Scene {
-    /// Every stroke, fill and text colour passed through `f`. Pictures keep
-    /// theirs, as in fig2dev.
-    pub fn map_colors(&mut self, f: impl Fn(Rgba) -> Rgba) {
-        for p in &mut self.prims {
-            match p {
-                Prim::Path { fill, stroke, .. } => {
-                    match fill {
-                        Some(Fill::Solid(c)) => *c = f(*c),
-                        Some(Fill::Pattern { fg, bg, .. }) => {
-                            *fg = f(*fg);
-                            *bg = f(*bg);
-                        }
-                        None => {}
-                    }
-                    if let Some(s) = stroke {
-                        s.color = f(s.color);
-                    }
-                }
-                Prim::Text(t) => t.color = f(t.color),
-                Prim::Image { .. } | Prim::PictureRef { .. } => {}
-            }
-        }
-    }
-}
-
-impl Prim {
-    /// Recolour in gray (objects on depths that are off).
-    pub fn gray_out(&mut self) {
-        match self {
-            Prim::Path { fill, stroke, .. } => {
-                match fill {
-                    Some(Fill::Solid(c)) => *c = c.grayed(),
-                    Some(Fill::Pattern { fg, bg, .. }) => {
-                        *fg = fg.grayed();
-                        *bg = bg.grayed();
-                    }
-                    None => {}
-                }
-                if let Some(s) = stroke {
-                    s.color = s.color.grayed();
-                }
-            }
-            Prim::Text(t) => t.color = t.color.grayed(),
-            // Pictures keep their pixels; they can't be picked either way.
-            Prim::Image { .. } | Prim::PictureRef { .. } => {}
-        }
-    }
-
-    /// Bounding box in Fig units (including half the stroke width).
-    pub fn bbox(&self) -> Rect {
-        match self {
-            Prim::Path { subpaths, stroke, .. } => {
-                let mut r = Rect::EMPTY;
-                for s in subpaths {
-                    for p in &s.pts {
-                        r.add_point(*p);
-                    }
-                }
-                r.expand(stroke.as_ref().map(|s| s.width / 2.0).unwrap_or(0.0))
-            }
-            Prim::Text(t) => {
-                let m = textcache::metrics(t);
-                let x0 = match t.justify {
-                    Justify::Left => 0.0,
-                    Justify::Center => -m.width / 2.0,
-                    Justify::Right => -m.width,
-                };
-                let rot = rustfig_geom::Affine::rotate(t.angle);
-                Rect::from_points(
-                    [
-                        Point::new(x0, -m.ascent),
-                        Point::new(x0 + m.width, -m.ascent),
-                        Point::new(x0 + m.width, m.descent),
-                        Point::new(x0, m.descent),
-                    ]
-                    .map(|p| t.origin + rot.apply_vec(p)),
-                )
-            }
-            Prim::Image { corners, .. } | Prim::PictureRef { corners, .. } => {
-                Rect::from_points(corners.iter().copied())
-            }
-        }
-    }
-}
 
 /// Options for building a scene.
 #[derive(Debug, Clone, Default)]
@@ -268,41 +41,30 @@ pub struct SceneOptions {
     pub text_scale: Option<f64>,
 }
 
-/// A depth-sorted list of primitives.
-#[derive(Debug, Clone, Default)]
-pub struct Scene {
-    pub prims: Vec<Prim>,
-}
-
-impl Scene {
-    pub fn build(doc: &Document, opts: &SceneOptions) -> Scene {
-        let mut leaves: Vec<(&Object, bool)> = Vec::with_capacity(doc.leaf_count());
-        doc.for_each_leaf_xfig_order(&mut |o| {
-            let hidden = opts.hidden_depths.contains(&o.depth());
-            if !hidden || opts.gray_hidden {
-                leaves.push((o, hidden));
-            }
-        });
-        // xfig's order: depths that are off (gray) behind everything, then
-        // back to front; within a depth, the stable sort keeps xfig's type
-        // order from the walk above (`u_redraw.c` `redisplay_objects`).
-        leaves.sort_by_key(|(o, gray)| (!*gray, std::cmp::Reverse(o.depth())));
-        let mut prims = Vec::with_capacity(leaves.len());
-        for (o, gray) in leaves {
-            let first = prims.len();
-            object_prims(doc, o, opts, &mut prims);
-            if gray {
-                if let Some(new) = prims.get_mut(first..) {
-                    new.iter_mut().for_each(Prim::gray_out);
-                }
+/// The scene of a document: its objects back to front, as xfig draws them.
+pub fn build_scene(doc: &Document, opts: &SceneOptions) -> Scene {
+    let mut leaves: Vec<(&Object, bool)> = Vec::with_capacity(doc.leaf_count());
+    doc.for_each_leaf_xfig_order(&mut |o| {
+        let hidden = opts.hidden_depths.contains(&o.depth());
+        if !hidden || opts.gray_hidden {
+            leaves.push((o, hidden));
+        }
+    });
+    // xfig's order: depths that are off (gray) behind everything, then
+    // back to front; within a depth, the stable sort keeps xfig's type
+    // order from the walk above (`u_redraw.c` `redisplay_objects`).
+    leaves.sort_by_key(|(o, gray)| (!*gray, std::cmp::Reverse(o.depth())));
+    let mut prims = Vec::with_capacity(leaves.len());
+    for (o, gray) in leaves {
+        let first = prims.len();
+        object_prims(doc, o, opts, &mut prims);
+        if gray {
+            if let Some(new) = prims.get_mut(first..) {
+                new.iter_mut().for_each(Prim::gray_out);
             }
         }
-        Scene { prims }
     }
-
-    pub fn bbox(&self) -> Rect {
-        self.prims.iter().fold(Rect::EMPTY, |r, p| r.union(&p.bbox()))
-    }
+    Scene { prims }
 }
 
 fn color(doc: &Document, c: ColorRef) -> Rgba {
@@ -310,116 +72,38 @@ fn color(doc: &Document, c: ColorRef) -> Rgba {
 }
 
 fn fill_for(doc: &Document, s: &Style) -> Option<Fill> {
-    if s.area_fill < 0 {
-        return None;
-    }
-    let fc = doc.rgb(s.fill_color);
-    if s.area_fill > 40 {
-        return Some(Fill::Pattern {
-            kind: s.area_fill,
-            fg: color(doc, s.pen_color),
-            bg: Rgba::opaque(fc),
-        });
-    }
-    let is_white = s.fill_color == ColorRef::WHITE;
-    area_fill_color(fc, s.fill_color.is_default_or_black(), is_white, s.area_fill).map(|c| Fill::Solid(Rgba::opaque(c)))
-}
-
-/// Stroke width in Fig units for a thickness in 1/80 inch (fig2dev's rule,
-/// [`rustfig_geom::stroke_width`]).
-pub fn line_width(thickness: f64) -> f64 {
-    rustfig_geom::stroke_width(thickness)
+    fill(
+        s.area_fill,
+        color(doc, s.pen_color),
+        doc.rgb(s.fill_color),
+        s.fill_color.is_default_or_black(),
+        s.fill_color == ColorRef::WHITE,
+    )
 }
 
 /// The stroke for an object's style. `round_dots`: fig2dev draws dotted
 /// ellipses and closed splines with round caps (dots); other objects use
 /// their cap style.
 fn stroke_for(doc: &Document, s: &Style, round_dots: bool) -> Option<Stroke> {
-    if s.thickness <= 0 {
-        return None;
-    }
-    let width = line_width(f64::from(s.thickness));
-    let dash = s.line.dash_pattern(s.style_val, width);
-    Some(Stroke {
-        width,
-        color: color(doc, s.pen_color),
-        dash,
-        cap: if round_dots && s.line == LineKind::Dotted {
-            CapStyle::Round
-        } else {
-            s.cap
-        },
-        join: s.join,
-    })
+    stroke(
+        s.thickness,
+        s.line,
+        s.style_val,
+        color(doc, s.pen_color),
+        s.cap,
+        s.join,
+        round_dots,
+    )
 }
 
-/// A point at least `min` away from the end of `pts`, walking backwards, to
-/// orient arrowheads.
-fn arrow_from(pts: &[Point], tip: Point, min: f64) -> Option<Point> {
-    let mut last = None;
-    for p in pts.iter().rev() {
-        if p.dist(tip) > 1e-6 {
-            last = Some(*p);
-            if p.dist(tip) >= min {
-                break;
-            }
-        }
-    }
-    last
-}
-
-/// The arrowhead at the end of `pts`. Polylines point the head along their
-/// last segment, as fig2dev does; curves along the chord of the head's length.
-pub(crate) fn head_at_end(pts: &[Point], a: &Arrow, line_thickness: f64, poly: bool) -> Option<ArrowShape> {
-    let tip = *pts.last()?;
-    let from = if poly {
-        pts.iter().rev().find(|p| p.dist(tip) > 1e-6).copied()?
-    } else {
-        arrow_from(pts, tip, a.height)?
-    };
-    let spec = ArrowSpec {
+/// An arrowhead as the geometry draws it.
+pub fn arrow_spec(a: &Arrow) -> ArrowSpec {
+    ArrowSpec {
         kind: a.kind,
         style: a.style,
         thickness: a.thickness,
         width: a.width,
         height: a.height,
-    };
-    arrowhead(tip, from, &spec, line_thickness)
-}
-
-fn arrow_prims(doc: &Document, style: &Style, a: &Arrow, shape: ArrowShape, out: &mut Vec<Prim>) {
-    let pen = color(doc, style.pen_color);
-    let fill = match shape.fill {
-        rustfig_geom::ArrowFill::None => None,
-        rustfig_geom::ArrowFill::White => Some(Fill::Solid(Rgba::opaque(Rgb::WHITE))),
-        rustfig_geom::ArrowFill::Pen => Some(Fill::Solid(pen)),
-    };
-    let stroke = Stroke {
-        width: line_width(a.thickness).max(1.0),
-        color: pen,
-        dash: Vec::new(),
-        cap: CapStyle::Butt,
-        join: JoinStyle::Miter,
-    };
-    out.push(Prim::Path {
-        subpaths: vec![SubPath {
-            pts: shape.outline,
-            closed: shape.closed,
-            curve: None,
-        }],
-        fill,
-        stroke: Some(stroke.clone()),
-    });
-    if let Some(part) = shape.pen_part {
-        out.push(Prim::Path {
-            subpaths: vec![SubPath {
-                pts: part,
-                closed: true,
-                curve: None,
-            }],
-            fill: Some(Fill::Solid(pen)),
-            stroke: Some(stroke),
-        });
     }
 }
 
@@ -447,88 +131,35 @@ fn object_prims(doc: &Document, o: &Object, opts: &SceneOptions, out: &mut Vec<P
             if r.is_empty() {
                 return;
             }
-            let corners = r.corners();
-            match p
-                .picture
-                .as_ref()
-                .and_then(|pic| pic.image.clone().map(|i| (i, pic.flipped)))
-            {
-                Some((image, flipped)) => out.push(Prim::Image {
-                    corners,
-                    image,
-                    flipped,
-                }),
-                None => {
-                    out.push(Prim::PictureRef {
-                        corners,
-                        flipped: p.picture.as_ref().is_some_and(|pic| pic.flipped),
-                        file: p.picture.as_ref().map(|pic| pic.file.clone()).unwrap_or_default(),
-                    });
-                    // Missing picture: box with a cross.
-                    let [a, b, c, d] = corners;
-                    out.push(Prim::Path {
-                        subpaths: vec![
-                            SubPath {
-                                pts: corners.to_vec(),
-                                closed: true,
-                                curve: None,
-                            },
-                            SubPath {
-                                pts: vec![a, c],
-                                closed: false,
-                                curve: None,
-                            },
-                            SubPath {
-                                pts: vec![b, d],
-                                closed: false,
-                                curve: None,
-                            },
-                        ],
-                        fill: None,
-                        stroke: Some(Stroke {
-                            width: line_width(1.0),
-                            color: Rgba::opaque(Rgb::new(128, 128, 128)),
-                            dash: Vec::new(),
-                            cap: CapStyle::Butt,
-                            join: JoinStyle::Miter,
-                        }),
-                    });
-                }
-            }
-            if p.style.thickness > 0 {
-                if let Some(stroke) = stroke_for(doc, &p.style, false) {
-                    out.push(Prim::Path {
-                        subpaths: vec![SubPath {
-                            pts: corners.to_vec(),
-                            closed: true,
-                            curve: None,
-                        }],
-                        fill: None,
-                        stroke: Some(stroke),
-                    });
-                }
-            }
+            let pic = p.picture.as_ref();
+            let frame = if p.style.thickness > 0 {
+                stroke_for(doc, &p.style, false)
+            } else {
+                None
+            };
+            picture_prims(
+                r.corners(),
+                pic.and_then(|pic| pic.image.clone()),
+                pic.is_some_and(|pic| pic.flipped),
+                pic.map(|pic| pic.file.as_str()).unwrap_or_default(),
+                frame,
+                out,
+            );
         }
         ObjectKind::Compound(_) => {}
         _ => {
             let Some(style) = o.style() else { return };
-            let mut paths = flatten_object(o);
-            let fill = fill_for(doc, style);
             let round_dots = match &o.kind {
                 ObjectKind::Ellipse(_) => true,
                 ObjectKind::Spline(s) => s.closed,
                 _ => false,
             };
-            let stroke = stroke_for(doc, style, round_dots);
             let (fwd, back) = match &o.kind {
                 ObjectKind::Polyline(p) if p.kind == PolyKind::Polyline => (p.forward_arrow, p.backward_arrow),
                 ObjectKind::Spline(s) if !s.closed => (s.forward_arrow, s.backward_arrow),
                 ObjectKind::Arc(a) => (a.forward_arrow, a.backward_arrow),
                 _ => (None, None),
             };
-            let mut heads = Vec::new();
-            let line_thk = f64::from(style.thickness);
-            let poly = matches!(&o.kind, ObjectKind::Polyline(_));
             // Pie wedges carry their arrows on the arc (fig2dev draws them).
             let pie_arc = match &o.kind {
                 ObjectKind::Arc(a) if a.pie && (fwd.is_some() || back.is_some()) => {
@@ -540,78 +171,23 @@ fn object_prims(doc: &Document, o: &Object, opts: &SceneOptions, out: &mut Vec<P
                 }
                 _ => None,
             };
-            if let Some(path) = paths.first_mut() {
-                let open = !path.closed && path.pts.len() >= 2;
-                let src = if open { Some(path.pts.clone()) } else { pie_arc };
-                if let Some(src) = src.filter(|s| s.len() >= 2) {
-                    if let Some(a) = fwd {
-                        if let Some(sh) = head_at_end(&src, &a, line_thk, poly) {
-                            if let Some(l) = path.pts.last_mut().filter(|_| open) {
-                                *l = sh.line_end;
-                            }
-                            heads.push((a, sh));
-                        }
-                    }
-                    if let Some(a) = back {
-                        let rev: Vec<Point> = src.iter().rev().copied().collect();
-                        if let Some(sh) = head_at_end(&rev, &a, line_thk, poly) {
-                            if let Some(f) = path.pts.first_mut().filter(|_| open) {
-                                *f = sh.line_end;
-                            }
-                            heads.push((a, sh));
-                        }
-                    }
-                }
-            }
-            let closed_any = paths.iter().any(|p| p.closed);
-            // The exact outline for the vector backends, unless arrowheads
-            // shortened the line (then the flattened, shortened one is drawn).
-            let shortened = !heads.is_empty() && !matches!(&o.kind, ObjectKind::Arc(a) if a.pie);
-            let mut exact = if shortened { None } else { exact_outline(o) };
-            let subpaths: Vec<SubPath> = paths
-                .into_iter()
-                .filter(|p| !p.pts.is_empty())
-                .map(|p| {
-                    let mut pts = p.pts;
-                    if pts.len() == 1 {
-                        // A single point: a dot.
-                        if let Some(q) = pts.first().copied() {
-                            pts.push(q + Point::new(0.01, 0.0));
-                        }
-                    }
-                    SubPath {
-                        pts,
-                        closed: p.closed,
-                        curve: exact.take(),
-                    }
-                })
-                .collect();
-            let single_dot = subpaths
-                .iter()
-                .all(|s| s.pts.len() == 2 && s.pts[0].dist(s.pts[1]) < 0.1);
-            let stroke = stroke.map(|mut s| {
-                if single_dot {
-                    s.cap = CapStyle::Round;
-                }
-                s
-            });
-            // Open shapes can still be filled (xfig fills open polylines and splines).
-            let fill = if closed_any || subpaths.iter().any(|s| s.pts.len() > 2) {
-                fill
-            } else {
-                None
-            };
-            out.push(Prim::Path { subpaths, fill, stroke });
-            for (a, sh) in heads {
-                arrow_prims(doc, style, &a, sh, out);
-            }
+            shape_prims(
+                Shape {
+                    paths: flatten_object(o).into_iter().map(|p| (p.pts, p.closed)).collect(),
+                    exact: exact_outline(o),
+                    fill: fill_for(doc, style),
+                    stroke: stroke_for(doc, style, round_dots),
+                    pen: color(doc, style.pen_color),
+                    thickness: f64::from(style.thickness),
+                    forward_arrow: fwd.as_ref().map(arrow_spec),
+                    backward_arrow: back.as_ref().map(arrow_spec),
+                    poly: matches!(&o.kind, ObjectKind::Polyline(_)),
+                    pie_arc,
+                },
+                out,
+            );
         }
     }
-}
-
-/// Font size in Fig units for a size in points.
-pub fn font_px(size: f64) -> f64 {
-    size * FIG_PER_POINT
 }
 
 /// An object's outline as lines and curves, where it has curves (ellipses,
@@ -637,6 +213,7 @@ fn exact_outline(o: &Object) -> Option<Vec<Seg>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rustfig_geom::Point;
     use rustfig_model::{Polyline, Style};
 
     #[test]
@@ -659,7 +236,7 @@ mod tests {
                 Point::ZERO,
                 Point::new(10.0, 10.0),
             )))));
-        let s = Scene::build(&doc, &SceneOptions::default());
+        let s = build_scene(&doc, &SceneOptions::default());
         assert_eq!(s.prims.len(), 2);
         let Prim::Path { stroke: Some(st), .. } = &s.prims[0] else {
             panic!()
@@ -711,7 +288,7 @@ mod tests {
             .push(std::sync::Arc::new(Object::new(ObjectKind::Compound(Compound {
                 objects: vec![rect_at(50, 2, 20.0)], // green line in a compound
             }))));
-        let s = Scene::build(&doc, &SceneOptions::default());
+        let s = build_scene(&doc, &SceneOptions::default());
         // Red channel of each stroke: blue arc 0, green compound member 0, red line 255.
         let order: Vec<u8> = s
             .prims
@@ -740,7 +317,7 @@ mod tests {
             gray_hidden: true,
             ..SceneOptions::default()
         };
-        let pens = stroke_pens(&Scene::build(&doc, &opts));
+        let pens = stroke_pens(&build_scene(&doc, &opts));
         // The gray (r == g == b, light) one comes first.
         assert!(pens[0] >= 170 && pens[0] < 255, "{pens:?}");
         assert_eq!(pens[1], 255);
@@ -762,9 +339,9 @@ mod tests {
             hidden_depths: [30].into_iter().collect(),
             ..SceneOptions::default()
         };
-        assert!(Scene::build(&doc, &opts).prims.is_empty());
+        assert!(build_scene(&doc, &opts).prims.is_empty());
         opts.gray_hidden = true;
-        let s = Scene::build(&doc, &opts);
+        let s = build_scene(&doc, &opts);
         let Prim::Path { stroke: Some(st), .. } = &s.prims[0] else {
             panic!()
         };
@@ -783,7 +360,7 @@ mod tests {
         p.forward_arrow = Some(Arrow::default());
         doc.objects
             .push(std::sync::Arc::new(Object::new(ObjectKind::Polyline(p))));
-        let s = Scene::build(&doc, &SceneOptions::default());
+        let s = build_scene(&doc, &SceneOptions::default());
         assert_eq!(s.prims.len(), 2);
         let Prim::Path { subpaths, .. } = &s.prims[0] else {
             panic!()

@@ -11,7 +11,7 @@
 // LICENSE-xfig).
 
 use crate::languages::Language;
-use rustfig_model::{x_color, Rgb};
+use figbase::color::{x_color, Rgb};
 
 /// The kind of value an option takes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -427,7 +427,7 @@ pub fn parse_options(lang: &Language, items: &[(&str, OptionValue<'_>)]) -> Resu
             }
             "font" => {
                 let t = text()?;
-                o.font = Some(rustfig_text::ps_font_number(t.trim()).ok_or_else(|| {
+                o.font = Some(figbase::text::ps_font_number(t.trim()).ok_or_else(|| {
                     format!("{t:?} is not a standard PostScript font name (like Helvetica or Times-Bold)")
                 })?);
             }

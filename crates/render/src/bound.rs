@@ -154,13 +154,13 @@ fn with_arrows(o: &Object, mut r: Rect, style: &Style, fwd: Option<Arrow>, back:
     }
     let line = f64::from(style.thickness);
     if let Some(a) = fwd {
-        if let Some(h) = head_at_end(&pts, &a, line, poly) {
+        if let Some(h) = head_at_end(&pts, &crate::arrow_spec(&a), line, poly) {
             r = r.union(&Rect::from_points(h.outline));
         }
     }
     if let Some(a) = back {
         let rev: Vec<Point> = pts.iter().rev().copied().collect();
-        if let Some(h) = head_at_end(&rev, &a, line, poly) {
+        if let Some(h) = head_at_end(&rev, &crate::arrow_spec(&a), line, poly) {
             r = r.union(&Rect::from_points(h.outline));
         }
     }

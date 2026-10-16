@@ -39,16 +39,16 @@ the score.
 - Commands: `crates/engine/src/cmd/*`, swept with hostile parameters in `crates/engine/tests/command_sweep.rs`.
 - Fig I/O: `crates/format/src/fig_read.rs` and `fig_write.rs`; round trip and fuzzing in `crates/format/tests/`.
 - Rendering: `crates/render/` (scene, tiny-skia raster, SVG, EPS, PDF; all 22 fill patterns; arrowheads; dashes); line widths as fig2dev (`geom::stroke_width`).
-- Fill patterns as fig2dev's PostScript (`crates/render/src/pattern.rs`, from `psprolog.h`).
+- Fill patterns as fig2dev's PostScript (`crates/fig2dev/src/scene/pattern.rs`, from `psprolog.h`).
 - Export bounds as fig2dev's (`crates/render/src/bound.rs`, ported from `bound.c`): bounding boxes equal fig2dev's on 2,532 of 2,568 sample figures.
 - True curves in SVG, PDF and EPS: `crates/figbase/src/geom/curves.rs`, `SubPath::curve`; test `ellipses_export_as_curves`.
-- fig2dev's options: `crates/render/src/options.rs`, applied in `export.rs`; tests `fig2dev_options_change_the_output`, `depth_options_select_objects_and_bounds`, `bad_options_are_refused` in `crates/engine/tests/export_languages.rs`; bounding boxes with `-b`, `-m`, `-Z`, `-D -K` checked equal to fig2dev's.
-- Bitmap languages (B6): `crates/render/src/drivers/bitmaps.rs`; tests in `crates/engine/tests/export_bitmaps.rs`.
+- fig2dev's options: `crates/fig2dev/src/options.rs`, applied in `export.rs`; tests `fig2dev_options_change_the_output`, `depth_options_select_objects_and_bounds`, `bad_options_are_refused` in `crates/engine/tests/export_languages.rs`; bounding boxes with `-b`, `-m`, `-Z`, `-D -K` checked equal to fig2dev's.
+- Bitmap languages (B6): `crates/fig2dev/src/scene/bitmaps.rs`; tests in `crates/engine/tests/export_bitmaps.rs`.
 - fig2dev port (B9): `crates/fig2dev` (reader, bounds, spline conversion, helpers); tests in `crates/fig2dev/tests/`.
 - One reader for every fig2dev language (`crates/fig2dev/src/read.rs`, `to_model.rs`); old Fig 1.3–2.1 files open in the app through it (`crates/engine/src/fig2dev.rs`, tests `crates/engine/tests/fig2dev_bridge.rs`); every ported language exports from the engine, the export dialog and `rustfig-cli`.
-- pstex/pdftex (B2): `crates/fig2dev/src/drivers/pstex.rs`, the `_t` file byte-identical to fig2dev's on a test figure; pictures in exports through `crates/fig2dev/src/util/readpics.rs`, EPS pictures embedded by `crates/render/src/eps.rs`.
+- pstex/pdftex (B2): `crates/fig2dev/src/drivers/pstex.rs`, the `_t` file byte-identical to fig2dev's on a test figure; pictures in exports through `crates/fig2dev/src/util/readpics.rs`, EPS pictures embedded by `crates/fig2dev/src/scene/eps.rs`.
 - Standalone `fig2dev` (B10): `apps/fig2dev` with fig2dev 3.2.9a's command line; tests in `apps/fig2dev/tests/cli.rs`; fig2dev's own suite in `apps/fig2dev/tests/fig2dev_suite.rs` (opt-in): 61 pass, 10 fail, 1 skipped, 17 need unported languages (2026-10-16).
-- Export languages: `crates/render/src/languages.rs` (xfig's list and suffixes), `drivers/latex_box.rs`, `file.export_formats`; tests in `crates/engine/tests/export_languages.rs` and `export_dialog_lists_xfigs_languages` in `ui_smoke.rs`.
+- Export languages: `crates/fig2dev/src/languages.rs` (xfig's list and suffixes), `drivers/latex_box.rs`, `file.export_formats`; tests in `crates/engine/tests/export_languages.rs` and `export_dialog_lists_xfigs_languages` in `ui_smoke.rs`.
 - Corpus comparison with fig2dev's EPS and PDF on xfig's ≈2,550 sample figures: `crates/engine/tests/fig2dev_corpus.rs` (opt-in), baseline `fixtures/corpus-scores.json`, report `target/fig2dev-reference/corpus/`.
 - Reference comparison with fig2dev: `crates/engine/tests/fig2dev_reference.rs`, 11 fixtures with recorded scores (`fixtures/scores.json`); arrowheads, arcs and dashes ported from fig2dev (D9): `geom/arrow.rs`, `model` `dash_pattern`.
 - UI: `crates/ui-egui/` (mode panel, attribute panel, depth manager, edit/export/search/settings dialogs, menus with shortcuts).

@@ -22,6 +22,7 @@ pub mod pict2e;
 pub mod pictex;
 pub mod pstex;
 pub mod pstricks;
+pub mod scene;
 pub mod shape;
 pub mod textyl;
 pub mod tikz;
@@ -30,8 +31,12 @@ pub mod tpic;
 
 /// The driver for fig2dev language `lang` (fig2dev's name, as `-L` takes
 /// it), or `None` when this crate doesn't write it (yet). EPS, PS, PDF,
-/// SVG, PNG and box are written by `rustfig-render`.
+/// SVG, the box, pstex, pdftex and the bitmaps are drawn from the scene
+/// ([`scene`]).
 pub fn driver(lang: &str) -> Option<Box<dyn Driver>> {
+    if scene::writes(lang) {
+        return scene::new(lang);
+    }
     match lang {
         "cgm" => cgm::new(lang),
         "dxf" => dxf::new(lang),

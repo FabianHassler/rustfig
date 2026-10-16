@@ -289,8 +289,10 @@ mod tests {
 
     #[test]
     fn every_ported_driver_has_help() {
+        // The scene languages' help comes from `crate::options`.
         for l in LANGS {
-            assert_eq!(help(l).is_some(), driver(l).is_some(), "{l}");
+            let listed = driver(l).is_some() && !crate::drivers::scene::writes(l);
+            assert_eq!(help(l).is_some(), listed, "{l}");
         }
     }
 

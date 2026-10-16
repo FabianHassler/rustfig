@@ -86,7 +86,7 @@ fn to_pos(p: Point, origin: Pos2) -> Pos2 {
 /// The scene of `doc` minus `hide`.
 fn build_scene(doc: &Document, opts: &SceneOptions, hide: &[ObjectId]) -> Scene {
     if hide.is_empty() {
-        Scene::build(doc, opts)
+        rustfig_render::build_scene(doc, opts)
     } else {
         let mut d = Document {
             settings: doc.settings.clone(),
@@ -96,7 +96,7 @@ fn build_scene(doc: &Document, opts: &SceneOptions, hide: &[ObjectId]) -> Scene 
             next_id: 0,
         };
         d.objects = doc.objects.iter().filter(|o| !hide.contains(&o.id)).cloned().collect();
-        Scene::build(&d, opts)
+        rustfig_render::build_scene(&d, opts)
     }
 }
 
@@ -312,7 +312,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
             if let Some(t) = &overlay.text {
                 d.objects.push(std::sync::Arc::new(t.object.clone()));
             }
-            let scene = Scene::build(&d, &SceneOptions::default());
+            let scene = rustfig_render::build_scene(&d, &SceneOptions::default());
             let img = rasterize_scene(&scene, t, w, h);
             match &mut app.canvas.ov_tex {
                 Some(tex) => tex.set(img, TextureOptions::NEAREST),

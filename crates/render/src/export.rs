@@ -6,86 +6,11 @@
 // licence, see LICENSE-xfig).
 
 use crate::options::{DriverOptions, SizeDim};
-use crate::{raster, Rgba, Scene, SceneOptions};
-use rustfig_geom::Rect;
+use crate::{build_scene, Rgba, SceneOptions};
+use rustfig_fig2dev::scene::Page;
+pub use rustfig_fig2dev::scene::{export_bounds, EmbeddedEps, ExportFormat};
 use rustfig_model::{Document, ObjectKind, Rgb, Units};
 use std::collections::BTreeSet;
-
-/// Export formats rendered from a scene.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ExportFormat {
-    Svg,
-    Eps,
-    Pdf,
-    Png,
-    /// fig2dev's LaTeX box (`-L box`).
-    LatexBox,
-    Gif,
-    Jpeg,
-    Pcx,
-    Ppm,
-    Tiff,
-    Xbm,
-    Xpm,
-}
-
-impl ExportFormat {
-    pub fn from_name(s: &str) -> Option<ExportFormat> {
-        match s.to_ascii_lowercase().trim_start_matches('.') {
-            "svg" => Some(ExportFormat::Svg),
-            "eps" | "ps" => Some(ExportFormat::Eps),
-            "pdf" => Some(ExportFormat::Pdf),
-            "png" => Some(ExportFormat::Png),
-            "box" => Some(ExportFormat::LatexBox),
-            "gif" => Some(ExportFormat::Gif),
-            "jpeg" | "jpg" => Some(ExportFormat::Jpeg),
-            "pcx" => Some(ExportFormat::Pcx),
-            "ppm" => Some(ExportFormat::Ppm),
-            "tiff" | "tif" => Some(ExportFormat::Tiff),
-            "xbm" => Some(ExportFormat::Xbm),
-            "xpm" => Some(ExportFormat::Xpm),
-            _ => None,
-        }
-    }
-
-    pub fn from_path(path: &str) -> Option<ExportFormat> {
-        let ext = path.rsplit_once('.').map(|(_, e)| e)?;
-        ExportFormat::from_name(ext)
-    }
-
-    pub fn extension(self) -> &'static str {
-        match self {
-            ExportFormat::Svg => "svg",
-            ExportFormat::Eps => "eps",
-            ExportFormat::Pdf => "pdf",
-            ExportFormat::Png => "png",
-            ExportFormat::LatexBox => "box",
-            ExportFormat::Gif => "gif",
-            ExportFormat::Jpeg => "jpg",
-            ExportFormat::Pcx => "pcx",
-            ExportFormat::Ppm => "ppm",
-            ExportFormat::Tiff => "tif",
-            ExportFormat::Xbm => "xbm",
-            ExportFormat::Xpm => "xpm",
-        }
-    }
-
-    /// Whether it is a bitmap (fig2dev's genbitmaps languages and PNG).
-    pub fn is_bitmap(self) -> bool {
-        !matches!(
-            self,
-            ExportFormat::Svg | ExportFormat::Eps | ExportFormat::Pdf | ExportFormat::LatexBox
-        )
-    }
-
-    /// Whether the output is text (the rest is binary).
-    pub fn is_text(self) -> bool {
-        matches!(
-            self,
-            ExportFormat::Svg | ExportFormat::Eps | ExportFormat::LatexBox | ExportFormat::Xbm | ExportFormat::Xpm
-        )
-    }
-}
 
 /// Export parameters.
 #[derive(Debug, Clone)]
@@ -114,20 +39,6 @@ pub struct ExportOptions {
     pub embedded_eps: std::collections::BTreeMap<String, EmbeddedEps>,
 }
 
-/// An EPS picture's content, for embedding (fig2dev's `read_eps`).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EmbeddedEps {
-    /// The name fig2dev writes in its comments.
-    pub title: String,
-    /// The bounding box, in points.
-    pub llx: i32,
-    pub lly: i32,
-    pub urx: i32,
-    pub ury: i32,
-    /// The PostScript (without a DOS EPS header).
-    pub ps: Vec<u8>,
-}
-
 impl Default for ExportOptions {
     fn default() -> Self {
         ExportOptions {
@@ -142,16 +53,6 @@ impl Default for ExportOptions {
             embedded_eps: std::collections::BTreeMap::new(),
         }
     }
-}
-
-/// Region covered by an export: the drawing's bounds plus the margin.
-pub fn export_bounds(scene: &Scene, margin: f64) -> Rect {
-    let m = if margin.is_finite() {
-        margin.clamp(0.0, 1.0e7)
-    } else {
-        0.0
-    };
-    scene.bbox().expand(m)
 }
 
 /// Render a document in the given format.
@@ -191,7 +92,7 @@ pub fn export(doc: &Document, format: ExportFormat, opts: &ExportOptions) -> Res
     } else {
         doc
     };
-    let mut scene = Scene::build(
+    let mut scene = build_scene(
         scene_doc,
         &SceneOptions {
             hidden_depths: hidden,
@@ -259,61 +160,27 @@ pub fn export(doc: &Document, format: ExportFormat, opts: &ExportOptions) -> Res
         scene.map_colors(Rgba::luminance_gray);
         bg = bg.map(Rgba::luminance_gray);
     }
-    let title = d.title.as_deref();
-    Ok(match format {
-        ExportFormat::Svg => crate::svg::to_svg(&scene, &bounds, scale, bg).into_bytes(),
-        ExportFormat::Eps => crate::eps::to_eps(&scene, &bounds, scale, bg, title, &opts.embedded_eps).into_bytes(),
-        ExportFormat::Pdf => crate::pdf::to_pdf(&scene, &bounds, scale, bg, title),
-        ExportFormat::LatexBox => crate::drivers::latex_box::to_box(&doc.comments, &bounds, scale).into_bytes(),
-        ExportFormat::Png
-        | ExportFormat::Gif
-        | ExportFormat::Jpeg
-        | ExportFormat::Pcx
-        | ExportFormat::Ppm
-        | ExportFormat::Tiff
-        | ExportFormat::Xbm
-        | ExportFormat::Xpm => {
-            let dpi = if opts.dpi.is_finite() {
-                opts.dpi.clamp(1.0, 4800.0)
-            } else {
-                150.0
-            };
-            let px_per_fig = dpi / 1200.0 * scale;
-            // genbitmaps sizes the image as `(int)(size + 0.9)`.
-            let (w, h) = raster::checked_size(
-                (bounds.width() * px_per_fig + 0.9).floor(),
-                (bounds.height() * px_per_fig + 0.9).floor(),
-            )?;
-            let smoothing = match d.smoothing {
-                None => raster::Smoothing::Antialias,
-                Some(0 | 1) => raster::Smoothing::None,
-                Some(k) => raster::Smoothing::Supersample(k),
-            };
-            let pm = raster::render_sized(
-                &scene,
-                &bounds,
-                px_per_fig,
-                (w, h),
-                bg,
-                crate::pattern::PatternFrame::export(&bounds, scale),
-                smoothing,
-            )?;
-            if format == ExportFormat::Png {
-                raster::encode_png(&pm)?
-            } else {
-                let transparent = d.transparent.or_else(|| figure_transparent_color(doc));
-                crate::drivers::bitmaps::encode(
-                    format,
-                    &pm,
-                    &crate::drivers::bitmaps::Encoding {
-                        quality: d.quality.unwrap_or(crate::drivers::bitmaps::DEFAULT_JPEG_QUALITY),
-                        transparent,
-                        dpi,
-                    },
-                )?
-            }
-        }
-    })
+    let transparent = if format == ExportFormat::Gif {
+        d.transparent.or_else(|| figure_transparent_color(doc))
+    } else {
+        None
+    };
+    rustfig_fig2dev::scene::write(
+        &scene,
+        format,
+        &Page {
+            bounds,
+            scale,
+            background: bg,
+            title: d.title.as_deref(),
+            embedded_eps: &opts.embedded_eps,
+            comments: &doc.comments,
+            dpi: opts.dpi,
+            smoothing: d.smoothing,
+            quality: d.quality,
+            transparent,
+        },
+    )
 }
 
 /// The figure's GIF transparent colour (its header line), as fig2dev's
@@ -412,7 +279,7 @@ mod metric_text_tests {
         } else {
             1.0
         };
-        let scene = Scene::build(
+        let scene = build_scene(
             &doc,
             &SceneOptions {
                 text_scale: Some(1.0 / unit_fix),
@@ -466,7 +333,7 @@ mod curve_tests {
         assert!(svg.len() < 3000, "{} bytes", svg.len());
         let eps = String::from_utf8(export(&doc, ExportFormat::Eps, &opts).unwrap()).unwrap();
         assert_eq!(eps.matches("curveto").count(), 4);
-        let scene = Scene::build(&doc, &SceneOptions::default());
+        let scene = build_scene(&doc, &SceneOptions::default());
         let Some(crate::Prim::Path { subpaths, .. }) = scene.prims.first() else {
             panic!("no path")
         };

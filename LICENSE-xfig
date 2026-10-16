@@ -60,13 +60,23 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/fig2dev/src/drivers/pic.rs: fig2dev/dev/genpic.c, fig2dev/dev/picfonts.h, fig2dev/dev/picpsfonts.h
 - crates/fig2dev/src/drivers/pictex.rs: fig2dev/dev/genpictex.c, fig2dev/localmath.c
 - crates/fig2dev/src/drivers/pstex.rs: fig2dev/dev/genpstex.c
+- crates/fig2dev/src/drivers/scene.rs: fig2dev/fig2dev.c, fig2dev/dev/genps.c, fig2dev/dev/genbitmaps.c, fig2dev/dev/genpstex.c
 - crates/fig2dev/src/drivers/shape.rs: fig2dev/dev/genshape.c
 - crates/fig2dev/src/drivers/textyl.rs: fig2dev/dev/gentextyl.c, fig2dev/localmath.c
 - crates/fig2dev/src/drivers/tpic.rs: fig2dev/dev/gentpic.c
 - crates/fig2dev/src/gendev.rs: fig2dev/fig2dev.c, fig2dev/fig2dev.h, fig2dev/drivers.h
+- crates/fig2dev/src/languages.rs: xfig src/mode.c, src/w_export.c
 - crates/fig2dev/src/object.rs: fig2dev/object.h
+- crates/fig2dev/src/options.rs: fig2dev/fig2dev.c, fig2dev/dev/genps.c, genpdf.c, genbitmaps.c, gensvg.c
 - crates/fig2dev/src/read.rs: fig2dev/read.c, fig2dev/read1_3.c, fig2dev/free.c, fig2dev/messages.c
 - crates/fig2dev/src/read/read1_3.rs: fig2dev/read1_3.c
+- crates/fig2dev/src/scene/bitmaps.rs: fig2dev/dev/genbitmaps.c
+- crates/fig2dev/src/scene/build.rs: fig2dev/dev/genps.c, fig2dev/read.c
+- crates/fig2dev/src/scene/eps.rs: fig2dev/dev/genps.c, fig2dev/dev/readeps.c
+- crates/fig2dev/src/scene/latex_box.rs: fig2dev/dev/genbox.c
+- crates/fig2dev/src/scene/mod.rs: fig2dev/dev/genps.c, fig2dev/colors.c
+- crates/fig2dev/src/scene/output.rs: fig2dev/dev/genbitmaps.c
+- crates/fig2dev/src/scene/pattern.rs: fig2dev/dev/psprolog.h
 - crates/fig2dev/src/trans_spline.rs: fig2dev/trans_spline.c, fig2dev/trans_spline.h
 - crates/fig2dev/src/util/creationdate.rs: fig2dev/creationdate.c
 - crates/fig2dev/src/util/iso2tex.rs: fig2dev/iso2tex.c
@@ -79,19 +89,14 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/figbase/src/color/xcolors.rs: fig2dev/colors.c
 - crates/figbase/src/geom/arrow.rs: fig2dev/bound.c, fig2dev/dev/genps.c
 - crates/figbase/src/geom/mod.rs: fig2dev/dev/genps.c, fig2dev/dev/gensvg.c
+- crates/figbase/src/style.rs: fig2dev/dev/genps.c
 - crates/figbase/src/text/fonts.rs: xfig src/u_fonts.c; fig2dev/dev/psfonts.c
 - crates/format/src/fig_read.rs: xfig src/f_read.c; fig2dev/read.c
 - crates/format/src/fig_write.rs: xfig src/f_save.c
-- crates/model/src/object.rs: xfig src/u_redraw.c, src/f_save.c; fig2dev/dev/genps.c
+- crates/model/src/object.rs: xfig src/u_redraw.c, src/f_save.c
 - crates/render/src/bound.rs: fig2dev/bound.c, fig2dev/read.c
-- crates/render/src/drivers/latex_box.rs: fig2dev/dev/genbox.c
-- crates/render/src/drivers/bitmaps.rs: fig2dev/dev/genbitmaps.c
-- crates/render/src/eps.rs: fig2dev/dev/genps.c, fig2dev/dev/readeps.c
 - crates/render/src/export.rs: fig2dev/fig2dev.c, fig2dev/read.c, fig2dev/dev/genps.c, fig2dev/dev/genbitmaps.c
-- crates/render/src/languages.rs: xfig src/mode.c, src/w_export.c
-- crates/render/src/lib.rs: xfig src/u_redraw.c; fig2dev/dev/genps.c, fig2dev/colors.c
-- crates/render/src/options.rs: fig2dev/fig2dev.c, fig2dev/dev/genps.c, genpdf.c, genbitmaps.c, gensvg.c
-- crates/render/src/pattern.rs: fig2dev/dev/psprolog.h
+- crates/render/src/lib.rs: xfig src/u_redraw.c; fig2dev/dev/genps.c
 - crates/text/src/compose.rs: xfig CompKeyDB, src/w_canvas.c
 - crates/ui-egui/src/attributes.rs: xfig src/w_indpanel.c, src/w_indpanel.h, src/w_modepanel.c, src/w_icons.c
 - crates/ui-egui/src/menus.rs: xfig src/w_cmdpanel.c, src/w_modepanel.c, app-defaults/Fig

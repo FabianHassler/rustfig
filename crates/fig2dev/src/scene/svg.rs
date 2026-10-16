@@ -1,9 +1,10 @@
 //! SVG backend.
 
-use crate::pattern::{coverage, PatternFrame};
-use crate::{Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
-use rustfig_geom::{Point, Rect, Seg};
-use rustfig_model::{CapStyle, JoinStyle, Justify, RasterImage};
+use super::pattern::{coverage, PatternFrame};
+use super::{Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
+use figbase::geom::{Point, Rect, Seg};
+use figbase::image::RasterImage;
+use figbase::style::{CapStyle, JoinStyle, Justify};
 use std::fmt::Write as _;
 
 fn esc(s: &str) -> String {
@@ -115,7 +116,7 @@ fn text(out: &mut String, t: &TextPrim) {
         Justify::Right => "end",
     };
     let deg = -t.angle.to_degrees();
-    let size = crate::font_px(t.size);
+    let size = super::font_px(t.size);
     let _ = write!(
         out,
         "<text transform=\"translate({} {}){}\" font-family=\"{}\" font-size=\"{}\"{}{} text-anchor=\"{}\" fill=\"{}\" xml:space=\"preserve\">",
@@ -137,7 +138,7 @@ fn text(out: &mut String, t: &TextPrim) {
             let _ = write!(
                 out,
                 "<tspan x=\"0\" y=\"{}\">{}</tspan>",
-                n(i as f64 * size * rustfig_text::LINE_SPACING),
+                n(i as f64 * size * figbase::text::LINE_SPACING),
                 esc(l)
             );
         }

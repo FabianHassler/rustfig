@@ -8,11 +8,11 @@
 // picture branch) and dev/readeps.c (`read_eps`) (xfig licence, see
 // LICENSE-xfig).
 
-use crate::export::EmbeddedEps;
-use crate::pattern::{coverage, PatternFrame};
-use crate::{Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
-use rustfig_geom::{Point, Rect, Seg};
-use rustfig_model::{CapStyle, JoinStyle, Justify};
+use super::pattern::{coverage, PatternFrame};
+use super::EmbeddedEps;
+use super::{Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
+use figbase::geom::{Point, Rect, Seg};
+use figbase::style::{CapStyle, JoinStyle, Justify};
 use std::fmt::Write as _;
 
 struct Ctx {
@@ -133,7 +133,7 @@ pub(crate) fn ps_string(s: &str) -> String {
 
 fn text(c: &mut Ctx, t: &TextPrim) {
     let name = if t.postscript {
-        rustfig_text::ps_font_name(t.font)
+        figbase::text::ps_font_name(t.font)
     } else {
         match t.font {
             2 => "Times-Bold",
@@ -144,7 +144,7 @@ fn text(c: &mut Ctx, t: &TextPrim) {
         }
     };
     let latin = !matches!(name, "Symbol" | "ZapfDingbats");
-    let size = crate::font_px(t.size) * c.k;
+    let size = super::font_px(t.size) * c.k;
     let (x, y) = c.p(t.origin);
     c.rgb(t.color);
     let _ = writeln!(
@@ -158,7 +158,7 @@ fn text(c: &mut Ctx, t: &TextPrim) {
         n(size)
     );
     for (i, line) in t.text.split('\n').enumerate() {
-        let dy = -(i as f64) * size * rustfig_text::LINE_SPACING;
+        let dy = -(i as f64) * size * figbase::text::LINE_SPACING;
         let s = ps_string(line);
         let just = match t.justify {
             Justify::Left => String::new(),
@@ -170,7 +170,7 @@ fn text(c: &mut Ctx, t: &TextPrim) {
     c.out.push_str("grestore\n");
 }
 
-fn image(c: &mut Ctx, corners: &[Point; 4], img: &rustfig_model::RasterImage, flipped: bool) {
+fn image(c: &mut Ctx, corners: &[Point; 4], img: &figbase::image::RasterImage, flipped: bool) {
     let (w, h) = (img.width, img.height);
     let expected = (w as usize).saturating_mul(h as usize).saturating_mul(4);
     if w == 0 || h == 0 || img.rgba.len() != expected {

@@ -16,4 +16,6 @@ figbase.workspace = true
 # Only for to_model.rs, which goes in plan B12 stage 3.
 rustfig-model.workspace = true
 image.workspace = true
+tiny-skia.workspace = true
+pdf-writer.workspace = true
 miniz_oxide = "0.8"

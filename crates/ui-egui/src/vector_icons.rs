@@ -12,7 +12,7 @@ use rustfig_model::{
     Style,
 };
 use rustfig_render::raster::{rasterize, Pixmap, RasterOptions};
-use rustfig_render::{Scene, SceneOptions};
+use rustfig_render::SceneOptions;
 use std::sync::Arc as Shared;
 
 /// Fig units per icon pixel (xfig's pictures are 32×32 pixels).
@@ -165,7 +165,7 @@ pub fn render_objects(objs: Vec<Object>, w: usize, h: usize, scale: f32) -> Opti
     );
     let mut doc = Document::new();
     doc.objects = objs.into_iter().map(Shared::new).collect();
-    let scene = Scene::build(&doc, &SceneOptions::default());
+    let scene = rustfig_render::build_scene(&doc, &SceneOptions::default());
     let mut pm = Pixmap::new(pw as u32, ph as u32)?;
     pm.data_mut().fill(255); // opaque white
     let k = pw as f64 / (w as f64 * U);

@@ -3,9 +3,11 @@
 //! reader (`read`), its bounds (`bound`), its spline conversion
 //! (`trans_spline`), the driver interface and the main flow (`gendev`).
 //!
-//! RustFig's own renderers (`rustfig-render`) write EPS, PDF, SVG and PNG;
-//! this crate writes fig2dev's other languages. A figure reaches a driver
-//! as xfig hands it to fig2dev: as Fig text, read by the ported `read.c`.
+//! EPS, PDF, SVG, the bitmaps and the LaTeX box are drawn from a display
+//! list (`scene`: RustFig's writers and rasteriser, which RustFig's canvas
+//! shares); the other languages are ported drivers. A figure reaches a
+//! driver as xfig hands it to fig2dev: as Fig text, read by the ported
+//! `read.c`. `options` and `languages` describe every language and option.
 //!
 //! Output goes to an [`Out`] buffer with [`fprintf!`], so ported code
 //! reads like the C it came from; messages fig2dev prints on stderr are
@@ -15,8 +17,11 @@
 pub mod bound;
 pub mod drivers;
 pub mod gendev;
+pub mod languages;
 pub mod object;
+pub mod options;
 pub mod read;
+pub mod scene;
 pub mod to_model;
 pub mod trans_spline;
 pub mod util;

@@ -20,6 +20,21 @@ impl ArcGeom {
         self.sweep < 0.0
     }
 
+    /// The arc as fig2dev draws it: around the same circle from the same
+    /// start, in the direction `ccw` (the Fig direction flag), even when the
+    /// middle point lies on the other side (as in files not written by xfig).
+    pub fn in_direction(self, ccw: bool) -> ArcGeom {
+        if self.counter_clockwise() == ccw {
+            return self;
+        }
+        let sweep = if self.sweep > 0.0 {
+            self.sweep - TAU
+        } else {
+            self.sweep + TAU
+        };
+        ArcGeom { sweep, ..self }
+    }
+
     pub fn point_at(&self, angle: f64) -> Point {
         Point::new(
             self.center.x + self.radius * angle.cos(),

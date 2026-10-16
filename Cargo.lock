@@ -1134,11 +1134,7 @@ dependencies = [
 name = "fig2dev"
 version = "0.1.0"
 dependencies = [
- "rustfig-engine",
  "rustfig-fig2dev",
- "rustfig-format",
- "rustfig-model",
- "rustfig-render",
 ]
 
 [[package]]
@@ -2843,7 +2839,9 @@ dependencies = [
  "figbase",
  "image",
  "miniz_oxide 0.8.9",
+ "pdf-writer",
  "rustfig-model",
+ "tiny-skia 0.11.4",
 ]
 
 [[package]]
@@ -2887,13 +2885,9 @@ dependencies = [
 name = "rustfig-render"
 version = "0.1.0"
 dependencies = [
- "image",
- "miniz_oxide 0.8.9",
- "pdf-writer",
+ "rustfig-fig2dev",
  "rustfig-geom",
  "rustfig-model",
- "rustfig-text",
- "tiny-skia 0.11.4",
 ]
 
 [[package]]

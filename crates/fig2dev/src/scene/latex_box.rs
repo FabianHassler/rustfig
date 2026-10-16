@@ -2,7 +2,7 @@
 //
 // Ported from fig2dev dev/genbox.c (xfig licence, see LICENSE-xfig).
 
-use rustfig_geom::{Rect, FIG_PER_INCH};
+use figbase::geom::{Rect, FIG_PER_INCH};
 
 /// The box for `bounds` (Fig units) at `scale` (magnification, with the
 /// metric correction), preceded by the whole-figure comments.
@@ -27,7 +27,7 @@ pub fn to_box(comments: &[String], bounds: &Rect, scale: f64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rustfig_geom::Point;
+    use figbase::geom::Point;
 
     #[test]
     fn box_of_two_by_one_inches() {

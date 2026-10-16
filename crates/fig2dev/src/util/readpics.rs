@@ -34,6 +34,8 @@ use std::collections::HashMap;
 use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
 
+use figbase::image::RasterImage;
+
 use crate::gendev::Ctx;
 use crate::object::{Pic, Point, P_EPS, P_GIF, P_JPEG, P_PCX, P_PNG, P_PPM, P_TIF, P_XBM, P_XPM};
 
@@ -937,6 +939,105 @@ pub fn read_pcx(ctx: &Ctx, data: &[u8], pic: &mut Pic) -> Result<(), String> {
     pic.subtype = P_PCX;
     set_size(pic, w as u32, h as u32);
     Ok(())
+}
+
+/// A picture as fig2dev's `readpics.c` reads it, for RustFig.
+#[derive(Debug, Clone, PartialEq)]
+pub enum LoadedPicture {
+    /// A bitmap, as RGBA pixels.
+    Raster(RasterImage),
+    /// An EPS file: its bounding box (points) and PostScript, which the
+    /// EPS export embeds as genps.c does.
+    Eps {
+        llx: i32,
+        lly: i32,
+        urx: i32,
+        ury: i32,
+        ps: Vec<u8>,
+    },
+    /// A PDF file: fig2dev converts it with external programs; RustFig
+    /// shows a placeholder.
+    Pdf,
+}
+
+/// Reads picture `name` the way fig2dev does (`readpics.c`: the file, or
+/// it with `.gz`, `.Z`, `.z` added or removed, uncompressed; GIF, JPEG,
+/// PNG, TIFF, PPM/PNM, PCX, XBM, XPM, EPS and PDF). Relative names are
+/// taken relative to `ctx.dir`. Errors carry genps.c's messages ("No such
+/// picture file: …", "…: Unknown image format").
+pub fn load_picture(ctx: &Ctx, name: &str) -> Result<LoadedPicture, String> {
+    if file_on_disk(&pic_path(ctx, name)).is_none() {
+        return Err(format!("No such picture file: {name}"));
+    }
+    let stream = open_stream(ctx, name)?;
+    let Some(kind) = pic_type(&stream.data) else {
+        return Err(format!("{name}: Unknown image format"));
+    };
+    let mut pic = Pic {
+        file: name.to_string(),
+        ..Pic::default()
+    };
+    let (llx, lly) = read_pic(ctx, &stream, &mut pic)?;
+    match kind {
+        PicType::Pdf => Ok(LoadedPicture::Pdf),
+        PicType::Eps | PicType::Epsi => Ok(LoadedPicture::Eps {
+            llx,
+            lly,
+            urx: llx.saturating_add(pic.bit_size.x),
+            ury: lly.saturating_add(pic.bit_size.y),
+            ps: eps_section(&stream.data).to_vec(),
+        }),
+        _ => pic_to_raster(&pic).map(LoadedPicture::Raster),
+    }
+}
+
+/// The pixels of a picture `readpics` read, as RGBA: XBM bits in black
+/// on transparent, the transparent colour of the others transparent.
+pub fn pic_to_raster(pic: &Pic) -> Result<RasterImage, String> {
+    let (w, h) = (pic.bit_size.x, pic.bit_size.y);
+    let (Ok(w), Ok(h)) = (u32::try_from(w), u32::try_from(h)) else {
+        return Err(format!("{}: bad picture size", pic.file));
+    };
+    let (wu, hu) = (w as usize, h as usize);
+    let n = wu.checked_mul(hu).filter(|&n| n > 0 && n as u64 <= MAX_PIXELS);
+    let Some(n) = n else {
+        return Err(format!("{}: bad picture size", pic.file));
+    };
+    let transparent = (pic.num_transp == TRANSP_COLOR).then_some(pic.transp_col);
+    let mut rgba = Vec::with_capacity(n * 4);
+    let mut push = |c: [u8; 3]| {
+        let a = if Some(c) == transparent { 0 } else { 255 };
+        rgba.extend_from_slice(&[c[0], c[1], c[2], a]);
+    };
+    if pic.subtype == P_XBM {
+        let row = wu.div_ceil(8);
+        for y in 0..hu {
+            for x in 0..wu {
+                let byte = pic.bitmap.get(y * row + x / 8).copied().unwrap_or(0);
+                if byte & (0x80 >> (x % 8)) != 0 {
+                    rgba.extend_from_slice(&[0, 0, 0, 255]);
+                } else {
+                    rgba.extend_from_slice(&[255, 255, 255, 0]);
+                }
+            }
+        }
+    } else if pic.numcols == RGB_NUMCOLS {
+        for px in pic.bitmap.as_chunks::<3>().0.iter().take(n) {
+            push(*px);
+        }
+    } else {
+        for &i in pic.bitmap.iter().take(n) {
+            push(pic.cmap.get(usize::from(i)).copied().unwrap_or([0, 0, 0]));
+        }
+    }
+    if rgba.len() != n * 4 {
+        return Err(format!("{}: short picture data", pic.file));
+    }
+    Ok(RasterImage {
+        width: w,
+        height: h,
+        rgba,
+    })
 }
 
 #[cfg(test)]

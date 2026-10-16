@@ -37,6 +37,8 @@ pub const MAXCOMMENTS: usize = 100;
 /// Compounds nest at most this deep (fig2dev has no limit; deeper nesting
 /// would overflow the stack here and in the drivers).
 pub const MAX_NESTING: usize = 200;
+/// Largest figure file read, in bytes (RustFig's limit; fig2dev has none).
+pub const MAX_FILE_BYTES: usize = 512 << 20;
 /// The longest paper size name (`PAPERSZ_LEN` − 1).
 const PAPERSZ_MAX: usize = 15;
 /// Points of a line before Fig 3.0, which ends at `9999` (`MAX_V2POINTS`).

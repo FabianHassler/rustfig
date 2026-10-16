@@ -298,7 +298,8 @@ fn old_formats_render_through_fig2devs_reader() {
     let fig21 = "#FIG 2.1\n80 2\n2 2 0 1 -1 0 0 0 0.000 7 0 0\n\t 10 10 90 10 90 50 10 50 10 10 9999 9999\n";
     let o = fig2dev(&["-L", "eps"], fig21);
     assert!(o.status.success(), "{}", err(&o));
-    assert_eq!(bbox(&o), "%%BoundingBox: 0 0 74 38");
+    // As fig2dev 3.2.9a: the bounds pad the box by its line width.
+    assert_eq!(bbox(&o), "%%BoundingBox: 0 0 76 40");
     let o = fig2dev(&["-L", "svg"], "80 2 9 9\n3 10 0 1 1 0 0 0 0 0 0\n10 10 40 0 9999 0\n");
     assert!(o.status.success(), "{}", err(&o));
     assert!(out(&o).contains("<svg"), "{}", out(&o));
