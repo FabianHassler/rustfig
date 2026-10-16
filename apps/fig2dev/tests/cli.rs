@@ -321,3 +321,207 @@ fn picture_messages_are_fig2devs() {
     assert!(o.status.success(), "{}", err(&o));
     assert_eq!(err(&o), "No such picture file: no-such.png\n");
 }
+
+/// A scratch directory for one test.
+fn scratch(name: &str) -> PathBuf {
+    let dir = std::env::temp_dir().join(format!("rustfig-fig2dev-cli-{name}-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    dir
+}
+
+const USAGE: &str =
+    "Usage:\n fig2dev -hV\n fig2dev -L language -h\n fig2dev [-L language] [other options] [in.fig [output]]\n";
+
+/// fig2dev.c's `get_args`: one pass in command-line order; getopt's
+/// message is followed by the usage, without a blank line.
+#[test]
+fn options_are_handled_in_command_line_order() {
+    // -D comes before the unknown option, so its message wins.
+    let o = fig2dev(&["-L", "eps", "-D", "x", "-u"], FIG);
+    assert_eq!(o.status.code(), Some(1));
+    assert!(err(&o).starts_with("fig2dev: help for -D option:\n"), "{}", err(&o));
+    let o = fig2dev(&["-L", "eps", "-K", "-u"], FIG);
+    assert_eq!(o.status.code(), Some(1));
+    assert_eq!(err(&o), format!("fig2dev: invalid option -- 'u'\n{USAGE}"));
+    let o = fig2dev(&["-L", "eps", "-b"], FIG);
+    assert_eq!(o.status.code(), Some(1));
+    assert_eq!(err(&o), format!("fig2dev: option requires an argument -- 'b'\n{USAGE}"));
+    // Driver options are handled before the figure is read.
+    let o = fig2dev(&["-L", "svg", "-n", "x", "/no/such.fig"], "");
+    assert_eq!(o.status.code(), Some(1));
+    assert_eq!(err(&o), "Argument -n unknown to svg driver.\n");
+    let o = fig2dev(&["-L", "cgm", "-N", "/no/such.fig"], "");
+    assert_eq!(o.status.code(), Some(1));
+    assert_eq!(err(&o), "Argument -N unknown to cgm driver.\n");
+    // -L keeps 11 characters.
+    let o = fig2dev(&["-L", "abcdefghijklmnop"], "");
+    assert_eq!(o.status.code(), Some(1));
+    assert!(
+        err(&o).starts_with("Unknown graphics language abcdefghijk\nKnown languages are:\nbox cgm "),
+        "{}",
+        err(&o)
+    );
+}
+
+/// -E takes any name (fig2dev hands it to iconv); -Z, -m and -s read a
+/// number prefix as atof/strtod do; -s 0 is 11 points.
+#[test]
+fn general_option_values_as_fig2dev() {
+    for enc in ["KOI8R", "1", "utf8", "whatever"] {
+        let o = fig2dev(&["-L", "eps", "-E", enc], FIG);
+        assert!(o.status.success(), "{enc}: {}", err(&o));
+        assert_eq!(err(&o), "", "{enc}");
+    }
+    let o = fig2dev(&["-L", "eps", "-m", "2x"], FIG);
+    assert!(o.status.success(), "{}", err(&o));
+    assert_eq!(bbox(&o), "%%BoundingBox: 0 0 147 75");
+    let z = |arg: &str| fig2dev(&["-L", "eps", "-Z", arg], FIG);
+    assert_eq!(bbox(&z("2in")), bbox(&z("2")));
+    assert_eq!(bbox(&z("2w")), "%%BoundingBox: 0 0 144 74");
+    // No number: strtod gives 0 without an error, so -Z still counts.
+    let o = z("x");
+    assert!(o.status.success(), "{}", err(&o));
+    assert_eq!(err(&o), "");
+    let o = fig2dev(&["-L", "eps", "-Z", "x", "-m", "2"], FIG);
+    assert_eq!(o.status.code(), Some(1));
+    assert_eq!(
+        err(&o),
+        "Must specify only one of -m (magnification) and -Z (max dimension).\n"
+    );
+    // Infinity or overflow: fig2dev's message (without a newline), and -Z
+    // is dropped, so -m may follow.
+    let o = fig2dev(&["-L", "eps", "-Z", "inf", "-m", "2"], FIG);
+    assert!(o.status.success(), "{}", err(&o));
+    assert_eq!(err(&o), "Unable to parse dimension specification (-Z inf)");
+    assert_eq!(bbox(&o), "%%BoundingBox: 0 0 147 75");
+    let o = z("1e999");
+    assert_eq!(err(&o), "Unable to parse dimension specification (-Z 1e999)");
+    // -s: atof, and 11 points for zero or less (read.c rescales the texts).
+    let text = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+4 0 0 50 -1 0 12 0.0000 4 135 450 300 600 plain\\001\n";
+    let size = |args: &[&str]| {
+        let mut a = vec!["-L", "svg"];
+        a.extend_from_slice(args);
+        let o = fig2dev(&a, text);
+        assert!(o.status.success(), "{args:?}: {}", err(&o));
+        let svg = out(&o);
+        let at = svg.find("font-size=\"").unwrap() + 11;
+        svg[at..].split('"').next().unwrap().to_string()
+    };
+    assert_eq!(size(&[]), "200");
+    assert_eq!(size(&["-s", "0"]), "183.33");
+    assert_eq!(size(&["-s", "-3"]), "183.33");
+    assert_eq!(size(&["-s", "12pt"]), "200");
+}
+
+/// depth_option: junk fills every slot ("Too many -D values!"); "-D +"
+/// filters nothing.
+#[test]
+fn depth_option_as_fig2dev() {
+    for junk in ["+a", "+10x", "+5;6"] {
+        let o = fig2dev(&["-L", "eps", "-D", junk], FIG);
+        assert_eq!(o.status.code(), Some(1), "{junk}");
+        assert_eq!(err(&o), "fig2dev: Too many -D values!\n", "{junk}");
+    }
+    let o = fig2dev(&["-L", "eps", "-D", "+"], FIG);
+    assert!(o.status.success(), "{}", err(&o));
+    assert_eq!(bbox(&o), "%%BoundingBox: 0 0 74 38");
+    let o = fig2dev(&["-L", "mp", "-D", "+"], FIG);
+    assert!(o.status.success(), "{}", err(&o));
+}
+
+/// read_fig's statuses and messages (fig2dev.c `main`, messages.c
+/// `err_msg` with its strerror suffix).
+#[test]
+fn read_messages_as_fig2dev() {
+    let dir = scratch("read");
+    let missing = dir.join("missing.fig");
+    let missing = missing.to_str().unwrap();
+    let o = fig2dev(&["-L", "eps", missing], "");
+    assert_eq!(o.status.code(), Some(1));
+    assert_eq!(
+        err(&o),
+        format!("File \"{missing}\" is not accessible: No such file or directory\n")
+    );
+    let d = dir.to_str().unwrap();
+    for lang in ["eps", "mp"] {
+        let o = fig2dev(&["-L", lang, d], "");
+        assert_eq!(o.status.code(), Some(1));
+        assert_eq!(err(&o), format!("Not a regular file: {d}\n"));
+    }
+    // Status -3 from the Fig 1.3 reader: errno is 0 then.
+    let fig13 = "80 2 9 9\n3 10 0 1 1 0 0 0 0 0 0\n10 10 40 0 9999 0\nxyz\n";
+    let file = dir.join("bad13.fig");
+    std::fs::write(&file, fig13).unwrap();
+    let f = file.to_str().unwrap();
+    let o = fig2dev(&["-L", "eps", f], "");
+    assert_eq!(o.status.code(), Some(1));
+    assert!(
+        err(&o).starts_with(&format!("File \"{f}\" is not accessible: ")),
+        "{}",
+        err(&o)
+    );
+    let o = fig2dev(&["-L", "eps"], fig13);
+    assert_eq!(o.status.code(), Some(1));
+    assert!(err(&o).starts_with("Input error: "), "{}", err(&o));
+    assert_eq!(err(&o).lines().count(), 1, "{}", err(&o));
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+/// An empty figure: "No objects in Fig file", exit(-1), and the output
+/// file fig2dev opened before converting stays empty.
+#[test]
+fn empty_figure_as_fig2dev() {
+    let empty = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n";
+    let dir = scratch("empty");
+    let input = dir.join("empty.fig");
+    std::fs::write(&input, empty).unwrap();
+    for name in ["out.eps", "out.png", "out.svg", "out.mp"] {
+        let output = dir.join(name);
+        std::fs::write(&output, "old").unwrap();
+        let o = fig2dev(&[input.to_str().unwrap(), output.to_str().unwrap()], "");
+        assert_eq!(o.status.code(), Some(255), "{name}");
+        assert_eq!(err(&o), "fig2dev: No objects in Fig file\n", "{name}");
+        assert_eq!(std::fs::read(&output).unwrap(), b"", "{name}");
+    }
+    let o = fig2dev(&["-L", "pdf"], empty);
+    assert_eq!(o.status.code(), Some(255));
+    assert!(o.stdout.is_empty());
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+/// genps_option and genbitmaps_option warn about a colour they can't
+/// parse and go on without a background.
+#[test]
+fn bad_background_colour_warns() {
+    for lang in ["eps", "pdf", "png"] {
+        for colour in ["#144ea0f90c0", "#30g", "no such colour"] {
+            let o = fig2dev(&["-L", lang, "-g", colour], FIG);
+            assert!(o.status.success(), "{lang} {colour}: {}", err(&o));
+            assert_eq!(
+                err(&o),
+                format!("Can't parse color '{colour}', ignoring background option\n")
+            );
+        }
+    }
+    let plain = fig2dev(&["-L", "eps"], FIG);
+    let bad = fig2dev(&["-L", "eps", "-g", "#30g"], FIG);
+    assert_eq!(plain.stdout, bad.stdout);
+}
+
+/// The language guessed from the output suffix reaches the driver as -L
+/// does (genmp lists it among its options).
+#[test]
+fn guessed_language_is_passed_to_the_driver() {
+    let dir = scratch("guess");
+    let input = dir.join("in.fig");
+    std::fs::write(&input, FIG).unwrap();
+    let guessed = dir.join("a.mp");
+    let o = fig2dev(&[input.to_str().unwrap(), guessed.to_str().unwrap()], "");
+    assert!(o.status.success(), "{}", err(&o));
+    let explicit = fig2dev(&["-L", "mp", input.to_str().unwrap()], "");
+    let guessed = std::fs::read_to_string(&guessed).unwrap();
+    assert!(guessed.contains("%  -L mp"), "{guessed}");
+    assert_eq!(guessed, out(&explicit));
+    std::fs::remove_dir_all(&dir).ok();
+}

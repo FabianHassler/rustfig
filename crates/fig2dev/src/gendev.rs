@@ -84,6 +84,8 @@ pub struct DepthOpts {
     pub op: char,
     /// `(d1, d2)`; `d2 < 0` for a single depth.
     pub ranges: Vec<(i32, i32)>,
+    /// The values given by every `-D` so far (`depth_index`).
+    pub index: usize,
 }
 
 /// fig2dev's global state (fig2dev.h, read.c): set by the options and the
@@ -259,7 +261,7 @@ impl Ctx {
         let a = arg.unwrap_or("");
         match c {
             'D' => {
-                self.depths = Some(depth_option(a)?);
+                self.depths.get_or_insert_with(DepthOpts::default).add(a)?;
                 Ok(true)
             }
             'E' => {
@@ -302,18 +304,25 @@ impl Ctx {
             'Z' => {
                 let height = a.ends_with('h') || a.starts_with(':');
                 let num = a.strip_prefix(':').unwrap_or(a);
-                let v = strtod(num);
                 if height {
                     self.maxdimspec = 3;
                 } else {
                     self.maxdimspec = if a.ends_with('w') || a.ends_with(':') { 2 } else { 1 };
                 }
-                match v {
-                    Some(v) if v.is_finite() => self.max_dimension = v,
-                    _ => {
-                        self.warn(format!("Unable to parse dimension specification (-Z {a})"));
-                        self.maxdimspec = 0;
-                    }
+                // strtod: no number is 0 without an error; infinity, NaN
+                // and overflow (ERANGE) are errors. The message has no
+                // newline in fig2dev.
+                let t = num.trim_start();
+                let t = t.strip_prefix(['+', '-']).unwrap_or(t);
+                let inf_nan = t
+                    .get(..3)
+                    .is_some_and(|w| w.eq_ignore_ascii_case("inf") || w.eq_ignore_ascii_case("nan"));
+                let v = atof(num);
+                if inf_nan || !v.is_finite() {
+                    self.warn(format!("Unable to parse dimension specification (-Z {a})"));
+                    self.maxdimspec = 0;
+                } else {
+                    self.max_dimension = v;
                 }
                 Ok(true)
             }
@@ -456,40 +465,56 @@ const DEPTH_USAGE: &str = "fig2dev: help for -D option:
 
 /// `depth_option`: `+list` or `-list` of depths and `d1:d2` ranges.
 pub fn depth_option(s: &str) -> Result<DepthOpts, String> {
-    let mut chars = s.chars();
-    let op = match chars.next() {
-        Some(c @ ('+' | '-')) => c,
-        _ => return Err(DEPTH_USAGE.into()),
-    };
-    let mut ranges = Vec::new();
-    let mut rest = chars.as_str();
-    while !rest.is_empty() {
-        if ranges.len() >= NUMDEPTHS {
-            return Err(format!("{PROG}: Too many -D values!"));
-        }
-        rest = rest.strip_prefix(',').unwrap_or(rest);
-        let (d1, n) = strtol(rest);
-        if d1 < 0 {
-            return Err(DEPTH_USAGE.into());
-        }
-        rest = rest.get(n..).unwrap_or("");
-        let mut d2 = -1;
-        if let Some(r) = rest.strip_prefix(':') {
-            let (v, n) = strtol(r);
-            if v < d1 {
+    let mut d = DepthOpts::default();
+    d.add(s)?;
+    Ok(d)
+}
+
+impl DepthOpts {
+    /// `depth_option` for one more `-D`: as in fig2dev, its values fill
+    /// the slots from the first one again while the count (`depth_index`)
+    /// goes on, and all of them together may not reach `NUMDEPTHS`.
+    /// Something that isn't a number or a delimiter makes no progress, so
+    /// fig2dev fills every slot with it and stops with "Too many -D
+    /// values!".
+    pub fn add(&mut self, s: &str) -> Result<(), String> {
+        let mut chars = s.chars();
+        self.op = match chars.next() {
+            Some(c @ ('+' | '-')) => c,
+            _ => return Err(DEPTH_USAGE.into()),
+        };
+        let mut rest = chars.as_str();
+        let mut slot = 0;
+        while self.index < NUMDEPTHS && !rest.is_empty() {
+            rest = rest.strip_prefix(',').unwrap_or(rest);
+            let (d1, n) = strtol(rest);
+            if d1 < 0 {
                 return Err(DEPTH_USAGE.into());
             }
-            d2 = v;
-            rest = r.get(n..).unwrap_or("");
-        } else if let Some(r) = rest.strip_prefix(',') {
-            rest = r;
-        } else if n == 0 {
-            // strtol made no progress: C would loop on the same input.
-            break;
+            rest = rest.get(n..).unwrap_or("");
+            let mut d2 = -1;
+            if let Some(r) = rest.strip_prefix(':') {
+                let (v, n) = strtol(r);
+                if v < d1 {
+                    return Err(DEPTH_USAGE.into());
+                }
+                d2 = v;
+                rest = r.get(n..).unwrap_or("");
+            } else if let Some(r) = rest.strip_prefix(',') {
+                rest = r;
+            }
+            match self.ranges.get_mut(slot) {
+                Some(r) => *r = (d1, d2),
+                None => self.ranges.push((d1, d2)),
+            }
+            slot += 1;
+            self.index += 1;
         }
-        ranges.push((d1, d2));
+        if self.index >= NUMDEPTHS {
+            return Err(format!("{PROG}: Too many -D values!"));
+        }
+        Ok(())
     }
-    Ok(DepthOpts { op, ranges })
 }
 
 /// `strtol(s, &end, 10)`: the value (0 if none) and the bytes used.
@@ -550,6 +575,16 @@ enum Obj<'a> {
     Line(&'a Line),
     Spline(&'a Spline),
     Text(&'a Text),
+}
+
+/// Whether `com` holds any object (`compound_dump` finds one).
+pub fn has_objects(com: &Compound) -> bool {
+    !(com.arcs.is_empty()
+        && com.ellipses.is_empty()
+        && com.lines.is_empty()
+        && com.splines.is_empty()
+        && com.texts.is_empty())
+        || com.compounds.iter().any(has_objects)
 }
 
 /// `compound_dump`: every object, compounds first, then arcs, ellipses,
@@ -666,6 +701,30 @@ mod tests {
         assert!(!ctx.depth_filter(5) && ctx.depth_filter(11));
         assert!(depth_option("x").is_err());
         assert!(depth_option("+5:2").is_err());
+        // Junk makes no progress: fig2dev fills every slot.
+        for junk in ["+a", "+10x", "+5;6"] {
+            assert_eq!(
+                depth_option(junk).unwrap_err(),
+                "fig2dev: Too many -D values!",
+                "{junk}"
+            );
+        }
+        let ninety_nine = format!("+{}", vec!["1"; 99].join(","));
+        assert!(depth_option(&ninety_nine).is_ok());
+        let hundred = format!("+{}", vec!["1"; 100].join(","));
+        assert!(depth_option(&hundred).is_err(), "NUMDEPTHS values are too many");
+        // "-D +" sets no filter.
+        let ctx = Ctx {
+            depths: Some(depth_option("+").unwrap()),
+            ..Ctx::default()
+        };
+        assert!(ctx.depth_filter(7));
+        // A second -D refills the slots from the first one.
+        let mut ctx = Ctx::default();
+        ctx.general_option('D', Some("+1,2")).unwrap();
+        ctx.general_option('D', Some("-3")).unwrap();
+        let d = ctx.depths.clone().unwrap();
+        assert_eq!((d.op, d.ranges, d.index), ('-', vec![(3, -1), (2, -1)], 3));
     }
 
     #[test]
@@ -685,5 +744,22 @@ mod tests {
         assert_eq!((ctx.maxdimspec, ctx.max_dimension), (2, 4.0));
         ctx.general_option('Z', Some(":3")).unwrap();
         assert_eq!((ctx.maxdimspec, ctx.max_dimension), (3, 3.0));
+        // strtod: a prefix counts, no number is 0 without a message.
+        ctx.general_option('Z', Some("4in")).unwrap();
+        assert_eq!((ctx.maxdimspec, ctx.max_dimension), (1, 4.0));
+        ctx.general_option('Z', Some("abc")).unwrap();
+        assert_eq!((ctx.maxdimspec, ctx.max_dimension), (1, 0.0));
+        assert!(ctx.messages.is_empty());
+        for bad in ["inf", "-NaN", "1e999"] {
+            ctx.general_option('Z', Some(bad)).unwrap();
+            assert_eq!(ctx.maxdimspec, 0, "{bad}");
+        }
+        assert_eq!(ctx.messages.len(), 3);
+        ctx.general_option('s', Some("0")).unwrap();
+        assert_eq!(ctx.font_size, DEFAULT_FONT_SIZE);
+        ctx.general_option('s', Some("12pt")).unwrap();
+        assert_eq!(ctx.font_size, 12.0);
+        ctx.general_option('m', Some("x")).unwrap();
+        assert_eq!((ctx.mag, ctx.magspec), (0.0, true));
     }
 }
