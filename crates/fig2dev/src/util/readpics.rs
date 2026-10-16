@@ -542,7 +542,7 @@ fn read_raster(
 }
 
 /// The PostScript part of an EPS file, without a DOS binary header.
-fn eps_section(data: &[u8]) -> &[u8] {
+pub fn eps_section(data: &[u8]) -> &[u8] {
     if data.starts_with(b"\xc5\xd0\xd3\xc6") {
         let word = |i: usize| -> Option<usize> {
             let b = data.get(i..i + 4)?;

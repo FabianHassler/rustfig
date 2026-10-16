@@ -743,12 +743,11 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
                         .width(280.0)
                         .show_ui(ui, |ui| {
                             for l in LANGUAGES {
-                                let item = ui.add_enabled(
-                                    l.available(),
-                                    egui::Button::selectable(st.format == l.id, l.description),
-                                );
+                                let available = rustfig_engine::fig2dev::language_available(l);
+                                let item = ui
+                                    .add_enabled(available, egui::Button::selectable(st.format == l.id, l.description));
                                 let item = match l.task() {
-                                    Some(t) if !l.available() => item
+                                    Some(t) if !available => item
                                         .on_disabled_hover_text(format!("Being ported from fig2dev (plan task {t})")),
                                     _ => item,
                                 };

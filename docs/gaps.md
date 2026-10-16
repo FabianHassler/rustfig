@@ -1,10 +1,10 @@
 # Known gaps (ranked work list)
 
-**Status:** 2026-10-15 (A8, D9, A10, D12 landed). Ranked by user impact per hour. Pick work from the top.
+**Status:** 2026-10-16 (B2, G1 landed; B11 added from the fig2dev audit). Ranked by user impact per hour. Pick work from the top.
 
 | # | Gap | Area | Impact | Hours |
 |---|-----|------|--------|------:|
-| 1 | LaTeX exports: TikZ, PSTricks, pict2e (special text passed through), ported from fig2dev (B0–B3) | Export | High: xfig's main audience writes LaTeX | 40 |
+| 1 | LaTeX exports: TikZ, PSTricks, pict2e (special text passed through), ported from fig2dev (B1, B3; pstex/pdftex done, B2) | Export | High: xfig's main audience writes LaTeX | 40 |
 | 2 | Web build: compiles locally (2026-10-14); still to do: the wasm check in CI, trunk packaging and browser open/save/download | Platforms | High | 24 |
 | 3 | PostScript output with page layout (orientation, centring, multi-page) and printing | Export/Printing | High | 30 |
 | 4 | Library objects: browse a directory of .fig files and place them | Libraries | Medium | 40 |
@@ -16,19 +16,20 @@
 | 10 | Bitmap exports GIF/JPEG/TIFF/PPM (with transparent colour) | Export | Medium | 12 |
 | 11 | Colour editor (create and edit user colours in the UI) | Attributes | Medium | 12 |
 | 12 | Point positioning modes: latex lines, manhattan, mountain; linked move | Attributes | Low | 20 |
-| 13 | Read Fig 1.x/2.x files | File format | Low | 24 |
-| 14 | EPS/PDF/XBM/XPM/PCX picture objects (currently a crossed box) | File format | Low | 24 |
+| 14 | EPS/PDF/XBM/XPM/PCX picture objects (currently a crossed box on the canvas); in exports XBM/XPM/PCX and .gz/.Z load and EPS pictures embed in EPS, but PDF pictures, and EPS pictures in PDF/SVG/bitmaps, are a placeholder box | File format | Low | 24 |
 | 16 | Windows and Linux smoke tests in CI | Platforms | Low | 8 |
 | 17 | Localization of UI strings | Localization | Low | 24 |
 | 18 | Spell check | Text | Low | 16 |
 | 19 | Accessibility (screen-reader labels for canvas objects) | Platforms | Low | 16 |
-| 21 | fig2dev's other output languages (EMF, CGM, DXF, HPGL, MetaPost, epic, …) not ported yet (B9) | Export | Low | 60 |
+| 21 | fig2dev's EMF and Tk/Perl-Tk drivers not ported yet (B9) | Export | Low | 26 |
+| 24 | fig2dev port hardening: the audit's partial and missing functions outside the unported drivers (options and messages, text bytes, depth order, FMA in bounds, `-G` grid, EPS/PDF fonts and Unicode, SVG text, `readpics`, JPEG passthrough; B11) | Export | Medium | 66 |
 | 20 | Real PostScript font metrics when craft-fonts lacks a face (synthetic bold/italic today); the A10 corpus shows text widths as the main remaining difference from fig2dev | Text | Medium | 12 |
 
 ## Revision history
 
 | Date | Note |
 |------|------|
+| 2026-10-16 | #13 closed (G1: the app reads Fig 1.3–2.1 through fig2dev's reader); #1 shrank (B2 pstex/pdftex), #21 shrank to EMF and Tk, #14 shrank (pictures in exports); #24 added from the fig2dev audit (B11). |
 | 2026-10-15 | #23 closed: start values are xfig's (positioning magnet 1/16 inch, alignment none, stick arrows, dot gap 3 apart from dash length 4); the man page's text step 1.2 is a documentation error, xfig's code starts at 1.0 as RustFig does. |
 | 2026-10-15 | D12 closed #22 (fill patterns as fig2dev's). |
 | 2026-10-14 | Export bounds now fig2dev's (B0); the corpus's largest remaining difference is fill patterns (#22). |

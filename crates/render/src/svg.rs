@@ -257,6 +257,7 @@ pub fn to_svg(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>
                 }
             }
             Prim::Text(t) => text(&mut out, t),
+            Prim::PictureRef { .. } => {}
             Prim::Image {
                 corners,
                 image,

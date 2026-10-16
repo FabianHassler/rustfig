@@ -105,6 +105,27 @@ pub struct ExportOptions {
     pub whole_figure_bounds: bool,
     /// fig2dev's options (`file.export`'s `options`).
     pub fig2dev: DriverOptions,
+    /// Leave special (LaTeX) texts out of the drawing, as the graphics
+    /// half of fig2dev's `pstex` and `pdftex` does; they still count in
+    /// the bounding box, so that the `pstex_t` overlay matches.
+    pub skip_special_text: bool,
+    /// EPS pictures to embed in EPS output, by the picture's file name
+    /// (RustFig can't draw them; other formats show a placeholder).
+    pub embedded_eps: std::collections::BTreeMap<String, EmbeddedEps>,
+}
+
+/// An EPS picture's content, for embedding (fig2dev's `read_eps`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EmbeddedEps {
+    /// The name fig2dev writes in its comments.
+    pub title: String,
+    /// The bounding box, in points.
+    pub llx: i32,
+    pub lly: i32,
+    pub urx: i32,
+    pub ury: i32,
+    /// The PostScript (without a DOS EPS header).
+    pub ps: Vec<u8>,
 }
 
 impl Default for ExportOptions {
@@ -117,6 +138,8 @@ impl Default for ExportOptions {
             hidden_depths: BTreeSet::new(),
             whole_figure_bounds: false,
             fig2dev: DriverOptions::default(),
+            skip_special_text: false,
+            embedded_eps: std::collections::BTreeMap::new(),
         }
     }
 }
@@ -161,8 +184,15 @@ pub fn export(doc: &Document, format: ExportFormat, opts: &ExportOptions) -> Res
     } else {
         72.0 / 80.0
     };
+    let without_special;
+    let scene_doc = if opts.skip_special_text {
+        without_special = without_special_text(doc);
+        &without_special
+    } else {
+        doc
+    };
     let mut scene = Scene::build(
-        doc,
+        scene_doc,
         &SceneOptions {
             hidden_depths: hidden,
             text_scale: Some(text_scale),
@@ -232,7 +262,7 @@ pub fn export(doc: &Document, format: ExportFormat, opts: &ExportOptions) -> Res
     let title = d.title.as_deref();
     Ok(match format {
         ExportFormat::Svg => crate::svg::to_svg(&scene, &bounds, scale, bg).into_bytes(),
-        ExportFormat::Eps => crate::eps::to_eps(&scene, &bounds, scale, bg, title).into_bytes(),
+        ExportFormat::Eps => crate::eps::to_eps(&scene, &bounds, scale, bg, title, &opts.embedded_eps).into_bytes(),
         ExportFormat::Pdf => crate::pdf::to_pdf(&scene, &bounds, scale, bg, title),
         ExportFormat::LatexBox => crate::drivers::latex_box::to_box(&doc.comments, &bounds, scale).into_bytes(),
         ExportFormat::Png
@@ -296,6 +326,23 @@ fn figure_transparent_color(doc: &Document) -> Option<Rgb> {
     }
     let defined = n < 32 || doc.colors.iter().any(|c| c.number == n);
     defined.then(|| doc.rgb(rustfig_model::ColorRef(n)))
+}
+
+/// The document without its special texts (genpstex.c `genpstex_text`).
+fn without_special_text(doc: &Document) -> Document {
+    fn keep(o: &mut rustfig_model::Object) -> bool {
+        match &mut o.kind {
+            ObjectKind::Text(t) => !t.is_special(),
+            ObjectKind::Compound(c) => {
+                c.objects.retain_mut(keep);
+                true
+            }
+            _ => true,
+        }
+    }
+    let mut doc = doc.clone();
+    doc.objects.retain_mut(|o| keep(std::sync::Arc::make_mut(o)));
+    doc
 }
 
 /// The document with fig2dev's `-s` (every text at one size, its stored

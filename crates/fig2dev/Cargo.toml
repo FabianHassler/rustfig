@@ -12,6 +12,7 @@ publish = false
 workspace = true
 
 [dependencies]
+rustfig-geom.workspace = true
 rustfig-model.workspace = true
 image.workspace = true
 miniz_oxide = "0.8"

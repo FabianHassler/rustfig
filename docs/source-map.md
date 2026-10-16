@@ -1,6 +1,6 @@
 # Source map: xfig and fig2dev → RustFig
 
-**Status:** 2026-10-14. First version, after the decision to port from xfig's
+**Status:** 2026-10-16 (B2: `genpstex.c` ported; one reader for every language). First version, after the decision to port from xfig's
 sources (`LICENSE-xfig`). Nothing has been ported line by line yet: every
 "own" row was written from the manual and the format description and must be
 checked against the C file named in it.
@@ -105,7 +105,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `f_load.c` | 384 | load, merge | `cmd/file` | own | review |
 | `f_util.c` | 1291 | directories, image colours, `~/.xfigrc` | — | missing: settings | S3/E1 |
 | `f_picobj.c` | 970 | picture loading and caching | `engine/import` | own | review |
-| `f_readeps.c` | 343 | EPS/PDF pictures (bounding box, ghostscript preview) | — | missing | G2 |
+| `f_readeps.c` | 343 | EPS/PDF pictures (bounding box, ghostscript preview) | `render/eps` (EPS pictures embedded in EPS output); canvas: placeholder box | partial | G2 |
 | `f_readgif.c`, `f_readjpg.c`, `f_readpng.c`, `f_readppm.c`, `f_readtif.c` | 1.6 k | bitmap pictures | `image` crate | modern | — |
 | `f_readpcx.c`, `f_readxbm.c`, `f_readxpm.c` | 790 | PCX, XBM, XPM pictures | — | missing | G2 |
 | `f_wrpcx.c`, `f_wrpng.c` | 317 | bitmap writers (for export) | `render/raster` (PNG) | partial | B6 |
@@ -180,13 +180,13 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `iso2tex.c` | 236 | Latin-1 characters to TeX sequences | `fig2dev/util/iso2tex` | ported | B9 |
 | `creationdate.c` | 114 | creation date for reproducible output (`SOURCE_DATE_EPOCH`) | `fig2dev/util/creationdate` | ported | B9 |
 | `localmath.c`, `messages.c` | 114 | math helpers, error messages | `geom`, errors; `apps/fig2dev` (messages) | n/a | — |
-| `read.c` | 2048 | Fig reader (second reference) | `format/fig_read` (RustFig's reader); `fig2dev/read` (port, for the drivers and the standalone fig2dev) | ported | B9 |
+| `read.c` | 2048 | Fig reader (second reference) | `format/fig_read` (RustFig's reader); `fig2dev/read` + `fig2dev/to_model` (port: the only reader of every fig2dev language and the standalone fig2dev; the app opens Fig 1.3–2.1 through it, `engine/fig2dev`) | ported | B9, G1 |
 | `read1_3.c` | 549 | Fig 1.3 reader | `fig2dev/read/read1_3` | ported | B9 |
 | `bound.c` | 1156 | bounds incl. arrows and text | `geom/arrow` (`arrow_shapes`, `calc_arrow`), `render/bound` (`compound_bound`, `arc_bound`, `ellipse_bound`, `line_bound`, `text_bound`, `arrow_bound`); `fig2dev/bound` (port on fig2dev's objects, for the drivers) | ported (D9, B0); ellipse extents analytic instead of the scan | — |
 | `trans_spline.c` | 661 | splines to polylines for exporters | `fig2dev/trans_spline` | ported | B9 |
 | `colors.c` | 851 | colour names | `model/xcolors.rs` (`x_color`: X11 names and `#rgb` forms of `lookup_X_color`), `Rgba::luminance_gray` (`rgb2luminance`) | ported | — |
-| `dev/genps.c`, `genpdf.c` | 2.9 k | PostScript/PDF with page layout; the reference where drivers disagree | `render/eps`, `render/pdf`; `set_style` → `LineKind::dash_pattern`, `linewidth_adj` → `geom::stroke_width`, arrow fills, `PSFONTMAG` → metric text keeps its point size (`SceneOptions::text_scale`) | partial: page layout, multi-page | B4 |
-| `dev/genpstex.c` | 176 | PS/PDF + LaTeX overlay (pstex, pdftex) | — | missing | B2 |
+| `dev/genps.c`, `genpdf.c` | 2.9 k | PostScript/PDF with page layout; the reference where drivers disagree | `render/eps`, `render/pdf`; `set_style` → `LineKind::dash_pattern`, `linewidth_adj` → `geom::stroke_width`, arrow fills, `PSFONTMAG` → metric text keeps its point size (`SceneOptions::text_scale`); the picture branch (EPS pictures embedded, `readeps.c`) → `render/eps` | partial: page layout, multi-page, previews | B4a, B4b, B11 |
+| `dev/genpstex.c` | 176 | PS/PDF + LaTeX overlay (pstex, pdftex) | `fig2dev/drivers/pstex` | ported | B2 |
 | `dev/gentikz.c` | 1870 | TikZ | — | missing | B1 |
 | `dev/genpict2e.c`, `genpstricks.c` | 4.6 k | LaTeX picture languages | — | missing | B3 |
 | `dev/genepic.c`, `gentpic.c`, `genpic.c`, `picfonts.h`, `picpsfonts.h` | 3.5 k | epic/eepic/eepicemu, tpic, pic | `fig2dev/drivers/{epic,tpic,pic}` | ported | B9 |
@@ -214,6 +214,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | 2026-10-15 | W8: xfig's bindings audited (`keys-parity.md`); `CompKeyDB` ported. |
 | 2026-10-15 | B9 wave 1: `read.c`, `read1_3.c`, `bound.c`, `trans_spline.c`, `iso2tex.c`, `creationdate.c`, `dev/` font and picture helpers ported into `rustfig-fig2dev`; `genbitmaps.c` (B6). |
 | 2026-10-15 | `fig2dev.c` command line ported as `apps/fig2dev` (B10). |
+| 2026-10-16 | `genpstex.c` ported (B2); `readeps.c` and genps's picture branch in `render/eps`; `read.c` the only reader for every fig2dev language and for Fig 1.3–2.1 in the app (G1). |
 | 2026-10-15 | `fig2dev.c` options and `colors.c` ported (B0). |
 | 2026-10-14 | S1: draw and save order ported (`u_redraw.c`, `f_save.c`). |
 | 2026-10-14 | Attribute panel: xfig's pictures (`w_icons.c`), xfig's arrow-mode order and grid choices. |

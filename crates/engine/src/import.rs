@@ -1,4 +1,5 @@
-//! Loading imported pictures (PNG, JPEG, GIF, BMP, PNM, TIFF).
+//! Loading imported pictures (PNG, JPEG, GIF, BMP, PNM, TIFF; through
+//! fig2dev's `readpics.c` also XBM, XPM, PCX and compressed files).
 
 use rustfig_model::{Document, Object, ObjectKind, RasterImage};
 use std::path::{Path, PathBuf};
@@ -36,8 +37,29 @@ pub fn resolve(file: &str, base: Option<&Path>) -> PathBuf {
     }
 }
 
-/// Read and decode a picture file.
+/// Read and decode a picture file; what the `image` crate can't read is
+/// read as fig2dev reads it (also `name.gz` for `name`, XBM, XPM, PCX).
+/// EPS and PDF pictures have no pixels: they are shown as a box (and
+/// embedded in EPS exports).
 pub fn load_picture(path: &Path) -> Result<RasterImage, String> {
+    let direct = load_picture_direct(path);
+    let Err(err) = direct else {
+        return direct;
+    };
+    match crate::fig2dev::load_picture(path) {
+        Ok(rustfig_fig2dev::to_model::LoadedPicture::Raster(img)) => Ok(img),
+        Ok(rustfig_fig2dev::to_model::LoadedPicture::Eps { .. }) => Err(format!(
+            "{}: EPS picture shown as a box (embedded in EPS exports)",
+            path.display()
+        )),
+        Ok(rustfig_fig2dev::to_model::LoadedPicture::Pdf) => {
+            Err(format!("{}: PDF picture shown as a box", path.display()))
+        }
+        Err(_) => Err(err),
+    }
+}
+
+fn load_picture_direct(path: &Path) -> Result<RasterImage, String> {
     let meta = std::fs::metadata(path).map_err(|e| format!("{}: {e}", path.display()))?;
     if meta.len() > MAX_PICTURE_BYTES {
         return Err(format!("{}: file too large", path.display()));

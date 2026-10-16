@@ -1,5 +1,14 @@
 //! Encapsulated PostScript backend.
+//!
+//! EPS pictures the export supplies ([`EmbeddedEps`]) are embedded as
+//! genps.c embeds them: scaled into the picture box, clipped to their
+//! bounding box, `showpage` and `setpagedevice` disabled.
+//
+// The picture embedding is ported from fig2dev dev/genps.c (`genps_line`,
+// picture branch) and dev/readeps.c (`read_eps`) (xfig licence, see
+// LICENSE-xfig).
 
+use crate::export::EmbeddedEps;
 use crate::pattern::{coverage, PatternFrame};
 use crate::{Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
 use rustfig_geom::{Point, Rect, Seg};
@@ -252,7 +261,15 @@ const ISO_FONTS: [&str; 39] = [
 
 /// Render a scene as EPS covering `bounds` (Fig units) at `scale`.
 /// `title` goes into `%%Title` (fig2dev's `-n`).
-pub fn to_eps(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>, title: Option<&str>) -> String {
+/// `embeds` holds the EPS pictures to embed, by file name.
+pub fn to_eps(
+    scene: &Scene,
+    bounds: &Rect,
+    scale: f64,
+    background: Option<Rgba>,
+    title: Option<&str>,
+    embeds: &std::collections::BTreeMap<String, EmbeddedEps>,
+) -> String {
     let b = if bounds.is_empty() {
         Rect::new(Point::ZERO, Point::new(1.0, 1.0))
     } else {
@@ -291,8 +308,19 @@ pub fn to_eps(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>
         c.rgb(bg);
         let _ = writeln!(c.out, "0 0 {} {} rectfill", n(w), n(h));
     }
+    let mut skip_placeholder = false;
     for p in &scene.prims {
+        if std::mem::take(&mut skip_placeholder) {
+            continue;
+        }
         match p {
+            Prim::PictureRef { corners, flipped, file } => {
+                if let Some(e) = embeds.get(file) {
+                    embed(&mut c, corners, *flipped, e);
+                    // The next primitive is the placeholder for the picture.
+                    skip_placeholder = true;
+                }
+            }
             Prim::Path { subpaths, fill, stroke } => {
                 match fill {
                     Some(Fill::Solid(col)) => {
@@ -345,6 +373,57 @@ pub fn to_eps(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>
     }
     c.out.push_str("restore\nshowpage\n%%Trailer\n%%EOF\n");
     c.out
+}
+
+/// Embeds an EPS file into the picture box `corners` (genps.c).
+fn embed(c: &mut Ctx, corners: &[Point; 4], flipped: bool, e: &EmbeddedEps) {
+    let (pllx, plly, purx, pury) = (e.llx, e.lly, e.urx, e.ury);
+    let (img_w, img_h) = (f64::from(purx) - f64::from(pllx), f64::from(pury) - f64::from(plly));
+    let (pic_w, pic_h) = if flipped { (img_h, img_w) } else { (img_w, img_h) };
+    if !(pic_w > 0.0 && pic_h > 0.0) {
+        return;
+    }
+    let [tl, _, br, _] = *corners;
+    let o = &mut c.out;
+    o.push_str("%\n% pen to black in case this eps object doesn't set color first\n0 0 0 setrgbcolor\n");
+    let _ = writeln!(o, "% Begin Imported EPS File: {}", e.title);
+    let _ = writeln!(o, "%%BeginDocument: {}", e.title);
+    o.push_str("%\nnewpath gsave\n");
+    // Fig coordinates, as genps works in them.
+    let _ = writeln!(
+        o,
+        "[{} 0 0 {} {} {}] concat",
+        n(c.k),
+        n(-c.k),
+        n(-c.min_x * c.k),
+        n(c.max_y * c.k)
+    );
+    let _ = writeln!(o, "{} {} translate", n(tl.x), n(tl.y));
+    let _ = writeln!(
+        o,
+        "{:.6} {:.6} scale",
+        ((br.x - tl.x) / pic_w).abs(),
+        -(br.y - tl.y) / pic_h
+    );
+    if flipped {
+        let _ = writeln!(o, "{} 0 translate\n270 rotate\n1 -1 scale", n(pic_w));
+    } else {
+        let _ = writeln!(o, "0 {} translate", n(-pic_h));
+    }
+    let _ = writeln!(o, "{} {} translate", -pllx, -plly);
+    o.push_str("save\n");
+    let _ = writeln!(
+        o,
+        "newpath {pllx} {plly} moveto {purx} {plly} lineto {purx} {pury} lineto {pllx} {pury} lineto closepath clip newpath"
+    );
+    o.push_str("countdictstack\nmark\n/showpage {} def\n/setpagedevice {pop} def\n% EPS file follows:\n");
+    o.push_str(&String::from_utf8_lossy(&e.ps));
+    if !o.ends_with('\n') {
+        o.push('\n');
+    }
+    o.push_str("\ncleartomark\ncountdictstack exch sub { end } repeat\nrestore grestore\n%\n");
+    let _ = writeln!(o, "% End Imported PIC File: {}", e.title);
+    o.push_str("%%EndDocument\n%\n");
 }
 
 #[cfg(test)]

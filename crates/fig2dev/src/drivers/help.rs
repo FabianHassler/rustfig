@@ -142,6 +142,18 @@ const LATEX: DriverHelp = d(
     ],
 );
 
+// pstex_t and pdftex_t set only the special texts (genpstex.c), so the
+// latex driver's line options do nothing there.
+const PSTEX_T: DriverHelp = d(
+    "PSTEX_T and PDFTEX_T",
+    &[
+        o('b', "width", "specify width of blank border around figure (1/72 inch)"),
+        o('F', "", "do not set font family/series/shape"),
+        o('f', "font", "set default font"),
+        o('p', "file", "specify name of the graphics file to include"),
+    ],
+);
+
 const MAP: DriverHelp = d(
     "MAP (HTML image map)",
     &[o(
@@ -238,6 +250,7 @@ pub fn help(lang: &str) -> Option<&'static DriverHelp> {
         "mp" | "mmp" => &MP,
         "pic" => &PIC,
         "pictex" => &PICTEX,
+        "pstex_t" | "pdftex_t" => &PSTEX_T,
         "shape" => &SHAPE,
         "textyl" => &TEXTYL,
         "tpic" => &TPIC,

@@ -164,9 +164,11 @@ fn option_shown(lang: &str, o: &Value) -> bool {
     }
     let key = o["key"].as_str().unwrap_or_default();
     let letter = o["letter"].as_str().unwrap_or_default();
-    rustfig_render::options::options_for(lang)
-        .find(|s| s.key == key && s.letter.to_string() == letter)
-        .is_some_and(|s| s.effective_for(lang))
+    match rustfig_render::options::options_for(lang).find(|s| s.key == key && s.letter.to_string() == letter) {
+        Some(s) => s.effective_for(lang),
+        // An option of a ported fig2dev driver, by letter.
+        None => key == letter,
+    }
 }
 
 fn info(args: &[String]) -> Result<(), String> {

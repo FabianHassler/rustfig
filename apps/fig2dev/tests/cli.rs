@@ -252,3 +252,72 @@ fn help_lists_only_effective_options() {
         );
     }
 }
+
+/// A figure with a PostScript text and a special (LaTeX) text.
+const TEXTS: &str = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+2 2 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 5\n\t 0 0 2400 0 2400 1200 0 1200 0 0\n\
+4 0 0 50 -1 0 12 0.0000 4 135 450 300 600 plain\\001\n\
+4 0 0 50 -1 0 12 0.0000 2 135 450 300 900 $x^2$\\001\n";
+
+fn out(o: &Output) -> String {
+    String::from_utf8_lossy(&o.stdout).into_owned()
+}
+
+#[test]
+fn pstex_and_pstex_t_split_the_texts() {
+    // B2: pstex is EPS without special texts, pstex_t the LaTeX overlay.
+    for (graphics, overlay, magic) in [("pstex", "pstex_t", "%!PS-Adobe"), ("pdftex", "pdftex_t", "%PDF")] {
+        let g = fig2dev(&["-L", graphics], TEXTS);
+        assert!(g.status.success(), "{}", err(&g));
+        assert!(g.stdout.starts_with(magic.as_bytes()), "{graphics}");
+        if graphics == "pstex" {
+            assert!(out(&g).contains("(plain)") && !out(&g).contains("x^2"), "{}", out(&g));
+            assert_eq!(bbox(&g), "%%BoundingBox: 0 0 146 74", "special texts count in the box");
+        }
+        let t = fig2dev(&["-L", overlay, "-p", "fig.eps"], TEXTS);
+        assert!(t.status.success(), "{}", err(&t));
+        let tex = out(&t);
+        // As fig2dev 3.2.9a writes it.
+        assert!(
+            tex.starts_with("\\begin{picture}(0,0)%\n\\includegraphics{fig.eps}%\n\\end{picture}%\n"),
+            "{tex}"
+        );
+        assert!(tex.contains("\\begin{picture}(2424,1224)(-11,-373)"), "{tex}");
+        assert!(tex.contains("$x^2$") && !tex.contains("plain"), "{tex}");
+    }
+    // pstex takes the EPS options (genps), pstex_t the latex ones.
+    assert!(fig2dev(&["-L", "pstex", "-b", "10"], TEXTS).status.success());
+    let o = fig2dev(&["-L", "pstex_t", "-N"], TEXTS);
+    assert_eq!(o.status.code(), Some(1));
+    assert!(err(&o).contains("Argument -N unknown to latex driver."), "{}", err(&o));
+}
+
+#[test]
+fn old_formats_render_through_fig2devs_reader() {
+    // Fig 2.1 at 80 ppi; Fig 1.3; a file without a final newline.
+    let fig21 = "#FIG 2.1\n80 2\n2 2 0 1 -1 0 0 0 0.000 7 0 0\n\t 10 10 90 10 90 50 10 50 10 10 9999 9999\n";
+    let o = fig2dev(&["-L", "eps"], fig21);
+    assert!(o.status.success(), "{}", err(&o));
+    assert_eq!(bbox(&o), "%%BoundingBox: 0 0 74 38");
+    let o = fig2dev(&["-L", "svg"], "80 2 9 9\n3 10 0 1 1 0 0 0 0 0 0\n10 10 40 0 9999 0\n");
+    assert!(o.status.success(), "{}", err(&o));
+    assert!(out(&o).contains("<svg"), "{}", out(&o));
+    let o = fig2dev(&["-L", "box"], FIG.trim_end_matches('\n'));
+    assert!(o.status.success(), "{}", err(&o));
+    // read.c's repairs are reported, and the figure is still drawn.
+    let open = "#FIG 2.1\n80 2\n2 2 0 1 -1 0 0 0 0.000 7 0 0\n\t 10 10 90 10 90 50 10 50 9999 9999\n";
+    let o = fig2dev(&["-L", "png"], open);
+    assert!(o.status.success(), "{}", err(&o));
+    assert!(err(&o).contains("An open rectangle at line"), "{}", err(&o));
+}
+
+#[test]
+fn picture_messages_are_fig2devs() {
+    let fig = format!(
+        "{}2 5 0 1 0 -1 50 -1 -1 0.000 0 0 -1 0 0 5\n\t0 no-such.png\n\t 0 0 1200 0 1200 600 0 600 0 0\n",
+        FIG
+    );
+    let o = fig2dev(&["-L", "eps"], &fig);
+    assert!(o.status.success(), "{}", err(&o));
+    assert_eq!(err(&o), "No such picture file: no-such.png\n");
+}

@@ -59,6 +59,7 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/fig2dev/src/drivers/mp.rs: fig2dev/dev/genmp.c
 - crates/fig2dev/src/drivers/pic.rs: fig2dev/dev/genpic.c, fig2dev/dev/picfonts.h, fig2dev/dev/picpsfonts.h
 - crates/fig2dev/src/drivers/pictex.rs: fig2dev/dev/genpictex.c, fig2dev/localmath.c
+- crates/fig2dev/src/drivers/pstex.rs: fig2dev/dev/genpstex.c
 - crates/fig2dev/src/drivers/shape.rs: fig2dev/dev/genshape.c
 - crates/fig2dev/src/drivers/textyl.rs: fig2dev/dev/gentextyl.c, fig2dev/localmath.c
 - crates/fig2dev/src/drivers/tpic.rs: fig2dev/dev/gentpic.c
@@ -84,6 +85,7 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/render/src/bound.rs: fig2dev/bound.c, fig2dev/read.c
 - crates/render/src/drivers/latex_box.rs: fig2dev/dev/genbox.c
 - crates/render/src/drivers/bitmaps.rs: fig2dev/dev/genbitmaps.c
+- crates/render/src/eps.rs: fig2dev/dev/genps.c, fig2dev/dev/readeps.c
 - crates/render/src/export.rs: fig2dev/fig2dev.c, fig2dev/read.c, fig2dev/dev/genps.c, fig2dev/dev/genbitmaps.c
 - crates/render/src/languages.rs: xfig src/mode.c, src/w_export.c
 - crates/render/src/lib.rs: xfig src/u_redraw.c; fig2dev/dev/genps.c, fig2dev/colors.c

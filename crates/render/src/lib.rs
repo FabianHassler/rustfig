@@ -103,6 +103,17 @@ pub enum Prim {
         /// Transposed (Fig "flipped" pictures).
         flipped: bool,
     },
+    /// A picture without pixels (an EPS or PDF file, or one that could
+    /// not be read). The placeholder drawn for it follows as the next
+    /// primitive; the EPS backend embeds the file instead when the export
+    /// supplies it ([`crate::export::EmbeddedEps`]).
+    PictureRef {
+        /// Top-left, top-right, bottom-right, bottom-left of the picture box.
+        corners: [Point; 4],
+        flipped: bool,
+        /// The picture's file name, as in the figure.
+        file: String,
+    },
 }
 
 /// A text run.
@@ -175,7 +186,7 @@ impl Scene {
                     }
                 }
                 Prim::Text(t) => t.color = f(t.color),
-                Prim::Image { .. } => {}
+                Prim::Image { .. } | Prim::PictureRef { .. } => {}
             }
         }
     }
@@ -200,7 +211,7 @@ impl Prim {
             }
             Prim::Text(t) => t.color = t.color.grayed(),
             // Pictures keep their pixels; they can't be picked either way.
-            Prim::Image { .. } => {}
+            Prim::Image { .. } | Prim::PictureRef { .. } => {}
         }
     }
 
@@ -234,7 +245,9 @@ impl Prim {
                     .map(|p| t.origin + rot.apply_vec(p)),
                 )
             }
-            Prim::Image { corners, .. } => Rect::from_points(corners.iter().copied()),
+            Prim::Image { corners, .. } | Prim::PictureRef { corners, .. } => {
+                Rect::from_points(corners.iter().copied())
+            }
         }
     }
 }
@@ -446,6 +459,11 @@ fn object_prims(doc: &Document, o: &Object, opts: &SceneOptions, out: &mut Vec<P
                     flipped,
                 }),
                 None => {
+                    out.push(Prim::PictureRef {
+                        corners,
+                        flipped: p.picture.as_ref().is_some_and(|pic| pic.flipped),
+                        file: p.picture.as_ref().map(|pic| pic.file.clone()).unwrap_or_default(),
+                    });
                     // Missing picture: box with a cross.
                     let [a, b, c, d] = corners;
                     out.push(Prim::Path {

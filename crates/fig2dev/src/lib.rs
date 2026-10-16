@@ -17,6 +17,7 @@ pub mod drivers;
 pub mod gendev;
 pub mod object;
 pub mod read;
+pub mod to_model;
 pub mod trans_spline;
 pub mod util;
 

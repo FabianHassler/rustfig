@@ -2816,6 +2816,7 @@ dependencies = [
  "image",
  "proptest",
  "resvg",
+ "rustfig-fig2dev",
  "rustfig-format",
  "rustfig-geom",
  "rustfig-model",
@@ -2832,6 +2833,7 @@ version = "0.1.0"
 dependencies = [
  "image",
  "miniz_oxide 0.8.9",
+ "rustfig-geom",
  "rustfig-model",
 ]
 

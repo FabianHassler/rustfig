@@ -8,6 +8,7 @@
 
 pub mod cmd;
 mod error;
+pub mod fig2dev;
 pub mod guard;
 mod history;
 pub mod import;

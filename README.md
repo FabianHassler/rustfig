@@ -7,7 +7,7 @@ and Linux, with a web (WASM) build on the way.
 
 ## Status
 
-**Alpha. Overall xfig parity ≈61 %** (see [ROADMAP.md](ROADMAP.md) and the
+**Alpha. Overall xfig parity ≈64 %** (see [ROADMAP.md](ROADMAP.md) and the
 [parity assessment](docs/target-app-parity.md)).
 
 - Draw: circles, ellipses, approximated/interpolated/X-splines, polylines,
@@ -15,8 +15,8 @@ and Linux, with a web (WASM) build on the way.
 - Edit: select, move, copy, delete, scale, rotate, flip, edit attributes,
   update, add/move/delete points, glue/break compounds, align, distribute,
   convert line ↔ spline, open/close, arrows, depth ordering, multi-level undo.
-- Files: reads Fig 3.0–3.2, writes Fig 3.2 and a native JSON format.
-- Export: PDF, SVG, EPS, PNG, GIF, JPEG, TIFF, PPM, PCX, XBM, XPM, LaTeX box (all 22 xfig fill patterns, arrowheads and dashes as fig2dev draws them); xfig's other export languages are being ported from fig2dev.
+- Files: reads Fig 1.3–3.2, writes Fig 3.2 and a native JSON format.
+- Export: PDF, SVG, EPS, PNG, GIF, JPEG, TIFF, PPM, PCX, XBM, XPM, LaTeX box (all 22 xfig fill patterns, arrowheads and dashes as fig2dev draws them); from fig2dev's ported drivers LaTeX picture, epic/eepic/eepicemu, PiCTeX, TeXtyl, tpic, pic, pstex/pdftex, CGM, HPGL, DXF, MetaPost, METAFONT, ge, image map, Gerber, shape; TikZ, PSTricks, pict2e, EMF and Tk are being ported.
 - Automation: every action is a command, reachable from a JSON control
   channel, an MCP server and the command line.
 
