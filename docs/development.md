@@ -1,6 +1,6 @@
 # Development
 
-**Status:** 2026-10-15 (CI workflows).
+**Status:** 2026-10-16 (B12: exports through fig2dev; corpus lists).
 
 ## Build and run
 
@@ -14,7 +14,19 @@ UPDATE_REFERENCE=1 cargo test -p rustfig-engine --test fig2dev_reference -- --no
 cargo test --release -p rustfig-engine --test fig2dev_corpus -- --ignored --nocapture
                       # compare EPS/PDF/PNG with fig2dev on xfig's sample
                       # figures (needs fig2dev and ghostscript; RUSTFIG_GS)
+RUSTFIG_CORPUS_LIST=plan/corpus-sample.txt cargo test --release -p rustfig-engine \
+  --test fig2dev_corpus -- --ignored --nocapture
+                      # only the figures listed in FILE (repo-relative paths,
+                      # one per line, `#` starts a comment); the local sample list
+                      # (plan/ is gitignored) is 150 random figures (seed 20261016)
+                      # + the 150 largest
 ```
+
+Every export goes through fig2dev (plan B12): the engine writes the drawing
+as Fig text and runs `rustfig_fig2dev::convert` (`crates/engine/src/fig2dev/`),
+so a change to an export lives in `crates/fig2dev` (the scene writers in
+`src/scene/`, the drivers in `src/drivers/`), and `cargo xtask layers` keeps
+that crate free of every workspace crate but `figbase`.
 
 If `cargo` cannot write to `~/.cargo` (sandboxed agents), set
 `CARGO_HOME=$PWD/.cargo-home` (it's gitignored).
@@ -75,3 +87,4 @@ format or geometry changes, on an idle machine.
 | Date | Note |
 |---|---|
 | 2026-10-13 | First version. |
+| 2026-10-16 | B12: exports through fig2dev; `RUSTFIG_CORPUS_LIST`. |

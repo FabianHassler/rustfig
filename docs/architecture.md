@@ -1,6 +1,6 @@
 # Architecture
 
-**Status:** 2026-10-14. Which xfig and fig2dev source file each module
+**Status:** 2026-10-16 (B12: fig2dev a program of its own; every export goes through it). Which xfig and fig2dev source file each module
 corresponds to: [source-map.md](source-map.md).
 
 RustFig is a Cargo workspace of layered crates. A crate may depend only on
@@ -9,15 +9,26 @@ lower layers; nothing below L6 may depend on egui, eframe, winit or rfd.
 
 | Layer | Crate | Role |
 |---|---|---|
-| L0 | `rustfig-geom` | points, rects, affine transforms, X-splines, arcs, ellipses, arrowheads, hit testing |
+| base | `figbase` | what fig2dev and RustFig share: points, X-splines, arcs, arrowheads, line widths; Fig font tables, metrics, glyph outlines (craft-fonts or fallback); colour tables |
+| L0 | `rustfig-geom` | `figbase`'s geometry plus hit testing |
+| L0 | `rustfig-fig2dev` | fig2dev: reader (`read.c`, Fig 1.3–3.2), `bound.c`, `gendev` (`convert`), option and language tables, every ported driver; the scene drivers (EPS, PDF, SVG, bitmaps) draw a `Scene` with its rasteriser and fill patterns |
 | L1 | `rustfig-model` | document model: objects, styles, colours, ids, transforms, flattening |
-| L1 | `rustfig-text` | Fig font tables, font selection, measurement, glyph outlines (craft-fonts or fallback) |
+| L1 | `rustfig-text` | `figbase`'s font tables and metrics plus text composition |
 | L2 | `rustfig-format` | Fig 3.0–3.2 reader, Fig 3.2 writer, native JSON |
-| L3 | `rustfig-render` | depth-sorted scene → tiny-skia raster, SVG, EPS, PDF, PNG; fill patterns |
-| L4 | `rustfig-engine` | session: commands, undo, selection, indicator, view, tools, guard, picture import |
+| L3 | `rustfig-render` | the canvas scene: a document → fig2dev's `Scene` (depth order, gray layers), drawn by fig2dev's rasteriser |
+| L4 | `rustfig-engine` | session: commands, undo, selection, indicator, view, tools, guard, picture import; exports through `fig2dev::convert` |
 | L5 | `rustfig-mcp` | MCP server over stdio |
 | L6 | `rustfig-ui-egui` | egui app: canvas, panels, menus, dialogs, control channel |
 | L7 | `rustfig` (app), `rustfig-cli`, `fig2dev` | binaries |
+
+fig2dev is a program of its own that RustFig depends on (plan B12):
+`rustfig-fig2dev` and the `fig2dev` app use no workspace crate but `figbase`
+(checked by `cargo xtask layers`). Who uses whom (workspace crates only):
+
+- `figbase` ← `rustfig-geom`, `rustfig-text`, `rustfig-model`, `rustfig-fig2dev`
+- `rustfig-fig2dev` ← `apps/fig2dev`, `rustfig-render` (the `Scene` and its rasteriser), `rustfig-engine` (every export, old Fig files, pictures)
+- `rustfig-geom` + `rustfig-model` ← `rustfig-format` ← `rustfig-engine`
+- `rustfig-render` (canvas only) ← `rustfig-engine`, `rustfig-ui-egui`, `rustfig-cli`
 
 ## Everything is a command
 
@@ -50,14 +61,26 @@ handles, the text being typed), which the UI renders with the same renderer.
 UI-only commands (dialogs, quit) are in `crates/ui-egui/src/menus.rs`
 (`UI_COMMANDS`).
 
-## Rendering
+## Rendering and export
 
-`Scene::build` flattens compounds, sorts leaves by depth (deepest first,
-stable within a depth) and turns each object into primitives: paths with
-fill (solid or pattern) and stroke (width, dash, cap, join), arrowheads,
-text runs and images. One scene feeds every backend, so the canvas matches
-the exports. The canvas caches the document raster per (revision, view) and
-draws overlays separately.
+The canvas: `rustfig_render::build_scene` flattens compounds, sorts leaves
+in xfig's order (depth, deepest first; object type within a depth; gray
+layers first) and turns each object into fig2dev's `Scene` primitives (paths
+with solid or pattern fill and stroke, arrowheads, text runs, pictures),
+which fig2dev's rasteriser (`rustfig_fig2dev::scene::raster`) draws. The
+canvas caches the raster per (revision, view) and draws overlays separately.
+
+Exports: the engine writes the document as Fig 3.2 text (`rustfig_format`),
+reads it with fig2dev's reader and runs the language's driver through
+`gendev::convert` (`crates/engine/src/fig2dev/mod.rs` `export`), passing
+fig2dev's option letters as xfig's `u_print.c` does (magnification and bitmap
+resolution → `-m`, margin → `-b`, background → `-g`, active layers →
+`-D`/`-K`, `-F`). fig2dev's messages come back as warnings or errors. The
+scene drivers (EPS, PDF, SVG, the bitmap languages) build a `Scene` from
+fig2dev's objects with the same primitives the canvas uses
+(`crates/fig2dev/src/scene/`), so what the canvas shows is what fig2dev
+writes. Fig files before 3.0 open through fig2dev's reader
+(`crates/engine/src/fig2dev/to_model.rs`).
 
 ## Robustness
 
@@ -72,3 +95,4 @@ protocols are fuzzed with proptest.
 | Date | Note |
 |---|---|
 | 2026-10-13 | First version. |
+| 2026-10-16 | B12: `figbase`, fig2dev at L0 and self-contained, render canvas-only, exports through `convert`. |

@@ -6,24 +6,24 @@
   },
   "eps_mean": {
     "count": 2568,
-    "median": 0.0028,
-    "p95": 0.0283
+    "median": 0.0025,
+    "p95": 0.0277
   },
   "eps_strong": {
     "count": 2568,
-    "median": 0.0001,
-    "p95": 0.0114
+    "median": 0.0,
+    "p95": 0.0097
   },
   "figures": 2569,
   "pdf_mean": {
     "count": 2568,
-    "median": 0.0027,
-    "p95": 0.0281
+    "median": 0.0024,
+    "p95": 0.0273
   },
   "png_mean": {
     "count": 2568,
-    "median": 0.0266,
-    "p95": 0.0692
+    "median": 0.0251,
+    "p95": 0.0652
   },
   "with_errors": 1
 }

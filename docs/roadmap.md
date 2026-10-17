@@ -1,6 +1,6 @@
 # Milestones
 
-**Status:** 2026-10-16. Current focus: **M4 (exports)**: phase W, phase A, B2, B6, B10 and G1 done; B9 (fig2dev's drivers) under way, then the audit's hardening passes (B11), page layout and previews (B4a/B4b), TikZ, PSTricks and pict2e (B1, B3). Task-level plan: [plan.md](plan.md).
+**Status:** 2026-10-16. Current focus: **M4 (exports)**: phase W, phase A, B2, B6, B10, B12 and G1 done (every export through fig2dev's `convert`); B9 (fig2dev's drivers) under way, then the audit's hardening passes (B11), page layout and previews (B4a/B4b), TikZ, PSTricks and pict2e (B1, B3). Task-level plan: [plan.md](plan.md).
 
 | Milestone | Content | State |
 |-----------|---------|-------|
@@ -23,3 +23,4 @@
 | 2026-10-14 | Phase W done (W4 Snap menu, W5 attribute panel, W6 rulers, W7 accelerators). |
 | 2026-10-15 | B0: fig2dev's languages, bounds and options ported; D12 fill patterns. |
 | 2026-10-16 | M4 in progress: B2 pstex/pdftex, G1 old Fig files, ported fig2dev languages exported from the app; B11 hardening added. |
+| 2026-10-16 | M4: B12 done, fig2dev a program of its own; every export through it. |
