@@ -17,3 +17,4 @@ image.workspace = true
 tiny-skia.workspace = true
 pdf-writer.workspace = true
 miniz_oxide = "0.8"
+png = { version = "0.18", default-features = false }

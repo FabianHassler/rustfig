@@ -200,6 +200,22 @@ const PIC: DriverHelp = d(
     ],
 );
 
+const EMF: DriverHelp = d(
+    "EMF",
+    &[
+        o(
+            'l',
+            "lang",
+            "set compatibility level to win95, win98 or winnt, default winnt",
+        ),
+        o(
+            'r',
+            "",
+            "position arrowheads for EMF viewers that use rounded arrowheads",
+        ),
+    ],
+);
+
 // -O is accepted, but genpict2e.c doesn't act on it.
 const PICT2E: DriverHelp = d(
     "PICT2E",
@@ -340,6 +356,7 @@ pub fn help(lang: &str) -> Option<&'static DriverHelp> {
     Some(match lang {
         "cgm" => &CGM,
         "dxf" => &DXF,
+        "emf" => &EMF,
         "epic" | "eepic" | "eepicemu" => &EPIC,
         "gbx" => &GBX,
         "ge" => &GE,

@@ -543,6 +543,169 @@ fn read_raster(
     Ok((0, 0))
 }
 
+/// libpng's alpha composition as `read_png` sets it up (`png_set_gamma(2.2,
+/// 0.45455)`, background in screen gamma): 8-bit tables to and from linear
+/// light, `png_composite` in between.
+fn compose_gamma(fg: u32, alpha: u32, bg: u8) -> u32 {
+    let table = |v: u32, g: f64| (255.0 * (f64::from(v) / 255.0).powf(g) + 0.5) as u32;
+    let (f, b) = (table(fg, 2.2), table(u32::from(bg), 2.2));
+    let temp = f * alpha + b * (255 - alpha) + 128;
+    let w = (temp + (temp >> 8)) >> 8;
+    table(w.min(255), 0.45455)
+}
+
+/// `read_png` (readpng.c, used by the EMF driver): like libpng with
+/// packing and 16 to 8 bit scaling, so unlike `read_pic`'s PNG path it keeps
+/// the file's palette (in file order) and gives grey images a ramp colour
+/// map of `1 << bit_depth` entries; RGB images have 3 bytes per pixel and
+/// `numcols == RGB_NUMCOLS`. Alpha is composited linearly over the
+/// background (libpng also applies gamma); `bKGD` and `gAMA` are ignored.
+pub fn read_png(ctx: &Ctx, data: &[u8], pic: &mut Pic) -> Result<(), String> {
+    let limits = png::Limits {
+        bytes: (MAX_PIXELS as usize).saturating_mul(8),
+    };
+    let decoder = png::Decoder::new_with_limits(Cursor::new(data), limits);
+    let mut reader = decoder.read_info().map_err(|e| e.to_string())?;
+    let (w, h, color, depth) = {
+        let i = reader.info();
+        (i.width, i.height, i.color_type, i.bit_depth as u8)
+    };
+    check_size(u64::from(w), u64::from(h))?;
+    let palette: Option<Vec<u8>> = reader.info().palette.as_ref().map(|p| p.to_vec());
+    let trns: Option<Vec<u8>> = reader.info().trns.as_ref().map(|p| p.to_vec());
+    let size = reader.output_buffer_size().ok_or("image too large")?;
+    let mut buf = vec![0u8; size];
+    let frame = reader.next_frame(&mut buf).map_err(|e| e.to_string())?;
+    let line = frame.line_size;
+    let channels = match color {
+        png::ColorType::Grayscale | png::ColorType::Indexed => 1,
+        png::ColorType::GrayscaleAlpha => 2,
+        png::ColorType::Rgb => 3,
+        png::ColorType::Rgba => 4,
+    };
+    // Sample `k` of row `y`, 16 bit scaled to 8 (libpng's png_set_scale_16).
+    let sample = |y: usize, k: usize| -> u32 {
+        let row = buf.get(y * line..).unwrap_or(&[]);
+        match depth {
+            16 => {
+                let v = row
+                    .get(2 * k..2 * k + 2)
+                    .map_or(0, |b| u32::from(b[0]) << 8 | u32::from(b[1]));
+                (v * 255 + 32895) >> 16
+            }
+            8 => u32::from(row.get(k).copied().unwrap_or(0)),
+            d => {
+                let bit = k * usize::from(d);
+                let byte = row.get(bit / 8).copied().unwrap_or(0);
+                let shift = 8 - usize::from(d) - bit % 8;
+                u32::from(byte >> shift) & ((1 << d) - 1)
+            }
+        }
+    };
+    let (w, h) = (w as usize, h as usize);
+    let bg = background(ctx);
+    let gray_depth = if depth == 16 { 8 } else { u32::from(depth) };
+    let mut bitmap: Vec<u8> = Vec::new();
+    pic.cmap = Vec::new();
+    pic.num_transp = NO_TRANSPARENCY;
+    pic.transp_col = [0; 3];
+    match color {
+        png::ColorType::Indexed => {
+            let pal = palette.ok_or_else(|| format!("Could not read color palette of png image {}.", pic.file))?;
+            pic.cmap = pal.as_chunks::<3>().0.iter().take(256).copied().collect();
+            if ctx.grayonly {
+                let cmap: Vec<u8> = pic.cmap.iter().map(|&c| luminance(c)).collect();
+                for y in 0..h {
+                    for x in 0..w {
+                        bitmap.push(cmap.get(sample(y, x) as usize).copied().unwrap_or(0));
+                    }
+                }
+                pic.cmap = (0..=255u8).map(|i| [i; 3]).collect();
+                pic.numcols = 256;
+            } else {
+                for y in 0..h {
+                    for x in 0..w {
+                        bitmap.push(sample(y, x) as u8);
+                    }
+                }
+                pic.numcols = pic.cmap.len() as i32;
+            }
+            if let Some(t) = &trns {
+                pic.num_transp = t.len() as i32;
+            }
+        }
+        png::ColorType::Grayscale | png::ColorType::GrayscaleAlpha => {
+            let n = 1usize << gray_depth;
+            pic.cmap = (0..n).map(|i| [(i * 255 / (n - 1)) as u8; 3]).collect();
+            pic.numcols = n as i32;
+            for y in 0..h {
+                for x in 0..w {
+                    let g = sample(y, x * channels);
+                    if color == png::ColorType::GrayscaleAlpha {
+                        let a = sample(y, x * channels + 1) * if depth == 16 { 1 } else { 255 / ((1 << depth) - 1) };
+                        let g8 = g * 255 / (n as u32 - 1);
+                        let m = compose_gamma(g8, a, bg[0]);
+                        bitmap.push((m * (n as u32 - 1) / 255) as u8);
+                    } else {
+                        bitmap.push(g as u8);
+                    }
+                }
+            }
+            if color == png::ColorType::GrayscaleAlpha {
+                pic.num_transp = TRANSP_COLOR;
+                pic.transp_col = bg;
+            } else if let Some(t) = &trns {
+                let g = t.get(..2).map_or(0, |b| u32::from(b[0]) << 8 | u32::from(b[1]));
+                let g = if depth == 16 {
+                    g >> 8
+                } else {
+                    g * (255 / ((1 << depth) - 1))
+                };
+                pic.transp_col = [g as u8; 3];
+                pic.num_transp = TRANSP_COLOR;
+            }
+        }
+        png::ColorType::Rgb | png::ColorType::Rgba => {
+            pic.numcols = RGB_NUMCOLS;
+            if ctx.grayonly {
+                pic.cmap = (0..=255u8).map(|i| [i; 3]).collect();
+                pic.numcols = 256;
+            }
+            for y in 0..h {
+                for x in 0..w {
+                    let mut c = [0, 1, 2].map(|k| sample(y, x * channels + k));
+                    if color == png::ColorType::Rgba {
+                        let a = sample(y, x * channels + 3);
+                        for (k, v) in c.iter_mut().enumerate() {
+                            *v = compose_gamma(*v, a, bg[k]);
+                        }
+                    }
+                    if ctx.grayonly {
+                        bitmap.push(luminance(c.map(|v| v as u8)));
+                    } else {
+                        bitmap.extend(c.map(|v| v as u8));
+                    }
+                }
+            }
+            if color == png::ColorType::Rgba {
+                pic.num_transp = TRANSP_COLOR;
+                pic.transp_col = bg;
+            } else if let Some(t) = &trns {
+                let v = |i: usize| {
+                    t.get(2 * i..2 * i + 2)
+                        .map_or(0, |b| u32::from(b[0]) << 8 | u32::from(b[1]))
+                };
+                pic.transp_col = [0, 1, 2].map(|i| if depth == 16 { (v(i) >> 8) as u8 } else { v(i) as u8 });
+                pic.num_transp = TRANSP_COLOR;
+            }
+        }
+    }
+    pic.bitmap = bitmap;
+    pic.subtype = P_PNG;
+    set_size(pic, w as u32, h as u32);
+    Ok(())
+}
+
 /// The PostScript part of an EPS file, without a DOS binary header.
 pub fn eps_section(data: &[u8]) -> &[u8] {
     if data.starts_with(b"\xc5\xd0\xd3\xc6") {

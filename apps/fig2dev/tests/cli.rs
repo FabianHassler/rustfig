@@ -241,11 +241,11 @@ fn help_lists_only_effective_options() {
         "{epic}"
     );
 
-    let emf = help(&["-L", "emf", "-h"]);
-    assert!(emf.contains("not available in RustFig's fig2dev yet"), "{emf}");
-    assert!(!emf.contains("  -D "), "{emf}");
+    let tk = help(&["-L", "tk", "-h"]);
+    assert!(tk.contains("not available in RustFig's fig2dev yet"), "{tk}");
+    assert!(!tk.contains("  -D "), "{tk}");
 
-    for out in [&all, &eps, &mp, &epic, &emf] {
+    for out in [&all, &eps, &mp, &epic, &tk] {
         assert!(
             !out.contains("no effect here") && !out.contains("not in RustFig yet"),
             "{out}"
