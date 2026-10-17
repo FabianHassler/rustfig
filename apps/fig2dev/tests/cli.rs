@@ -241,11 +241,14 @@ fn help_lists_only_effective_options() {
         "{epic}"
     );
 
-    let tikz = help(&["-L", "tikz", "-h"]);
-    assert!(tikz.contains("not available in RustFig's fig2dev yet"), "{tikz}");
-    assert!(!tikz.contains("  -D "), "{tikz}");
+    let pstricks = help(&["-L", "pstricks", "-h"]);
+    assert!(
+        pstricks.contains("not available in RustFig's fig2dev yet"),
+        "{pstricks}"
+    );
+    assert!(!pstricks.contains("  -D "), "{pstricks}");
 
-    for out in [&all, &eps, &mp, &epic, &tikz] {
+    for out in [&all, &eps, &mp, &epic, &pstricks] {
         assert!(
             !out.contains("no effect here") && !out.contains("not in RustFig yet"),
             "{out}"

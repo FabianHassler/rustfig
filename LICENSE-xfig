@@ -52,7 +52,7 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/fig2dev/src/drivers/epic.rs: fig2dev/dev/genepic.c
 - crates/fig2dev/src/drivers/gbx.rs: fig2dev/dev/gengbx.c
 - crates/fig2dev/src/drivers/ge.rs: fig2dev/dev/genge.c
-- crates/fig2dev/src/drivers/help.rs: fig2dev/fig2dev.c, fig2dev/dev/gencgm.c, gendxf.c, genepic.c, gengbx.c, genibmgl.c, genlatex.c, genmap.c, genmf.c, genmp.c, genpic.c, genpict2e.c, genpictex.c, genshape.c, gentextyl.c, gentpic.c
+- crates/fig2dev/src/drivers/help.rs: fig2dev/fig2dev.c, fig2dev/dev/gencgm.c, gendxf.c, genepic.c, gengbx.c, genibmgl.c, genlatex.c, genmap.c, genmf.c, genmp.c, genpic.c, genpict2e.c, genpictex.c, genshape.c, gentextyl.c, gentikz.c, gentpic.c
 - crates/fig2dev/src/drivers/ibmgl.rs: fig2dev/dev/genibmgl.c
 - crates/fig2dev/src/drivers/latex.rs: fig2dev/dev/genlatex.c
 - crates/fig2dev/src/drivers/map.rs: fig2dev/dev/genmap.c
@@ -65,6 +65,7 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/fig2dev/src/drivers/scene.rs: fig2dev/fig2dev.c, fig2dev/dev/genps.c, fig2dev/dev/genbitmaps.c, fig2dev/dev/genpstex.c
 - crates/fig2dev/src/drivers/shape.rs: fig2dev/dev/genshape.c
 - crates/fig2dev/src/drivers/textyl.rs: fig2dev/dev/gentextyl.c, fig2dev/localmath.c
+- crates/fig2dev/src/drivers/tikz.rs: fig2dev/dev/gentikz.c, fig2dev/dev/gentikz.h
 - crates/fig2dev/src/drivers/tpic.rs: fig2dev/dev/gentpic.c
 - crates/fig2dev/src/gendev.rs: fig2dev/fig2dev.c, fig2dev/fig2dev.h, fig2dev/drivers.h
 - crates/fig2dev/src/languages.rs: xfig src/mode.c, src/w_export.c

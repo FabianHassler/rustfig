@@ -95,7 +95,7 @@ const PICT2EARROW: [(f64, f64); 30] = [
 
 /// `round(a*b)` as clang compiles fig2dev's `round()` macro: the product
 /// and the ±0.5 fused, the sign taken from the rounded product.
-fn round_mul(a: f64, b: f64) -> i32 {
+pub(crate) fn round_mul(a: f64, b: f64) -> i32 {
     let half = if a * b >= 0.0 { 0.5 } else { -0.5 };
     a.mul_add(b, half) as i32
 }

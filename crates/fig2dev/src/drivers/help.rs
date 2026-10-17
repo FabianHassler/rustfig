@@ -247,6 +247,33 @@ const SHAPE: DriverHelp = d(
     )],
 );
 
+// -f is accepted, but fig2dev's help doesn't list it.
+const TIKZ: DriverHelp = DriverHelp {
+    title: "TIKZ",
+    grid: true,
+    options: &[
+        o('b', "width", "specify width of blank border around figure (1/72 inch)"),
+        o(
+            'C',
+            "num",
+            "do not issue color commands for color num (0 = black,\n1 = blue, etc., see xfig color chooser)",
+        ),
+        o('F', "", "do not set font family/series/shape"),
+        o('i', "dir", "prepend the string \"dir\" to included graphics files"),
+        o(
+            'O',
+            "",
+            "do not quote characters special to TeX/LaTeX\n(effectively, set the text flag \"TeX\" for all text)",
+        ),
+        o('o', "", "do not set the font size"),
+        o('P', "", "pagemode, generate stand-alone LaTeX-file"),
+        o('T', "", "only use TeX fonts (even when PS-fonts are specified)"),
+        o('v', "", "verbose mode, include comments in the output"),
+        o('W', "", "disable code that enables scaling of figure from TeX file"),
+        o('w', "", "remove suffix from included graphics-files"),
+    ],
+};
+
 const TEXTYL: DriverHelp = d(
     "TEXTYL",
     &[
@@ -282,6 +309,7 @@ pub fn help(lang: &str) -> Option<&'static DriverHelp> {
         "pstex_t" | "pdftex_t" => &PSTEX_T,
         "shape" => &SHAPE,
         "textyl" => &TEXTYL,
+        "tikz" => &TIKZ,
         "tpic" => &TPIC,
         _ => return None,
     })
