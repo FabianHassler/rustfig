@@ -1,6 +1,6 @@
 # File format parity checklist
 
-**Status:** 2026-10-17 (G1: Fig 1.3–2.1; B2: pstex/pdftex; B3: pict2e; B1: tikz; ported languages exported from the app; B12: every export through fig2dev).
+**Status:** 2026-10-17 (G1: Fig 1.3–2.1; B2: pstex/pdftex; B3: pict2e; B1: tikz; B3: PSTricks; ported languages exported from the app; B12: every export through fig2dev).
 
 | Format | Read | Write | Notes |
 |---|---|---|---|
@@ -21,7 +21,7 @@
 | pstex/pdftex (and xfig's pspdftex pair) | — | ✅ | ported from `genpstex.c` (B2): the `_t` file byte-identical to fig2dev on a test figure; EPS/PDF without special texts, fig2dev's bounding box; the app writes xfig's file pairs |
 | pict2e | — | ✅ | ported from `genpict2e.c` (B3): byte-identical to fig2dev 3.2.9a on the fixtures, the suite's figures and 285 of 300 sample figures (the rest: `\ooo`-escaped bytes in texts come out as UTF-8) |
 | TikZ | — | ✅ | ported from `gentikz.c` (B1): byte-identical to fig2dev 3.2.9a on the fixtures, the suite's figures and 285 of 300 sample figures (the rest: `\ooo`-escaped bytes in text) |
-| PSTricks | — | ❌ | being ported from fig2dev (B3); gap #1 |
+| PSTricks | — | ✅ | ported from `genpstricks.c` (B3): byte-identical to fig2dev 3.2.9a on the fixtures, the suite's figures and 285 of 300 sample figures (the rest: `\ooo`-escaped bytes in texts come out as UTF-8) |
 | GIF/JPEG/TIFF/PPM/PCX/XBM/XPM | — | ✅ | from RustFig's renderer (B6): sizes and options `-S`, `-q`, `-t`, `-b`, `-g`, `-N` as fig2dev; checked against RustFig's PNG |
 | Gerber, shape | — | ✅ | ported from fig2dev (B9): byte-identical to fig2dev 3.2.9a on 2,549/2,552 (Gerber) and 2,551/2,552 (shape) of xfig's samples, with fig2dev's depth order |
 | LaTeX picture (`latex`), PiCTeX, TeXtyl | — | ✅ | ported from fig2dev (B9): identical to fig2dev 3.2.9a on ≈7,590 of 7,701 runs (2,552 samples × 3 option sets); the rest differ in Latin-1 text (written as UTF-8) and one ellipse bound |
@@ -47,3 +47,4 @@ Fuzzing: `crates/format/tests/prop_format.rs`, `crates/engine/tests/import_fuzz.
 | 2026-10-16 | B12: every export through fig2dev's `convert`; suite 62 pass. |
 | 2026-10-17 | pict2e (B3), byte-identical to fig2dev on 285 of 300 sample figures; suite 73 pass. |
 | 2026-10-17 | tikz (B1), byte-identical to fig2dev on 285 of 300 sample figures. |
+| 2026-10-17 | PSTricks (B3), byte-identical to fig2dev on 285 of 300 sample figures. |

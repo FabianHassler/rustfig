@@ -274,6 +274,51 @@ const TIKZ: DriverHelp = DriverHelp {
     ],
 };
 
+// -M, -N and -O are listed by fig2dev's help but the driver rejects them,
+// so they are left out here.
+const PSTRICKS: DriverHelp = d(
+    "PSTRICKS",
+    &[
+        o('f', "fontname", "set default font"),
+        o('G', "dummyarg", "draw pstricks standard grid (sizes ignored)"),
+        o(
+            'l',
+            "weight",
+            "set line weight factor 0 to 2.0 (default 0.5 matches PS driver)",
+        ),
+        o('n', "mode", "page mode (0, 1, 2, or 3)"),
+        o('P', "", "generate complete {document}; scale to fit one page"),
+        o('p', "dir", "turn on auto picture conversion to EPS; dir is repository"),
+        o(
+            'R',
+            "0|1|2",
+            "arrow style (default 0 = Fig, 1 = PST with Fig sizes,\n   2 = PST default, ignore Fig sizes)",
+        ),
+        o(
+            'S',
+            "scale",
+            "hard scale factor, scale must be between 8 and 12 inclusively",
+        ),
+        o('t', "version", "set PSTricks version"),
+        o('v', "", "verbose warnings and comments in output file"),
+        o(
+            'x',
+            "marginsize",
+            "add margin on left and right (default is tight bounding box)",
+        ),
+        o(
+            'y',
+            "marginsize",
+            "add margin on over and under (default is tight bounding box)",
+        ),
+        o(
+            'z',
+            "0|1|2",
+            "font handling (default 0=full, 1=size only, 2=none,PST default)",
+        ),
+    ],
+);
+
 const TEXTYL: DriverHelp = d(
     "TEXTYL",
     &[
@@ -306,6 +351,7 @@ pub fn help(lang: &str) -> Option<&'static DriverHelp> {
         "pic" => &PIC,
         "pict2e" => &PICT2E,
         "pictex" => &PICTEX,
+        "pstricks" => &PSTRICKS,
         "pstex_t" | "pdftex_t" => &PSTEX_T,
         "shape" => &SHAPE,
         "textyl" => &TEXTYL,
@@ -359,6 +405,8 @@ mod tests {
             let (Some(h), Some(mut dev)) = (help(l), driver(l)) else {
                 continue;
             };
+            // pstricks -p writes a readme into its picture directory
+            let tmp = std::env::temp_dir().to_string_lossy().into_owned();
             for opt in h.options {
                 let arg = match (*l, opt.letter) {
                     ("pic", 'p') => "all",
@@ -368,6 +416,8 @@ mod tests {
                     ("gbx", 'p') => "pos",
                     ("gbx", 'g') => "1x1+0+0",
                     ("gbx", 'f') => "2.4",
+                    ("pstricks", 'p') => &tmp,
+                    ("pstricks", 'S') => "10",
                     (_, 'f' | 'l' | 'p') if *l == "ibmgl" || *l == "dxf" => "/nonexistent",
                     _ => "1",
                 };

@@ -94,7 +94,7 @@ pub const PS_FONT_MAP: [i32; NUM_PSFONTS] = [
 ];
 
 /// Whether substituting the font deserves a warning (`PSmapwarn`).
-const PS_MAP_WARN: [bool; NUM_PSFONTS] = [
+pub const PS_MAP_WARN: [bool; NUM_PSFONTS] = [
     false, false, false, false, false, // Times
     true, true, true, true, // AvantGarde
     true, true, true, true, // Bookman

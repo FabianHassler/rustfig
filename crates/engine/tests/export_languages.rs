@@ -72,10 +72,8 @@ fn latex_box_has_the_figures_size() {
 #[test]
 fn planned_and_unknown_languages_are_errors() {
     let mut e = drawing();
-    let err = e
-        .execute("file.export_data", &json!({"format": "pstricks"}))
-        .unwrap_err();
-    assert!(err.message.contains("plan task B3"), "{}", err.message);
+    let err = e.execute("file.export_data", &json!({"format": "emf"})).unwrap_err();
+    assert!(err.message.contains("plan task B9"), "{}", err.message);
     for bad in [
         "",
         "bogus",
@@ -109,11 +107,9 @@ fn files_pick_the_language_from_their_name() {
 
     let err = e.execute("file.export", &json!({"path": path("fig.tex")})).unwrap_err();
     assert!(err.message.contains("format"), "{}", err.message);
-    let err = e
-        .execute("file.export", &json!({"path": path("fig.pstricks")}))
-        .unwrap_err();
-    assert!(err.message.contains("B3"), "{}", err.message);
-    assert!(!dir.join("fig.pstricks").exists());
+    let err = e.execute("file.export", &json!({"path": path("fig.emf")})).unwrap_err();
+    assert!(err.message.contains("B9"), "{}", err.message);
+    assert!(!dir.join("fig.emf").exists());
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
