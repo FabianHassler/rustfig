@@ -1,6 +1,6 @@
 # RustFig roadmap
 
-**Status (2026-10-16):** Stage **Alpha**. Overall xfig parity **≈64 %**
+**Status (2026-10-17):** Stage **Alpha**. Overall xfig parity **≈64 %**
 ([assessment](docs/target-app-parity.md)). The native app draws, edits,
 saves and exports. The web build compiles; it is not yet packaged or tested in a browser.
 
@@ -20,9 +20,9 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Overall parity (weighted) | ≈64 % |
 | Commands (all reachable from the control channel and MCP) | 133 engine (incl. 38 tool modes) + 17 UI |
 | Interactive tools (xfig modes) | 38 |
-| Tests | 464 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
+| Tests | 475 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 1.3–3.2, write 3.2 |
-| Export formats | all through fig2dev's ported drivers (`convert`): PDF, SVG, EPS, PNG, GIF, JPEG, TIFF, PPM, PCX, XBM, XPM, EPS+PDF pair, LaTeX box from its scene writers (PostScript without page layout yet); LaTeX picture, epic/eepic/eepicemu, PiCTeX, TeXtyl, tpic, pic, pstex/pdftex, CGM, HPGL, DXF, MetaPost, METAFONT, ge, image map, Gerber, shape from ported fig2dev drivers; TikZ, PSTricks, pict2e, EMF, Tk/Perl-Tk still being ported |
+| Export formats | all through fig2dev's ported drivers (`convert`): PDF, SVG, EPS, PNG, GIF, JPEG, TIFF, PPM, PCX, XBM, XPM, EPS+PDF pair, LaTeX box from its scene writers (PostScript without page layout yet); LaTeX picture, epic/eepic/eepicemu, PiCTeX, TeXtyl, tpic, pic, pstex/pdftex, pict2e, CGM, HPGL, DXF, MetaPost, METAFONT, ge, image map, Gerber, shape from ported fig2dev drivers; TikZ, PSTricks, EMF, Tk/Perl-Tk still being ported |
 | Perf, 50k paths (render fit / hit test / open / edit + undo) | 260 ms / 0.1 ms / 20 ms / 0.9 ms |
 
 ## Parity by dimension
@@ -33,7 +33,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Editing modes | 70 % | missing open-compound, join/split, chop, tangent, measure modes |
 | Attributes panel | 75 % | xfig's per-mode buttons; missing colour editor, latex/manhattan positioning, smart links |
 | File format | 92 % | Fig 1.3–3.2 read; exact pre-3.2 spline conversion missing |
-| Export | 55 % | most fig2dev languages and pstex/pdftex; TikZ, PSTricks, pict2e, EMF, Tk, PostScript page layout and previews missing |
+| Export | 57 % | most fig2dev languages, pstex/pdftex and pict2e; TikZ, PSTricks, EMF, Tk, PostScript page layout and previews missing |
 | Text | 55 % | fallback fonts, no character map or LaTeX special text |
 | View & navigation | 96 % | classic xfig layout, xfig's three-button mouse (or a modern scheme), depth panel, rulers and units box, object snaps; zoom box missing |
 | Undo | 100 % | multi-level (xfig: single level) |
@@ -61,7 +61,7 @@ English only. See [localization parity](docs/localization-parity.md).
 
 The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 [docs/gaps.md](docs/gaps.md). Next up:
-1. The rest of the fig2dev port: the audit's hardening passes (B11), PostScript page layout and previews (B4a/B4b), TikZ, PSTricks and pict2e (B1, B3), EMF and Tk (B9); every export language in Rust, no fig2dev or ghostscript at runtime.
+1. The rest of the fig2dev port: the audit's hardening passes (B11), PostScript page layout and previews (B4a/B4b), TikZ and PSTricks (B1, B3), EMF and Tk (B9); every export language in Rust, no fig2dev or ghostscript at runtime.
 2. ✅ Phase A, hardening (done 2026-10-15): shared undo snapshots, per-command cost, CI (Linux on every push, all OSes for releases), the web build check, UI tests, export curves, crash recovery, stall-free panning on large drawings.
 3. Preferences that survive restarts (E1) and xfig's command-line options (S3).
 4. Phase B: fig2dev's drivers ported (LaTeX exports, bitmaps, PostScript, the rest), modern printing (PDF to the system print dialog).
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-17 | B3: fig2dev's pict2e driver ported, byte-identical to fig2dev 3.2.9a on the fixtures, the suite's figures and 285 of 300 sample figures (the rest: octal-escaped text bytes); every driver now orders objects of one depth with the macOS `qsort`, as the reference. fig2dev's suite: 73 pass, 9 fail, 6 need unported languages. 475 tests. |
 | 2026-10-16 | B12: fig2dev is a program of its own that RustFig depends on. Shared crate `figbase` (geometry, fonts, colours); the scene, rasteriser, fill patterns and EPS/PDF/SVG/bitmap writers live in fig2dev's crate, which uses no other workspace crate; every export writes Fig text and runs fig2dev's `convert` with xfig's option letters; `rustfig-render` only draws the canvas. Corpus median/p95 EPS .0028/.0283 → .0025/.0277, PDF .0027/.0281 → .0024/.0273, PNG .0266/.0692 → .0251/.0652; SVG export 249 → 109 ms; fig2dev's suite unchanged (62 pass); 464 tests. |
 | 2026-10-16 | The app opens Fig 1.3–2.1 files through fig2dev's ported reader (G1), now the only reader of every fig2dev language; pstex/pdftex ported (B2: the `_t` file byte-identical to fig2dev's), the app writes xfig's file pairs; every ported fig2dev language exports from the app, the export dialog and the CLI; pictures in exports (.gz/.Z, XBM, XPM, PCX; EPS embedded in EPS). fig2dev's own suite: 61 pass, 10 fail (was 44/27). A function-level audit of the port added B11 (hardening, 66 h). Parity ≈64 %. |
 | 2026-10-15 | B6: GIF, JPEG, TIFF, PPM, PCX, XBM and XPM export from RustFig's renderer (no ghostscript), antialiased by default. B9 started: fig2dev's reader (Fig 1.3–3.2), bounds, spline conversion and driver helpers ported into a new crate; the standalone fig2dev now reports fig2dev's read messages (its suite: 37 pass). 357 tests. |

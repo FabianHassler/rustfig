@@ -1,24 +1,20 @@
 //! Shared by the latex, pictex and textyl tests: running a driver on a
 //! Fig text, and comparing with the real fig2dev 3.2.9a when installed.
 //!
-//! `gendev::convert` sorts objects of one depth stably, fig2dev with the
-//! C library's `qsort`, which isn't stable. For the comparison, the
-//! objects are put into fig2dev's order first (macOS `qsort`, copied from
-//! the shape driver) and handed to `convert` as one compound per object,
-//! which keeps that order.
+//! `gendev::convert` orders objects of one depth with the macOS C
+//! library's `qsort`, as the reference fig2dev does.
 #![allow(dead_code)]
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use rustfig_fig2dev::object::Compound;
 use rustfig_fig2dev::{convert, drivers, read::readfp_fig, Ctx};
 
 pub const HDR: &str = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n";
 
 /// Output (without the creation date), messages and exit status of
-/// `lang` on `fig`, or the error that ends the run. `qsorted` puts the
-/// objects in fig2dev's order.
+/// `lang` on `fig`, or the error that ends the run. `qsorted` is kept
+/// for the callers: `convert` itself orders the objects as fig2dev.
 pub fn run_with(
     lang: &str,
     fig: &[u8],
@@ -41,7 +37,7 @@ pub fn run_with(
     let Ok(objects) = readfp_fig(&mut ctx, fig) else {
         return Ok((String::new(), ctx.messages, 1));
     };
-    let objects = if qsorted { fig2dev_order(&objects) } else { objects };
+    let _ = qsorted;
     let status = convert(&mut ctx, dev.as_mut(), &objects)?;
     let out = String::from_utf8_lossy(&status.output);
     let out: String = out
@@ -51,77 +47,9 @@ pub fn run_with(
     Ok((out, ctx.messages, status.exit))
 }
 
-/// [`run_with`] on a Fig 3.2 body (after the header), stable order.
+/// [`run_with`] on a Fig 3.2 body (after the header).
 pub fn run(lang: &str, body: &str, opts: &[(char, Option<&str>)]) -> Result<(String, Vec<String>, i32), String> {
     run_with(lang, format!("{HDR}{body}").as_bytes(), None, opts, false)
-}
-
-/// The objects in the order fig2dev hands them to the driver, each in a
-/// compound of its own.
-fn fig2dev_order(top: &Compound) -> Compound {
-    let mut recs: Vec<(i32, Compound)> = Vec::new();
-    dump(top, &mut recs);
-    qsort(&mut recs, &mut |a: &(i32, Compound), b: &(i32, Compound)| {
-        b.0.wrapping_sub(a.0)
-    });
-    Compound {
-        comments: top.comments.clone(),
-        compounds: recs.into_iter().map(|r| r.1).collect(),
-        ..Compound::default()
-    }
-}
-
-/// `compound_dump`.
-fn dump(c: &Compound, out: &mut Vec<(i32, Compound)>) {
-    for s in &c.compounds {
-        dump(s, out);
-    }
-    let one = || Compound::default();
-    out.extend(c.arcs.iter().map(|o| {
-        (
-            o.depth,
-            Compound {
-                arcs: vec![o.clone()],
-                ..one()
-            },
-        )
-    }));
-    out.extend(c.ellipses.iter().map(|o| {
-        (
-            o.depth,
-            Compound {
-                ellipses: vec![o.clone()],
-                ..one()
-            },
-        )
-    }));
-    out.extend(c.lines.iter().map(|o| {
-        (
-            o.depth,
-            Compound {
-                lines: vec![o.clone()],
-                ..one()
-            },
-        )
-    }));
-    out.extend(c.splines.iter().map(|o| {
-        (
-            o.depth,
-            Compound {
-                splines: vec![o.clone()],
-                ..one()
-            },
-        )
-    }));
-    out.extend(c.texts.iter().map(|o| {
-        (
-            o.depth,
-            Compound {
-                texts: vec![o.clone()],
-                ..one()
-            },
-        )
-    }));
 }
 
 pub const FIG2DEV: &str = "/opt/homebrew/bin/fig2dev";
@@ -247,238 +175,6 @@ fn parse_opts(opts: &[&str]) -> Vec<(char, Option<String>)> {
         }
     }
     v
-}
-
-/// The C library's `qsort` as macOS has it (FreeBSD's Bentley–McIlroy
-/// quicksort with a recursion limit falling back to heapsort, and an
-/// insertion sort tried after a partition that moved nothing), so that
-/// elements comparing equal end up where they do there. `cmp` returns
-/// C's negative, zero or positive.
-pub fn qsort<T: Clone>(v: &mut [T], cmp: &mut impl FnMut(&T, &T) -> i32) {
-    let n = v.len();
-    let fls = usize::BITS - n.leading_zeros();
-    let depth = 2 * (i64::from(fls) - 1);
-    qsort_part(v, depth, cmp);
-}
-
-fn med3<T>(v: &[T], a: usize, b: usize, c: usize, cmp: &mut impl FnMut(&T, &T) -> i32) -> usize {
-    let (Some(x), Some(y), Some(z)) = (v.get(a), v.get(b), v.get(c)) else {
-        return a;
-    };
-    if cmp(x, y) < 0 {
-        if cmp(y, z) < 0 {
-            b
-        } else if cmp(x, z) < 0 {
-            c
-        } else {
-            a
-        }
-    } else if cmp(y, z) > 0 {
-        b
-    } else if cmp(x, z) < 0 {
-        a
-    } else {
-        c
-    }
-}
-
-/// `cmp(v[i], v[j])`, 0 for indices out of range.
-fn cmp_at<T>(v: &[T], i: usize, j: usize, cmp: &mut impl FnMut(&T, &T) -> i32) -> i32 {
-    match (v.get(i), v.get(j)) {
-        (Some(a), Some(b)) => cmp(a, b),
-        _ => 0,
-    }
-}
-
-/// Insertion sort; gives up (`false`) after `limit` swaps, unless 0.
-fn isort<T>(v: &mut [T], limit: usize, cmp: &mut impl FnMut(&T, &T) -> i32) -> bool {
-    let mut swaps = 0;
-    for m in 1..v.len() {
-        let mut l = m;
-        while l > 0 && cmp_at(v, l - 1, l, cmp) > 0 {
-            v.swap(l, l - 1);
-            swaps += 1;
-            if limit != 0 && swaps > limit {
-                return false;
-            }
-            l -= 1;
-        }
-    }
-    true
-}
-
-/// `vecswap`: swap `n` elements from `a` with `n` from `b`.
-fn vecswap<T>(v: &mut [T], a: usize, b: usize, n: usize) {
-    for i in 0..n {
-        if a + i < v.len() && b + i < v.len() {
-            v.swap(a + i, b + i);
-        }
-    }
-}
-
-/// BSD `heapsort`.
-fn heapsort<T: Clone>(v: &mut [T], cmp: &mut impl FnMut(&T, &T) -> i32) {
-    let mut nmemb = v.len();
-    if nmemb <= 1 {
-        return;
-    }
-    // One-based indices, as in the C code.
-    let c = |v: &[T], i: usize, j: usize, cmp: &mut dyn FnMut(&T, &T) -> i32| match (v.get(i - 1), v.get(j - 1)) {
-        (Some(a), Some(b)) => cmp(a, b),
-        _ => 0,
-    };
-    let mut l = nmemb / 2 + 1;
-    while l > 1 {
-        l -= 1;
-        let mut i = l;
-        while i * 2 <= nmemb {
-            let mut j = i * 2;
-            if j < nmemb && c(v, j, j + 1, cmp) < 0 {
-                j += 1;
-            }
-            if c(v, j, i, cmp) <= 0 {
-                break;
-            }
-            v.swap(i - 1, j - 1);
-            i = j;
-        }
-    }
-    while nmemb > 1 {
-        let (Some(k), Some(top)) = (v.get(nmemb - 1).cloned(), v.first().cloned()) else {
-            return;
-        };
-        if let Some(slot) = v.get_mut(nmemb - 1) {
-            *slot = top;
-        }
-        nmemb -= 1;
-        let mut i = 1;
-        while i * 2 <= nmemb {
-            let mut j = i * 2;
-            if j < nmemb && c(v, j, j + 1, cmp) < 0 {
-                j += 1;
-            }
-            if let Some(child) = v.get(j - 1).cloned() {
-                if let Some(slot) = v.get_mut(i - 1) {
-                    *slot = child;
-                }
-            }
-            i = j;
-        }
-        loop {
-            let child = i;
-            i = child / 2;
-            let place = child == 1 || v.get(i.wrapping_sub(1)).is_none_or(|p| cmp(&k, p) < 0);
-            if place {
-                if let Some(slot) = v.get_mut(child - 1) {
-                    *slot = k;
-                }
-                break;
-            }
-            if let Some(parent) = v.get(i - 1).cloned() {
-                if let Some(slot) = v.get_mut(child - 1) {
-                    *slot = parent;
-                }
-            }
-        }
-    }
-}
-
-fn qsort_part<T: Clone>(mut v: &mut [T], mut depth: i64, cmp: &mut impl FnMut(&T, &T) -> i32) {
-    loop {
-        let n = v.len();
-        if depth <= 0 {
-            heapsort(v, cmp);
-            return;
-        }
-        depth -= 1;
-        if n < 8 {
-            isort(v, 0, cmp);
-            return;
-        }
-        let mut pm = n / 2;
-        let mut pl = 0;
-        let mut pn = n - 1;
-        if n > 40 {
-            let d = n / 8;
-            pl = med3(v, pl, pl + d, pl + 2 * d, cmp);
-            pm = med3(v, pm - d, pm, pm + d, cmp);
-            pn = med3(v, pn - 2 * d, pn - d, pn, cmp);
-        }
-        pm = med3(v, pl, pm, pn, cmp);
-        v.swap(0, pm);
-        let (mut pa, mut pb) = (1, 1);
-        let (mut pc, mut pd) = (n - 1, n - 1);
-        let mut swapped = false;
-        loop {
-            while pb <= pc {
-                let r = cmp_at(v, pb, 0, cmp);
-                if r > 0 {
-                    break;
-                }
-                if r == 0 {
-                    swapped = true;
-                    v.swap(pa, pb);
-                    pa += 1;
-                }
-                pb += 1;
-            }
-            while pb <= pc {
-                let r = cmp_at(v, pc, 0, cmp);
-                if r < 0 {
-                    break;
-                }
-                if r == 0 {
-                    swapped = true;
-                    v.swap(pc, pd);
-                    pd -= 1;
-                }
-                pc -= 1;
-            }
-            if pb > pc {
-                break;
-            }
-            v.swap(pb, pc);
-            swapped = true;
-            pb += 1;
-            pc -= 1;
-        }
-        let r = pa.min(pb - pa);
-        vecswap(v, 0, pb - r, r);
-        let r = (pd - pc).min(n - pd - 1);
-        vecswap(v, pb, n - r, r);
-        if !swapped && isort(v, 1 + n / 4, cmp) {
-            return;
-        }
-        let d1 = pb - pa;
-        let d2 = pd - pc;
-        let whole = v;
-        if d1 <= d2 {
-            let (left, rest) = whole.split_at_mut(d1);
-            if d1 > 1 {
-                qsort_part(left, depth, cmp);
-            }
-            if d2 <= 1 {
-                return;
-            }
-            let len = rest.len();
-            let Some(r) = rest.get_mut(len.saturating_sub(d2)..) else {
-                return;
-            };
-            v = r;
-        } else {
-            let (left, rest) = whole.split_at_mut(n - d2);
-            if d2 > 1 {
-                qsort_part(rest, depth, cmp);
-            }
-            if d1 <= 1 {
-                return;
-            }
-            let Some(l) = left.get_mut(..d1) else {
-                return;
-            };
-            v = l;
-        }
-    }
 }
 
 /// Hand-written figures exercising each object type, arrows, fills,

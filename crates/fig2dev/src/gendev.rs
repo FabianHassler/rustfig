@@ -603,13 +603,17 @@ fn compound_dump<'a>(com: &'a Compound, out: &mut Vec<(i32, Obj<'a>)>) {
 }
 
 /// Every object with its depth in the order the drivers draw them
-/// (`gendev_objects`): deepest first; objects of one depth in
-/// `compound_dump`'s order.
+/// (`gendev_objects`): deepest first; objects of one depth where the macOS
+/// C library's `qsort` puts `compound_dump`'s order, as in the reference
+/// fig2dev.
 pub fn drawing_order(objects: &Compound) -> Vec<(i32, Obj<'_>)> {
     let mut recs = Vec::new();
     compound_dump(objects, &mut recs);
-    // Deepest first; stable, so objects of one depth keep their order.
-    recs.sort_by_key(|r| std::cmp::Reverse(r.0));
+    // Deepest first, with the C library's qsort as macOS has it (not
+    // stable), so that objects of one depth come in fig2dev's order.
+    crate::drivers::shape::qsort(&mut recs, &mut |a: &(i32, Obj<'_>), b: &(i32, Obj<'_>)| {
+        b.0.wrapping_sub(a.0)
+    });
     recs
 }
 

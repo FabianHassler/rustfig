@@ -1,10 +1,10 @@
 # Known gaps (ranked work list)
 
-**Status:** 2026-10-16 (B2, G1, B12 landed; B11 added from the fig2dev audit). Ranked by user impact per hour. Pick work from the top.
+**Status:** 2026-10-17 (B2, G1, B12, pict2e (B3) landed; B11 added from the fig2dev audit). Ranked by user impact per hour. Pick work from the top.
 
 | # | Gap | Area | Impact | Hours |
 |---|-----|------|--------|------:|
-| 1 | LaTeX exports: TikZ, PSTricks, pict2e (special text passed through), ported from fig2dev (B1, B3; pstex/pdftex done, B2) | Export | High: xfig's main audience writes LaTeX | 40 |
+| 1 | LaTeX exports: TikZ, PSTricks (special text passed through), ported from fig2dev (B1, B3; pstex/pdftex done, B2; pict2e done, B3) | Export | High: xfig's main audience writes LaTeX | 26 |
 | 2 | Web build: compiles locally (2026-10-14); still to do: the wasm check in CI, trunk packaging and browser open/save/download | Platforms | High | 24 |
 | 25 | Exports go through RustFig's Fig writer (B12), which drops arrows on pie-wedge arcs and refits arc centres from the rounded points instead of keeping the file's centre; fig2dev draws both from the file (`fig2dev_reference` arcs, 2 corpus bounding boxes). Saving loses them too | Export/File format | Medium | 3 |
 | 26 | Pictures in exports: a frame is stroked around every picture with a line thickness (fig2dev's genps strokes none) and transparent GIF pixels come out white (corpus: `Examples/pictures.fig`, `Flags/Africa/eritrea.fig`, fig2dev's `boxwimg.fig`) | Export | Medium | 3 |
@@ -31,6 +31,7 @@
 
 | Date | Note |
 |------|------|
+| 2026-10-17 | #1 shrank: pict2e ported (B3). |
 | 2026-10-16 | #25 added (B12: exports through the Fig writer expose its arc losses); #26 added (the corpus now exports pictures as the app does). |
 | 2026-10-16 | #13 closed (G1: the app reads Fig 1.3–2.1 through fig2dev's reader); #1 shrank (B2 pstex/pdftex), #21 shrank to EMF and Tk, #14 shrank (pictures in exports); #24 added from the fig2dev audit (B11). |
 | 2026-10-15 | #23 closed: start values are xfig's (positioning magnet 1/16 inch, alignment none, stick arrows, dot gap 3 apart from dash length 4); the man page's text step 1.2 is a documentation error, xfig's code starts at 1.0 as RustFig does. |

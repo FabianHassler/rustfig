@@ -1,6 +1,6 @@
 # Source map: xfig and fig2dev → RustFig
 
-**Status:** 2026-10-16 (B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev). First version, after the decision to port from xfig's
+**Status:** 2026-10-17 (B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e). First version, after the decision to port from xfig's
 sources (`LICENSE-xfig`). Nothing has been ported line by line yet: every
 "own" row was written from the manual and the format description and must be
 checked against the C file named in it.
@@ -188,7 +188,8 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `dev/genps.c`, `genpdf.c` | 2.9 k | PostScript/PDF with page layout; the reference where drivers disagree | `drivers/scene.rs` (options, `-F`) + `crates/fig2dev/src/scene/{build,eps,pdf}.rs`; `set_style` → `figbase/style.rs` `LineKind::dash_pattern`, `linewidth_adj` → `figbase::geom::stroke_width`, arrow fills, `PSFONTMAG` → metric text keeps its point size (`scene/build.rs`); the picture branch (EPS pictures embedded, `readeps.c`) → `crates/fig2dev/src/scene/eps.rs` | partial: page layout, multi-page, previews | B4a, B4b, B11 |
 | `dev/genpstex.c` | 176 | PS/PDF + LaTeX overlay (pstex, pdftex) | `fig2dev/drivers/pstex` | ported | B2 |
 | `dev/gentikz.c` | 1870 | TikZ | — | missing | B1 |
-| `dev/genpict2e.c`, `genpstricks.c` | 4.6 k | LaTeX picture languages | — | missing | B3 |
+| `dev/genpict2e.c` | 2549 | pict2e | `fig2dev/drivers/pict2e` (text through `util/texfonts` `put_string_bytes`) | ported: byte-identical to fig2dev 3.2.9a on the fixtures, the suite's figures and 285 of the 300-figure sample (the rest: `\ooo` escapes in texts, which the reader decodes) | B3 |
+| `dev/genpstricks.c` | 2880 | PSTricks | — | missing | B3 |
 | `dev/genepic.c`, `gentpic.c`, `genpic.c`, `picfonts.h`, `picpsfonts.h` | 3.5 k | epic/eepic/eepicemu, tpic, pic | `fig2dev/drivers/{epic,tpic,pic}` | ported | B9 |
 | `dev/genlatex.c`, `genpictex.c`, `gentextyl.c` | 2.9 k | LaTeX picture, PiCTeX, TeXtyl | `fig2dev/drivers/{latex,pictex,textyl}` | ported | B9 |
 | `dev/gensvg.c` | 1331 | SVG | `crates/fig2dev/src/scene/svg.rs`; `figbase::geom::stroke_width` ported from `linewidth_adj` | own; reference-tested (A8) | review |
@@ -214,6 +215,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | 2026-10-15 | W8: xfig's bindings audited (`keys-parity.md`); `CompKeyDB` ported. |
 | 2026-10-15 | B9 wave 1: `read.c`, `read1_3.c`, `bound.c`, `trans_spline.c`, `iso2tex.c`, `creationdate.c`, `dev/` font and picture helpers ported into `rustfig-fig2dev`; `genbitmaps.c` (B6). |
 | 2026-10-15 | `fig2dev.c` command line ported as `apps/fig2dev` (B10). |
+| 2026-10-17 | B3: `genpict2e.c` ported (`drivers/pict2e.rs`); `genpstricks.c` on a row of its own. |
 | 2026-10-16 | B12: paths after the move (geometry, fonts, colours → `crates/figbase`; EPS/PDF/SVG/bitmap writers, rasteriser, patterns → `crates/fig2dev/src/scene/`; options, languages → `crates/fig2dev/src`; `to_model` → `crates/engine/src/fig2dev/`). |
 | 2026-10-16 | `genpstex.c` ported (B2); `readeps.c` and genps's picture branch in `render/eps` (now `crates/fig2dev/src/scene/eps.rs`); `read.c` the only reader for every fig2dev language and for Fig 1.3–2.1 in the app (G1). |
 | 2026-10-15 | `fig2dev.c` options and `colors.c` ported (B0). |

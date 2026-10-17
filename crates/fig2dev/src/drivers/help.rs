@@ -200,6 +200,34 @@ const PIC: DriverHelp = d(
     ],
 );
 
+// -O is accepted, but genpict2e.c doesn't act on it.
+const PICT2E: DriverHelp = d(
+    "PICT2E",
+    &[
+        o(
+            'b',
+            "width",
+            "specify width of blank border around figure (points, 1/72 inch)",
+        ),
+        o(
+            'C',
+            "num",
+            "do not issue color commands for color num (0 = black,\n1 = blue, etc., see xfig color chooser)",
+        ),
+        o('e', "", "do not try to be compatible with epic/eepic"),
+        o('F', "", "do not set font family/series/shape"),
+        o('f', "font", "set default font"),
+        o('i', "dir", "prepend the string \"dir\" to included graphics files"),
+        o('o', "", "do not set the font size"),
+        o('P', "", "pagemode, generate stand-alone LaTeX-file"),
+        o('R', "num", "use LaTeX-arrows for arrow-type num"),
+        o('r', "", "use LaTeX-arrows for all arrows"),
+        o('T', "", "only use TeX fonts (even when PS-fonts are specified)"),
+        o('v', "", "verbose mode, include comments in the output"),
+        o('w', "", "remove suffix from included graphics-files"),
+    ],
+);
+
 const PICTEX: DriverHelp = d(
     "PICTeX",
     &[
@@ -249,6 +277,7 @@ pub fn help(lang: &str) -> Option<&'static DriverHelp> {
         "mf" => &MF,
         "mp" | "mmp" => &MP,
         "pic" => &PIC,
+        "pict2e" => &PICT2E,
         "pictex" => &PICTEX,
         "pstex_t" | "pdftex_t" => &PSTEX_T,
         "shape" => &SHAPE,

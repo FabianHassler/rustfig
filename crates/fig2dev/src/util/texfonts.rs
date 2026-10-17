@@ -297,35 +297,53 @@ pub fn put_string(out: &mut Out, string: &str, font: i32, tex_text: bool) {
     }
 }
 
+/// [`put_string`] for a text whose input bytes are `bytes` (`string`
+/// decoded): fonts other than Symbol and Zapf Dingbats get the bytes, as
+/// fig2dev writes them without a text conversion.
+pub fn put_string_bytes(out: &mut Out, string: &str, bytes: &[u8], font: i32, tex_text: bool) {
+    if is_symbol_font(font) {
+        put_string(out, string, font, tex_text);
+    } else if tex_text {
+        out.bytes(bytes);
+    } else {
+        put_quoted_bytes(out, bytes);
+    }
+}
+
 /// Writes `string` with the characters ` #$%&<>\^_{|}~` quoted for LaTeX.
 fn put_quoted_string(out: &mut Out, string: &str) {
-    let mut last = 0;
-    for (i, c) in string.char_indices() {
-        let quoted = match c {
-            '<' => "\\textless ",
-            '>' => "\\textgreater ",
-            '|' => "\\textbar ",
-            '\\' => "\\textbackslash ",
+    put_quoted_bytes(out, string.as_bytes());
+}
+
+/// [`put_quoted_string`] on bytes in any ASCII-compatible encoding: the
+/// quoted characters are ASCII, other bytes are written as they are.
+fn put_quoted_bytes(out: &mut Out, string: &[u8]) {
+    for &b in string {
+        let quoted = match b {
+            b'<' => "\\textless ",
+            b'>' => "\\textgreater ",
+            b'|' => "\\textbar ",
+            b'\\' => "\\textbackslash ",
             // With \usepackage[T1]{fontenc}, \^{} inserts ascii 2, while
             // \textasciicircum inserts the correct ascii 94.
-            '^' => "\\textasciicircum ",
+            b'^' => "\\textasciicircum ",
             // With T1, \~{} inserts ascii 3, \textasciitilde ascii 126.
-            '~' => "\\textasciitilde ",
-            ' ' => "\\ ",
-            '#' => "\\#",
-            '$' => "\\$",
-            '%' => "\\%",
-            '&' => "\\&",
-            '_' => "\\_",
-            '{' => "\\{",
-            '}' => "\\}",
-            _ => continue,
+            b'~' => "\\textasciitilde ",
+            b' ' => "\\ ",
+            b'#' => "\\#",
+            b'$' => "\\$",
+            b'%' => "\\%",
+            b'&' => "\\&",
+            b'_' => "\\_",
+            b'{' => "\\{",
+            b'}' => "\\}",
+            _ => {
+                out.bytes(&[b]);
+                continue;
+            }
         };
-        out.puts(string.get(last..i).unwrap_or(""));
         out.puts(quoted);
-        last = i + c.len_utf8();
     }
-    out.puts(string.get(last..).unwrap_or(""));
 }
 
 /// Writes `\charNNN` for byte `b`, with a space if a digit follows.
