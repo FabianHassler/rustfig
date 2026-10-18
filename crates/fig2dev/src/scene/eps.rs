@@ -170,6 +170,48 @@ fn text(c: &mut Ctx, t: &TextPrim) {
     c.out.push_str("grestore\n");
 }
 
+/// The pixels as hex RGB lines, alpha composited against white.
+fn push_hex_pixels(out: &mut String, img: &figbase::image::RasterImage) {
+    let mut col = 0;
+    for &[r, g, b, a] in img.rgba.as_chunks::<4>().0 {
+        let blend = |v: u8| -> u8 {
+            let a = u16::from(a);
+            ((u16::from(v) * a + 255 * (255 - a) + 127) / 255) as u8
+        };
+        let _ = write!(out, "{:02x}{:02x}{:02x}", blend(r), blend(g), blend(b));
+        col += 6;
+        if col >= 72 {
+            out.push('\n');
+            col = 0;
+        }
+    }
+}
+
+/// A standalone colour EPS file showing `img` at 1 pixel = 1 point (as
+/// bmeps does), alpha composited against white. `None` for an empty or
+/// inconsistent image.
+pub fn raster_eps(img: &figbase::image::RasterImage) -> Option<String> {
+    let (w, h) = (img.width, img.height);
+    let expected = (w as usize).checked_mul(h as usize)?.checked_mul(4)?;
+    if w == 0 || h == 0 || img.rgba.len() != expected {
+        return None;
+    }
+    let mut out = String::new();
+    let _ = writeln!(out, "%!PS-Adobe-3.0 EPSF-3.0");
+    let _ = writeln!(out, "%%BoundingBox: 0 0 {w} {h}");
+    let _ = writeln!(out, "%%Creator: RustFig fig2dev");
+    let _ = writeln!(out, "%%EndComments");
+    let _ = writeln!(out, "gsave");
+    let _ = writeln!(out, "/picstr {} string def", u64::from(w) * 3);
+    let _ = writeln!(
+        out,
+        "{w} {h} 8 [{w} 0 0 -{h} 0 {h}] {{currentfile picstr readhexstring pop}} false 3 colorimage"
+    );
+    push_hex_pixels(&mut out, img);
+    out.push_str("\ngrestore\nshowpage\n%%EOF\n");
+    Some(out)
+}
+
 fn image(c: &mut Ctx, corners: &[Point; 4], img: &figbase::image::RasterImage, flipped: bool) {
     let (w, h) = (img.width, img.height);
     let expected = (w as usize).saturating_mul(h as usize).saturating_mul(4);
@@ -201,19 +243,7 @@ fn image(c: &mut Ctx, corners: &[Point; 4], img: &figbase::image::RasterImage, f
         c.out,
         "{w} {h} 8 [{w} 0 0 {h} 0 0] {{currentfile picstr readhexstring pop}} false 3 colorimage"
     );
-    let mut col = 0;
-    for &[r, g, b, a] in img.rgba.as_chunks::<4>().0 {
-        let blend = |v: u8| -> u8 {
-            let a = u16::from(a);
-            ((u16::from(v) * a + 255 * (255 - a) + 127) / 255) as u8
-        };
-        let _ = write!(c.out, "{:02x}{:02x}{:02x}", blend(r), blend(g), blend(b));
-        col += 6;
-        if col >= 72 {
-            c.out.push('\n');
-            col = 0;
-        }
-    }
+    push_hex_pixels(&mut c.out, img);
     c.out.push_str("\ngrestore\n");
 }
 

@@ -506,3 +506,65 @@ fn same_as_fig2dev() {
         assert!(same * 20 >= total * 19, "{same} of {total} identical");
     }
 }
+
+fn pic_fig(path: &str) -> String {
+    format!("2 5 0 1 0 -1 50 -1 -1 0.000 0 0 -1 0 0 5\n\t0 {path}\n\t 600 600 1800 600 1800 1200 600 1200 600 600\n")
+}
+
+#[test]
+fn p_option_converts_png_and_jpeg_to_eps() {
+    let dir = std::env::temp_dir().join(format!("pst-p-{}", std::process::id()));
+    let out_dir = dir.join("out");
+    std::fs::create_dir_all(&out_dir).unwrap();
+    let img = image::RgbaImage::from_fn(5, 3, |x, y| {
+        image::Rgba([(x * 50) as u8, (y * 80) as u8, 200, if x == 4 { 0 } else { 255 }])
+    });
+    let png = dir.join("a.png");
+    img.save(&png).unwrap();
+    let jpg = dir.join("b.jpg");
+    image::DynamicImage::ImageRgba8(img).to_rgb8().save(&jpg).unwrap();
+    let body = format!("{}{}", pic_fig(png.to_str().unwrap()), pic_fig(jpg.to_str().unwrap()));
+    let (out, msgs, _) = run("pstricks", &body, &[('p', Some(out_dir.to_str().unwrap()))]).unwrap();
+    assert!(out.contains("out/a}") && out.contains("out/b}"), "{out}");
+    assert!(!msgs.iter().any(|m| m.contains("probably failed")), "{msgs:?}");
+    for (name, w) in [("a", 5), ("b", 5)] {
+        let eps = std::fs::read_to_string(out_dir.join(format!("{name}.eps"))).unwrap();
+        assert!(eps.starts_with("%!PS-Adobe-3.0 EPSF-3.0\n"));
+        assert!(eps.contains(&format!("%%BoundingBox: 0 0 {w} 3\n")));
+        assert!(eps.contains("colorimage"));
+        // 5 x 3 pixels, 6 hex digits each
+        let data = eps
+            .split("colorimage\n")
+            .nth(1)
+            .unwrap()
+            .split("\ngrestore")
+            .next()
+            .unwrap();
+        assert_eq!(data.replace('\n', "").len(), 90);
+    }
+    // the transparent column is white in the png
+    let eps = std::fs::read_to_string(out_dir.join("a.eps")).unwrap();
+    assert!(eps.contains("ffffff"));
+    if let Ok(keep) = std::env::var("KEEP_PST_EPS") {
+        std::fs::copy(out_dir.join("a.eps"), keep).unwrap();
+    }
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn p_option_warns_on_a_corrupt_picture() {
+    let dir = std::env::temp_dir().join(format!("pst-bad-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let bad = dir.join("c.png");
+    std::fs::write(&bad, b"\x89PNG\r\n\x1a\nnot really").unwrap();
+    let (out, msgs, _) = run(
+        "pstricks",
+        &pic_fig(bad.to_str().unwrap()),
+        &[('p', Some(dir.to_str().unwrap()))],
+    )
+    .unwrap();
+    assert!(out.contains("/c}"), "{out}");
+    assert!(msgs.iter().any(|m| m.contains("probably failed")), "{msgs:?}");
+    assert!(!dir.join("c.eps").exists());
+    std::fs::remove_dir_all(&dir).ok();
+}

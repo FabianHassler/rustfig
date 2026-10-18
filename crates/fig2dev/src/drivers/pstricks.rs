@@ -3,7 +3,8 @@
 //! coordinates in centimetres relative to the figure's bounding box.
 //! Arrowheads are drawn like Fig does (`-R 0`) or with PSTricks' own arrow
 //! ends; shades and tints are declared as `\newrgbcolor`s on first use.
-//! With `-p`, pictures that are not EPS are converted with `bmeps`.
+//! With `-p`, pictures that are not EPS are converted to EPS by fig2dev's own picture reader and EPS writer
+//! (C runs the external `bmeps`; we do not).
 //
 // Ported from fig2dev dev/genpstricks.c (xfig licence, see LICENSE-xfig).
 
@@ -18,6 +19,7 @@ use crate::object::{
     T_PIC_BOX, T_PIE_WEDGE_ARC, T_POLYGON, T_POLYLINE, T_RIGHT_JUSTIFIED,
 };
 use crate::util::psfonts::{ps_font_name, ps_index, PS_FONT_MAP, PS_MAP_WARN};
+use crate::util::readpics;
 use crate::util::texfonts::TexFonts;
 use crate::{fprintf, Driver, Out};
 
@@ -1387,15 +1389,11 @@ impl Pstricks {
                 None => self.warn(W_UNK_PIC_TYPE),
                 Some(kind) => {
                     let dest = format!("{eps_path}.eps");
-                    let errval = run_bmeps(kind, src, &dest);
+                    let res = convert_to_eps(ctx, src, &dest);
                     if self.verbose {
-                        ctx.warn(format!(
-                            "running system(bmeps -c -t {kind} \"{src}\" \"{dest}\"): returned {errval}"
-                        ));
+                        ctx.warn(format!("converting {kind} picture \"{src}\" to \"{dest}\": {res:?}"));
                     }
-                    if errval == -1 {
-                        self.warn(W_SYSTEM_EXEC);
-                    } else if errval != 0 {
+                    if res.is_err() {
                         self.warn(W_BMEPS_ERR);
                     } else {
                         self.warn(W_PIC_CONVERT);
@@ -1497,39 +1495,24 @@ impl Pstricks {
     }
 }
 
-/// Runs `bmeps` on `src` (C's `system`): the wait status, -1 if the
-/// program could not be run at all.
-#[cfg(not(target_arch = "wasm32"))]
-fn run_bmeps(kind: &str, src: &str, dest: &str) -> i32 {
-    match std::process::Command::new("bmeps")
-        .args(["-c", "-t", kind, src, dest])
-        .status()
-    {
-        // `system` returns the wait status: the exit code in the high byte
-        Ok(s) => s.code().map_or(-1, |c| c.wrapping_shl(8)),
-        // the shell reports a missing program as exit code 127
-        Err(_) => 127 << 8,
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-fn run_bmeps(_kind: &str, _src: &str, _dest: &str) -> i32 {
-    -1
+/// `-p`: converts picture `src` to the EPS file `dest` (C: `bmeps -c -t
+/// TYPE src dest`). Pixels are written at 1 pixel = 1 point, alpha over
+/// white. `Err` when the picture cannot be read or the file written.
+fn convert_to_eps(ctx: &Ctx, src: &str, dest: &str) -> Result<(), String> {
+    let eps = match readpics::load_picture(ctx, src)? {
+        readpics::LoadedPicture::Raster(img) => crate::scene::eps::raster_eps(&img).ok_or("empty picture")?,
+        _ => return Err(format!("{src}: not a bitmap")),
+    };
+    std::fs::write(dest, eps).map_err(|e| format!("{dest}: {e}"))
 }
 
 /// `-p`: writes the readme into the conversion directory.
-#[cfg(not(target_arch = "wasm32"))]
 fn write_readme(dir: &str) -> bool {
     std::fs::write(
         format!("{dir}readme.txt"),
         "This directory has been used by the fig2dev pstricks driver.\nAny '.eps' file here may be overwritten.\n",
     )
     .is_ok()
-}
-
-#[cfg(target_arch = "wasm32")]
-fn write_readme(_dir: &str) -> bool {
-    false
 }
 
 impl Driver for Pstricks {
