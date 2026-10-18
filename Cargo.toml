@@ -1,22 +1,19 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/figbase",
     "crates/geom",
     "crates/model",
     "crates/text",
     "crates/format",
     "crates/render",
-    "crates/fig2dev",
     "crates/engine",
     "crates/mcp",
     "crates/ui-egui",
     "apps/rustfig",
     "apps/cli",
-    "apps/fig2dev",
     "xtask",
 ]
-default-members = ["apps/rustfig", "apps/cli", "apps/fig2dev"]
+default-members = ["apps/rustfig", "apps/cli"]
 
 [workspace.package]
 version = "0.1.0"
@@ -26,13 +23,15 @@ repository = "https://github.com/FabianHassler/rustfig"
 rust-version = "1.89"
 
 [workspace.dependencies]
-figbase = { path = "crates/figbase" }
+# fig2dev's own repository. While it is not published, [patch] below points
+# at a local clone (../fig2dev); once published, drop the patch and pin a tag.
+figbase = { git = "https://github.com/fahasch/fig2dev" }
+fig2dev = { git = "https://github.com/fahasch/fig2dev" }
 rustfig-geom = { path = "crates/geom" }
 rustfig-model = { path = "crates/model" }
 rustfig-text = { path = "crates/text" }
 rustfig-format = { path = "crates/format" }
 rustfig-render = { path = "crates/render" }
-rustfig-fig2dev = { path = "crates/fig2dev" }
 rustfig-engine = { path = "crates/engine" }
 rustfig-mcp = { path = "crates/mcp" }
 rustfig-ui-egui = { path = "crates/ui-egui" }
@@ -51,6 +50,10 @@ proptest = "1"
 log = "0.4"
 wasm-bindgen-futures = "0.4"
 web-sys = "0.3"
+
+[patch."https://github.com/fahasch/fig2dev"]
+figbase = { path = "../fig2dev/crates/figbase" }
+fig2dev = { path = "../fig2dev/crates/fig2dev" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

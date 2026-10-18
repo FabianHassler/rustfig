@@ -1,4 +1,4 @@
-//! fig2dev's scene builder (`rustfig_fig2dev::scene::build`, from the
+//! fig2dev's scene builder (`fig2dev::scene::build`, from the
 //! objects fig2dev's reader returns) draws every object as RustFig's own
 //! builder does (`build_scene`, from the document the same objects
 //! become): the same primitives, up to the order of objects at one depth
@@ -6,9 +6,9 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+use fig2dev::scene::build::TextOptions;
+use fig2dev::Ctx;
 use rustfig_engine::render::{build_scene, Scene, SceneOptions};
-use rustfig_fig2dev::scene::build::TextOptions;
-use rustfig_fig2dev::Ctx;
 use std::path::Path;
 
 fn sorted(scene: &Scene) -> Vec<String> {
@@ -19,10 +19,10 @@ fn sorted(scene: &Scene) -> Vec<String> {
 
 fn check(name: &str, src: &[u8]) {
     let mut ctx = Ctx::default();
-    let objects = rustfig_fig2dev::read::readfp_fig(&mut ctx, src).unwrap();
+    let objects = fig2dev::read::readfp_fig(&mut ctx, src).unwrap();
     let doc = rustfig_engine::fig2dev::to_model::to_document(&ctx, &objects);
     let ours = build_scene(&doc, &SceneOptions::default());
-    let (theirs, _) = rustfig_fig2dev::scene::build(&mut ctx, &objects, TextOptions::default());
+    let (theirs, _) = fig2dev::scene::build(&mut ctx, &objects, TextOptions::default());
     assert_eq!(ours.prims.len(), theirs.prims.len(), "{name}");
     let (a, b) = (sorted(&ours), sorted(&theirs));
     for (x, y) in a.iter().zip(&b) {

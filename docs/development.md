@@ -23,10 +23,9 @@ RUSTFIG_CORPUS_LIST=plan/corpus-sample.txt cargo test --release -p rustfig-engin
 ```
 
 Every export goes through fig2dev (plan B12): the engine writes the drawing
-as Fig text and runs `rustfig_fig2dev::convert` (`crates/engine/src/fig2dev/`),
-so a change to an export lives in `crates/fig2dev` (the scene writers in
-`src/scene/`, the drivers in `src/drivers/`), and `cargo xtask layers` keeps
-that crate free of every workspace crate but `figbase`.
+as Fig text and runs `fig2dev::convert` (`crates/engine/src/fig2dev/`),
+so a change to an export lives in the fig2dev repository (`crates/fig2dev` there: the scene writers in
+`src/scene/`, the drivers in `src/drivers/`), which keeps its crates free of every RustFig crate.
 
 If `cargo` cannot write to `~/.cargo` (sandboxed agents), set
 `CARGO_HOME=$PWD/.cargo-home` (it's gitignored).
@@ -58,7 +57,7 @@ it, so `cargo +toolchain xtask …` stays on that toolchain.
 Fonts are never committed here. They live in
 [storytold/craft-fonts](https://github.com/storytold/craft-fonts). Build with
 `CRAFT_FONTS_DIR="$PWD/../craft-fonts" cargo xtask ci` (absolute path) to embed
-them; `crates/figbase/build.rs` generates `figbase::text::CRAFT_FONTS`. Without
+them; figbase's `build.rs` (fig2dev repo) generates `figbase::text::CRAFT_FONTS`. Without
 it RustFig uses Ubuntu Light and Hack from the `epaint_default_fonts` crate,
 with synthetic bold and italic. Everything builds and tests with
 `CRAFT_FONTS` empty.

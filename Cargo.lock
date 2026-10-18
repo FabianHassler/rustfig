@@ -1148,7 +1148,13 @@ dependencies = [
 name = "fig2dev"
 version = "0.1.0"
 dependencies = [
- "rustfig-fig2dev",
+ "encoding_rs",
+ "figbase",
+ "image",
+ "miniz_oxide 0.8.9",
+ "pdf-writer",
+ "png 0.18.1",
+ "tiny-skia 0.11.4",
 ]
 
 [[package]]
@@ -2838,10 +2844,10 @@ dependencies = [
 name = "rustfig-engine"
 version = "0.1.0"
 dependencies = [
+ "fig2dev",
  "image",
  "proptest",
  "resvg",
- "rustfig-fig2dev",
  "rustfig-format",
  "rustfig-geom",
  "rustfig-model",
@@ -2850,19 +2856,6 @@ dependencies = [
  "serde",
  "serde_json",
  "toml",
-]
-
-[[package]]
-name = "rustfig-fig2dev"
-version = "0.1.0"
-dependencies = [
- "encoding_rs",
- "figbase",
- "image",
- "miniz_oxide 0.8.9",
- "pdf-writer",
- "png 0.18.1",
- "tiny-skia 0.11.4",
 ]
 
 [[package]]
@@ -2906,7 +2899,7 @@ dependencies = [
 name = "rustfig-render"
 version = "0.1.0"
 dependencies = [
- "rustfig-fig2dev",
+ "fig2dev",
  "rustfig-geom",
  "rustfig-model",
 ]

@@ -7,8 +7,8 @@ use super::{always, has_objects, num_or, opt_bool, opt_num, opt_str, string, Cmd
 use crate::fig2dev::languages::{language, language_for_path, Language, Status, LANGUAGES};
 use crate::fig2dev::options::{option_spec, options_for, Arg, Support};
 use crate::{import, Engine, EngineError};
-use rustfig_fig2dev::drivers::scene;
-use rustfig_fig2dev::scene::ExportFormat;
+use fig2dev::drivers::scene;
+use fig2dev::scene::ExportFormat;
 use rustfig_format::FileFormat;
 use rustfig_model::{Document, ObjectKind, Rgb};
 use serde_json::{json, Value};
@@ -457,7 +457,7 @@ fn parts(lang: &Language, path: &str) -> Vec<(String, Part)> {
 fn takes(drv: &str, key: &str, letter: char) -> bool {
     let olang = scene::options_lang(drv);
     option_spec(olang, key).is_some_and(|s| s.letter == letter && s.effective_for(olang))
-        || rustfig_fig2dev::drivers::help::help(drv).is_some_and(|h| h.options.iter().any(|o| o.letter == letter))
+        || fig2dev::drivers::help::help(drv).is_some_and(|h| h.options.iter().any(|o| o.letter == letter))
 }
 
 /// A number as an option argument (`2`, not `2.0`, for whole numbers).
@@ -482,7 +482,7 @@ fn driver_args(e: &Engine, drv: &str, half: Half, p: &Value) -> Result<Vec<(char
     // Letters given, also those switched off (`false`).
     let mut given = Vec::new();
     let olang = scene::options_lang(drv);
-    let help = rustfig_fig2dev::drivers::help::help(drv);
+    let help = fig2dev::drivers::help::help(drv);
     for (k, v) in option_items(p)? {
         let letter = match half {
             Half::Latex(g) => {
@@ -570,7 +570,7 @@ fn driver_args(e: &Engine, drv: &str, half: Half, p: &Value) -> Result<Vec<(char
                 // An explicit -m: scale it.
                 Some(i) => {
                     let (_, a) = args.remove(i);
-                    rustfig_fig2dev::gendev::atof(a.as_deref().unwrap_or(""))
+                    fig2dev::gendev::atof(a.as_deref().unwrap_or(""))
                 }
                 None => mag.unwrap_or(e.doc().settings.magnification / 100.0),
             };
@@ -594,7 +594,7 @@ fn driver_args(e: &Engine, drv: &str, half: Half, p: &Value) -> Result<Vec<(char
         let points = margin * 72.0 / 1200.0;
         match args.iter_mut().find(|(l, _)| *l == 'b') {
             Some((_, a)) => {
-                let b = rustfig_fig2dev::gendev::atof(a.as_deref().unwrap_or("")) + points;
+                let b = fig2dev::gendev::atof(a.as_deref().unwrap_or("")) + points;
                 *a = Some(number_arg(b));
             }
             None => args.push(('b', Some(number_arg(points)))),
@@ -773,7 +773,7 @@ fn export_formats(_: &mut Engine, _: &Value) -> CmdResult {
                     "pdftex" => "pdftex_t",
                     id => id,
                 };
-                for o in rustfig_fig2dev::drivers::help::help(drv).map_or(&[][..], |h| h.options) {
+                for o in fig2dev::drivers::help::help(drv).map_or(&[][..], |h| h.options) {
                     options.push(json!({
                         "key": o.letter.to_string(),
                         "letter": o.letter.to_string(),

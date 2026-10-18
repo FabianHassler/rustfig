@@ -215,10 +215,10 @@ fn bitmaps_are_sized_as_genbitmaps_sizes_them() {
     let size = |items: &[(char, &str)]| decode(&render(&doc, "ppm", items), ImageFormat::Pnm).dimensions();
     let (w, h) = size(&[]);
     // fig2dev's bounds of the figure (1200 units per inch).
-    let mut ctx = rustfig_fig2dev::Ctx::default();
+    let mut ctx = ::fig2dev::Ctx::default();
     let fig = rustfig_engine::format::write_fig(&doc);
-    let objects = rustfig_fig2dev::read::readfp_fig(&mut ctx, fig.as_bytes()).unwrap();
-    let (llx, lly, urx, ury) = rustfig_fig2dev::bound::compound_bound(&ctx, &objects, true);
+    let objects = ::fig2dev::read::readfp_fig(&mut ctx, fig.as_bytes()).unwrap();
+    let (llx, lly, urx, ury) = ::fig2dev::bound::compound_bound(&ctx, &objects, true);
     assert_eq!(w, (f64::from(urx - llx) / 15.0 + 0.9).floor() as u32);
     assert_eq!(h, (f64::from(ury - lly) / 15.0 + 0.9).floor() as u32);
     // -m 2 doubles it; -b 5 adds five pixels on each side.

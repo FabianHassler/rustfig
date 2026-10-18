@@ -1,7 +1,7 @@
 //! RustFig rendering (layer L3): the scene of a document.
 //!
 //! [`build_scene`] turns a document into fig2dev's display list
-//! ([`Scene`], from `rustfig-fig2dev`), which the canvas rasterises
+//! ([`Scene`], from `fig2dev`), which the canvas rasterises
 //! ([`raster`], the same rasteriser fig2dev's bitmap languages use). The
 //! exports don't come from here: the engine writes the document as Fig
 //! text and runs fig2dev (plan B12), whose scene builder draws fig2dev's
@@ -11,11 +11,11 @@
 // dev/genps.c (`PSFONTMAG` text sizes, arrows on pie arcs) (xfig licence,
 // see LICENSE-xfig).
 
-pub use rustfig_fig2dev::scene::{
+pub use fig2dev::scene::{
     font_px, head_at_end, line_width, pattern, raster, Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim,
 };
 
-use rustfig_fig2dev::scene::{fill, picture_prims, shape_prims, stroke, Shape};
+use fig2dev::scene::{fill, picture_prims, shape_prims, stroke, Shape};
 use rustfig_geom::{ArrowSpec, Rect, Seg};
 use rustfig_model::{flatten_object, Arrow, ColorRef, Document, Object, ObjectKind, PolyKind, Style};
 use std::collections::BTreeSet;

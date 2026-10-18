@@ -33,6 +33,8 @@ Tool shortcuts follow xfig: `C` circle, `E` ellipse, `L` polyline,
 `S` select. Left click adds points; double click, right click or Enter
 finishes; Esc cancels.
 
+fig2dev (the converter RustFig exports through) lives in its own repository, [fahasch/fig2dev](https://github.com/fahasch/fig2dev); until it is published, clone it next to this repository as `../fig2dev` (the root `Cargo.toml` has a `[patch]` for it).
+
 ## Documentation
 
 [Architecture](docs/architecture.md) · [Development](docs/development.md) ·

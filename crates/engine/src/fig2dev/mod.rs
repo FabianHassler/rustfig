@@ -1,11 +1,11 @@
-//! fig2dev in the engine (`rustfig-fig2dev`, a program of its own that
+//! fig2dev in the engine (`fig2dev`, a program of its own that
 //! RustFig depends on, plan B12):
 //!
 //! - Every export goes through fig2dev: the document is written as Fig 3.2
 //!   (`rustfig_format`), read by fig2dev's reader and handed to the
 //!   language's driver with fig2dev's options ([`export`]), as xfig hands
 //!   a figure to fig2dev. A language is available as soon as
-//!   `rustfig_fig2dev::drivers::driver` provides it; the combined LaTeX
+//!   `fig2dev::drivers::driver` provides it; the combined LaTeX
 //!   exports (`pstex`, `pdftex`, `pspdftex`) need both halves.
 //! - Fig files before 3.0 (1.3, 1.4, 2.0, 2.1, which RustFig's own reader
 //!   doesn't read) open through fig2dev's reader, converted to a document
@@ -18,11 +18,11 @@
 
 pub mod to_model;
 
-pub use rustfig_fig2dev::util::readpics::LoadedPicture;
-pub use rustfig_fig2dev::{languages, options};
+pub use fig2dev::util::readpics::LoadedPicture;
+pub use fig2dev::{languages, options};
 
+use fig2dev::{read, Ctx};
 use languages::Language;
-use rustfig_fig2dev::{read, Ctx};
 use rustfig_model::Document;
 use std::path::Path;
 
@@ -54,7 +54,7 @@ pub fn read_old_fig(src: &[u8]) -> Result<(Document, Vec<String>), String> {
 
 /// Whether the fig2dev crate writes language `id` (fig2dev's name).
 pub fn driver_available(id: &str) -> bool {
-    rustfig_fig2dev::drivers::driver(id).is_some()
+    fig2dev::drivers::driver(id).is_some()
 }
 
 /// Whether RustFig can export `lang`: fig2dev's driver for it is ported
@@ -79,7 +79,7 @@ pub fn export(
     options: &[(char, Option<String>)],
     dir: Option<&Path>,
 ) -> Result<(Vec<u8>, Vec<String>), String> {
-    let mut dev = rustfig_fig2dev::drivers::driver(lang).ok_or_else(|| format!("no fig2dev driver for {lang}"))?;
+    let mut dev = fig2dev::drivers::driver(lang).ok_or_else(|| format!("no fig2dev driver for {lang}"))?;
     let mut ctx = Ctx {
         lang: lang.to_string(),
         dir: dir.map(Path::to_path_buf),
@@ -96,7 +96,7 @@ pub fn export(
     ctx.font_size *= ctx.fontmag;
     let fig = rustfig_format::write_fig(doc);
     let objects = read::readfp_fig(&mut ctx, fig.as_bytes()).map_err(|_| ctx.messages.join("\n"))?;
-    let status = rustfig_fig2dev::convert(&mut ctx, dev.as_mut(), &objects)?;
+    let status = fig2dev::convert(&mut ctx, dev.as_mut(), &objects)?;
     let messages = std::mem::take(&mut ctx.messages);
     if status.exit != 0 && status.output.is_empty() {
         return Err(if messages.is_empty() {
@@ -111,7 +111,7 @@ pub fn export(
 /// Read picture `path` as fig2dev does (`.gz`/`.Z` variants, XBM, XPM,
 /// PCX, EPS, PDF and the common bitmaps).
 pub fn load_picture(path: &Path) -> Result<LoadedPicture, String> {
-    rustfig_fig2dev::util::readpics::load_picture(&Ctx::default(), &path.to_string_lossy())
+    fig2dev::util::readpics::load_picture(&Ctx::default(), &path.to_string_lossy())
 }
 
 #[cfg(test)]

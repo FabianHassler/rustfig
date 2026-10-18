@@ -231,7 +231,7 @@ impl TempDir {
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.subsec_nanos())
             .unwrap_or(0);
-        let dir = std::env::temp_dir().join(format!("rustfig-fig2dev-{}-{n}-{nanos}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("fig2dev-{}-{n}-{nanos}", std::process::id()));
         std::fs::create_dir(&dir).map_err(|e| format!("cannot create a temporary directory: {e}"))?;
         Ok(TempDir(dir))
     }
