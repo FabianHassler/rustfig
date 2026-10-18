@@ -20,7 +20,7 @@ RustFig is an open-source, Rust-native reimplementation of xfig: close to the or
 
 | Layer | Crate | Path | Role |
 |---|---|---|---|
-| ext | `figbase`, `fig2dev` | [fahasch/fig2dev](https://github.com/fahasch/fig2dev) (git dependency) | fig2dev as a program of its own, in its own repository (`crates/figbase`, `crates/fig2dev`, `apps/fig2dev`): shared geometry, Fig fonts, colours; reader, options, drivers, scene, rasteriser, fill patterns; the `fig2dev` binary. Below every RustFig layer; not in `cargo xtask layers`. Local joint development: `[patch]` in the root `Cargo.toml` points at `../fig2dev` |
+| ext | `figbase`, `fig2dev` | [FabianHassler/fig2dev](https://github.com/FabianHassler/fig2dev) (git dependency) | fig2dev as a program of its own, in its own repository (`crates/figbase`, `crates/fig2dev`, `apps/fig2dev`): shared geometry, Fig fonts, colours; reader, options, drivers, scene, rasteriser, fill patterns; the `fig2dev` binary. Below every RustFig layer; not in `cargo xtask layers`. Local joint development: `[patch]` in the root `Cargo.toml` points at `../fig2dev` |
 | L0 | `rustfig-geom` | `crates/geom` | figbase's geometry + hit testing |
 | L1 | `rustfig-model` | `crates/model` | document model, styles, colours, object transforms, flattening |
 | L1 | `rustfig-text` | `crates/text` | Fig font tables, font selection, metrics, glyph outlines |

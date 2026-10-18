@@ -216,7 +216,7 @@ is an optional extra, used in two ways.
 - PostScript is the reference (decided 2026-10-14): where fig2dev's drivers disagree (for example the SVG driver draws dashes at 2/3 of their length), RustFig follows `genps.c`, which matches xfig's screen. The A8 tests compare with fig2dev's SVG, so such differences are expected there.
 - fig2dev is ported to Rust (decided 2026-10-14, replacing the 2026-10-13 plan to call it as an external program): no runtime dependence on fig2dev or ghostscript. The installed fig2dev serves only as the optional reference in the A8 tests.
 - fig2dev is an independent program (decided 2026-10-16): `fig2dev` is self-contained and RustFig depends on it for every export; the only code they share is a small common crate (geometry, font tables and metrics, colours). RustFig's EPS/PDF/SVG/bitmap renderers move into fig2dev (B12).
-- fig2dev moves out (decided 2026-10-18, B13 prepared 2026-10-18): `figbase`, `fig2dev` and the `fig2dev` program live in their own repository `fahasch/fig2dev` (history kept; library `fig2dev`, program package `fig2dev-cli`). RustFig depends on them by git; until the repository is published a `[patch]` in the root `Cargo.toml` points at the local clone `../fig2dev` (then: remove the patch, pin a tag, fix CI to fetch the dependency). Paths written `fig2dev:crates/…` in these docs are in that repository.
+- fig2dev moves out (decided 2026-10-18, B13 prepared 2026-10-18): `figbase`, `fig2dev` and the `fig2dev` program live in their own repository `FabianHassler/fig2dev` (history kept; library `fig2dev`, program package `fig2dev-cli`). RustFig depends on them by git; until the repository is published a `[patch]` in the root `Cargo.toml` points at the local clone `../fig2dev` (then: remove the patch, pin a tag, fix CI to fetch the dependency). Paths written `fig2dev:crates/…` in these docs are in that repository.
 - Publishing (demo site, crate names, releases) and the product name/branding.
 - Licence changes and any asset of unclear provenance.
 
@@ -227,7 +227,7 @@ is an optional extra, used in two ways.
 | 2026-10-13 | First plan, after M0–M3. |
 | 2026-10-13 | Added A8 (fig2dev reference tests) and B0 (fig2dev export backend) with design notes. |
 | 2026-10-14 | A3: the web build compiles locally with rustup's toolchain; xtask uses the running toolchain's rustc. |
-| 2026-10-18 | B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk ported; every fig2dev language but `sld`; suite 79 pass / 9 fail / 1 skipped. Decision: fig2dev moves to `fahasch/fig2dev`. |
+| 2026-10-18 | B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk ported; every fig2dev language but `sld`; suite 79 pass / 9 fail / 1 skipped. Decision: fig2dev moves to `FabianHassler/fig2dev`. |
 | 2026-10-17 | B3: pict2e part done; 16 h left for pstricks. |
 | 2026-10-17 | B3: PSTricks driver ported (`genpstricks.c`); B3 done. |
 | 2026-10-17 | B1: TikZ driver ported (`gentikz.c`), done. |

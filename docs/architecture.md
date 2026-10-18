@@ -9,9 +9,9 @@ lower layers; nothing below L6 may depend on egui, eframe, winit or rfd.
 
 | Layer | Crate | Role |
 |---|---|---|
-| ext | `figbase` (fahasch/fig2dev) | what fig2dev and RustFig share: points, X-splines, arcs, arrowheads, line widths; Fig font tables, metrics, glyph outlines (craft-fonts or fallback); colour tables |
+| ext | `figbase` (FabianHassler/fig2dev) | what fig2dev and RustFig share: points, X-splines, arcs, arrowheads, line widths; Fig font tables, metrics, glyph outlines (craft-fonts or fallback); colour tables |
 | L0 | `rustfig-geom` | `figbase`'s geometry plus hit testing |
-| ext | `fig2dev` (fahasch/fig2dev) | fig2dev: reader (`read.c`, Fig 1.3–3.2), `bound.c`, `gendev` (`convert`), option and language tables, every ported driver; the scene drivers (EPS, PDF, SVG, bitmaps) draw a `Scene` with its rasteriser and fill patterns |
+| ext | `fig2dev` (FabianHassler/fig2dev) | fig2dev: reader (`read.c`, Fig 1.3–3.2), `bound.c`, `gendev` (`convert`), option and language tables, every ported driver; the scene drivers (EPS, PDF, SVG, bitmaps) draw a `Scene` with its rasteriser and fill patterns |
 | L1 | `rustfig-model` | document model: objects, styles, colours, ids, transforms, flattening |
 | L1 | `rustfig-text` | `figbase`'s font tables and metrics plus text composition |
 | L2 | `rustfig-format` | Fig 3.0–3.2 reader, Fig 3.2 writer, native JSON |
@@ -23,7 +23,7 @@ lower layers; nothing below L6 may depend on egui, eframe, winit or rfd.
 
 fig2dev is a program of its own that RustFig depends on (plan B12):
 `figbase`, `fig2dev` and the `fig2dev` app live in their own repository,
-<https://github.com/fahasch/fig2dev>, and RustFig takes the two
+<https://github.com/FabianHassler/fig2dev>, and RustFig takes the two
 crates as git dependencies (a `[patch]` points at a local clone `../fig2dev`
 while it is not published). They use no RustFig crate. Who uses whom (workspace crates only):
 

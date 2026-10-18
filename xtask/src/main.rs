@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 /// Workspace crates and their layers. `figbase` and `fig2dev` live in
-/// https://github.com/fahasch/fig2dev (git dependencies) and sit below every
+/// https://github.com/FabianHassler/fig2dev (git dependencies) and sit below every
 /// RustFig layer, so they are not listed.
 const LAYERS: &[(&str, &str, i32)] = &[
     ("rustfig-geom", "crates/geom", 0),

@@ -22,6 +22,11 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      # fig2dev is a private git dependency: let cargo's git fetch use a
+      # token with read access to FabianHassler/fig2dev (repository secret).
+      - name: Access to fig2dev
+        shell: bash
+        run: git config --global url."https://x-access-token:${{ secrets.FIG2DEV_TOKEN }}@github.com/FabianHassler/fig2dev".insteadOf "https://github.com/FabianHassler/fig2dev"
       - name: System packages (eframe, rfd's GTK dialogs, fig2dev and the PostScript fonts' URW clones for the A8 reference tests)
         run: |
           sudo apt-get update

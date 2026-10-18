@@ -1,6 +1,6 @@
 # Source map: xfig and fig2dev → RustFig
 
-**Paths written `fig2dev:crates/…` are in the fig2dev repository (<https://github.com/fahasch/fig2dev>), where figbase, the fig2dev library and the `fig2dev` program moved (B13).**
+**Paths written `fig2dev:crates/…` are in the fig2dev repository (<https://github.com/FabianHassler/fig2dev>), where figbase, the fig2dev library and the `fig2dev` program moved (B13).**
 
 **Status:** 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
 sources (`LICENSE-xfig`). Nothing has been ported line by line yet: every

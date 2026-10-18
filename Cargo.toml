@@ -23,10 +23,11 @@ repository = "https://github.com/FabianHassler/rustfig"
 rust-version = "1.89"
 
 [workspace.dependencies]
-# fig2dev's own repository. While it is not published, [patch] below points
-# at a local clone (../fig2dev); once published, drop the patch and pin a tag.
-figbase = { git = "https://github.com/fahasch/fig2dev" }
-fig2dev = { git = "https://github.com/fahasch/fig2dev" }
+# fig2dev's own repository (private; cargo fetches it with the git CLI, see
+# .cargo/config.toml). For joint work, a [patch."https://github.com/FabianHassler/fig2dev"]
+# with path = "../fig2dev/crates/…" points at a local clone.
+figbase = { git = "https://github.com/FabianHassler/fig2dev", tag = "v0.1.0" }
+fig2dev = { git = "https://github.com/FabianHassler/fig2dev", tag = "v0.1.0" }
 rustfig-geom = { path = "crates/geom" }
 rustfig-model = { path = "crates/model" }
 rustfig-text = { path = "crates/text" }
@@ -50,10 +51,6 @@ proptest = "1"
 log = "0.4"
 wasm-bindgen-futures = "0.4"
 web-sys = "0.3"
-
-[patch."https://github.com/fahasch/fig2dev"]
-figbase = { path = "../fig2dev/crates/figbase" }
-fig2dev = { path = "../fig2dev/crates/fig2dev" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

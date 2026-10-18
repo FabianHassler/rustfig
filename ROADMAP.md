@@ -61,7 +61,7 @@ English only. See [localization parity](docs/localization-parity.md).
 
 The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 [docs/gaps.md](docs/gaps.md). Next up:
-1. The rest of the fig2dev port: the audit's hardening passes (B11; text bytes done), PostScript page layout and previews (B4a/B4b), `sld`; then fig2dev moves to its own repository `fahasch/fig2dev` (see plan decisions).
+1. The rest of the fig2dev port: the audit's hardening passes (B11; text bytes done), PostScript page layout and previews (B4a/B4b), `sld`; then fig2dev moves to its own repository `FabianHassler/fig2dev` (see plan decisions).
 2. ✅ Phase A, hardening (done 2026-10-15): shared undo snapshots, per-command cost, CI (Linux on every push, all OSes for releases), the web build check, UI tests, export curves, crash recovery, stall-free panning on large drawings.
 3. Preferences that survive restarts (E1) and xfig's command-line options (S3).
 4. Phase B: fig2dev's drivers ported (LaTeX exports, bitmaps, PostScript, the rest), modern printing (PDF to the system print dialog).
@@ -72,7 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
-| 2026-10-18 | B13: `figbase`, the fig2dev library and the `fig2dev` program move to their own repository (`fahasch/fig2dev`, history kept; prepared locally, not yet published); RustFig takes them as git dependencies with a temporary local `[patch]`. |
+| 2026-10-18 | B13: `figbase`, the fig2dev library and the `fig2dev` program move to their own repository (`FabianHassler/fig2dev`, history kept; prepared locally, not yet published); RustFig takes them as git dependencies with a temporary local `[patch]`. |
 | 2026-10-18 | B11 passes 5 and 6: texts and comments keep the input's bytes (`Text::raw`, `Comment`), every ported text driver writes them as fig2dev does (no UTF-8 re-encoding); 300 of 300 sample figures identical in the TeX, plotter, EMF, Tk, map and pic drivers (was 285); EPS/SVG/PDF/PNG unchanged. Gap #27 closed. |
 | 2026-10-18 | B1, B3, B9: fig2dev's TikZ, PSTricks (`-p` writes picture EPS in-process, PNG pixel-identical to bmeps 2.2.27), EMF, Tk and Perl/Tk drivers ported, with pict2e: byte-identical to fig2dev 3.2.9a on the fixtures and the suite's figures and 285 of 300 sample figures (the rest: texts with `\ooo` octal escapes; reader keeps raw bytes, audit pass 5, next). Every fig2dev language is ported except `sld`. fig2dev's suite: 79 pass, 9 fail, 1 skipped, 0 unported (was 62/9/17). Export 57 → 66 %, parity ≈65 %. 509 tests. |
 | 2026-10-17 | B3: fig2dev's pict2e driver ported, byte-identical to fig2dev 3.2.9a on the fixtures, the suite's figures and 285 of 300 sample figures (the rest: octal-escaped text bytes); every driver now orders objects of one depth with the macOS `qsort`, as the reference. fig2dev's suite: 73 pass, 9 fail, 6 need unported languages. 475 tests. |
