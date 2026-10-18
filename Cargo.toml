@@ -23,8 +23,7 @@ repository = "https://github.com/FabianHassler/rustfig"
 rust-version = "1.89"
 
 [workspace.dependencies]
-# fig2dev's own repository (private; cargo fetches it with the git CLI, see
-# .cargo/config.toml). For joint work, a [patch."https://github.com/FabianHassler/fig2dev"]
+# fig2dev's own repository. For joint work, a [patch."https://github.com/FabianHassler/fig2dev"]
 # with path = "../fig2dev/crates/…" points at a local clone.
 figbase = { git = "https://github.com/FabianHassler/fig2dev", tag = "v0.1.0" }
 fig2dev = { git = "https://github.com/FabianHassler/fig2dev", tag = "v0.1.0" }

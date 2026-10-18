@@ -3,8 +3,3 @@ xtask = "run --quiet --package xtask --"
 
 [target.wasm32-unknown-unknown]
 rustflags = ['--cfg', 'getrandom_backend="wasm_js"']
-
-# fig2dev is a private git dependency: fetch with the git CLI so its
-# credential helpers apply.
-[net]
-git-fetch-with-cli = true
