@@ -11,6 +11,7 @@ use crate::gendev::{Ctx, Driver};
 use crate::object::{
     Arc, Compound, Ellipse, Line, Spline, Text, T_ARC_BOX, T_BOX, T_PIC_BOX, T_PIE_WEDGE_ARC, T_POLYGON, T_POLYLINE,
 };
+use crate::util::textconvert::{byte_view, from_byte_view};
 use crate::{fprintf, round, Out};
 use std::f64::consts::PI;
 // Writing to a String can't fail, so the results of write! are ignored.
@@ -70,8 +71,10 @@ fn strip_prefix_ci<'a>(s: &'a str, prefix: &str) -> Option<&'a str> {
 /// A link found in an object's comments (`is_link`): the URL, the ALT
 /// text, and the comment (from its first non-space), which goes into the
 /// area tag as it is.
-fn is_link(ctx: &mut Ctx, comments: &[String]) -> Option<(String, String, String)> {
+fn is_link(ctx: &mut Ctx, comments: &[crate::object::Comment]) -> Option<(String, String, String)> {
     for comment in comments {
+        // One character per byte: written back unchanged by `end`.
+        let comment = byte_view(&comment.raw);
         let cp1 = comment.trim_start_matches(is_space);
         let Some(rest) = strip_prefix_ci(cp1, "HREF=") else {
             continue;
@@ -345,7 +348,10 @@ impl Driver for Map {
         Ok(())
     }
 
-    fn end(&mut self, _ctx: &mut Ctx, out: &mut Out) -> Result<i32, String> {
+    fn end(&mut self, _ctx: &mut Ctx, real_out: &mut Out) -> Result<i32, String> {
+        // The links are byte views (see `is_link`): convert back at the end.
+        let mut tmp = Out::new();
+        let out = &mut tmp;
         for l in self.links.iter().rev() {
             out.puts(&l.area);
         }
@@ -375,7 +381,7 @@ impl Driver for Map {
                 l.url,
                 label
             );
-            len += label.len() + 3;
+            len += label.chars().count() + 3;
             if 50 < len {
                 out.puts("<BR>\n");
                 len = 0;
@@ -385,6 +391,8 @@ impl Driver for Map {
         out.puts("\n");
         out.puts("</BODY>\n");
         out.puts("</HTML>\n");
+        let text = String::from_utf8_lossy(&tmp.buf).into_owned();
+        real_out.bytes(&from_byte_view(&text));
         Ok(0)
     }
 

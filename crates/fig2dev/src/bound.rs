@@ -567,12 +567,11 @@ pub fn rot_y(x: f64, y: f64, angle: f64) -> f64 {
     x * (-angle).sin() + y * (-angle).cos()
 }
 
-/// Characters of the Symbol font that descend below the baseline
-/// (bound.c's list; the 8-bit ones as the code points the reader decodes
-/// them to, Latin-1).
-const SYMBOL_DESCENDERS: &[char] = &[
-    'b', 'c', 'f', 'g', 'h', 'j', 'm', 'r', 'x', 'y', 'z', '\u{c3}', '\u{ca}', '\u{cd}', '\u{d5}', '\u{e1}', '\u{e5}',
-    '\u{e6}', '\u{e8}', '\u{f1}', '\u{f2}', '\u{f6}', '\u{f8}', '\u{a6}',
+/// Bytes of the Symbol font's characters that descend below the baseline
+/// (bound.c's list; `'C' + '\200'` is the byte 0xC3, and so on).
+const SYMBOL_DESCENDERS: &[u8] = &[
+    b'b', b'c', b'f', b'g', b'h', b'j', b'm', b'r', b'x', b'y', b'z', 0xC3, 0xCA, 0xCD, 0xD5, 0xE1, 0xE5, 0xE6, 0xE8,
+    0xF1, 0xF2, 0xF6, 0xF8, 0xA6,
 ];
 
 /// `text_bound`: the text's box from its stored length and height, rotated
@@ -580,13 +579,12 @@ const SYMBOL_DESCENDERS: &[char] = &[
 /// the baseline counts only with `inc_text` and not for special (LaTeX)
 /// text that contains `\` or `$`.
 pub fn text_bound(ctx: &Ctx, t: &Text, inc_text: bool) -> Bounds {
-    let s = t.cstring.as_str();
-    let has = |cs: &[char]| s.contains(cs);
-    let include = inc_text && (!t.special_text() || (!s.contains('\\') && !s.contains('$')));
+    // C's `strchr` on the string's bytes.
+    let s = t.raw.as_slice();
+    let has = |cs: &[u8]| s.iter().any(|b| cs.contains(b));
+    let include = inc_text && (!t.special_text() || (!s.contains(&b'\\') && !s.contains(&b'$')));
     // look for descenders (fig2dev's kludge)
-    let mut descend = has(&[
-        'g', 'j', 'p', 'q', 'y', '$', '(', ')', '{', '}', '[', ']', ',', ';', '_',
-    ]);
+    let mut descend = has(b"gjpqy$(){}[],;_");
     // Symbol font descenders
     if !descend && t.psfont_text() && t.font == 32 {
         descend = has(SYMBOL_DESCENDERS);
@@ -1026,6 +1024,7 @@ mod tests {
             base_x: 1200,
             base_y: 1200,
             cstring: s.into(),
+            raw: s.as_bytes().to_vec(),
             ..Text::default()
         }
     }

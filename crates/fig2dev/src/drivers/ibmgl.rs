@@ -495,7 +495,6 @@ pub(crate) fn ctl_spline(
 /// fig2dev's `static` state of genibmgl.c.
 #[derive(Debug)]
 pub struct Ibmgl {
-    enc: super::cgm::TextEnc,
     ibmgec: bool,
     pcljcl: bool,
     reflected: bool,
@@ -531,7 +530,6 @@ pub struct Ibmgl {
 impl Default for Ibmgl {
     fn default() -> Ibmgl {
         Ibmgl {
-            enc: super::cgm::TextEnc::Utf8,
             // fig2dev is configured with IBMGEC and A4 by default.
             ibmgec: true,
             pcljcl: false,
@@ -761,7 +759,6 @@ impl Driver for Ibmgl {
             return Err("|mag| < 1/2048".into());
         }
         self.ppi = ctx.ppi;
-        self.enc = super::cgm::text_encoding(ctx);
         if ctx.paperspec {
             if ctx.papersize.eq_ignore_ascii_case("ledger") {
                 ctx.papersize = "tabloid".into();
@@ -1123,7 +1120,7 @@ impl Driver for Ibmgl {
             cf(f64::from(t.base_x) / ppi, 4),
             cf(f64::from(t.base_y) / ppi, 4)
         );
-        let bytes = super::cgm::text_bytes(self.enc, &t.cstring);
+        let bytes = t.raw.clone();
         let len = bytes.len() as f64;
         match t.type_ {
             DEFAULT | T_LEFT_JUSTIFIED => {}

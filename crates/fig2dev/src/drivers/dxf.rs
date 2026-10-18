@@ -71,7 +71,6 @@ pub(crate) fn fmt_g(x: f64, prec: usize) -> String {
 /// fig2dev's `static` state of gendxf.c.
 #[derive(Debug)]
 pub struct Dxf {
-    enc: super::cgm::TextEnc,
     tables: Tables,
     line: LineStyle,
     /// Drawing units (in or mm) per Fig unit.
@@ -85,7 +84,6 @@ pub struct Dxf {
 impl Default for Dxf {
     fn default() -> Dxf {
         Dxf {
-            enc: super::cgm::TextEnc::Utf8,
             tables: Tables::new(0.6, 0.8),
             line: LineStyle::default(),
             figtodxf: 0.0,
@@ -168,7 +166,6 @@ impl Driver for Dxf {
 
     fn start(&mut self, ctx: &mut Ctx, out: &mut Out, _objects: &Compound) -> Result<(), String> {
         let mag = ctx.mag;
-        self.enc = super::cgm::text_encoding(ctx);
         if mag.abs() < 1.0 / 2048.0 || !mag.is_finite() {
             return Err("|mag| < 1/2048".into());
         }
@@ -345,7 +342,7 @@ impl Driver for Dxf {
     }
 
     fn text(&mut self, _ctx: &mut Ctx, out: &mut Out, t: &Text) -> Result<(), String> {
-        let bytes = super::cgm::text_bytes(self.enc, &t.cstring);
+        let bytes = t.raw.clone();
         out.puts("999\n !! found text ");
         out.bytes(&bytes);
         out.puts("\n");

@@ -606,9 +606,12 @@ impl Driver for Pic {
         let y = f64::from((convy(self.inch(t.base_y)) + f64::from(size) * HT_OFFSET) as f32);
         let x = self.inch(t.base_x);
         if self.opt_no_unps {
-            fprintf!(out, "\"{}\" at {x:.3},{y:.3} {tpos}\n.ft \n.ps \n", t.cstring);
+            out.puts("\"");
+            out.bytes(&t.raw);
+            fprintf!(out, "\" at {x:.3},{y:.3} {tpos}\n.ft \n.ps \n");
         } else {
-            fprintf!(out, "{}\\fP\" at {x:.3},{y:.3} {tpos}\n", t.cstring);
+            out.bytes(&t.raw);
+            fprintf!(out, "\\fP\" at {x:.3},{y:.3} {tpos}\n");
         }
         Ok(())
     }

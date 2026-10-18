@@ -295,7 +295,7 @@ impl Driver for SceneDriver {
         };
         self.builder = Some(Builder::new(ctx, text));
         self.options = Some(o);
-        self.comments = objects.comments.clone();
+        self.comments = objects.comments.iter().map(|c| c.text.clone()).collect();
         Ok(())
     }
 

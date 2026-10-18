@@ -132,6 +132,8 @@ pub struct Ctx {
     pub lang: String,
     /// `-E`: `None`, or "UTF-8", "ISO-8859-1", "ISO-8859-2", or another name.
     pub input_encoding: Option<String>,
+    /// Whether texts need a conversion to UTF-8 (`util::textconvert`).
+    pub text_conv: crate::util::textconvert::ConvState,
     /// `-g`.
     pub background: Rgb,
     /// Grid spacings: as given (in `mult` units), then in Fig units.
@@ -201,6 +203,7 @@ impl Default for Ctx {
             boundingbox: String::new(),
             lang: String::new(),
             input_encoding: None,
+            text_conv: Default::default(),
             background: Rgb::default(),
             grid_minor_spacing: 0.0,
             grid_major_spacing: 0.0,
@@ -688,9 +691,11 @@ pub fn convert(ctx: &mut Ctx, dev: &mut dyn Driver, objects: &Compound) -> Resul
 
 /// Print the comments (`print_comments`): `"{pre} {comment} {post}"` per
 /// comment.
-pub fn print_comments(out: &mut Out, pre: &str, comments: &[String], post: &str) {
+pub fn print_comments(out: &mut Out, pre: &str, comments: &[crate::object::Comment], post: &str) {
     for c in comments {
-        crate::fprintf!(out, "{pre} {c} {post}\n");
+        crate::fprintf!(out, "{pre} ");
+        out.bytes(&c.raw);
+        crate::fprintf!(out, " {post}\n");
     }
 }
 

@@ -89,6 +89,7 @@ fn text(type_: i32, angle: f64, height: f64, length: f64, base: (i32, i32), s: &
         base_x: base.0,
         base_y: base.1,
         cstring: s.into(),
+        raw: s.as_bytes().to_vec(),
         ..Text::default()
     }
 }

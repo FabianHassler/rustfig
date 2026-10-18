@@ -853,7 +853,7 @@ impl Driver for Latex {
         self.fonts
             .select_font(out, ctx, &mut t, true, self.select_fontname, false);
         self.color.set_color(out, ctx, t.color);
-        put_string(out, c_string(&t.cstring), t.font, t.special_text());
+        put_string(out, ctx, &t.raw, t.font, t.special_text());
         self.color.reset_color(out, t.color);
         if t.angle != 0.0 {
             out.puts("}");
@@ -870,11 +870,6 @@ impl Driver for Latex {
     fn text_include(&self) -> bool {
         false
     }
-}
-
-/// The string as C sees it: up to the first NUL.
-pub(super) fn c_string(s: &str) -> &str {
-    s.split('\0').next().unwrap_or("")
 }
 
 #[cfg(test)]

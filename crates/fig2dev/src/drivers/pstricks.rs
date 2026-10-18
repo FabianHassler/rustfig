@@ -10,8 +10,7 @@
 
 use std::f64::consts::PI;
 
-use crate::drivers::cgm::{text_bytes, text_encoding, TextEnc};
-use crate::drivers::latex::{c_string, default_font_option, set_default_size, Cf};
+use crate::drivers::latex::{default_font_option, set_default_size, Cf};
 use crate::gendev::{print_comments, strtod_prefix, strtol, Ctx, NUM_STD_COLS};
 use crate::object::{
     Arc, Arrow, Compound, Ellipse, Line, Point, Spline, Text, DASH_2_DOTS_LINE, DASH_3_DOTS_LINE, DASH_DOT_LINE,
@@ -21,6 +20,7 @@ use crate::object::{
 use crate::util::psfonts::{ps_font_name, ps_index, PS_FONT_MAP, PS_MAP_WARN};
 use crate::util::readpics;
 use crate::util::texfonts::TexFonts;
+use crate::util::textconvert::{byte_view, from_byte_view};
 use crate::{fprintf, Driver, Out};
 
 // Warnings, printed once at the end of the run (`warn_flags`).
@@ -240,7 +240,6 @@ pub struct Pstricks {
     /// Base names used for converted pictures and their counters.
     base_names: Vec<(String, i32)>,
     ppi: f64,
-    enc: TextEnc,
     /// `min_int(llx, urx)` and `max_int(lly, ury)`.
     x_origin: i32,
     y_origin: i32,
@@ -273,7 +272,6 @@ impl Default for Pstricks {
             converted: Vec::new(),
             base_names: Vec::new(),
             ppi: 1200.0,
-            enc: TextEnc::Utf8,
             x_origin: 0,
             y_origin: 0,
         }
@@ -1449,7 +1447,7 @@ impl Pstricks {
                         "Substituting LaTeX {} for Postscript {} ('{}')",
                         sub,
                         ps_font_name(t.font),
-                        c_string(&t.cstring)
+                        String::from_utf8_lossy(&t.raw)
                     ));
                 }
             }
@@ -1609,7 +1607,6 @@ impl Driver for Pstricks {
 
     fn start(&mut self, ctx: &mut Ctx, out: &mut Out, objects: &Compound) -> Result<(), String> {
         self.ppi = ctx.ppi;
-        self.enc = text_encoding(ctx);
         self.x_origin = ctx.llx.min(ctx.urx);
         self.y_origin = ctx.lly.max(ctx.ury);
         self.setup_colors(ctx);
@@ -1943,10 +1940,14 @@ impl Driver for Pstricks {
                 };
                 let rot = table.get(sx).and_then(|r| r.get(sy)).copied().unwrap_or(0);
                 // format the pic file name, but this may also do a conversion to eps
-                let file = l.pic.as_ref().map_or("", |p| c_string(&p.file)).to_string();
+                // The name as a byte view, converted back when written.
+                let file = l.pic.as_ref().map_or_else(String::new, |p| {
+                    byte_view(p.name_bytes().split(|&b| b == 0).next().unwrap_or_default())
+                });
                 let file_name = self.do_eps_conversion(ctx, &file);
+                let mut tmp = Out::new();
                 fprintf!(
-                    out,
+                    tmp,
                     "\\rput[bl]{}{{\\includegraphics[origin=c,angle={},width={}\\unit,totalheight={}\\unit]{{{}}}}}%\n",
                     pt(self.cm(x0), self.cm(y0)),
                     rot,
@@ -1954,6 +1955,7 @@ impl Driver for Pstricks {
                     f4(self.cm(ht)),
                     file_name
                 );
+                out.bytes(&from_byte_view(&String::from_utf8_lossy(&tmp.buf)));
             }
             T_BOX => {
                 if self.verbose {
@@ -2191,7 +2193,7 @@ impl Driver for Pstricks {
         } else {
             format!("{{{:.2}}}", Cf(t.angle * (180.0 / PI)))
         };
-        let bytes = text_bytes(self.enc, c_string(&t.cstring));
+        let bytes = t.raw.clone();
         let body = if t.special_text() {
             check_tex_format(ctx, &bytes);
             bytes

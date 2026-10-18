@@ -92,6 +92,7 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/fig2dev/src/util/readpics.rs: fig2dev/dev/readpics.c, fig2dev/dev/readeps.c, fig2dev/dev/readpcx.c, fig2dev/dev/readpng.c, fig2dev/dev/genps.c
 - crates/fig2dev/src/util/setfigfont.rs: fig2dev/dev/setfigfont.c
 - crates/fig2dev/src/util/texfonts.rs: fig2dev/dev/texfonts.c, fig2dev/dev/textconvert.c
+- crates/fig2dev/src/util/textconvert.rs: fig2dev/dev/textconvert.c
 - crates/fig2dev/src/util/tkpattern.rs: fig2dev/dev/tkpattern.c
 - crates/figbase/src/color/mod.rs: xfig src/u_colors.c; fig2dev/colors.c
 - crates/figbase/src/color/xcolors.rs: fig2dev/colors.c

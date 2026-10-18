@@ -1015,7 +1015,7 @@ impl Driver for Epic {
         let mut t = text.clone();
         self.fonts
             .select_font(out, ctx, &mut t, true, self.select_fontname, false);
-        put_string(out, &t.cstring, t.font, t.special_text());
+        put_string(out, ctx, &t.raw, t.font, t.special_text());
         if rotated {
             out.puts("}");
         }

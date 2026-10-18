@@ -349,6 +349,7 @@ impl Reader<'_, '_> {
             return Err(-1);
         }
         t.cstring = self.decode(rest);
+        t.raw = rest.split(|&b| b == 0).next().unwrap_or_default().to_vec();
         if t.size == 0.0 {
             t.size = 18.0;
         }

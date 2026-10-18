@@ -174,7 +174,6 @@ pub struct Cgm {
     textangle: f64,
     pic_warned: bool,
     spline_warned: bool,
-    enc: TextEnc,
 }
 
 impl Default for Cgm {
@@ -201,7 +200,6 @@ impl Default for Cgm {
             textangle: f64::from(u),
             pic_warned: false,
             spline_warned: false,
-            enc: TextEnc::Utf8,
         }
     }
 }
@@ -1001,55 +999,6 @@ fn figname(from: Option<&str>) -> String {
     base.split('.').next().unwrap_or(base).to_string()
 }
 
-/// The encoding fig2dev's texts are in: the reader decoded them to
-/// Unicode, fig2dev writes the input's bytes.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub(crate) enum TextEnc {
-    #[default]
-    Utf8,
-    Latin1,
-    Latin2,
-}
-
-/// The encoding the reader decoded the texts from: `-E` (or the file's
-/// `#encoding: UTF-8` line), else UTF-8 if the input file is valid UTF-8
-/// and ISO-8859-1 otherwise (figures from stdin count as UTF-8).
-pub(crate) fn text_encoding(ctx: &Ctx) -> TextEnc {
-    let Some(name) = ctx.input_encoding.as_deref() else {
-        let latin1 = ctx
-            .from
-            .as_deref()
-            .and_then(|f| std::fs::read(f).ok())
-            .is_some_and(|d| std::str::from_utf8(&d).is_err());
-        return if latin1 { TextEnc::Latin1 } else { TextEnc::Utf8 };
-    };
-    let key: String = name
-        .chars()
-        .filter(|c| !matches!(c, '-' | '_' | ' '))
-        .map(|c| c.to_ascii_lowercase())
-        .collect();
-    match key.as_str() {
-        "utf8" | "0" => TextEnc::Utf8,
-        "iso88592" | "latin2" | "l2" | "2" => TextEnc::Latin2,
-        _ => TextEnc::Latin1,
-    }
-}
-
-/// The bytes of a text in `enc`.
-pub(crate) fn text_bytes(enc: TextEnc, s: &str) -> Vec<u8> {
-    match enc {
-        TextEnc::Utf8 => s.as_bytes().to_vec(),
-        TextEnc::Latin2 => s
-            .chars()
-            .map(|c| match u8::try_from(u32::from(c)) {
-                Ok(b) if b < 0xA0 => b,
-                _ => crate::util::iso2tex::unicode_to_iso2(c).unwrap_or(b'?'),
-            })
-            .collect(),
-        TextEnc::Latin1 => s.chars().map(|c| u8::try_from(u32::from(c)).unwrap_or(b'?')).collect(),
-    }
-}
-
 impl Driver for Cgm {
     fn option(&mut self, _ctx: &mut Ctx, opt: char, _arg: Option<&str>) -> Result<(), String> {
         // fig2dev resets -r with every option.
@@ -1065,7 +1014,6 @@ impl Driver for Cgm {
 
     fn start(&mut self, ctx: &mut Ctx, out: &mut Out, objects: &Compound) -> Result<(), String> {
         let figname = figname(ctx.from.as_deref());
-        self.enc = text_encoding(ctx);
         if self.binary_output {
             // fig2dev pipes the output through ralcgm; RustFig runs no
             // external programs, as when fig2dev can't open the pipe.
@@ -1239,7 +1187,7 @@ impl Driver for Cgm {
         pos(ctx, out, t.base_x, t.base_y);
         out.puts(" final '");
         // Double any "'".
-        for b in text_bytes(self.enc, &t.cstring) {
+        for b in t.raw.iter().copied() {
             out.bytes(&[b]);
             if b == b'\'' {
                 out.bytes(b"'");

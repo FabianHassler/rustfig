@@ -13,7 +13,7 @@
 
 use std::f64::consts::PI;
 
-use super::latex::{c_string, default_font_option};
+use super::latex::default_font_option;
 use super::pictex::{arc_tangent, rtop};
 use crate::gendev::{print_comments, strtol, Ctx, DEFAULT_FONT_SIZE};
 use crate::object::{
@@ -518,12 +518,13 @@ impl Driver for Textyl {
         }
         fprintf!(
             out,
-            "\\special{{tyl label {} 1 {} {} \"{}\"}}\n",
+            "\\special{{tyl label {} 1 {} {} \"",
             MEASURE,
             self.convx(f64::from(t.base_x)),
             self.convy(f64::from(t.base_y)),
-            c_string(&t.cstring)
         );
+        out.bytes(&t.raw);
+        out.puts("\"}\n");
         Ok(())
     }
 

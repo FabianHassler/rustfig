@@ -4,6 +4,7 @@
 //!
 //! - [`texfonts`]: `dev/texfonts.c` and the parts of `dev/textconvert.c` it
 //!   uses (`put_string`, `select_font`, the TeX font tables).
+//! - [`textconvert`]: `dev/textconvert.c` (the bytes of a text, conversions).
 //! - [`iso2tex`]: `iso2tex.c` (ISO-8859-1/-2 → TeX sequences).
 //! - [`psfonts`]: `dev/psfonts.c` (PostScript font names, `unpsfont`).
 //! - [`setfigfont`]: `dev/setfigfont.c` (the `\SetFigFont` macro).
@@ -18,4 +19,5 @@ pub mod psfonts;
 pub mod readpics;
 pub mod setfigfont;
 pub mod texfonts;
+pub mod textconvert;
 pub mod tkpattern;

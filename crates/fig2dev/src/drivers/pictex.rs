@@ -15,7 +15,7 @@
 
 use std::f64::consts::PI;
 
-use super::latex::{c_string, default_font_option, set_default_size, Cf};
+use super::latex::{default_font_option, set_default_size, Cf};
 use crate::gendev::{print_comments, Ctx, PACKAGE_VERSION, PROG};
 use crate::object::{
     Arc, Compound, Ellipse, Line, Spline, Text, BLACK_FILL, DASH_LINE, DEFAULT, DOTTED_LINE, SOLID_LINE, T_ARC_BOX,
@@ -785,7 +785,7 @@ impl Driver for Pictex {
             );
         }
         self.color.set_color(out, ctx, t.color);
-        put_string(out, c_string(&t.cstring), t.font, t.special_text());
+        put_string(out, ctx, &t.raw, t.font, t.special_text());
         self.color.reset_color(out, t.color);
         if self.rotate && t.angle != 0.0 {
             if t.type_ == T_LEFT_JUSTIFIED {

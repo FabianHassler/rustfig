@@ -277,7 +277,10 @@ impl Driver for Mf {
     }
 
     fn text(&mut self, ctx: &mut Ctx, _out: &mut Out, t: &Text) -> Result<(), String> {
-        ctx.warn(format!("warning: text ignored in MF output: `{}'", t.cstring));
+        ctx.warn(format!(
+            "warning: text ignored in MF output: `{}'",
+            String::from_utf8_lossy(&t.raw)
+        ));
         Ok(())
     }
 

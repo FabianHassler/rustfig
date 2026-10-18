@@ -14,9 +14,8 @@
 use std::f64::consts::PI;
 
 use crate::bound::ARROW_SHAPES;
-use crate::drivers::cgm::{text_bytes, text_encoding, TextEnc};
 use crate::drivers::dxf::fmt_g;
-use crate::drivers::latex::{c_string, set_default_size, Cf};
+use crate::drivers::latex::{set_default_size, Cf};
 use crate::drivers::pict2e::round_mul;
 use crate::gendev::{print_comments, strtol, Ctx, NUMARROWS, NUM_STD_COLS};
 use crate::object::{
@@ -26,7 +25,7 @@ use crate::object::{
     T_RIGHT_JUSTIFIED, UNFILLED, WHITE_COLOR,
 };
 use crate::util::psfonts::PS_FONT_NAMES;
-use crate::util::texfonts::{put_string_bytes, TexFonts};
+use crate::util::texfonts::{put_string, TexFonts};
 use crate::{fprintf, round, Driver, Out};
 
 /// The standard colours: name and rgb (`std_color[]`, entry 0 is DEFAULT).
@@ -232,7 +231,6 @@ pub struct Tikz {
     cur_f: TikzArrow,
     thick_scale: f32,
     ppi: f64,
-    enc: TextEnc,
 }
 
 impl Default for Tikz {
@@ -266,7 +264,6 @@ impl Default for Tikz {
             cur_f: NO_ARROW,
             thick_scale: 1.0,
             ppi: 1200.0,
-            enc: TextEnc::Utf8,
         }
     }
 }
@@ -1167,9 +1164,12 @@ impl Tikz {
             rot += 90;
             std::mem::swap(&mut dx, &mut dy);
         }
-        let file = c_string(&pic.file);
+        // The name's bytes up to a NUL, as C holds them.
+        let file = pic.name_bytes().split(|&b| b == 0).next().unwrap_or_default();
         let file = if self.removesuffix {
-            file.rfind('.').map_or(file, |i| &file[..i])
+            file.iter()
+                .rposition(|&c| c == b'.')
+                .map_or(file, |i| file.get(..i).unwrap_or(file))
         } else {
             file
         };
@@ -1182,11 +1182,13 @@ impl Tikz {
         }
         fprintf!(
             out,
-            "] at ({},{}) {{\\pgfimage[width=+{dx}\\XFigu,height=+{dy}\\XFigu]{{{}{file}}}}};\n",
+            "] at ({},{}) {{\\pgfimage[width=+{dx}\\XFigu,height=+{dy}\\XFigu]{{{}",
             self.xc(p.x),
             self.yc(p.y),
             self.prepend.as_deref().unwrap_or("")
         );
+        out.bytes(file);
+        out.puts("}};\n");
     }
 }
 
@@ -1246,7 +1248,6 @@ impl Driver for Tikz {
         ctx.ury = ctx.ury.wrapping_add(bm);
         self.thick_scale = ctx.thick_scale;
         self.ppi = ctx.ppi;
-        self.enc = text_encoding(ctx);
         self.xshift = shift_coordinate(ctx.llx, ctx.ppi);
         self.yshift = shift_coordinate(ctx.ury.wrapping_neg(), ctx.ppi);
         let sp = splength as i64;
@@ -1734,8 +1735,7 @@ impl Driver for Tikz {
             self.select_fontname,
             self.only_texfonts,
         );
-        let s = c_string(&t.cstring);
-        put_string_bytes(out, s, &text_bytes(self.enc, s), t.font, t.special_text());
+        put_string(out, ctx, &t.raw, t.font, t.special_text());
         out.puts("}\n");
         Ok(())
     }

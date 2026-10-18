@@ -63,7 +63,7 @@ pub fn to_document(ctx: &Ctx, objects: &Compound) -> Document {
     };
     let mut doc = Document::new();
     doc.settings = settings(ctx);
-    doc.comments = objects.comments.clone();
+    doc.comments = objects.comments.iter().map(|c| c.text.clone()).collect();
     for (i, u) in ctx.user_colors.iter().enumerate() {
         let Some(&number) = ctx.user_col_indx.get(i) else {
             continue;
@@ -408,9 +408,9 @@ impl Conv<'_> {
     }
 }
 
-fn with_comments(kind: ObjectKind, comments: &[String]) -> Object {
+fn with_comments(kind: ObjectKind, comments: &[f::Comment]) -> Object {
     let mut o = Object::new(kind);
-    o.comments = comments.to_vec();
+    o.comments = comments.iter().map(|c| c.text.clone()).collect();
     o
 }
 

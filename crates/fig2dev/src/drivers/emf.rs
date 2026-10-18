@@ -8,7 +8,6 @@
 //
 // Ported from fig2dev dev/genemf.c and genemf.h (xfig licence, see LICENSE-xfig).
 
-use crate::drivers::cgm::{text_bytes, text_encoding, TextEnc};
 use crate::gendev::{print_comments, Ctx, NUM_STD_COLS, PACKAGE_VERSION};
 use crate::object::{
     Arc, Arrow, Ellipse, Line, Pic, Point, Spline, Text, DEFAULT, P_PNG, T_ARC_BOX, T_BOX, T_CENTER_JUSTIFIED,
@@ -16,7 +15,7 @@ use crate::object::{
     T_PIE_WEDGE_ARC, T_POLYGON, T_POLYLINE, T_RIGHT_JUSTIFIED,
 };
 use crate::round;
-use crate::util::readpics::{open_stream, read_png};
+use crate::util::readpics::{open_stream_pic, read_png};
 use crate::{Driver, Out};
 
 const UNDEFVALUE: i32 = -100;
@@ -340,8 +339,6 @@ pub struct Emf {
     /// `oldcolor` of `textcolr` and `oldalign` of `textalign`.
     text_color: i32,
     text_align: i32,
-    /// The input encoding of the texts (C holds their raw bytes).
-    enc: TextEnc,
     /// `coltab` of `picbox`: static, so entries survive from picture to picture.
     coltab: [[u8; 4]; 256],
 }
@@ -368,7 +365,6 @@ impl Default for Emf {
             user_colors: Vec::new(),
             text_color: UNDEFVALUE,
             text_align: 0,
-            enc: TextEnc::Utf8,
             coltab: [[0; 4]; 256],
         }
     }
@@ -1585,12 +1581,12 @@ impl Emf {
         }
     }
 
-    /// `textunicode`: the bytes of `s` (in the input encoding) as UTF-16LE
-    /// code units, each byte sign-extended, `\n` as 0.
-    fn textunicode(&self, s: &str) -> Vec<u8> {
-        let cut = s.split('\0').next().unwrap_or("");
+    /// `textunicode`: the input bytes of `s` as UTF-16LE code units, each
+    /// byte sign-extended, `\n` as 0.
+    fn textunicode(&self, s: &[u8]) -> Vec<u8> {
+        let cut = s.split(|&b| b == 0).next().unwrap_or_default();
         let mut v = Vec::new();
-        for b in text_bytes(self.enc, cut) {
+        for &b in cut {
             let u: u16 = if b == b'\n' { 0 } else { b as i8 as i16 as u16 };
             v.extend_from_slice(&u.to_le_bytes());
         }
@@ -1638,7 +1634,7 @@ impl Emf {
             if let Some(d) = r.get_mut(36..40) {
                 d.copy_from_slice(&[0, 0, 0, pitch]);
             }
-            let name = self.textunicode(LF_FACE_NAME.get(f).copied().unwrap_or(""));
+            let name = self.textunicode(LF_FACE_NAME.get(f).copied().unwrap_or("").as_bytes());
             if let Some(d) = r.get_mut(40..40 + name.len().min(64)) {
                 d.copy_from_slice(&name[..d.len()]);
             }
@@ -1657,7 +1653,7 @@ impl Emf {
     }
 
     /// `text`: EMR_EXTTEXTOUTW.
-    fn text_out(&mut self, x: i32, y: i32, bbx: [i32; 4], s: &str) {
+    fn text_out(&mut self, x: i32, y: i32, bbx: [i32; 4], s: &[u8]) {
         let u = self.textunicode(s);
         let n_unicode = u.len();
         let padded = (n_unicode + 4) & !3;
@@ -1736,7 +1732,7 @@ impl Emf {
         let a = t.angle;
         let half = if a * RAD_01DEG >= 0.0 { 0.5 } else { -0.5 };
         self.textfont(font, t.size, a.mul_add(RAD_01DEG, half) as i32);
-        self.text_out(t.base_x, t.base_y, bbx, &t.cstring);
+        self.text_out(t.base_x, t.base_y, bbx, &t.raw);
     }
 
     // ---- pictures ----
@@ -1831,7 +1827,7 @@ impl Emf {
         } else {
             0
         };
-        let Ok(stream) = open_stream(ctx, &pic0.file) else {
+        let Ok(stream) = open_stream_pic(ctx, pic0) else {
             self.msg(format!("fig2dev: {}: No such picture file", pic0.file));
             return;
         };
@@ -2014,7 +2010,6 @@ impl Driver for Emf {
         if std::env::var("LANG").is_err() {
             self.msg("fig2dev: LANG not defined; assuming C locale");
         }
-        self.enc = text_encoding(ctx);
         self.user_colors = ctx
             .user_colors
             .iter()
@@ -2033,11 +2028,12 @@ impl Driver for Emf {
         let mut texts = vec![format!(
             "Converted from {figname} using fig2dev {PACKAGE_VERSION} for {}",
             self.level.name()
-        )];
-        texts.extend(objects.comments.iter().cloned());
+        )
+        .into_bytes()];
+        texts.extend(objects.comments.iter().map(|c| c.raw.clone()));
         let mut desc: Vec<u8> = Vec::new();
         for t in &texts {
-            for &b in t.as_bytes() {
+            for &b in t {
                 let u: u16 = if b == b'\n' { 0 } else { b as i8 as i16 as u16 };
                 desc.extend_from_slice(&u.to_le_bytes());
             }

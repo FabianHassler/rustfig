@@ -312,7 +312,13 @@ impl Gbx {
     }
 
     fn write_comment(out: &mut Out, c: &str) {
-        fprintf!(out, "G{:02} {c}*\n", G_IGNORE_DATA_BLOCK);
+        Self::write_comment_bytes(out, c.as_bytes());
+    }
+
+    fn write_comment_bytes(out: &mut Out, c: &[u8]) {
+        fprintf!(out, "G{:02} ", G_IGNORE_DATA_BLOCK);
+        out.bytes(c);
+        out.puts("*\n");
     }
 
     fn write_trace(&self, out: &mut Out, c: &str) {
@@ -822,7 +828,7 @@ impl Driver for Gbx {
             Self::write_comment(out, &format!("Creation date: {date}"));
         }
         for c in &objects.comments {
-            Self::write_comment(out, c);
+            Self::write_comment_bytes(out, &c.raw);
         }
         out.puts(if self.mm { "%MOMM*%\n" } else { "%MOIN*%\n" });
         fprintf!(

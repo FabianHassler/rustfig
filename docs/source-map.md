@@ -180,7 +180,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `iso2tex.c` | 236 | Latin-1 characters to TeX sequences | `fig2dev/util/iso2tex` | ported | B9 |
 | `creationdate.c` | 114 | creation date for reproducible output (`SOURCE_DATE_EPOCH`) | `fig2dev/util/creationdate` | ported | B9 |
 | `localmath.c`, `messages.c` | 114 | math helpers, error messages | `geom`, errors; `apps/fig2dev` (messages) | n/a | — |
-| `read.c` | 2048 | Fig reader (second reference) | `format/fig_read` (RustFig's reader); `fig2dev/read` + `crates/engine/src/fig2dev/to_model.rs` (port: the only reader of every export and of the standalone fig2dev; the app opens Fig 1.3–2.1 through it, `engine/fig2dev`) | ported | B9, G1 |
+| `read.c` | 2048 | Fig reader (second reference) | `format/fig_read` (RustFig's reader); `fig2dev/read` + `crates/engine/src/fig2dev/to_model.rs` (port: the only reader of every export and of the standalone fig2dev; the app opens Fig 1.3–2.1 through it, `engine/fig2dev`); texts and comments keep their input bytes beside the Unicode decoding (`Text::raw`, `Comment`) | ported | B9, G1 |
 | `read1_3.c` | 549 | Fig 1.3 reader | `fig2dev/read/read1_3` | ported | B9 |
 | `bound.c` | 1156 | bounds incl. arrows and text | `figbase/geom/arrow.rs` (arrowheads for the scene); `fig2dev/bound` (port on fig2dev's objects: the bounds of every export; RustFig's own model bounds are gone) | ported (D9, B0); ellipse extents analytic instead of the scan | — |
 | `trans_spline.c` | 661 | splines to polylines for exporters | `fig2dev/trans_spline` | ported | B9 |
@@ -198,15 +198,15 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `dev/genbox.c` | 78 | LaTeX box | `crates/fig2dev/src/scene/latex_box.rs` | ported | — |
 | `dev/gencgm.c`, `genibmgl.c`, `gendxf.c` | 3 k | CGM, HPGL (`ibmgl`), DXF | `fig2dev/drivers/{cgm,ibmgl,dxf}` | ported | B9 |
 | `dev/genmp.c`, `genmf.c`, `genge.c`, `genmap.c` | — | MetaPost, METAFONT, ge, HTML image maps | `crates/fig2dev/src/drivers/{mp,mf,ge,map}.rs` | ported | B9 |
-| `dev/genemf.c` | `crates/fig2dev/src/drivers/emf.rs` | EMF (all objects; texts as UTF-16 of the input bytes, PNG pictures as in C; CJK locale fonts via iconv not ported) | byte-identical to fig2dev on 285 of 300 sample figures, the rest octal-escape texts | ported | B9 |
-| `dev/gentk.c`, `genptk.c` | 2.9 k | Tk, Perl-Tk (`-L tk`, `-L ptk`) | `crates/fig2dev/src/drivers/tk.rs` | ported (byte-identical to fig2dev on 284 / 285 of 300 sample figures, the rest octal-escape texts; stack garbage after a dash of length 0 not reproduced) | B9 |
+| `dev/genemf.c` | `crates/fig2dev/src/drivers/emf.rs` | EMF (all objects; texts as UTF-16 of the input bytes, PNG pictures as in C; CJK locale fonts via iconv not ported) | byte-identical to fig2dev on 300 of 300 sample figures | ported | B9 |
+| `dev/gentk.c`, `genptk.c` | 2.9 k | Tk, Perl-Tk (`-L tk`, `-L ptk`) | `crates/fig2dev/src/drivers/tk.rs` | ported (byte-identical to fig2dev on 299 of 300 sample figures; stack garbage after a dash of length 0 not reproduced) | B9 |
 | `dev/gengbx.c` | 0.9 k | Gerber (`-L gbx`) | `crates/fig2dev/src/drivers/gbx.rs` | ported | B9 |
 | `dev/genshape.c` | 0.9 k | LaTeX shape macros (`-L shape`) | `crates/fig2dev/src/drivers/shape.rs` | ported | B9 |
 | `dev/encode.c` | 236 | ASCII85 and deflate streams for PostScript/PDF | `crates/fig2dev/src/scene/{eps,pdf}.rs` | own | review |
 | `dev/tkpattern.c` | 122 | Tk fill patterns | `crates/fig2dev/src/util/tkpattern.rs` | ported | B9 |
 | `dev/xtmpfile.c` | 150 | temporary files | — | n/a | — |
 | `dev/read*.c`, `readpics.c` | 3 k | pictures embedded in exports | `fig2dev/util/readpics` (`image` crate; EPS/PDF boxes, PCX, XBM, XPM, .gz/.Z) | ported | B9 |
-| `dev/psfonts.c`, `texfonts.c`, `setfigfont.c`, `textconvert.c` | 1 k | font names and LaTeX font selection for exports | `fig2dev/util/{psfonts,texfonts,setfigfont}` | ported | B9 |
+| `dev/psfonts.c`, `texfonts.c`, `setfigfont.c`, `textconvert.c` | 1 k | font names and LaTeX font selection for exports | `fig2dev/util/{psfonts,texfonts,setfigfont,textconvert}` (texts as the input's bytes, `put_string`, conversions; 2026-10-18) | ported | B9 |
 
 ## Revision history
 

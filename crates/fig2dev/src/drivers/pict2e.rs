@@ -21,9 +21,8 @@
 use std::f64::consts::PI;
 
 use crate::bound::{arrow_shape, calc_arrow, compute_arcarrow_angle};
-use crate::drivers::cgm::{text_bytes, text_encoding, TextEnc};
 use crate::drivers::dxf::fmt_g;
-use crate::drivers::latex::{c_string, set_default_size, Cf};
+use crate::drivers::latex::{set_default_size, Cf};
 use crate::gendev::{print_comments, strtol, Ctx, FIG_COLOR_NAMES, NUM_STD_COLS};
 use crate::object::{
     Arc, Arrow, Compound, Control, Ellipse, Line, Point, Spline, Text, BLACK_COLOR, DASH_2_DOTS_LINE, DASH_3_DOTS_LINE,
@@ -33,7 +32,7 @@ use crate::object::{
 };
 use crate::trans_spline::create_line_with_spline;
 use crate::util::psfonts::PS_FONT_NAMES;
-use crate::util::texfonts::{put_string_bytes, TexFonts};
+use crate::util::texfonts::{put_string, TexFonts};
 use crate::{fprintf, round, Driver, Out};
 
 const M_PI_2: f64 = std::f64::consts::FRAC_PI_2;
@@ -380,8 +379,6 @@ pub struct Pict2e {
     ury: i32,
     thick_scale: f32,
     ppi: f64,
-    /// The input's text encoding: texts are written in the input's bytes.
-    enc: TextEnc,
 }
 
 impl Default for Pict2e {
@@ -412,7 +409,6 @@ impl Default for Pict2e {
             ury: 0,
             thick_scale: 1.0,
             ppi: 1200.0,
-            enc: TextEnc::Utf8,
         }
     }
 }
@@ -1330,7 +1326,7 @@ impl Pict2e {
         let Some(pic) = &l.pic else {
             return;
         };
-        let file = pic.file.as_bytes();
+        let file = pic.name_bytes();
         let n = if self.removesuffix {
             file.iter().rposition(|&c| c == b'.').unwrap_or(file.len())
         } else {
@@ -1955,7 +1951,6 @@ impl Driver for Pict2e {
         self.ury = ctx.ury;
         self.thick_scale = ctx.thick_scale;
         self.ppi = ctx.ppi;
-        self.enc = text_encoding(ctx);
 
         if !objects.comments.is_empty() {
             out.puts("%\n");
@@ -2283,8 +2278,7 @@ impl Driver for Pict2e {
             self.select_fontname,
             self.only_texfonts,
         );
-        let s = c_string(&t.cstring);
-        put_string_bytes(out, s, &text_bytes(self.enc, s), t.font, t.special_text());
+        put_string(out, ctx, &t.raw, t.font, t.special_text());
         if t.angle != 0.0 {
             out.puts("}");
         }

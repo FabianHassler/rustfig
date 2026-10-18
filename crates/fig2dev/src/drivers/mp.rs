@@ -11,7 +11,6 @@
 //
 // Ported from fig2dev dev/genmp.c (xfig licence, see LICENSE-xfig).
 
-use super::cgm::{text_bytes, text_encoding, TextEnc};
 use crate::bound::{calc_arrow, compute_arcarrow_angle};
 use crate::gendev::{print_comments, Ctx, Driver, NUM_STD_COLS, PACKAGE_VERSION};
 use crate::object::{Arc, Arrow, Compound, Ellipse, Line, Point, Spline, Text};
@@ -117,7 +116,6 @@ struct Mp {
     immediate_insert_filename: Option<String>,
     include_filename: Option<String>,
     tex: TexFonts,
-    enc: TextEnc,
     mag: f64,
 }
 
@@ -133,7 +131,6 @@ impl Default for Mp {
             immediate_insert_filename: None,
             include_filename: None,
             tex: TexFonts::new(),
-            enc: TextEnc::Utf8,
             mag: 1.0,
         }
     }
@@ -489,7 +486,6 @@ impl Driver for Mp {
 
     fn start(&mut self, ctx: &mut Ctx, out: &mut Out, objects: &Compound) -> Result<(), String> {
         self.mag = ctx.mag;
-        self.enc = text_encoding(ctx);
         fprintf!(
             out,
             "%\n% fig2dev (version {}) -L (m)mp version {:.2} --- Preamble\n%\n",
@@ -892,7 +888,7 @@ impl Driver for Mp {
         self.do_split(out, t.depth);
         print_comments(out, "% ", &t.comments, "");
         out.puts("% Begin text object\n");
-        let s = text_bytes(self.enc, &t.cstring);
+        let s = t.raw.clone();
         let ps = t.flags & 0x4 != 0;
         if !ps || t.special_text() {
             out.puts("  picture q;\n");

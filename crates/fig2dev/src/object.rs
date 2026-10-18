@@ -86,7 +86,7 @@ pub struct Ellipse {
     pub radiuses: Point,
     pub start: Point,
     pub end: Point,
-    pub comments: Vec<String>,
+    pub comments: Vec<Comment>,
 }
 
 /// Arc types.
@@ -117,7 +117,7 @@ pub struct Arc {
     pub direction: i32,
     pub center: DPoint,
     pub point: [Point; 3],
-    pub comments: Vec<String>,
+    pub comments: Vec<Comment>,
 }
 
 /// Line types.
@@ -146,7 +146,7 @@ pub struct Line {
     pub radius: i32,
     pub points: Vec<Point>,
     pub pic: Option<Box<Pic>>,
-    pub comments: Vec<String>,
+    pub comments: Vec<Comment>,
 }
 
 impl Line {
@@ -173,7 +173,13 @@ pub const P_PNG: i32 = 8;
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Pic {
     pub subtype: i32,
+    /// The picture's file name (relative to the Fig file's directory),
+    /// decoded to Unicode.
     pub file: String,
+    /// The same name as C holds it: the raw bytes of the Fig file, unless
+    /// `-E` names an encoding other than UTF-8 (`conv_filename` converts
+    /// then). Empty: `file`'s bytes.
+    pub file_raw: Vec<u8>,
     pub flipped: i32,
     pub bitmap: Vec<u8>,
     /// Colour map, `cmap[RED|GREEN|BLUE][i]`, `numcols` entries used.
@@ -223,11 +229,82 @@ pub struct Text {
     pub base_x: i32,
     pub base_y: i32,
     pub pen: i32,
-    /// The string, decoded to Unicode by the reader (fig2dev keeps bytes in
-    /// the input encoding; the drivers that need an 8-bit encoding encode it
-    /// again).
+    /// The string decoded to Unicode by the reader, for the consumers that
+    /// need characters (bounds, the scene and its EPS/PDF/SVG writers, the
+    /// app's document).
     pub cstring: String,
-    pub comments: Vec<String>,
+    /// The string as C's `char *cstring` holds it: the input's bytes after
+    /// the `\ooo` escapes, up to the first NUL. The text drivers write
+    /// these (see `util::textbytes`).
+    pub raw: Vec<u8>,
+    pub comments: Vec<Comment>,
+}
+
+/// A comment line (`# ...`) of the Fig file: the bytes as C keeps them and
+/// the same decoded to Unicode (by the encoding the reader resolved).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Comment {
+    pub raw: Vec<u8>,
+    pub text: String,
+}
+
+impl From<&str> for Comment {
+    fn from(s: &str) -> Comment {
+        Comment {
+            raw: s.as_bytes().to_vec(),
+            text: s.to_string(),
+        }
+    }
+}
+
+impl std::ops::Deref for Comment {
+    type Target = str;
+    fn deref(&self) -> &str {
+        &self.text
+    }
+}
+
+impl std::fmt::Display for Comment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.text)
+    }
+}
+
+impl PartialEq<String> for Comment {
+    fn eq(&self, o: &String) -> bool {
+        self.text == *o
+    }
+}
+
+impl PartialEq<&str> for Comment {
+    fn eq(&self, o: &&str) -> bool {
+        self.text == *o
+    }
+}
+
+impl Pic {
+    /// The file name's bytes (`file` in C).
+    pub fn name_bytes(&self) -> &[u8] {
+        if self.file_raw.is_empty() {
+            self.file.as_bytes()
+        } else {
+            &self.file_raw
+        }
+    }
+
+    /// The file name as the operating system takes it: on Unix the raw
+    /// bytes, elsewhere the Unicode name.
+    pub fn os_name(&self) -> std::ffi::OsString {
+        #[cfg(unix)]
+        {
+            use std::os::unix::ffi::OsStringExt;
+            std::ffi::OsString::from_vec(self.name_bytes().to_vec())
+        }
+        #[cfg(not(unix))]
+        {
+            std::ffi::OsString::from(self.file.clone())
+        }
+    }
 }
 
 impl Text {
@@ -293,7 +370,7 @@ pub struct Spline {
     pub points: Vec<Point>,
     /// One per point; empty if the file had none.
     pub controls: Vec<Control>,
-    pub comments: Vec<String>,
+    pub comments: Vec<Comment>,
 }
 
 impl Spline {
@@ -325,5 +402,5 @@ pub struct Compound {
     pub texts: Vec<Text>,
     pub arcs: Vec<Arc>,
     pub compounds: Vec<Compound>,
-    pub comments: Vec<String>,
+    pub comments: Vec<Comment>,
 }

@@ -133,7 +133,21 @@ pub fn file_on_disk(path: &Path) -> Option<(PathBuf, Compression)> {
 
 /// `open_stream`: finds, reads and uncompresses picture `name`.
 pub fn open_stream(ctx: &Ctx, name: &str) -> Result<PicStream, String> {
-    let wanted = pic_path(ctx, name);
+    open_path(ctx, pic_path(ctx, name), name)
+}
+
+/// [`open_stream`] for a picture of the figure: the file is found by the
+/// name's raw bytes (a Latin-1 name in a legacy file opens on Unix).
+pub fn open_stream_pic(ctx: &Ctx, pic: &Pic) -> Result<PicStream, String> {
+    let p = Path::new(&pic.os_name()).to_path_buf();
+    let wanted = match &ctx.dir {
+        Some(dir) if p.is_relative() => dir.join(p),
+        _ => p,
+    };
+    open_path(ctx, wanted, &pic.file)
+}
+
+fn open_path(_ctx: &Ctx, wanted: PathBuf, name: &str) -> Result<PicStream, String> {
     let (path, compression) = file_on_disk(&wanted).ok_or_else(|| format!("{name}: No such picture file"))?;
     let file = std::fs::File::open(&path).map_err(|e| format!("{}: {e}", path.display()))?;
     let mut raw = Vec::new();
@@ -421,7 +435,7 @@ pub fn read_pic(ctx: &Ctx, stream: &PicStream, pic: &mut Pic) -> Result<(i32, i3
 
 /// `open_stream` and `read_pic` in one.
 pub fn read_picture(ctx: &Ctx, pic: &mut Pic) -> Result<(i32, i32), String> {
-    let stream = open_stream(ctx, &pic.file)?;
+    let stream = open_stream_pic(ctx, pic)?;
     read_pic(ctx, &stream, pic)
 }
 

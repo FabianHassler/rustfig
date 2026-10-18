@@ -336,7 +336,7 @@ pub(crate) fn atof(s: &[u8]) -> f64 {
 
 /// The encoding of the strings in a Fig file.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum Encoding {
+pub enum Encoding {
     Utf8,
     Latin1,
     Latin2,
@@ -351,15 +351,22 @@ impl Encoding {
         let Some(name) = name else {
             return if file_is_utf8 { Encoding::Utf8 } else { Encoding::Latin1 };
         };
+        Encoding::from_name(name).unwrap_or(Encoding::Latin1)
+    }
+
+    /// The encodings RustFig converts itself (what iconv would do for
+    /// `-E name`): UTF-8, ISO-8859-1 and -2 under their usual names.
+    pub fn from_name(name: &str) -> Option<Encoding> {
         let key: String = name
             .chars()
             .filter(|c| !matches!(c, '-' | '_' | ' '))
             .map(|c| c.to_ascii_lowercase())
             .collect();
         match key.as_str() {
-            "utf8" | "0" => Encoding::Utf8,
-            "iso88592" | "latin2" | "l2" | "2" => Encoding::Latin2,
-            _ => Encoding::Latin1,
+            "utf8" | "0" => Some(Encoding::Utf8),
+            "iso88592" | "iso88592:1987" | "latin2" | "l2" | "2" => Some(Encoding::Latin2),
+            "iso88591" | "iso88591:1987" | "latin1" | "l1" | "1" => Some(Encoding::Latin1),
+            _ => None,
         }
     }
 

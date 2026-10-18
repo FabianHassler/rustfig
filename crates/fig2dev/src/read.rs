@@ -28,7 +28,8 @@ mod scan;
 use crate::gendev::{UserColor, DEFAULT_FONT_SIZE, FIG_COLOR_NAMES, MAX_USR_COLS, NUMARROWS, NUM_STD_COLS};
 use crate::object::*;
 use crate::Ctx;
-use scan::{atof, atoi, fmt_g, sscanf, starts_ci, Encoding, Scan};
+pub use scan::Encoding;
+use scan::{atof, atoi, fmt_g, sscanf, starts_ci, Scan};
 
 /// fig2dev's version as `read.c` compares it with the file's.
 const PACKAGE_VERSION: &[u8] = b"3.2";
@@ -103,7 +104,7 @@ struct Reader<'a, 'c> {
     inp: Scan<'a>,
     line_no: i32,
     /// Comments saved for the next object.
-    comments: Vec<String>,
+    comments: Vec<Comment>,
     /// The user colours defined, counting one past the maximum to report
     /// it once (`num_usr_cols`).
     num_usr_cols: usize,
@@ -223,12 +224,15 @@ impl<'a> Reader<'a, '_> {
         }
         let body = line.get(1..).unwrap_or_default();
         let body = body.strip_prefix(b" ").unwrap_or(body);
-        let c = self.decode(body);
-        self.comments.push(c);
+        let text = self.decode(body);
+        self.comments.push(Comment {
+            raw: body.to_vec(),
+            text,
+        });
     }
 
     /// `attach_comments`.
-    fn attach_comments(&mut self) -> Vec<String> {
+    fn attach_comments(&mut self) -> Vec<Comment> {
         std::mem::take(&mut self.comments)
     }
 
@@ -941,17 +945,32 @@ impl<'a> Reader<'a, '_> {
 
     /// The name of a picture file: relative to the Fig file's directory
     /// when that is given as a path (fig2dev prepends the path of `from`).
-    fn picture_path(&self, file: &[u8]) -> String {
+    /// Returns the name decoded to Unicode and as bytes: the file's bytes,
+    /// or the Unicode name when `conv_filename` converts from `-E`.
+    fn picture_path(&self, file: &[u8]) -> (String, Vec<u8>) {
         let name = self.decode(file);
+        let converted = self
+            .ctx
+            .input_encoding
+            .as_deref()
+            .is_some_and(|n| !n.eq_ignore_ascii_case("UTF-8") && Encoding::from_name(n).is_some());
+        let bytes: Vec<u8> = if converted {
+            name.as_bytes().to_vec()
+        } else {
+            file.to_vec()
+        };
         let Some(from) = self.ctx.from.as_deref() else {
-            return name;
+            return (name, bytes);
         };
         let sep = |c: char| c == '/' || (cfg!(windows) && c == '\\');
         match from.rfind(sep) {
             Some(i) if !name.starts_with('/') && !(cfg!(windows) && is_windows_absolute(&name)) => {
-                format!("{}{name}", from.get(..=i).unwrap_or_default())
+                let prefix = from.get(..=i).unwrap_or_default();
+                let mut raw = prefix.as_bytes().to_vec();
+                raw.extend_from_slice(&bytes);
+                (format!("{prefix}{name}"), raw)
             }
-            _ => name,
+            _ => (name, bytes),
         }
     }
 
@@ -1037,9 +1056,11 @@ impl<'a> Reader<'a, '_> {
             };
             sc.skip_ws();
             let file = sc.rest();
+            let (file, file_raw) = self.picture_path(file);
             l.pic = Some(Box::new(Pic {
                 flipped,
-                file: self.picture_path(file),
+                file,
+                file_raw,
                 ..Pic::default()
             }));
         }
@@ -1313,6 +1334,7 @@ impl<'a> Reader<'a, '_> {
             text.truncate(nul);
         }
         t.cstring = self.decode(&text);
+        t.raw = text;
 
         if self.ctx.font_size != 0.0 {
             // Scale length and height to the requested font size.

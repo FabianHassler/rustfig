@@ -12,7 +12,6 @@
 
 use std::f64::consts::PI;
 
-use crate::drivers::cgm::{text_bytes, text_encoding, TextEnc};
 use crate::drivers::latex::Cf;
 use crate::drivers::pict2e::round_mul;
 use crate::gendev::{print_comments, Ctx, PAPERDEF};
@@ -23,6 +22,7 @@ use crate::object::{
     T_RIGHT_JUSTIFIED, UNFILLED, WHITE_COLOR, WHITE_FILL,
 };
 use crate::util::readpics;
+use crate::util::textconvert::{byte_view, from_byte_view};
 use crate::util::tkpattern::TKPATTERN;
 use crate::{fprintf, round, Driver, Out};
 
@@ -118,7 +118,6 @@ pub struct Tk {
     in_quote: bool,
     pos: usize,
     ppi: f64,
-    enc: TextEnc,
 }
 
 /// The driver for `lang` (`tk` or `ptk`).
@@ -138,7 +137,6 @@ pub fn new(lang: &str) -> Option<Box<dyn Driver>> {
         in_quote: false,
         pos: 0,
         ppi: 1200.0,
-        enc: TextEnc::default(),
     }))
 }
 
@@ -775,7 +773,7 @@ impl Tk {
                 "Rotated images not supported by Tk."
             });
         }
-        let stream = match readpics::open_stream(ctx, &p.file) {
+        let stream = match readpics::open_stream_pic(ctx, p) {
             Ok(s) => s,
             Err(_) => {
                 ctx.warn(if ptk {
@@ -828,26 +826,29 @@ impl Tk {
             isphoto = true;
         }
         let (x, y) = (f6(self.x(p0.x)), f6(self.x(p0.y)));
+        // The name as a byte view; the section's output is converted back.
+        let pfile = byte_view(p.name_bytes());
+        let start = out.buf.len();
         let c = self.canvas();
         if isphoto {
-            let pname = p.file.split('.').next().unwrap_or("");
+            let pname = pfile.split('.').next().unwrap_or("");
             if ptk {
-                fprintf!(out, "$img{{\"{pname}\"}} = $top->Photo(-file => \"{}\");\n", p.file);
+                fprintf!(out, "$img{{\"{pname}\"}} = $top->Photo(-file => \"{}\");\n", pfile);
                 fprintf!(
                     out,
                     "{c}->createImage(qw/{x}i {y}i -anchor nw -image/, $img{{\"{pname}\"}});"
                 );
             } else {
-                fprintf!(out, "image create photo {pname} -file {}\n\n", p.file);
+                fprintf!(out, "image create photo {pname} -file {}\n\n", pfile);
                 fprintf!(out, "{c} create image {x}i {y}i -anchor nw -image {pname}\n");
             }
         } else if readpics::read_bitmap_file(&stream.data).is_some() {
             if ptk {
                 self.nice_line(out, &format!("{c}->createBitmap(qw/{x}i {y}i -anchor nw"));
-                self.nice_line(out, &format!(" -bitmap/, \"@{}\"", p.file));
+                self.nice_line(out, &format!(" -bitmap/, \"@{}\"", pfile));
             } else {
                 self.nice_line(out, &format!("{c} create bitmap {x}i {y}i -anchor nw"));
-                self.nice_line(out, &format!(" -bitmap @{}", p.file));
+                self.nice_line(out, &format!(" -bitmap @{}", pfile));
             }
             if l.pen_color != BLACK_COLOR && l.pen_color != DEFAULT {
                 let v = self.rgb_color_val(ctx, l.pen_color);
@@ -879,6 +880,9 @@ impl Tk {
                 "Only X bitmap and GIF picture objects are supported in Tk canvases."
             });
         }
+        let tail = from_byte_view(&String::from_utf8_lossy(out.buf.get(start..).unwrap_or_default()));
+        out.buf.truncate(start);
+        out.bytes(&tail);
     }
 
     /// `bezierSpline`.
@@ -1165,7 +1169,6 @@ impl Driver for Tk {
     }
 
     fn start(&mut self, ctx: &mut Ctx, out: &mut Out, objects: &Compound) -> Result<(), String> {
-        self.enc = text_encoding(ctx);
         let ptk = self.ptk;
         if !ptk {
             out.puts("# Produced by fig2dev Version 3.2.9a\n");
@@ -1455,7 +1458,7 @@ impl Driver for Tk {
         }
         let c = self.canvas();
         let (x, y) = (f6(self.x(t.base_x)), f6(self.x(t.base_y)));
-        let bytes = text_bytes(self.enc, &t.cstring);
+        let bytes = t.raw.clone();
         let bytes = bytes.split(|&b| b == 0).next().unwrap_or(&[]);
         let quote = if ptk { b'\'' } else { b'"' };
         if ptk {

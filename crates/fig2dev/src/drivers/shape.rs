@@ -162,8 +162,8 @@ fn centerref(c: &str) -> bool {
 /// `get_comment`: the shape comment at the start of the first comment
 /// (an optional sign and a word), empty for none; an error for a comment
 /// that is neither a shape nor a reference.
-fn get_comment(ctx: &mut Ctx, comments: &[String]) -> Result<String, String> {
-    let Some(comment) = comments.first() else {
+fn get_comment(ctx: &mut Ctx, comments: &[crate::object::Comment]) -> Result<String, String> {
+    let Some(comment) = comments.first().map(|c| c.text.as_str()) else {
         return Ok(String::new());
     };
     let mut end = 0;
@@ -1007,7 +1007,7 @@ impl Driver for Shape {
     fn start(&mut self, _ctx: &mut Ctx, _out: &mut Out, objects: &Compound) -> Result<(), String> {
         if let Some(c) = objects.comments.first() {
             if self.macroname.is_none() {
-                self.macroname = Some(c.clone());
+                self.macroname = Some(c.text.clone());
             }
         }
         Ok(())

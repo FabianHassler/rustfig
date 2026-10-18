@@ -7,7 +7,6 @@
 //
 // Ported from fig2dev dev/genge.c (xfig licence, see LICENSE-xfig).
 
-use super::cgm::{text_bytes, text_encoding, TextEnc};
 use crate::gendev::{print_comments, Ctx, Driver};
 use crate::object::{
     Arc, Arrow, Compound, Ellipse, Line, Spline, Text, DASH_2_DOTS_LINE, DASH_3_DOTS_LINE, DASH_DOT_LINE, DASH_LINE,
@@ -33,15 +32,11 @@ const GE_COLORS: [i32; 33] = [
 struct Ge {
     /// Fig units → 0.1 mm.
     scale: f32,
-    enc: TextEnc,
 }
 
 impl Default for Ge {
     fn default() -> Ge {
-        Ge {
-            scale: 254.0 / 1200.0,
-            enc: TextEnc::Utf8,
-        }
+        Ge { scale: 254.0 / 1200.0 }
     }
 }
 
@@ -191,7 +186,6 @@ impl Driver for Ge {
 
     fn start(&mut self, ctx: &mut Ctx, out: &mut Out, objects: &Compound) -> Result<(), String> {
         self.scale = (254.0 / ctx.ppi) as f32;
-        self.enc = text_encoding(ctx);
         print_comments(out, "# ", &objects.comments, "");
         Ok(())
     }
@@ -295,7 +289,7 @@ impl Driver for Ge {
     fn text(&mut self, _ctx: &mut Ctx, out: &mut Out, t: &Text) -> Result<(), String> {
         print_comments(out, "# ", &t.comments, "");
         out.puts("\"");
-        out.bytes(&text_bytes(self.enc, &t.cstring));
+        out.bytes(&t.raw);
         out.puts("\" ");
         set_color(out, t.color);
         // C's `%` keeps the sign: font −1 (default PostScript font) gives

@@ -7,15 +7,8 @@
 //! options (`texfontsizes[0] = …`, `texfontnames[0] = …`); here they live
 //! in [`TexFonts`], which a driver owns and may change.
 //!
-//! Texts reach the drivers decoded to Unicode (`Text::cstring`). Where C
-//! converts a text from the input encoding to UTF-8 (`conv_textstring`),
-//! there is nothing left to do: the text is written as UTF-8. Where C
-//! converts it to Latin-1 for the Symbol and Zapf Dingbats fonts
-//! (`convertutf8tolatin1`), [`to_latin1`] does so from Unicode. fig2dev
-//! 3.2.9a skips that conversion for UTF-8 files (`conv_textisutf8` returns
-//! NULL when no conversion is needed) and writes each UTF-8 byte as
-//! `\charNNN`; this port writes the Latin-1 code, as the code intends:
-//! "±" in Symbol gives `\char177`, not `\char194\char177`.
+//! Texts reach the drivers as the bytes of the input (`Text::raw`), as in C;
+//! see `util::textconvert` for the conversions `put_string` applies.
 //
 // Ported from fig2dev dev/texfonts.c, dev/texfonts.h and dev/textconvert.c
 // (xfig licence, see LICENSE-xfig).
@@ -25,6 +18,7 @@ use std::borrow::Cow;
 use crate::gendev::Ctx;
 use crate::object::{Text, MAX_FONT, MAX_PSFONT};
 use crate::util::psfonts::unpsfont_clear;
+use crate::util::textconvert::{conv_textisutf8, conv_textstring, convertutf8tolatin1};
 use crate::{fprintf, round, Out};
 
 /// Font sizes above this are used as they are (`MAXFONTSIZE`).
@@ -278,45 +272,43 @@ fn is_symbol_font(font: i32) -> bool {
     font == MAX_PSFONT || font == MAX_PSFONT - 2
 }
 
-/// `put_string`: writes a text. In Symbol and Zapf Dingbats the text is
-/// written as Latin-1 codes, with characters beyond ASCII as `\charNNN`;
-/// in other fonts as UTF-8. Unless `tex_text` (a special text, which is
-/// TeX code), LaTeX's special characters are quoted.
-pub fn put_string(out: &mut Out, string: &str, font: i32, tex_text: bool) {
+/// `put_string`: writes a text, given as the bytes C holds (`Text::raw`).
+/// In Symbol and Zapf Dingbats a conversion that is needed (an input
+/// encoding other than the locale's) first turns it "from UTF-8 to
+/// Latin-1" (`convertutf8tolatin1`, which on Latin-1 input drops the
+/// non-ASCII bytes); then every byte beyond ASCII is `\charNNN`: in a UTF-8
+/// file, one per UTF-8 byte. Other fonts get the bytes as they are, or
+/// converted to UTF-8 where the input encoding differs from the locale's.
+/// Unless `tex_text` (a special text, which is TeX code), LaTeX's special
+/// characters are quoted.
+pub fn put_string(out: &mut Out, ctx: &mut Ctx, raw: &[u8], font: i32, tex_text: bool) {
     if is_symbol_font(font) {
-        let bytes = to_latin1(string);
+        let bytes: Cow<[u8]> = match conv_textisutf8(ctx, raw) {
+            Some(at) => {
+                let mut v = raw.get(..at).unwrap_or_default().to_vec();
+                v.extend(convertutf8tolatin1(raw.get(at..).unwrap_or_default()));
+                Cow::Owned(v)
+            }
+            None => Cow::Borrowed(raw),
+        };
         if tex_text {
             put_characters(out, &bytes);
         } else {
             put_quoted_characters(out, &bytes);
         }
-    } else if tex_text {
-        out.puts(string);
     } else {
-        put_quoted_string(out, string);
+        let bytes = conv_textstring(ctx, raw);
+        if tex_text {
+            out.bytes(&bytes);
+        } else {
+            put_quoted_bytes(out, &bytes);
+        }
     }
 }
 
-/// [`put_string`] for a text whose input bytes are `bytes` (`string`
-/// decoded): fonts other than Symbol and Zapf Dingbats get the bytes, as
-/// fig2dev writes them without a text conversion.
-pub fn put_string_bytes(out: &mut Out, string: &str, bytes: &[u8], font: i32, tex_text: bool) {
-    if is_symbol_font(font) {
-        put_string(out, string, font, tex_text);
-    } else if tex_text {
-        out.bytes(bytes);
-    } else {
-        put_quoted_bytes(out, bytes);
-    }
-}
-
-/// Writes `string` with the characters ` #$%&<>\^_{|}~` quoted for LaTeX.
-fn put_quoted_string(out: &mut Out, string: &str) {
-    put_quoted_bytes(out, string.as_bytes());
-}
-
-/// [`put_quoted_string`] on bytes in any ASCII-compatible encoding: the
-/// quoted characters are ASCII, other bytes are written as they are.
+/// Writes the bytes with the characters ` #$%&<>\\^_{|}~` quoted for LaTeX
+/// (`put_quoted_string`); the quoted characters are ASCII, other bytes are
+/// written as they are.
 fn put_quoted_bytes(out: &mut Out, string: &[u8]) {
     for &b in string {
         let quoted = match b {
@@ -378,17 +370,6 @@ fn put_characters(out: &mut Out, s: &[u8]) {
     }
 }
 
-/// `convertutf8tolatin1` from Unicode: characters beyond Latin-1 are
-/// silently omitted.
-pub fn to_latin1(s: &str) -> Vec<u8> {
-    s.chars().filter_map(|c| u8::try_from(u32::from(c)).ok()).collect()
-}
-
-/// `conv_non_ascii`: the byte offset of the first character beyond ASCII.
-pub fn conv_non_ascii(s: &str) -> Option<usize> {
-    s.bytes().position(|b| !b.is_ascii())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -396,7 +377,7 @@ mod tests {
 
     fn put(s: &str, font: i32, tex: bool) -> String {
         let mut out = Out::new();
-        put_string(&mut out, s, font, tex);
+        put_string(&mut out, &mut Ctx::default(), s.as_bytes(), font, tex);
         String::from_utf8(out.buf).unwrap()
     }
 
@@ -434,11 +415,9 @@ mod tests {
 
     #[test]
     fn symbol_font_latin1() {
-        assert_eq!(put("a±bα", 32, false), "a\\char177b");
-        assert_eq!(put("±1", 34, true), "\\char177 1");
-        assert_eq!(to_latin1("ÿĀ"), vec![0xFF]);
-        assert_eq!(conv_non_ascii("abü"), Some(2));
-        assert_eq!(conv_non_ascii("ab"), None);
+        // In a UTF-8 file fig2dev writes one \\charNNN per UTF-8 byte.
+        assert_eq!(put("a±b", 32, false), "a\\char194\\char177b");
+        assert_eq!(put("±1", 34, true), "\\char194\\char177 1");
     }
 
     #[test]

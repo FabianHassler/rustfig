@@ -634,14 +634,8 @@ impl Driver for Tpic {
             .copied()
             .unwrap_or(TEX_FONT_SIZES_INT[0]);
         let y = (convy(self.inch(t.base_y)) + f64::from(pts) * HT_OFFSET) as f32;
-        fprintf!(
-            out,
-            "{}\" at {:.3},{:.3} {}\n",
-            t.cstring,
-            self.inch(t.base_x),
-            f64::from(y),
-            tpos
-        );
+        out.bytes(&t.raw);
+        fprintf!(out, "\" at {:.3},{:.3} {}\n", self.inch(t.base_x), f64::from(y), tpos);
         Ok(())
     }
 
