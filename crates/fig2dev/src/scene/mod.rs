@@ -138,6 +138,9 @@ pub struct TextPrim {
     pub postscript: bool,
     pub text: String,
     pub color: Rgba,
+    /// The figure's special-text flag (`^`, `_` and `$` mean something to
+    /// the SVG writer).
+    pub special: bool,
 }
 
 impl TextPrim {

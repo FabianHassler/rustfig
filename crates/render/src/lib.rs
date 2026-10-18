@@ -119,6 +119,7 @@ fn object_prims(doc: &Document, o: &Object, opts: &SceneOptions, out: &mut Vec<P
                 postscript: t.is_postscript(),
                 text,
                 color: color(doc, t.color),
+                special: t.is_special(),
             }));
         }
         ObjectKind::Polyline(p) if p.kind == PolyKind::Picture => {

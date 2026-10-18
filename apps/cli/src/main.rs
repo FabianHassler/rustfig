@@ -430,6 +430,6 @@ mod tests {
         assert!(png.contains(&"smoothing".to_string()), "{png:?}");
         assert!(!png.contains(&"quality".to_string()), "-q is JPEG only: {png:?}");
         assert!(shown("jpeg").contains(&"quality".to_string()));
-        assert!(!shown("svg").contains(&"paper_size".to_string()), "planned");
+        assert!(shown("svg").contains(&"paper_size".to_string()), "svg -z is ported");
     }
 }

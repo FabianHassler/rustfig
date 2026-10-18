@@ -174,7 +174,7 @@ pub const OPTIONS: &[OptionSpec] = &[
     opt_for("page_mode", 'P', Flag, PS, &["pdf"], "generate a full page instead of a figure-sized one", Ported),
     opt_for("pdf_version", 'Y', Number, PS, &["pdf", "pspdf"], "set the PDF minor version (1-7)", Ported),
     // SVG (gensvg_option).
-    opt("paper_size", 'z', Text, &["svg"], "set the paper size (Letter, A4, ...)", Planned("B9")),
+    opt("paper_size", 'z', Text, &["svg"], "set the paper size (Letter, A4, ...)", Ported),
     // Bitmaps (genbitmaps_option): -q and -t are accepted by every bitmap
     // language, with a warning outside JPEG and GIF.
     opt("smoothing", 'S', Number, BITMAPS, "specify smoothing factor (1 = none, 2 = some, 4 = more)", Ported),

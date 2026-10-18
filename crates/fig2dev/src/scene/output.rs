@@ -153,6 +153,8 @@ pub struct Page<'a> {
     pub opaque: bool,
     /// `-b`, the border in whole points (the user's bounding box adds it).
     pub border_pt: i32,
+    /// SVG `-z`: the paper's width and height in points.
+    pub svg_paper: Option<(i32, i32)>,
 }
 
 /// The preview's canvas: the bounding box's size plus one point each way,
@@ -207,7 +209,7 @@ pub fn write_with_notes(
     let (bounds, scale, bg) = (&page.bounds, page.scale, page.background);
     let mut notes = Vec::new();
     let bytes = match format {
-        ExportFormat::Svg => svg::to_svg(scene, bounds, scale, bg).into_bytes(),
+        ExportFormat::Svg => svg::to_svg_page(scene, bounds, scale, bg, page.svg_paper).into_bytes(),
         ExportFormat::Eps => {
             let mut text = match &page.layout {
                 Some(l) => eps::to_ps(

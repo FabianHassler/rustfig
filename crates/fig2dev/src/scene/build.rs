@@ -536,6 +536,7 @@ impl Builder {
             postscript,
             text: t.cstring.clone(),
             color: Rgba::opaque(color(ctx, t.color)),
+            special: t.special_text(),
         }));
     }
 

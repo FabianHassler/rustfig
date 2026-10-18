@@ -11,7 +11,7 @@
 | RustFig native (`.rustfig`, JSON) | ✅ | ✅ | versioned envelope |
 | PDF | — | ✅ | vector with true curves (ellipses, arcs, rounded boxes), standard-14 fonts, images with alpha; `-P`/`-z` page mode (paper, orientation, centring, multi-page), `-Y` version |
 | PostScript (`ps`) | — | ✅ | DSC pages as genps: `-z` paper table, `-l`/`-p`, `-c`/`-e`, `-x`/`-y`, `-M`/`-o`/`-O`; geometry equals fig2dev's under ghostscript |
-| SVG | — | ✅ | vector with true curves, patterns via clip paths, embedded PNG images |
+| SVG | — | ✅ | vector with true curves, patterns via clip paths, embedded PNG images; Symbol/ZapfDingbats text as Unicode, special-text `tspan`s and `-z` paper size as gensvg (pass 17) |
 | EPS | — | ✅ | Level 2, true curves, ISO-Latin-1 fonts |
 | PNG | — | ✅ | any resolution up to 20 000 px edge |
 | EPS and PDF together (xfig's pspdf) | — | ✅ | two files, NAME.eps and NAME.pdf |

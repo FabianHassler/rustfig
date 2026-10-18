@@ -247,6 +247,12 @@ impl Driver for SceneDriver {
         if self.page_option(ctx, c, arg) {
             return Ok(());
         }
+        if c == 'z' && matches!(self.format, ExportFormat::Svg) {
+            // gensvg_option: the paper is looked up when the figure starts.
+            ctx.papersize = arg.unwrap_or("").to_string();
+            ctx.paperspec = true;
+            return Ok(());
+        }
         // genbitmaps_option's `-t`: a specification too long for
         // `gif_transparent[8]` is an error (the argument still has its
         // leading space here, as in fig2dev's, so `#rrggbb` is too long);
@@ -322,6 +328,10 @@ impl Driver for SceneDriver {
     fn start(&mut self, ctx: &mut Ctx, _out: &mut Out, objects: &Compound) -> Result<(), String> {
         if self.is_ps_family() {
             // genps_start looks the paper up for every PostScript language.
+            paper(&ctx.papersize)?;
+        }
+        if matches!(self.format, ExportFormat::Svg) && ctx.paperspec {
+            // gensvg_start: "Unknown paper size" ends fig2dev.
             paper(&ctx.papersize)?;
         }
         let o = self.parse()?;
@@ -487,6 +497,12 @@ impl Driver for SceneDriver {
                 Err(e) => ctx.warn(format!("fig2dev: {e}")),
             }
         }
+        let svg_paper = if matches!(self.format, ExportFormat::Svg) && ctx.paperspec {
+            let (_, w, h) = paper(&ctx.papersize)?;
+            Some(if ctx.landscape { (h, w) } else { (w, h) })
+        } else {
+            None
+        };
         let (bytes, notes) = write_with_notes(
             &scene,
             self.format,
@@ -504,6 +520,7 @@ impl Driver for SceneDriver {
                 transparent,
                 layout,
                 pdf_minor: self.pdf_minor,
+                svg_paper,
                 magnification: if ctx.metric { ctx.mag * 76.2 / 80.0 } else { ctx.mag },
                 bbox: o
                     .bbox

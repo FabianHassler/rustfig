@@ -192,7 +192,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `dev/genpstricks.c` | 2880 | PSTricks | `fig2dev/drivers/pstricks` | ported: byte-identical to fig2dev 3.2.9a on the fixtures, the suite's figures and 285 of the 300-figure sample (the rest: `\ooo`-escaped bytes in texts); `-p` converts bitmaps to EPS in-process (decoder + EPS writer), no `bmeps` | B3 |
 | `dev/genepic.c`, `gentpic.c`, `genpic.c`, `picfonts.h`, `picpsfonts.h` | 3.5 k | epic/eepic/eepicemu, tpic, pic | `fig2dev/drivers/{epic,tpic,pic}` | ported | B9 |
 | `dev/genlatex.c`, `genpictex.c`, `gentextyl.c` | 2.9 k | LaTeX picture, PiCTeX, TeXtyl | `fig2dev/drivers/{latex,pictex,textyl}` | ported | B9 |
-| `dev/gensvg.c` | 1331 | SVG | `crates/fig2dev/src/scene/svg.rs`; `figbase::geom::stroke_width` ported from `linewidth_adj` | own; reference-tested (A8) | review |
+| `dev/gensvg.c` | 1331 | SVG | `crates/fig2dev/src/scene/svg.rs` (text: Symbol/Dingbats tables, special-text tspans, `-z` ported, audit pass 17); `figbase::geom::stroke_width` ported from `linewidth_adj` | own markup; text ported; reference-tested (A8) | review |
 | `dev/genbitmaps.c` | 593 | GIF, JPEG, PNG, PPM, TIFF, XBM, XPM via ghostscript | `drivers/scene.rs` + `crates/fig2dev/src/scene/{bitmaps,raster}.rs` (own rasteriser, no ghostscript) | ported; PNG opaque white, XBM Floyd-Steinberg, PCX 1-4 planes/8-bit/24-bit, `-S`/`-t` messages as C; no `sld` | B6 |
 | `dev/psprolog.h` | 936 | PostScript prolog, the 22 fill patterns, the Xfig-UTF8-H CMap | `crates/fig2dev/src/scene/pattern.rs` (`FILL_PAT01`…`22` ported), `scene/ps_cmap.rs` (`XFIG_CMAP1-3`) | patterns and CMap ported | — |
 | `dev/genbox.c` | 78 | LaTeX box | `crates/fig2dev/src/scene/latex_box.rs` | ported | — |
