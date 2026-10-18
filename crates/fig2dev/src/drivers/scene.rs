@@ -19,8 +19,10 @@ use crate::languages::{language, Language};
 use crate::object::{Arc, Compound, Ellipse, Line, Spline, Text};
 use crate::options::{option_spec, parse_options, Arg, DriverOptions, OptionValue, Support};
 use crate::scene::build::{file_scale, transparent_color, Builder, TextOptions};
+use crate::scene::output::write_with_notes;
 use crate::scene::page::paper;
-use crate::scene::{write, ExportFormat, Page, PageInput, PageLayout, Rgba};
+use crate::scene::preview::{PreviewKind, UserBox};
+use crate::scene::{ExportFormat, Page, PageInput, PageLayout, Rgba};
 use crate::{Ctx, Driver, Out};
 use figbase::color::x_color;
 use figbase::geom::{Point, Rect};
@@ -241,16 +243,54 @@ impl Driver for SceneDriver {
         if self.page_option(ctx, c, arg) {
             return Ok(());
         }
+        // genbitmaps_option's `-t`: a specification too long for
+        // `gif_transparent[8]` is an error (the argument still has its
+        // leading space here, as in fig2dev's, so `#rrggbb` is too long);
+        // the message shows the (empty) buffer.
+        let too_long_transparent = || {
+            if c == 't' && arg.is_some_and(|a| a.len() >= 8) {
+                Err(
+                    "fig2dev: invalid color specification \n         specify gif transparent color in the form #rrggbb"
+                        .to_string(),
+                )
+            } else {
+                Ok(())
+            }
+        };
         if !spec.effective_for(lang) {
             // fig2dev accepts it here and does nothing; genbitmaps says so
             // for -q and -t.
             match c {
                 'q' => ctx.warn("-q option only allowed for jpeg quality; ignored"),
-                't' => ctx.warn("-t option only allowed for GIF transparent color; ignored"),
+                't' => {
+                    ctx.warn("-t option only allowed for GIF transparent color; ignored");
+                    too_long_transparent()?;
+                }
                 _ => {}
             }
             return Ok(());
         }
+        too_long_transparent()?;
+        // `sscanf(optarg, "%d", ...)` for -b, -q and -S: the leading
+        // integer; without one the setting stays as it was. -S must be
+        // 0, 1, 2 or 4.
+        let int_arg;
+        let arg = if (matches!(c, 'b' | 'q' | 'S') && BITMAP_LANGUAGES.contains(&lang))
+            || (c == 'b' && self.is_ps_family())
+        {
+            let a = arg.unwrap_or("");
+            let (v, used) = strtol(a);
+            if used == 0 {
+                return Ok(());
+            }
+            if c == 'S' && ![0, 1, 2, 4].contains(&v) {
+                return Err(format!("fig2dev: bad value for -S option: {a}, should be 1, 2 or 4"));
+            }
+            int_arg = v.to_string();
+            Some(int_arg.as_str())
+        } else {
+            arg
+        };
         if let Support::Planned(task) = spec.support {
             ctx.warn(format!(
                 "fig2dev: option -{c} is not implemented in RustFig yet (plan task {task}); ignored"
@@ -281,6 +321,10 @@ impl Driver for SceneDriver {
             paper(&ctx.papersize)?;
         }
         let o = self.parse()?;
+        // genps_start: one kind of preview.
+        if o.ascii_preview && o.tiff_preview.is_some() {
+            return Err("Only one type of preview allowed: -A or -T/-C".into());
+        }
         // Without -F, fig2dev reads font sizes as 1/80 inch (`PSFONTMAG`);
         // with it, metric figures keep their text's point size.
         let unit_fix = if ctx.metric { 80.0 / 76.2 } else { 1.0 };
@@ -292,6 +336,7 @@ impl Driver for SceneDriver {
             },
             font: o.font,
             skip_special: matches!(self.lang, "pstex" | "pdftex"),
+            eps_preview: self.format.is_bitmap(),
         };
         self.builder = Some(Builder::new(ctx, text));
         self.options = Some(o);
@@ -377,7 +422,8 @@ impl Driver for SceneDriver {
             } else {
                 None
             };
-        let bytes = write(
+        let eps_page = layout.is_none();
+        let (bytes, notes) = write_with_notes(
             &scene,
             self.format,
             &Page {
@@ -395,9 +441,33 @@ impl Driver for SceneDriver {
                 layout,
                 pdf_minor: self.pdf_minor,
                 magnification: if ctx.metric { ctx.mag * 76.2 / 80.0 } else { ctx.mag },
+                bbox: o
+                    .bbox
+                    .as_deref()
+                    .filter(|_| eps_page && self.is_ps_family() && !matches!(self.lang, "pdf" | "pdftex"))
+                    .map(|spec| UserBox {
+                        spec,
+                        absolute: o.bbox_absolute,
+                    }),
+                preview: if matches!(self.format, ExportFormat::Eps) && self.is_ps_family() {
+                    match (o.ascii_preview, o.tiff_preview) {
+                        (true, _) => Some(PreviewKind::Ascii),
+                        (_, Some(false)) => Some(PreviewKind::TiffMono),
+                        (_, Some(true)) => Some(PreviewKind::TiffColor),
+                        _ => None,
+                    }
+                } else {
+                    None
+                },
+                metric: ctx.metric,
+                opaque: true,
+                border_pt: o.border as i32,
             },
         )
         .map_err(|e| format!("fig2dev: {e}"))?;
+        for n in notes {
+            ctx.warn(n);
+        }
         out.bytes(&bytes);
         Ok(0)
     }

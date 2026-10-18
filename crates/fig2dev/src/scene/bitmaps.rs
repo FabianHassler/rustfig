@@ -28,8 +28,8 @@ pub struct Encoding {
     /// Pixels of exactly this colour are transparent in a GIF
     /// (`ppmtogif -transparent=`).
     pub transparent: Option<Rgb>,
-    /// Resolution recorded in the file where the format has a field for it
-    /// (PCX).
+    /// The output resolution in pixels per inch (no format records it now:
+    /// netpbm's PCX header holds the image size instead).
     pub dpi: f64,
 }
 
@@ -69,7 +69,7 @@ pub fn encode(format: ExportFormat, pm: &Pixmap, enc: &Encoding) -> Result<Vec<u
             Ok(out.into_inner())
         }
         ExportFormat::Ppm => Ok(ppm(&rgb, w, h)),
-        ExportFormat::Pcx => pcx(&rgb, w, h, enc.dpi),
+        ExportFormat::Pcx => pcx(&rgb, w, h),
         ExportFormat::Xbm => Ok(xbm(&rgb, w, h).into_bytes()),
         ExportFormat::Xpm => Ok(xpm(&rgb, w, h).into_bytes()),
         other => Err(format!(
@@ -115,41 +115,99 @@ fn ppm(rgb: &[u8], w: u32, h: u32) -> Vec<u8> {
     out
 }
 
-/// PCX version 5, 24 bits in three planes, run-length encoded (as
-/// `ppmtopcx` writes images of more than 256 colours).
-fn pcx(rgb: &[u8], w: u32, h: u32, dpi: f64) -> Result<Vec<u8>, String> {
+/// PCX version 5 as `ppmtopcx` writes it: images of at most 16 colours in
+/// bit planes with the palette in the header (one to four planes), at most
+/// 256 colours as 8-bit indices with the palette after the data, else 24
+/// bits in three planes. Scan lines are not padded to an even length, and
+/// the header's resolution is the image size, as in netpbm. (The palette is
+/// in order of first use; netpbm's follows its hash table.)
+fn pcx(rgb: &[u8], w: u32, h: u32) -> Result<Vec<u8>, String> {
     let (Ok(w16), Ok(h16)) = (u16::try_from(w), u16::try_from(h)) else {
         return Err("PCX images are at most 65535 pixels wide and high".into());
     };
     if w16 == 0 || h16 == 0 {
         return Err("image would be empty".into());
     }
-    // Scan lines hold an even number of bytes.
-    let bytes_per_line = w16.checked_add(w16 % 2).ok_or("PCX image too wide")?;
-    let res = if dpi.is_finite() {
-        dpi.round().clamp(1.0, 65535.0) as u16
+    // The distinct colours, in order of first use, up to 257.
+    let mut index: HashMap<[u8; 3], u8> = HashMap::new();
+    let mut palette: Vec<[u8; 3]> = Vec::new();
+    let mut many = false;
+    for &c in rgb.as_chunks::<3>().0 {
+        if index.contains_key(&c) {
+            continue;
+        }
+        if palette.len() == 256 {
+            many = true;
+            break;
+        }
+        index.insert(c, palette.len() as u8);
+        palette.push(c);
+    }
+    let w = w as usize;
+    let (bits, planes, bpl) = if many {
+        (8u8, 3u8, w)
+    } else if palette.len() > 16 {
+        (8, 1, w)
     } else {
-        80
+        // 1 or 2 colours: one plane; 3 or 4: two; up to 16: four at most.
+        let planes = match palette.len() {
+            0..=2 => 1,
+            3..=4 => 2,
+            5..=8 => 3,
+            _ => 4,
+        };
+        (1, planes, w.div_ceil(8))
     };
-    let mut out = Vec::with_capacity(128 + rgb.len());
-    out.extend_from_slice(&[0x0a, 5, 1, 8]); // manufacturer, version, RLE, bits per pixel
-    for v in [0, 0, w16 - 1, h16 - 1, res, res] {
+    let bpl16 = u16::try_from(bpl).map_err(|_| "PCX image too wide")?;
+    let mut out = Vec::with_capacity(128 + rgb.len() / 2);
+    out.extend_from_slice(&[0x0a, 5, 1, bits]); // manufacturer, version, RLE, bits per pixel
+    for v in [0, 0, w16 - 1, h16 - 1, w16, h16] {
         out.extend_from_slice(&v.to_le_bytes());
     }
-    out.extend_from_slice(&[0; 48]); // 16-colour palette, unused
+    let mut header_palette = [0u8; 48];
+    if bits == 1 {
+        for (dst, c) in header_palette.as_chunks_mut::<3>().0.iter_mut().zip(&palette) {
+            dst.copy_from_slice(c);
+        }
+    }
+    out.extend_from_slice(&header_palette);
     out.push(0); // reserved
-    out.push(3); // planes
-    out.extend_from_slice(&bytes_per_line.to_le_bytes());
+    out.push(planes);
+    out.extend_from_slice(&bpl16.to_le_bytes());
     out.extend_from_slice(&1u16.to_le_bytes()); // colour palette
     out.extend_from_slice(&[0; 58]); // screen size and filler
-    let (w, bpl) = (w as usize, usize::from(bytes_per_line));
     let mut plane = Vec::with_capacity(bpl);
-    for row in rgb.chunks_exact(w * 3) {
-        for c in 0..3 {
-            plane.clear();
-            plane.extend(row.iter().skip(c).step_by(3));
-            plane.resize(bpl, 0);
-            pcx_rle(&plane, &mut out);
+    for row in rgb.chunks_exact((w * 3).max(1)) {
+        if many {
+            for c in 0..3 {
+                plane.clear();
+                plane.extend(row.iter().skip(c).step_by(3));
+                pcx_rle(&plane, &mut out);
+            }
+        } else {
+            let idx = |p: &[u8; 3]| -> u8 { index.get(p).copied().unwrap_or(0) };
+            if bits == 8 {
+                plane.clear();
+                plane.extend(row.as_chunks::<3>().0.iter().map(idx));
+                pcx_rle(&plane, &mut out);
+            } else {
+                for bit in 0..planes {
+                    plane.clear();
+                    plane.resize(bpl, 0);
+                    for (x, p) in row.as_chunks::<3>().0.iter().enumerate() {
+                        if let Some(byte) = plane.get_mut(x / 8) {
+                            *byte |= ((idx(p) >> bit) & 1) << (7 - x % 8);
+                        }
+                    }
+                    pcx_rle(&plane, &mut out);
+                }
+            }
+        }
+    }
+    if bits == 8 && planes == 1 {
+        out.push(0x0c);
+        for i in 0..256 {
+            out.extend_from_slice(palette.get(i).unwrap_or(&[0, 0, 0]));
         }
     }
     Ok(out)
@@ -172,24 +230,69 @@ fn pcx_rle(line: &[u8], out: &mut Vec<u8>) {
     }
 }
 
-/// Whether a pixel is black in a 1-bit image: darker than mid-grey
-/// (luminance as fig2dev's `rgb2luminance`).
-fn is_dark(p: &[u8; 3]) -> bool {
-    let [r, g, b] = p.map(f64::from);
-    0.3 * r + 0.59 * g + 0.11 * b < 127.5
+/// `ppmtopgm`'s grey (`(77 r + 150 g + 29 b + 128) / 256`).
+fn gray(p: &[u8; 3]) -> i64 {
+    let [r, g, b] = p.map(i64::from);
+    (77 * r + 150 * g + 29 * b + 128) >> 8
 }
 
-/// X11 bitmap: black pixels are set bits, least significant bit first.
+/// `pgmtopbm`'s Floyd-Steinberg dithering (its default): the rows run
+/// alternately left to right and back, a pixel is white when the grey plus
+/// the error carried to it reaches the middle, and the error goes 7/16 to
+/// the next pixel, 3/16, 5/16 and 1/16 to the row below. (netpbm starts
+/// from random errors, so its pixels in grey areas differ from run to run;
+/// here the errors start at zero.) Black is true.
+fn dither(rgb: &[u8], w: usize, h: usize) -> Vec<bool> {
+    const SCALE: i64 = 1024;
+    let mut black = vec![false; w * h];
+    let mut this = vec![0i64; w + 2];
+    let mut next = vec![0i64; w + 2];
+    for (y, row) in rgb.chunks_exact((w * 3).max(1)).take(h).enumerate() {
+        let forward = y % 2 == 0;
+        next.iter_mut().for_each(|e| *e = 0);
+        for step in 0..w {
+            let x = if forward { step } else { w - 1 - step };
+            let g = row.get(x * 3..x * 3 + 3).and_then(|p| <&[u8; 3]>::try_from(p).ok());
+            let g = g.map_or(255, gray);
+            let mut sum = g * SCALE / 255 + this.get(x + 1).copied().unwrap_or(0);
+            if sum >= SCALE / 2 {
+                sum -= SCALE;
+            } else if let Some(b) = black.get_mut(y * w + x) {
+                *b = true;
+            }
+            // `sum` is the error now.
+            let (ahead, behind) = if forward { (x + 2, x) } else { (x, x + 2) };
+            if let Some(e) = this.get_mut(ahead) {
+                *e += sum * 7 / 16;
+            }
+            if let Some(e) = next.get_mut(behind) {
+                *e += sum * 3 / 16;
+            }
+            if let Some(e) = next.get_mut(x + 1) {
+                *e += sum * 5 / 16;
+            }
+            if let Some(e) = next.get_mut(ahead) {
+                *e += sum / 16;
+            }
+        }
+        std::mem::swap(&mut this, &mut next);
+    }
+    black
+}
+
+/// X11 bitmap as `pbmtoxbm` writes it after `ppmtopgm | pgmtopbm`: black
+/// (after dithering) pixels are set bits, least significant bit first.
 fn xbm(rgb: &[u8], w: u32, h: u32) -> String {
     use std::fmt::Write as _;
     let mut s = format!("#define noname_width {w}\n#define noname_height {h}\nstatic char noname_bits[] = {{\n");
-    let w = w as usize;
+    let (wu, hu) = (w as usize, h as usize);
+    let black = dither(rgb, wu, hu);
     let mut n = 0usize;
-    for row in rgb.chunks_exact(w * 3) {
-        for byte in row.chunks(8 * 3) {
+    for row in black.chunks(wu.max(1)) {
+        for byte in row.chunks(8) {
             let mut v = 0u8;
-            for (bit, p) in byte.as_chunks::<3>().0.iter().enumerate() {
-                if is_dark(p) {
+            for (bit, &b) in byte.iter().enumerate() {
+                if b {
                     v |= 1 << bit;
                 }
             }
@@ -386,16 +489,21 @@ mod tests {
         assert!(p[0] > 200 && p[1] < 60 && p[2] < 60, "{p:?}");
     }
 
-    /// A minimal PCX reader for the 24-bit files written above.
+    /// A minimal PCX reader for the files written above.
     fn read_pcx(b: &[u8]) -> image::RgbImage {
-        assert_eq!(&b[..4], &[0x0a, 5, 1, 8]);
         let u16_at = |i: usize| u16::from_le_bytes([b[i], b[i + 1]]);
+        let bits = b[3];
         let (w, h) = (u32::from(u16_at(8)) + 1, u32::from(u16_at(10)) + 1);
-        assert_eq!(b[65], 3);
+        let planes = usize::from(b[65]);
         let bpl = usize::from(u16_at(66));
         let mut data = Vec::new();
         let mut i = 128;
-        while i < b.len() {
+        let end = if bits == 8 && planes == 1 {
+            b.len() - 769
+        } else {
+            b.len()
+        };
+        while i < end {
             if b[i] >= 0xc0 {
                 data.extend(std::iter::repeat_n(b[i + 1], usize::from(b[i] & 0x3f)));
                 i += 2;
@@ -404,18 +512,49 @@ mod tests {
                 i += 1;
             }
         }
-        assert_eq!(data.len(), bpl * 3 * h as usize);
+        assert_eq!(data.len(), bpl * planes * h as usize);
         image::RgbImage::from_fn(w, h, |x, y| {
-            let row = &data[y as usize * bpl * 3..];
-            image::Rgb([0, 1, 2].map(|c| row[c * bpl + x as usize]))
+            let row = &data[y as usize * bpl * planes..];
+            let x = x as usize;
+            match (bits, planes) {
+                (8, 3) => image::Rgb([0, 1, 2].map(|c| row[c * bpl + x])),
+                (8, 1) => {
+                    let k = usize::from(row[x]);
+                    image::Rgb([b[end + 1 + 3 * k], b[end + 2 + 3 * k], b[end + 3 + 3 * k]])
+                }
+                _ => {
+                    let k: usize = (0..planes)
+                        .map(|p| usize::from(row[p * bpl + x / 8] >> (7 - x % 8) & 1) << p)
+                        .sum();
+                    image::Rgb([b[16 + 3 * k], b[17 + 3 * k], b[18 + 3 * k]])
+                }
+            }
         })
     }
 
     #[test]
     fn pcx_round_trips() {
+        // Three colours: two bit planes, the palette in the header.
         let b = enc(ExportFormat::Pcx);
-        assert!(b.len() > 128);
+        assert_eq!(&b[..4], &[0x0a, 5, 1, 1]);
+        assert_eq!(b[65], 2);
         check_exact(&read_pcx(&b));
+        // 20 colours: 8 bits with the palette behind the data; many more:
+        // 24 bits in three planes. Lines are not padded.
+        let mut pm = Pixmap::new(37, 20).unwrap();
+        for (i, p) in pm.data_mut().as_chunks_mut::<4>().0.iter_mut().enumerate() {
+            p.copy_from_slice(&[(i % 20) as u8, 1, 2, 255]);
+        }
+        let b = encode(ExportFormat::Pcx, &pm, &Encoding::default()).unwrap();
+        assert_eq!((b[3], b[65], u16::from_le_bytes([b[66], b[67]])), (8, 1, 37));
+        assert_eq!(b[b.len() - 769], 0x0c);
+        assert_eq!(read_pcx(&b).get_pixel(5, 0).0, [5, 1, 2]);
+        for (i, p) in pm.data_mut().as_chunks_mut::<4>().0.iter_mut().enumerate() {
+            p.copy_from_slice(&[(i % 256) as u8, (i / 3) as u8, 2, 255]);
+        }
+        let b = encode(ExportFormat::Pcx, &pm, &Encoding::default()).unwrap();
+        assert_eq!((b[3], b[65]), (8, 3));
+        assert_eq!(read_pcx(&b).get_pixel(5, 0).0, [5, 1, 2]);
         // Long runs and bytes from 0xC0 up are encoded as runs.
         let mut out = Vec::new();
         pcx_rle(&[0xc5, 1, 1, 1], &mut out);
@@ -425,22 +564,51 @@ mod tests {
         assert_eq!(out, vec![0xc0 | 63, 7, 0xc7, 7]);
     }
 
-    #[test]
-    fn xbm_sets_the_dark_pixels() {
-        let s = String::from_utf8(enc(ExportFormat::Xbm)).unwrap();
-        assert!(s.starts_with("#define noname_width 11\n#define noname_height 5\nstatic char noname_bits[] = {\n"));
-        let bytes: Vec<u8> = s
-            .split(|c: char| c == ',' || c.is_whitespace() || c == '}')
+    fn xbm_bytes(pm: &Pixmap) -> Vec<u8> {
+        let s = String::from_utf8(encode(ExportFormat::Xbm, pm, &Encoding::default()).unwrap()).unwrap();
+        s.split(|c: char| c == ',' || c.is_whitespace() || c == '}')
             .filter_map(|t| t.strip_prefix("0x"))
             .map(|t| u8::from_str_radix(t, 16).unwrap())
-            .collect();
-        // Two bytes per row; red's luminance (0.3 · 255) is dark, so the
-        // red columns are set, as is the blue pixel.
+            .collect()
+    }
+
+    #[test]
+    fn xbm_sets_the_black_pixels() {
+        let s = String::from_utf8(enc(ExportFormat::Xbm)).unwrap();
+        assert!(s.starts_with("#define noname_width 11\n#define noname_height 5\nstatic char noname_bits[] = {\n"));
+        // Black and white only: no dithering. Two bytes per row, the dark
+        // (ppmtopgm grey 77 of red, so dithered to about a third) pixels
+        // aside, the blue pixel (grey 29) is black.
+        let bytes = xbm_bytes(&sample());
         assert_eq!(bytes.len(), 10);
-        for (y, row) in bytes.chunks(2).enumerate() {
-            let blue = if y == 2 { 1 } else { 0 };
-            assert_eq!(row, [0x0f, blue], "row {y}");
-        }
+        let mut black = Pixmap::new(11, 2).unwrap();
+        black.fill(Color::WHITE);
+        let paint = Paint {
+            shader: tiny_skia::Shader::SolidColor(Color::BLACK),
+            ..Paint::default()
+        };
+        black.fill_rect(
+            SkRect::from_xywh(0.0, 0.0, 4.0, 1.0).unwrap(),
+            &paint,
+            Transform::identity(),
+            None,
+        );
+        assert_eq!(xbm_bytes(&black), vec![0x0f, 0, 0, 0]);
+    }
+
+    #[test]
+    fn xbm_dithers_grey_like_pgmtopbm() {
+        // Mid grey (128 of 255) comes out about half black.
+        let mut pm = Pixmap::new(64, 8).unwrap();
+        pm.fill(Color::from_rgba8(128, 128, 128, 255));
+        let ones: u32 = xbm_bytes(&pm).iter().map(|b| b.count_ones()).sum();
+        assert!((200..=312).contains(&ones), "{ones} of 512");
+        // Light grey is mostly white, dark grey mostly black.
+        pm.fill(Color::from_rgba8(230, 230, 230, 255));
+        let light: u32 = xbm_bytes(&pm).iter().map(|b| b.count_ones()).sum();
+        pm.fill(Color::from_rgba8(30, 30, 30, 255));
+        let dark: u32 = xbm_bytes(&pm).iter().map(|b| b.count_ones()).sum();
+        assert!(light < 100 && dark > 400, "{light} {dark}");
     }
 
     #[test]

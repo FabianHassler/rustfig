@@ -1,6 +1,6 @@
 # Milestones
 
-**Status:** 2026-10-18. Current focus: **M4 (exports)**: phase W, phase A, B1, B2, B3, B6, B10, B12 and G1 done; every fig2dev language is ported except `sld` (B9); next the audit's hardening passes (B11, octal-escape text bytes first) and page layout and previews (B4a/B4b). Task-level plan: [plan.md](plan.md).
+**Status:** 2026-10-18. Current focus: **M4 (exports)**: phase W, phase A, B1, B2, B3, B6, B10, B12 and G1 done; every fig2dev language is ported except `sld` (B9); next the audit's hardening passes (B11, octal-escape text bytes first) page layout and previews (B4a/B4b) done 2026-10-18. Task-level plan: [plan.md](plan.md).
 
 | Milestone | Content | State |
 |-----------|---------|-------|

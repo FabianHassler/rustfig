@@ -20,6 +20,7 @@ pub mod output;
 pub mod page;
 pub mod pattern;
 pub mod pdf;
+pub mod preview;
 pub mod raster;
 pub mod svg;
 mod textcache;

@@ -71,15 +71,22 @@ fn colours(img: &RgbImage) -> usize {
         .len()
 }
 
-/// A minimal reader for RustFig's 24-bit PCX files.
+/// A minimal reader for RustFig's PCX files (bit planes with the palette in
+/// the header, 8 bits with the palette behind the data, or 24 bits).
 fn read_pcx(b: &[u8]) -> RgbImage {
-    assert_eq!(&b[..4], &[0x0a, 5, 1, 8]);
     let u16_at = |i: usize| u16::from_le_bytes([b[i], b[i + 1]]);
+    let bits = b[3];
     let (w, h) = (u32::from(u16_at(8)) + 1, u32::from(u16_at(10)) + 1);
+    let planes = usize::from(b[65]);
     let bpl = usize::from(u16_at(66));
+    let end = if bits == 8 && planes == 1 {
+        b.len() - 769
+    } else {
+        b.len()
+    };
     let mut data = Vec::new();
     let mut i = 128;
-    while i < b.len() {
+    while i < end {
         if b[i] >= 0xc0 {
             data.extend(std::iter::repeat_n(b[i + 1], usize::from(b[i] & 0x3f)));
             i += 2;
@@ -89,8 +96,21 @@ fn read_pcx(b: &[u8]) -> RgbImage {
         }
     }
     RgbImage::from_fn(w, h, |x, y| {
-        let row = &data[y as usize * bpl * 3..];
-        image::Rgb([0, 1, 2].map(|c| row[c * bpl + x as usize]))
+        let row = &data[y as usize * bpl * planes..];
+        let x = x as usize;
+        match (bits, planes) {
+            (8, 3) => image::Rgb([0, 1, 2].map(|c| row[c * bpl + x])),
+            (8, 1) => {
+                let k = usize::from(row[x]);
+                image::Rgb([b[end + 1 + 3 * k], b[end + 2 + 3 * k], b[end + 3 + 3 * k]])
+            }
+            _ => {
+                let k: usize = (0..planes)
+                    .map(|p| usize::from(row[p * bpl + x / 8] >> (7 - x % 8) & 1) << p)
+                    .sum();
+                image::Rgb([b[16 + 3 * k], b[17 + 3 * k], b[18 + 3 * k]])
+            }
+        }
     })
 }
 
@@ -166,14 +186,24 @@ fn every_bitmap_carries_the_pngs_pixels() {
             let jpeg = on_white(&decode(&get("jpeg"), ImageFormat::Jpeg));
             let d = mean_diff(&jpeg, &png);
             assert!(d < 8.0, "jpeg {ctx}: mean difference {d}");
-            // XBM: the PNG thresholded.
+            // XBM: ppmtopgm and pgmtopbm's Floyd-Steinberg dithering: black
+            // and white stay, greys come out as the matching share of black.
             let xbm = read_xbm(&get("xbm"));
             assert_eq!(xbm.dimensions(), png.dimensions(), "xbm {ctx}");
+            let (mut want, mut got) = (0.0, 0.0);
             for (a, b) in xbm.pixels().zip(png.pixels()) {
-                let [r, g, bl] = b.0.map(f64::from);
-                let dark = 0.3 * r + 0.59 * g + 0.11 * bl < 127.5;
-                assert_eq!(a.0[0] == 0, dark, "xbm {ctx}");
+                let [r, g, bl] = b.0.map(i64::from);
+                let gray = (77 * r + 150 * g + 29 * bl + 128) >> 8;
+                if gray == 0 {
+                    assert_eq!(a.0[0], 0, "xbm {ctx}");
+                } else if gray == 255 {
+                    assert_eq!(a.0[0], 255, "xbm {ctx}");
+                }
+                want += 1.0 - gray as f64 / 255.0;
+                got += if a.0[0] == 0 { 1.0 } else { 0.0 };
             }
+            let n = (xbm.width() * xbm.height()) as f64;
+            assert!(((want - got) / n).abs() < 0.01, "xbm {ctx}: {want} {got}");
         }
     }
 }

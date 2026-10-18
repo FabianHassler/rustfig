@@ -41,6 +41,9 @@ pub struct TextOptions {
     /// Leave special (LaTeX) texts out, as the graphics half of `pstex`
     /// and `pdftex` does.
     pub skip_special: bool,
+    /// Draw an EPS picture's preview image (the bitmap languages) instead
+    /// of leaving the PostScript to the EPS writer.
+    pub eps_preview: bool,
 }
 
 impl Default for TextOptions {
@@ -49,6 +52,7 @@ impl Default for TextOptions {
             scale: 1.0,
             font: None,
             skip_special: false,
+            eps_preview: false,
         }
     }
 }
@@ -323,7 +327,19 @@ impl Builder {
         if !file.is_empty() {
             match load_picture(ctx, file) {
                 Ok(LoadedPicture::Raster(img)) => image = Some(Shared::new(img)),
-                Ok(LoadedPicture::Eps { llx, lly, urx, ury, ps }) => {
+                Ok(LoadedPicture::Eps {
+                    llx,
+                    lly,
+                    urx,
+                    ury,
+                    ps,
+                    preview,
+                }) => {
+                    // The bitmap languages draw the file's preview, where
+                    // fig2dev has ghostscript run the PostScript.
+                    if self.text.eps_preview {
+                        image = preview.map(Shared::new);
+                    }
                     self.embedded_eps.insert(
                         file.to_string(),
                         EmbeddedEps {

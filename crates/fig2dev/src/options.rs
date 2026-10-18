@@ -155,12 +155,12 @@ pub const OPTIONS: &[OptionSpec] = &[
     opt("correct_font_size", 'F', Flag, PS_AND_BITMAPS, "use correct font sizes (points instead of 1/80 inch); xfig sets it, so it is on unless false", Ported),
     opt("title", 'n', Text, PS, "set title part of PostScript output to name", Ported),
     opt("font", 'f', Font, PS, "set default font", Ported),
-    opt_for("ascii_preview", 'A', Flag, PS, PREVIEW, "add ASCII preview (produce EPSI file; not for PDF output)", Planned("B4")),
-    opt_for("color_tiff_preview", 'C', Text, PS, PREVIEW, "add color TIFF preview (for Microsoft apps; not for PDF output)", Planned("B4")),
-    opt_for("tiff_preview", 'T', Flag, PS, PREVIEW, "add monochrome TIFF preview (for Microsoft apps; not for PDF)", Planned("B4")),
+    opt_for("ascii_preview", 'A', Flag, PS, PREVIEW, "add ASCII preview (produce EPSI file; not for PDF output)", Ported),
+    opt_for("color_tiff_preview", 'C', Text, PS, PREVIEW, "add color TIFF preview (for Microsoft apps; not for PDF output)", Ported),
+    opt_for("tiff_preview", 'T', Flag, PS, PREVIEW, "add monochrome TIFF preview (for Microsoft apps; not for PDF)", Ported),
     opt("composite_fonts", 'j', Flag, PS, "enable composite fonts for japanese or korean text", Planned("B8")),
-    opt_for("bbox", 'B', Text, PS, EPS, "force width, height and origin in absolute coordinates (\"Wx [Wy X0 Y0]\")", Planned("B4")),
-    opt_for("relative_bbox", 'R', Text, PS, EPS, "force width, height and origin in relative coordinates (\"Wx [Wy X0 Y0]\")", Planned("B4")),
+    opt_for("bbox", 'B', Text, PS, EPS, "force width, height and origin in absolute coordinates (\"Wx [Wy X0 Y0]\")", Ported),
+    opt_for("relative_bbox", 'R', Text, PS, EPS, "force width, height and origin in relative coordinates (\"Wx [Wy X0 Y0]\")", Ported),
     opt_for("center", 'c', Flag, PS, PAGE, "center figure on page", Ported),
     opt_for("edge", 'e', Flag, PS, PAGE, "put figure at left page edge", Ported),
     opt_for("landscape", 'l', Text, PS, PAGE, "force landscape mode (takes an argument it ignores)", Ported),
@@ -329,6 +329,16 @@ pub struct DriverOptions {
     pub quality: Option<u8>,
     /// The GIF transparent colour (`-t`); without it, the figure's own.
     pub transparent: Option<Rgb>,
+    /// `-A`: an ASCII (EPSI) preview.
+    pub ascii_preview: bool,
+    /// `-T` (false) or `-C` (true, the last of them): a TIFF preview in a
+    /// DOS EPS header, monochrome or colour.
+    pub tiff_preview: Option<bool>,
+    /// `-B` or `-R` (the last of them): the bounding box text, and whether
+    /// `-B` was given at any time (it makes the coordinates absolute, and
+    /// `-R` after it does not undo that, as in `genps.c`).
+    pub bbox: Option<String>,
+    pub bbox_absolute: bool,
 }
 
 impl Default for DriverOptions {
@@ -348,6 +358,10 @@ impl Default for DriverOptions {
             smoothing: None,
             quality: None,
             transparent: None,
+            ascii_preview: false,
+            tiff_preview: None,
+            bbox: None,
+            bbox_absolute: false,
         }
     }
 }
@@ -446,6 +460,18 @@ pub fn parse_options(lang: &Language, items: &[(&str, OptionValue<'_>)]) -> Resu
             "transparent" => {
                 let t = text()?;
                 o.transparent = Some(x_color(t).ok_or_else(|| format!("can't parse color {t:?}"))?);
+            }
+            "ascii_preview" => o.ascii_preview = flag()?,
+            "tiff_preview" => {
+                if flag()? {
+                    o.tiff_preview = Some(false);
+                }
+            }
+            // `-C` takes an argument it ignores.
+            "color_tiff_preview" => o.tiff_preview = Some(true),
+            "bbox" | "relative_bbox" => {
+                o.bbox = Some(text()?.to_string());
+                o.bbox_absolute |= key == "bbox";
             }
             // The page options are the driver's (`SceneDriver::page_option`).
             "center" | "edge" | "landscape" | "portrait" | "multi_page" | "single_page" | "overlap" | "x_offset"
@@ -549,7 +575,7 @@ mod tests {
         let err = |lang: &str, k: &str, v: OptionValue<'_>| parse(lang, &[(k, v)]).unwrap_err();
         assert!(err("eps", "bogus", OptionValue::Bool(true)).contains("no option"));
         assert!(err("svg", "border", OptionValue::Number(1.0)).contains("no option"));
-        assert!(err("eps", "bbox", OptionValue::Text("1 1")).contains("B4"));
+        assert!(err("eps", "bbox", OptionValue::Bool(true)).contains("text"));
         assert!(err("eps", "border", OptionValue::Number(-1.0)).contains("number"));
         assert!(err("eps", "border", OptionValue::Number(f64::NAN)).contains("number"));
         assert!(err("eps", "grayscale", OptionValue::Number(1.0)).contains("true or false"));

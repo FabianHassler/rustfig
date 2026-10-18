@@ -81,9 +81,10 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/fig2dev/src/scene/eps.rs: fig2dev/dev/genps.c, fig2dev/dev/readeps.c
 - crates/fig2dev/src/scene/latex_box.rs: fig2dev/dev/genbox.c
 - crates/fig2dev/src/scene/mod.rs: fig2dev/dev/genps.c, fig2dev/colors.c
-- crates/fig2dev/src/scene/output.rs: fig2dev/dev/genbitmaps.c
+- crates/fig2dev/src/scene/output.rs: fig2dev/dev/genbitmaps.c, fig2dev/dev/genps.c
 - crates/fig2dev/src/scene/page.rs: fig2dev/dev/genps.c, fig2dev/fig2dev.c
 - crates/fig2dev/src/scene/pattern.rs: fig2dev/dev/psprolog.h
+- crates/fig2dev/src/scene/preview.rs: fig2dev/dev/genps.c
 - crates/fig2dev/src/trans_spline.rs: fig2dev/trans_spline.c, fig2dev/trans_spline.h
 - crates/fig2dev/src/util/creationdate.rs: fig2dev/creationdate.c
 - crates/fig2dev/src/util/iso2tex.rs: fig2dev/iso2tex.c

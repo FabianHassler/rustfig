@@ -736,6 +736,115 @@ pub fn eps_section(data: &[u8]) -> &[u8] {
     data
 }
 
+/// The preview of an EPS file, if it has one, as RGBA pixels: the TIFF of
+/// a DOS EPS header, else EPSI's `%%BeginPreview` data (hex, `depth` bits,
+/// larger values darker as fig2dev's `-A` and ghostscript's `ps2epsi`
+/// write it). `w` x `h` is the bounding box; a larger preview is cut to
+/// it at its lower left corner (fig2dev's previews are one pixel larger
+/// each way).
+pub fn eps_preview(data: &[u8], w: i32, h: i32) -> Option<RasterImage> {
+    let (w, h) = (u32::try_from(w).ok()?, u32::try_from(h).ok()?);
+    if w == 0 || h == 0 || w > MAX_SIDE || h > MAX_SIDE {
+        return None;
+    }
+    let img = if data.starts_with(b"\xc5\xd0\xd3\xc6") {
+        let word = |i: usize| -> Option<usize> {
+            let b: [u8; 4] = data.get(i..i + 4)?.try_into().ok()?;
+            usize::try_from(u32::from_le_bytes(b)).ok()
+        };
+        let (start, len) = (word(20)?, word(24)?);
+        let tif = data.get(start..start.checked_add(len)?.min(data.len()))?;
+        let mut reader = image::ImageReader::with_format(Cursor::new(tif), image::ImageFormat::Tiff);
+        let mut limits = image::Limits::default();
+        limits.max_image_width = Some(MAX_SIDE);
+        limits.max_image_height = Some(MAX_SIDE);
+        limits.max_alloc = Some(MAX_PIXELS * 8);
+        reader.limits(limits);
+        let rgba = reader.decode().ok()?.to_rgba8();
+        let (iw, ih) = rgba.dimensions();
+        if u64::from(iw) * u64::from(ih) > MAX_PIXELS {
+            return None;
+        }
+        RasterImage {
+            width: iw,
+            height: ih,
+            rgba: rgba.into_raw(),
+        }
+    } else {
+        epsi_preview(eps_section(data))?
+    };
+    // Cut to the bounding box from the lower left.
+    if img.width < w || img.height < h || (img.width == w && img.height == h) {
+        return Some(img);
+    }
+    let (x0, y0) = (0usize, (img.height - h) as usize);
+    let mut rgba = Vec::with_capacity(w as usize * h as usize * 4);
+    for row in y0..y0 + h as usize {
+        let from = (row * img.width as usize + x0) * 4;
+        rgba.extend_from_slice(img.rgba.get(from..from + w as usize * 4)?);
+    }
+    Some(RasterImage {
+        width: w,
+        height: h,
+        rgba,
+    })
+}
+
+/// EPSI's `%%BeginPreview: width height depth lines` and its hex lines.
+fn epsi_preview(ps: &[u8]) -> Option<RasterImage> {
+    let mut lines = ps.split(|&b| b == b'\n');
+    let head = lines.find_map(|l| l.strip_prefix(b"%%BeginPreview:"))?;
+    let head = String::from_utf8_lossy(head);
+    let v: Vec<u32> = head.split_whitespace().take(4).map_while(|t| t.parse().ok()).collect();
+    let &[w, h, depth, _] = v.as_slice() else {
+        return None;
+    };
+    if w == 0 || h == 0 || w > MAX_SIDE || h > MAX_SIDE || !matches!(depth, 1 | 2 | 4 | 8) {
+        return None;
+    }
+    let mut bytes = Vec::new();
+    let mut half: Option<u8> = None;
+    for line in lines {
+        if line.starts_with(b"%%EndPreview") {
+            break;
+        }
+        let Some(rest) = line.strip_prefix(b"%") else {
+            break;
+        };
+        for &c in rest {
+            let Some(d) = (c as char).to_digit(16) else {
+                continue;
+            };
+            match half.take() {
+                Some(hi) => bytes.push(hi << 4 | d as u8),
+                None => half = Some(d as u8),
+            }
+        }
+        if bytes.len() > (MAX_PIXELS as usize) {
+            return None;
+        }
+    }
+    let row_bytes = (w as usize * depth as usize).div_ceil(8);
+    let max = (1u32 << depth) - 1;
+    let mut rgba = Vec::with_capacity(w as usize * h as usize * 4);
+    for y in 0..h as usize {
+        let row = bytes.get(y * row_bytes..(y + 1) * row_bytes)?;
+        for x in 0..w as usize {
+            let bit = x * depth as usize;
+            let byte = u32::from(*row.get(bit / 8)?);
+            let v = (byte >> (8 - depth as usize - bit % 8)) & max;
+            // 1 = black at depth 1; larger values are darker.
+            let g = (255 - 255 * v / max) as u8;
+            rgba.extend_from_slice(&[g, g, g, 255]);
+        }
+    }
+    Some(RasterImage {
+        width: w,
+        height: h,
+        rgba,
+    })
+}
+
 /// The first `n` numbers in `s` (as `sscanf("%lf %lf …")`).
 fn numbers(s: &str, n: usize) -> Option<Vec<f64>> {
     let v: Vec<f64> = s
@@ -1131,6 +1240,11 @@ pub enum LoadedPicture {
         urx: i32,
         ury: i32,
         ps: Vec<u8>,
+        /// The preview the file carries (a TIFF in a DOS EPS header, or
+        /// EPSI's `%%BeginPreview`), cut to the bounding box. The bitmap
+        /// languages draw it where fig2dev has ghostscript run the
+        /// PostScript.
+        preview: Option<RasterImage>,
     },
     /// A PDF file: fig2dev converts it with external programs; RustFig
     /// shows a placeholder.
@@ -1163,6 +1277,7 @@ pub fn load_picture(ctx: &Ctx, name: &str) -> Result<LoadedPicture, String> {
             urx: llx.saturating_add(pic.bit_size.x),
             ury: lly.saturating_add(pic.bit_size.y),
             ps: eps_section(&stream.data).to_vec(),
+            preview: eps_preview(&stream.data, pic.bit_size.x, pic.bit_size.y),
         }),
         _ => pic_to_raster(&pic).map(LoadedPicture::Raster),
     }

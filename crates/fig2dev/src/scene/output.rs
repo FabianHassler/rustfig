@@ -5,6 +5,7 @@
 // Ported from fig2dev dev/genbitmaps.c (bitmap size and smoothing) and
 // dev/genps.c (PostScript pages) (xfig licence, see LICENSE-xfig).
 
+use super::preview::{self, PreviewKind, UserBox};
 use super::{bitmaps, eps, latex_box, pattern, pdf, raster, svg, Rgba, Scene};
 use figbase::color::Rgb;
 use figbase::geom::Rect;
@@ -141,27 +142,127 @@ pub struct Page<'a> {
     pub pdf_minor: u8,
     /// The figure's magnification, for PostScript's `%%Magnification`.
     pub magnification: f64,
+    /// EPS: the user's bounding box (`-B`, `-R`).
+    pub bbox: Option<UserBox<'a>>,
+    /// EPS and PostScript: a preview (`-A`, `-T`, `-C`).
+    pub preview: Option<PreviewKind>,
+    /// A metric figure (the user's bounding box is in centimetres).
+    pub metric: bool,
+    /// PNG: composite over white and write no alpha channel (fig2dev's
+    /// PNG comes from ghostscript's opaque image).
+    pub opaque: bool,
+    /// `-b`, the border in whole points (the user's bounding box adds it).
+    pub border_pt: i32,
+}
+
+/// The preview's canvas: the bounding box's size plus one point each way,
+/// with the figure at the page's lower left corner (or, for a page, where
+/// the layout puts it).
+fn preview_canvas(
+    scene: &Scene,
+    page: &Page<'_>,
+    bbox: [i32; 4],
+    fig_pt: (f64, f64),
+    at: (f64, f64),
+) -> Result<preview::Canvas, String> {
+    let scale = page.scale;
+    let pt = 72.0 / 1200.0 * scale;
+    let (cw, ch) = raster::checked_size(
+        f64::from(bbox[2]) - f64::from(bbox[0]) + 1.0,
+        f64::from(bbox[3]) - f64::from(bbox[1]) + 1.0,
+    )?;
+    let (fw, fh) = raster::checked_size(fig_pt.0.ceil(), fig_pt.1.ceil())?;
+    let pm = raster::render_sized(
+        scene,
+        &page.bounds,
+        pt,
+        (fw, fh),
+        page.background,
+        pattern::PatternFrame::export(&page.bounds, scale),
+        raster::Smoothing::None,
+    )?;
+    let mut canvas = preview::Canvas::white(cw, ch).ok_or("preview too large")?;
+    canvas.paste(
+        &bitmaps::rgb_over_white(&pm),
+        fw,
+        fh,
+        at.0.round() as i64,
+        at.1.round() as i64,
+    );
+    Ok(canvas)
 }
 
 /// Write `scene` on `page` in `format`.
 pub fn write(scene: &Scene, format: ExportFormat, page: &Page<'_>) -> Result<Vec<u8>, String> {
+    write_with_notes(scene, format, page).map(|(bytes, _)| bytes)
+}
+
+/// [`write`], and the messages fig2dev prints on stderr while writing
+/// (a preview that could not be made).
+pub fn write_with_notes(
+    scene: &Scene,
+    format: ExportFormat,
+    page: &Page<'_>,
+) -> Result<(Vec<u8>, Vec<String>), String> {
     let (bounds, scale, bg) = (&page.bounds, page.scale, page.background);
-    Ok(match format {
+    let mut notes = Vec::new();
+    let bytes = match format {
         ExportFormat::Svg => svg::to_svg(scene, bounds, scale, bg).into_bytes(),
-        ExportFormat::Eps => match &page.layout {
-            Some(l) => eps::to_ps(
-                scene,
-                bounds,
-                scale,
-                bg,
-                page.title,
-                page.embedded_eps,
-                l,
-                page.magnification,
-            ),
-            None => eps::to_eps(scene, bounds, scale, bg, page.title, page.embedded_eps),
+        ExportFormat::Eps => {
+            let mut text = match &page.layout {
+                Some(l) => eps::to_ps(
+                    scene,
+                    bounds,
+                    scale,
+                    bg,
+                    page.title,
+                    page.embedded_eps,
+                    l,
+                    page.magnification,
+                ),
+                None => eps::to_eps(scene, bounds, scale, bg, page.title, page.embedded_eps),
+            };
+            let pt = 72.0 / 1200.0 * scale;
+            let fig_pt = (bounds.width() * pt, bounds.height() * pt);
+            // genps: the box of the figure, or of the paper.
+            let mut bbox = match &page.layout {
+                Some(l) => [0, 0, l.width, l.height],
+                None => [0, 0, fig_pt.0.ceil() as i32, fig_pt.1.ceil() as i32],
+            };
+            if let (Some(b), None) = (page.bbox, &page.layout) {
+                bbox = preview::user_bbox(
+                    b,
+                    page.metric,
+                    bounds.min.x * pt,
+                    bounds.min.y * pt,
+                    bounds.max.x * pt,
+                    bounds.max.y * pt,
+                    page.border_pt,
+                );
+                text = preview::set_bbox(&text, bbox);
+            }
+            match page.preview {
+                None => text.into_bytes(),
+                Some(kind) => {
+                    let at = page
+                        .layout
+                        .as_ref()
+                        .and_then(|l| l.pages.first())
+                        .copied()
+                        .unwrap_or((0.0, 0.0));
+                    match preview_canvas(scene, page, bbox, fig_pt, at)
+                        .and_then(|c| preview::attach(kind, &text, &c, page.layout.is_none()))
+                    {
+                        Ok(bytes) => bytes,
+                        Err(e) => {
+                            notes.push(e);
+                            notes.push("No preview will be produced".into());
+                            text.into_bytes()
+                        }
+                    }
+                }
+            }
         }
-        .into_bytes(),
         ExportFormat::Pdf => pdf::to_pdf_pages(
             scene,
             bounds,
@@ -205,7 +306,14 @@ pub fn write(scene: &Scene, format: ExportFormat, page: &Page<'_>) -> Result<Vec
                 pattern::PatternFrame::export(bounds, scale),
                 smoothing,
             )?;
-            if format == ExportFormat::Png {
+            if format == ExportFormat::Png && page.opaque {
+                let rgb = bitmaps::rgb_over_white(&pm);
+                let mut rgba = Vec::with_capacity(rgb.len() / 3 * 4);
+                for p in rgb.as_chunks::<3>().0 {
+                    rgba.extend_from_slice(&[p[0], p[1], p[2], 255]);
+                }
+                raster::encode_rgba_png(pm.width(), pm.height(), &rgba)?
+            } else if format == ExportFormat::Png {
                 raster::encode_png(&pm)?
             } else {
                 bitmaps::encode(
@@ -219,5 +327,6 @@ pub fn write(scene: &Scene, format: ExportFormat, page: &Page<'_>) -> Result<Vec
                 )?
             }
         }
-    })
+    };
+    Ok((bytes, notes))
 }

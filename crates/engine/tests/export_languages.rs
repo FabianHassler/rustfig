@@ -187,12 +187,12 @@ fn bad_options_are_refused() {
     let r = e
         .execute(
             "file.export_data",
-            &json!({"format": "eps", "options": {"ascii_preview": true}}),
+            &json!({"format": "eps", "options": {"composite_fonts": true}}),
         )
         .unwrap();
-    assert!(r["warnings"][0].as_str().unwrap().contains("B4"), "{r}");
+    assert!(r["warnings"][0].as_str().unwrap().contains("B8"), "{r}");
     assert!(err(&mut e, "svg", json!({"title": "x"})).contains("no option"));
-    assert!(err(&mut e, "eps", json!({"border": "wide"})).contains("number"));
+    assert!(err(&mut e, "eps", json!({"border": -5})).contains("number"));
     // fig2dev takes -m and -Z together; -Z sizes the figure.
     assert!(e
         .execute("file.export_data", &json!({"format": "eps", "options": [1]}))
@@ -216,12 +216,16 @@ fn formats_list_each_languages_options() {
         .map(|o| o["key"].as_str().unwrap())
         .collect();
     assert!(keys.contains(&"border") && keys.contains(&"depths") && keys.contains(&"bbox"));
-    let bbox = eps["options"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|o| o["key"] == "bbox")
-        .unwrap();
-    assert_eq!(bbox["available"], false);
-    assert_eq!(bbox["task"], "B4");
+    let opt = |key: &str| {
+        eps["options"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|o| o["key"] == key)
+            .unwrap()
+    };
+    // Ported with B4b; composite fonts wait for B8.
+    assert_eq!(opt("bbox")["available"], true);
+    assert_eq!(opt("composite_fonts")["available"], false);
+    assert_eq!(opt("composite_fonts")["task"], "B8");
 }

@@ -8,7 +8,7 @@
 | 2 | Web build: compiles locally (2026-10-14); still to do: the wasm check in CI, trunk packaging and browser open/save/download | Platforms | High | 24 |
 | 25 | Exports go through RustFig's Fig writer (B12), which drops arrows on pie-wedge arcs and refits arc centres from the rounded points instead of keeping the file's centre; fig2dev draws both from the file (`fig2dev_reference` arcs, 2 corpus bounding boxes). Saving loses them too | Export/File format | Medium | 3 |
 | 26 | Pictures in exports: a frame is stroked around every picture with a line thickness (fig2dev's genps strokes none) and transparent GIF pixels come out white (corpus: `Examples/pictures.fig`, `Flags/Africa/eritrea.fig`, fig2dev's `boxwimg.fig`) | Export | Medium | 3 |
-| 3 | PostScript output: page layout done 2026-10-18 (B4a); EPS previews (`-A`/`-T`/`-C`) and printing remain | Export/Printing | Medium | 20 |
+| 3 | PostScript output: page layout done 2026-10-18 (B4a); EPS previews (`-A`/`-T`/`-C`) and `-B`/`-R` done 2026-10-18 (B4b); printing remains | Export/Printing | Medium | 20 |
 | 4 | Library objects: browse a directory of .fig files and place them | Libraries | Medium | 40 |
 | 5 | Open compound (edit inside a compound without breaking it) | Editing | Medium | 16 |
 | 6 | Join/split lines, chop, tangent/normal, measure modes | Editing | Medium | 40 |
