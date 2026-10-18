@@ -1,6 +1,6 @@
 # Source map: xfig and fig2dev → RustFig
 
-**Status:** 2026-10-17 (B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
+**Status:** 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
 sources (`LICENSE-xfig`). Nothing has been ported line by line yet: every
 "own" row was written from the manual and the format description and must be
 checked against the C file named in it.
@@ -218,6 +218,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | 2026-10-15 | `fig2dev.c` command line ported as `apps/fig2dev` (B10). |
 | 2026-10-17 | B3: `genpict2e.c` ported (`drivers/pict2e.rs`); `genpstricks.c` on a row of its own. |
 | 2026-10-17 | B3: `genpstricks.c` ported (`drivers/pstricks.rs`). |
+| 2026-10-18 | B9: `genemf.c`, `gentk.c`, `genptk.c`, `tkpattern.c` ported. |
 | 2026-10-16 | B12: paths after the move (geometry, fonts, colours → `crates/figbase`; EPS/PDF/SVG/bitmap writers, rasteriser, patterns → `crates/fig2dev/src/scene/`; options, languages → `crates/fig2dev/src`; `to_model` → `crates/engine/src/fig2dev/`). |
 | 2026-10-16 | `genpstex.c` ported (B2); `readeps.c` and genps's picture branch in `render/eps` (now `crates/fig2dev/src/scene/eps.rs`); `read.c` the only reader for every fig2dev language and for Fig 1.3–2.1 in the app (G1). |
 | 2026-10-15 | `fig2dev.c` options and `colors.c` ported (B0). |

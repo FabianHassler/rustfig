@@ -1,6 +1,6 @@
 # Milestones
 
-**Status:** 2026-10-17. Current focus: **M4 (exports)**: phase W, phase A, B2, B6, B10, B12 and G1 done (every export through fig2dev's `convert`); B9 (fig2dev's drivers) under way, then the audit's hardening passes (B11), page layout and previews (B4a/B4b), TikZ and PSTricks (B1, B3); pict2e done (B3). Task-level plan: [plan.md](plan.md).
+**Status:** 2026-10-18. Current focus: **M4 (exports)**: phase W, phase A, B1, B2, B3, B6, B10, B12 and G1 done; every fig2dev language is ported except `sld` (B9); next the audit's hardening passes (B11, octal-escape text bytes first) and page layout and previews (B4a/B4b). Task-level plan: [plan.md](plan.md).
 
 | Milestone | Content | State |
 |-----------|---------|-------|
@@ -8,7 +8,7 @@
 | M1 | Geometry (X-splines, arcs, arrows), model, Fig 3.x I/O, native format | done |
 | M2 | Renderer: screen, PNG, SVG, EPS, PDF; patterns; text | done |
 | M3 | Engine (commands, undo, tools), egui app, control channel, MCP, CLI | done |
-| M4 | Exports: LaTeX family, PostScript/print, more bitmaps | in progress (bitmaps, pstex/pdftex, pict2e, most fig2dev languages done) |
+| M4 | Exports: LaTeX family, PostScript/print, more bitmaps | in progress (every fig2dev language but `sld` done; page layout, previews, hardening left) |
 | M5 | Web build verified and packaged; browser file I/O | planned |
 | M6 | Libraries, open compound, remaining edit modes | planned |
 | M7 | Settings, rulers, colour editor, character map | planned |
@@ -25,3 +25,4 @@
 | 2026-10-16 | M4 in progress: B2 pstex/pdftex, G1 old Fig files, ported fig2dev languages exported from the app; B11 hardening added. |
 | 2026-10-16 | M4: B12 done, fig2dev a program of its own; every export through it. |
 | 2026-10-17 | M4: pict2e ported (B3). |
+| 2026-10-18 | M4: TikZ, PSTricks, EMF, Tk/Perl-Tk ported (B1, B3, B9); suite 79 pass. |

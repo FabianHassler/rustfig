@@ -1,6 +1,6 @@
 # Target-app parity assessment: RustFig vs xfig 3.2.9
 
-**Status:** 2026-10-17, overall **≈64 %** (G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
+**Status:** 2026-10-18, overall **≈65 %** (B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk; G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
 
 ## Methodology
 
@@ -23,7 +23,7 @@ the score.
 | Editing modes | 12 | 70 % | anchor point for flip/rotate (right button), array copy, align to canvas, figure comments from Edit mode, open compound (edit in place), join/split lines, chop, tangent/normal, angle/length/area measure modes, copy to library | 56 |
 | Attributes / indicator | 10 | 77 % | colour editor UI, Angle Geom (latex, manhattan, mountain), smart links, copy counts | 30 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
-| Export | 12 | 57 % | PostScript page layout and multi-page (B4a), EPSI/TIFF previews (B4b), TikZ (B1), PSTricks (B3), EMF and Tk/Perl-Tk (B9), PDF pictures and EPS pictures outside EPS output, the audit's hardening passes (B11), arrows on pie-wedge arcs and file arc centres lost on the way through the Fig writer (gap #25), picture frames and GIF transparency (gap #26) | 140 |
+| Export | 12 | 66 % | PostScript page layout and multi-page (B4a), EPSI/TIFF previews (B4b), `sld`, texts with `\ooo` octal escapes (raw bytes, B11 pass 5), PDF pictures and EPS pictures outside EPS output, the audit's hardening passes (B11), arrows on pie-wedge arcs and file arc centres lost on the way through the Fig writer (gap #25), picture frames and GIF transparency (gap #26) | 90 |
 | Text | 10 | 55 % | character map, LaTeX special-text export, exact PostScript font metrics, compose keys, spell check | 60 |
 | View & navigation | 8 | 96 % | zoom box (Ctrl+left), pan to origin with Ctrl+middle | 4 |
 | Undo | 4 | 100 % | — | 0 |
@@ -43,6 +43,7 @@ the score.
 - Export bounds as fig2dev's (`crates/fig2dev/src/bound.rs`, ported from `bound.c`): bounding boxes equal fig2dev's on 2,532 of 2,568 sample figures.
 - True curves in SVG, PDF and EPS: `crates/figbase/src/geom/curves.rs`, `SubPath::curve`; test `ellipses_export_as_curves`.
 - fig2dev's options: `crates/fig2dev/src/options.rs`, parsed by fig2dev's drivers; RustFig's settings become option letters in `crates/engine/src/cmd/file.rs` (`driver_args`, as xfig's `u_print.c`); tests `fig2dev_options_change_the_output`, `depth_options_select_objects_and_bounds`, `bad_options_are_refused` in `crates/engine/tests/export_languages.rs`; bounding boxes with `-b`, `-m`, `-Z`, `-D -K` checked equal to fig2dev's.
+- TikZ, PSTricks, pict2e, EMF, Tk/Perl-Tk (B1, B3, B9): `crates/fig2dev/src/drivers/{tikz,pstricks,pict2e,emf,tk}.rs`, `util/tkpattern.rs`; byte-identical to fig2dev 3.2.9a on the fixtures, the suite's figures and ~285 of 300 sample figures (rest: octal-escape texts); fig2dev's suite 79 pass / 9 fail / 1 skipped / 0 unported.
 - Bitmap languages (B6): `crates/fig2dev/src/scene/bitmaps.rs`; tests in `crates/engine/tests/export_bitmaps.rs`.
 - fig2dev port (B9): `crates/fig2dev` (reader, bounds, spline conversion, helpers); tests in `crates/fig2dev/tests/`.
 - One reader for every fig2dev language (`crates/fig2dev/src/read.rs`; `crates/engine/src/fig2dev/to_model.rs` for the app); old Fig 1.3–2.1 files open in the app through it (`crates/engine/src/fig2dev/mod.rs`, tests `crates/engine/tests/fig2dev_bridge.rs`); every ported language exports from the engine, the export dialog and `rustfig-cli`.
@@ -67,6 +68,7 @@ the score.
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-18 | ≈65 % | B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk ported (Export 57 → 66 %, 50 h less). |
 | 2026-10-17 | ≈64 % | B3: pict2e ported, byte-identical to fig2dev on 285 of 300 sample figures (Export 55 → 57 %, 14 h less). |
 | 2026-10-16 | ≈64 % | B12: fig2dev self-contained, every export through `convert` (Export stays 55 %: architecture, no new language). |
 | 2026-10-16 | ≈64 % | G1, B2, B9 audit passes: old Fig files read (File format 85 → 92 %); pstex/pdftex and every ported fig2dev language exported from the app (Export 40 → 55 %; hours up with the audit's B11). |

@@ -1,10 +1,10 @@
 # Known gaps (ranked work list)
 
-**Status:** 2026-10-17 (B2, G1, B12, pict2e (B3) landed; B11 added from the fig2dev audit). Ranked by user impact per hour. Pick work from the top.
+**Status:** 2026-10-18 (B2, G1, B12, pict2e, TikZ, PSTricks, EMF, Tk (B1, B3, B9) landed; B11 added from the fig2dev audit). Ranked by user impact per hour. Pick work from the top.
 
 | # | Gap | Area | Impact | Hours |
 |---|-----|------|--------|------:|
-| 1 | LaTeX exports: TikZ, PSTricks (special text passed through), ported from fig2dev (B1, B3; pstex/pdftex done, B2; pict2e done, B3) | Export | High: xfig's main audience writes LaTeX | 26 |
+| 1 | LaTeX exports closed: TikZ, PSTricks, pict2e, pstex/pdftex ported (B1, B2, B3); only texts with `\ooo` octal escapes differ (#27) | Export | High | 0 |
 | 2 | Web build: compiles locally (2026-10-14); still to do: the wasm check in CI, trunk packaging and browser open/save/download | Platforms | High | 24 |
 | 25 | Exports go through RustFig's Fig writer (B12), which drops arrows on pie-wedge arcs and refits arc centres from the rounded points instead of keeping the file's centre; fig2dev draws both from the file (`fig2dev_reference` arcs, 2 corpus bounding boxes). Saving loses them too | Export/File format | Medium | 3 |
 | 26 | Pictures in exports: a frame is stroked around every picture with a line thickness (fig2dev's genps strokes none) and transparent GIF pixels come out white (corpus: `Examples/pictures.fig`, `Flags/Africa/eritrea.fig`, fig2dev's `boxwimg.fig`) | Export | Medium | 3 |
@@ -23,7 +23,8 @@
 | 17 | Localization of UI strings | Localization | Low | 24 |
 | 18 | Spell check | Text | Low | 16 |
 | 19 | Accessibility (screen-reader labels for canvas objects) | Platforms | Low | 16 |
-| 21 | fig2dev's EMF and Tk/Perl-Tk drivers not ported yet (B9) | Export | Low | 26 |
+| 21 | closed: EMF, Tk/Perl-Tk ported (B9); the `sld` driver (slide output) is the one fig2dev language left unported | Export | Low | 4 |
+| 27 | Text bytes: texts with `\ooo` octal escapes come out as UTF-8 in the drivers (reader keeps raw bytes, B11 pass 5); about 15 of 300 sample figures differ from fig2dev in the TikZ, PSTricks, pict2e, EMF and Tk output | Export | Medium | 6 |
 | 24 | fig2dev port hardening: the audit's partial and missing functions outside the unported drivers (options and messages, text bytes, depth order, FMA in bounds, `-G` grid, EPS/PDF fonts and Unicode, SVG text, `readpics`, JPEG passthrough; B11) | Export | Medium | 66 |
 | 20 | Real PostScript font metrics when craft-fonts lacks a face (synthetic bold/italic today); the A10 corpus shows text widths as the main remaining difference from fig2dev | Text | Medium | 12 |
 
@@ -31,6 +32,7 @@
 
 | Date | Note |
 |------|------|
+| 2026-10-18 | #1 closed (TikZ, PSTricks), #21 shrank to `sld` (EMF, Tk/Perl-Tk ported); #27 added (octal-escape text bytes). |
 | 2026-10-17 | #1 shrank: pict2e ported (B3). |
 | 2026-10-16 | #25 added (B12: exports through the Fig writer expose its arc losses); #26 added (the corpus now exports pictures as the app does). |
 | 2026-10-16 | #13 closed (G1: the app reads Fig 1.3–2.1 through fig2dev's reader); #1 shrank (B2 pstex/pdftex), #21 shrank to EMF and Tk, #14 shrank (pictures in exports); #24 added from the fig2dev audit (B11). |

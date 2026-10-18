@@ -1,9 +1,10 @@
 # File format parity checklist
 
-**Status:** 2026-10-17 (G1: Fig 1.3–2.1; B2: pstex/pdftex; B3: pict2e; B1: tikz; B3: PSTricks; ported languages exported from the app; B12: every export through fig2dev).
+**Status:** 2026-10-18 (B9: EMF, Tk; G1: Fig 1.3–2.1; B2: pstex/pdftex; B3: pict2e; B1: tikz; B3: PSTricks; ported languages exported from the app; B12: every export through fig2dev).
 
 | Format | Read | Write | Notes |
 |---|---|---|---|
+| 2026-10-18 | EMF, Tk/Perl-Tk ported (B9); TikZ, PSTricks rows updated. |
 | Fig 3.2 | ✅ | ✅ | header without the centring line (as fig2dev); all object types, user colours, comments, pictures, resolution scaling, UTF-8 and Latin-1 text, octal escapes |
 | Fig 3.1, 3.0 | ✅ | — | old splines converted to X-splines (shape ±1) |
 | Fig 2.1 and older | ✅ | — | Fig 1.3–2.1 through fig2dev's ported reader (`engine/src/fig2dev/`, G1); the reader's repairs shown as warnings |
