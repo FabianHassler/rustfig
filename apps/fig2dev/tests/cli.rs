@@ -241,7 +241,7 @@ fn help_lists_only_effective_options() {
         "{epic}"
     );
 
-    let tk = help(&["-L", "tk", "-h"]);
+    let tk = help(&["-L", "sld", "-h"]);
     assert!(tk.contains("not available in RustFig's fig2dev yet"), "{tk}");
     assert!(!tk.contains("  -D "), "{tk}");
 

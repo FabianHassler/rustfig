@@ -199,11 +199,11 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `dev/gencgm.c`, `genibmgl.c`, `gendxf.c` | 3 k | CGM, HPGL (`ibmgl`), DXF | `fig2dev/drivers/{cgm,ibmgl,dxf}` | ported | B9 |
 | `dev/genmp.c`, `genmf.c`, `genge.c`, `genmap.c` | — | MetaPost, METAFONT, ge, HTML image maps | `crates/fig2dev/src/drivers/{mp,mf,ge,map}.rs` | ported | B9 |
 | `dev/genemf.c` | `crates/fig2dev/src/drivers/emf.rs` | EMF (all objects; texts as UTF-16 of the input bytes, PNG pictures as in C; CJK locale fonts via iconv not ported) | byte-identical to fig2dev on 285 of 300 sample figures, the rest octal-escape texts | ported | B9 |
-| `dev/gentk.c`, `genptk.c` | — | Tk, Perl-Tk | — | missing | B9 |
+| `dev/gentk.c`, `genptk.c` | 2.9 k | Tk, Perl-Tk (`-L tk`, `-L ptk`) | `crates/fig2dev/src/drivers/tk.rs` | ported (byte-identical to fig2dev on 284 / 285 of 300 sample figures, the rest octal-escape texts; stack garbage after a dash of length 0 not reproduced) | B9 |
 | `dev/gengbx.c` | 0.9 k | Gerber (`-L gbx`) | `crates/fig2dev/src/drivers/gbx.rs` | ported | B9 |
 | `dev/genshape.c` | 0.9 k | LaTeX shape macros (`-L shape`) | `crates/fig2dev/src/drivers/shape.rs` | ported | B9 |
 | `dev/encode.c` | 236 | ASCII85 and deflate streams for PostScript/PDF | `crates/fig2dev/src/scene/{eps,pdf}.rs` | own | review |
-| `dev/tkpattern.c` | 122 | Tk fill patterns | — | missing | B9 |
+| `dev/tkpattern.c` | 122 | Tk fill patterns | `crates/fig2dev/src/util/tkpattern.rs` | ported | B9 |
 | `dev/xtmpfile.c` | 150 | temporary files | — | n/a | — |
 | `dev/read*.c`, `readpics.c` | 3 k | pictures embedded in exports | `fig2dev/util/readpics` (`image` crate; EPS/PDF boxes, PCX, XBM, XPM, .gz/.Z) | ported | B9 |
 | `dev/psfonts.c`, `texfonts.c`, `setfigfont.c`, `textconvert.c` | 1 k | font names and LaTeX font selection for exports | `fig2dev/util/{psfonts,texfonts,setfigfont}` | ported | B9 |

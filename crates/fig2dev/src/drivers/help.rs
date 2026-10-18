@@ -347,6 +347,38 @@ const TEXTYL: DriverHelp = d(
     ],
 );
 
+// -l and -p take a dummy argument in fig2dev's help; -g is Tcl/Tk only, -w
+// Perl/Tk only.
+const TK: DriverHelp = d(
+    "Tcl/Tk (tk)",
+    &[
+        o('g', "color", "set background color"),
+        o('l', "dummyarg", "landscape mode (dummy argument required after \"-l\")"),
+        o('p', "dummyarg", "portrait mode (dummy argument required after \"-p\")"),
+        o('P', "", "generate canvas of full page size instead of figure bounds"),
+        o(
+            'z',
+            "papersize",
+            "set the papersize (see man pages for available sizes)",
+        ),
+    ],
+);
+
+const PTK: DriverHelp = d(
+    "Perl/Tk (ptk)",
+    &[
+        o('l', "dummyarg", "landscape mode (dummy argument required after \"-l\")"),
+        o('p', "dummyarg", "portrait mode (dummy argument required after \"-p\")"),
+        o('P', "", "generate canvas of full page size instead of figure bounds"),
+        o('w', "", "add wrapper to generate complete perl file"),
+        o(
+            'z',
+            "papersize",
+            "set the papersize (see man pages for available sizes)",
+        ),
+    ],
+);
+
 const TPIC: DriverHelp = d("TPIC", &[o('f', "font", "set default font")]);
 
 /// The help of language `lang`'s driver in this crate, or `None` when
@@ -369,6 +401,8 @@ pub fn help(lang: &str) -> Option<&'static DriverHelp> {
         "pict2e" => &PICT2E,
         "pictex" => &PICTEX,
         "pstricks" => &PSTRICKS,
+        "tk" => &TK,
+        "ptk" => &PTK,
         "pstex_t" | "pdftex_t" => &PSTEX_T,
         "shape" => &SHAPE,
         "textyl" => &TEXTYL,

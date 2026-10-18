@@ -18,3 +18,4 @@ pub mod psfonts;
 pub mod readpics;
 pub mod setfigfont;
 pub mod texfonts;
+pub mod tkpattern;

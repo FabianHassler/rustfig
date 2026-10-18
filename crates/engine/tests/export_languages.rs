@@ -72,7 +72,7 @@ fn latex_box_has_the_figures_size() {
 #[test]
 fn planned_and_unknown_languages_are_errors() {
     let mut e = drawing();
-    let err = e.execute("file.export_data", &json!({"format": "tk"})).unwrap_err();
+    let err = e.execute("file.export_data", &json!({"format": "sld"})).unwrap_err();
     assert!(err.message.contains("plan task B9"), "{}", err.message);
     for bad in [
         "",
@@ -107,9 +107,9 @@ fn files_pick_the_language_from_their_name() {
 
     let err = e.execute("file.export", &json!({"path": path("fig.tex")})).unwrap_err();
     assert!(err.message.contains("format"), "{}", err.message);
-    let err = e.execute("file.export", &json!({"path": path("fig.tk")})).unwrap_err();
+    let err = e.execute("file.export", &json!({"path": path("fig.sld")})).unwrap_err();
     assert!(err.message.contains("B9"), "{}", err.message);
-    assert!(!dir.join("fig.tk").exists());
+    assert!(!dir.join("fig.sld").exists());
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
