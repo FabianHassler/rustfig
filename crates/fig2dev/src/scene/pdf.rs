@@ -1,7 +1,7 @@
 //! PDF backend (pdf-writer). Text uses the standard 14 PDF fonts.
 
 use super::pattern::{coverage, PatternFrame};
-use super::{Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
+use super::{Fill, PageLayout, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
 use figbase::geom::{Point, Rect, Seg};
 use figbase::image::RasterImage;
 use figbase::style::{CapStyle, JoinStyle, Justify};
@@ -228,6 +228,22 @@ fn image(c: &mut Ctx, corners: &[Point; 4], img: &RasterImage, flipped: bool, im
 /// Render a scene as a one-page PDF covering `bounds` (Fig units) at `scale`.
 /// `title` becomes the document's `/Title` (fig2dev's `-n`).
 pub fn to_pdf(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>, title: Option<&str>) -> Vec<u8> {
+    to_pdf_pages(scene, bounds, scale, background, title, None, 5)
+}
+
+/// Like [`to_pdf`]; with a `layout` the figure goes on its pages (fig2dev's
+/// page mode) instead of one page of the figure's size. `minor` is the PDF
+/// version 1.`minor` (`-Y`).
+#[allow(clippy::too_many_arguments)]
+pub fn to_pdf_pages(
+    scene: &Scene,
+    bounds: &Rect,
+    scale: f64,
+    background: Option<Rgba>,
+    title: Option<&str>,
+    layout: Option<&PageLayout>,
+    minor: u8,
+) -> Vec<u8> {
     let b = if bounds.is_empty() {
         Rect::new(Point::ZERO, Point::new(1.0, 1.0))
     } else {
@@ -242,7 +258,7 @@ pub fn to_pdf(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>
         min_x: b.min.x,
         max_y: b.max.y,
     };
-    if let Some(bg) = background {
+    if let (Some(bg), None) = (background, layout) {
         c.fill_rgb(bg);
         c.c.rect(0.0, 0.0, f(w), f(h));
         c.c.fill_even_odd();
@@ -326,11 +342,25 @@ pub fn to_pdf(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>
         };
         image_ids.push((im.name.clone(), id, mask));
     }
+    // One page of the figure's size, or fig2dev's pages on the paper.
+    let figure_page = [(0.0, 0.0)];
+    let (page_w, page_h, places): (f64, f64, &[(f64, f64)]) = match layout {
+        Some(l) => (f64::from(l.width), f64::from(l.height), &l.pages),
+        None => (w, h, &figure_page),
+    };
+    let mut page_ids = vec![(page_id, content_id)];
+    for _ in 1..places.len() {
+        page_ids.push((Ref::new(next), Ref::new(next + 1)));
+        next += 2;
+    }
+    pdf.set_version(1, minor);
     pdf.catalog(catalog_id).pages(tree_id);
-    pdf.pages(tree_id).kids([page_id]).count(1);
-    {
+    pdf.pages(tree_id)
+        .kids(page_ids.iter().map(|p| p.0))
+        .count(i32::try_from(page_ids.len()).unwrap_or(i32::MAX));
+    for &(page_id, content_id) in &page_ids {
         let mut page = pdf.page(page_id);
-        page.media_box(PdfRect::new(0.0, 0.0, f(w), f(h)));
+        page.media_box(PdfRect::new(0.0, 0.0, f(page_w), f(page_h)));
         page.parent(tree_id);
         page.contents(content_id);
         let mut res = page.resources();
@@ -356,8 +386,29 @@ pub fn to_pdf(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>
             font.encoding_predefined(Name(b"WinAnsiEncoding"));
         }
     }
-    let content = c.c.finish();
-    pdf.stream(content_id, &content);
+    let body = c.c.finish();
+    for ((_, content_id), (i, &(tx, ty))) in page_ids.iter().zip(places.iter().enumerate()) {
+        if layout.is_none() {
+            pdf.stream(*content_id, &body);
+            continue;
+        }
+        // The paper: background on the first page, clipped to the page,
+        // the figure's corner at its place.
+        let mut content = String::new();
+        if let (0, Some(bg)) = (i, background) {
+            let (r, g, b) = (
+                f64::from(bg.r) / 255.0,
+                f64::from(bg.g) / 255.0,
+                f64::from(bg.b) / 255.0,
+            );
+            content.push_str(&format!("{r:.4} {g:.4} {b:.4} rg 0 0 {page_w} {page_h} re f\n"));
+        }
+        content.push_str(&format!("q 0 0 {page_w} {page_h} re W n 1 0 0 1 {tx:.3} {ty:.3} cm\n"));
+        let mut bytes = content.into_bytes();
+        bytes.extend_from_slice(&body);
+        bytes.extend_from_slice(b"\nQ\n");
+        pdf.stream(*content_id, &bytes);
+    }
     for (im, (_, id, mask)) in images.iter().zip(image_ids.iter()) {
         let data = miniz_oxide::deflate::compress_to_vec_zlib(&im.rgb, 6);
         let mut x = pdf.image_xobject(*id, &data);

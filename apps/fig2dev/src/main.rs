@@ -66,8 +66,6 @@ const DRIVERS: &[(&str, Option<&str>, Writer)] = &[
     ("pictex", None, Writer::Planned("B9")),
     ("png", None, Writer::Ported),
     ("ppm", None, Writer::Ported),
-    // PostScript pages: RustFig writes the figure as EPS-style PostScript
-    // until the page layout is ported (B4).
     ("ps", None, Writer::Ported),
     ("pstex", None, Writer::Ported),
     ("pstex_t", None, Writer::Planned("B2")),

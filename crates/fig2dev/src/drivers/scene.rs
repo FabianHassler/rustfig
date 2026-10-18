@@ -1,5 +1,5 @@
-//! The languages RustFig's own writers produce from the scene: EPS (and
-//! `ps` until the page layout is ported, plan B4a), PDF, SVG, the LaTeX box,
+//! The languages RustFig's own writers produce from the scene: EPS, PostScript
+//! pages (`ps`, and PDF in page mode), PDF, SVG, the LaTeX box,
 //! the graphics halves of `pstex` and `pdftex`, PNG and fig2dev's bitmap
 //! languages (`genbitmaps.c`, without ghostscript).
 //!
@@ -14,11 +14,13 @@
 // (special texts left to `pstex_t`) and fig2dev.c (`-b`, `-g`, `-N`) (xfig
 // licence, see LICENSE-xfig).
 
+use crate::gendev::strtol;
 use crate::languages::{language, Language};
 use crate::object::{Arc, Compound, Ellipse, Line, Spline, Text};
 use crate::options::{option_spec, parse_options, Arg, DriverOptions, OptionValue, Support};
 use crate::scene::build::{file_scale, transparent_color, Builder, TextOptions};
-use crate::scene::{write, ExportFormat, Page, Rgba};
+use crate::scene::page::paper;
+use crate::scene::{write, ExportFormat, Page, PageInput, PageLayout, Rgba};
 use crate::{Ctx, Driver, Out};
 use figbase::color::x_color;
 use figbase::geom::{Point, Rect};
@@ -36,8 +38,7 @@ const LANGUAGES: &[(&str, ExportFormat)] = &[
     ("pdftex", ExportFormat::Pdf),
     ("png", ExportFormat::Png),
     ("ppm", ExportFormat::Ppm),
-    // PostScript pages: written as EPS-style PostScript until the page
-    // layout is ported (B4a).
+    // PostScript pages (genps with the page layout).
     ("ps", ExportFormat::Eps),
     ("pstex", ExportFormat::Eps),
     ("svg", ExportFormat::Svg),
@@ -59,6 +60,12 @@ pub fn new(lang: &str) -> Option<Box<dyn Driver>> {
         options: None,
         builder: None,
         comments: Vec::new(),
+        // genps: `ps` makes pages; `eps` and `pdf` start as EPS (`-P` or
+        // `-z` make a PDF's pages).
+        epsflag: lang != "ps",
+        xoff: 0,
+        yoff: 0,
+        pdf_minor: 5,
     }))
 }
 
@@ -105,9 +112,74 @@ pub struct SceneDriver {
     builder: Option<Builder>,
     /// The whole-figure comments (the LaTeX box writes them).
     comments: Vec<String>,
+    /// genps' `epsflag`: the page options are ignored while it is set.
+    epsflag: bool,
+    xoff: i32,
+    yoff: i32,
+    /// The PDF version 1.n (`-Y`).
+    pdf_minor: u8,
 }
 
 impl SceneDriver {
+    /// Whether the PostScript languages (not the bitmaps) are written.
+    fn is_ps_family(&self) -> bool {
+        matches!(self.lang, "ps" | "eps" | "pdf" | "pstex" | "pdftex")
+    }
+
+    /// `gen_ps_eps_option` and `genpdf_option`'s page options; true if
+    /// `c` is one of them.
+    fn page_option(&mut self, ctx: &mut Ctx, c: char, arg: Option<&str>) -> bool {
+        if !self.is_ps_family() {
+            return false;
+        }
+        let pdf = matches!(self.lang, "pdf" | "pdftex");
+        let int = || arg.map_or(0, |a| strtol(a).0);
+        match c {
+            // -P and -z make PDF pages instead of an EPS figure.
+            'P' | 'z' if pdf => {
+                self.epsflag = false;
+                if c == 'z' {
+                    ctx.papersize = arg.unwrap_or("").to_string();
+                    ctx.paperspec = true;
+                }
+            }
+            'P' => {}
+            'Y' => {
+                if pdf {
+                    let v = int();
+                    self.pdf_minor = if (1..=7).contains(&v) { v as u8 } else { 5 };
+                }
+            }
+            'c' | 'e' | 'l' | 'p' | 'M' | 'o' | 'O' | 'x' | 'y' | 'z' => {
+                if !self.epsflag {
+                    match c {
+                        'c' | 'e' => {
+                            ctx.center = c == 'c';
+                            ctx.centerspec = true;
+                        }
+                        'l' | 'p' => {
+                            ctx.landscape = c == 'l';
+                            ctx.orientspec = true;
+                        }
+                        'M' | 'o' => {
+                            ctx.multi_page = c == 'M';
+                            ctx.multispec = true;
+                        }
+                        'O' => ctx.overlap = true,
+                        'x' => self.xoff = int(),
+                        'y' => self.yoff = int(),
+                        _ => {
+                            ctx.papersize = arg.unwrap_or("").to_string();
+                            ctx.paperspec = true;
+                        }
+                    }
+                }
+            }
+            _ => return false,
+        }
+        true
+    }
+
     fn language(&self) -> Result<&'static Language, String> {
         language(match options_lang(self.lang) {
             "ps" => "eps",
@@ -166,6 +238,9 @@ impl Driver for SceneDriver {
             }
             return Err(msg);
         };
+        if self.page_option(ctx, c, arg) {
+            return Ok(());
+        }
         if !spec.effective_for(lang) {
             // fig2dev accepts it here and does nothing; genbitmaps says so
             // for -q and -t.
@@ -201,10 +276,9 @@ impl Driver for SceneDriver {
     }
 
     fn start(&mut self, ctx: &mut Ctx, _out: &mut Out, objects: &Compound) -> Result<(), String> {
-        if self.lang == "ps" {
-            ctx.warn(
-                "fig2dev: PostScript page layout is not ported yet (plan task B4); writing the figure as EPS-style PostScript",
-            );
+        if self.is_ps_family() {
+            // genps_start looks the paper up for every PostScript language.
+            paper(&ctx.papersize)?;
         }
         let o = self.parse()?;
         // Without -F, fig2dev reads font sizes as 1/80 inch (`PSFONTMAG`);
@@ -282,11 +356,32 @@ impl Driver for SceneDriver {
             bg = bg.map(Rgba::luminance_gray);
         }
         let transparent = o.transparent.or_else(|| transparent_color(ctx));
+        let bounds = raw.expand(border);
+        // PostScript pages, and PDF in page mode.
+        let layout =
+            if self.is_ps_family() && !self.epsflag && matches!(self.format, ExportFormat::Eps | ExportFormat::Pdf) {
+                let pt = 72.0 / 1200.0 * scale;
+                Some(PageLayout::compute(&PageInput {
+                    papersize: &ctx.papersize,
+                    landscape: ctx.landscape,
+                    center: ctx.center,
+                    multi_page: ctx.multi_page,
+                    overlap: ctx.overlap,
+                    xoff: self.xoff,
+                    yoff: self.yoff,
+                    fllx: bounds.min.x * pt,
+                    flly: bounds.min.y * pt,
+                    furx: bounds.max.x * pt,
+                    fury: bounds.max.y * pt,
+                })?)
+            } else {
+                None
+            };
         let bytes = write(
             &scene,
             self.format,
             &Page {
-                bounds: raw.expand(border),
+                bounds,
                 scale,
                 background: bg,
                 title: o.title.as_deref(),
@@ -297,6 +392,9 @@ impl Driver for SceneDriver {
                 smoothing: o.smoothing,
                 quality: o.quality,
                 transparent,
+                layout,
+                pdf_minor: self.pdf_minor,
+                magnification: if ctx.metric { ctx.mag * 76.2 / 80.0 } else { ctx.mag },
             },
         )
         .map_err(|e| format!("fig2dev: {e}"))?;

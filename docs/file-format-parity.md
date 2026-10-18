@@ -9,7 +9,8 @@
 | Fig 3.1, 3.0 | ✅ | — | old splines converted to X-splines (shape ±1) |
 | Fig 2.1 and older | ✅ | — | Fig 1.3–2.1 through fig2dev's ported reader (`engine/src/fig2dev/`, G1); the reader's repairs shown as warnings |
 | RustFig native (`.rustfig`, JSON) | ✅ | ✅ | versioned envelope |
-| PDF | — | ✅ | vector with true curves (ellipses, arcs, rounded boxes), standard-14 fonts, images with alpha |
+| PDF | — | ✅ | vector with true curves (ellipses, arcs, rounded boxes), standard-14 fonts, images with alpha; `-P`/`-z` page mode (paper, orientation, centring, multi-page), `-Y` version |
+| PostScript (`ps`) | — | ✅ | DSC pages as genps: `-z` paper table, `-l`/`-p`, `-c`/`-e`, `-x`/`-y`, `-M`/`-o`/`-O`; geometry equals fig2dev's under ghostscript |
 | SVG | — | ✅ | vector with true curves, patterns via clip paths, embedded PNG images |
 | EPS | — | ✅ | Level 2, true curves, ISO-Latin-1 fonts |
 | PNG | — | ✅ | any resolution up to 20 000 px edge |

@@ -17,6 +17,7 @@ pub mod build;
 pub mod eps;
 pub mod latex_box;
 pub mod output;
+pub mod page;
 pub mod pattern;
 pub mod pdf;
 pub mod raster;
@@ -25,6 +26,7 @@ mod textcache;
 
 pub use build::build;
 pub use output::{export_bounds, write, EmbeddedEps, ExportFormat, Page};
+pub use page::{PageInput, PageLayout};
 
 use figbase::color::{area_fill_color, Rgb};
 use figbase::geom::{arrowhead, ArrowFill, ArrowShape, ArrowSpec, Point, Rect, Seg, FIG_PER_POINT};

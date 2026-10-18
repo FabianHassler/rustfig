@@ -5,11 +5,12 @@
 //! bounding box, `showpage` and `setpagedevice` disabled.
 //
 // The picture embedding is ported from fig2dev dev/genps.c (`genps_line`,
-// picture branch) and dev/readeps.c (`read_eps`) (xfig licence, see
+// picture branch) and dev/readeps.c (`read_eps`); the page structure of
+// `to_ps` from `genps_start` and `genps_end` (xfig licence, see
 // LICENSE-xfig).
 
 use super::pattern::{coverage, PatternFrame};
-use super::EmbeddedEps;
+use super::{EmbeddedEps, PageLayout};
 use super::{Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
 use figbase::geom::{Point, Rect, Seg};
 use figbase::style::{CapStyle, JoinStyle, Justify};
@@ -292,55 +293,23 @@ const ISO_FONTS: [&str; 39] = [
     "Times-Roman",
 ];
 
-/// Render a scene as EPS covering `bounds` (Fig units) at `scale`.
-/// `title` goes into `%%Title` (fig2dev's `-n`).
-/// `embeds` holds the EPS pictures to embed, by file name.
-pub fn to_eps(
-    scene: &Scene,
-    bounds: &Rect,
-    scale: f64,
-    background: Option<Rgba>,
-    title: Option<&str>,
-    embeds: &std::collections::BTreeMap<String, EmbeddedEps>,
-) -> String {
-    let b = if bounds.is_empty() {
-        Rect::new(Point::ZERO, Point::new(1.0, 1.0))
-    } else {
-        *bounds
-    };
-    let scale = if scale.is_finite() && scale > 0.0 { scale } else { 1.0 };
-    let k = 72.0 / 1200.0 * scale;
-    let mut c = Ctx {
-        out: String::new(),
-        k,
-        min_x: b.min.x,
-        max_y: b.max.y,
-    };
-    let (w, h) = (b.width() * k, b.height() * k);
-    let _ = writeln!(c.out, "%!PS-Adobe-3.0 EPSF-3.0");
-    if let Some(t) = title {
-        let _ = writeln!(c.out, "%%Title: {}", t.replace(['\r', '\n'], " "));
-    }
-    let _ = writeln!(c.out, "%%Creator: RustFig");
-    let _ = writeln!(c.out, "%%BoundingBox: 0 0 {} {}", w.ceil() as i64, h.ceil() as i64);
-    let _ = writeln!(c.out, "%%HiResBoundingBox: 0 0 {} {}", n(w), n(h));
-    let _ = writeln!(c.out, "%%LanguageLevel: 2\n%%Pages: 1\n%%EndComments\n%%BeginProlog");
-    c.out.push_str("/m {moveto} bind def /l {lineto} bind def\n");
-    c.out.push_str(
+/// The procedure and font definitions of the prolog.
+fn prolog(out: &mut String) {
+    out.push_str("/m {moveto} bind def /l {lineto} bind def\n");
+    out.push_str(
         "/isofont { findfont dup length dict begin {1 index /FID ne {def} {pop pop} ifelse} forall \
          /Encoding ISOLatin1Encoding def currentdict end definefont pop } bind def\n",
     );
     let mut seen = std::collections::BTreeSet::new();
     for f in ISO_FONTS {
         if seen.insert(f) {
-            let _ = writeln!(c.out, "/{f}-iso /{f} isofont");
+            let _ = writeln!(out, "/{f}-iso /{f} isofont");
         }
     }
-    c.out.push_str("%%EndProlog\n%%Page: 1 1\nsave\n");
-    if let Some(bg) = background {
-        c.rgb(bg);
-        let _ = writeln!(c.out, "0 0 {} {} rectfill", n(w), n(h));
-    }
+}
+
+/// The scene's primitives, in the frame of `c`.
+fn draw_prims(c: &mut Ctx, scene: &Scene, embeds: &std::collections::BTreeMap<String, EmbeddedEps>) {
     let mut skip_placeholder = false;
     for p in &scene.prims {
         if std::mem::take(&mut skip_placeholder) {
@@ -349,7 +318,7 @@ pub fn to_eps(
         match p {
             Prim::PictureRef { corners, flipped, file } => {
                 if let Some(e) = embeds.get(file) {
-                    embed(&mut c, corners, *flipped, e);
+                    embed(c, corners, *flipped, e);
                     // The next primitive is the placeholder for the picture.
                     skip_placeholder = true;
                 }
@@ -396,15 +365,128 @@ pub fn to_eps(
                     c.stroke(s);
                 }
             }
-            Prim::Text(t) => text(&mut c, t),
+            Prim::Text(t) => text(c, t),
             Prim::Image {
                 corners,
                 image: img,
                 flipped,
-            } => image(&mut c, corners, img, *flipped),
+            } => image(c, corners, img, *flipped),
         }
     }
+}
+
+/// Render a scene as EPS covering `bounds` (Fig units) at `scale`.
+/// `title` goes into `%%Title` (fig2dev's `-n`).
+/// `embeds` holds the EPS pictures to embed, by file name.
+pub fn to_eps(
+    scene: &Scene,
+    bounds: &Rect,
+    scale: f64,
+    background: Option<Rgba>,
+    title: Option<&str>,
+    embeds: &std::collections::BTreeMap<String, EmbeddedEps>,
+) -> String {
+    let b = if bounds.is_empty() {
+        Rect::new(Point::ZERO, Point::new(1.0, 1.0))
+    } else {
+        *bounds
+    };
+    let scale = if scale.is_finite() && scale > 0.0 { scale } else { 1.0 };
+    let k = 72.0 / 1200.0 * scale;
+    let mut c = Ctx {
+        out: String::new(),
+        k,
+        min_x: b.min.x,
+        max_y: b.max.y,
+    };
+    let (w, h) = (b.width() * k, b.height() * k);
+    let _ = writeln!(c.out, "%!PS-Adobe-3.0 EPSF-3.0");
+    if let Some(t) = title {
+        let _ = writeln!(c.out, "%%Title: {}", t.replace(['\r', '\n'], " "));
+    }
+    let _ = writeln!(c.out, "%%Creator: RustFig");
+    let _ = writeln!(c.out, "%%BoundingBox: 0 0 {} {}", w.ceil() as i64, h.ceil() as i64);
+    let _ = writeln!(c.out, "%%HiResBoundingBox: 0 0 {} {}", n(w), n(h));
+    let _ = writeln!(c.out, "%%LanguageLevel: 2\n%%Pages: 1\n%%EndComments\n%%BeginProlog");
+    prolog(&mut c.out);
+    c.out.push_str("%%EndProlog\n%%Page: 1 1\nsave\n");
+    if let Some(bg) = background {
+        c.rgb(bg);
+        let _ = writeln!(c.out, "0 0 {} {} rectfill", n(w), n(h));
+    }
+    draw_prims(&mut c, scene, embeds);
     c.out.push_str("restore\nshowpage\n%%Trailer\n%%EOF\n");
+    c.out
+}
+
+/// Render a scene as a DSC PostScript document on `layout`'s pages:
+/// `bounds` (Fig units) at `scale` placed on each page as
+/// [`PageLayout::pages`] says, clipped to the paper. `magnification` is
+/// the figure's, for the `%%Magnification` comment.
+#[allow(clippy::too_many_arguments)]
+pub fn to_ps(
+    scene: &Scene,
+    bounds: &Rect,
+    scale: f64,
+    background: Option<Rgba>,
+    title: Option<&str>,
+    embeds: &std::collections::BTreeMap<String, EmbeddedEps>,
+    layout: &PageLayout,
+    magnification: f64,
+) -> String {
+    let b = if bounds.is_empty() {
+        Rect::new(Point::ZERO, Point::new(1.0, 1.0))
+    } else {
+        *bounds
+    };
+    let scale = if scale.is_finite() && scale > 0.0 { scale } else { 1.0 };
+    let k = 72.0 / 1200.0 * scale;
+    let mut c = Ctx {
+        out: String::new(),
+        k,
+        min_x: b.min.x,
+        max_y: b.max.y,
+    };
+    draw_prims(&mut c, scene, embeds);
+    let body = std::mem::take(&mut c.out);
+    let (pw, ph) = (layout.width, layout.height);
+    let o = &mut c.out;
+    let _ = writeln!(o, "%!PS-Adobe-3.0");
+    if let Some(t) = title {
+        let _ = writeln!(o, "%%Title: {}", t.replace(['\r', '\n'], " "));
+    }
+    let _ = writeln!(o, "%%Creator: RustFig");
+    let _ = writeln!(o, "%%Pages: {}", layout.declared_pages);
+    let _ = writeln!(o, "%%BoundingBox: 0 0 {pw} {ph}");
+    let _ = writeln!(o, "%%DocumentPaperSizes: {}", layout.paper.to_ascii_lowercase());
+    let _ = writeln!(o, "%%Magnification: {magnification:.4}");
+    o.push_str("%%EndComments\n");
+    o.push_str("%%BeginSetup\n[{\n");
+    let _ = writeln!(o, "%%BeginFeature: *PageSize {}", layout.paper);
+    let _ = writeln!(o, "<</PageSize [{pw} {ph}]>> setpagedevice");
+    o.push_str("%%EndFeature\n} stopped cleartomark\n%%EndSetup\n%%BeginProlog\n");
+    prolog(o);
+    o.push_str("%%EndProlog\n");
+    for (i, (tx, ty)) in layout.pages.iter().enumerate() {
+        let _ = writeln!(o, "%%Page: {} {}\nsave", i + 1, i + 1);
+        // The background fills the first page, as fig2dev's prolog does.
+        if let (0, Some(bg)) = (i, background) {
+            let (r, g, bl) = (
+                f64::from(bg.r) / 255.0,
+                f64::from(bg.g) / 255.0,
+                f64::from(bg.b) / 255.0,
+            );
+            let _ = writeln!(o, "{r:.4} {g:.4} {bl:.4} setrgbcolor\n0 0 {pw} {ph} rectfill");
+        }
+        let _ = writeln!(
+            o,
+            "newpath 0 0 moveto {pw} 0 lineto {pw} {ph} lineto 0 {ph} lineto closepath clip newpath"
+        );
+        let _ = writeln!(o, "{} {} translate", n(*tx), n(*ty));
+        o.push_str(&body);
+        o.push_str("restore\nshowpage\n");
+    }
+    o.push_str("%%Trailer\n%%EOF\n");
     c.out
 }
 

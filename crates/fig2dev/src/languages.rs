@@ -78,11 +78,11 @@ const fn lang(
 }
 
 use Kind::{Bitmap, Latex, PostScript, Vector};
-use Status::{Available, Partial, Planned};
+use Status::{Available, Planned};
 
 /// xfig's export languages in the order of its Export panel.
 pub const LANGUAGES: &[Language] = &[
-    lang("ps", "PostScript", "ps", &[], PostScript, Partial("B4")),
+    lang("ps", "PostScript", "ps", &[], PostScript, Available),
     lang(
         "eps",
         "EPS (Encapsulated PostScript)",

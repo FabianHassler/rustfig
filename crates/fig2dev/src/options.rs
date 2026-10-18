@@ -161,18 +161,18 @@ pub const OPTIONS: &[OptionSpec] = &[
     opt("composite_fonts", 'j', Flag, PS, "enable composite fonts for japanese or korean text", Planned("B8")),
     opt_for("bbox", 'B', Text, PS, EPS, "force width, height and origin in absolute coordinates (\"Wx [Wy X0 Y0]\")", Planned("B4")),
     opt_for("relative_bbox", 'R', Text, PS, EPS, "force width, height and origin in relative coordinates (\"Wx [Wy X0 Y0]\")", Planned("B4")),
-    opt_for("center", 'c', Flag, PS, PAGE, "center figure on page", Planned("B4")),
-    opt_for("edge", 'e', Flag, PS, PAGE, "put figure at left page edge", Planned("B4")),
-    opt_for("landscape", 'l', Text, PS, PAGE, "force landscape mode (takes an argument it ignores)", Planned("B4")),
-    opt_for("portrait", 'p', Text, PS, PAGE, "force portrait mode (takes an argument it ignores)", Planned("B4")),
-    opt_for("multi_page", 'M', Flag, PS, PAGE, "generate multiple pages for large figure", Planned("B4")),
-    opt_for("single_page", 'o', Flag, PS, PAGE, "generate single page even for large figure", Planned("B4")),
-    opt_for("overlap", 'O', Flag, PS, PAGE, "overlap pages when multiple pages are generated", Planned("B4")),
-    opt_for("x_offset", 'x', Number, PS, PAGE, "shift figure horizontally by offset points", Planned("B4")),
-    opt_for("y_offset", 'y', Number, PS, PAGE, "shift figure vertically by offset points", Planned("B4")),
-    opt_for("paper_size", 'z', Text, PS, PAGE, "set the paper size (Letter, A4, ...)", Planned("B4")),
-    opt_for("page_mode", 'P', Flag, PS, &["pdf"], "generate a full page instead of a figure-sized one", Planned("B4")),
-    opt_for("pdf_version", 'Y', Number, PS, &["pdf", "pspdf"], "set the PDF minor version (1-7)", Planned("B4")),
+    opt_for("center", 'c', Flag, PS, PAGE, "center figure on page", Ported),
+    opt_for("edge", 'e', Flag, PS, PAGE, "put figure at left page edge", Ported),
+    opt_for("landscape", 'l', Text, PS, PAGE, "force landscape mode (takes an argument it ignores)", Ported),
+    opt_for("portrait", 'p', Text, PS, PAGE, "force portrait mode (takes an argument it ignores)", Ported),
+    opt_for("multi_page", 'M', Flag, PS, PAGE, "generate multiple pages for large figure", Ported),
+    opt_for("single_page", 'o', Flag, PS, PAGE, "generate single page even for large figure", Ported),
+    opt_for("overlap", 'O', Flag, PS, PAGE, "overlap pages when multiple pages are generated", Ported),
+    opt_for("x_offset", 'x', Number, PS, PAGE, "shift figure horizontally by offset points", Ported),
+    opt_for("y_offset", 'y', Number, PS, PAGE, "shift figure vertically by offset points", Ported),
+    opt_for("paper_size", 'z', Text, PS, PAGE, "set the paper size (Letter, A4, ...)", Ported),
+    opt_for("page_mode", 'P', Flag, PS, &["pdf"], "generate a full page instead of a figure-sized one", Ported),
+    opt_for("pdf_version", 'Y', Number, PS, &["pdf", "pspdf"], "set the PDF minor version (1-7)", Ported),
     // SVG (gensvg_option).
     opt("paper_size", 'z', Text, &["svg"], "set the paper size (Letter, A4, ...)", Planned("B9")),
     // Bitmaps (genbitmaps_option): -q and -t are accepted by every bitmap
@@ -447,6 +447,9 @@ pub fn parse_options(lang: &Language, items: &[(&str, OptionValue<'_>)]) -> Resu
                 let t = text()?;
                 o.transparent = Some(x_color(t).ok_or_else(|| format!("can't parse color {t:?}"))?);
             }
+            // The page options are the driver's (`SceneDriver::page_option`).
+            "center" | "edge" | "landscape" | "portrait" | "multi_page" | "single_page" | "overlap" | "x_offset"
+            | "y_offset" | "paper_size" | "page_mode" | "pdf_version" => {}
             other => return Err(format!("option {other} is not handled (internal error)")),
         }
     }

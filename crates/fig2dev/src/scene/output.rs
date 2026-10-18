@@ -2,8 +2,8 @@
 //! settings of the language, written as EPS, PDF, SVG, a LaTeX box or one
 //! of the bitmap languages.
 //
-// Ported from fig2dev dev/genbitmaps.c (bitmap size and smoothing) (xfig
-// licence, see LICENSE-xfig).
+// Ported from fig2dev dev/genbitmaps.c (bitmap size and smoothing) and
+// dev/genps.c (PostScript pages) (xfig licence, see LICENSE-xfig).
 
 use super::{bitmaps, eps, latex_box, pattern, pdf, raster, svg, Rgba, Scene};
 use figbase::color::Rgb;
@@ -134,6 +134,13 @@ pub struct Page<'a> {
     pub quality: Option<u8>,
     /// The GIF transparent colour (`-t`, or the figure's).
     pub transparent: Option<Rgb>,
+    /// PostScript and PDF page mode: the paper and the figure's places
+    /// on it (`-L ps`; `-L pdf` with `-P` or `-z`).
+    pub layout: Option<super::PageLayout>,
+    /// The PDF version 1.n (`-Y`).
+    pub pdf_minor: u8,
+    /// The figure's magnification, for PostScript's `%%Magnification`.
+    pub magnification: f64,
 }
 
 /// Write `scene` on `page` in `format`.
@@ -141,8 +148,29 @@ pub fn write(scene: &Scene, format: ExportFormat, page: &Page<'_>) -> Result<Vec
     let (bounds, scale, bg) = (&page.bounds, page.scale, page.background);
     Ok(match format {
         ExportFormat::Svg => svg::to_svg(scene, bounds, scale, bg).into_bytes(),
-        ExportFormat::Eps => eps::to_eps(scene, bounds, scale, bg, page.title, page.embedded_eps).into_bytes(),
-        ExportFormat::Pdf => pdf::to_pdf(scene, bounds, scale, bg, page.title),
+        ExportFormat::Eps => match &page.layout {
+            Some(l) => eps::to_ps(
+                scene,
+                bounds,
+                scale,
+                bg,
+                page.title,
+                page.embedded_eps,
+                l,
+                page.magnification,
+            ),
+            None => eps::to_eps(scene, bounds, scale, bg, page.title, page.embedded_eps),
+        }
+        .into_bytes(),
+        ExportFormat::Pdf => pdf::to_pdf_pages(
+            scene,
+            bounds,
+            scale,
+            bg,
+            page.title,
+            page.layout.as_ref(),
+            page.pdf_minor,
+        ),
         ExportFormat::LatexBox => latex_box::to_box(page.comments, bounds, scale).into_bytes(),
         ExportFormat::Png
         | ExportFormat::Gif
