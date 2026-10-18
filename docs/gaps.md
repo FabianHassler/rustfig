@@ -24,7 +24,7 @@
 | 18 | Spell check | Text | Low | 16 |
 | 19 | Accessibility (screen-reader labels for canvas objects) | Platforms | Low | 16 |
 | 21 | closed: EMF, Tk/Perl-Tk ported (B9); the `sld` driver (slide output) is the one fig2dev language left unported | Export | Low | 4 |
-| 27 | ✅ closed 2026-10-18: text bytes as C (`Text::raw`, `Comment::raw`; drivers write the input bytes). Remaining: `-E` names other than UTF-8/ISO-8859-1/-2 are not converted for TeX output (C uses iconv), stderr messages and tk/pstricks picture names are Unicode | Export | Low | 2 |
+| 27 | ✅ closed 2026-10-18: text bytes as C (`Text::raw`, `Comment::raw`; drivers write the input bytes). `-E` charsets beyond UTF-8/ISO-8859-1/-2 convert through `encoding_rs` (audit pass 27, 2026-10-18; no CP437/CP850, stderr messages with raw bytes and tk/pstricks picture names are Unicode) | Export | Low | 2 |
 | 24 | fig2dev port hardening: the audit's partial and missing functions outside the unported drivers (options and messages, text bytes, depth order, FMA in bounds, EPS/PDF fonts and Unicode, SVG text, `readpics`, JPEG passthrough; B11) | Export | Medium | 66 |
 | 20 | Real PostScript font metrics when craft-fonts lacks a face (synthetic bold/italic today); the A10 corpus shows text widths as the main remaining difference from fig2dev | Text | Medium | 12 |
 
@@ -32,6 +32,7 @@
 
 | Date | Note |
 |------|------|
+| 2026-10-18 | #27 remainder closed: `-E` charsets through `encoding_rs`. |
 | 2026-10-18 | #27 closed (text bytes as C, audit passes 5 and 6). |
 | 2026-10-18 | #1 closed (TikZ, PSTricks), #21 shrank to `sld` (EMF, Tk/Perl-Tk ported); #27 added (octal-escape text bytes). |
 | 2026-10-17 | #1 shrank: pict2e ported (B3). |

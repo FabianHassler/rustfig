@@ -206,7 +206,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `dev/tkpattern.c` | 122 | Tk fill patterns | `crates/fig2dev/src/util/tkpattern.rs` | ported | B9 |
 | `dev/xtmpfile.c` | 150 | temporary files | — | n/a | — |
 | `dev/read*.c`, `readpics.c` | 3 k | pictures embedded in exports | `fig2dev/util/readpics` (`image` crate; EPS/PDF boxes, PCX, XBM, XPM, .gz/.Z) | ported | B9 |
-| `dev/psfonts.c`, `texfonts.c`, `setfigfont.c`, `textconvert.c` | 1 k | font names and LaTeX font selection for exports | `fig2dev/util/{psfonts,texfonts,setfigfont,textconvert}` (texts as the input's bytes, `put_string`, conversions; 2026-10-18) | ported | B9 |
+| `dev/psfonts.c`, `texfonts.c`, `setfigfont.c`, `textconvert.c` | 1 k | font names and LaTeX font selection for exports | `fig2dev/util/{psfonts,texfonts,setfigfont,textconvert}` (`-E` charsets beyond Latin-1/-2 via `encoding_rs`, audit pass 27; texts as the input's bytes, `put_string`, conversions; 2026-10-18) | ported | B9 |
 
 ## Revision history
 

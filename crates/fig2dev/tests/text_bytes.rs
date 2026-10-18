@@ -83,3 +83,48 @@ fn unicode_view_stays_unicode() {
     assert_eq!(c.texts[0].cstring, "café©");
     assert_eq!(c.texts[0].raw, b"caf\xe9\xa9");
 }
+
+#[test]
+fn input_charsets_beyond_latin_go_through_encoding_rs() {
+    // 0xe9: KOI8-R "И", windows-1252 "é", ISO-8859-15 "é", ISO-8859-5 "щ".
+    let f = fig("", b"4 0 0 50 -1 0 12 0.0 4 135 900 1200 1200 a\\351b\\001\n");
+    // (pstricks and mp write the bytes unconverted, as in C.)
+    for lang in ["latex", "pict2e", "tikz", "epic"] {
+        for (enc, want) in [
+            ("KOI8-R", "aИb"),
+            ("CP1252", "aéb"),
+            ("windows-1252", "aéb"),
+            ("ISO-8859-15", "aéb"),
+            ("latin9", "aéb"),
+            ("ISO-8859-5", "aщb"),
+        ] {
+            let out = run(lang, &f, Some(enc));
+            assert!(has(&out, want.as_bytes()), "{lang} {enc}");
+        }
+    }
+}
+
+#[test]
+fn undefined_bytes_stop_the_text_like_iconv() {
+    // 0x81 is undefined in CP1252 (iconv rejects it): the text ends there.
+    let f = fig("", b"4 0 0 50 -1 0 12 0.0 4 135 900 1200 1200 a\\351\\201b\\001\n");
+    let mut ctx = Ctx {
+        lang: "latex".into(),
+        input_encoding: Some("CP1252".into()),
+        ..Ctx::default()
+    };
+    let mut dev = drivers::driver("latex").unwrap();
+    ctx.font_size *= ctx.fontmag;
+    let objects = readfp_fig(&mut ctx, &f).unwrap();
+    let out = convert(&mut ctx, dev.as_mut(), &objects).unwrap().output;
+    assert!(has(&out, "aé}".as_bytes()));
+    assert!(ctx.messages.iter().any(|m| m.contains("Illegal byte sequence")));
+}
+
+#[test]
+fn unknown_input_charset_still_warns_and_keeps_bytes() {
+    let f = fig("", b"4 0 0 50 -1 0 12 0.0 4 135 900 1200 1200 a\\351b\\001\n");
+    // The reference iconv (macOS) does not know "KOI8R" without the dash.
+    let out = run("latex", &f, Some("KOI8R"));
+    assert!(has(&out, b"a\xe9b"));
+}
