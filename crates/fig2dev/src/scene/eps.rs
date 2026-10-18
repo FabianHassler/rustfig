@@ -203,6 +203,9 @@ pub fn raster_eps(img: &figbase::image::RasterImage) -> Option<String> {
     let _ = writeln!(out, "%%EndComments");
     let _ = writeln!(out, "gsave");
     let _ = writeln!(out, "/picstr {} string def", u64::from(w) * 3);
+    // The image matrix maps the picture onto the unit square; scale it to
+    // one point per pixel, as bmeps does.
+    let _ = writeln!(out, "{w} {h} scale");
     let _ = writeln!(
         out,
         "{w} {h} 8 [{w} 0 0 -{h} 0 {h}] {{currentfile picstr readhexstring pop}} false 3 colorimage"

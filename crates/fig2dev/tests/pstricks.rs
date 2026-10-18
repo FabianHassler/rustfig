@@ -532,6 +532,8 @@ fn p_option_converts_png_and_jpeg_to_eps() {
         assert!(eps.starts_with("%!PS-Adobe-3.0 EPSF-3.0\n"));
         assert!(eps.contains(&format!("%%BoundingBox: 0 0 {w} 3\n")));
         assert!(eps.contains("colorimage"));
+        // drawn one point per pixel, not into the unit square
+        assert!(eps.contains(&format!("\n{w} 3 scale\n")), "{eps}");
         // 5 x 3 pixels, 6 hex digits each
         let data = eps
             .split("colorimage\n")
