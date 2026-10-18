@@ -69,6 +69,9 @@ pub enum Fill {
         kind: i32,
         fg: Rgba,
         bg: Rgba,
+        /// Fill (and clip) with the nonzero rule, as genps does; else the
+        /// even-odd rule.
+        nonzero: bool,
     },
 }
 
@@ -293,6 +296,7 @@ pub fn fill(area_fill: i32, pen: Rgba, fill: Rgb, default_or_black: bool, white:
             kind: area_fill,
             fg: pen,
             bg: Rgba::opaque(fill),
+            nonzero: false,
         });
     }
     area_fill_color(fill, default_or_black, white, area_fill).map(|c| Fill::Solid(Rgba::opaque(c)))

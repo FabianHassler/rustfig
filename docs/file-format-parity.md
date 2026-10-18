@@ -32,7 +32,7 @@
 | MetaPost (`mp`, `mmp`), METAFONT, ge, image map | — | ✅ | ported from fig2dev (B9): mf and map identical to fig2dev 3.2.9a on all 342 runs each, mp on 672/684, pictex and gbx on all runs (with `SOURCE_DATE_EPOCH`; without it their dates are UTC, fig2dev's local time), ge on all runs without user colours; the rest are escaped high bytes in text and pre-3.2 interpolated splines. ge's user colours are written as black, where fig2dev reads past its `GE_COLORS` table and prints whatever follows it |
 | EMF | — | ✅ | ported from fig2dev (B9, 2026-10-18): texts, PNG pictures, all shapes; byte-identical to fig2dev (texts as the input's bytes) except CJK-locale iconv fonts |
 | Tk, Perl-Tk | — | ✅ | ported from fig2dev (B9), byte-identical on the sample (texts as the input's bytes; one figure differs by stack garbage in C) |
-| Pictures in exports | ✅ | — | `fig2dev/util/readpics`: .gz/.Z, XBM, XPM, PCX with fig2dev's messages; EPS pictures embedded in EPS as genps does; PDF pictures, and EPS pictures in PDF/SVG/bitmaps, still a placeholder box |
+| Pictures in exports | ✅ | — | `fig2dev/util/readpics`: .gz/.Z, XBM, XPM, PCX with fig2dev's messages; EPS pictures embedded in EPS as genps does; no frame around pictures and transparent pixels stay transparent in EPS (pass 9); PDF pictures, and EPS pictures in PDF/SVG/bitmaps, still a placeholder box |
 | epic, eepic, eepicemu, tpic, pic | — | ✅ | ported from fig2dev (B9): identical to fig2dev 3.2.9a on ≈99% of runs (every sample, several option sets); the rest differ in Latin-1 text, one ellipse bound, ±1 point in some closed X-splines |
 | Picture import PNG/JPEG/GIF/BMP/TIFF/PNM | ✅ | — | |
 | Picture import EPS/PDF/XPM/XBM/PCX | ❌ | — | gap #14 |

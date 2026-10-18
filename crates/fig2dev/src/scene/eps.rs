@@ -318,6 +318,21 @@ pub fn raster_eps(img: &figbase::image::RasterImage) -> Option<String> {
     Some(out)
 }
 
+/// The colour that stands for transparent in an image whose pixels are
+/// fully opaque or fully transparent: all transparent pixels have it, none
+/// of the opaque ones has not (they would be masked too).
+fn color_key(img: &figbase::image::RasterImage) -> Option<[u8; 3]> {
+    let px = img.rgba.as_chunks::<4>().0;
+    let key = px.iter().find(|p| p[3] == 0).map(|p| [p[0], p[1], p[2]])?;
+    px.iter()
+        .all(|p| match p[3] {
+            0 => [p[0], p[1], p[2]] == key,
+            255 => [p[0], p[1], p[2]] != key,
+            _ => false,
+        })
+        .then_some(key)
+}
+
 fn image(c: &mut Ctx, corners: &[Point; 4], img: &figbase::image::RasterImage, flipped: bool) {
     let (w, h) = (img.width, img.height);
     let expected = (w as usize).saturating_mul(h as usize).saturating_mul(4);
@@ -345,10 +360,21 @@ fn image(c: &mut Ctx, corners: &[Point; 4], img: &figbase::image::RasterImage, f
         n(tl.y)
     );
     let _ = writeln!(c.out, "/picstr {} string def", u64::from(w) * 3);
-    let _ = writeln!(
-        c.out,
-        "{w} {h} 8 [{w} 0 0 {h} 0 0] {{currentfile picstr readhexstring pop}} false 3 colorimage"
-    );
+    if let Some([r, g, b]) = color_key(img) {
+        // Transparent pixels (a colour key, as genps's `/ImageType 4
+        // /MaskColor`) leave what lies below.
+        let _ = writeln!(
+            c.out,
+            "/DeviceRGB setcolorspace\n<< /ImageType 4 /MaskColor [{r} {g} {b}] /Width {w} /Height {h}\n   \
+             /ImageMatrix [{w} 0 0 {h} 0 0] /DataSource {{currentfile picstr readhexstring pop}}\n   \
+             /BitsPerComponent 8 /Decode [0 1 0 1 0 1] >> image"
+        );
+    } else {
+        let _ = writeln!(
+            c.out,
+            "{w} {h} 8 [{w} 0 0 {h} 0 0] {{currentfile picstr readhexstring pop}} false 3 colorimage"
+        );
+    }
     push_hex_pixels(&mut c.out, img);
     c.out.push_str("\ngrestore\n");
 }
@@ -432,10 +458,14 @@ fn draw_prims(c: &mut Ctx, scene: &Scene, embeds: &std::collections::BTreeMap<St
                         c.path(subpaths);
                         c.out.push_str("eofill\n");
                     }
-                    Some(Fill::Pattern { kind, fg, bg }) => {
+                    Some(Fill::Pattern { kind, fg, bg, nonzero }) => {
                         c.rgb(*bg);
                         c.path(subpaths);
-                        c.out.push_str("gsave eofill grestore gsave eoclip\n");
+                        c.out.push_str(if *nonzero {
+                            "gsave fill grestore gsave clip\n"
+                        } else {
+                            "gsave eofill grestore gsave eoclip\n"
+                        });
                         let region = Rect::from_points(subpaths.iter().flat_map(|s| s.pts.iter().copied()));
                         let frame = PatternFrame {
                             origin: Point::new(c.min_x, c.max_y),

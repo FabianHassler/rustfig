@@ -122,10 +122,11 @@ fn draw_path(
     let Some(path) = build_path(subpaths, t) else { return };
     match fill {
         Some(Fill::Solid(c)) => pm.fill_path(&path, &paint(*c, aa), FillRule::EvenOdd, Transform::identity(), None),
-        Some(Fill::Pattern { kind, fg, bg }) => {
-            pm.fill_path(&path, &paint(*bg, aa), FillRule::EvenOdd, Transform::identity(), None);
+        Some(Fill::Pattern { kind, fg, bg, nonzero }) => {
+            let rule = if *nonzero { FillRule::Winding } else { FillRule::EvenOdd };
+            pm.fill_path(&path, &paint(*bg, aa), rule, Transform::identity(), None);
             if let Some(mut mask) = Mask::new(pm.width(), pm.height()) {
-                mask.fill_path(&path, FillRule::EvenOdd, aa, Transform::identity());
+                mask.fill_path(&path, rule, aa, Transform::identity());
                 // Pattern lines over the visible part of the shape, in Fig units.
                 if let Some(inv) = t.invert() {
                     let vis = Rect::from_points(bb.intersection_or_empty(&view).corners().map(|p| inv.apply(p)));

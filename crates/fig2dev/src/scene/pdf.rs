@@ -446,13 +446,21 @@ pub fn to_pdf_pages(
                         c.path(subpaths);
                         c.c.fill_even_odd();
                     }
-                    Some(Fill::Pattern { kind, fg, bg }) => {
+                    Some(Fill::Pattern { kind, fg, bg, nonzero }) => {
                         c.fill_rgb(*bg);
                         c.path(subpaths);
-                        c.c.fill_even_odd();
+                        if *nonzero {
+                            c.c.fill_nonzero();
+                        } else {
+                            c.c.fill_even_odd();
+                        }
                         c.c.save_state();
                         c.path(subpaths);
-                        c.c.clip_even_odd();
+                        if *nonzero {
+                            c.c.clip_nonzero();
+                        } else {
+                            c.c.clip_even_odd();
+                        }
                         c.c.end_path();
                         let region = Rect::from_points(subpaths.iter().flat_map(|s| s.pts.iter().copied()));
                         let frame = PatternFrame {

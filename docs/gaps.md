@@ -7,7 +7,7 @@
 | 1 | LaTeX exports closed: TikZ, PSTricks, pict2e, pstex/pdftex ported (B1, B2, B3); text bytes now as C (#27 closed 2026-10-18) | Export | High | 0 |
 | 2 | Web build: compiles locally (2026-10-14); still to do: the wasm check in CI, trunk packaging and browser open/save/download | Platforms | High | 24 |
 | 25 | Exports go through RustFig's Fig writer (B12), which drops arrows on pie-wedge arcs and refits arc centres from the rounded points instead of keeping the file's centre; fig2dev draws both from the file (`fig2dev_reference` arcs, 2 corpus bounding boxes). Saving loses them too | Export/File format | Medium | 3 |
-| 26 | Pictures in exports: a frame is stroked around every picture with a line thickness (fig2dev's genps strokes none) and transparent GIF pixels come out white (corpus: `Examples/pictures.fig`, `Flags/Africa/eritrea.fig`, fig2dev's `boxwimg.fig`) | Export | Medium | 3 |
+| 26 | ✅ closed 2026-10-18 (audit pass 9): pictures get no frame in PS, EPS, PDF and bitmaps (genps strokes none; SVG keeps it) and transparent pixels stay transparent in EPS (colour-key `/ImageType 4`). Left: opaque pixels with the transparent colour are masked too (as fig2dev does for RGB images; for indexed GIFs it masks the index only), PNG with partial alpha is blended over white | Export | Low | 0 |
 | 3 | PostScript output: page layout done 2026-10-18 (B4a); EPS previews (`-A`/`-T`/`-C`) and `-B`/`-R` done 2026-10-18 (B4b); printing remains | Export/Printing | Medium | 20 |
 | 4 | Library objects: browse a directory of .fig files and place them | Libraries | Medium | 40 |
 | 5 | Open compound (edit inside a compound without breaking it) | Editing | Medium | 16 |
@@ -33,6 +33,7 @@
 
 | Date | Note |
 |------|------|
+| 2026-10-18 | #26 closed (audit pass 9: genps object fidelity in the scene builder). |
 | 2026-10-18 | #27 remainder closed: `-E` charsets through `encoding_rs`. |
 | 2026-10-18 | #27 closed (text bytes as C, audit passes 5 and 6). |
 | 2026-10-18 | #1 closed (TikZ, PSTricks), #21 shrank to `sld` (EMF, Tk/Perl-Tk ported); #27 added (octal-escape text bytes). |

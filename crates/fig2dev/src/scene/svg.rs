@@ -226,13 +226,14 @@ pub fn to_svg(scene: &Scene, bounds: &Rect, scale: f64, background: Option<Rgba>
                     Some(Fill::Solid(c)) => {
                         let _ = writeln!(out, "<path d=\"{d}\" fill=\"{}\" fill-rule=\"evenodd\"/>", rgb(*c));
                     }
-                    Some(Fill::Pattern { kind, fg, bg }) => {
+                    Some(Fill::Pattern { kind, fg, bg, nonzero }) => {
                         clip_id += 1;
+                        let rule = if *nonzero { "nonzero" } else { "evenodd" };
                         let _ = writeln!(
                             out,
-                            "<clipPath id=\"c{clip_id}\"><path d=\"{d}\" clip-rule=\"evenodd\"/></clipPath>"
+                            "<clipPath id=\"c{clip_id}\"><path d=\"{d}\" clip-rule=\"{rule}\"/></clipPath>"
                         );
-                        let _ = writeln!(out, "<path d=\"{d}\" fill=\"{}\" fill-rule=\"evenodd\"/>", rgb(*bg));
+                        let _ = writeln!(out, "<path d=\"{d}\" fill=\"{}\" fill-rule=\"{rule}\"/>", rgb(*bg));
                         let region = Rect::from_points(subpaths.iter().flat_map(|s| s.pts.iter().copied()));
                         let (lines, line_width) = coverage(*kind, &region, &PatternFrame::export(&b, scale));
                         let lines: Vec<SubPath> = lines

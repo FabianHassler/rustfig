@@ -13,7 +13,7 @@
 // `PSFONTMAG` text sizes, `-f`) and read.c (closed polylines, old splines)
 // (xfig licence, see LICENSE-xfig).
 
-use super::{fill, picture_prims, shape_prims, stroke, EmbeddedEps, Prim, Rgba, Scene, Shape, TextPrim};
+use super::{fill, picture_prims, shape_prims, stroke, EmbeddedEps, Fill, Prim, Rgba, Scene, Shape, TextPrim};
 use crate::gendev::{drawing_order, Obj, FIG_COLOR_NAMES, NUM_STD_COLS};
 use crate::object::{self as f, Compound};
 use crate::util::readpics::{load_picture, LoadedPicture};
@@ -44,6 +44,13 @@ pub struct TextOptions {
     /// Draw an EPS picture's preview image (the bitmap languages) instead
     /// of leaving the PostScript to the EPS writer.
     pub eps_preview: bool,
+    /// Draw as genps does (PostScript, EPS, PDF, bitmaps through
+    /// ghostscript): hidden texts skipped, no arrowheads on lines and arcs
+    /// of thickness 0 nor on pie wedges, single-point polylines as short
+    /// segments, polylines with coincident ends closed, pattern fills with
+    /// the nonzero rule, pictures without a frame. Off for SVG (gensvg),
+    /// and for the comparison with RustFig's canvas.
+    pub genps: bool,
 }
 
 impl Default for TextOptions {
@@ -53,6 +60,7 @@ impl Default for TextOptions {
             font: None,
             skip_special: false,
             eps_preview: false,
+            genps: false,
         }
     }
 }
@@ -131,6 +139,20 @@ impl Builder {
         })
     }
 
+    /// The arrowheads of an object of file `thickness`: genps draws them
+    /// only above thickness 0.
+    fn arrows(
+        &self,
+        thickness: i32,
+        f: &Option<f::Arrow>,
+        b: &Option<f::Arrow>,
+    ) -> (Option<ArrowSpec>, Option<ArrowSpec>) {
+        if self.text.genps && thickness <= 0 {
+            return (None, None);
+        }
+        (self.arrow(f), self.arrow(b))
+    }
+
     /// The line style of an object.
     #[allow(clippy::too_many_arguments)]
     fn style(
@@ -160,11 +182,16 @@ impl Builder {
     }
 
     fn shape(&mut self, st: &Style, round_dots: bool, s: ShapeGeom) {
+        let mut fill = fill(st.area_fill, st.pen, st.fill, st.fill_default_or_black, st.fill_white);
+        if let (true, Some(Fill::Pattern { nonzero, .. })) = (self.text.genps, fill.as_mut()) {
+            // genps fills patterns with `fill`, shades and tints with `eofill`.
+            *nonzero = true;
+        }
         shape_prims(
             Shape {
                 paths: s.paths,
                 exact: s.exact,
-                fill: fill(st.area_fill, st.pen, st.fill, st.fill_default_or_black, st.fill_white),
+                fill,
                 stroke: st.stroke(round_dots),
                 pen: st.pen,
                 thickness: f64::from(st.thickness),
@@ -191,7 +218,12 @@ impl Builder {
         );
         let pts = a.point.map(|p| self.point(p));
         let pie = a.type_ == f::T_PIE_WEDGE_ARC;
-        let (fwd, back) = (self.arrow(&a.for_arrow), self.arrow(&a.back_arrow));
+        // genps gives pie wedges no arrowheads (`T_OPEN_ARC` only).
+        let (fwd, back) = if pie && self.text.genps {
+            (None, None)
+        } else {
+            self.arrows(a.thickness, &a.for_arrow, &a.back_arrow)
+        };
         // RustFig reads the direction from the three points.
         let geom = arc_from_three_points(pts[0], pts[1], pts[2]);
         let (paths, exact, pie_arc) = match geom {
@@ -268,6 +300,10 @@ impl Builder {
         let closed = matches!(kind, f::T_BOX | f::T_POLYGON | f::T_ARC_BOX | f::T_PIC_BOX);
         let rect = matches!(kind, f::T_BOX | f::T_ARC_BOX | f::T_PIC_BOX);
         let mut points = self.points(&l.points);
+        if self.text.genps && l.points.len() == 1 {
+            self.single_point_line(l, &st, points[0]);
+            return;
+        }
         // Closed polylines repeat their first point in the file.
         if closed && points.len() > 1 && points.first() == points.last() {
             points.pop();
@@ -293,10 +329,18 @@ impl Builder {
                 Some(round_rect_path(&r, radius)),
             )
         } else {
-            (vec![(points, closed)], None)
+            // genps closes a polyline whose first and last points coincide,
+            // so that the line join is drawn (when no arrowhead shortens it).
+            let coincident = self.text.genps
+                && kind == f::T_POLYLINE
+                && l.for_arrow.is_none()
+                && l.back_arrow.is_none()
+                && l.points.len() > 1
+                && l.points.first() == l.points.last();
+            (vec![(points, closed || coincident)], None)
         };
         let (forward, backward) = if !closed {
-            (self.arrow(&l.for_arrow), self.arrow(&l.back_arrow))
+            self.arrows(l.thickness, &l.for_arrow, &l.back_arrow)
         } else {
             (None, None)
         };
@@ -311,6 +355,33 @@ impl Builder {
                 poly: true,
                 pie_arc: None,
             },
+        );
+    }
+
+    /// A line object of one point (genps): a horizontal segment of
+    /// half-length `hf_wid` drawn with the line's cap.
+    fn single_point_line(&mut self, l: &f::Line, st: &Style, p: Point) {
+        let t = f64::from(l.thickness);
+        let hf = if l.cap_style > 0 {
+            1.0
+        } else if t <= self.thick_scale {
+            t / 4.0
+        } else {
+            (t - self.thick_scale) / 2.0
+        } * self.scale;
+        let mut stroke = st.stroke(false);
+        if let Some(s) = stroke.as_mut() {
+            s.dash.clear();
+        }
+        shape_prims(
+            Shape {
+                paths: vec![(vec![Point::new(p.x - hf, p.y), Point::new(p.x + hf, p.y)], false)],
+                stroke,
+                pen: st.pen,
+                thickness: f64::from(st.thickness),
+                ..Shape::default()
+            },
+            &mut self.prims,
         );
     }
 
@@ -357,7 +428,12 @@ impl Builder {
                 Err(e) => ctx.warn(e),
             }
         }
-        let frame = if st.thickness > 0 { st.stroke(false) } else { None };
+        // genps strokes no frame ("pic object has no line thickness").
+        let frame = if st.thickness > 0 && !self.text.genps {
+            st.stroke(false)
+        } else {
+            None
+        };
         picture_prims(
             r.corners(),
             image,
@@ -412,7 +488,7 @@ impl Builder {
         let (forward, backward) = if closed {
             (None, None)
         } else {
-            (self.arrow(&s.for_arrow), self.arrow(&s.back_arrow))
+            self.arrows(s.thickness, &s.for_arrow, &s.back_arrow)
         };
         self.shape(
             &st,
@@ -430,6 +506,9 @@ impl Builder {
 
     pub fn text(&mut self, ctx: &Ctx, t: &f::Text) {
         // RustFig's flags: bits, even for −1.
+        if self.text.genps && t.hidden_text() {
+            return;
+        }
         let special = t.flags & f::SPECIAL_TEXT != 0;
         if self.text.skip_special && special {
             return;
