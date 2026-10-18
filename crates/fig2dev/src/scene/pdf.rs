@@ -1,4 +1,5 @@
-//! PDF backend (pdf-writer). Text uses the standard 14 PDF fonts.
+//! PDF backend (pdf-writer). Text uses the standard 14 PDF fonts; characters
+//! beyond WinAnsi are set in Type 3 fonts built from RustFig's glyph outlines.
 
 use super::pattern::{coverage, PatternFrame};
 use super::{Fill, PageLayout, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
@@ -6,6 +7,7 @@ use figbase::geom::{Point, Rect, Seg};
 use figbase::image::RasterImage;
 use figbase::style::{CapStyle, JoinStyle, Justify};
 use pdf_writer::types::{LineCapStyle, LineJoinStyle};
+use pdf_writer::types::{SystemInfo, UnicodeCmap};
 use pdf_writer::{Content, Filter, Finish, Name, Pdf, Rect as PdfRect, Ref, Str, TextStr};
 
 /// The standard fonts used for text, by resource name.
@@ -47,28 +49,132 @@ fn base14_index(t: &TextPrim) -> usize {
     style
 }
 
-/// Encode a string in WinAnsi (other characters become '?').
+/// The WinAnsi code of a character, if it has one.
+fn win_ansi_byte(c: char) -> Option<u8> {
+    let u = c as u32;
+    if (0x20..0x7f).contains(&u) || (0xa0..=0xff).contains(&u) {
+        return u8::try_from(u).ok();
+    }
+    match c {
+        '€' => Some(0x80),
+        '‘' => Some(0x91),
+        '’' => Some(0x92),
+        '“' => Some(0x93),
+        '”' => Some(0x94),
+        '•' => Some(0x95),
+        '–' => Some(0x96),
+        '—' => Some(0x97),
+        _ => None,
+    }
+}
+
+/// Encode a string in WinAnsi (other characters become '?'; text that has
+/// any is set in a Type 3 font instead, see [`T3Font`]).
 fn win_ansi(s: &str) -> Vec<u8> {
-    s.chars()
-        .map(|c| {
-            let u = c as u32;
-            if (0x20..0x7f).contains(&u) || (0xa0..=0xff).contains(&u) {
-                u as u8
-            } else {
-                match c {
-                    '€' => 0x80,
-                    '‘' => 0x91,
-                    '’' => 0x92,
-                    '“' => 0x93,
-                    '”' => 0x94,
-                    '•' => 0x95,
-                    '–' => 0x96,
-                    '—' => 0x97,
-                    _ => b'?',
+    s.chars().map(|c| win_ansi_byte(c).unwrap_or(b'?')).collect()
+}
+
+/// A Type 3 font for characters beyond WinAnsi: the glyph outlines of
+/// RustFig's own fonts ([`figbase::text`]: craft-fonts when built in, else
+/// the fallback faces), 1000 units to the em, with a `ToUnicode` map so the
+/// text stays selectable. One font holds up to 255 characters of one Fig
+/// font.
+struct T3Font {
+    font: i32,
+    postscript: bool,
+    glyphs: Vec<T3Glyph>,
+}
+
+struct T3Glyph {
+    ch: char,
+    /// Advance in glyph units (1000 per em).
+    adv: f64,
+    /// The glyph's content stream.
+    proc_: Vec<u8>,
+    /// Bounding box, glyph units.
+    bbox: [f32; 4],
+}
+
+impl T3Glyph {
+    fn new(t: &TextPrim, ch: char) -> T3Glyph {
+        use figbase::text::PathOp;
+        let em_pt = 1000.0 / figbase::text::FIG_PER_POINT;
+        let shaped = figbase::text::shape(&t.request(), em_pt, &ch.to_string());
+        let adv = shaped.line_widths.first().copied().unwrap_or(0.0);
+        let mut c = Content::new();
+        let (mut x0, mut y0, mut x1, mut y1) = (f64::MAX, f64::MAX, f64::MIN, f64::MIN);
+        let mut grow = |x: f64, y: f64| {
+            x0 = x0.min(x);
+            y0 = y0.min(-y);
+            x1 = x1.max(x);
+            y1 = y1.max(-y);
+        };
+        let mut body = Content::new();
+        let mut cur = (0.0, 0.0);
+        let mut any = false;
+        for op in shaped.lines.first().map(Vec::as_slice).unwrap_or(&[]) {
+            any = true;
+            match *op {
+                PathOp::Move(x, y) => {
+                    grow(x, y);
+                    body.move_to(f(x), f(-y));
+                    cur = (x, y);
+                }
+                PathOp::Line(x, y) => {
+                    grow(x, y);
+                    body.line_to(f(x), f(-y));
+                    cur = (x, y);
+                }
+                PathOp::Quad(qx, qy, x, y) => {
+                    grow(qx, qy);
+                    grow(x, y);
+                    let (c1x, c1y) = (cur.0 + 2.0 / 3.0 * (qx - cur.0), cur.1 + 2.0 / 3.0 * (qy - cur.1));
+                    let (c2x, c2y) = (x + 2.0 / 3.0 * (qx - x), y + 2.0 / 3.0 * (qy - y));
+                    body.cubic_to(f(c1x), f(-c1y), f(c2x), f(-c2y), f(x), f(-y));
+                    cur = (x, y);
+                }
+                PathOp::Cubic(ax, ay, bx, by, x, y) => {
+                    grow(ax, ay);
+                    grow(bx, by);
+                    grow(x, y);
+                    body.cubic_to(f(ax), f(-ay), f(bx), f(-by), f(x), f(-y));
+                    cur = (x, y);
+                }
+                PathOp::Close => {
+                    body.close_path();
                 }
             }
-        })
-        .collect()
+        }
+        let bbox = if any && x0 <= x1 {
+            [f(x0), f(y0), f(x1), f(y1)]
+        } else {
+            [0.0; 4]
+        };
+        c.start_shape_glyph(f(adv), bbox[0], bbox[1], bbox[2], bbox[3]);
+        if any {
+            if shaped.synthetic_bold {
+                // The face has no bold: embolden by stroking, as the raster does.
+                c.set_line_width(40.0).set_line_join(LineJoinStyle::RoundJoin);
+            }
+            let mut bytes = c.finish().to_vec();
+            bytes.push(b'\n');
+            bytes.extend_from_slice(&body.finish());
+            bytes.push(b'\n');
+            bytes.extend_from_slice(if shaped.synthetic_bold { b"B\n" } else { b"f\n" });
+            return T3Glyph {
+                ch,
+                adv,
+                proc_: bytes,
+                bbox,
+            };
+        }
+        T3Glyph {
+            ch,
+            adv,
+            proc_: c.finish().to_vec(),
+            bbox,
+        }
+    }
 }
 
 fn f(v: f64) -> f32 {
@@ -84,9 +190,39 @@ struct Ctx {
     k: f64,
     min_x: f64,
     max_y: f64,
+    t3: Vec<T3Font>,
 }
 
 impl Ctx {
+    /// The Type 3 font number and code of `ch` in the font of `t`
+    /// (registering the glyph); `None` when 255 codes per font run out of
+    /// reach (never: a new font is started).
+    fn t3_code(&mut self, t: &TextPrim, ch: char) -> (usize, u8) {
+        for (i, fnt) in self.t3.iter().enumerate() {
+            if fnt.font == t.font && fnt.postscript == t.postscript {
+                if let Some(k) = fnt.glyphs.iter().position(|g| g.ch == ch) {
+                    return (i, u8::try_from(k + 1).unwrap_or(1));
+                }
+            }
+        }
+        let room = self
+            .t3
+            .iter()
+            .position(|fnt| fnt.font == t.font && fnt.postscript == t.postscript && fnt.glyphs.len() < 255);
+        let i = room.unwrap_or_else(|| {
+            self.t3.push(T3Font {
+                font: t.font,
+                postscript: t.postscript,
+                glyphs: Vec::new(),
+            });
+            self.t3.len() - 1
+        });
+        let glyph = T3Glyph::new(t, ch);
+        let Some(fnt) = self.t3.get_mut(i) else { return (0, 1) };
+        fnt.glyphs.push(glyph);
+        (i, u8::try_from(fnt.glyphs.len()).unwrap_or(1))
+    }
+
     fn p(&self, p: Point) -> (f32, f32) {
         (f((p.x - self.min_x) * self.k), f((self.max_y - p.y) * self.k))
     }
@@ -161,8 +297,28 @@ fn text(c: &mut Ctx, t: &TextPrim) {
     c.fill_rgb(t.color);
     let shaped = super::textcache::shaped(t);
     for (i, line) in t.text.split('\n').enumerate() {
+        // Characters beyond WinAnsi: the line is set in Type 3 fonts.
+        let t3_line: Option<Vec<(usize, u8)>> = if idx < 12 && line.chars().any(|ch| win_ansi_byte(ch).is_none()) {
+            Some(line.chars().map(|ch| c.t3_code(t, ch)).collect())
+        } else {
+            None
+        };
         // Line widths come from RustFig's own font metrics.
-        let w = shaped.line_widths.get(i).copied().unwrap_or(0.0) * c.k;
+        let w = match &t3_line {
+            Some(codes) => {
+                codes
+                    .iter()
+                    .map(|&(fi, code)| {
+                        c.t3.get(fi)
+                            .and_then(|fnt| fnt.glyphs.get(usize::from(code) - 1))
+                            .map_or(0.0, |g| g.adv)
+                    })
+                    .sum::<f64>()
+                    / 1000.0
+                    * size
+            }
+            None => shaped.line_widths.get(i).copied().unwrap_or(0.0) * c.k,
+        };
         let dx = match t.justify {
             Justify::Left => 0.0,
             Justify::Center => -w / 2.0,
@@ -173,9 +329,25 @@ fn text(c: &mut Ctx, t: &TextPrim) {
         let ox = f64::from(x) + dx * co - dy * s;
         let oy = f64::from(y) + dx * s + dy * co;
         c.c.begin_text();
-        c.c.set_font(Name(res.as_bytes()), f(size));
-        c.c.set_text_matrix([f(co), f(s), f(-s), f(co), f(ox), f(oy)]);
-        c.c.show(Str(&win_ansi(line)));
+        if let Some(codes) = t3_line {
+            c.c.set_text_matrix([f(co), f(s), f(-s), f(co), f(ox), f(oy)]);
+            let mut k = 0;
+            while let Some(&(fi, _)) = codes.get(k) {
+                let run: Vec<u8> = codes
+                    .iter()
+                    .skip(k)
+                    .take_while(|(g, _)| *g == fi)
+                    .map(|&(_, b)| b)
+                    .collect();
+                k += run.len();
+                c.c.set_font(Name(format!("T3_{fi}").as_bytes()), f(size));
+                c.c.show(Str(&run));
+            }
+        } else {
+            c.c.set_font(Name(res.as_bytes()), f(size));
+            c.c.set_text_matrix([f(co), f(s), f(-s), f(co), f(ox), f(oy)]);
+            c.c.show(Str(&win_ansi(line)));
+        }
         c.c.end_text();
     }
 }
@@ -257,6 +429,7 @@ pub fn to_pdf_pages(
         k,
         min_x: b.min.x,
         max_y: b.max.y,
+        t3: Vec::new(),
     };
     if let (Some(bg), None) = (background, layout) {
         c.fill_rgb(bg);
@@ -353,6 +526,24 @@ pub fn to_pdf_pages(
         page_ids.push((Ref::new(next), Ref::new(next + 1)));
         next += 2;
     }
+    // Type 3 fonts: the font, its ToUnicode map and one id per glyph.
+    let t3_ids: Vec<(Ref, Ref, Vec<Ref>)> =
+        c.t3.iter()
+            .map(|fnt| {
+                let font = Ref::new(next);
+                let tou = Ref::new(next + 1);
+                next += 2;
+                let glyphs = fnt
+                    .glyphs
+                    .iter()
+                    .map(|_| {
+                        next += 1;
+                        Ref::new(next - 1)
+                    })
+                    .collect();
+                (font, tou, glyphs)
+            })
+            .collect();
     pdf.set_version(1, minor);
     pdf.catalog(catalog_id).pages(tree_id);
     pdf.pages(tree_id)
@@ -369,6 +560,9 @@ pub fn to_pdf_pages(
             for (i, (name, _)) in BASE14.iter().enumerate() {
                 fonts.pair(Name(name.as_bytes()), Ref::new(font_base + i as i32));
             }
+            for (i, (font, _, _)) in t3_ids.iter().enumerate() {
+                fonts.pair(Name(format!("T3_{i}").as_bytes()), *font);
+            }
         }
         {
             let mut xo = res.x_objects();
@@ -384,6 +578,49 @@ pub fn to_pdf_pages(
         font.base_font(Name(base.as_bytes()));
         if !matches!(*base, "Symbol" | "ZapfDingbats") {
             font.encoding_predefined(Name(b"WinAnsiEncoding"));
+        }
+    }
+    for (fnt, (font_id, tou_id, glyph_ids)) in c.t3.iter().zip(&t3_ids) {
+        let names: Vec<String> = fnt.glyphs.iter().map(|g| format!("uni{:04X}", g.ch as u32)).collect();
+        let bbox = fnt.glyphs.iter().fold([0.0f32, -300.0, 1000.0, 1000.0], |a, g| {
+            [
+                a[0].min(g.bbox[0]),
+                a[1].min(g.bbox[1]),
+                a[2].max(g.bbox[2]),
+                a[3].max(g.bbox[3]),
+            ]
+        });
+        let mut font = pdf.type3_font(*font_id);
+        font.bbox(PdfRect::new(bbox[0], bbox[1], bbox[2], bbox[3]));
+        font.matrix([0.001, 0.0, 0.0, 0.001, 0.0, 0.0]);
+        {
+            let mut cp = font.char_procs();
+            for (name, id) in names.iter().zip(glyph_ids) {
+                cp.pair(Name(name.as_bytes()), *id);
+            }
+        }
+        font.encoding_custom()
+            .differences()
+            .consecutive(1, names.iter().map(|n| Name(n.as_bytes())));
+        font.first_char(1);
+        font.last_char(u8::try_from(fnt.glyphs.len()).unwrap_or(255));
+        font.widths(fnt.glyphs.iter().map(|g| f(g.adv)));
+        font.to_unicode(*tou_id);
+        font.finish();
+        let mut cmap = UnicodeCmap::<u8>::new(
+            Name(b"Adobe-Identity-UCS"),
+            SystemInfo {
+                registry: Str(b"Adobe"),
+                ordering: Str(b"UCS"),
+                supplement: 0,
+            },
+        );
+        for (k, g) in fnt.glyphs.iter().enumerate() {
+            cmap.pair(u8::try_from(k + 1).unwrap_or(1), g.ch);
+        }
+        pdf.stream(*tou_id, &cmap.finish());
+        for (g, id) in fnt.glyphs.iter().zip(glyph_ids) {
+            pdf.stream(*id, &g.proc_);
         }
     }
     let body = c.c.finish();

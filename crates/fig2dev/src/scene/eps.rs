@@ -7,9 +7,11 @@
 // The picture embedding is ported from fig2dev dev/genps.c (`genps_line`,
 // picture branch) and dev/readeps.c (`read_eps`); the page structure of
 // `to_ps` from `genps_start` and `genps_end` (xfig licence, see
-// LICENSE-xfig).
+// LICENSE-xfig). The UTF-8 text path (CMap, `composefont`, `-UTF-8` fonts)
+// is ported from genps.c (`note_text_needing_cmap`, `genps_text`).
 
 use super::pattern::{coverage, PatternFrame};
+use super::ps_cmap::{XFIG_CMAP1, XFIG_CMAP2, XFIG_CMAP3};
 use super::{EmbeddedEps, PageLayout};
 use super::{Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim};
 use figbase::geom::{Point, Rect, Seg};
@@ -132,8 +134,9 @@ pub(crate) fn ps_string(s: &str) -> String {
     o
 }
 
-fn text(c: &mut Ctx, t: &TextPrim) {
-    let name = if t.postscript {
+/// The PostScript font a text is set in.
+fn font_name(t: &TextPrim) -> &'static str {
+    if t.postscript {
         figbase::text::ps_font_name(t.font)
     } else {
         match t.font {
@@ -143,7 +146,94 @@ fn text(c: &mut Ctx, t: &TextPrim) {
             5 => "Courier",
             _ => "Times-Roman",
         }
-    };
+    }
+}
+
+/// Whether a text goes through the `-UTF-8` composite font: it has a
+/// character beyond Latin-1 and its font is not Symbol or ZapfDingbats
+/// (those get the bytes as they are, see `ps_string_bytes`). (genps does so for any non-ASCII text; Latin-1 text stays on the
+/// ISO-Latin-1 fonts here.)
+fn needs_utf8(t: &TextPrim) -> bool {
+    !matches!(font_name(t), "Symbol" | "ZapfDingbats") && t.text.chars().any(|c| u32::from(c) > 0xff)
+}
+
+/// The fonts that need a `-UTF-8` composite font (`note_text_needing_cmap`).
+fn utf8_fonts(scene: &Scene) -> std::collections::BTreeSet<&'static str> {
+    scene
+        .prims
+        .iter()
+        .filter_map(|p| match p {
+            Prim::Text(t) if needs_utf8(t) => Some(font_name(t)),
+            _ => None,
+        })
+        .collect()
+}
+
+/// DSC resource comments, as genps writes them before `%%EndComments`.
+fn utf8_comments(out: &mut String, fonts: &std::collections::BTreeSet<&'static str>) {
+    if !fonts.is_empty() {
+        out.push_str("%%DocumentNeededResources: ProcSet (CIDInit)\n%%+ CMap (Xfig-UTF8-H)\n");
+        out.push_str("%%DocumentSuppliedResources: CMap (Xfig-UTF8-H)\n");
+    }
+}
+
+/// The CMap, at the start of the prolog.
+fn utf8_cmap(out: &mut String, fonts: &std::collections::BTreeSet<&'static str>) {
+    if !fonts.is_empty() {
+        out.push_str(XFIG_CMAP1);
+        out.push_str(XFIG_CMAP2);
+        out.push_str(XFIG_CMAP3);
+    }
+}
+
+/// The composite fonts, in the prolog.
+fn utf8_composefonts(out: &mut String, fonts: &std::collections::BTreeSet<&'static str>) {
+    for f in fonts {
+        let _ = writeln!(
+            out,
+            "/{f}-UTF-8\n/Xfig-AGL-UTF8-H /CMap findresource\n[/{f} ] composefont pop"
+        );
+    }
+}
+
+/// A PostScript string literal for UTF-8 text, as genps writes it: only
+/// `(`, `)` and `\` are escaped.
+fn ps_string_utf8(s: &str) -> String {
+    let mut o = String::from("(");
+    for c in s.chars() {
+        if matches!(c, '(' | ')' | '\\') {
+            o.push('\\');
+        }
+        o.push(c);
+    }
+    o.push(')');
+    o
+}
+
+/// The UTF-8 bytes of a text as a string literal for a font without the
+/// CMap (Symbol, ZapfDingbats): genps writes them as they are, so the font
+/// shows what its own encoding makes of each byte.
+fn ps_string_bytes(s: &str) -> String {
+    let mut o = String::from("(");
+    for b in s.bytes() {
+        match b {
+            b'(' | b')' | b'\\' => {
+                o.push('\\');
+                o.push(char::from(b));
+            }
+            b' '..=b'~' => o.push(char::from(b)),
+            _ => {
+                let _ = write!(o, "\\{b:03o}");
+            }
+        }
+    }
+    o.push(')');
+    o
+}
+
+fn text(c: &mut Ctx, t: &TextPrim) {
+    let name = font_name(t);
+    let utf8 = needs_utf8(t);
     let latin = !matches!(name, "Symbol" | "ZapfDingbats");
     let size = super::font_px(t.size) * c.k;
     let (x, y) = c.p(t.origin);
@@ -155,12 +245,24 @@ fn text(c: &mut Ctx, t: &TextPrim) {
         n(y),
         n(t.angle.to_degrees()),
         name,
-        if latin { "-iso" } else { "" },
+        if utf8 {
+            "-UTF-8"
+        } else if latin {
+            "-iso"
+        } else {
+            ""
+        },
         n(size)
     );
     for (i, line) in t.text.split('\n').enumerate() {
         let dy = -(i as f64) * size * figbase::text::LINE_SPACING;
-        let s = ps_string(line);
+        let s = if utf8 {
+            ps_string_utf8(line)
+        } else if !latin && line.chars().any(|c| u32::from(c) > 0xff) {
+            ps_string_bytes(line)
+        } else {
+            ps_string(line)
+        };
         let just = match t.justify {
             Justify::Left => String::new(),
             Justify::Center => format!("{s} stringwidth pop -2 div 0 rmoveto "),
@@ -407,8 +509,13 @@ pub fn to_eps(
     let _ = writeln!(c.out, "%%Creator: RustFig");
     let _ = writeln!(c.out, "%%BoundingBox: 0 0 {} {}", w.ceil() as i64, h.ceil() as i64);
     let _ = writeln!(c.out, "%%HiResBoundingBox: 0 0 {} {}", n(w), n(h));
-    let _ = writeln!(c.out, "%%LanguageLevel: 2\n%%Pages: 1\n%%EndComments\n%%BeginProlog");
+    let _ = writeln!(c.out, "%%LanguageLevel: 2\n%%Pages: 1");
+    let fonts = utf8_fonts(scene);
+    utf8_comments(&mut c.out, &fonts);
+    c.out.push_str("%%EndComments\n%%BeginProlog\n");
+    utf8_cmap(&mut c.out, &fonts);
     prolog(&mut c.out);
+    utf8_composefonts(&mut c.out, &fonts);
     c.out.push_str("%%EndProlog\n%%Page: 1 1\nsave\n");
     if let Some(bg) = background {
         c.rgb(bg);
@@ -460,12 +567,16 @@ pub fn to_ps(
     let _ = writeln!(o, "%%BoundingBox: 0 0 {pw} {ph}");
     let _ = writeln!(o, "%%DocumentPaperSizes: {}", layout.paper.to_ascii_lowercase());
     let _ = writeln!(o, "%%Magnification: {magnification:.4}");
+    let fonts = utf8_fonts(scene);
+    utf8_comments(o, &fonts);
     o.push_str("%%EndComments\n");
     o.push_str("%%BeginSetup\n[{\n");
     let _ = writeln!(o, "%%BeginFeature: *PageSize {}", layout.paper);
     let _ = writeln!(o, "<</PageSize [{pw} {ph}]>> setpagedevice");
     o.push_str("%%EndFeature\n} stopped cleartomark\n%%EndSetup\n%%BeginProlog\n");
+    utf8_cmap(o, &fonts);
     prolog(o);
+    utf8_composefonts(o, &fonts);
     o.push_str("%%EndProlog\n");
     for (i, (tx, ty)) in layout.pages.iter().enumerate() {
         let _ = writeln!(o, "%%Page: {} {}\nsave", i + 1, i + 1);

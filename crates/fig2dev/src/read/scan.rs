@@ -340,18 +340,23 @@ pub enum Encoding {
     Utf8,
     Latin1,
     Latin2,
+    /// Any other charset iconv knows (`-E KOI8-R`, `ISO-8859-7`, ...).
+    Other(&'static encoding_rs::Encoding),
 }
 
 impl Encoding {
     /// fig2dev's `-E` name (or the file's `#encoding:` line), else, as
     /// RustFig's default for the locale fig2dev would use: UTF-8 if the
     /// whole file is valid UTF-8, otherwise ISO-8859-1. Names fig2dev
-    /// could only convert with iconv keep their bytes as ISO-8859-1.
+    /// could only convert with iconv are converted through `encoding_rs`;
+    /// unknown names keep their bytes as ISO-8859-1.
     pub fn resolve(name: Option<&str>, file_is_utf8: bool) -> Encoding {
         let Some(name) = name else {
             return if file_is_utf8 { Encoding::Utf8 } else { Encoding::Latin1 };
         };
-        Encoding::from_name(name).unwrap_or(Encoding::Latin1)
+        Encoding::from_name(name)
+            .or_else(|| crate::util::textconvert::iconv_encoding(name).map(Encoding::Other))
+            .unwrap_or(Encoding::Latin1)
     }
 
     /// The encodings RustFig converts itself (what iconv would do for
@@ -376,6 +381,7 @@ impl Encoding {
         match self {
             Encoding::Latin1 => bytes.iter().map(|&b| char::from(b)).collect(),
             Encoding::Latin2 => bytes.iter().map(|&b| latin2(b)).collect(),
+            Encoding::Other(e) => e.decode_without_bom_handling(bytes).0.into_owned(),
             Encoding::Utf8 => {
                 let mut s = String::with_capacity(bytes.len());
                 for chunk in bytes.utf8_chunks() {
@@ -503,7 +509,8 @@ mod tests {
         assert_eq!(Encoding::resolve(None, true), Encoding::Utf8);
         assert_eq!(Encoding::resolve(None, false), Encoding::Latin1);
         assert_eq!(Encoding::resolve(Some("ISO-8859-2"), true), Encoding::Latin2);
-        assert_eq!(Encoding::resolve(Some("KOI8-R"), true), Encoding::Latin1);
+        assert_eq!(Encoding::resolve(Some("no-such-charset"), true), Encoding::Latin1);
+        assert_eq!(Encoding::resolve(Some("KOI8-R"), true).decode(b"\xc1"), "а");
         assert_eq!(Encoding::Utf8.decode("é\u{1}".as_bytes()), "é\u{1}");
         assert_eq!(Encoding::Utf8.decode(b"a\xe9"), "aé");
         assert_eq!(Encoding::Latin1.decode(b"\xe9"), "é");

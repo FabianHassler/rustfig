@@ -22,6 +22,7 @@ pub mod page;
 pub mod pattern;
 pub mod pdf;
 pub mod preview;
+mod ps_cmap;
 pub mod raster;
 pub mod svg;
 mod textcache;
