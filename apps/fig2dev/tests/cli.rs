@@ -218,9 +218,10 @@ fn help_lists_only_effective_options() {
     let eps = help(&["-L", "eps", "-h"]);
     assert!(eps.contains("EPS Options:") && eps.contains("  -b num"), "{eps}");
     assert!(eps.contains("  -D +/-list"), "{eps}");
-    for page_only in ["  -P", "  -c ", "  -z ", "  -M ", "  -G "] {
+    for page_only in ["  -P", "  -c ", "  -z ", "  -M "] {
         assert!(!eps.contains(page_only), "eps lists {page_only}: {eps}");
     }
+    assert!(eps.contains("  -G minor[:major][unit]"), "{eps}");
 
     let mp = help(&["-L", "mp", "-h"]);
     assert!(mp.contains("METAPOST Options:"), "{mp}");

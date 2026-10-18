@@ -19,6 +19,7 @@ use crate::languages::{language, Language};
 use crate::object::{Arc, Compound, Ellipse, Line, Spline, Text};
 use crate::options::{option_spec, parse_options, Arg, DriverOptions, OptionValue, Support};
 use crate::scene::build::{file_scale, transparent_color, Builder, TextOptions};
+use crate::scene::grid::{grid_prims, GridSpec};
 use crate::scene::output::write_with_notes;
 use crate::scene::page::paper;
 use crate::scene::preview::{PreviewKind, UserBox};
@@ -68,6 +69,7 @@ pub fn new(lang: &str) -> Option<Box<dyn Driver>> {
         xoff: 0,
         yoff: 0,
         pdf_minor: 5,
+        grid: None,
     }))
 }
 
@@ -120,6 +122,8 @@ pub struct SceneDriver {
     yoff: i32,
     /// The PDF version 1.n (`-Y`).
     pdf_minor: u8,
+    /// `-G`: the major and minor spacings in file units (`grid` call).
+    grid: Option<(f32, f32)>,
 }
 
 impl SceneDriver {
@@ -227,7 +231,7 @@ impl Driver for SceneDriver {
     /// figure.
     fn option(&mut self, ctx: &mut Ctx, c: char, arg: Option<&str>) -> Result<(), String> {
         // -L and -G reach every driver; they are handled globally.
-        if c == 'L' {
+        if c == 'L' || c == 'G' {
             return Ok(());
         }
         let lang = options_lang(self.lang);
@@ -344,6 +348,15 @@ impl Driver for SceneDriver {
         Ok(())
     }
 
+    /// `genps_grid` (the bitmaps, PostScript, PDF and pstex; not SVG or
+    /// the box): remembered, drawn first when the scene is written.
+    fn grid(&mut self, _ctx: &mut Ctx, _out: &mut Out, major: f32, minor: f32) -> Result<(), String> {
+        if !matches!(self.format, ExportFormat::Svg | ExportFormat::LatexBox) {
+            self.grid = Some((major, minor));
+        }
+        Ok(())
+    }
+
     fn arc(&mut self, ctx: &mut Ctx, _out: &mut Out, a: &Arc) -> Result<(), String> {
         self.builder()?.arc(ctx, a);
         Ok(())
@@ -423,6 +436,56 @@ impl Driver for SceneDriver {
                 None
             };
         let eps_page = layout.is_none();
+        if let Some((major, minor)) = self.grid {
+            // genps_grid: EPS (and the bitmaps) grid the figure's box, pages
+            // the page's size, from the figure's origin.
+            let k = file_scale(ctx);
+            let ppi = if ctx.ppi.is_finite() && ctx.ppi > 0.0 {
+                ctx.ppi
+            } else {
+                1200.0
+            };
+            let (lx, ly, ux, uy) = match &layout {
+                Some(l) => {
+                    let sx = scale * 72.0 / ppi;
+                    (0.0, 0.0, f64::from(l.width) / sx, f64::from(l.height) / sx)
+                }
+                None => {
+                    let m = f64::from(if minor == 0.0 { major } else { minor });
+                    let fl = |v: f64| if m > 0.0 { (v / m).floor() * m } else { v };
+                    (
+                        fl(bounds.min.x / k),
+                        fl(bounds.min.y / k),
+                        bounds.max.x / k,
+                        bounds.max.y / k,
+                    )
+                }
+            };
+            let spec = GridSpec {
+                major,
+                minor,
+                lx: lx as f32,
+                ly: ly as f32,
+                ux: ux as f32,
+                uy: uy as f32,
+                thick_scale: ctx.thick_scale,
+                k,
+                metric: ctx.metric,
+                // One device pixel at 80 dpi times the magnification.
+                min_width: if self.format.is_bitmap() && o.smoothing.unwrap_or(0) <= 1 {
+                    15.0 / scale
+                } else {
+                    0.0
+                },
+            };
+            match grid_prims(&spec) {
+                Ok(Some(p)) => {
+                    scene.prims.splice(0..0, p);
+                }
+                Ok(None) => {}
+                Err(e) => ctx.warn(format!("fig2dev: {e}")),
+            }
+        }
         let (bytes, notes) = write_with_notes(
             &scene,
             self.format,

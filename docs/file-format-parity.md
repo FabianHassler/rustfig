@@ -16,7 +16,7 @@
 | PNG | — | ✅ | any resolution up to 20 000 px edge |
 | EPS and PDF together (xfig's pspdf) | — | ✅ | two files, NAME.eps and NAME.pdf |
 | LaTeX box (fig2dev `box`) | — | ✅ | ported from `genbox.c`; fig2dev's bounds |
-| fig2dev options (`file.export` `options`, CLI `--option`) | — | 🟡 | ported: depths `-D`/`-K`, `-m`, `-Z`, `-s`, border `-b`, background `-g` (X11 names), grayscale `-N`, title `-n`, font `-f`, `-F`; page layout (B4a), previews `-A`/`-T`/`-C` and bounding box `-B`/`-R` (B4b); bitmap options as fig2dev (B6) |
+| fig2dev options (`file.export` `options`, CLI `--option`) | — | 🟡 | ported: depths `-D`/`-K`, `-m`, `-Z`, `-s`, border `-b`, background `-g` (X11 names), grayscale `-N`, title `-n`, font `-f`, `-F`; page layout (B4a), previews `-A`/`-T`/`-C` and bounding box `-B`/`-R` (B4b); bitmap options as fig2dev (B6); grid `-G` for PostScript, PDF, pstex and the bitmaps (audit pass 13) |
 | PostScript (print) | — | ❌ | gap #3 |
 | standalone `fig2dev` (`apps/fig2dev`) | — | 🟡 | fig2dev 3.2.9a's command line, messages and exit codes, input from files or stdin with `-E` encodings; writes the ported languages, the others fail naming their task (B10); one reader for every language; fig2dev's suite: 82 pass, 6 fail (`epsi` and two embedded-PostScript bitmap tests that need a PostScript interpreter, the `/MediaBox` helper program, a version-2 font size, the KOI8-R case whose `iconv KOI8R` macOS lacks), 6 need unported languages |
 | ported fig2dev languages from the app | — | ✅ | every language a ported driver provides exports from the engine, the export dialog and `rustfig-cli` (availability checked at run time) |

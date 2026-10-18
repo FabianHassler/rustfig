@@ -419,7 +419,11 @@ mod tests {
     fn formats_lists_only_effective_options() {
         let eps = shown("eps");
         assert!(eps.contains(&"border".to_string()), "{eps:?}");
-        for k in ["center", "page_mode", "paper_size", "grid", "quality"] {
+        assert!(
+            eps.contains(&"grid".to_string()) && !shown("svg").contains(&"grid".to_string()),
+            "{eps:?}"
+        );
+        for k in ["center", "page_mode", "paper_size", "quality"] {
             assert!(!eps.contains(&k.to_string()), "eps lists {k}: {eps:?}");
         }
         let png = shown("png");

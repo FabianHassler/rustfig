@@ -9,12 +9,13 @@
 //! (`rustfig-render`) with the helpers here ([`shape_prims`],
 //! [`picture_prims`], [`fill`], [`stroke`]).
 //
-// Ported from fig2dev dev/genps.c (`PSFONTMAG` text sizes, arrows on pie
+// Ported from fig2dev dev/genps.c (`PSFONTMAG` text sizes, `genps_grid` in grid.rs, arrows on pie
 // arcs) and colors.c (`rgb2luminance`) (xfig licence, see LICENSE-xfig).
 
 pub mod bitmaps;
 pub mod build;
 pub mod eps;
+pub mod grid;
 pub mod latex_box;
 pub mod output;
 pub mod page;

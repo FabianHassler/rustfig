@@ -207,7 +207,7 @@ impl Default for Ctx {
             background: Rgb::default(),
             grid_minor_spacing: 0.0,
             grid_major_spacing: 0.0,
-            grid_mult: 1.0,
+            grid_mult: 0.0,
             thick_scale: 1.0,
             user_colors: Vec::new(),
             user_col_indx: Vec::new(),
@@ -336,49 +336,49 @@ impl Ctx {
     /// `-G minor[:major][unit]`.
     fn grid_option(&mut self, a: &str) {
         let usage = "Can't parse grid spec. Format is -G [minor_tick][:major_tick]unit e.g. -G .5:2cm or -G 1/16:1/2in\nAllowable units are: 'i', 'in', 'ft', 'feet', 'c', 'cm', 'mm', 'm'.  Ignoring grid.";
-        let rest = if let Some((minor, major)) = a.split_once(':') {
-            if !minor.is_empty() {
-                match parse_gridspec(minor) {
-                    Some((v, _)) => self.grid_minor_spacing = v,
-                    None => self.warn(usage),
+        // Parses one spacing into `slot`; the unit text after it.
+        let one = |this: &mut Ctx, s: &'_ str, minor: bool| -> String {
+            match parse_gridspec(s) {
+                GridSpec::Value(v, n) => {
+                    if minor {
+                        this.grid_minor_spacing = v;
+                    } else {
+                        this.grid_major_spacing = v;
+                    }
+                    s.get(n..).unwrap_or("").to_string()
                 }
-            }
-            match parse_gridspec(major) {
-                Some((v, n)) => {
-                    self.grid_major_spacing = v;
-                    major.get(n..).unwrap_or("")
-                }
-                None => {
-                    self.warn(usage);
-                    ""
-                }
-            }
-        } else {
-            match parse_gridspec(a) {
-                Some((v, n)) => {
-                    self.grid_minor_spacing = v;
-                    a.get(n..).unwrap_or("")
-                }
-                None => {
-                    self.warn(usage);
-                    ""
+                GridSpec::Rejected(n) => s.get(n..).unwrap_or("").to_string(),
+                GridSpec::Bad => {
+                    this.warn(usage);
+                    String::new()
                 }
             }
         };
-        self.grid_mult = match rest {
-            "" => 1.0,
-            "i" | "in" | "inch" => 1.0,
-            "f" | "ft" | "feet" => 12.0,
-            "c" | "cm" => 1.0 / 2.54,
-            "mm" => 1.0 / 25.4,
-            "m" => 1.0 / 0.0254,
+        let rest = if let Some((minor, major)) = a.split_once(':') {
+            if !minor.is_empty() {
+                one(self, minor, true);
+            }
+            one(self, major, false)
+        } else {
+            one(self, a, true)
+        };
+        let rest = rest.as_str();
+        // C's `mult` is static: "inch" passes the unit check but is never
+        // assigned (the test repeats "in"), a bad unit leaves it alone.
+        match rest {
+            "" => self.grid_mult = 1.0,
+            "i" | "in" => self.grid_mult = 1.0,
+            "inch" => {}
+            "f" | "ft" | "feet" => self.grid_mult = 12.0,
+            "c" | "cm" => self.grid_mult = 1.0 / 2.54,
+            "mm" => self.grid_mult = 1.0 / 25.4,
+            "m" => self.grid_mult = 1.0 / 0.0254,
             _ => {
                 self.warn(usage);
                 self.grid_major_spacing = 0.0;
                 self.grid_minor_spacing = 0.0;
-                1.0
             }
-        };
+        }
     }
 
     /// The RGB of colour number `c` (0..31 standard, then user colours),
@@ -445,19 +445,34 @@ pub fn strtod_prefix(s: &str) -> Option<(f64, usize)> {
     t.get(..i)?.parse::<f64>().ok().map(|v| (v, skip + i))
 }
 
-/// `parse_gridspec`: `numer/denom` or a number; the spacing and the bytes
-/// used. Zero or negative spacings are rejected.
-fn parse_gridspec(s: &str) -> Option<(f32, usize)> {
-    let (v, n) = strtod_prefix(s)?;
+/// What `parse_gridspec` made of one spacing.
+enum GridSpec {
+    /// The spacing and the bytes used.
+    Value(f32, usize),
+    /// Read, but zero or negative: no message, the spacing stays.
+    Rejected(usize),
+    /// Not a number (C prints the usage).
+    Bad,
+}
+
+/// `parse_gridspec`: `numer/denom` or a number.
+fn parse_gridspec(s: &str) -> GridSpec {
+    let Some((v, n)) = strtod_prefix(s) else {
+        return GridSpec::Bad;
+    };
     if let Some(after) = s.get(n..).and_then(|r| r.strip_prefix('/')) {
         if let Some((d, m)) = strtod_prefix(after) {
             if v < 0.0 || d <= 0.0 {
-                return None;
+                return GridSpec::Rejected(n + 1 + m);
             }
-            return Some(((v / d) as f32, n + 1 + m));
+            return GridSpec::Value((v / d) as f32, n + 1 + m);
         }
     }
-    (v > 0.0).then_some((v as f32, n))
+    if v > 0.0 {
+        GridSpec::Value(v as f32, n)
+    } else {
+        GridSpec::Rejected(n)
+    }
 }
 
 const DEPTH_USAGE: &str = "fig2dev: help for -D option:
@@ -779,5 +794,15 @@ mod tests {
         assert_eq!(ctx.font_size, 12.0);
         ctx.general_option('m', Some("x")).unwrap();
         assert_eq!((ctx.mag, ctx.magspec), (0.0, true));
+    }
+}
+#[cfg(test)]
+mod grid_zero_tests {
+    use super::*;
+    #[test]
+    fn zero_spacing_is_silent() {
+        let mut ctx = Ctx::default();
+        ctx.general_option('G', Some("1:0")).unwrap();
+        assert!(ctx.messages.is_empty(), "{:?}", ctx.messages);
     }
 }

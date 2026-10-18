@@ -143,7 +143,7 @@ pub const OPTIONS: &[OptionSpec] = &[
     opt("magnification", 'm', Number, ALL, "set magnification (1 = 100 %); not with max_size (-Z)", Ported),
     opt("font_size", 's', Number, ALL, "set default font size in points", Ported),
     opt("max_size", 'Z', Size, ALL, "scale the figure so that its largest dimension is maxdim inches/cm; append w or : for the width, h or prepend : for the height", Ported),
-    opt_for("grid", 'G', Text, ALL, PS_AND_BITMAPS, "draw light gray grid with thin/thick lines at minor/major units (e.g. .25:1cm)", Planned("B4")),
+    opt_for("grid", 'G', Text, ALL, PS_AND_BITMAPS, "draw light gray grid with thin/thick lines at minor/major units (e.g. .25:1cm)", Ported),
     // PostScript, EPS and PDF (gen_ps_eps_option, genpdf_option); the
     // bitmaps share some (genbitmaps_option).
     opt("border", 'b', Number, PS, "specify width of blank border around figure (points, 1/72 inch)", Ported),
@@ -461,6 +461,8 @@ pub fn parse_options(lang: &Language, items: &[(&str, OptionValue<'_>)]) -> Resu
                 let t = text()?;
                 o.transparent = Some(x_color(t).ok_or_else(|| format!("can't parse color {t:?}"))?);
             }
+            // The spacings are fig2dev's globals (`Ctx`), drawn by the driver.
+            "grid" => {}
             "ascii_preview" => o.ascii_preview = flag()?,
             "tiff_preview" => {
                 if flag()? {
