@@ -26,32 +26,6 @@ use languages::Language;
 use rustfig_model::Document;
 use std::path::Path;
 
-/// Whether `src` is a Fig file older than 3.0: `#FIG 1.x`/`#FIG 2.x`, or
-/// Fig 1.3's header of numbers.
-pub fn is_old_fig(src: &[u8]) -> bool {
-    let start = src.iter().position(|b| !b.is_ascii_whitespace()).unwrap_or(src.len());
-    let head = src.get(start..).unwrap_or_default();
-    if head.starts_with(b"#FIG 1") || head.starts_with(b"#FIG 2") {
-        return true;
-    }
-    // Fig 1.3 has no "#FIG" line: it starts with "ppi coord_sys w h".
-    start == 0 && head.first().is_some_and(u8::is_ascii_digit)
-}
-
-/// Read a Fig file of any version fig2dev reads (1.3 to 3.2) with its
-/// reader; the document and fig2dev's messages (its repairs).
-pub fn read_old_fig(src: &[u8]) -> Result<(Document, Vec<String>), String> {
-    let mut ctx = Ctx::default();
-    match read::readfp_fig(&mut ctx, src) {
-        Ok(objects) => {
-            let doc = to_model::to_document(&ctx, &objects);
-            Ok((doc, std::mem::take(&mut ctx.messages)))
-        }
-        Err(_) if ctx.messages.is_empty() => Err("not a Fig file fig2dev can read".into()),
-        Err(_) => Err(ctx.messages.join("\n")),
-    }
-}
-
 /// Whether the fig2dev crate writes language `id` (fig2dev's name).
 pub fn driver_available(id: &str) -> bool {
     fig2dev::drivers::driver(id).is_some()
@@ -112,20 +86,4 @@ pub fn export(
 /// PCX, EPS, PDF and the common bitmaps).
 pub fn load_picture(path: &Path) -> Result<LoadedPicture, String> {
     fig2dev::util::readpics::load_picture(&mut Ctx::default(), &path.to_string_lossy())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn old_versions_are_recognised() {
-        assert!(is_old_fig(b"#FIG 2.1\n80 2\n"));
-        assert!(is_old_fig(b"#FIG 1.4\n"));
-        assert!(is_old_fig(b"1200 2 9 9\n"));
-        assert!(!is_old_fig(b"#FIG 3.2\n"));
-        assert!(!is_old_fig(b"{\"objects\": []}"));
-        assert!(!is_old_fig(b""));
-        assert!(!is_old_fig(b"hello"));
-    }
 }

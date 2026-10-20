@@ -2,7 +2,7 @@
 
 **Paths written `fig2dev:crates/…` are in the fig2dev repository (<https://github.com/FabianHassler/fig2dev>), where figbase, the fig2dev library and the `fig2dev` program moved (B13).**
 
-**Status:** 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
+**Status:** 2026-10-20 (DD3: `f_read.c` read through fig2dev's reader); 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
 sources (`LICENSE-xfig`). Nothing has been ported line by line yet: every
 "own" row was written from the manual and the format description and must be
 checked against the C file named in it.
@@ -101,7 +101,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 
 | File | Lines | What it does | RustFig | Status | Task |
 |---|---:|---|---|---|---|
-| `f_read.c` | 2034 | Fig 3.x reader (all quirks) | `format/fig_read` | own | review |
+| `f_read.c` | 2034 | Fig 3.x reader (all quirks) | fig2dev's `read.c` through `format/bridge/to_model` (`format/fig_read`, 83 lines; DD3) | via fig2dev | DD3 ✅ |
 | `f_readold.c` | 537 | Fig 1.x/2.x reader | — | missing | G1 |
 | `f_save.c` | 665 | Fig 3.2 writer (type order) | `format/fig_write` | own; type order ported | review |
 | `f_load.c` | 384 | load, merge | `cmd/file` | own | review |

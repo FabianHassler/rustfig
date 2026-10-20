@@ -72,6 +72,8 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-20 | DD3: one Fig reader (fig2dev's, through the bridge) for versions 1.3–3.2; `fig_read.rs` 662 → 83 lines; fig2dev's reader in `Ctx::editing` mode (xfig's `f_read.c` rules, nothing repaired that xfig keeps); differential run old vs new over 2,572 figures (all parse in both, 2,469 equal, 103 differ only where `f_read.c` does the same); open .fig 19.0 → 15.7 ms; corpus sample unchanged. |
+| 2026-10-20 | B13: fig2dev v0.2.0 (`sld`, JPEG passthrough in EPS, gensvg/genps headers, hardened picture handling); `sld` now exports; all gates pass; corpus sample (300 figures, 0 errors) EPS/PDF/PNG medians in the report. |
 | 2026-10-20 | DD5: the canvas loads pictures through fig2dev's `readpics` first (PNG gamma, GIF transparency, XBM, XPM, PCX, `.gz`), the `image` crate only as fallback; canvas pixels equal the exports'. |
 | 2026-10-20 | DD2: bounds for fit, selection box, `doc.info` and rubber-band selection come from fig2dev's `bound` through the bridge (`bridge/bounds.rs`, cached per object in the engine); `Document::bbox` removed; equals fig2dev's on fixtures, the 300-figure sample and generated documents; perf `bounds (fig2dev)` 26 ms/50k paths, rest unchanged. Audit 12b closed. |
 | 2026-10-20 | DD1/DD8/DD10 (fig2dev side): model ↔ fig2dev object bridge in `rustfig-format` (`bridge/`, `to_model` moved down from the engine, new `from_model`; fixtures, 300-figure sample and generated documents round-trip and equal fig2dev's reader); fig2dev gets `Ctx::for_figure`, `Figure`, `splines_to_lines` and `fig2dev::cli::run` (fig2dev v0.3.0). Perf unchanged. |

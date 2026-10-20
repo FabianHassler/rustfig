@@ -13,15 +13,17 @@
 //! What is lost, because `read.c` drops it before the conversion sees it:
 //! - Fig 3.2 splines arrive as polylines (fig2dev converts every X-spline
 //!   with `create_line_with_spline`), so their control points and shape
-//!   factors are gone; files before 3.2 keep their splines (approximated or
+//!   factors are gone, unless the reader ran with `Ctx::editing` (as
+//!   [`crate::read_fig`] does: xfig's reading, nothing repaired); files before 3.2 keep their splines (approximated or
 //!   interpolated, with the default shape factors RustFig's reader gives
 //!   them; interpolated splines' Bézier controls are dropped, as there).
 //! - Objects come in fig2dev's list order (per compound: arcs, compounds,
 //!   ellipses, lines, splines, texts), which is xfig's drawing order within
 //!   a depth, but not necessarily the file's order.
 //! - The transparent-colour number of the header: `read.c` keeps only its
-//!   colour, so it is found again by colour; "none", "default" and
-//!   "background" all come back as none (−2), which exports alike.
+//!   colour, so it is found again by colour (`Ctx::header_transparent`, not
+//!   in fig2dev, tells "none" from "background"; "default" comes back as
+//!   none).
 //! - With fig2dev's `-m`, `-l`/`-p`, `-z`, `-M` given, the header's
 //!   values were not read; the options' values are taken instead.
 //! - Comments beyond `read.c`'s 100 per object.
@@ -113,7 +115,7 @@ fn settings(ctx: &Ctx) -> DocSettings {
 fn transparent_number(ctx: &Ctx) -> i32 {
     let name = ctx.gif_transparent.as_str();
     if name.is_empty() {
-        return -2;
+        return if ctx.header_transparent == -1 { -1 } else { -2 };
     }
     if let Some(i) = FIG_COLOR_NAMES.iter().position(|n| *n == name) {
         return i as i32;

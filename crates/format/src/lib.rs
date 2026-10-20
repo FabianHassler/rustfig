@@ -6,7 +6,7 @@ mod fig_read;
 mod fig_write;
 mod native;
 
-pub use fig_read::{read_fig, read_fig_encoded, TextEncoding, MAX_NESTING, MAX_POINTS, MAX_TEXT_BYTES};
+pub use fig_read::{read_fig, read_fig_encoded, read_fig_messages, TextEncoding, MAX_NESTING, MAX_TEXT_BYTES};
 pub use fig_write::write_fig;
 pub use native::{read_native, write_native, NATIVE_VERSION};
 
@@ -76,7 +76,8 @@ impl FileFormat {
     pub fn sniff(src: &[u8]) -> Option<FileFormat> {
         let head = src.get(..src.len().min(64)).unwrap_or(src);
         let trimmed: Vec<u8> = head.iter().copied().skip_while(u8::is_ascii_whitespace).collect();
-        if trimmed.starts_with(b"#FIG") {
+        // Fig 1.3 has no "#FIG" line: it starts with "ppi coord_sys w h".
+        if trimmed.starts_with(b"#FIG") || head.first().is_some_and(u8::is_ascii_digit) {
             Some(FileFormat::Fig)
         } else if trimmed.starts_with(b"{") {
             Some(FileFormat::Native)
@@ -88,12 +89,18 @@ impl FileFormat {
 
 /// Read a document in any supported format (detected from the content).
 pub fn read_any(src: &[u8]) -> Result<Document, FormatError> {
+    read_any_messages(src).map(|(doc, _)| doc)
+}
+
+/// Like [`read_any`], with fig2dev's messages for a Fig file (what its
+/// reader repaired or skipped).
+pub fn read_any_messages(src: &[u8]) -> Result<(Document, Vec<String>), FormatError> {
     if src.len() > MAX_FILE_BYTES {
         return Err(FormatError::new("file is too large"));
     }
     match FileFormat::sniff(src) {
-        Some(FileFormat::Fig) => read_fig(src),
-        Some(FileFormat::Native) => read_native(src),
+        Some(FileFormat::Fig) => read_fig_messages(src, TextEncoding::Auto),
+        Some(FileFormat::Native) => read_native(src).map(|d| (d, Vec::new())),
         None => Err(FormatError::new(
             "unrecognised file format (expected a Fig or RustFig document)",
         )),

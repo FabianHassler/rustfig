@@ -40,7 +40,7 @@ fn fig_2_1_and_1_3_files_open() {
     assert_eq!(types(&e), ["box", "polyline", "spline", "text"]);
     let x = e.doc_bounds().max.x;
     assert!((1350.0..1370.0).contains(&x), "80 ppi scaled to 1200: {x}");
-    // Saved as Fig 3.2, it reads back with RustFig's own reader.
+    // Saved as Fig 3.2, it reads back with the reader.
     let saved = dir.join("saved.fig");
     e.execute("file.save", &json!({"path": saved})).unwrap();
     let text = std::fs::read_to_string(&saved).unwrap();
@@ -55,14 +55,18 @@ fn fig_2_1_and_1_3_files_open() {
     assert_eq!(r["objects"], 1);
     assert_eq!(types(&e), ["spline"]);
 
-    // And from data, with fig2dev's repair messages as warnings.
+    // And from data, with the reader's messages as warnings: like xfig, it
+    // deletes a box of fewer than 5 points.
     let open_box = "#FIG 2.1\n80 2\n2 2 0 1 -1 0 0 0 0.000 7 0 0\n\t 10 10 90 10 90 50 10 50 9999 9999\n";
     let r = e.execute("file.open_data", &json!({"data": open_box})).unwrap();
-    assert_eq!(r["objects"], 1);
+    assert_eq!(r["objects"], 0);
     let w = r["warnings"].as_array().unwrap();
-    assert!(w.iter().any(|m| m.as_str().unwrap().contains("open rectangle")), "{r}");
+    assert!(
+        w.iter().any(|m| m.as_str().unwrap().contains("Deleting zero-size box")),
+        "{r}"
+    );
     e.execute("file.merge_data", &json!({"data": FIG21})).unwrap();
-    assert_eq!(e.doc().objects.len(), 5);
+    assert_eq!(e.doc().objects.len(), 4);
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
@@ -87,7 +91,7 @@ fn bad_old_files_are_errors_and_change_nothing() {
 const DRAWING: &str = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
     2 2 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 5\n\t 0 0 2400 0 2400 1200 0 1200 0 0\n\
     4 0 0 50 -1 0 12 0.0000 4 135 450 300 600 plain\\001\n\
-    4 0 0 50 -1 0 12 0.0000 2 135 450 300 900 $\\alpha^2$\\001\n";
+    4 0 0 50 -1 0 12 0.0000 2 135 450 300 900 $\\\\alpha^2$\\001\n";
 
 fn drawing() -> Engine {
     let mut e = Engine::new();

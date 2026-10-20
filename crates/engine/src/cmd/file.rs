@@ -169,18 +169,10 @@ fn read_file(path: &str) -> Result<Vec<u8>, EngineError> {
     std::fs::read(path).map_err(|err| EngineError::io(format!("{path}: {err}")))
 }
 
-/// Read a document; Fig files before 3.0 through fig2dev's reader. The
-/// document and the reader's messages.
+/// Read a document (Fig 1.3 to 3.2 through fig2dev's reader). The document
+/// and the reader's messages.
 fn parse(bytes: &[u8]) -> Result<(Document, Vec<String>), EngineError> {
-    if crate::fig2dev::is_old_fig(bytes) {
-        if bytes.len() > rustfig_format::MAX_FILE_BYTES {
-            return Err(EngineError::format("file is too large"));
-        }
-        return crate::fig2dev::read_old_fig(bytes).map_err(EngineError::format);
-    }
-    rustfig_format::read_any(bytes)
-        .map(|d| (d, Vec::new()))
-        .map_err(|err| EngineError::format(err.to_string()))
+    rustfig_format::read_any_messages(bytes).map_err(|err| EngineError::format(err.to_string()))
 }
 
 fn open(e: &mut Engine, p: &Value) -> CmdResult {

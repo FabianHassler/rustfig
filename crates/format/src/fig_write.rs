@@ -85,7 +85,23 @@ fn escape_text(s: &str) -> String {
     out
 }
 
+/// An angle in radians as the reader takes it (between -7 and 7).
+fn angle(a: f64) -> f64 {
+    if (-7.0..=7.0).contains(&a) {
+        a
+    } else {
+        a.rem_euclid(std::f64::consts::TAU)
+    }
+}
+
 fn object(out: &mut String, o: &Object) {
+    // As xfig's write_ellipse: "get rid of any evil ellipses which have
+    // either radius = 0" (fig2dev's reader rejects the whole file for one).
+    if let ObjectKind::Ellipse(e) = &o.kind {
+        if i(e.radii.x) == 0 || i(e.radii.y) == 0 {
+            return;
+        }
+    }
     comments(out, &o.comments);
     match &o.kind {
         ObjectKind::Ellipse(e) => {
@@ -95,7 +111,7 @@ fn object(out: &mut String, o: &Object) {
                 out,
                 " {} {:.4} {} {} {} {} {} {} {} {}",
                 e.direction,
-                f(e.angle),
+                f(angle(e.angle)),
                 i(e.center.x),
                 i(e.center.y),
                 i(e.radii.x),
@@ -181,10 +197,10 @@ fn object(out: &mut String, o: &Object) {
                 t.pen_style,
                 t.font,
                 f(t.size),
-                f(t.angle),
+                f(angle(t.angle)),
                 t.flags,
-                i(t.height),
-                i(t.length),
+                i(t.height).max(0),
+                i(t.length).max(0),
                 i(t.origin.x),
                 i(t.origin.y),
                 escape_text(&t.text)

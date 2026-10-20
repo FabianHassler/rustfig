@@ -14,7 +14,7 @@ lower layers; nothing below L6 may depend on egui, eframe, winit or rfd.
 | ext | `fig2dev` (FabianHassler/fig2dev) | fig2dev: reader (`read.c`, Fig 1.3–3.2), `bound.c`, `gendev` (`convert`), option and language tables, every ported driver; the scene drivers (EPS, PDF, SVG, bitmaps) draw a `Scene` with its rasteriser and fill patterns |
 | L1 | `rustfig-model` | document model: objects, styles, colours, ids, transforms, flattening |
 | L1 | `rustfig-text` | `figbase`'s font tables and metrics plus text composition |
-| L2 | `rustfig-format` | Fig 3.0–3.2 reader, Fig 3.2 writer, native JSON |
+| L2 | `rustfig-format` | Fig 1.3–3.2 reader (fig2dev's, through the bridge), Fig 3.2 writer, native JSON |
 | L3 | `rustfig-render` | the canvas scene: a document → fig2dev's `Scene` (depth order, gray layers), drawn by fig2dev's rasteriser |
 | L4 | `rustfig-engine` | session: commands, undo, selection, indicator, view, tools, guard, picture import; exports through `fig2dev::convert` |
 | L5 | `rustfig-mcp` | MCP server over stdio |
@@ -81,7 +81,7 @@ resolution → `-m`, margin → `-b`, background → `-g`, active layers →
 scene drivers (EPS, PDF, SVG, the bitmap languages) build a `Scene` from
 fig2dev's objects with the same primitives the canvas uses
 (fig2dev repo, `crates/fig2dev/src/scene/`), so what the canvas shows is what fig2dev
-writes. Fig files before 3.0 open through fig2dev's reader, converted by the
+writes. Every Fig file (1.3–3.2) opens through fig2dev's reader (`Ctx::editing`), converted by the
 bridge (`crates/format/src/bridge/`, L2: `to_model` fig2dev objects → document,
 `from_model` document → fig2dev `Ctx` + objects, which equal what fig2dev's reader
 returns for `write_fig`'s text; `engine::fig2dev::to_model` re-exports it). `format`
