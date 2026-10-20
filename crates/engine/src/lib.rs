@@ -38,6 +38,10 @@ use serde_json::Value;
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
+/// A cached box of a top-level object: the picking box (a superset of the
+/// drawn object) and, once asked for, fig2dev's bounds of it.
+type BoxEntry = (Arc<Object>, Rect, std::cell::Cell<Option<Rect>>);
+
 /// Something the engine asks the UI to do (open a dialog, pick a file).
 #[derive(Debug, Clone, PartialEq)]
 pub enum UiRequest {
@@ -99,7 +103,7 @@ pub struct Engine {
     /// Bounding boxes of the top-level objects, each with the object it
     /// belongs to: a changed object is a new `Arc`, so entries stay right
     /// even while a command runs.
-    bbox_cache: std::cell::RefCell<Vec<(Arc<Object>, Rect)>>,
+    bbox_cache: std::cell::RefCell<Vec<BoxEntry>>,
 }
 
 impl Default for Engine {
@@ -393,23 +397,27 @@ impl Engine {
 
     /// Bounding boxes of the top-level objects, recomputed only for objects
     /// that changed since the last call.
-    fn object_bboxes(&self) -> std::cell::Ref<'_, Vec<(Arc<Object>, Rect)>> {
+    fn object_bboxes(&self) -> std::cell::Ref<'_, Vec<BoxEntry>> {
         let objs = &self.doc.objects;
         let fresh = {
             let c = self.bbox_cache.borrow();
-            c.len() == objs.len() && c.iter().zip(objs).all(|((a, _), b)| Arc::ptr_eq(a, b))
+            c.len() == objs.len() && c.iter().zip(objs).all(|((a, ..), b)| Arc::ptr_eq(a, b))
         };
         if !fresh {
             let mut c = self.bbox_cache.borrow_mut();
             let old = std::mem::take(&mut *c);
             // Unchanged runs at the start and the end keep their boxes.
-            let prefix = old.iter().zip(objs).take_while(|((a, _), b)| Arc::ptr_eq(a, b)).count();
+            let prefix = old
+                .iter()
+                .zip(objs)
+                .take_while(|((a, ..), b)| Arc::ptr_eq(a, b))
+                .count();
             let suffix = old
                 .iter()
                 .rev()
                 .zip(objs.iter().rev())
                 .take(old.len().min(objs.len()) - prefix)
-                .take_while(|((a, _), b)| Arc::ptr_eq(a, b))
+                .take_while(|((a, ..), b)| Arc::ptr_eq(a, b))
                 .count();
             let old_tail = old.len() - suffix;
             let mut fresh = Vec::with_capacity(objs.len());
@@ -418,12 +426,45 @@ impl Engine {
                 objs.iter()
                     .take(objs.len() - suffix)
                     .skip(prefix)
-                    .map(|o| (Arc::clone(o), o.bbox())),
+                    .map(|o| (Arc::clone(o), o.approx_bbox(), std::cell::Cell::new(None))),
             );
             fresh.extend(old.into_iter().skip(old_tail));
             *c = fresh;
         }
         self.bbox_cache.borrow()
+    }
+
+    /// The boxes of the top-level objects with fig2dev's bounds filled in
+    /// (`fig2dev::bound` through the bridge), each computed once per
+    /// changed object.
+    fn fig_bounds(&self) -> std::cell::Ref<'_, Vec<BoxEntry>> {
+        let boxes = self.object_bboxes();
+        if boxes.iter().any(|(_, _, b)| b.get().is_none()) {
+            let mut ctx = rustfig_format::bridge::from_model::context(&self.doc);
+            for (o, _, b) in boxes.iter() {
+                if b.get().is_none() {
+                    b.set(Some(rustfig_format::bridge::object_bounds(o, &mut ctx)));
+                }
+            }
+        }
+        boxes
+    }
+
+    /// The bounds of the whole drawing as fig2dev computes them (what its
+    /// drivers frame): used to fit the window and to report the size.
+    pub fn doc_bounds(&self) -> Rect {
+        self.fig_bounds()
+            .iter()
+            .fold(Rect::EMPTY, |r, (_, _, b)| r.union(&b.get().unwrap_or(Rect::EMPTY)))
+    }
+
+    /// Top-level objects (visible ones) whose fig2dev bounds lie inside `r`.
+    pub fn objects_within(&self, r: &Rect) -> Vec<ObjectId> {
+        self.fig_bounds()
+            .iter()
+            .filter(|(o, _, b)| self.is_visible(o) && r.contains_rect(&b.get().unwrap_or(Rect::EMPTY)))
+            .map(|(o, ..)| o.id)
+            .collect()
     }
 
     /// Topmost top-level object within `tol` Fig units of `p`.
@@ -432,7 +473,7 @@ impl Engine {
         // (depth, xfig type rank, index): the front-most is the one drawn last.
         let mut best: Option<(i32, u8, usize)> = None;
         for (i, o) in self.doc.objects.iter().enumerate() {
-            let Some((_, bb)) = boxes.get(i) else { break };
+            let Some((_, bb, _)) = boxes.get(i) else { break };
             if !bb.expand(tol).contains(p) || !self.is_visible(o) {
                 continue;
             }
@@ -502,10 +543,11 @@ impl Engine {
 
     /// Bounding box of the selection.
     pub fn selection_bbox(&self) -> Rect {
-        self.selection
+        let sel: std::collections::HashSet<ObjectId> = self.selection.iter().copied().collect();
+        self.fig_bounds()
             .iter()
-            .filter_map(|id| self.doc.get(*id))
-            .fold(Rect::EMPTY, |r, o| r.union(&o.bbox()))
+            .filter(|(o, ..)| sel.contains(&o.id))
+            .fold(Rect::EMPTY, |r, (_, _, b)| r.union(&b.get().unwrap_or(Rect::EMPTY)))
     }
 
     /// Snap a point according to the positioning mode.

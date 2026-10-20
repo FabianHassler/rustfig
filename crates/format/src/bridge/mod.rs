@@ -12,8 +12,10 @@
 //! Hand them to fig2dev's drivers through [`from_model::driver_objects`],
 //! which converts the splines to lines as the reader does.
 
+pub mod bounds;
 pub mod from_model;
 pub mod to_model;
 
-pub use from_model::{driver_objects, from_model, note_usage, object_to_fig2dev, FigObject};
+pub use bounds::{document_bounds, object_bounds};
+pub use from_model::{driver_compound, driver_objects, from_model, note_usage, object_to_fig2dev, FigObject};
 pub use to_model::to_document;

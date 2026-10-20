@@ -244,7 +244,7 @@ pub(super) fn commands() -> Vec<Command> {
 fn info(e: &mut Engine, _: &Value) -> CmdResult {
     let d = e.doc();
     let s = &d.settings;
-    let bb = d.bbox();
+    let bb = e.doc_bounds();
     Ok(json!({
         "path": e.path(),
         "modified": e.is_modified(),

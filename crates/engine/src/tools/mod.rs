@@ -1327,13 +1327,7 @@ impl Engine {
     /// Close a rubber band from `start` to `end`.
     fn finish_band(&mut self, purpose: Band, start: Point, end: Point) -> Result<(), EngineError> {
         let r = Rect::new(start, end);
-        let inside: Vec<ObjectId> = self
-            .doc()
-            .objects
-            .iter()
-            .filter(|o| self.is_visible(o) && r.contains_rect(&o.bbox()))
-            .map(|o| o.id)
-            .collect();
+        let inside: Vec<ObjectId> = self.objects_within(&r);
         match purpose {
             Band::Select | Band::SelectAdd => {
                 let mut sel = if purpose == Band::SelectAdd {

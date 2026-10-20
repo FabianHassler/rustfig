@@ -192,7 +192,7 @@ fn open(e: &mut Engine, p: &Value) -> CmdResult {
     e.replace_document(doc, Some(path.clone()));
     e.prefs.add_recent(&path);
     e.prefs_dirty = true;
-    let r = e.doc().bbox();
+    let r = e.doc_bounds();
     e.view.fit(&r);
     e.set_status(format!("Opened {path}"));
     Ok(json!({"objects": count, "warnings": warnings}))
@@ -229,7 +229,7 @@ fn recover(e: &mut Engine, p: &Value) -> CmdResult {
     let warnings = import::load_all_pictures(&mut doc, base.as_deref());
     e.replace_document(doc, original.clone());
     e.set_modified(true);
-    let r = e.doc().bbox();
+    let r = e.doc_bounds();
     e.view.fit(&r);
     e.set_status("Recovered an unsaved drawing; save it to keep it");
     Ok(json!({"original": original, "warnings": warnings}))
@@ -274,7 +274,7 @@ fn open_data(e: &mut Engine, p: &Value) -> CmdResult {
     let (doc, warnings) = parse(data.as_bytes())?;
     let count = doc.objects.len();
     e.replace_document(doc, opt_str(p, "name")?.map(str::to_string));
-    let r = e.doc().bbox();
+    let r = e.doc_bounds();
     e.view.fit(&r);
     Ok(json!({"objects": count, "warnings": warnings}))
 }

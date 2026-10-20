@@ -1,6 +1,6 @@
 # Execution plan
 
-**Status:** 2026-10-18. Phase W (with W8, W9), phase A (A1–A10) done, A8, A9, A10, D9 and D12 done; B1, B2, B3, B10, B12 and G1 done; B9 (porting fig2dev's drivers) done but `sld`, with the audit's hardening passes in B11. Overall parity ≈65 %.
+**Status:** 2026-10-20 (DD1, DD2 done). Phase W (with W8, W9), phase A (A1–A10) done, A8, A9, A10, D9 and D12 done; B1, B2, B3, B10, B12 and G1 done; B9 (porting fig2dev's drivers) done but `sld`, with the audit's hardening passes in B11. Overall parity ≈65 %.
 
 This is the committed work plan. [`gaps.md`](gaps.md) ranks every known
 shortfall; this file groups them into phases with task ids, acceptance
@@ -198,6 +198,7 @@ User decision 2026-10-20: RustFig uses fig2dev for everything fig2dev can do.
 | Id | Task | Acceptance | h |
 |----|------|------------|---|
 | DD1 | ✅ 2026-10-20. **Model ↔ fig2dev object bridge** in `rustfig-format` (`crates/format/src/bridge/`): `to_model` moved down from the engine (the engine re-exports it), new `from_model` (`from_model(doc) -> Figure`, `object_to_fig2dev`, `driver_objects`, `note_usage`). Same rounding, closed-path points, arrowhead rules and colour numbering as `write_fig` + fig2dev's reader. | `crates/format/tests/bridge.rs`: the 11 fixtures and the 300-figure corpus sample round-trip through `from_model`/`to_document` (Fig text and model equal) and `driver_objects(from_model(doc))` equals fig2dev's reader on `write_fig(doc)` (objects and context); 300 generated documents; hostile documents (NaN, huge, empty, 240 levels of compounds); `prop_format` runs the bridge on mutated files. Perf unchanged. Not yet on any hot path (D2, D3, D7 do that). | 14 |
+| DD2 | ✅ 2026-10-20. **Bounds from `fig2dev::bound`** (closes audit 12b): `rustfig_format::bridge::{object_bounds, document_bounds}` take an object through the D1 bridge (`object_to_fig2dev`, `driver_compound`) and `bound::compound_bound`; the engine caches them per top-level `Arc<Object>` (`Engine::doc_bounds`, `selection_bbox`, `objects_within`) for fit, the open/recover frame, `doc.info`, the selection box and rubber-band selection. `Document::bbox` is gone; `Object::bbox` became `approx_bbox`, a superset kept only to pre-filter hit tests (`geometry_bbox`, `Text::corners` stay). No fig2dev change. | `crates/format/tests/bridge.rs` (`check_bounds`: equals `compound_bound` of fig2dev's reading, for fixtures, the 300-figure sample and generated documents of every kind); `fig2dev_bridge.rs` (`doc_bounds_are_the_eps_frame`, `arrowheads_count_in_the_bounds`); perf: `bounds (fig2dev)` 26 ms for 50k paths, other lines unchanged; corpus sample (300) identical (exports already used fig2dev's bounds). | 4 |
 | DD8 | ✅ 2026-10-20. **fig2dev API for figures in memory** (fig2dev repo, v0.3.0): `Ctx::for_figure(ppi, metric, colors)`, `Figure { ctx, objects }` with `convert`, `trans_spline::splines_to_lines`. | fig2dev gates green, suite unchanged (82 pass / 6 fail). | 4 |
 | DD10 | fig2dev side ✅ 2026-10-20: the command line is `fig2dev::cli::run(args, stdin, stdout, stderr) -> u8` (native only), the binary a thin `main`. The RustFig side (subcommand, name dispatch) is open. | fig2dev's cli tests and suite unchanged. | 2 |
 
@@ -238,6 +239,7 @@ User decision 2026-10-20: RustFig uses fig2dev for everything fig2dev can do.
 | 2026-10-13 | First plan, after M0–M3. |
 | 2026-10-13 | Added A8 (fig2dev reference tests) and B0 (fig2dev export backend) with design notes. |
 | 2026-10-14 | A3: the web build compiles locally with rustup's toolchain; xtask uses the running toolchain's rustc. |
+| 2026-10-20 | DD2: bounds (fit, selection box, info, rubber band) from fig2dev's `bound` through the bridge. |
 | 2026-10-20 | DD1, DD8, DD10 (fig2dev side): the model ↔ fig2dev object bridge, fig2dev API for figures in memory and `fig2dev::cli`; RustFig pins fig2dev v0.3.0. |
 | 2026-10-18 | B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk ported; every fig2dev language but `sld`; suite 79 pass / 9 fail / 1 skipped. Decision: fig2dev moves to `FabianHassler/fig2dev`. |
 | 2026-10-17 | B3: pict2e part done; 16 h left for pstricks. |

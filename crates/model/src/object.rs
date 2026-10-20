@@ -570,10 +570,12 @@ impl Object {
         }
     }
 
-    /// Bounding box including line width and arrowheads (approximately).
-    pub fn bbox(&self) -> Rect {
+    /// A cheap box around the object, line width included: a superset for
+    /// pre-filtering picks, not the figure's bounds (those are fig2dev's,
+    /// `rustfig_format::bridge::object_bounds`).
+    pub fn approx_bbox(&self) -> Rect {
         match &self.kind {
-            ObjectKind::Compound(c) => c.objects.iter().fold(Rect::EMPTY, |r, o| r.union(&o.bbox())),
+            ObjectKind::Compound(c) => c.objects.iter().fold(Rect::EMPTY, |r, o| r.union(&o.approx_bbox())),
             ObjectKind::Text(t) => Rect::from_points(t.corners()),
             _ => {
                 let mut r = Rect::EMPTY;

@@ -288,7 +288,8 @@ fn measure_doc(doc: &Document, report: &mut Report, scale_budget: f64) -> Result
         )
     });
     report.add("scene build", ms, 400.0 * scale_budget);
-    let bb = doc.bbox();
+    let (bb, ms) = time(|| rustfig_format::bridge::document_bounds(doc));
+    report.add("bounds (fig2dev)", ms, 200.0 * scale_budget);
     let (w, h) = (1280u32, 860u32);
     let mut view = rustfig_engine::View {
         size: (f64::from(w), f64::from(h)),

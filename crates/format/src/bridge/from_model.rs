@@ -143,9 +143,15 @@ pub fn from_model(doc: &Document) -> Figure {
 /// a Fig 3.2 file): the splines converted to lines. fig2dev's messages for
 /// a spline that can't be converted go to `fig.ctx`.
 pub fn driver_objects(fig: &mut Figure) -> Compound {
-    let mut objects = fig.objects.clone();
+    driver_compound(&mut fig.ctx, &fig.objects)
+}
+
+/// [`driver_objects`] for any compound built by this module (one object
+/// wrapped in a compound, for instance).
+pub fn driver_compound(ctx: &mut Ctx, com: &Compound) -> Compound {
+    let mut objects = com.clone();
     repair_lines(&mut objects);
-    fig2dev::trans_spline::splines_to_lines(&mut fig.ctx, &objects)
+    fig2dev::trans_spline::splines_to_lines(ctx, &objects)
 }
 
 /// What `read.c` does to the points of a line (`sanitize_lineobject`):

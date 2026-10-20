@@ -38,8 +38,8 @@ fn fig_2_1_and_1_3_files_open() {
     let r = e.execute("file.open", &json!({"path": p21})).unwrap();
     assert_eq!(r["objects"], 4);
     assert_eq!(types(&e), ["box", "polyline", "spline", "text"]);
-    let x = e.doc().bbox().max.x;
-    assert!((1350.0..1360.0).contains(&x), "80 ppi scaled to 1200: {x}");
+    let x = e.doc_bounds().max.x;
+    assert!((1350.0..1370.0).contains(&x), "80 ppi scaled to 1200: {x}");
     // Saved as Fig 3.2, it reads back with RustFig's own reader.
     let saved = dir.join("saved.fig");
     e.execute("file.save", &json!({"path": saved})).unwrap();
@@ -278,4 +278,67 @@ fn compressed_and_xbm_pictures_load() {
     let r = e.execute("file.open", &json!({"path": path})).unwrap();
     assert_eq!(r["warnings"].as_array().unwrap().len(), 0, "{r}");
     std::fs::remove_dir_all(&dir).unwrap();
+}
+
+/// D2: the frame the engine fits and reports is the frame fig2dev's EPS
+/// driver exports (points: 72/1200 of a Fig unit, rounded outward).
+#[test]
+fn doc_bounds_are_the_eps_frame() {
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+    let mut n = 0;
+    for entry in std::fs::read_dir(dir).unwrap() {
+        let p = entry.unwrap().path();
+        if p.extension().is_none_or(|x| x != "fig") {
+            continue;
+        }
+        let mut e = Engine::new();
+        e.execute("file.open", &json!({"path": p})).unwrap();
+        let r = e
+            .execute("file.export_data", &json!({"format": "eps", "options": {}}))
+            .unwrap();
+        let eps = r["data"].as_str().unwrap();
+        let line = eps.lines().find(|l| l.starts_with("%%BoundingBox:")).unwrap();
+        let v: Vec<f64> = line.split_whitespace().skip(1).map(|n| n.parse().unwrap()).collect();
+        let b = e.doc_bounds();
+        // Metric drawings have 450 units per cm, 1143 per inch.
+        let k = if e.doc().settings.units == rustfig_model::Units::Metric {
+            72.0 / 1143.0
+        } else {
+            0.06
+        };
+        let (w, h) = ((b.max.x - b.min.x) * k, (b.max.y - b.min.y) * k);
+        // fig2dev rounds the corners outward; the extent differs by under 2 points.
+        assert!(
+            (v[2] - v[0] - w).abs() < 2.0,
+            "{}: width {} vs {w}",
+            p.display(),
+            v[2] - v[0]
+        );
+        assert!(
+            (v[3] - v[1] - h).abs() < 2.0,
+            "{}: height {} vs {h}",
+            p.display(),
+            v[3] - v[1]
+        );
+        n += 1;
+    }
+    assert!(n >= 10);
+}
+
+/// D2: arrowheads count, and the selection box is fig2dev's.
+#[test]
+fn arrowheads_count_in_the_bounds() {
+    let mut e = Engine::new();
+    e.execute("shape.polyline", &json!({"points": [[0, 0], [1200, 0]]}))
+        .unwrap();
+    let plain = e.doc_bounds();
+    e.execute("edit.select_all", &json!({})).unwrap();
+    e.execute("object.set_attributes", &json!({"forward_arrow": true}))
+        .unwrap();
+    let arrowed = e.doc_bounds();
+    assert!(
+        arrowed.max.x > plain.max.x || arrowed.max.y > plain.max.y,
+        "{plain:?} {arrowed:?}"
+    );
+    assert_eq!(e.selection_bbox(), arrowed);
 }

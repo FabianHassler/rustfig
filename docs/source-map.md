@@ -120,7 +120,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `u_draw.c` | 2237 | drawing every object type, arrowheads, dash patterns | `render` (canvas scene), `fig2dev:crates/fig2dev/src/scene/` (primitives), `fig2dev:crates/figbase/src/geom/arrow.rs` | arrowheads ported from fig2dev `bound.c` (D9); own otherwise | — |
 | `u_draw_spline.c` | 384 | X-spline evaluation | `fig2dev:crates/figbase/src/geom/xspline.rs` (from the paper) | own | review (step size) |
 | `u_redraw.c` | 731 | redraw order, gray layers | `rustfig_render::build_scene` | ported: draw order, gray layers first | — |
-| `u_bound.c` | 653 | bounding boxes | `model` | own | review |
+| `u_bound.c` | 653 | bounding boxes | `fig2dev:crates/fig2dev/src/bound.rs` through `crates/format/src/bridge/bounds.rs` (DD2); `model` keeps only `Object::approx_bbox` (hit-test prefilter) and `geometry_bbox` | ported via fig2dev's `bound.c` | — |
 | `u_geom.c` | 1072 | normals, slopes, latex/manhattan endpoints, closeness | `geom` | partial: latex/manhattan modes | D7 |
 | `u_quartic.c` | 298 | quartic solver (intersections) | `snap.rs` (flattened outlines) | modern | — |
 | `u_elastic.c` | 1004 | rubber-band feedback while drawing | `Engine::overlay` | own | review |

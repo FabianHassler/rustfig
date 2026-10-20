@@ -12,7 +12,7 @@ pub use figbase::color::{area_fill_color, x_color, x_color_names, Rgb, STANDARD_
 pub use geometry::{arc_geom, flatten_object, FlatPath};
 pub use object::*;
 
-use rustfig_geom::{Point, Rect};
+use rustfig_geom::Point;
 use serde::{Deserialize, Serialize};
 
 /// Page orientation.
@@ -260,11 +260,6 @@ impl Document {
 
     pub fn index_of(&self, id: ObjectId) -> Option<usize> {
         self.objects.iter().position(|o| o.id == id)
-    }
-
-    /// Bounding box of all objects.
-    pub fn bbox(&self) -> Rect {
-        self.objects.iter().fold(Rect::EMPTY, |r, o| r.union(&o.bbox()))
     }
 
     /// Number of leaf objects, counting into compounds.

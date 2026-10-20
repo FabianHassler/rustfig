@@ -175,10 +175,24 @@ fn check(doc: &Document, what: &str) {
         &format!("{what}: model after the round trip"),
     );
     let (rctx, mut robjs, bctx, mut bobjs) = read_and_bridge(doc);
+    check_bounds(doc, &rctx, &robjs, what);
     unfill(&mut robjs);
     unfill(&mut bobjs);
     eq_dbg(&bobjs, &robjs, &format!("{what}: objects as the reader returns them"));
     assert_eq!(ctx_key(&bctx), ctx_key(&rctx), "{what}: context");
+}
+
+/// The document's bounds (plan D2) are `compound_bound` of fig2dev's own
+/// reading of the Fig text, whole and per top-level object.
+fn check_bounds(doc: &Document, rctx: &Ctx, robjs: &FigCompound, what: &str) {
+    let b = fig2dev::bound::compound_bound(rctx, robjs, true);
+    let want = if b.0 > b.2 || b.1 > b.3 {
+        rustfig_geom::Rect::EMPTY
+    } else {
+        rustfig_geom::Rect::new(pt(b.0, b.1), pt(b.2, b.3))
+    };
+    let got = rustfig_format::bridge::document_bounds(doc);
+    assert_eq!(got, want, "{what}: document bounds");
 }
 
 fn fixtures() -> Vec<PathBuf> {

@@ -36,7 +36,7 @@ pub(super) fn commands() -> Vec<Command> {
             mutates: false,
             enabled: always,
             run: |e, _| {
-                let bb = e.doc().bbox();
+                let bb = e.doc_bounds();
                 if !bb.is_empty() {
                     e.view.fit(&bb);
                 }

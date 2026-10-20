@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-20 | DD2: bounds for fit, selection box, `doc.info` and rubber-band selection come from fig2dev's `bound` through the bridge (`bridge/bounds.rs`, cached per object in the engine); `Document::bbox` removed; equals fig2dev's on fixtures, the 300-figure sample and generated documents; perf `bounds (fig2dev)` 26 ms/50k paths, rest unchanged. Audit 12b closed. |
 | 2026-10-20 | DD1/DD8/DD10 (fig2dev side): model ↔ fig2dev object bridge in `rustfig-format` (`bridge/`, `to_model` moved down from the engine, new `from_model`; fixtures, 300-figure sample and generated documents round-trip and equal fig2dev's reader); fig2dev gets `Ctx::for_figure`, `Figure`, `splines_to_lines` and `fig2dev::cli::run` (fig2dev v0.3.0). Perf unchanged. |
 | 2026-10-20 | B14: fig2dev v0.2.0 (picture readers take `&mut Ctx`, JPEG passthrough, `-L sld` ported, gensvg/genps headers, hardening passes); `sld` export now works. Corpus sample (300): EPS median 0.0015, PDF 0.0020, PNG 0.0174, 0 errors. |
 | 2026-10-18 | B13: `figbase`, the fig2dev library and the `fig2dev` program move to their own repository (`FabianHassler/fig2dev`, history kept; prepared locally, not yet published); RustFig takes them as git dependencies with a temporary local `[patch]`. |
