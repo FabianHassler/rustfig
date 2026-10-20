@@ -207,7 +207,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `dev/encode.c` | 236 | ASCII85 and deflate streams for PostScript/PDF | `fig2dev:crates/fig2dev/src/scene/{eps,pdf}.rs` | own | review |
 | `dev/tkpattern.c` | 122 | Tk fill patterns | `fig2dev:crates/fig2dev/src/util/tkpattern.rs` | ported | B9 |
 | `dev/xtmpfile.c` | 150 | temporary files | — | n/a | — |
-| `dev/read*.c`, `readpics.c` | 3 k | pictures embedded in exports | `fig2dev/util/readpics` (`image` crate; EPS/PDF boxes, PCX, XBM, XPM, .gz/.Z) | ported | B9 |
+| `dev/read*.c`, `readpics.c` | 3 k | pictures embedded in exports | `fig2dev/util/readpics` (`image` crate; EPS/PDF boxes, PCX, XBM, XPM, .gz/.Z); the canvas (`engine/import.rs`) loads through it first (DD5) | ported | B9, DD5 |
 | `dev/psfonts.c`, `texfonts.c`, `setfigfont.c`, `textconvert.c` | 1 k | font names and LaTeX font selection for exports | `fig2dev/util/{psfonts,texfonts,setfigfont,textconvert}` (`-E` charsets beyond Latin-1/-2 via `encoding_rs`, audit pass 27; texts as the input's bytes, `put_string`, conversions; 2026-10-18) | ported | B9 |
 
 ## Revision history
