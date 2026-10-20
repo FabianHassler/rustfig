@@ -16,7 +16,7 @@
 //! fig2dev's language and option tables are re-exported here
 //! ([`languages`], [`options`]) for the export dialog and the CLI.
 
-pub mod to_model;
+pub use rustfig_format::bridge::to_model;
 
 pub use fig2dev::util::readpics::LoadedPicture;
 pub use fig2dev::{languages, options};

@@ -24,12 +24,12 @@ RustFig is an open-source, Rust-native reimplementation of xfig: close to the or
 | L0 | `rustfig-geom` | `crates/geom` | figbase's geometry + hit testing |
 | L1 | `rustfig-model` | `crates/model` | document model, styles, colours, object transforms, flattening |
 | L1 | `rustfig-text` | `crates/text` | Fig font tables, font selection, metrics, glyph outlines |
-| L2 | `rustfig-format` | `crates/format` | Fig 3.0–3.2 read, Fig 3.2 write, native `.rustfig` JSON |
+| L2 | `rustfig-format` | `crates/format` | Fig 3.0–3.2 read, Fig 3.2 write, native `.rustfig` JSON, bridge model ↔ fig2dev objects (`bridge/`) |
 | L3 | `rustfig-render` | `crates/render` | document → scene for the canvas (fig2dev's display list and rasteriser) |
-| L4 | `rustfig-engine` | `crates/engine` | commands, undo, selection, indicator, view, tools, guard; exports (Fig text → fig2dev's `convert`, `engine::fig2dev`), fig2dev objects → document for old Fig files (`fig2dev/to_model.rs`) |
+| L4 | `rustfig-engine` | `crates/engine` | commands, undo, selection, indicator, view, tools, guard; exports (Fig text → fig2dev's `convert`, `engine::fig2dev`), old Fig files through fig2dev's reader |
 | L5 | `rustfig-mcp` | `crates/mcp` | MCP server over stdio |
 | L6 | `rustfig-ui-egui` | `crates/ui-egui` | egui app: canvas, panels, menus, dialogs, control channel |
-| L7 | `rustfig`, `rustfig-cli`, `fig2dev` | `apps/` | desktop/web app; CLI (convert, info, perf, bench, mcp); standalone fig2dev |
+| L7 | `rustfig`, `rustfig-cli` | `apps/` | desktop/web app; CLI (convert, info, perf, bench, mcp) |
 | — | `xtask` | `xtask/` | `cargo xtask ci \| layers \| assets \| licences \| wasm` |
 
 Coordinates are Fig units (1200 per inch; metric drawings use 450 per cm), y grows downwards; line thickness is in 1/80 inch, drawn as fig2dev draws it (`geom::stroke_width`: 1/160 inch for thickness 1, (t − 1)/80 inch above).

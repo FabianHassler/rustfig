@@ -87,7 +87,8 @@ fn byte(v: i32) -> u8 {
 
 /// The header values `read.c` set (or the options that overrode them).
 fn settings(ctx: &Ctx) -> DocSettings {
-    let mag = ctx.mag * 100.0;
+    // The file prints the magnification with two decimals.
+    let mag = (ctx.mag * 10_000.0).round() / 100.0;
     DocSettings {
         orientation: if ctx.landscape {
             Orientation::Landscape
@@ -209,7 +210,12 @@ impl Conv<'_> {
     fn arrow(&self, a: &Option<f::Arrow>) -> Option<Arrow> {
         let a = a.as_ref()?;
         let ts = f64::from(self.ctx.thick_scale);
-        let thickness = if ts > 0.0 { a.thickness / ts } else { 1.0 };
+        // The file prints it with two decimals.
+        let thickness = if ts > 0.0 {
+            (a.thickness / ts * 100.0).round() / 100.0
+        } else {
+            1.0
+        };
         let finite = |v: f64| if v.is_finite() { v } else { 0.0 };
         Some(Arrow {
             kind: a.type_.clamp(0, 30),

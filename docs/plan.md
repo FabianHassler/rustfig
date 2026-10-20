@@ -191,6 +191,16 @@ is an optional extra, used in two ways.
 - **Expected differences:** fonts (RustFig's fallback faces versus fig2dev's PostScript names), pattern phase, and where fig2dev's SVG driver departs from its PostScript driver, which RustFig follows (dash lengths).
 - **CI:** install fig2dev on the Linux runner (A2) so the comparison runs there; it skips elsewhere.
 
+## Deduplication with fig2dev (ids DD1–DD10; the task list is `plan/dedup.md`, where they are D1–D10)
+
+User decision 2026-10-20: RustFig uses fig2dev for everything fig2dev can do.
+
+| Id | Task | Acceptance | h |
+|----|------|------------|---|
+| DD1 | ✅ 2026-10-20. **Model ↔ fig2dev object bridge** in `rustfig-format` (`crates/format/src/bridge/`): `to_model` moved down from the engine (the engine re-exports it), new `from_model` (`from_model(doc) -> Figure`, `object_to_fig2dev`, `driver_objects`, `note_usage`). Same rounding, closed-path points, arrowhead rules and colour numbering as `write_fig` + fig2dev's reader. | `crates/format/tests/bridge.rs`: the 11 fixtures and the 300-figure corpus sample round-trip through `from_model`/`to_document` (Fig text and model equal) and `driver_objects(from_model(doc))` equals fig2dev's reader on `write_fig(doc)` (objects and context); 300 generated documents; hostile documents (NaN, huge, empty, 240 levels of compounds); `prop_format` runs the bridge on mutated files. Perf unchanged. Not yet on any hot path (D2, D3, D7 do that). | 14 |
+| DD8 | ✅ 2026-10-20. **fig2dev API for figures in memory** (fig2dev repo, v0.3.0): `Ctx::for_figure(ppi, metric, colors)`, `Figure { ctx, objects }` with `convert`, `trans_spline::splines_to_lines`. | fig2dev gates green, suite unchanged (82 pass / 6 fail). | 4 |
+| DD10 | fig2dev side ✅ 2026-10-20: the command line is `fig2dev::cli::run(args, stdin, stdout, stderr) -> u8` (native only), the binary a thin `main`. The RustFig side (subcommand, name dispatch) is open. | fig2dev's cli tests and suite unchanged. | 2 |
+
 ## Order and milestones
 
 1. ✅ Phase W, xfig window parity (W1–W7, S0–S2), done 2026-10-14.
@@ -228,6 +238,7 @@ is an optional extra, used in two ways.
 | 2026-10-13 | First plan, after M0–M3. |
 | 2026-10-13 | Added A8 (fig2dev reference tests) and B0 (fig2dev export backend) with design notes. |
 | 2026-10-14 | A3: the web build compiles locally with rustup's toolchain; xtask uses the running toolchain's rustc. |
+| 2026-10-20 | DD1, DD8, DD10 (fig2dev side): the model ↔ fig2dev object bridge, fig2dev API for figures in memory and `fig2dev::cli`; RustFig pins fig2dev v0.3.0. |
 | 2026-10-18 | B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk ported; every fig2dev language but `sld`; suite 79 pass / 9 fail / 1 skipped. Decision: fig2dev moves to `FabianHassler/fig2dev`. |
 | 2026-10-17 | B3: pict2e part done; 16 h left for pstricks. |
 | 2026-10-17 | B3: PSTricks driver ported (`genpstricks.c`); B3 done. |

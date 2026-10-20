@@ -13,6 +13,7 @@ workspace = true
 [dependencies]
 rustfig-geom.workspace = true
 rustfig-model.workspace = true
+fig2dev.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 

@@ -1146,8 +1146,8 @@ dependencies = [
 
 [[package]]
 name = "fig2dev"
-version = "0.2.0"
-source = "git+https://github.com/FabianHassler/fig2dev?tag=v0.2.0#ad2ef2654b9f9e80a3839ce8b07aaca183233d90"
+version = "0.3.0"
+source = "git+https://github.com/FabianHassler/fig2dev?tag=v0.3.0#5a38ba4a5883faa7101947bb5c7e687113800ad5"
 dependencies = [
  "encoding_rs",
  "figbase",
@@ -1161,8 +1161,8 @@ dependencies = [
 
 [[package]]
 name = "figbase"
-version = "0.2.0"
-source = "git+https://github.com/FabianHassler/fig2dev?tag=v0.2.0#ad2ef2654b9f9e80a3839ce8b07aaca183233d90"
+version = "0.3.0"
+source = "git+https://github.com/FabianHassler/fig2dev?tag=v0.3.0#5a38ba4a5883faa7101947bb5c7e687113800ad5"
 dependencies = [
  "epaint_default_fonts",
  "serde",
@@ -2865,6 +2865,7 @@ dependencies = [
 name = "rustfig-format"
 version = "0.1.0"
 dependencies = [
+ "fig2dev",
  "proptest",
  "rustfig-geom",
  "rustfig-model",

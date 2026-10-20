@@ -1,6 +1,7 @@
 //! RustFig file formats (layer L2): the Fig format (read 3.0–3.2, write
 //! 3.2) and the native `.rustfig` JSON format.
 
+pub mod bridge;
 mod fig_read;
 mod fig_write;
 mod native;

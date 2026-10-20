@@ -26,6 +26,10 @@ proptest! {
             // Whatever parses must write and parse again.
             let out = write_fig(&doc);
             read_fig(out.as_bytes()).unwrap();
+            // And through fig2dev's objects and back (the bridge).
+            let mut fig = rustfig_format::bridge::from_model(&doc);
+            let _ = rustfig_format::bridge::driver_objects(&mut fig);
+            let _ = rustfig_format::bridge::to_document(&fig.ctx, &fig.objects);
         }
     }
 

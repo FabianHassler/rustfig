@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-20 | DD1/DD8/DD10 (fig2dev side): model ↔ fig2dev object bridge in `rustfig-format` (`bridge/`, `to_model` moved down from the engine, new `from_model`; fixtures, 300-figure sample and generated documents round-trip and equal fig2dev's reader); fig2dev gets `Ctx::for_figure`, `Figure`, `splines_to_lines` and `fig2dev::cli::run` (fig2dev v0.3.0). Perf unchanged. |
 | 2026-10-20 | B14: fig2dev v0.2.0 (picture readers take `&mut Ctx`, JPEG passthrough, `-L sld` ported, gensvg/genps headers, hardening passes); `sld` export now works. Corpus sample (300): EPS median 0.0015, PDF 0.0020, PNG 0.0174, 0 errors. |
 | 2026-10-18 | B13: `figbase`, the fig2dev library and the `fig2dev` program move to their own repository (`FabianHassler/fig2dev`, history kept; prepared locally, not yet published); RustFig takes them as git dependencies with a temporary local `[patch]`. |
 | 2026-10-18 | B11 passes 5 and 6: texts and comments keep the input's bytes (`Text::raw`, `Comment`), every ported text driver writes them as fig2dev does (no UTF-8 re-encoding); 300 of 300 sample figures identical in the TeX, plotter, EMF, Tk, map and pic drivers (was 285); EPS/SVG/PDF/PNG unchanged. Gap #27 closed. |
