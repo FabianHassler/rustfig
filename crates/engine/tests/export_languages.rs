@@ -72,8 +72,9 @@ fn latex_box_has_the_figures_size() {
 #[test]
 fn planned_and_unknown_languages_are_errors() {
     let mut e = drawing();
-    let err = e.execute("file.export_data", &json!({"format": "sld"})).unwrap_err();
-    assert!(err.message.contains("plan task B9"), "{}", err.message);
+    // sld (AutoCAD slide) is a real language since fig2dev 0.2.0.
+    let r = e.execute("file.export_data", &json!({"format": "sld"})).unwrap();
+    assert!(r["base64"].as_str().is_some_and(|b| !b.is_empty()), "{r}");
     for bad in [
         "",
         "bogus",
@@ -107,9 +108,9 @@ fn files_pick_the_language_from_their_name() {
 
     let err = e.execute("file.export", &json!({"path": path("fig.tex")})).unwrap_err();
     assert!(err.message.contains("format"), "{}", err.message);
-    let err = e.execute("file.export", &json!({"path": path("fig.sld")})).unwrap_err();
-    assert!(err.message.contains("B9"), "{}", err.message);
-    assert!(!dir.join("fig.sld").exists());
+    let r = e.execute("file.export", &json!({"path": path("fig.sld")})).unwrap();
+    assert_eq!(r["format"], "sld");
+    assert!(dir.join("fig.sld").is_file());
     std::fs::remove_dir_all(&dir).unwrap();
 }
 

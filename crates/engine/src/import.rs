@@ -47,13 +47,14 @@ pub fn load_picture(path: &Path) -> Result<RasterImage, String> {
         return direct;
     };
     match crate::fig2dev::load_picture(path) {
-        Ok(crate::fig2dev::LoadedPicture::Raster(img)) => Ok(img),
+        Ok(crate::fig2dev::LoadedPicture::Raster(img))
+        | Ok(crate::fig2dev::LoadedPicture::Jpeg { raster: Some(img), .. }) => Ok(img),
         Ok(crate::fig2dev::LoadedPicture::Eps { .. }) => Err(format!(
             "{}: EPS picture shown as a box (embedded in EPS exports)",
             path.display()
         )),
         Ok(crate::fig2dev::LoadedPicture::Pdf) => Err(format!("{}: PDF picture shown as a box", path.display())),
-        Err(_) => Err(err),
+        Ok(crate::fig2dev::LoadedPicture::Jpeg { raster: None, .. }) | Err(_) => Err(err),
     }
 }
 

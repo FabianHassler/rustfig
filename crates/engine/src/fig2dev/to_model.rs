@@ -569,6 +569,6 @@ mod tests {
     }
 
     fn load_picture_err(name: &str) -> String {
-        read_picture(&Ctx::default(), name).unwrap_err()
+        read_picture(&mut Ctx::default(), name).unwrap_err()
     }
 }

@@ -1146,11 +1146,12 @@ dependencies = [
 
 [[package]]
 name = "fig2dev"
-version = "0.1.0"
-source = "git+https://github.com/FabianHassler/fig2dev?tag=v0.1.0#fd19fdc82725d14b6552389fd0890989145899cb"
+version = "0.2.0"
+source = "git+https://github.com/FabianHassler/fig2dev?tag=v0.2.0#ad2ef2654b9f9e80a3839ce8b07aaca183233d90"
 dependencies = [
  "encoding_rs",
  "figbase",
+ "gif",
  "image",
  "miniz_oxide 0.8.9",
  "pdf-writer",
@@ -1160,8 +1161,8 @@ dependencies = [
 
 [[package]]
 name = "figbase"
-version = "0.1.0"
-source = "git+https://github.com/FabianHassler/fig2dev?tag=v0.1.0#fd19fdc82725d14b6552389fd0890989145899cb"
+version = "0.2.0"
+source = "git+https://github.com/FabianHassler/fig2dev?tag=v0.2.0#ad2ef2654b9f9e80a3839ce8b07aaca183233d90"
 dependencies = [
  "epaint_default_fonts",
  "serde",

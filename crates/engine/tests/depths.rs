@@ -134,7 +134,9 @@ fn svg_size(e: &mut Engine, extra: Value) -> (f64, f64) {
     let v = e.execute("file.export_data", &p).unwrap();
     let svg = v["data"].as_str().unwrap().to_string();
     let attr = |name: &str| -> f64 {
-        let i = svg.find(&format!(" {name}=\"")).unwrap() + name.len() + 3;
+        // gensvg's header: `\twidth="NNpt" height="NNpt"`.
+        let key = if name == "width" { "\twidth=\"" } else { " height=\"" };
+        let i = svg.find(key).unwrap() + name.len() + 3;
         let rest = &svg[i..];
         let end = rest.find(|c: char| !(c.is_ascii_digit() || c == '.')).unwrap();
         rest[..end].parse().unwrap()

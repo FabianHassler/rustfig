@@ -111,7 +111,7 @@ pub fn export(
 /// Read picture `path` as fig2dev does (`.gz`/`.Z` variants, XBM, XPM,
 /// PCX, EPS, PDF and the common bitmaps).
 pub fn load_picture(path: &Path) -> Result<LoadedPicture, String> {
-    fig2dev::util::readpics::load_picture(&Ctx::default(), &path.to_string_lossy())
+    fig2dev::util::readpics::load_picture(&mut Ctx::default(), &path.to_string_lossy())
 }
 
 #[cfg(test)]
