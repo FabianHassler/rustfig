@@ -671,7 +671,7 @@ fn entry_keys(id: &str, xfig_keys: bool, mac: bool) -> String {
     let platform = if platform.is_empty() || (xfig_keys && shadowed_by_xfig(platform, mac)) {
         String::new()
     } else if mac {
-        platform.replace("Ctrl+", "⌘").replace("Shift+", "⇧")
+        mac_shortcut(platform)
     } else {
         platform.to_string()
     };
@@ -702,10 +702,42 @@ fn shadowed_by_xfig(s: &str, mac: bool) -> bool {
             })
 }
 
+/// A shortcut as macOS writes it, Shift and Option before ⌘ ("Shift+⌘Z").
+/// Only ⌘ is drawn as a symbol: the fonts have no ⇧, ⌥ or ⌃ (test
+/// `key_symbols_exist_in_the_fonts`), so those are spelled out as in xfig's
+/// labels ("Option+U").
+fn mac_shortcut(s: &str) -> String {
+    let parts: Vec<&str> = s.split('+').collect();
+    let has = |m: &str| parts.contains(&m);
+    let key = parts
+        .iter()
+        .rev()
+        .find(|p| !matches!(**p, "Ctrl" | "Shift" | "Alt"))
+        .copied();
+    // "Ctrl++" (a plus key) splits into an empty last part.
+    let key = if s.ends_with("++") || s == "+" {
+        "+"
+    } else {
+        key.unwrap_or("")
+    };
+    let mut out = String::new();
+    if has("Shift") {
+        out.push_str("Shift+");
+    }
+    if has("Alt") {
+        out.push_str("Option+");
+    }
+    if has("Ctrl") {
+        out.push('⌘');
+    }
+    out.push_str(key);
+    out
+}
+
 /// Human-readable shortcut ("Ctrl" shows as ⌘ on macOS).
 pub fn display_shortcut(s: &str) -> String {
     if cfg!(target_os = "macos") {
-        s.replace("Ctrl+", "⌘").replace("Shift+", "⇧")
+        mac_shortcut(s)
     } else {
         s.to_string()
     }
@@ -1198,6 +1230,31 @@ mod tests {
         assert_eq!(entry_keys("view.zoom_fit", true, false), "Ctrl+Z");
         // Without xfig's keys, the platform's shortcuts.
         assert_eq!(entry_keys("edit.undo", false, false), "Ctrl+Z");
+    }
+
+    #[test]
+    fn key_symbols_exist_in_the_fonts() {
+        let ctx = egui::Context::default();
+        let _ = ctx.run(egui::RawInput::default(), |_| {});
+        let font = egui::FontId::proportional(13.0);
+        // Every symbol the menus draw for keys is in the fonts.
+        let all: String = cmd::all()
+            .iter()
+            .map(|c| c.shortcut)
+            .chain(UI_COMMANDS.iter().map(|c| c.shortcut))
+            .map(|s| mac_shortcut(s) + &display_shortcut(s))
+            .collect();
+        for c in all.chars() {
+            assert!(ctx.fonts_mut(|f| f.has_glyph(&font, c)), "no glyph for {c:?}");
+        }
+        // And the other symbols the UI writes (degrees, check marks, …).
+        for c in "°±²·×—•…↔✔".chars() {
+            assert!(ctx.fonts_mut(|f| f.has_glyph(&font, c)), "no glyph for {c:?}");
+        }
+        assert_eq!(mac_shortcut("Ctrl+Shift+Z"), "Shift+⌘Z");
+        assert_eq!(mac_shortcut("Ctrl+="), "⌘=");
+        assert_eq!(mac_shortcut("Ctrl+Shift+Up"), "Shift+⌘Up");
+        assert_eq!(mac_shortcut("Delete"), "Delete");
     }
 
     #[test]
