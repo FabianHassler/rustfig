@@ -351,6 +351,15 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         painter.rect_filled(r, 0.0, tk.handle_fill);
         painter.rect_stroke(r, 0.0, Stroke::new(1.0_f32, tk.handle_stroke), egui::StrokeKind::Middle);
     }
+    // xfig's object markers: hollow squares (5 px) on what the mode can act on.
+    for m in &overlay.markers {
+        let p = to_screen(*m);
+        if !rect.expand(4.0).contains(p) {
+            continue;
+        }
+        let r = Rect::from_center_size(p, vec2(5.0, 5.0));
+        painter.rect_stroke(r, 0.0, Stroke::new(1.0_f32, tk.handle_stroke), egui::StrokeKind::Middle);
+    }
     if let Some(ot) = &overlay.text {
         draw_caret(&painter, ot, &to_screen, tk);
     }

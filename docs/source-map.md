@@ -125,7 +125,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `u_quartic.c` | 298 | quartic solver (intersections) | `snap.rs` (flattened outlines) | modern | — |
 | `u_elastic.c` | 1004 | rubber-band feedback while drawing | `Engine::overlay` | own | review |
 | `u_drag.c` | 861 | dragging objects | tools, overlay | own | review |
-| `u_markers.c` | 462 | object markers, tag highlight | `ui-egui/canvas` handles | own | review |
+| `u_markers.c` | 462 | object markers, tag highlight | `engine/tools/markers.rs` (masks, markers), `ui-egui/canvas` | ported (W12; tag highlight not) | done |
 | `u_list.c` | 1358 | object lists, depth bookkeeping | `model::Document` | own | — |
 | `u_create.c`, `u_free.c` | 1.4 k | allocation | — | n/a | — |
 | `u_translate.c`, `u_scale.c` | 314 | translate/scale objects | `model` transforms | own | — |

@@ -51,6 +51,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | View: depth manager | right panel | ✅ |
 | View: character map, style manager | — | ❌ |
 | Indicator panel (line, colours, fill, depth, arrows, caps, joins, fonts, justification, angle, radius, sides, rotation, grid, positioning, arc type, text step, text flags) | xfig's buttons, per mode | 🟡 no Angle Geom (latex/manhattan), Smart Links, copy counts |
+| Object markers in editing modes | per-mode masks as xfig (`u_markers.c`, `w_modepanel.c`) | ✅ |
 | Rulers | top and side, xfig's ticks and labels, cursor marker, pan buttons | ✅ |
 | Mouse-function panel | top strip, one column per button | ✅ |
 

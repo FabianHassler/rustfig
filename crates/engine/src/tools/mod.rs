@@ -8,6 +8,9 @@
 // editing modes src/d_*.c and src/e_*.c (button behaviour, `set_mousefun`
 // wording) and src/w_canvas.c (snapping) (xfig licence, see LICENSE-xfig).
 
+mod markers;
+pub use markers::{mode_mask, object_markers, ObjMask};
+
 use crate::cmd::shape::make_ellipse;
 use crate::{Engine, EngineError, UiRequest};
 use rustfig_geom::{dist_to_segment, regular_polygon, Affine, Point, Rect};
@@ -383,6 +386,8 @@ pub struct Overlay {
     pub hide: Vec<ObjectId>,
     /// Editable vertices to mark.
     pub handles: Vec<Point>,
+    /// xfig's object markers of the active editing mode (`markers.rs`).
+    pub markers: Vec<Point>,
     pub text: Option<OverlayText>,
 }
 
@@ -2130,23 +2135,14 @@ impl Engine {
                 }
             }
         }
-        if ov.handles.is_empty() && matches!(self.tool_state, ToolState::Idle) {
-            let show = matches!(
-                self.tool,
-                ToolKind::Select | ToolKind::MovePoint | ToolKind::DeletePoint | ToolKind::AddPoint
-            );
-            if show {
-                let ids: Vec<ObjectId> = if self.tool == ToolKind::Select {
-                    self.selection().to_vec()
-                } else {
-                    self.doc().objects.iter().map(|o| o.id).collect()
-                };
-                if ids.len() <= 2000 {
-                    for id in ids {
-                        if let Some(o) = self.doc().get(id) {
-                            if !matches!(o.kind, ObjectKind::Compound(_) | ObjectKind::Text(_)) {
-                                ov.handles.extend(edit_points(o));
-                            }
+        ov.markers = self.mode_markers();
+        if ov.handles.is_empty() && matches!(self.tool_state, ToolState::Idle) && self.tool == ToolKind::Select {
+            let ids = self.selection().to_vec();
+            if ids.len() <= 2000 {
+                for id in ids {
+                    if let Some(o) = self.doc().get(id) {
+                        if !matches!(o.kind, ObjectKind::Compound(_) | ObjectKind::Text(_)) {
+                            ov.handles.extend(edit_points(o));
                         }
                     }
                 }
