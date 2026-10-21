@@ -114,8 +114,53 @@ impl Attr {
         }
     }
 
-    /// Button width (xfig's NARROW/DEF/WIDE/XWIDE/FONT widths).
-    fn width(self) -> f32 {
+    /// The short caption on the button (W19); the full name stays in the
+    /// tooltip and the accessible label (`name`).
+    pub fn caption(self) -> &'static str {
+        match self {
+            Attr::Zoom => "Zoom",
+            Attr::Grid => "Grid",
+            Attr::PointPosn => "Point",
+            Attr::Depth => "Depth",
+            Attr::RotnAngle => "Rotate",
+            Attr::NumSides => "Sides",
+            Attr::VAlign => "V-Align",
+            Attr::HAlign => "H-Align",
+            Attr::PenColor => "Pen",
+            Attr::FillColor => "Fill",
+            Attr::FillStyle => "Shade",
+            Attr::ArcType => "Arc",
+            Attr::LineWidth => "Width",
+            Attr::LineStyle => "Style",
+            Attr::JoinStyle => "Join",
+            Attr::CapStyle => "Cap",
+            Attr::ArrowMode => "Arrow",
+            Attr::ArrowType => "Head",
+            Attr::ArrowSize => "Head size",
+            Attr::BoxRadius => "Corner",
+            Attr::TextJust => "Justify",
+            Attr::TextAngle => "Angle",
+            Attr::TextFlags => "Flags",
+            Attr::FontSize => "Size",
+            Attr::TextStep => "Step",
+            Attr::Font => "Font",
+        }
+    }
+
+    /// Button width, sized by content: the picture or value, or the caption
+    /// if that is wider (about 44-56 points; the font button is wider).
+    pub fn width(self) -> f32 {
+        match self {
+            Attr::Font => 96.0,
+            Attr::ArrowSize => 52.0,
+            Attr::PenColor | Attr::FillColor | Attr::LineWidth | Attr::TextFlags => 48.0,
+            _ => 44.0,
+        }
+    }
+
+    /// xfig's button width (NARROW/DEF/WIDE/XWIDE/FONT), for comparison.
+    #[cfg(test)]
+    fn xfig_width(self) -> f32 {
         match self {
             Attr::Zoom | Attr::Depth | Attr::NumSides | Attr::TextStep => 58.0,
             Attr::RotnAngle | Attr::ArrowSize | Attr::TextFlags | Attr::FontSize => 90.0,
@@ -208,7 +253,9 @@ pub fn attributes_for(tool: ToolKind) -> Vec<Attr> {
 /// `draw_mousefun_ind`).
 pub const BUTTON_HINTS: (&str, &str, &str) = ("Menu", "Dec/Prev", "Inc/Next");
 
-const BUTTON_HEIGHT: f32 = 34.0;
+const BUTTON_HEIGHT: f32 = 40.0;
+/// Space between buttons (xfig's were 2 points apart).
+const GAP: f32 = 1.0;
 
 /// The attribute panel: one row of buttons, wrapping when the window is narrow.
 pub fn attribute_panel(app: &mut App, ui: &mut Ui, tk: &Tokens) {
@@ -216,7 +263,7 @@ pub fn attribute_panel(app: &mut App, ui: &mut Ui, tk: &Tokens) {
     let mut hovered = false;
     ui.add_space(2.0);
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = vec2(2.0, 2.0);
+        ui.spacing_mut().item_spacing = vec2(GAP, 2.0);
         for a in attrs {
             hovered |= button(app, ui, tk, a);
         }
@@ -232,44 +279,19 @@ fn button(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) -> bool {
     crate::bevel::paint(ui.painter(), rect, tk, crate::bevel::State::of(&resp, false, open));
     let p = ui.painter();
     let text = ui.visuals().text_color();
-    let font = egui::FontId::proportional(11.0);
-    let (l1, l2) = a.label();
     p.text(
-        rect.left_top() + vec2(4.0, 3.0),
-        egui::Align2::LEFT_TOP,
-        l1,
-        font.clone(),
+        pos2(rect.center().x, rect.top() + 3.0),
+        egui::Align2::CENTER_TOP,
+        a.caption(),
+        egui::FontId::proportional(10.0),
         text,
     );
-    if !l2.is_empty() {
-        p.text(
-            rect.left_top() + vec2(4.0, 17.0),
-            egui::Align2::LEFT_TOP,
-            l2,
-            font,
-            text,
-        );
-    }
-    // The value picture fills the right part of the button.
-    let label_w = [l1, l2]
-        .iter()
-        .map(|s| s.chars().count() as f32 * 6.0)
-        .fold(0.0_f32, f32::max)
-        .min(a.width() - 24.0);
+    // The value fills the rest of the button.
     let value_rect = Rect::from_min_max(
-        pos2(rect.left() + label_w + 8.0, rect.top() + 3.0),
+        pos2(rect.left() + 3.0, rect.top() + 15.0),
         pos2(rect.right() - 3.0, rect.bottom() - 3.0),
     );
-    let one_line = l2.is_empty();
-    let value_rect = if one_line && value_rect.width() < 24.0 {
-        Rect::from_min_max(
-            pos2(rect.left() + 4.0, rect.top() + 16.0),
-            rect.right_bottom() - vec2(3.0, 2.0),
-        )
-    } else {
-        value_rect
-    };
-    draw_value(app, ui, p, value_rect, rect, tk, a);
+    draw_value(app, ui, p, value_rect, tk, a);
     let summary = format!("{}: {}", a.name(), value_text(app, a));
     // xfig: Alt + right button is the middle button (`sel_ind_but`).
     if resp.secondary_clicked() {
@@ -456,6 +478,20 @@ fn value_text(app: &App, a: Attr) -> String {
         Attr::FontSize => format!("{}", ind.font_size),
         Attr::TextStep => format!("{:.1}", ind.text_step),
         Attr::Font => font_name(ind.font, ind.postscript),
+    }
+}
+
+/// The text flags as letters (Hidden, Rigid, TeX), or a dash.
+fn flags_short(ind: &Indicator) -> String {
+    let f: String = [(ind.hidden_text, 'H'), (ind.rigid_text, 'R'), (ind.special_text, 'T')]
+        .iter()
+        .filter(|(on, _)| *on)
+        .map(|(_, c)| *c)
+        .collect();
+    if f.is_empty() {
+        "-".into()
+    } else {
+        f
     }
 }
 
@@ -878,21 +914,17 @@ fn icon_choices(ui: &mut Ui, id: &str, items: &[(bool, String, Pic)], per_row: u
 
 // ---- value pictures ------------------------------------------------------
 
-fn draw_value(app: &App, ui: &Ui, p: &Painter, r: Rect, button: Rect, tk: &Tokens, a: Attr) {
+fn draw_value(app: &App, ui: &Ui, p: &Painter, r: Rect, tk: &Tokens, a: Attr) {
     let ind = &app.engine.indicator;
     let doc = app.engine.doc();
     let ink = ui.visuals().text_color();
     let small = egui::FontId::proportional(11.0);
-    let text_right = |s: &str| {
-        p.text(r.right_center(), egui::Align2::RIGHT_CENTER, s, small.clone(), ink);
+    let centred = |s: &str| {
+        p.with_clip_rect(r.expand(1.0))
+            .text(r.center(), egui::Align2::CENTER_CENTER, s, small.clone(), ink);
     };
     if let Some(icon) = value_icon(app, a) {
-        // xfig's 32×32 picture, the full height of the button.
-        let tall = Rect::from_min_max(
-            pos2(r.left(), button.top() + 1.0),
-            pos2(r.right(), button.bottom() - 1.0),
-        );
-        icon.paint(ui, tall, ink);
+        icon.paint(ui, r, ink);
         return;
     }
     match a {
@@ -902,29 +934,33 @@ fn draw_value(app: &App, ui: &Ui, p: &Painter, r: Rect, button: Rect, tk: &Token
             } else {
                 ind.fill_color
             };
-            let sw = Rect::from_min_size(pos2(r.right() - 16.0, r.center().y - 8.0), vec2(16.0, 16.0));
+            let sw = Rect::from_center_size(r.center(), vec2(r.width().min(36.0), r.height().min(16.0)));
             p.rect_filled(sw, 1.0, color32(doc, c));
             p.rect_stroke(sw, 1.0, Stroke::new(1.0_f32, tk.muted), egui::StrokeKind::Inside);
-            // The name goes on the label's second line, like xfig.
-            p.text(
-                button.left_top() + vec2(4.0, 17.0),
-                egui::Align2::LEFT_TOP,
-                color_name(c),
-                small,
-                ink,
-            );
         }
         Attr::FillStyle => {
-            let sw = Rect::from_center_size(r.center(), vec2(r.height().min(26.0), r.height().min(26.0)));
+            let sw = Rect::from_center_size(r.center(), vec2(r.height().min(22.0), r.height().min(22.0)));
             fill_swatch(p, sw, doc, ind.fill_color, ind.area_fill, ink, tk);
         }
         Attr::LineWidth => {
-            text_right(&ind.thickness.to_string());
+            p.text(
+                r.right_center(),
+                egui::Align2::RIGHT_CENTER,
+                ind.thickness.to_string(),
+                small,
+                ink,
+            );
             let y = r.center().y;
-            let w = (ind.thickness as f32).clamp(0.5, 8.0);
-            p.line_segment([pos2(r.left(), y), pos2(r.right() - 16.0, y)], Stroke::new(w, ink));
+            let w = (ind.thickness as f32).clamp(0.5, 6.0);
+            p.line_segment([pos2(r.left(), y), pos2(r.right() - 14.0, y)], Stroke::new(w, ink));
         }
-        _ => text_right(&value_text(app, a)),
+        Attr::ArrowSize => centred(&format!(
+            "{:.1}×{:.1}",
+            ind.arrow.width / rustfig_geom::FIG_PER_STYLE_UNIT,
+            ind.arrow.height / rustfig_geom::FIG_PER_STYLE_UNIT
+        )),
+        Attr::TextFlags => centred(&flags_short(ind)),
+        _ => centred(&value_text(app, a)),
     }
 }
 
@@ -1442,6 +1478,25 @@ fn value_entry(app: &mut App, ui: &mut Ui, ind: &Indicator, a: Attr) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_mode_fits_in_about_sixty_percent_of_xfigs_width() {
+        for tool in ToolKind::ALL {
+            let attrs = attributes_for(tool);
+            let new: f32 = attrs.iter().map(|a| a.width() + GAP).sum();
+            let old: f32 = attrs.iter().map(|a| a.xfig_width() + 2.0).sum();
+            assert!(new <= 0.7 * old, "{tool:?}: {new} of {old}");
+        }
+    }
+
+    #[test]
+    fn captions_fit_their_buttons() {
+        for a in Attr::ORDER {
+            let est = a.caption().chars().count() as f32 * 5.0 + 6.0;
+            assert!(est <= a.width(), "{a:?}: {est} > {}", a.width());
+            assert!(!a.name().is_empty());
+        }
+    }
 
     #[test]
     fn rotation_steps_through_xfigs_presets() {

@@ -67,7 +67,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | Units box | ✅ "1cm = 1.00cm" in the ruler corner; left: pan to origin, right: Unit menu (ruler units, figure unit, scale) | — |
 | Top and side rulers | ✅ ported from `w_rulers.c` | — |
 | Depth panel: checkboxes, drag-toggle, All On/Off/Toggle, Gray/Blank | ✅ with object counts; hidden depths can't be picked; export of active layers only | — |
-| Attribute panel: graphical buttons, per-mode attributes | ✅ xfig's buttons and order, per-mode masks, choice panels; middle/right buttons step values | — |
+| Attribute panel: graphical buttons, per-mode attributes | ✅ xfig's buttons and order, per-mode masks, choice panels; middle/right buttons step values; W19: one short caption per button (full name in tooltip and accessible label), content-sized 44–52 pt buttons (font 96), vector pictures, about 58 % of xfig's width, wraps to a second row | — |
 | xfig accelerators (Meta-key) | ✅ xfig keymap (on by default): Meta = Alt/Option menu keys, physical Ctrl mode keys, xfig's mode letters; menus show "Meta-N"; platform shortcuts stay | — |
 | Preferences (xfig's resources, recent files, user colours) | ✅ `settings.toml`; Edit › Global settings › xfig resources… | — |
 | Icons at HiDPI | ✅ every icon and picture is drawn as a vector at the screen's density (xfig's bitmaps optional); application icon | — |
@@ -86,6 +86,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | 2026-10-13 | Added the main-window section (plan phase W). |
 | 2026-10-13 | W1: classic layout, message panel, mouse indicator, units box. |
 | 2026-10-14 | W2: three-button mouse semantics and the modern scheme. |
+| 2026-10-21 | W19: compact attribute panel (short captions, content-sized buttons, about 58 % of xfig's width). |
 | 2026-10-21 | W16, W17: the modern scheme, the layout choice, the attribute-panel switch and the icon choice removed; Object menu; Save All / Save Part query. |
 | 2026-10-14 | W3: depth panel. |
 | 2026-10-14 | W5: attribute panel. |
