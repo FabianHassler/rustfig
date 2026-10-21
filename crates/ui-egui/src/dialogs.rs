@@ -443,6 +443,16 @@ impl Dialogs {
     }
 }
 
+/// What a line's one style value v means (1/80 inch; the Fig format keeps
+/// one number per object, fig2dev derives the rest, `genps.c` `set_style`).
+pub const LINE_STYLE_VALUE_HELP: &str = "A Fig file keeps one number per line, in 1/80 inch; the rest of the pattern follows from it:\n\
+    Dashed: dash v, gap v\n\
+    Dotted: dot, gap v\n\
+    Dash-dotted: dash v, gap v/2, dot, gap v/2\n\
+    Dash-double-dotted: dash v, gaps 0.45v, 0.33v, 0.45v between the dots\n\
+    Dash-triple-dotted: dash v, gaps 0.4v, 0.3v, 0.3v, 0.4v between the dots\n\
+    The attribute panel's Line Style keeps two defaults: the dash length for the dashed styles, the dot gap for Dotted.";
+
 /// Extensions offered when picking a figure.
 pub const FIGURE_EXTS: &[&str] = &["fig", "xfig", "rustfig"];
 /// Extensions offered when picking a picture: xfig's picture types
@@ -1176,8 +1186,13 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                                 st.line = k;
                             }
                             if st.line != LineKind::Solid {
-                                ui.label("Dash length / dot gap");
-                                ui.add(egui::DragValue::new(&mut st.style_val).range(0.0..=1000.0).speed(0.1));
+                                // xfig's edit panel names the one value by the style
+                                // (`e_edit.c`); its meaning follows fig2dev's `set_style`.
+                                let dotted = st.line == LineKind::Dotted;
+                                ui.label(if dotted { "Dot gap" } else { "Dash length" })
+                                    .on_hover_text(LINE_STYLE_VALUE_HELP);
+                                ui.add(egui::DragValue::new(&mut st.style_val).range(0.0..=1000.0).speed(0.1))
+                                    .on_hover_text(LINE_STYLE_VALUE_HELP);
                             }
                         });
                         ui.end_row();
