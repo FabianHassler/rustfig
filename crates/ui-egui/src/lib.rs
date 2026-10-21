@@ -13,6 +13,7 @@ pub mod canvas;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod control;
 pub mod dialogs;
+pub mod inject;
 pub mod input;
 pub mod menus;
 pub mod mode_icons;
@@ -101,6 +102,13 @@ pub struct App {
     pub hint_override: Option<(&'static str, &'static str, &'static str)>,
     /// Alt + click as the middle button, Ctrl + click as the right one (macOS).
     pub ctrl_click: input::CtrlClick,
+    /// Input queued by the control channel (`ui.pointer`, `ui.key`).
+    pub injector: inject::Injector,
+    /// Labelled widgets of the last frame (filled once `attach` ran).
+    pub widgets: inject::Registry,
+    /// Requests waiting for their injected input to be fed: reply, id, result, sequence.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+    pub(crate) input_waiters: Vec<(std::sync::mpsc::Sender<String>, Value, Value, u64)>,
     /// xfig's keyboard accelerators (Meta menu keys, Ctrl mode keys).
     pub xfig_keys: bool,
     /// A classic menu to pop up on the next frame (xfig's Meta-F/E/V/H).
@@ -113,6 +121,9 @@ pub struct App {
     /// File pickers (native dialogs; replaced in tests).
     pub file_dialogs: Box<dyn dialogs::FileDialogs>,
     quit_confirmed: bool,
+    /// Open pop-ups, menus, windows and dialogs as of the last frame (for `ui.state`).
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+    pub(crate) ui_open: Value,
     #[cfg(not(target_arch = "wasm32"))]
     control: Option<control::Server>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -146,6 +157,9 @@ impl App {
             depth_drag: None,
             hint_override: None,
             ctrl_click: input::CtrlClick::default(),
+            injector: inject::Injector::default(),
+            widgets: inject::Registry::default(),
+            input_waiters: Vec::new(),
             hint_shown: None,
             unit_panel_open: false,
             xfig_keys: true,
@@ -153,6 +167,7 @@ impl App {
             pending: None,
             file_dialogs: Box::new(dialogs::NativeDialogs),
             quit_confirmed: false,
+            ui_open: Value::Null,
             #[cfg(not(target_arch = "wasm32"))]
             control: None,
             #[cfg(not(target_arch = "wasm32"))]
@@ -168,6 +183,7 @@ impl App {
         let mut app = App::with_engine(engine);
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(port) = control_port {
+            app.attach(&cc.egui_ctx);
             match control::Server::start(port, cc.egui_ctx.clone()) {
                 Ok(s) => {
                     log::info!("control channel listening on 127.0.0.1:{port}");
@@ -346,7 +362,7 @@ impl eframe::App for App {
     }
 
     fn raw_input_hook(&mut self, _ctx: &egui::Context, raw_input: &mut egui::RawInput) {
-        self.ctrl_click.apply(raw_input, cfg!(target_os = "macos"));
+        self.feed_input(raw_input);
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
@@ -361,6 +377,18 @@ impl eframe::App for App {
 }
 
 impl App {
+    /// Start collecting the labelled widgets for `ui.state` and `ui.click_label`.
+    pub fn attach(&mut self, ctx: &egui::Context) {
+        self.widgets = inject::install_registry(ctx);
+    }
+
+    /// Add the next injected input step to a frame's raw input, then apply the
+    /// platform conventions (what `raw_input_hook` does for every frame).
+    pub fn feed_input(&mut self, raw: &mut egui::RawInput) {
+        self.injector.feed(raw);
+        self.ctrl_click.apply(raw, cfg!(target_os = "macos"));
+    }
+
     /// Run one UI frame (guarded against panics).
     pub fn ui(&mut self, ctx: &egui::Context) {
         #[cfg(not(target_arch = "wasm32"))]
@@ -461,6 +489,19 @@ impl App {
                 let _ = reply.send(msg.to_string()); // the client may have gone away
             }
         }
+        // Answer requests whose injected input has been fed; keep frames coming meanwhile.
+        let (done, waiting): (Vec<_>, Vec<_>) = std::mem::take(&mut self.input_waiters)
+            .into_iter()
+            .partition(|w| self.injector.reached(w.3));
+        self.input_waiters = waiting;
+        for (reply, id, result, _) in done {
+            let _ = reply.send(json!({"id": id, "result": result}).to_string());
+            // the client may have gone away
+        }
+        if !self.injector.is_idle() {
+            ctx.request_repaint();
+        }
+        self.ui_open = control::open_state(self, ctx);
         let reqs = match &self.control {
             Some(s) => s.drain(),
             None => return,
@@ -475,6 +516,19 @@ impl App {
                     .to_string();
                 self.screenshot_waiters.push((path, r.reply, r.id));
                 ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::UserData::default()));
+                ctx.request_repaint();
+                continue;
+            }
+            if matches!(r.method.as_str(), "ui.pointer" | "ui.key" | "ui.click_label") {
+                let queued = control::input_steps(self, &r.method, &r.params)
+                    .and_then(|(steps, result)| self.injector.push(steps).map(|seq| (seq, result)));
+                match queued {
+                    Ok((seq, result)) => self.input_waiters.push((r.reply, r.id, result, seq)),
+                    Err(m) => {
+                        let msg = json!({"id": r.id, "error": {"code": "params", "message": m}});
+                        let _ = r.reply.send(msg.to_string()); // the client may have gone away
+                    }
+                }
                 ctx.request_repaint();
                 continue;
             }

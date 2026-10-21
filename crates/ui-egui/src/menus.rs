@@ -545,12 +545,13 @@ fn xfig_menu(app: &mut App, ui: &mut egui::Ui, menu: &str, items: &[XfigItem]) {
                     Some(false) => format!("    {label}"),
                     None => label.to_string(),
                 };
+                // With xfig's keys on, an entry shows xfig's accelerator or none
+                // (xfig's Unzoom has none), never RustFig's own shortcut.
                 let shortcut = if app.xfig_keys {
-                    xfig_accelerator(id).map(xfig_key_label)
+                    xfig_accelerator(id).map(xfig_key_label).unwrap_or_default()
                 } else {
-                    None
-                }
-                .unwrap_or_else(|| display_shortcut(label_of(id).1));
+                    display_shortcut(label_of(id).1)
+                };
                 let mut b = egui::Button::new(text);
                 if !shortcut.is_empty() {
                     b = b.shortcut_text(shortcut);
@@ -869,6 +870,10 @@ fn parse_xfig_key(spec: &str) -> Option<(bool, bool, bool, egui::Key)> {
 
 /// How xfig's menus print an accelerator: "Meta-N", "Shift-Meta-X", "Ctrl-L".
 pub fn xfig_key_label(spec: &str) -> String {
+    if !spec.contains('+') {
+        // A bare letter is lower case in xfig's labels: "(z)".
+        return spec.to_ascii_lowercase();
+    }
     spec.replace("PhysCtrl", "Ctrl")
         .replace("Alt", "Meta")
         .replace('+', "-")
@@ -1136,6 +1141,7 @@ mod tests {
             assert!(seen.insert(*spec), "{spec} twice");
         }
         assert_eq!(xfig_key_label("Shift+Alt+X"), "Shift-Meta-X");
+        assert_eq!(xfig_key_label("Z"), "z");
         assert_eq!(xfig_accelerator("edit.undo"), Some("Alt+U"));
     }
 

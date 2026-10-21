@@ -9,7 +9,7 @@ RustFig may look nicer and more modern than xfig; the **functionality** must sta
 ## Method and what could be captured
 
 - Reference: the real xfig 3.2.9a (X11, Xaw3d), `/opt/homebrew/bin/xfig`, run directly with its standard defaults on a hidden virtual display (`Xvfb :77 -screen 0 1600x1200x24`, so nothing appears on the user's screen and the user's X resources are not loaded), driven with a small XTest program (press, move, release; XQuartz has no XTEST, Xvfb has) and captured with `xwd -root | xwdtopnm | pnmtopng`. Images: `target/window-parity/xfig-*.png` (not committed). Two things the user's home leaks into xfig: the File menu's recent-file list (read from `~/.xfigrc`) and nothing else. The earlier note that this xfig was a Qt build and could not be captured was wrong (it was an older install); the sources remain the ground truth for labels and behaviour.
-- RustFig: `target/window-parity/rf-*.png` (control channel `ui.screenshot`, Classic layout, 2560x1652). egui pop-up menus cannot be opened through the control channel, so RustFig's menus are compared from `XFIG_MENUS` / `LAYOUT` in `crates/ui-egui/src/menus.rs` (entry by entry) rather than from images; the dialogs that open by command (`app.export`) are imaged.
+- RustFig: `target/window-parity/rf-*.png` (control channel `ui.screenshot`, Classic layout, 2560x1652) and, since A11 (`ui.click_label` opens menus and pop-ups), `a11-menu-{file,edit,view,snap,help}.png`, `a11-popup-linestyle.png`, `a11-submenu-tools-draw.png` (Modern layout), `a11-dialog-export.png`; the dialogs that open by command (`app.export`) are imaged.
 - xfig's manual images (`doc/html/images/`) copied as `xfig-manual-*.png` for comparison with the captures: they match the 3.2.9a panels except for details noted below.
 
 ## Groups
@@ -44,6 +44,8 @@ RustFig may look nicer and more modern than xfig; the **functionality** must sta
 Captured from the real xfig: `xfig-main.png` (main window), `xfig-menu-file.png`, `xfig-menu-edit.png`, `xfig-menu-view.png`, `xfig-menu-snap.png`, `xfig-menu-help.png`, `xfig-popup-gridmode.png` (the Grid Mode pop-up panel: NONE and eight grid pictures, Cancel; its function is group 5). Every label, order, divider and accelerator shown in the captures equals the tables below (the Edit menu shows `Paste Text (F18/F20)`, Snap has the two dividers, View has the check marks on page borders, depth manager and info balloons). xfig's five menus are flat lists: **there are no cascades or sub-menus** in File, Edit, View, Snap or Help; the only drop-downs from the main window are the Grid Mode pop-up panel (indicator button), the other attribute pop-ups (group 5) and the unit box's Set Units panel (group 4). Entries of xfig's File menu in the capture: New (Meta-N), Open... (Meta-O), Merge... (Meta-M), Save (Meta-S), Save As... (Meta-A), Export... (Meta-X, Quick = Shift-Meta-X), Print... (Meta-P, Quick = Shift-Meta-P), Exit (Meta-Q), then the numbered recent files (5 in the capture).
 
 xfig's menus are in `w_cmdpanel.c`; RustFig's Classic layout builds them from `XFIG_MENUS` (`crates/ui-egui/src/menus.rs`). Accelerators: xfig shows them inside the label ("(Meta-N)"); RustFig shows them separately (look, allowed) and handles the keys in `XFIG_KEYS` (Meta = Alt/Option). Entries RustFig lacks are shown greyed with a tooltip naming the task.
+
+Compared again with the A11 screenshots `a11-menu-*.png` against `xfig-menu-*.png` (2026-10-21): entries, order, dividers, check marks and greyed items equal the tables. Two differences found and fixed: Unzoom showed RustFig's own shortcut (xfig: none) and Zoom Out showed "Z" (xfig: "(z)"); in the Classic layout an entry now shows xfig's accelerator or none. Look only: RustFig prints accelerators in a right column without parentheses, menus are rounded and fade in.
 
 | Menu | xfig entries (order) | RustFig | Differences |
 |---|---|---|---|
@@ -240,5 +242,6 @@ Nothing in group 1 needed an in-place fix: labels, order, accelerators and defau
 |---|---|
 | 2026-10-21 | Created; group 1 compared from xfig's sources. |
 | 2026-10-21 | Group 1 re-checked against captures of the real X11 xfig (menus, main window, Grid Mode pop-up); group 2 (Open, Save As, Merge, Export, Print) compared with captures; W10-4 to W10-10 added; merge as one compound, Figure Offset in the engine and the input-file check for export fixed. |
+| 2026-10-21 | A11: group 1 menus re-compared with real screenshots of RustFig (`a11-*.png`); Unzoom/Zoom Out accelerator labels fixed. |
 | 2026-10-21 | W11: main window look (3D buttons, mode panel fits, compact mouse box, rulers as xfig), screenshots `target/window-parity/w11-*.png`. |
 | 2026-10-21 | Group 3 (object edit panels) compared with captures of the real X11 xfig; position rows, arrow rows, arc type, text flags, units, Cancel-restores, figure comments and the spline point panel added; W10-15 to W10-17 added. |

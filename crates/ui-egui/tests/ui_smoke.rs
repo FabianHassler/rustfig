@@ -1199,3 +1199,130 @@ fn file_name_box_renames() {
     assert!(!std::path::Path::new(&a).exists());
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+// ---- Injected mouse and keys (A11) ----
+
+/// Run a control-channel input request through the queue, frame by frame,
+/// as `App::raw_input_hook` does.
+fn inject(h: &mut Harness<'static, App>, method: &str, p: serde_json::Value) -> serde_json::Value {
+    let (steps, result) = rustfig_ui_egui::control::input_steps(h.state(), method, &p).unwrap();
+    let seq = h.state_mut().injector.push(steps).unwrap();
+    for _ in 0..200 {
+        if h.state().injector.reached(seq) {
+            break;
+        }
+        let mut raw = std::mem::take(h.input_mut());
+        h.state_mut().feed_input(&mut raw);
+        *h.input_mut() = raw;
+        h.step();
+    }
+    h.run_steps(2);
+    result
+}
+
+fn attached() -> Harness<'static, App> {
+    let mut h = harness(app());
+    let ctx = h.ctx.clone();
+    h.state_mut().attach(&ctx);
+    h.run_steps(3);
+    h
+}
+
+fn open_state(h: &mut Harness<'static, App>) -> serde_json::Value {
+    let ctx = h.ctx.clone();
+    rustfig_ui_egui::control::open_state(h.state(), &ctx)
+}
+
+#[test]
+fn injected_clicks_open_menu_submenu_and_dialog_by_label() {
+    let mut h = attached();
+    assert!(!h.state().widgets.lock().unwrap().is_empty());
+    // A menu by its label, then a dialog from its entry.
+    inject(&mut h, "ui.click_label", json!({"label": "File"}));
+    assert_eq!(open_state(&mut h)["popup"], json!(true));
+    inject(&mut h, "ui.click_label", json!({"label": "Export"}));
+    assert!(open_state(&mut h)["dialogs"]
+        .as_array()
+        .unwrap()
+        .contains(&json!("export")));
+    inject(&mut h, "ui.click_label", json!({"label": "Help"}));
+    inject(&mut h, "ui.click_label", json!({"label": "About"}));
+    let open = open_state(&mut h);
+    assert!(open["dialogs"].as_array().unwrap().contains(&json!("about")), "{open}");
+    // A submenu (modern layout): Tools > Draw lists the drawing tools.
+    let mut m = harness(app());
+    m.state_mut().layout = Layout::Modern;
+    let ctx = m.ctx.clone();
+    m.state_mut().attach(&ctx);
+    m.run_steps(3);
+    inject(&mut m, "ui.click_label", json!({"label": "Tools"}));
+    inject(&mut m, "ui.click_label", json!({"label": "Draw"}));
+    let labels: Vec<String> = m
+        .state()
+        .widgets
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|w| w.label.clone())
+        .collect();
+    assert!(labels.iter().any(|l| l.contains("Box")), "{labels:?}");
+}
+
+#[test]
+fn injected_keys_and_text_reach_the_app() {
+    let mut h = attached();
+    // xfig's accelerator Meta-F opens the File menu; typing text goes to the focused field.
+    inject(&mut h, "ui.key", json!({"key": "F", "modifiers": ["alt"]}));
+    h.run_steps(2);
+    inject(&mut h, "ui.key", json!({"text": "ab"}));
+    inject(
+        &mut h,
+        "ui.pointer",
+        json!({"action": "scroll", "x": 600, "y": 400, "dy": -30}),
+    );
+    inject(
+        &mut h,
+        "ui.pointer",
+        json!({"action": "double_click", "x": 600, "y": 400, "button": "right", "modifiers": ["shift"]}),
+    );
+}
+
+#[test]
+fn injected_alt_click_is_the_middle_button() {
+    let mut h = attached();
+    let steps =
+        rustfig_ui_egui::inject::pointer_steps(&json!({"action": "click", "x": 3, "y": 4, "modifiers": ["alt"]}))
+            .unwrap();
+    let seq = h.state_mut().injector.push(steps).unwrap();
+    let mut seen = Vec::new();
+    for _ in 0..seq {
+        let mut raw = egui::RawInput::default();
+        h.state_mut().feed_input(&mut raw);
+        for e in raw.events {
+            if let egui::Event::PointerButton { button, .. } = e {
+                seen.push(button);
+            }
+        }
+    }
+    assert_eq!(seen, [egui::PointerButton::Middle, egui::PointerButton::Middle]);
+}
+
+#[test]
+fn control_input_hostile_params_never_panic() {
+    let mut h = attached();
+    for (m, p) in [
+        ("ui.pointer", json!({"action": "click", "x": f64::MAX, "y": 0})),
+        ("ui.pointer", json!([1, 2])),
+        ("ui.pointer", json!({"action": 5})),
+        ("ui.key", json!({"key": "\u{0}"})),
+        ("ui.key", json!({"text": "\u{1}\n"})),
+        ("ui.key", json!({"modifiers": "wat", "key": "A"})),
+        ("ui.click_label", json!({})),
+        ("ui.click_label", json!({"label": "no such widget"})),
+        ("ui.click_label", json!({"label": "File", "index": 1e30})),
+        ("ui.click_label", json!({"label": "File", "button": "x"})),
+    ] {
+        let _ = rustfig_ui_egui::control::input_steps(h.state(), m, &p);
+    }
+    h.run_steps(2);
+}
