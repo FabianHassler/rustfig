@@ -1402,5 +1402,22 @@ fn saving_inside_an_open_compound_asks_all_or_part() {
     h.run_steps(2);
     assert!(h.query_by_label_contains("You have opened a compound").is_none());
     assert_eq!(h.state().engine.open_compounds(), 1);
+    // Quit with unsaved changes: Save, then Save Part, and RustFig quits
+    // (xfig's query_save); Cancel at the second query does not quit.
+    let mut h = harness(make());
+    h.state_mut().run("app.quit", json!({}));
+    h.run_steps(2);
+    h.get_by_label("Save").click();
+    h.run_steps(2);
+    h.get_by_label("Cancel").click();
+    h.run_steps(2);
+    assert!(!h.state().quit_requested());
+    h.state_mut().run("app.quit", json!({}));
+    h.run_steps(2);
+    h.get_by_label("Save").click();
+    h.run_steps(2);
+    h.get_by_label("Save Part").click();
+    h.run_steps(2);
+    assert!(h.state().quit_requested());
     let _ = std::fs::remove_dir_all(&dir);
 }

@@ -702,6 +702,7 @@ fn save_scope_dialog(app: &mut App, ctx: &egui::Context) {
     });
     let Some(choice) = choice else { return };
     app.dialogs.save_scope = None;
+    let then = app.after_save.take();
     let Some(part) = choice else { return };
     if !part {
         // xfig: `close_all_compounds` before saving.
@@ -711,6 +712,12 @@ fn save_scope_dialog(app: &mut App, ctx: &egui::Context) {
         app.run("compound.close_all", json!({}));
     }
     app.run(id, json!({ "part": part }));
+    // As xfig's `query_save`: quit (or open, new) once the figure is saved.
+    if let Some(action) = then {
+        if !app.engine.is_modified() {
+            app.do_pending(action);
+        }
+    }
 }
 
 /// xfig's Global settings panel holds its preferences; RustFig's is the
@@ -1868,7 +1875,10 @@ fn unsaved_dialog(app: &mut App, ctx: &egui::Context) {
         Some(0) => {
             app.pending = None;
             app.run("app.save", json!({}));
-            if !app.engine.is_modified() {
+            if app.dialogs.save_scope.is_some() {
+                // The Save All / Save Part query is up: go on after it.
+                app.after_save = Some(action);
+            } else if !app.engine.is_modified() {
                 app.do_pending(action);
             }
         }

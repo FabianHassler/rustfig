@@ -105,6 +105,9 @@ pub struct App {
     /// The override set during the previous frame, shown in this one.
     pub hint_shown: Option<(&'static str, &'static str, &'static str)>,
     pub pending: Option<Pending>,
+    /// The action (quit, new, open) that resumes once the Save All / Save
+    /// Part query of an open compound has saved the figure.
+    pub after_save: Option<Pending>,
     /// File pickers (native dialogs; replaced in tests).
     pub file_dialogs: Box<dyn dialogs::FileDialogs>,
     quit_confirmed: bool,
@@ -150,6 +153,7 @@ impl App {
             xfig_keys: true,
             open_menu: None,
             pending: None,
+            after_save: None,
             file_dialogs: Box::new(dialogs::NativeDialogs),
             quit_confirmed: false,
             ui_open: Value::Null,
