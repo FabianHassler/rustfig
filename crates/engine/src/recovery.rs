@@ -17,6 +17,7 @@ use rustfig_format::FileFormat;
 use rustfig_model::Document;
 use std::fs::File;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::SystemTime;
 
 /// The platform's folder for RustFig's recovery files.
@@ -66,7 +67,11 @@ impl Recovery {
             .duration_since(SystemTime::UNIX_EPOCH)
             .map(|d| d.as_nanos())
             .unwrap_or(0);
-        let id = format!("{}-{nanos:x}", std::process::id());
+        // The clock alone can give two instances of one process the same
+        // id (macOS: microseconds), so a counter makes it unique.
+        static NEXT: AtomicU64 = AtomicU64::new(0);
+        let n = NEXT.fetch_add(1, Ordering::Relaxed);
+        let id = format!("{}-{nanos:x}-{n}", std::process::id());
         let lock = std::fs::create_dir_all(&dir)
             .ok()
             .and_then(|()| File::create(dir.join(format!("{id}.lock"))).ok())
