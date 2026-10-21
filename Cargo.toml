@@ -25,8 +25,8 @@ rust-version = "1.89"
 [workspace.dependencies]
 # fig2dev's own repository. For joint work, a [patch."https://github.com/FabianHassler/fig2dev"]
 # with path = "../fig2dev/crates/…" points at a local clone.
-figbase = { git = "https://github.com/FabianHassler/fig2dev", tag = "v0.4.0" }
-fig2dev = { git = "https://github.com/FabianHassler/fig2dev", tag = "v0.4.0" }
+figbase = { git = "https://github.com/FabianHassler/fig2dev", tag = "v0.5.0" }
+fig2dev = { git = "https://github.com/FabianHassler/fig2dev", tag = "v0.5.0" }
 rustfig-geom = { path = "crates/geom" }
 rustfig-model = { path = "crates/model" }
 rustfig-text = { path = "crates/text" }
@@ -69,4 +69,3 @@ debug = false
 
 [profile.dev.package."*"]
 opt-level = 2
-

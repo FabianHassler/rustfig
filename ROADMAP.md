@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-21 | DD7: exports hand fig2dev's drivers the bridge's objects, no Fig text round trip (the text path stays as reference and as fallback where the reader would print a message); byte-identical over fixtures x every language x 9 option sets, the 300-figure sample and 129,108 generated-document exports; fig2dev 0.5.0 exposes the reader's repairs (`repair_line`, `repair_arc`, validators) which the bridge now calls; export SVG (50k paths) 108 → 86 ms; corpus sample unchanged. |
 | 2026-10-20 | DD3: one Fig reader (fig2dev's, through the bridge) for versions 1.3–3.2; `fig_read.rs` 662 → 83 lines; fig2dev's reader in `Ctx::editing` mode (xfig's `f_read.c` rules, nothing repaired that xfig keeps); differential run old vs new over 2,572 figures (all parse in both, 2,469 equal, 103 differ only where `f_read.c` does the same); open .fig 19.0 → 15.7 ms; corpus sample unchanged. |
 | 2026-10-20 | B13: fig2dev v0.2.0 (`sld`, JPEG passthrough in EPS, gensvg/genps headers, hardened picture handling); `sld` now exports; all gates pass; corpus sample (300 figures, 0 errors) EPS/PDF/PNG medians in the report. |
 | 2026-10-20 | DD5: the canvas loads pictures through fig2dev's `readpics` first (PNG gamma, GIF transparency, XBM, XPM, PCX, `.gz`), the `image` crate only as fallback; canvas pixels equal the exports'. |

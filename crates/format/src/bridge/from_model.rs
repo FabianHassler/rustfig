@@ -19,10 +19,11 @@
 //! - `Ctx::std_color_used`, `pattern_used` and `arrow_used` are noted as
 //!   the reader notes them ([`note_usage`]).
 //!
-//! Not done, as the reader's repairs are for files: consecutive equal
-//! points are not dropped, invalid objects are not rejected, and the
-//! unfilled objects' fill colour is mapped like any other (the reader
-//! leaves it as the file has it).
+//! Not done here, as the reader's repairs are for files: consecutive equal
+//! points are not dropped, invalid objects are not rejected, a text keeps
+//! its leading blanks, and the unfilled objects' fill colour is mapped like
+//! any other (the reader leaves it as the file has it). [`super::export`]
+//! does what the reader does, for the exports (plan D7).
 
 use fig2dev::gendev::{FIG_COLOR_NAMES, MAX_USR_COLS, NUM_STD_COLS};
 use fig2dev::object::{self as f, Compound};
@@ -31,6 +32,7 @@ use rustfig_geom::Point;
 use rustfig_model::{
     Arrow, ColorRef, Document, ObjectKind, Orientation, PolyKind, Style, Units, FIRST_USER_COLOR, LAST_USER_COLOR,
 };
+use std::cell::Cell;
 
 /// Compounds nested deeper than this are cut off (as the reader refuses
 /// them), so that a hostile document can't overflow the stack.
@@ -77,6 +79,18 @@ fn i(v: f64) -> i32 {
         v.round().clamp(-2.0e9, 2.0e9) as i32
     } else {
         0
+    }
+}
+
+/// An angle as the writer prints it: within -7 to 7 as it is, otherwise
+/// turned into 0 to 2 pi (0 when not finite).
+fn wrap_angle(a: f64) -> f64 {
+    if !a.is_finite() {
+        0.0
+    } else if (-7.0..=7.0).contains(&a) {
+        a
+    } else {
+        a.rem_euclid(std::f64::consts::TAU)
     }
 }
 
@@ -147,54 +161,29 @@ pub fn driver_objects(fig: &mut Figure) -> Compound {
 }
 
 /// [`driver_objects`] for any compound built by this module (one object
-/// wrapped in a compound, for instance).
+/// wrapped in a compound, for instance): the repairs of `read.c`'s
+/// `sanitize_lineobject` (fig2dev's own [`fig2dev::read::repair_line`]),
+/// consecutive equal points dropped, the splines converted to lines. A
+/// malformed arc-box or picture box, which the reader rejects, is left as
+/// it is.
 pub fn driver_compound(ctx: &mut Ctx, com: &Compound) -> Compound {
     let mut objects = com.clone();
     repair_lines(&mut objects);
     fig2dev::trans_spline::splines_to_lines(ctx, &objects)
 }
 
-/// What `read.c` does to the points of a line (`sanitize_lineobject`):
-/// consecutive equal points go; boxes and polygons of fewer than three
-/// vertices become polylines, a box that isn't a rectangle a polygon; a
-/// polyline of fewer than three points is unfilled, of a single point has
-/// no arrowheads. (A malformed arc-box or picture box, which the reader
-/// rejects, is left as it is.)
 fn repair_lines(c: &mut Compound) {
     for l in &mut c.lines {
         l.points.dedup();
-        let n = l.points.len();
-        if matches!(l.type_, f::T_BOX | f::T_POLYGON) {
-            if n < 4 {
-                l.type_ = f::T_POLYLINE;
-                if n == 2 || n == 3 {
-                    l.points.truncate(n - 1);
-                }
-            } else if l.type_ == f::T_BOX {
-                let rect = |p: &[f::Point]| match p {
-                    [p0, p1, p2, p3, ..] => {
-                        (p0.x == p1.x && p2.x == p3.x && p0.y == p3.y && p1.y == p2.y)
-                            || (p0.y == p1.y && p2.y == p3.y && p0.x == p3.x && p1.x == p2.x)
-                    }
-                    _ => false,
-                };
-                if n != 5 || !rect(&l.points) {
-                    l.type_ = f::T_POLYGON;
-                }
-            }
-        }
-        if l.type_ == f::T_POLYLINE && l.points.len() < 3 {
-            l.fill_style = f::UNFILLED;
-            if l.points.len() < 2 {
-                l.for_arrow = None;
-                l.back_arrow = None;
-            }
+        let saved = l.clone();
+        if fig2dev::read::repair_line(l, l.points.len() as i64).is_err() {
+            *l = saved;
         }
     }
     c.compounds.iter_mut().for_each(repair_lines);
 }
 
-fn comments(lines: &[String]) -> Vec<f::Comment> {
+pub(super) fn comments(lines: &[String]) -> Vec<f::Comment> {
     lines
         .iter()
         .flat_map(|c| c.split('\n'))
@@ -211,18 +200,41 @@ fn compound_of<O: AsRef<rustfig_model::Object>>(objs: &[O], ctx: &Ctx, depth: us
         return com;
     }
     for o in rustfig_model::xfig_order(objs) {
-        object_at(o, ctx, depth).push_into(&mut com);
+        object_below(o, ctx, depth).push_into(&mut com);
     }
     com
 }
 
-/// One object as fig2dev's, for the context `ctx` (from [`context`]).
-pub fn object_to_fig2dev(o: &rustfig_model::Object, ctx: &Ctx) -> FigObject {
-    object_at(o, ctx, 0)
+/// Put the objects of `kids` into `inner` (a compound whose corners and
+/// comments are set).
+pub(super) fn give_children(inner: &mut Compound, kids: Compound) {
+    inner.lines = kids.lines;
+    inner.ellipses = kids.ellipses;
+    inner.splines = kids.splines;
+    inner.texts = kids.texts;
+    inner.arcs = kids.arcs;
+    inner.compounds = kids.compounds;
 }
 
-fn object_at(o: &rustfig_model::Object, ctx: &Ctx, depth: usize) -> FigObject {
-    let c = Conv { ctx };
+/// One object as fig2dev's, for the context `ctx` (from [`context`]).
+pub fn object_to_fig2dev(o: &rustfig_model::Object, ctx: &Ctx) -> FigObject {
+    object_below(o, ctx, 0)
+}
+
+/// [`object_at`] with the children of a compound.
+fn object_below(o: &rustfig_model::Object, ctx: &Ctx, depth: usize) -> FigObject {
+    let mut obj = object_at(o, ctx, &Cell::new(false));
+    if let (FigObject::Compound(inner), ObjectKind::Compound(c)) = (&mut obj, &o.kind) {
+        give_children(inner, compound_of(&c.objects, ctx, depth + 1));
+    }
+    obj
+}
+
+/// One object as fig2dev's; `odd` is set where the Fig file the writer
+/// makes would draw a message from the reader (a colour that doesn't exist,
+/// an arrowhead it drops), which an export through objects must not hide.
+pub(super) fn object_at(o: &rustfig_model::Object, ctx: &Ctx, odd: &Cell<bool>) -> FigObject {
+    let c = Conv { ctx, odd };
     let cm = comments(&o.comments);
     match &o.kind {
         ObjectKind::Ellipse(e) => {
@@ -238,7 +250,7 @@ fn object_at(o: &rustfig_model::Object, ctx: &Ctx, depth: usize) -> FigObject {
                 fill_style: st.area_fill,
                 style_val: st.style_val,
                 direction: e.direction,
-                angle: q(e.angle, 4),
+                angle: q(wrap_angle(e.angle), 4),
                 center: fpoint(e.center),
                 radiuses: f::Point::new(i(e.radii.x).saturating_abs(), i(e.radii.y).saturating_abs()),
                 start: fpoint(e.start),
@@ -326,10 +338,10 @@ fn object_at(o: &rustfig_model::Object, ctx: &Ctx, depth: usize) -> FigObject {
                 size: if t.size.is_finite() { t.size } else { 0.0 },
                 color: c.color(t.color),
                 depth: t.depth,
-                angle: q(t.angle, 4),
+                angle: q(wrap_angle(t.angle), 4),
                 flags: t.flags,
-                height: f64::from(i(t.height)),
-                length: f64::from(i(t.length)),
+                height: f64::from(i(t.height).max(0)),
+                length: f64::from(i(t.length).max(0)),
                 base_x: i(t.origin.x),
                 base_y: i(t.origin.y),
                 pen: t.pen_style,
@@ -363,8 +375,8 @@ fn object_at(o: &rustfig_model::Object, ctx: &Ctx, depth: usize) -> FigObject {
                 comments: cm,
             })
         }
-        ObjectKind::Compound(com) => {
-            let mut inner = compound_of(&com.objects, ctx, depth + 1);
+        ObjectKind::Compound(_) => {
+            let mut inner = Compound::default();
             let b = o.geometry_bbox();
             let (lo, hi) = if b.is_empty() {
                 (Point::ZERO, Point::ZERO)
@@ -393,6 +405,7 @@ struct Common {
 
 struct Conv<'a> {
     ctx: &'a Ctx,
+    odd: &'a Cell<bool>,
 }
 
 impl Conv<'_> {
@@ -404,11 +417,15 @@ impl Conv<'_> {
     /// `NUM_STD_COLS` + their index, an undefined one the default.
     fn color(&self, c: ColorRef) -> i32 {
         if c.0 < NUM_STD_COLS as i32 {
+            self.odd.set(self.odd.get() || c.0 < f::DEFAULT);
             return c.0.max(-1);
         }
         match self.ctx.user_col_indx.iter().position(|&n| n == c.0) {
             Some(idx) => NUM_STD_COLS as i32 + idx as i32,
-            None => f::DEFAULT,
+            None => {
+                self.odd.set(true);
+                f::DEFAULT
+            }
         }
     }
 
@@ -428,12 +445,16 @@ impl Conv<'_> {
     /// The arrowhead, or none where the file has none (`allowed` false).
     fn arrow(&self, allowed: bool, a: &Option<Arrow>) -> Option<f::Arrow> {
         let a = a.as_ref().filter(|_| allowed)?;
+        let (thickness, wid, ht) = (q(a.thickness, 2), q(a.width, 2), q(a.height, 2));
+        if fig2dev::read::arrow_fault(a.kind, a.style, thickness, wid, ht).is_some() {
+            self.odd.set(true);
+        }
         Some(f::Arrow {
             type_: a.kind,
             style: a.style,
-            thickness: q(a.thickness, 2) * f64::from(self.ctx.thick_scale),
-            wid: q(a.width, 2),
-            ht: q(a.height, 2),
+            thickness: thickness * f64::from(self.ctx.thick_scale),
+            wid,
+            ht,
         })
     }
 }
@@ -442,60 +463,77 @@ impl Conv<'_> {
 /// in `ctx`, as the reader does (`fix_and_note_color`, `note_fill`,
 /// `make_arrow`); drivers write only what is noted.
 pub fn note_usage(ctx: &mut Ctx, objects: &Compound) {
-    fn color(ctx: &mut Ctx, c: i32) {
-        if let Some(u) = usize::try_from(c).ok().and_then(|i| ctx.std_color_used.get_mut(i)) {
+    objects.arcs.iter().for_each(|a| note_arc(ctx, a));
+    objects.ellipses.iter().for_each(|e| note_ellipse(ctx, e));
+    objects.lines.iter().for_each(|l| note_line(ctx, l));
+    objects.splines.iter().for_each(|s| note_spline(ctx, s));
+    objects.texts.iter().for_each(|t| note_text(ctx, t));
+    objects.compounds.iter().for_each(|c| note_usage(ctx, c));
+}
+
+fn note_color(ctx: &mut Ctx, c: i32) {
+    if let Some(u) = usize::try_from(c).ok().and_then(|i| ctx.std_color_used.get_mut(i)) {
+        *u = true;
+    }
+}
+
+fn note_fill(ctx: &mut Ctx, style: i32, c: i32) {
+    if style == f::UNFILLED {
+        return;
+    }
+    note_color(ctx, c);
+    if style >= f::NUMSHADES + f::NUMTINTS {
+        if let Some(p) = usize::try_from(style - f::NUMSHADES - f::NUMTINTS)
+            .ok()
+            .and_then(|i| ctx.pattern_used.get_mut(i))
+        {
+            *p = true;
+        }
+        ctx.pats_used = true;
+    }
+}
+
+fn note_arrows(ctx: &mut Ctx, list: [&Option<f::Arrow>; 2]) {
+    for a in list.into_iter().flatten() {
+        ctx.arrows_used = true;
+        if let Some(u) = usize::try_from(2 * a.type_ + a.style)
+            .ok()
+            .and_then(|i| ctx.arrow_used.get_mut(i))
+        {
             *u = true;
         }
     }
-    fn fill(ctx: &mut Ctx, style: i32, c: i32) {
-        if style == f::UNFILLED {
-            return;
-        }
-        color(ctx, c);
-        if style >= f::NUMSHADES + f::NUMTINTS {
-            if let Some(p) = usize::try_from(style - f::NUMSHADES - f::NUMTINTS)
-                .ok()
-                .and_then(|i| ctx.pattern_used.get_mut(i))
-            {
-                *p = true;
-            }
-            ctx.pats_used = true;
-        }
-    }
-    fn arrows(ctx: &mut Ctx, list: [&Option<f::Arrow>; 2]) {
-        for a in list.into_iter().flatten() {
-            ctx.arrows_used = true;
-            if let Some(u) = usize::try_from(2 * a.type_ + a.style)
-                .ok()
-                .and_then(|i| ctx.arrow_used.get_mut(i))
-            {
-                *u = true;
-            }
-        }
-    }
-    for a in &objects.arcs {
-        color(ctx, a.pen_color);
-        fill(ctx, a.fill_style, a.fill_color);
-        arrows(ctx, [&a.for_arrow, &a.back_arrow]);
-    }
-    for e in &objects.ellipses {
-        color(ctx, e.pen_color);
-        fill(ctx, e.fill_style, e.fill_color);
-    }
-    for l in &objects.lines {
-        color(ctx, l.pen_color);
-        fill(ctx, l.fill_style, l.fill_color);
-        arrows(ctx, [&l.for_arrow, &l.back_arrow]);
-    }
-    for s in &objects.splines {
-        color(ctx, s.pen_color);
-        fill(ctx, s.fill_style, s.fill_color);
-        arrows(ctx, [&s.for_arrow, &s.back_arrow]);
-    }
-    for t in &objects.texts {
-        color(ctx, t.color);
-    }
-    for c in &objects.compounds {
-        note_usage(ctx, c);
-    }
+}
+
+/// What the reader notes for one arc.
+pub(super) fn note_arc(ctx: &mut Ctx, a: &f::Arc) {
+    note_color(ctx, a.pen_color);
+    note_fill(ctx, a.fill_style, a.fill_color);
+    note_arrows(ctx, [&a.for_arrow, &a.back_arrow]);
+}
+
+/// What the reader notes for one ellipse.
+pub(super) fn note_ellipse(ctx: &mut Ctx, e: &f::Ellipse) {
+    note_color(ctx, e.pen_color);
+    note_fill(ctx, e.fill_style, e.fill_color);
+}
+
+/// What the reader notes for one line (as read, before its repairs: the
+/// fill of a short polyline counts although the repair removes it).
+pub(super) fn note_line(ctx: &mut Ctx, l: &f::Line) {
+    note_color(ctx, l.pen_color);
+    note_fill(ctx, l.fill_style, l.fill_color);
+    note_arrows(ctx, [&l.for_arrow, &l.back_arrow]);
+}
+
+/// What the reader notes for one spline.
+pub(super) fn note_spline(ctx: &mut Ctx, s: &f::Spline) {
+    note_color(ctx, s.pen_color);
+    note_fill(ctx, s.fill_style, s.fill_color);
+    note_arrows(ctx, [&s.for_arrow, &s.back_arrow]);
+}
+
+/// What the reader notes for one text.
+pub(super) fn note_text(ctx: &mut Ctx, t: &f::Text) {
+    note_color(ctx, t.color);
 }

@@ -346,3 +346,291 @@ fn arrowheads_count_in_the_bounds() {
     );
     assert_eq!(e.selection_bbox(), arrowed);
 }
+
+// ---- D7: export straight from the objects equals the text path ----
+
+mod identity {
+    use rustfig_engine::fig2dev::{driver_available, export, export_via_text, languages::LANGUAGES};
+    use rustfig_model::Document;
+    use serde_json::Value;
+    use std::path::Path;
+
+    type Opts = Vec<(char, Option<String>)>;
+    type Exported = Result<(Vec<u8>, Vec<String>), String>;
+
+    fn languages() -> Vec<&'static str> {
+        let mut v: Vec<&str> = LANGUAGES
+            .iter()
+            .map(|l| l.id)
+            .filter(|id| driver_available(id))
+            .collect();
+        for extra in ["pstex_t", "pdftex_t"] {
+            if driver_available(extra) && !v.contains(&extra) {
+                v.push(extra);
+            }
+        }
+        v
+    }
+
+    fn opt(c: char, a: &str) -> (char, Option<String>) {
+        (c, Some(a.to_string()))
+    }
+
+    fn option_sets() -> Vec<Opts> {
+        vec![
+            vec![],
+            vec![opt('m', "0.5")],
+            vec![opt('s', "14")],
+            vec![opt('b', "10")],
+            vec![opt('D', "-50")],
+            vec![opt('Z', "3")],
+            vec![('K', None)],
+            vec![('c', None), opt('l', "portrait"), opt('p', "a4")],
+            vec![opt('m', "1.5"), opt('s', "10"), opt('b', "5")],
+        ]
+    }
+
+    fn run_both(doc: &Document, lang: &str, o: &Opts) -> (Exported, Exported) {
+        (export(doc, lang, o, None), export_via_text(doc, lang, o, None))
+    }
+
+    /// Check one export; the clock in the headers may tick between the two.
+    fn check(doc: &Document, lang: &str, o: &Opts, what: &str) {
+        let (a, b) = run_both(doc, lang, o);
+        if a != b {
+            let (a, b) = run_both(doc, lang, o);
+            if a != b {
+                let show = |r: &Exported| match r {
+                    Ok((out, m)) => format!("ok {} bytes, messages {m:?}", out.len()),
+                    Err(e) => format!("error {e}"),
+                };
+                let at = match (&a, &b) {
+                    (Ok((x, _)), Ok((y, _))) => x.iter().zip(y).position(|(p, q)| p != q),
+                    _ => None,
+                };
+                let around = |r: &Exported| match (r, at) {
+                    (Ok((out, _)), Some(i)) => String::from_utf8_lossy(
+                        out.get(i.saturating_sub(80)..(i + 80).min(out.len()))
+                            .unwrap_or_default(),
+                    )
+                    .into_owned(),
+                    _ => String::new(),
+                };
+                if let Some(l) = rustfig_format::write_fig(doc)
+                    .lines()
+                    .find(|l| l.contains(['\0', '\r']))
+                {
+                    eprintln!("a line with NUL or CR: {l:?}");
+                }
+                panic!(
+                    "{what} -L {lang} {o:?}: objects {} / text {} (first difference at {at:?})\nobjects: {}\ntext: {}",
+                    show(&a),
+                    show(&b),
+                    around(&a),
+                    around(&b)
+                );
+            }
+        }
+    }
+
+    fn all_languages(doc: &Document, what: &str, sets: &[Opts]) -> usize {
+        let mut n = 0;
+        for lang in languages() {
+            for o in sets {
+                check(doc, lang, o, what);
+                n += 1;
+            }
+        }
+        n
+    }
+
+    fn root() -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
+    }
+
+    fn set_clock() {
+        std::env::set_var("SOURCE_DATE_EPOCH", "1700000000");
+    }
+
+    fn load(p: &Path) -> Option<Document> {
+        rustfig_format::read_any(&std::fs::read(p).ok()?).ok()
+    }
+
+    fn objects_used(doc: &Document) -> bool {
+        rustfig_format::bridge::export_objects(doc, &mut fig2dev::Ctx::default()).is_some()
+    }
+
+    #[test]
+    fn fixtures_export_identically_in_every_language_and_option() {
+        set_clock();
+        let dir = root().join("crates/engine/tests/fixtures");
+        let mut n = 0;
+        let mut used = 0;
+        for e in std::fs::read_dir(dir).unwrap() {
+            let p = e.unwrap().path();
+            if p.extension().is_some_and(|x| x == "fig") {
+                let doc = load(&p).unwrap();
+                used += usize::from(objects_used(&doc));
+                n += all_languages(&doc, &p.display().to_string(), &option_sets());
+            }
+        }
+        eprintln!("fixtures: {n} exports identical, {used} figures through objects");
+        assert!(used >= 10);
+    }
+
+    /// The 300-figure sample of the corpus checks (local, needs `old/`).
+    #[test]
+    fn corpus_sample_exports_identically() {
+        set_clock();
+        let list = root().join("plan/corpus-sample.txt");
+        let (Ok(text), true) = (std::fs::read_to_string(list), root().join("old").is_dir()) else {
+            eprintln!("skipped: no plan/corpus-sample.txt or old/");
+            return;
+        };
+        let sets = option_sets();
+        let langs = languages();
+        let (mut n, mut figures, mut used) = (0, 0, 0);
+        for (k, line) in text
+            .lines()
+            .map(str::trim)
+            .filter(|l| !l.is_empty() && !l.starts_with('#'))
+            .enumerate()
+        {
+            let Some(doc) = load(&root().join(line)) else { continue };
+            figures += 1;
+            used += usize::from(objects_used(&doc));
+            // Every language once, with a rotating set of options.
+            for (j, lang) in langs.iter().enumerate() {
+                check(&doc, lang, &sets[(k + j) % sets.len()], line);
+                n += 1;
+            }
+            // And the main ones with all option sets.
+            for lang in ["eps", "svg", "pdf"] {
+                for o in &sets {
+                    check(&doc, lang, o, line);
+                    n += 1;
+                }
+            }
+        }
+        eprintln!("corpus sample: {figures} figures ({used} through objects), {n} exports identical");
+    }
+
+    struct Rng(u64);
+    impl Rng {
+        fn next(&mut self) -> u64 {
+            self.0 = self
+                .0
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            self.0 >> 33
+        }
+        fn below(&mut self, n: usize) -> usize {
+            (self.next() % n.max(1) as u64) as usize
+        }
+    }
+
+    /// JSON pointers of the numbers, strings and booleans in `v`.
+    fn leaves(v: &Value, at: &mut String, out: &mut Vec<String>) {
+        let len = at.len();
+        match v {
+            Value::Number(_) | Value::String(_) | Value::Bool(_) => out.push(at.clone()),
+            Value::Array(a) => {
+                for (i, x) in a.iter().enumerate() {
+                    at.push_str(&format!("/{i}"));
+                    leaves(x, at, out);
+                    at.truncate(len);
+                }
+            }
+            Value::Object(m) => {
+                for (k, x) in m {
+                    at.push_str(&format!("/{}", k.replace('~', "~0").replace('/', "~1")));
+                    leaves(x, at, out);
+                    at.truncate(len);
+                }
+            }
+            Value::Null => {}
+        }
+    }
+
+    const NUMBERS: &[f64] = &[
+        0.0, -1.0, 1.0, 0.5, 2.0, 3.0, 7.5, -7.5, 31.0, 32.0, 543.0, 544.0, 999.0, 1000.0, 1e9, -1e9, 1e12, 1e-9,
+        12345.678,
+    ];
+    const STRINGS: &[&str] = &[
+        "",
+        "  lead",
+        "tail\\",
+        "a\r\nb",
+        "x\u{1}y",
+        "\\001",
+        "é€ü",
+        "line1\nline2",
+        "\ttab",
+        "a\\b\\",
+        "# hash",
+        " ",
+        "back\\001slash",
+        "\nlead newline",
+        "\u{0}",
+    ];
+
+    /// A document with a few random fields of its JSON changed: hostile but
+    /// shaped like one (sizes zero or negative, texts with odd characters).
+    fn mutate(doc: &Document, rng: &mut Rng) -> Option<Document> {
+        let mut v = serde_json::to_value(doc).ok()?;
+        let mut ls = Vec::new();
+        leaves(&v, &mut String::new(), &mut ls);
+        for _ in 0..1 + rng.below(4) {
+            let path = ls.get(rng.below(ls.len()))?;
+            let leaf = v.pointer_mut(path)?;
+            match leaf {
+                Value::Number(_) => *leaf = serde_json::json!(NUMBERS[rng.below(NUMBERS.len())]),
+                Value::String(_) => *leaf = Value::String(STRINGS[rng.below(STRINGS.len())].to_string()),
+                Value::Bool(b) => *b = !*b,
+                _ => {}
+            }
+        }
+        serde_json::from_value(v).ok()
+    }
+
+    /// Fixtures and sample figures with random fields changed: through
+    /// objects or text, the output is the same (or both fail the same way).
+    #[test]
+    fn hostile_documents_export_identically() {
+        set_clock();
+        let dir = root().join("crates/engine/tests/fixtures");
+        let mut docs = Vec::new();
+        for e in std::fs::read_dir(dir).unwrap() {
+            let p = e.unwrap().path();
+            if p.extension().is_some_and(|x| x == "fig") {
+                docs.extend(load(&p));
+            }
+        }
+        let cases: usize = std::env::var("D7_CASES")
+            .ok()
+            .and_then(|n| n.parse().ok())
+            .unwrap_or(300);
+        let langs = [
+            "eps", "svg", "pdf", "tikz", "latex", "pstricks", "box", "ps", "pic", "mf", "emf", "png",
+        ];
+        let sets = option_sets();
+        let mut rng = Rng(std::env::var("D7_SEED")
+            .ok()
+            .and_then(|n| n.parse().ok())
+            .unwrap_or(20261020));
+        let (mut n, mut used, mut tried) = (0, 0, 0);
+        for k in 0..cases {
+            let Some(base) = docs.get(rng.below(docs.len())) else {
+                break;
+            };
+            let Some(doc) = mutate(base, &mut rng) else { continue };
+            tried += 1;
+            used += usize::from(objects_used(&doc));
+            for lang in langs.iter().filter(|l| driver_available(l)) {
+                check(&doc, lang, &sets[(k + n) % sets.len()], &format!("hostile case {k}"));
+                n += 1;
+            }
+        }
+        eprintln!("hostile: {tried} documents ({used} through objects), {n} exports identical");
+    }
+}

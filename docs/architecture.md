@@ -1,6 +1,6 @@
 # Architecture
 
-**Status:** 2026-10-16 (B12: fig2dev a program of its own; every export goes through it). Which xfig and fig2dev source file each module
+**Status:** 2026-10-21 (DD7: exports from the bridge's objects); 2026-10-16 (B12: fig2dev a program of its own; every export goes through it). Which xfig and fig2dev source file each module
 corresponds to: [source-map.md](source-map.md).
 
 RustFig is a Cargo workspace of layered crates. A crate may depend only on
@@ -72,9 +72,14 @@ with solid or pattern fill and stroke, arrowheads, text runs, pictures),
 which fig2dev's rasteriser (`fig2dev::scene::raster`) draws. The
 canvas caches the raster per (revision, view) and draws overlays separately.
 
-Exports: the engine writes the document as Fig 3.2 text (`rustfig_format`),
-reads it with fig2dev's reader and runs the language's driver through
-`gendev::convert` (`crates/engine/src/fig2dev/mod.rs` `export`), passing
+Exports: the engine converts the document to fig2dev's objects and context
+(`rustfig_format::bridge::export_objects`: what fig2dev's reader returns for
+the Fig 3.2 text the document would be saved as, repairs included, built with
+fig2dev's own repair functions) and runs the language's driver through
+`gendev::convert` (`crates/engine/src/fig2dev/mod.rs` `export`). Where the
+reader would print a message or refuse something (`export_objects` is `None`),
+`export` writes the Fig text and reads it, as xfig does (`export_via_text`, the
+reference of the identity tests), so messages and errors are fig2dev's. It passes
 fig2dev's option letters as xfig's `u_print.c` does (magnification and bitmap
 resolution → `-m`, margin → `-b`, background → `-g`, active layers →
 `-D`/`-K`, `-F`). fig2dev's messages come back as warnings or errors. The
@@ -84,7 +89,7 @@ fig2dev's objects with the same primitives the canvas uses
 writes. Every Fig file (1.3–3.2) opens through fig2dev's reader (`Ctx::editing`), converted by the
 bridge (`crates/format/src/bridge/`, L2: `to_model` fig2dev objects → document,
 `from_model` document → fig2dev `Ctx` + objects, which equal what fig2dev's reader
-returns for `write_fig`'s text; `engine::fig2dev::to_model` re-exports it). `format`
+returns for `write_fig`'s text; `export_objects` adds the reader's repairs for the exports; `engine::fig2dev::to_model` re-exports `to_model`). `format`
 depends on the `fig2dev` crate for this (it sits below every layer).
 
 ## Robustness
@@ -101,3 +106,4 @@ protocols are fuzzed with proptest.
 |---|---|
 | 2026-10-13 | First version. |
 | 2026-10-16 | B12: `figbase`, fig2dev at L0 and self-contained, render canvas-only, exports through `convert`. |
+| 2026-10-21 | DD7: exports from the bridge's objects (`export_objects`), text path as reference and fallback. |

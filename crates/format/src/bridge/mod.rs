@@ -11,11 +11,15 @@
 //! shape factors, so that [`to_model::to_document`] gets the document back.
 //! Hand them to fig2dev's drivers through [`from_model::driver_objects`],
 //! which converts the splines to lines as the reader does.
+//! [`export::export_objects`] gives what the reader returns for the written
+//! Fig text, repairs and all, for the exports (plan D7).
 
 pub mod bounds;
+pub mod export;
 pub mod from_model;
 pub mod to_model;
 
 pub use bounds::{document_bounds, object_bounds};
+pub use export::export_objects;
 pub use from_model::{driver_compound, driver_objects, from_model, note_usage, object_to_fig2dev, FigObject};
 pub use to_model::to_document;

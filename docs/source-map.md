@@ -2,7 +2,7 @@
 
 **Paths written `fig2dev:crates/…` are in the fig2dev repository (<https://github.com/FabianHassler/fig2dev>), where figbase, the fig2dev library and the `fig2dev` program moved (B13).**
 
-**Status:** 2026-10-20 (DD3: `f_read.c` read through fig2dev's reader); 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
+**Status:** 2026-10-21 (DD7: `read.c`'s repairs as functions used by `format/bridge/export`); 2026-10-20 (DD3: `f_read.c` read through fig2dev's reader); 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
 sources (`LICENSE-xfig`). Nothing has been ported line by line yet: every
 "own" row was written from the manual and the format description and must be
 checked against the C file named in it.
@@ -182,7 +182,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `iso2tex.c` | 236 | Latin-1 characters to TeX sequences | `fig2dev/util/iso2tex` | ported | B9 |
 | `creationdate.c` | 114 | creation date for reproducible output (`SOURCE_DATE_EPOCH`) | `fig2dev/util/creationdate` | ported | B9 |
 | `localmath.c`, `messages.c` | 114 | math helpers, error messages | `geom`, errors; `fig2dev:apps/fig2dev` (messages) | n/a | — |
-| `read.c` | 2048 | Fig reader (second reference) | `format/fig_read` (RustFig's reader); `fig2dev/read` + `crates/format/src/bridge/to_model.rs` (port: the only reader of every export and of the standalone fig2dev; the app opens Fig 1.3–2.1 through it, `engine/fig2dev`); texts and comments keep their input bytes beside the Unicode decoding (`Text::raw`, `Comment`) | ported | B9, G1 |
+| `read.c` | 2048 | Fig reader (second reference) | `format/fig_read` (RustFig's reader); `fig2dev/read` + `crates/format/src/bridge/to_model.rs` (port: the only reader of every export and of the standalone fig2dev; the app opens Fig 1.3–2.1 through it, `engine/fig2dev`); texts and comments keep their input bytes beside the Unicode decoding (`Text::raw`, `Comment`); its repairs and checks are functions (`read::repair_line`, `repair_arc`, `*_invalid`, DD7) that `format/bridge/export.rs` calls | ported | B9, G1 |
 | `read1_3.c` | 549 | Fig 1.3 reader | `fig2dev/read/read1_3` | ported | B9 |
 | `bound.c` | 1156 | bounds incl. arrows and text | `fig2dev:crates/figbase/src/geom/arrow.rs` (arrowheads for the scene); `fig2dev/bound` (port on fig2dev's objects: the bounds of every export; RustFig's own model bounds are gone) | ported (D9, B0); ellipse extents analytic instead of the scan | — |
 | `trans_spline.c` | 661 | splines to polylines for exporters | `fig2dev/trans_spline` | ported | B9 |
@@ -233,3 +233,4 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | 2026-10-14 | W6: rulers and units box ported (`w_rulers.c`, `u_pan.c`). |
 | 2026-10-14 | W5: attribute panel ported (`w_indpanel.c`, masks from `w_modepanel.c`). |
 | 2026-10-14 | S2: mouse indicator ported (`w_mousefun.c`, `set_mousefun` wording); notes from the real xfig. |
+| 2026-10-21 | DD7: `read.c`'s repairs and checks exposed as functions, used by the bridge's export. |
