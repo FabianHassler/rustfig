@@ -1,5 +1,7 @@
 //! Project automation: `cargo xtask ci | layers | assets | wasm`.
 
+mod audit;
+
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
@@ -297,7 +299,8 @@ fn main() -> ExitCode {
         "assets" => assets(),
         "licences" => licences(),
         "wasm" => wasm(),
-        _ => Err("usage: cargo xtask ci | layers | assets | licences | wasm".into()),
+        "source-audit" => audit::run(&root()),
+        _ => Err("usage: cargo xtask ci | layers | assets | licences | wasm | source-audit".into()),
     };
     match r {
         Ok(()) => ExitCode::SUCCESS,

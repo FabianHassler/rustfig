@@ -1,6 +1,6 @@
 # Milestones
 
-**Status:** 2026-10-18. Current focus: **M4 (exports)**: phase W, phase A, B1, B2, B3, B6, B10, B12 and G1 done; every fig2dev language is ported except `sld` (B9); next the audit's hardening passes (B11, octal-escape text bytes first) page layout and previews (B4a/B4b) done 2026-10-18. Task-level plan: [plan.md](plan.md).
+**Status:** 2026-10-21 (S4 done). Earlier: 2026-10-18. Current focus: **M4 (exports)**: phase W, phase A, B1, B2, B3, B6, B10, B12 and G1 done; every fig2dev language is ported except `sld` (B9); next the audit's hardening passes (B11, octal-escape text bytes first) page layout and previews (B4a/B4b) done 2026-10-18. Task-level plan: [plan.md](plan.md).
 
 | Milestone | Content | State |
 |-----------|---------|-------|
@@ -18,6 +18,7 @@
 
 | Date | Note |
 |------|------|
+| 2026-10-21 | S4 done: every xfig function audited (`source-audit.md`); S4-1 to S4-7 added to phase S. |
 | 2026-10-21 | DD1–DD10 (dedup with fig2dev) done; docs swept (DD9). |
 | 2026-10-13 | M0–M3 landed. |
 | 2026-10-14 | Phase W: W1 (layout), W2 (mouse buttons) and W3 (depth panel) landed. |

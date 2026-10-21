@@ -1,6 +1,6 @@
 # Execution plan
 
-**Status:** 2026-10-21 (B15, DD10, DD1, DD2, DD3, DD5, DD7, DD9 done). Phase W (with W8, W9), phase A (A1–A10) done, A8, A9, A10, D9 and D12 done; B1, B2, B3, B10, B12 and G1 done; B9 (porting fig2dev's drivers) done but `sld`, with the audit's hardening passes in B11. Overall parity ≈65 %.
+**Status:** 2026-10-21 (S4 done, S4-1 to S4-7 added; B15, DD10, DD1, DD2, DD3, DD5, DD7, DD9 done). Phase W (with W8, W9), phase A (A1–A10) done, A8, A9, A10, D9 and D12 done; B1, B2, B3, B10, B12 and G1 done; B9 (porting fig2dev's drivers) done but `sld`, with the audit's hardening passes in B11. Overall parity ≈65 %.
 
 This is the committed work plan. [`gaps.md`](gaps.md) ranks every known
 shortfall; this file groups them into phases with task ids, acceptance
@@ -20,7 +20,7 @@ criteria and estimates. Commit messages use the task id (`A1: shared undo snapsh
   area. A task that touches an "own" row reviews it against that file;
   accepted behaviour differences are recorded in the map.
 
-## Phase S: source review (≈20 h)
+## Phase S: source review (≈20 h; S4 and its S4-1 to S4-7 add 32 h and 20 h)
 
 The source map compares every xfig and fig2dev file with RustFig. These
 tasks fix what it found; the per-area reviews ride along with the W, B and D
@@ -32,7 +32,14 @@ tasks that touch each area.
 | S1 | ✅ 2026-10-14 (`Object::xfig_type_rank`, `Document::for_each_leaf_xfig_order`, `xfig_order`; hit testing follows the same order). **Draw order as xfig:** within a depth, arcs, compounds (recursively), ellipses, lines, splines, texts (`u_redraw.c`); gray depths drawn behind all active ones; `.fig` written in xfig's type order (`f_save.c`). | Render tests for type order, compound order and gray layers; a saved file lists objects in xfig's order. | 4 |
 | S2 | ✅ 2026-10-14 (also: xfig's labels word for word; ellipses finish with either button; text: middle finishes, right cancels). **Mouse indicator as xfig** (`w_mousefun.c`): left label left of the mouse, middle above, right label right; xfig's capitalisation. | Screenshot next to the manual's image. | 2 |
 | S3 | **xfig's command-line options, backwards compatible** (`main.c`, `xfig.man.in`; widened 2026-10-15 at the user's request: RustFig must be usable as a drop-in for `xfig`): RustFig accepts xfig's standard options (`-metric`/`-inches`, `-specialtext`, `-latexfonts`, `-startfontsize`, `-startgridmode`, `-startposnmode`, `-zoom`, `-exportLanguage`, arrow defaults, `-portrait`/`-landscape`, …) as a general compatibility feature; they override the preferences (E1) for that run. Nothing user-specific is built in. Backwards compatible beyond the options: every option of `xfig.man.in` accepted (X toolkit ones such as `-geometry`, `-display`, `-iconic` accepted and mapped or ignored with a note), xfig's resources from `app-defaults/Fig` and `~/.Xdefaults`-style `Fig.*` settings read where they have an equivalent, `~/.xfigrc` imported into the preferences on first start, an `xfig` command name (a launcher or symlink installed alongside `rustfig`), files saved exactly as xfig 3.2 saves them, and old Fig formats read (Fig 1.x/2.x, gap #13, G1; ✅ 2026-10-16). | Each option has a test; `rustfig -metric file.fig` behaves as `xfig -metric file.fig`; every option in `xfig.man.in` is accepted; a table in `docs/ui-parity.md` lists each option with its effect. | 16 |
-| S4 | **Function-level source audit** (asked 2026-10-15). S0 maps files; this goes function by function through xfig's `src/*.c` and fig2dev's `fig2dev/*.c` and `dev/*.c` (about 3,300 function definitions: 2,300 in xfig, 1,000 in fig2dev) and records for each: **ported** (RustFig module and item), **replaced** by a deliberate modern equivalent (with the reason, e.g. X toolkit widget code → egui, `u_print.c` printing → PDF to the system print dialog (B5), ghostscript calls → RustFig's renderer, `~/.xfigrc` → TOML preferences (E1)), **not needed** (X11/Xt plumbing, memory management, platform workarounds), or **missing** (with the task that ports it; new tasks where none exists). Generated with a script that lists every C function (ctags-style) into `docs/source-audit.md`, then reviewed by hand; the S0 file statuses are corrected from it. | Every C function has a status; no "missing" function without a task; `source-map.md` statuses agree; the script can be rerun to catch functions added upstream. | 32 |
+| S4 | ✅ 2026-10-21. **Function-level source audit of xfig** (asked 2026-10-15; fig2dev's functions were audited in the fig2dev repository, see B11, and are not repeated): `cargo xtask source-audit` (`xtask/src/audit.rs`, skips without `old/`) lists every function definition of xfig's `src/*.c` (2,126, `xfigmain.c` being a copy of `main.c`) into [`source-audit.md`](source-audit.md), merging the status, note and task columns on rerun. Each has a status: ported 797, replaced 584, not needed 218, partial 66, missing 447 (counts without `xfigmain.c`; `source-audit.md` keeps them current). The S0 file statuses in `source-map.md` are corrected from it. The audit found seven gaps without a task (S4-1 to S4-7); six visible functions are proposed as not needed (summary of `source-audit.md`, for the user's decision). | Every C function has a status; no "missing" function without a task; `source-map.md` statuses agree; the script can be rerun to catch functions added upstream. | 32 |
+| S4-1 | **Shift-click cycling** (S4; `do_object_search`, `show_objecthighlight`, `toggle_csrhighlight`): in every mode that picks an object, Shift+click highlights the object found (corner marker filled) without acting, clicking again with Shift held highlights the next overlapping object, and the click without Shift acts on the highlighted one; clicking on nothing marks the cursor (xfig manual, "editing": selecting an object under another). Mouse hints for Shift (S4-7). | Test with two overlapping objects: Shift-click twice reaches the lower one, a plain click then edits it; the highlight is drawn. | 6 |
+| S4-2 | **Paste follows the mouse** (S4; `paste`, `place_object`, `place_object_orig_posn`, `paste_draw`): Edit > Paste attaches the cut-buffer objects to the pointer; left places them there, middle at their original position, right cancels; Escape cancels. `edit.paste` with `dx`, `dy` stays for scripts. | Test of the tool: paste, move, place; one undo step; hints show the three buttons. | 3 |
+| S4-3 | **Relative picture paths follow the figure** (S4; `relative_path`, `xf_relpath`, `external_path`, `internal_path`): saving a figure in another folder rewrites relative picture names so they still point at the same files (as xfig does), absolute ones stay. | Save As into another folder keeps pictures loading; test. | 2 |
+| S4-4 | **A cursor per mode** (S4; `w_cursor.c`): the canvas cursor follows the mode with egui's cursor set (crosshair for drawing, pointer for picking, text for the text mode, move for Move, grab while dragging). | Cursor changes with the mode; test of the mapping. | 2 |
+| S4-5 | **Convert box ↔ arc-box** (S4; `e_convert.c` `box_2_box`, `init_convert_line_spline`): in Convert mode the left button on a box makes it a rounded box (radius from the indicator) and on a rounded box a plain box; line ↔ spline conversions remember approximated or interpolated for the way back. | Tests for both conversions and undo. | 1 |
+| S4-6 | **Shape factor on the canvas** (S4; `change_sfactor`, `w_canvas.c`): in the editing modes Ctrl+Shift+click on a spline point changes its shape factor (left: more approximating, middle: cycle the shapes, right: more interpolating) and turns the spline into an X-spline; end points of open splines are refused with xfig's messages. | Tests per button; hints (S4-7). | 3 |
+| S4-7 | **Shift and Ctrl variants in the mouse-function indicator** (S4; `draw_shift_mousefun_canvas`, `canvas_selected`): while Shift is held the indicator shows the Shift meanings of the mode (delete point, dimension line, ...), with Ctrl "Zoom area / Pan to origin / Unzoom", with Ctrl+Shift in edit modes "More approx / Cycle shapes / More interp"; `Engine::mouse_hints` gets the modifier state, and the test that checks hints against behaviour covers them. | Screenshots; `mouse_hints_match_behaviour` extended. | 3 |
 
 ## Phase A: hardening (≈84 h)
 
@@ -259,7 +266,7 @@ User decision 2026-10-20: RustFig uses fig2dev for everything fig2dev can do.
 1. ✅ Phase W, xfig window parity (W1–W7, S0–S2), done 2026-10-14.
 2. ✅ A8 (fig2dev reference tests), ✅ D9 (the arrowhead, arc and dash differences it found), ✅ A10 (EPS/PDF compared with fig2dev on xfig's sample figures), then B0 (the fig2dev port: language table ✅, `bound.c` ✅), ✅ D12 (fill patterns).
 3. ✅ A1 and A9 (undo memory, per-command cost), ✅ A2 and A3 (CI, web build check), ✅ W8 (xfig's translations and accelerators), ✅ W9 (sharper icons), (CI on Linux, Windows and macOS; web build), the rest of A4, A5–A7.
-4. ✅ E1 and S3 (preferences ✅, xfig's command line and backwards compatibility), S4 (function-level source audit).
+4. ✅ E1 and S3 (preferences ✅, xfig's command line and backwards compatibility), ✅ S4 (function-level source audit; its seven new tasks S4-1 to S4-7 join phase S).
 5. B1–B10 (fig2dev's drivers ported, and a standalone `fig2dev` with the original's command line: LaTeX exports, bitmaps, PostScript; modern printing), C1–C3 (web): the first release candidate, on desktop and web.
 6. D6 (libraries), D1–D5, D7–D12, E3–E9: every remaining xfig function.
 7. F and G toward Beta and 1.0 (every xfig function available; about 550 h in total).
@@ -269,7 +276,7 @@ User decision 2026-10-20: RustFig uses fig2dev for everything fig2dev can do.
 1. W10 group 3 (object edit panels), then W12 (object markers in the editing modes).
 2. W11 (3D buttons), A11 (mouse and keys through the control channel).
 3. W10 groups 4 (settings, colour, font, style, search, units, libraries, about) and 5 (attribute pop-ups, mode panels); their accepted modernisations join the list below.
-4. S4: function-by-function audit of xfig's sources, so that no function is missed; every missing one gets a task.
+4. ✅ S4: function-by-function audit of xfig's sources ([`source-audit.md`](source-audit.md)), so that no function is missed; every missing one has a task (S4-1 to S4-7 added, 20 h).
 5. W13 and W14 (functions on free mouse buttons); then every missing function, by how often it is used: the editing modes D1 (open compound), D2 (join/split), D3 (chop), D7 (point positioning), D8 (linked move), D4 (tangent/normal), D5 (measure), D10 (mode options, dimension lines); D6 (libraries); B5 (print with preview); W10-4, W10-8 to W10-14 (export and open); W10-15 to W10-17 (edit panels); W10-1 to W10-3; E4, E10, E11, E5, E6, E7, E3 (colours, text, fonts, character map, styles, clipboard, zoom box); F2, F3, F5; D11 (the remaining functions S4 lists).
 6. G4: parity re-scored, aiming at 100 % of xfig's functions; stale rows (B0, B7, B9, G2) brought up to date on the way.
 
@@ -318,6 +325,7 @@ User decision 2026-10-20: RustFig uses fig2dev for everything fig2dev can do.
 | 2026-10-21 | E12 added: plot a function or data as vector curves. |
 | 2026-10-21 | D13 added: new bundled libraries (Feynman diagrams, quantum circuits, optics/lab, plot elements; electronics only where xfig's library has gaps). |
 | 2026-10-21 | W14 added: functions on xfig's free mouse buttons (12 tools). |
+| 2026-10-21 | S4 done: function-level audit of xfig (`docs/source-audit.md`, `cargo xtask source-audit`); S4-1 to S4-7 added (20 h). |
 | 2026-10-21 | W13 added: update region on the right button in Update mode. |
 | 2026-10-21 | W11-1 added: left+right as the middle button (Linux, Windows). |
 | 2026-10-21 | W12 added: object markers in the editing modes, as xfig. |

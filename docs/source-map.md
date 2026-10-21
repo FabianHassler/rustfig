@@ -2,10 +2,12 @@
 
 **Paths written `fig2dev:crates/…` are in the fig2dev repository (<https://github.com/FabianHassler/fig2dev>), where figbase, the fig2dev library and the `fig2dev` program moved (B13).**
 
-**Status:** 2026-10-21 (DD9: sweep; DD7: `read.c`'s repairs as functions used by `format/bridge/export`); 2026-10-20 (DD3: `f_read.c` read through fig2dev's reader); 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
+**Status:** 2026-10-21 (S4: the xfig file statuses corrected from the function-level audit, [`source-audit.md`](source-audit.md); DD9: sweep; DD7: `read.c`'s repairs as functions used by `format/bridge/export`); 2026-10-20 (DD3: `f_read.c` read through fig2dev's reader); 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
 sources (`LICENSE-xfig`). Nothing has been ported line by line yet: every
 "own" row was written from the manual and the format description and must be
 checked against the C file named in it.
+
+Function by function: [`source-audit.md`](source-audit.md) (S4) lists every xfig function with its status; the file rows below summarise it (a status marked "(S4)" comes from there). fig2dev's functions were audited in the fig2dev repository.
 
 Legend: **own** RustFig has its own implementation (review against the source
 pending) · **partial** part of the file's behaviour exists · **missing** ·
@@ -59,43 +61,43 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 
 | File | Lines | What it does | RustFig | Status | Task |
 |---|---:|---|---|---|---|
-| `d_arc.c` | 359 | arc by three points or by centre | `engine/tools` (Arc) | own | review |
-| `d_arcbox.c` | 132 | rounded box | `engine/tools` (ArcBox) | own | review |
-| `d_box.c` | 133 | box | `engine/tools` (Box) | own | review |
-| `d_ellipse.c` | 345 | circles/ellipses by radius or diameter | `engine/tools` | own | review |
-| `d_line.c` | 318 | polylines, polygons, freehand, dimension lines | `engine/tools` | partial: dimension lines missing | D10 |
-| `d_picobj.c` | 136 | picture box | `engine/tools` (Picture) | own | review |
-| `d_regpoly.c` | 149 | regular polygon | `engine/tools` | own | review |
-| `d_spline.c` | 195 | splines | `engine/tools` | own | review |
-| `d_subspline.c` | 179 | spline helpers | `fig2dev:crates/figbase/src/geom` (via `geom`) | own | review |
-| `d_text.c` | 1477 | text entry, cursor, compose keys, paste | `engine/tools` (Text) | partial: compose keys, paste, multi-line editing | F3 |
+| `d_arc.c` | 359 | arc by three points or by centre | `engine/tools` (Arc) | ported (S4) | — |
+| `d_arcbox.c` | 132 | rounded box | `engine/tools` (ArcBox) | ported (S4) | — |
+| `d_box.c` | 133 | box | `engine/tools` (Box) | ported (S4) | — |
+| `d_ellipse.c` | 345 | circles/ellipses by radius or diameter | `engine/tools` | ported (S4) | — |
+| `d_line.c` | 318 | polylines, polygons, freehand, dimension lines | `engine/tools` | partial: dimension lines, latex/manhattan constraints (S4) | D10, D7 |
+| `d_picobj.c` | 136 | picture box | `engine/tools` (Picture) | ported (S4) | — |
+| `d_regpoly.c` | 149 | regular polygon | `engine/tools` | ported (S4) | — |
+| `d_spline.c` | 195 | splines | `engine/tools` | ported (S4) | — |
+| `d_subspline.c` | 179 | spline helpers | `fig2dev:crates/figbase/src/geom` (via `geom`) | replaced: the overlay evaluates the whole curve (S4) | — |
+| `d_text.c` | 1477 | text entry, cursor, compose keys, paste | `engine/tools` (Text) | partial: Up/Down, caret by mouse, Ctrl-key editing, paste into text (S4) | E10, F3 |
 
 ## xfig: editing modes (`e_*`, 17 k lines)
 
 | File | Lines | What it does | RustFig | Status | Task |
 |---|---:|---|---|---|---|
-| `e_addpt.c` | 368 | add point | `engine/tools` | own | review |
-| `e_align.c` | 962 | align compound / canvas, distribute | `cmd/arrange`, tools | partial: align to canvas | D10 |
-| `e_arrow.c` | 293 | add/remove arrowheads | tools, `cmd/object` | own | review |
-| `e_break.c` | 92 | break compound (and tag) | tools | own | review |
-| `e_chop.c` | 890 | chop objects at intersections | — | missing | D3 |
-| `e_compound.c` | 294 | open/close compound | — | missing | D1 |
-| `e_convert.c` | 420 | line↔spline, box↔arc-box | `cmd/object` | own | review |
-| `e_copy.c` | 185 | copy, array copy, copy to cut buffer | tools | partial: array copy | D10 |
-| `e_delete.c` | 307 | delete object/region, cut buffer | tools | own | review |
-| `e_deletept.c` | 214 | delete point | tools | own | review |
-| `e_edit.c` | 5996 | the Edit panel for every object type, figure comments, spline point shapes | `ui-egui/dialogs` | partial: per-type panels, comments, shape factors | W5 |
-| `e_flip.c` | 452 | flip, copy & flip, anchor | tools, `cmd/transform` | partial: anchor | D10 |
-| `e_glue.c` | 521 | tag and glue compounds | tools | own | review |
-| `e_joinsplit.c` | 714 | join/split lines and splines | — | missing | D2 |
-| `e_measure.c` | 514 | measure angle, length, area | `object.measure` | partial: modes and running sums | D5 |
-| `e_move.c` | 135 | move (constrained) | tools | own | review |
-| `e_movept.c` | 845 | move point (constrained, linked) | tools | partial: linked move | D8 |
-| `e_placelib.c` | 337 | place library object | — | missing | D6 |
-| `e_rotate.c` | 575 | rotate, copy & rotate, anchor, copies count | tools | partial: anchor, number of copies | D10 |
-| `e_scale.c` | 1444 | scale box/edge/centre | tools | partial: edge scaling in one dimension | D10 |
-| `e_tangent.c` | 159 | tangent/normal lines | — | missing | D4 |
-| `e_update.c` | 827 | update object / settings, update mask | tools, `indicator.take_from` | partial: per-attribute update mask | W5 |
+| `e_addpt.c` | 368 | add point | `engine/tools` | ported (S4) | — |
+| `e_align.c` | 962 | align compound / canvas, distribute | `cmd/arrange`, tools | partial: align to canvas, distribute choices in the mode (S4) | D10, W10-33 |
+| `e_arrow.c` | 293 | add/remove arrowheads | tools, `cmd/object` | ported (S4) | — |
+| `e_break.c` | 92 | break compound (and tag) | tools | ported (S4) | — |
+| `e_chop.c` | 890 | chop objects at intersections | — | missing (14 functions, S4) | D3 |
+| `e_compound.c` | 294 | open/close compound | — | missing (7 functions, S4) | D1 |
+| `e_convert.c` | 420 | line↔spline, box↔arc-box | `cmd/object` | partial: box ↔ arc-box (S4) | S4-5 |
+| `e_copy.c` | 185 | copy, array copy, copy to cut buffer | tools | partial: array copy (S4) | D10 |
+| `e_delete.c` | 307 | delete object/region, cut buffer | tools | ported (S4) | — |
+| `e_deletept.c` | 214 | delete point | tools | ported (S4) | — |
+| `e_edit.c` | 5996 | the Edit panel for every object type, figure comments, spline point shapes | `ui-egui/dialogs` | partial: compound and picture rows, point table, shape factor on the canvas, live panel (S4) | W10-15, W10-16, W10-19, S4-6 |
+| `e_flip.c` | 452 | flip, copy & flip, anchor | tools, `cmd/transform` | partial: anchor (S4) | D10 |
+| `e_glue.c` | 521 | tag and glue compounds | tools | ported (S4) | — |
+| `e_joinsplit.c` | 714 | join/split lines and splines | — | missing (16 functions, S4) | D2 |
+| `e_measure.c` | 514 | measure angle, length, area | `object.measure` | missing: interactive modes (25 functions; the values exist as `object.measure`, S4) | D5 |
+| `e_move.c` | 135 | move (constrained) | tools | ported (S4) | — |
+| `e_movept.c` | 845 | move point (constrained, linked) | tools | partial: smart links do not follow (S4) | D8 |
+| `e_placelib.c` | 337 | place library object | — | missing (11 functions, S4) | D6 |
+| `e_rotate.c` | 575 | rotate, copy & rotate, anchor, copies count | tools | partial: anchor, number of copies (S4) | D10 |
+| `e_scale.c` | 1444 | scale box/edge/centre | tools | partial: edge scaling in one dimension, dimension lines (S4) | D10 |
+| `e_tangent.c` | 159 | tangent/normal lines | — | missing (5 functions, S4) | D4 |
+| `e_update.c` | 827 | update object / settings, update mask | tools, `indicator.take_from` | partial: Update Control mask (S4) | W10-1 |
 
 ## xfig: files (`f_*`, 9.9 k lines)
 
@@ -103,71 +105,71 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 |---|---:|---|---|---|---|
 | `f_read.c` | 2034 | Fig 3.x reader (all quirks) | fig2dev's `read.c` through `format/bridge/to_model` (`format/fig_read`, 83 lines; DD3) | via fig2dev | DD3 ✅ |
 | `f_readold.c` | 537 | Fig 1.x/2.x reader | fig2dev's `read/read1_3` and `read.c` through the bridge (`format/fig_read`) | via fig2dev | G1, DD3 ✅ |
-| `f_save.c` | 665 | Fig 3.2 writer (type order) | `format/fig_write` | own; type order ported | review |
-| `f_load.c` | 384 | load, merge | `cmd/file` | own | review |
-| `f_util.c` | 1291 | directories, image colours, `~/.xfigrc` | — | missing: settings | S3/E1 |
-| `f_picobj.c` | 970 | picture loading and caching | `engine/import` | own | review |
+| `f_save.c` | 665 | Fig 3.2 writer (type order) | `format/fig_write` | ported: type order, header, arrows, comments; `.bak` missing (S4) | W10-9 |
+| `f_load.c` | 384 | load, merge | `cmd/file` | ported (S4) | — |
+| `f_util.c` | 1291 | directories, image colours, `~/.xfigrc` | — | partial: `~/.xfigrc` replaced by TOML (E1); `xfig -update`, dimension-line parts missing; image colormap code not needed (S4) | S3, D10 |
+| `f_picobj.c` | 970 | picture loading and caching | `engine/import` | replaced by fig2dev `readpics`; relative picture names not rewritten on Save As (S4) | S4-3 |
 | `f_readeps.c` | 343 | EPS/PDF pictures (bounding box, ghostscript preview) | `fig2dev:crates/fig2dev/src/scene/eps.rs` (EPS pictures embedded in EPS output), `util/{pdfpic,pdfps,gs}.rs` (PDF pictures through hayro; ghostscript for EPS in PDF/bitmaps, optional); canvas: `engine/src/import.rs` renders PDF pages and EPS through gs or the preview | ported (B15) | B15 |
 | `f_readgif.c`, `f_readjpg.c`, `f_readpng.c`, `f_readppm.c`, `f_readtif.c` | 1.6 k | bitmap pictures | `image` crate | modern | — |
-| `f_readpcx.c`, `f_readxbm.c`, `f_readxpm.c` | 790 | PCX, XBM, XPM pictures | — | missing | G2 |
-| `f_wrpcx.c`, `f_wrpng.c` | 317 | bitmap writers (for export) | `fig2dev:crates/fig2dev/src/scene/{raster,bitmaps}.rs` (PNG and fig2dev's bitmap languages) | partial | B6 |
+| `f_readpcx.c`, `f_readxbm.c`, `f_readxpm.c` | 790 | PCX, XBM, XPM pictures | fig2dev `util/readpics` (DD5) | replaced (S4) | — |
+| `f_wrpcx.c`, `f_wrpng.c` | 317 | bitmap writers (for export) | `fig2dev:crates/fig2dev/src/scene/{raster,bitmaps}.rs` (PNG and fig2dev's bitmap languages) | replaced: fig2dev bitmaps (B6 ✅) (S4) | — |
 | `f_neuclrtab.c` | 596 | colour quantisation for X visuals | — | n/a | — |
 
 ## xfig: utilities (`u_*`, 19 k lines)
 
 | File | Lines | What it does | RustFig | Status | Task |
 |---|---:|---|---|---|---|
-| `u_draw.c` | 2237 | drawing every object type, arrowheads, dash patterns | `render` (canvas scene), `fig2dev:crates/fig2dev/src/scene/` (primitives), `fig2dev:crates/figbase/src/geom/arrow.rs` | arrowheads ported from fig2dev `bound.c` (D9); own otherwise | — |
+| `u_draw.c` | 2237 | drawing every object type, arrowheads, dash patterns | `render` (canvas scene), `fig2dev:crates/fig2dev/src/scene/` (primitives), `fig2dev:crates/figbase/src/geom/arrow.rs` | replaced by the renderer (fig2dev scene); arrowheads ported from fig2dev `bound.c` (D9) (S4) | — |
 | `u_draw_spline.c` | 384 | X-spline evaluation | `fig2dev:crates/figbase/src/geom/xspline.rs` (from the paper) | own | review (step size) |
 | `u_redraw.c` | 731 | redraw order, gray layers | `rustfig_render::build_scene` | ported: draw order, gray layers first | — |
 | `u_bound.c` | 653 | bounding boxes | `fig2dev:crates/fig2dev/src/bound.rs` through `crates/format/src/bridge/bounds.rs` (DD2); `model` keeps only `Object::approx_bbox` (hit-test prefilter) and `geometry_bbox` | ported via fig2dev's `bound.c` | — |
-| `u_geom.c` | 1072 | normals, slopes, latex/manhattan endpoints, closeness | `geom` | partial: latex/manhattan modes | D7 |
+| `u_geom.c` | 1072 | normals, slopes, latex/manhattan endpoints, closeness | `geom` | partial: lengths and areas via `object.measure`; angle measure and latex/manhattan tables missing (S4) | D5, D7 |
 | `u_quartic.c` | 298 | quartic solver (intersections) | `snap.rs` (flattened outlines) | modern | — |
-| `u_elastic.c` | 1004 | rubber-band feedback while drawing | `Engine::overlay` | own | review |
-| `u_drag.c` | 861 | dragging objects | tools, overlay | own | review |
-| `u_markers.c` | 462 | object markers, tag highlight | `engine/tools/markers.rs` (masks, markers), `ui-egui/canvas` | ported (W12; tag highlight not) | done |
-| `u_list.c` | 1358 | object lists, depth bookkeeping | `model::Document` | own | — |
+| `u_elastic.c` | 1004 | rubber-band feedback while drawing | `Engine::overlay` | replaced by `Engine::overlay`; latex/manhattan lines and smart-link rubber bands missing (S4) | D7, D8 |
+| `u_drag.c` | 861 | dragging objects | tools, overlay | ported; array placement missing (S4) | D10 |
+| `u_markers.c` | 462 | object markers, tag highlight | `engine/tools/markers.rs` (masks, markers), `ui-egui/canvas` | ported (W12); highlight of the found object missing (S4) | S4-1 |
+| `u_list.c` | 1358 | object lists, depth bookkeeping | `model::Document` | replaced by `model::Document`; smart-link bookkeeping missing (S4) | D8 |
 | `u_create.c`, `u_free.c` | 1.4 k | allocation | — | n/a | — |
 | `u_translate.c`, `u_scale.c` | 314 | translate/scale objects | `model` transforms | own | — |
-| `u_convert.c` | 259 | line↔spline conversion | `cmd/object` | own | review |
+| `u_convert.c` | 259 | line↔spline conversion | `cmd/object` | replaced: UTF-8 strings, raw Fig bytes (S4) | — |
 | `u_colors.c` | 306 | colour tables | `figbase/color` (via `model`) | own | review |
-| `u_fonts.c` | 1264 | PostScript/LaTeX font tables | `text` | own | review |
-| `u_search.c` | 1029 | picking objects, points, segments | `Engine::hit_test`, tools | own | review |
+| `u_fonts.c` | 1264 | PostScript/LaTeX font tables | `text` | ported: font tables, metrics, Symbol/Dingbats maps; X font loading replaced (S4) | — |
+| `u_search.c` | 1029 | picking objects, points, segments | `Engine::hit_test`, tools | ported; Shift-click cycling and highlight missing (S4) | S4-1 |
 | `u_smartsearch.c` | 507 | smart links (lines follow moved boxes) | — | missing | D8 |
-| `u_undo.c` | 962 | undo (one level) | `engine/history` (multi-level) | own, superset | — |
-| `u_error.c` | 136 | emergency save on crash | `engine/guard` | partial: emergency save | A6 |
+| `u_undo.c` | 962 | undo (one level) | `engine/history` (multi-level) | replaced: multi-level snapshot undo (S4) | — |
+| `u_error.c` | 136 | emergency save on crash | `engine/guard` | replaced: `engine::guard` and recovery files (A6) (S4) | — |
 | `u_pan.c` | 89 | pan steps | `rulers::pan_step` | ported | — |
-| `u_print.c` | 923 | print and export through fig2dev (passes `-F`, true point sizes, for PS/EPS/PDF) | `cmd/file` export | partial | B4 |
-| `u_ghostscript.c` | 1218 | EPS/PDF preview through ghostscript | — | missing | G2 |
-| `u_spawn.c` | 587 | run external programs | — | n/a for exports (fig2dev is ported, B0); image editor later | — |
+| `u_print.c` | 923 | print and export through fig2dev (passes `-F`, true point sizes, for PS/EPS/PDF) | `cmd/file` export | export replaced (fig2dev in process); printing missing, modern replacement planned (S4) | B5 |
+| `u_ghostscript.c` | 1218 | EPS/PDF preview through ghostscript | `fig2dev:crates/fig2dev/src/util/{pdfpic,pdfps,gs}.rs` | replaced: fig2dev `util/{pdfpic,pdfps,gs}.rs` (B15); library callbacks not needed (S4) | — |
+| `u_spawn.c` | 587 | run external programs | — | replaced: no spawned exports; image editor and help viewer through the OS (S4) | W10-16, W10-2 |
 
 ## xfig: window (`w_*`, 44 k lines; rewritten in egui)
 
 | File | Lines | What it does | RustFig | Status | Task |
 |---|---:|---|---|---|---|
-| `w_cmdpanel.c` | 1860 | main menus | `menus::XFIG_MENUS` (classic layout) | ported: entries, order, dividers, accelerators | — |
-| `w_modepanel.c` | 905 | mode panel, mode keys, per-mode attribute masks | `panels::mode_panel`, `ToolKind::shortcut`, `attributes_for` | own; keys and masks ported | review |
+| `w_cmdpanel.c` | 1860 | main menus | `menus::XFIG_MENUS` (classic layout) | ported: menus; partial: paste with the mouse, character map, global settings rows (S4) | S4-2, E5, W10-23 |
+| `w_modepanel.c` | 905 | mode panel, mode keys, per-mode attribute masks | `panels::mode_panel`, `ToolKind::shortcut`, `attributes_for` | ported: buttons, keys, masks; the Join/Split, Chop, Open compound, Tangent, Measure and Library modes are greyed or missing (S4) | D1–D6 |
 | `w_icons.c` | 3270 | mode and attribute icon bitmaps | `ui-egui/xfig_icons.rs` (verbatim), used by `panels::mode_panel` and `attributes` | ported: mode icons and the attribute pictures (line, join, cap, arrow mode and type, arc type, justification, grid, positioning, alignment) | — |
-| `w_indpanel.c` | 4865 | attribute (indicator) panel, choice panels | `ui-egui/attributes` | ported: buttons, order, per-mode masks, choice panels; missing: Angle Geom, Smart Links, copy counts, dimension line, tangent length, colour editor | D7, D8, D10, D4, E4 |
-| `w_mousefun.c` | 432 | mouse-function indicator | `panels::mouse_indicator`, `Engine::mouse_hints` | ported: layout and wording | — |
-| `w_msgpanel.c` | 881 | message panel, lengths while drawing | `panels::message_panel` | partial: show lengths | D10 |
-| `w_layers.c` | 903 | depth panel | `panels::depth_panel` | own | review (Front/Back labels) |
+| `w_indpanel.c` | 4865 | attribute (indicator) panel, choice panels | `ui-egui/attributes` | ported: buttons, order, per-mode masks, choice panels; missing: Angle Geom, Smart Links, copy counts, dimension line, tangent length, colour editor, Update Control, Arrow Size panel (function by function in `source-audit.md`) | D7, D8, D10, D4, E4, W10-1, W10-31 |
+| `w_mousefun.c` | 432 | mouse-function indicator | `panels::mouse_indicator`, `Engine::mouse_hints` | ported; Shift/Ctrl variants missing (S4) | S4-7 |
+| `w_msgpanel.c` | 881 | message panel, lengths while drawing | `panels::message_panel` | partial: lengths and measure results while drawing (S4) | D10, D5 |
+| `w_layers.c` | 903 | depth panel | `panels::depth_panel` | ported (S4) | — |
 | `w_rulers.c` | 1479 | rulers and units box | `ui-egui/rulers`, `view.set_scale` | ported: tick tables, labels, marker, ruler buttons, units box, Unit menu | — |
 | `w_snap.c`, `w_intersect.c` | 2.8 k | Snap menu (object snaps) | `engine/snap.rs`, `snap.*` commands | ported (curves on flattened outlines instead of the quartic solver) | — |
-| `w_keyboard.c` | 518 | type coordinates for the next point | — | missing | D10 |
-| `w_zoom.c` | 202 | zoom panel | `cmd/view` | partial: zoom panel | E3 |
-| `w_grid.c` | 238 | grid drawing | canvas | own | — |
-| `w_canvas.c` | 1218 | canvas input, key bindings, compose key | `ui-egui/canvas`, `menus::pan_keys`, `menus::Compose`, `rustfig_text::compose` (CompKeyDB) | own; keys ported (W8) | — |
-| `w_cursor.c` | 144 | cursors per mode | canvas | partial | — |
-| `w_color.c` | 2592 | colour panel and editor | indicator combo | partial: colour editor | E4 |
-| `w_export.c` | 2054 | export panel | `dialogs::export` (language menu in xfig's order), default suffixes in `fig2dev:crates/fig2dev/src/languages.rs` | partial | B7 |
+| `w_keyboard.c` | 518 | type coordinates for the next point | — | missing (7 functions, S4) | D10 |
+| `w_zoom.c` | 202 | zoom panel | `cmd/view` | missing: zoom box, unzoom semantics (S4) | E3, D11 |
+| `w_grid.c` | 238 | grid drawing | canvas | ported (S4) | — |
+| `w_canvas.c` | 1218 | canvas input, key bindings, compose key | `ui-egui/canvas`, `menus::pan_keys`, `menus::Compose`, `rustfig_text::compose` (CompKeyDB) | own; partial: Ctrl+click zoom, shape factor on the canvas, crosshair (S4) | E3, S4-6, E9 |
+| `w_cursor.c` | 144 | cursors per mode | canvas | partial: one cursor (S4) | S4-4 |
+| `w_color.c` | 2592 | colour panel and editor | indicator combo | partial: colour editor (35 functions, S4) | E4 |
+| `w_export.c` | 2054 | export panel | `dialogs::export` (language menu in xfig's order), default suffixes in `fig2dev:crates/fig2dev/src/languages.rs` | partial: Export panel options (26 functions, S4) | W10-4, W10-10 |
 | `w_print.c` | 1542 | print panel | — | missing; modern: PDF to the system print dialog (decided) | B5 |
-| `w_file.c`, `w_dir.c`, `w_browse.c`, `w_listwidget.c` | 3.5 k | file panel and browser with preview | native dialogs (`rfd`) | modern; preview missing | — |
+| `w_file.c`, `w_dir.c`, `w_browse.c`, `w_listwidget.c` | 3.5 k | file panel and browser with preview | native dialogs (`rfd`) | modern; preview, offset fields and Open of a missing name missing (S4) | W10-12, W10-8 |
 | `w_library.c` | 1831 | library panel | — | missing | D6 |
 | `w_srchrepl.c` | 966 | search/replace, spell check | `dialogs::search` | partial: spell check | F5 |
 | `w_style.c` | 1026 | style manager | — | missing | E6 |
-| `w_fontpanel.c` | 424 | font menus | `attributes` Text Font panel | own | review |
-| `w_help.c` | 219 | Help menu | menus | own | — |
+| `w_fontpanel.c` | 424 | font menus | `attributes` Text Font panel | replaced by the Text Font pop-up (S4) | E11 |
+| `w_help.c` | 219 | Help menu | menus | partial: reference/how-to entries (S4) | W10-2 |
 | `w_capture.c` | 676 | screen capture into a picture | — | missing (through the OS screenshot facilities) | D11 |
 | `w_digitize.c` | 471 | digitising tablet | — | missing | D11 |
 | `w_drawprim.c`, `w_fontbits.c`, `w_rottext.c`, `w_i18n.c` | 4.6 k | X drawing primitives, bitmap fonts, rotated X text, X input methods | renderer, `figbase/text` (via `text`) | n/a | — |
@@ -234,5 +236,6 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | 2026-10-14 | W6: rulers and units box ported (`w_rulers.c`, `u_pan.c`). |
 | 2026-10-14 | W5: attribute panel ported (`w_indpanel.c`, masks from `w_modepanel.c`). |
 | 2026-10-14 | S2: mouse indicator ported (`w_mousefun.c`, `set_mousefun` wording); notes from the real xfig. |
+| 2026-10-21 | S4: every xfig function audited (`source-audit.md`); file statuses of `d_*`, `e_*`, `f_*`, `u_*` and `w_*` rows corrected (f_readpcx/xbm/xpm and f_wrpcx/png, u_ghostscript, u_error are done or replaced, not missing). |
 | 2026-10-21 | DD7: `read.c`'s repairs and checks exposed as functions, used by the bridge's export. |
 | 2026-10-21 | B15: `f_readeps.c`, `readeps.c` (`read_pdf`, `pdftops`, `gsexe`) and the picture part of `genps.c` now covered by `util/{pdfpic,pdfps,gs}.rs`. |

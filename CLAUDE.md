@@ -11,6 +11,7 @@ RustFig is an open-source, Rust-native reimplementation of xfig: close to the or
 ## Using xfig's sources (decided 2026-10-14)
 
 - xfig and fig2dev are under the xfig licence (SPDX `Xfig`): use, modify, sublicense and redistribute freely, as long as the copyright and permission notice stay intact. RustFig may read, port and reuse their code, comments and data tables. [`docs/source-map.md`](docs/source-map.md) maps every C file to its RustFig module, status and plan task; update it when you port or review a file.
+- `docs/source-audit.md` lists every xfig function with its status (S4); `cargo xtask source-audit` regenerates the table (not part of `ci`, skips without `old/`) and keeps the status columns. Update the status of a function when you port or replace it.
 - References in `old/` (gitignored, never commit it): the C sources (`old/xfig-3.2.9a/src/`, `old/fig2dev-3.2.9a/fig2dev/`), the format specs (`doc/FORMAT3.2` and older), the HTML manual with screenshots of every panel (`doc/html/`, `doc/html/images/`), `xfig.man.in`, the app defaults (`app-defaults/`), and fig2dev's man pages. Before building UI, look at the manual's image of that panel; with the user's permission, compare with the real xfig (`~/bin/xfig`, XQuartz).
 - Ported code: translate into idiomatic Rust that follows this file's rules (no panics, `Result`, layering) rather than transliterating C. Put a comment at the top of the Rust file (after its `//!` doc) naming the sources, e.g. `// Ported from xfig src/u_draw.c (xfig licence, see LICENSE-xfig).`, and add the file with its sources to the list at the end of `LICENSE-xfig`; copyright holders of the C file not yet listed there go into its notice. Tables, strings and constants copied from xfig count as ported. `cargo xtask licences` (part of `ci`) fails when a file says "Ported from xfig/fig2dev" without pointing to `LICENSE-xfig`, or when the list and the files disagree.
 - Some files under `old/` are not under the xfig licence (fig2dev's `lib/` replacement C functions; several figure libraries in `Libraries/` carry their own notice or none). Check the header before reusing; library figures follow the asset rules below.
@@ -30,7 +31,7 @@ RustFig is an open-source, Rust-native reimplementation of xfig: close to the or
 | L5 | `rustfig-mcp` | `crates/mcp` | MCP server over stdio |
 | L6 | `rustfig-ui-egui` | `crates/ui-egui` | egui app: canvas, panels, menus, dialogs, control channel |
 | L7 | `rustfig`, `rustfig-cli` | `apps/` | desktop/web app; CLI (convert, info, perf, bench, mcp) |
-| — | `xtask` | `xtask/` | `cargo xtask ci \| layers \| assets \| licences \| wasm` |
+| — | `xtask` | `xtask/` | `cargo xtask ci \| layers \| assets \| licences \| wasm \| source-audit` |
 
 Coordinates are Fig units (1200 per inch; metric drawings use 450 per cm), y grows downwards; line thickness is in 1/80 inch, drawn as fig2dev draws it (`geom::stroke_width`: 1/160 inch for thickness 1, (t − 1)/80 inch above).
 

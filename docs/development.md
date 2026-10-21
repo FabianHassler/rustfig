@@ -37,6 +37,8 @@ If `cargo` cannot write to `~/.cargo` (sandboxed agents), set
 skipped with a warning; set `RUSTFIG_REQUIRE_WASM=1` (as CI does) to make
 it fail instead.
 
+`cargo xtask source-audit` (not part of `ci`) lists every function of `old/xfig-3.2.9a/src/*.c` into `docs/source-audit.md`, keeping the status, note and task columns by file and name; run it after porting a function and set the row's status; without `old/` it skips.
+
 GitHub Actions (plan A2): `.github/workflows/ci.yml` runs `cargo xtask ci`
 and the perf budgets on Linux for every push and pull request, with fig2dev
 installed so the A8 reference tests run. `release.yml` runs on `v*` tags (or

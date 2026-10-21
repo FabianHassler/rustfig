@@ -1,6 +1,6 @@
 # Known gaps (ranked work list)
 
-**Status:** 2026-10-21 (B15: #14 shrank to the leftovers; DD9: #25 restated after DD7; #14 restated: EPS/PDF pictures in exports need a PostScript interpreter). Earlier: 2026-10-18 (B2, G1, B12, pict2e, TikZ, PSTricks, EMF, Tk (B1, B3, B9) landed; B11 added from the fig2dev audit). Ranked by user impact per hour. Pick work from the top.
+**Status:** 2026-10-21 (S4: #34 added; B15: #14 shrank to the leftovers; DD9: #25 restated after DD7; #14 restated: EPS/PDF pictures in exports need a PostScript interpreter). Earlier: 2026-10-18 (B2, G1, B12, pict2e, TikZ, PSTricks, EMF, Tk (B1, B3, B9) landed; B11 added from the fig2dev audit). Ranked by user impact per hour. Pick work from the top.
 
 | # | Gap | Area | Impact | Hours |
 |---|-----|------|--------|------:|
@@ -33,11 +33,13 @@
 | 31 | Edit-panel leftovers found by W10 group 3 ([window-parity.md](window-parity.md)): compound panel rows (W10-15), picture panel rows (W10-16), Done as one undo step and live point panel (W10-17); the position rows, arrow rows, text flags, arc type, figure comments and Cancel-restores were fixed in the same pass | UI | Medium | 16 |
 | 32 | Settings and tool windows found by W10 group 4 ([window-parity.md](window-parity.md)): Global settings rows with effect (W10-23), Unit/Scale panel details (W10-24); the colour panel, character map, Manage Styles, font menus, spell check, libraries and zoom box are E4, E5, E6, E11, F5, D6, E3; Search and Replace results list, Update settings, empty search, About copyrights, Messages Dismiss/Clear and Global settings view rows were fixed in the same pass | UI | Medium | 11 |
 | 33 | Attribute pop-ups and mode panel found by W10 group 5 ([window-parity.md](window-parity.md)): Update Control toggles (W10-1), Arrow Size panel with absolute / multiple-of-line-width values and thickness (W10-31), Integer zoom and Return-sets for number pop-ups (W10-32), Align distribute/abut and isometric grid choices (W10-33), indicator buttons without their feature yet (Angle Geom and Point Posn modes D7, Smart Links D8, Num Copies / X / Y D10, Tangent/Norm Length D4, Dimension line D10) | Unchanged function otherwise; stepping, ranges and tooltips fixed in W10 |
+| 34 | Functions the xfig function audit found missing with no task ([source-audit.md](source-audit.md), S4): Shift-click cycling and highlight (S4-1), paste with the mouse (S4-2), relative picture paths on Save As (S4-3), a cursor per mode (S4-4), box ↔ arc-box convert (S4-5), shape factor on the canvas (S4-6), Shift/Ctrl variants in the mouse indicator (S4-7); 447 missing and 66 partial functions in all, each under its task | UI/Editing | Medium | 20 |
 
 ## Revision history
 
 | Date | Note |
 |------|------|
+| 2026-10-21 | #34 added (S4: function-level audit of xfig; S4-1 to S4-7). |
 | 2026-10-21 | #30 added (W10 group 2: file windows). |
 | 2026-10-21 | #31 added (W10 group 3: edit panels). |
 | 2026-10-18 | #26 closed (audit pass 9: genps object fidelity in the scene builder). |
