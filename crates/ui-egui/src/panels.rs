@@ -621,8 +621,14 @@ fn current_file(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     );
     let size = galley.size() + vec2(14.0, 4.0);
     let (rect, resp) = ui.allocate_exact_size(size, Sense::click());
-    let state = crate::bevel::State::of(&resp, false, false);
-    crate::bevel::paint(ui.painter(), rect, tk, state);
+    // A sunken field, as xfig's name panel, lighter while hovered (a click
+    // edits it).
+    let fill = if resp.hovered() {
+        tk.face_hover
+    } else {
+        ui.visuals().extreme_bg_color
+    };
+    crate::bevel::field(ui.painter(), rect, tk, fill);
     ui.painter()
         .galley(rect.center() - galley.size() / 2.0, galley, ui.visuals().text_color());
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, text.clone()));

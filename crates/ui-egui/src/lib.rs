@@ -13,6 +13,7 @@ pub mod canvas;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod control;
 pub mod dialogs;
+pub mod input;
 pub mod menus;
 pub mod mode_icons;
 pub mod panels;
@@ -98,6 +99,8 @@ pub struct App {
     /// Mouse hints shown instead of the tool's while the pointer is over a
     /// panel with its own button functions (the attribute buttons).
     pub hint_override: Option<(&'static str, &'static str, &'static str)>,
+    /// Alt + click as the middle button, Ctrl + click as the right one (macOS).
+    pub ctrl_click: input::CtrlClick,
     /// xfig's keyboard accelerators (Meta menu keys, Ctrl mode keys).
     pub xfig_keys: bool,
     /// A classic menu to pop up on the next frame (xfig's Meta-F/E/V/H).
@@ -142,6 +145,7 @@ impl App {
             file_edit: None,
             depth_drag: None,
             hint_override: None,
+            ctrl_click: input::CtrlClick::default(),
             hint_shown: None,
             unit_panel_open: false,
             xfig_keys: true,
@@ -339,6 +343,10 @@ impl App {
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.ui(ctx);
+    }
+
+    fn raw_input_hook(&mut self, _ctx: &egui::Context, raw_input: &mut egui::RawInput) {
+        self.ctrl_click.apply(raw_input, cfg!(target_os = "macos"));
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
