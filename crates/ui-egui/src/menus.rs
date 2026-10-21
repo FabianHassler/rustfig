@@ -33,7 +33,7 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         id: "app.toggle_xfig_keys",
         label: "xfig keyboard accelerators",
         shortcut: "",
-        params: "{\"on\"?: bool}  — Meta (Alt/Option) menu keys and xfig's Ctrl mode keys",
+        params: "{\"on\"?: bool}  — xfig's Meta keys (Alt, macOS Option) and Ctrl mode keys",
     },
     UiCommand {
         id: "app.unit_panel",
@@ -141,7 +141,7 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         id: "app.toggle_balloons",
         label: "Show info balloons",
         shortcut: "",
-        params: "{}  — xfig's tooltips (Meta-Y)",
+        params: "{}  — xfig's tooltips (Alt+Y, macOS Option+Y)",
     },
     UiCommand {
         id: "app.toggle_indicator",
@@ -387,11 +387,11 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("New", "app.new"),
                 Cmd("Open...", "app.open"),
                 Cmd("Merge...", "app.merge"),
-                Missing("Digitize...", "Meta-Z", "—"),
+                Missing("Digitize...", "Alt+Z", "—"),
                 Cmd("Save", "app.save"),
                 Cmd("Save As...", "app.save_as"),
                 Cmd("Export...", "app.export"),
-                Missing("Print...", "Meta-P", "B5"),
+                Missing("Print...", "Alt+P", "B5"),
                 Cmd("Exit", "app.quit"),
             ],
         ),
@@ -402,7 +402,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Paste Objects", "edit.paste"),
                 Missing("Paste Text", "F18/F20", "E7"),
                 Cmd("Search/Replace...", "app.search"),
-                Missing("Spell Check...", "Meta-K", "F5"),
+                Missing("Spell Check...", "Alt+K", "F5"),
                 Cmd("Delete All", "edit.delete_all"),
                 Sep,
                 Cmd("Global settings...", "app.global_settings"),
@@ -425,7 +425,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Show page borders", "view.toggle_page_border"),
                 Cmd("Show depth manager", "app.toggle_depths"),
                 Cmd("Show info balloons", "app.toggle_balloons"),
-                Missing("Show line lengths", "Meta-L", "D10"),
+                Missing("Show line lengths", "Alt+L", "D10"),
                 Missing("Show vertex numbers", "", "—"),
                 Missing("Autorefresh mode", "", "—"),
             ],
@@ -564,7 +564,7 @@ fn xfig_menu(app: &mut App, ui: &mut egui::Ui, menu: &str, items: &[XfigItem]) {
             XfigItem::Missing(label, accel, task) => {
                 let mut b = egui::Button::new(label);
                 if !accel.is_empty() {
-                    b = b.shortcut_text(accel);
+                    b = b.shortcut_text(xfig_key_label(accel));
                 }
                 let why = if task == "—" {
                     "Not available in RustFig".to_string()
@@ -868,15 +868,26 @@ fn parse_xfig_key(spec: &str) -> Option<(bool, bool, bool, egui::Key)> {
     key.map(|k| (alt, shift, ctrl, k))
 }
 
-/// How xfig's menus print an accelerator: "Meta-N", "Shift-Meta-X", "Ctrl-L".
+/// An xfig accelerator as the platform names its keys. xfig prints "Meta-N",
+/// "Shift-Meta-X", "Ctrl-L"; its Meta is the Alt key (Option on macOS), so
+/// macOS shows "Option+N", "Shift+Option+X", "Ctrl+L" (the key's printed
+/// name; the ⌥ symbol is missing from the fallback fonts) and Linux and
+/// Windows "Alt+N", "Shift+Alt+X", "Ctrl+L".
 pub fn xfig_key_label(spec: &str) -> String {
+    key_label(spec, cfg!(target_os = "macos"))
+}
+
+fn key_label(spec: &str, mac: bool) -> String {
     if !spec.contains('+') {
         // A bare letter is lower case in xfig's labels: "(z)".
         return spec.to_ascii_lowercase();
     }
-    spec.replace("PhysCtrl", "Ctrl")
-        .replace("Alt", "Meta")
-        .replace('+', "-")
+    let spec = spec.replace("PhysCtrl", "Ctrl");
+    if mac {
+        spec.replace("Alt", "Option")
+    } else {
+        spec
+    }
 }
 
 /// The xfig accelerator shown for a command in the menus.
@@ -1140,7 +1151,10 @@ mod tests {
             );
             assert!(seen.insert(*spec), "{spec} twice");
         }
-        assert_eq!(xfig_key_label("Shift+Alt+X"), "Shift-Meta-X");
+        assert_eq!(key_label("Shift+Alt+X", false), "Shift+Alt+X");
+        assert_eq!(key_label("PhysCtrl+L", false), "Ctrl+L");
+        assert_eq!(key_label("Shift+Alt+X", true), "Shift+Option+X");
+        assert_eq!(key_label("PhysCtrl+L", true), "Ctrl+L");
         assert_eq!(xfig_key_label("Z"), "z");
         assert_eq!(xfig_accelerator("edit.undo"), Some("Alt+U"));
     }

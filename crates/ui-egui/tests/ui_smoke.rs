@@ -461,7 +461,7 @@ fn xfig_keys_select_modes_and_run_menu_entries() {
     // The menus show xfig's accelerators.
     h.get_by_label("Edit").click();
     h.run_steps(2);
-    h.get_by_label_contains("Meta-U");
+    h.get_by_label_contains(&rustfig_ui_egui::menus::xfig_key_label("Alt+U"));
     // Turned off, Ctrl-s no longer picks Scale.
     h.state_mut().run("app.toggle_xfig_keys", json!({"on": false}));
     h.state_mut().engine.set_tool(ToolKind::Select);
