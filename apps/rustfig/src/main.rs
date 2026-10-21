@@ -51,6 +51,14 @@ fn main() -> eframe::Result<()> {
     if let Some(icon) = rustfig_ui_egui::app_icon::icon_data() {
         viewport = viewport.with_icon(icon);
     }
+    if background && std::env::var_os("RUSTFIG_RECOVERY_DIR").is_none() {
+        // A background instance (an agent's or a script's) that gets killed
+        // must not offer its drawings to the user's next start.
+        std::env::set_var(
+            "RUSTFIG_RECOVERY_DIR",
+            std::env::temp_dir().join("rustfig-background-recovery"),
+        );
+    }
     if background {
         viewport = viewport
             .with_active(false)

@@ -23,6 +23,10 @@ use std::time::SystemTime;
 /// The platform's folder for RustFig's recovery files.
 pub fn default_dir() -> Option<PathBuf> {
     let env = |k: &str| std::env::var_os(k).filter(|v| !v.is_empty()).map(PathBuf::from);
+    // Scripts and agents (`rustfig --background`) keep their copies apart.
+    if let Some(d) = env("RUSTFIG_RECOVERY_DIR") {
+        return Some(d);
+    }
     let base = if cfg!(target_os = "macos") {
         env("HOME").map(|h| h.join("Library/Application Support/RustFig"))
     } else if cfg!(windows) {
