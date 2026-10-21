@@ -130,6 +130,26 @@ fn rasterize_scene(scene: &Scene, t: Affine, w: usize, h: usize) -> egui::ColorI
     egui::ColorImage::from_rgba_premultiplied([w, h], pm.data())
 }
 
+/// The grid step (Fig units) and its spacing on screen (points). As xfig's
+/// `setup_grid` (w_grid.c), a grid too fine for the zoom shows the next
+/// coarser one; the caller hides it when even the coarsest is under 5 px.
+fn grid_spacing(g: rustfig_engine::SnapMode, units: rustfig_model::Units, px_per_fig: f64) -> (f64, f64) {
+    let all = rustfig_engine::SnapMode::ALL;
+    let from = all.iter().position(|&s| s == g).unwrap_or(0);
+    let mut best = (0.0, 0.0);
+    for s in all.iter().skip(from) {
+        let step = s.step(units);
+        if step <= 0.0 {
+            continue;
+        }
+        best = (step, step * px_per_fig);
+        if best.1 >= 5.0 {
+            break;
+        }
+    }
+    best
+}
+
 fn tiny_skia_pixmap(w: usize, h: usize) -> Option<rustfig_render::raster::Pixmap> {
     rustfig_render::raster::Pixmap::new(w.clamp(1, 16_384) as u32, h.clamp(1, 16_384) as u32)
 }
@@ -175,9 +195,8 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
 
     // Grid.
     if let Some(g) = app.engine.indicator.grid {
-        let step = g.step(doc.settings.units);
-        let px = step * view.px_per_fig();
-        if step > 0.0 && px >= 6.0 {
+        let (step, px) = grid_spacing(g, doc.settings.units, view.px_per_fig());
+        if step > 0.0 && px >= 5.0 {
             let vis = view.visible();
             let stroke = Stroke::new(1.0_f32, tk.grid);
             let mut x = (vis.min.x / step).floor() * step;
@@ -543,5 +562,23 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
             } else {
                 egui::CursorIcon::Crosshair
             });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::grid_spacing;
+    use rustfig_engine::SnapMode;
+    use rustfig_model::Units;
+
+    #[test]
+    fn a_grid_too_fine_for_the_zoom_shows_a_coarser_one() {
+        let base = 80.0 / 1200.0;
+        // 1/16 in at 100% is 5 points: shown as it is.
+        assert_eq!(grid_spacing(SnapMode::Fine, Units::Inches, base).0, 75.0);
+        // At 50% it would be 2.5 points: 1/8 in (5 points) instead.
+        assert_eq!(grid_spacing(SnapMode::Fine, Units::Inches, base * 0.5).0, 150.0);
+        // Far out, even 1 in is too fine: the caller hides it.
+        assert!(grid_spacing(SnapMode::Fine, Units::Inches, base * 0.01).1 < 5.0);
     }
 }
