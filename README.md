@@ -35,6 +35,8 @@ finishes; Esc cancels.
 
 fig2dev (the converter RustFig exports through) lives in its own repository, [FabianHassler/fig2dev](https://github.com/FabianHassler/fig2dev); until it is published, clone it next to this repository as `../fig2dev` (the root `Cargo.toml` has a `[patch]` for it).
 
+**fig2dev command.** The RustFig binary is also fig2dev: `rustfig fig2dev -L eps in.fig out.eps` (or `rustfig-cli fig2dev …`) runs fig2dev's command line without starting the GUI, and a program started under the name `fig2dev` does the same. For old scripts, put a link or copy named `fig2dev` on `PATH`: `ln -s /path/to/rustfig ~/bin/fig2dev` (Windows: copy `rustfig.exe` to `fig2dev.exe`; the release GUI build has no console, so use `rustfig-cli fig2dev` there). Installers don't create the link yet.
+
 ## Documentation
 
 [Architecture](docs/architecture.md) · [Development](docs/development.md) ·

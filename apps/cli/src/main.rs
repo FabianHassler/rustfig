@@ -18,9 +18,17 @@ const USAGE: &str = "usage:
   rustfig-cli info FILE
   rustfig-cli perf [--paths N]      check performance budgets on a synthetic document
   rustfig-cli bench FILE            time render, save and open for one file
-  rustfig-cli mcp                   run the MCP server on stdio";
+  rustfig-cli mcp                   run the MCP server on stdio
+  rustfig-cli fig2dev ARGS...       fig2dev's own command line (fig2dev -h for its options)";
 
 fn main() -> ExitCode {
+    // fig2dev's command line runs exactly as the program itself (stdin,
+    // stdout, stderr, exit status), before anything here looks at the arguments.
+    if std::env::args().nth(1).as_deref() == Some("fig2dev") {
+        let mut args = rustfig_engine::fig2dev::process_args();
+        args.drain(..1.min(args.len()));
+        return ExitCode::from(rustfig_engine::fig2dev::run_cli(args));
+    }
     let args: Vec<String> = std::env::args().skip(1).collect();
     let result = match args.first().map(String::as_str) {
         Some("convert") => convert(&args[1..]),

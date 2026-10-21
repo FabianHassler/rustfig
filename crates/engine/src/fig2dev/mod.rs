@@ -123,3 +123,72 @@ fn finish(
 pub fn load_picture(path: &Path) -> Result<LoadedPicture, String> {
     fig2dev::util::readpics::load_picture(&mut Ctx::default(), &path.to_string_lossy())
 }
+
+/// fig2dev's command line (`fig2dev::cli::run`) on the process's stdin,
+/// stdout and stderr: what `fig2dev ARGS…` does, reached as
+/// `rustfig fig2dev ARGS…`, `rustfig-cli fig2dev ARGS…` or by starting
+/// the program under the name `fig2dev` (plan DD10). Returns the exit
+/// status. Not on wasm (no process streams).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn run_cli(args: Vec<String>) -> u8 {
+    fig2dev::cli::run(
+        args,
+        &mut std::io::stdin().lock(),
+        &mut std::io::stdout().lock(),
+        &mut std::io::stderr().lock(),
+    )
+}
+
+/// The process arguments after the program name, as fig2dev reads them
+/// (not UTF-8 is read lossily rather than aborting).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn process_args() -> Vec<String> {
+    std::env::args_os()
+        .skip(1)
+        .map(|a| a.to_string_lossy().into_owned())
+        .collect()
+}
+
+/// True when the program was started under the name `fig2dev` (a link or
+/// copy of the RustFig binary): `argv[0]`'s file stem is `fig2dev`, so
+/// `fig2dev.exe` on Windows counts too.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn started_as_fig2dev() -> bool {
+    std::env::args_os().next().is_some_and(|a| is_fig2dev_name(&a))
+}
+
+/// `argv[0]` names fig2dev: its file stem is `fig2dev` (case-insensitive,
+/// for Windows).
+pub fn is_fig2dev_name(argv0: &std::ffi::OsStr) -> bool {
+    // Both separators, whatever the platform: argv[0] may come from either.
+    let s = argv0.to_string_lossy();
+    let base = s.rsplit(['/', '\\']).next().unwrap_or("");
+    let stem = base
+        .strip_suffix(".exe")
+        .or_else(|| base.strip_suffix(".EXE"))
+        .unwrap_or(base);
+    stem.eq_ignore_ascii_case("fig2dev")
+}
+
+#[cfg(test)]
+mod name_tests {
+    use super::is_fig2dev_name;
+    use std::ffi::OsStr;
+
+    #[test]
+    fn program_names() {
+        for yes in ["fig2dev", "/usr/local/bin/fig2dev", "C:\\x\\fig2dev.exe", "fig2dev.EXE"] {
+            assert!(is_fig2dev_name(OsStr::new(yes)), "{yes}");
+        }
+        for no in [
+            "rustfig",
+            "rustfig-cli",
+            "fig2dev-cli",
+            "xfig2dev",
+            "",
+            "/a/fig2dev/rustfig",
+        ] {
+            assert!(!is_fig2dev_name(OsStr::new(no)), "{no}");
+        }
+    }
+}

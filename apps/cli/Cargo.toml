@@ -18,3 +18,6 @@ rustfig-model.workspace = true
 rustfig-geom.workspace = true
 rustfig-mcp.workspace = true
 serde_json.workspace = true
+
+[dev-dependencies]
+fig2dev.workspace = true

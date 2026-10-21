@@ -2822,6 +2822,7 @@ version = "0.1.0"
 dependencies = [
  "eframe",
  "egui",
+ "fig2dev",
  "log",
  "rustfig-engine",
  "rustfig-ui-egui",
@@ -2834,6 +2835,7 @@ dependencies = [
 name = "rustfig-cli"
 version = "0.1.0"
 dependencies = [
+ "fig2dev",
  "rustfig-engine",
  "rustfig-format",
  "rustfig-geom",

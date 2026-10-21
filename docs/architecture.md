@@ -23,7 +23,7 @@ lower layers; nothing below L6 may depend on egui, eframe, winit or rfd.
 
 fig2dev is a program of its own that RustFig depends on (plan B12):
 `figbase`, `fig2dev` and the `fig2dev` app live in their own repository,
-<https://github.com/FabianHassler/fig2dev>, and RustFig takes the two
+<https://github.com/FabianHassler/fig2dev>, and RustFig bundles its command line: `rustfig fig2dev ARGS`, `rustfig-cli fig2dev ARGS`, or the `rustfig` binary started as `fig2dev` call `fig2dev::cli::run` before the GUI parses anything (`engine::fig2dev::run_cli`, plan DD10). RustFig takes the two
 crates as git dependencies (a `[patch]` points at a local clone `../fig2dev`
 while it is not published). They use no RustFig crate. Who uses whom (workspace crates only):
 

@@ -4,6 +4,18 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result<()> {
+    // fig2dev first: started under that name, or `rustfig fig2dev ARGS…`.
+    // The GUI is not started and its option parsing never sees the arguments.
+    if rustfig_engine::fig2dev::started_as_fig2dev() {
+        std::process::exit(i32::from(rustfig_engine::fig2dev::run_cli(
+            rustfig_engine::fig2dev::process_args(),
+        )));
+    }
+    if std::env::args().nth(1).as_deref() == Some("fig2dev") {
+        let mut args = rustfig_engine::fig2dev::process_args();
+        args.drain(..1.min(args.len()));
+        std::process::exit(i32::from(rustfig_engine::fig2dev::run_cli(args)));
+    }
     let mut args = std::env::args().skip(1);
     let mut control = None;
     let mut file = None;
@@ -11,7 +23,7 @@ fn main() -> eframe::Result<()> {
         match a.as_str() {
             "--control" => control = args.next().and_then(|p| p.parse::<u16>().ok()),
             "--help" | "-h" => {
-                println!("usage: rustfig [--control PORT] [FILE.fig|FILE.rustfig]");
+                println!("usage: rustfig [--control PORT] [FILE.fig|FILE.rustfig]\n       rustfig fig2dev ARGS...   (fig2dev's command line; also when started as `fig2dev`)");
                 return Ok(());
             }
             "--version" | "-V" => {
