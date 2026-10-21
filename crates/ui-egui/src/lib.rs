@@ -102,6 +102,8 @@ pub struct App {
     pub hint_override: Option<(&'static str, &'static str, &'static str)>,
     /// Alt + click as the middle button, Ctrl + click as the right one (macOS).
     pub ctrl_click: input::CtrlClick,
+    /// Linux, Windows: left + right together as the middle button.
+    pub chord: input::Chord,
     /// Input queued by the control channel (`ui.pointer`, `ui.key`).
     pub injector: inject::Injector,
     /// Labelled widgets of the last frame (filled once `attach` ran).
@@ -157,6 +159,7 @@ impl App {
             depth_drag: None,
             hint_override: None,
             ctrl_click: input::CtrlClick::default(),
+            chord: input::Chord::default(),
             injector: inject::Injector::default(),
             widgets: inject::Registry::default(),
             input_waiters: Vec::new(),
@@ -361,8 +364,12 @@ impl eframe::App for App {
         self.ui(ctx);
     }
 
-    fn raw_input_hook(&mut self, _ctx: &egui::Context, raw_input: &mut egui::RawInput) {
+    fn raw_input_hook(&mut self, ctx: &egui::Context, raw_input: &mut egui::RawInput) {
         self.feed_input(raw_input);
+        if self.chord.waiting() {
+            // A held-back press must get out after the chord interval.
+            ctx.request_repaint_after(std::time::Duration::from_secs_f64(input::CHORD_INTERVAL));
+        }
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
@@ -387,6 +394,9 @@ impl App {
     pub fn feed_input(&mut self, raw: &mut egui::RawInput) {
         self.injector.feed(raw);
         self.ctrl_click.apply(raw, cfg!(target_os = "macos"));
+        if !cfg!(target_os = "macos") {
+            self.chord.apply(raw);
+        }
     }
 
     /// Run one UI frame (guarded against panics).
