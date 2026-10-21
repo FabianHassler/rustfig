@@ -339,6 +339,37 @@ fn attribute_panel_shows_the_modes_attributes() {
     h.get_by_label_contains("Grid Mode: ");
 }
 
+/// W10-1: in Update mode every attribute button has an update box and the
+/// panel starts with the three Update Control buttons.
+#[test]
+fn update_control_flags_in_update_mode() {
+    use rustfig_engine::UpdateFlag;
+    let mut h = harness(app());
+    h.state_mut().engine.set_tool(ToolKind::Polyline);
+    h.run_steps(2);
+    assert!(h.query_by_label("Update Line Width").is_none());
+    assert!(h.query_by_label("Sets all update flags").is_none());
+    h.state_mut().engine.set_tool(ToolKind::Update);
+    h.run_steps(2);
+    h.get_by_label("Update Line Width").click();
+    h.run_steps(2);
+    assert!(!h.state().engine.indicator.updates(UpdateFlag::LineWidth));
+    assert!(h.state().engine.indicator.updates(UpdateFlag::Depth));
+    // The click did not open the button's pop-up or change its value.
+    assert_eq!(h.state().engine.indicator.thickness, 1);
+    assert_eq!(open_state(&mut h)["popup"], json!(false));
+    h.get_by_label("Clears all update flags").click();
+    h.run_steps(2);
+    assert!(UpdateFlag::ALL.iter().all(|f| !h.state().engine.indicator.updates(*f)));
+    h.get_by_label("Toggles all update flags").click();
+    h.run_steps(2);
+    assert!(UpdateFlag::ALL.iter().all(|f| h.state().engine.indicator.updates(*f)));
+    h.get_by_label("Update Line Width").click();
+    h.get_by_label("Sets all update flags").click();
+    h.run_steps(2);
+    assert!(h.state().engine.indicator.updates(UpdateFlag::LineWidth));
+}
+
 #[test]
 fn attribute_buttons_step_and_choose() {
     let mut h = harness(app());

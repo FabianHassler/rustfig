@@ -97,7 +97,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `e_rotate.c` | 575 | rotate, copy & rotate, anchor, copies count | tools | partial: anchor, number of copies (S4) | D10 |
 | `e_scale.c` | 1444 | scale box/edge/centre | tools | partial: edge scaling in one dimension, dimension lines (S4) | D10 |
 | `e_tangent.c` | 159 | tangent/normal lines | — | missing (5 functions, S4) | D4 |
-| `e_update.c` | 827 | update object / settings, update mask | tools, `indicator.take_from` | partial: Update Control mask (S4) | W10-1 |
+| `e_update.c` | 827 | update object / settings, update mask | tools, `indicator.take_from` | ported: update flags (`UpdateFlag`, `Indicator::update_object`, `take_from`) | W10-1 |
 
 ## xfig: files (`f_*`, 9.9 k lines)
 
@@ -150,7 +150,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_cmdpanel.c` | 1860 | main menus | `menus::XFIG_MENUS` (classic layout) | ported: menus; partial: paste with the mouse, character map, global settings rows (S4) | S4-2, E5, W10-23 |
 | `w_modepanel.c` | 905 | mode panel, mode keys, per-mode attribute masks | `panels::mode_panel`, `ToolKind::shortcut`, `attributes_for` | ported: buttons, keys, masks; Open compound and Join/Split work (D1, D2); the Chop, Tangent, Measure and Library modes are greyed or missing (S4) | D1–D6 |
 | `w_icons.c` | 3270 | mode and attribute icon bitmaps | `ui-egui/xfig_icons.rs` (verbatim), used by `panels::mode_panel` and `attributes` | ported: mode icons and the attribute pictures (line, join, cap, arrow mode and type, arc type, justification, grid, positioning, alignment) | — |
-| `w_indpanel.c` | 4865 | attribute (indicator) panel, choice panels | `ui-egui/attributes` | ported: buttons, order, per-mode masks, choice panels; missing: Angle Geom, Smart Links, copy counts, dimension line, tangent length, colour editor, Update Control, Arrow Size panel (function by function in `source-audit.md`) | D7, D8, D10, D4, E4, W10-1, W10-31 |
+| `w_indpanel.c` | 4865 | attribute (indicator) panel, choice panels | `ui-egui/attributes` | ported: buttons, order, per-mode masks, choice panels, Update Control; missing: Angle Geom, Smart Links, copy counts, dimension line, tangent length, colour editor, Arrow Size panel (function by function in `source-audit.md`) | D7, D8, D10, D4, E4, W10-31 |
 | `w_mousefun.c` | 432 | mouse-function indicator | `panels::mouse_indicator`, `Engine::mouse_hints` | ported; Shift/Ctrl variants missing (S4) | S4-7 |
 | `w_msgpanel.c` | 881 | message panel, lengths while drawing | `panels::message_panel` | partial: lengths and measure results while drawing (S4) | D10, D5 |
 | `w_layers.c` | 903 | depth panel | `panels::depth_panel` | ported (S4) | — |

@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-21 | W10-1: Update Control: every attribute button has an update box in Update mode, plus Set/Clear/Toggle all; Update, update region, lasso and update settings copy only the flagged attributes; commands `indicator.set_update_flag`, `indicator.update_flags`. |
 | 2026-10-21 | W15: lasso in every region selection (press and drag with the middle or right button in Glue, Delete, Update, Move and Delete point selects what lies completely inside the freehand path; click, move, click keeps xfig's rectangle; drawn in the overlay, hints say "drag: lasso"); fixed Delete's middle region with an empty selection. |
 | 2026-10-21 | W19: attribute panel tightened: xfig's labels and layout kept, each button narrowed to what its label and value need (a short-caption version was tried and reverted at the user's request); thinner join and cap pictures. |
 | 2026-10-21 | W16, W17: one mouse scheme (xfig's), one layout, no attribute-panel or icon switch; RustFig's extras in Edit, View, File and a new Object menu (every command reachable from a menu or listed as menu-less, tested); D1 follow-up: xfig's Save All / Save Part / Cancel query when saving inside an open compound (`part` param on save and export commands). One engine command (`tool.mouse_buttons`) and three UI commands fewer. |

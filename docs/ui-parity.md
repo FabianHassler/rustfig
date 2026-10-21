@@ -67,6 +67,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | Units box | ✅ "1cm = 1.00cm" in the ruler corner; left: pan to origin, right: Unit menu (ruler units, figure unit, scale) | — |
 | Top and side rulers | ✅ ported from `w_rulers.c` | — |
 | Depth panel: checkboxes, drag-toggle, All On/Off/Toggle, Gray/Blank | ✅ with object counts; hidden depths can't be picked; export of active layers only | — |
+| Update Control: update box on every attribute button in Update mode, Set/Clear/Toggle all buttons, flags honoured by Update, update region, lasso and update settings (W10-1) | ✅ | — |
 | Attribute panel: graphical buttons, per-mode attributes | ✅ xfig's buttons and order, per-mode masks, choice panels; middle/right buttons step values; W19: xfig's labels and layout, each button narrowed to what its label and value need, wraps to a second row | — |
 | xfig accelerators (Meta-key) | ✅ xfig keymap (on by default): Meta = Alt/Option menu keys, physical Ctrl mode keys, xfig's mode letters; menus show "Meta-N"; platform shortcuts stay | — |
 | Preferences (xfig's resources, recent files, user colours) | ✅ `settings.toml`; Edit › Global settings › xfig resources… | — |

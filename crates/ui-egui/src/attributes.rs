@@ -9,7 +9,7 @@
 use crate::theme::Tokens;
 use crate::App;
 use egui::{pos2, vec2, Color32, Painter, Pos2, Rect, Sense, Stroke, Ui};
-use rustfig_engine::{arrow_choice, arrow_choice_of, Indicator, SnapMode, ToolKind};
+use rustfig_engine::{arrow_choice, arrow_choice_of, Indicator, SnapMode, ToolKind, UpdateFlag};
 use rustfig_model::{area_fill_color, CapStyle, ColorRef, Document, JoinStyle, Justify, LineKind, Rgb};
 use serde_json::{json, Value};
 
@@ -104,6 +104,32 @@ impl Attr {
             Attr::TextStep => ("Text", "Step"),
             Attr::Font => ("Text", "Font"),
         }
+    }
+
+    /// The update flag this button carries in Update mode (xfig's
+    /// `I_UPDATEMASK` buttons).
+    pub fn update_flag(self) -> Option<UpdateFlag> {
+        Some(match self {
+            Attr::Depth => UpdateFlag::Depth,
+            Attr::PenColor => UpdateFlag::PenColor,
+            Attr::FillColor => UpdateFlag::FillColor,
+            Attr::FillStyle => UpdateFlag::FillStyle,
+            Attr::ArcType => UpdateFlag::ArcType,
+            Attr::LineWidth => UpdateFlag::LineWidth,
+            Attr::LineStyle => UpdateFlag::LineStyle,
+            Attr::JoinStyle => UpdateFlag::JoinStyle,
+            Attr::CapStyle => UpdateFlag::CapStyle,
+            Attr::ArrowMode => UpdateFlag::ArrowMode,
+            Attr::ArrowType => UpdateFlag::ArrowType,
+            Attr::ArrowSize => UpdateFlag::ArrowSize,
+            Attr::BoxRadius => UpdateFlag::BoxRadius,
+            Attr::TextJust => UpdateFlag::TextJust,
+            Attr::TextAngle => UpdateFlag::TextAngle,
+            Attr::TextFlags => UpdateFlag::TextFlags,
+            Attr::FontSize => UpdateFlag::FontSize,
+            Attr::Font => UpdateFlag::Font,
+            _ => return None,
+        })
     }
 
     /// One-line name for menus, tooltips and accessibility.
@@ -235,14 +261,97 @@ pub fn attribute_panel(app: &mut App, ui: &mut Ui, tk: &Tokens) {
     let attrs = attributes_for(app.engine.tool());
     let mut hovered = false;
     ui.add_space(2.0);
+    let update_mode = app.engine.tool() == ToolKind::Update;
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = vec2(2.0, 2.0);
+        if update_mode {
+            update_control(app, ui, tk);
+        }
         for a in attrs {
             hovered |= button(app, ui, tk, a);
         }
     });
     ui.add_space(2.0);
     app.hint_override = hovered.then_some(BUTTON_HINTS);
+}
+
+/// xfig's "Update Control" box, shown in Update mode only: a caption and
+/// three small buttons that set, clear and toggle every update flag.
+fn update_control(app: &mut App, ui: &mut Ui, tk: &Tokens) {
+    let (rect, _) = ui.allocate_exact_size(vec2(76.0, BUTTON_HEIGHT), Sense::hover());
+    crate::bevel::paint(ui.painter(), rect, tk, crate::bevel::State::Normal);
+    let text = ui.visuals().text_color();
+    ui.painter().text(
+        rect.center_top() + vec2(0.0, 2.0),
+        egui::Align2::CENTER_TOP,
+        "Update Control",
+        egui::FontId::proportional(10.0),
+        text,
+    );
+    let buttons = [
+        ("Sets all update flags", json!(true), 2),
+        ("Clears all update flags", json!(false), 0),
+        ("Toggles all update flags", json!("toggle"), 1),
+    ];
+    for (i, (tip, all, kind)) in buttons.into_iter().enumerate() {
+        let r = Rect::from_min_size(
+            pos2(rect.left() + 12.0 + 20.0 * i as f32, rect.top() + 16.0),
+            vec2(14.0, 14.0),
+        );
+        let resp = ui.interact(r, ui.id().with(("update_control", i)), Sense::click());
+        crate::bevel::paint(ui.painter(), r, tk, crate::bevel::State::of(&resp, false, false));
+        let inner = r.shrink(3.0);
+        let red = Color32::from_rgb(220, 30, 30);
+        let p = ui.painter();
+        match kind {
+            2 => {
+                p.rect_filled(inner, 0.0, red);
+            }
+            1 => {
+                p.rect_filled(inner, 0.0, red);
+                p.add(egui::Shape::convex_polygon(
+                    vec![inner.right_top(), inner.right_bottom(), inner.left_bottom()],
+                    ui.visuals().extreme_bg_color,
+                    Stroke::NONE,
+                ));
+            }
+            _ => {}
+        }
+        p.rect_stroke(inner, 0.0, Stroke::new(1.0_f32, text), egui::StrokeKind::Inside);
+        if resp.clicked() {
+            app.run("indicator.update_flags", json!({ "all": all }));
+        }
+        resp.on_hover_text(tip)
+            .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, tip));
+    }
+}
+
+/// The small update box in the upper-right corner of an attribute button
+/// (Update mode): red when the attribute is copied by Update.
+fn update_box(app: &mut App, ui: &mut Ui, button: Rect, a: Attr, flag: UpdateFlag) -> bool {
+    let r = Rect::from_min_size(pos2(button.right() - 12.0, button.top() + 2.0), vec2(10.0, 10.0));
+    let resp = ui.interact(r, ui.id().with(("update_flag", a as u8)), Sense::click());
+    let on = app.engine.indicator.updates(flag);
+    let ink = ui.visuals().text_color();
+    let p = ui.painter();
+    p.rect_filled(
+        r,
+        0.0,
+        if on {
+            Color32::from_rgb(220, 30, 30)
+        } else {
+            ui.visuals().extreme_bg_color
+        },
+    );
+    p.rect_stroke(r, 0.0, Stroke::new(1.0_f32, ink), egui::StrokeKind::Inside);
+    if resp.clicked() {
+        app.run("indicator.set_update_flag", json!({ "attr": flag.name(), "on": !on }));
+    }
+    let label = format!("Update {}", a.name());
+    let clicked = resp.clicked();
+    resp.on_hover_text(format!("{label}: {}", if on { "on" } else { "off" }))
+        .widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Checkbox, true, on, label.clone()));
+    clicked
 }
 
 /// One attribute button; returns whether the pointer is over it.
@@ -295,38 +404,51 @@ fn button(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) -> bool {
         value_rect
     };
     draw_value(app, ui, p, value_rect, rect, tk, a);
+    // In Update mode the small upper-right box toggles the attribute's
+    // update flag; when it is clicked it owns the click, so the button's
+    // pop-up and wheel/right/middle actions stay closed and unchanged.
+    let flag_clicked = if app.engine.tool() == ToolKind::Update {
+        match a.update_flag() {
+            Some(flag) => update_box(app, ui, rect, a, flag),
+            None => false,
+        }
+    } else {
+        false
+    };
     let summary = format!("{}: {}", a.name(), value_text(app, a));
     // xfig: Alt + right button is the middle button (`sel_ind_but`).
-    if resp.secondary_clicked() {
-        step(app, a, if ui.input(|i| i.modifiers.alt) { -1 } else { 1 });
-    } else if resp.middle_clicked() {
-        step(app, a, -1);
-    } else if resp.hovered() {
-        // xfig's wheel (`Fig*ind_panel*Command.translations`): up is the
-        // middle button, down the right one; one step per wheel notch.
-        let dy = ui.input(|i| i.raw_scroll_delta.y);
-        if dy != 0.0 {
-            let id = resp.id.with("wheel");
-            let acc = ui.data(|d| d.get_temp::<f32>(id).unwrap_or(0.0)) + dy;
-            let notch = 40.0;
-            let steps = (acc / notch).trunc();
-            ui.data_mut(|d| d.insert_temp(id, acc - steps * notch));
-            if steps > 0.0 {
-                step(app, a, -1);
-            } else if steps < 0.0 {
-                step(app, a, 1);
+    if !flag_clicked {
+        if resp.secondary_clicked() {
+            step(app, a, if ui.input(|i| i.modifiers.alt) { -1 } else { 1 });
+        } else if resp.middle_clicked() {
+            step(app, a, -1);
+        } else if resp.hovered() {
+            // xfig's wheel (`Fig*ind_panel*Command.translations`): up is the
+            // middle button, down the right one; one step per wheel notch.
+            let dy = ui.input(|i| i.raw_scroll_delta.y);
+            if dy != 0.0 {
+                let id = resp.id.with("wheel");
+                let acc = ui.data(|d| d.get_temp::<f32>(id).unwrap_or(0.0)) + dy;
+                let notch = 40.0;
+                let steps = (acc / notch).trunc();
+                ui.data_mut(|d| d.insert_temp(id, acc - steps * notch));
+                if steps > 0.0 {
+                    step(app, a, -1);
+                } else if steps < 0.0 {
+                    step(app, a, 1);
+                }
             }
         }
+        let close = if a.is_choice() {
+            egui::PopupCloseBehavior::CloseOnClick
+        } else {
+            egui::PopupCloseBehavior::CloseOnClickOutside
+        };
+        egui::Popup::from_toggle_button_response(&resp)
+            .align(egui::RectAlign::TOP_START)
+            .close_behavior(close)
+            .show(|ui| choice_panel(app, ui, tk, a));
     }
-    let close = if a.is_choice() {
-        egui::PopupCloseBehavior::CloseOnClick
-    } else {
-        egui::PopupCloseBehavior::CloseOnClickOutside
-    };
-    egui::Popup::from_toggle_button_response(&resp)
-        .align(egui::RectAlign::TOP_START)
-        .close_behavior(close)
-        .show(|ui| choice_panel(app, ui, tk, a));
     let hovered = resp.hovered();
     resp.on_hover_text(format!(
         "{summary}\nClick: choose · middle button or wheel up: previous/decrease · right button or wheel down: next/increase"
@@ -1229,7 +1351,8 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             let mut gap = ind.dot_gap;
             let mut changed = false;
             egui::Grid::new("dash_gap").show(ui, |ui| {
-                ui.label("Default dash length");
+                ui.label("Default dash length")
+                    .on_hover_text(crate::dialogs::LINE_STYLE_VALUE_HELP);
                 changed |= ui
                     .add(
                         egui::DragValue::new(&mut dash)
@@ -1239,7 +1362,8 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                     )
                     .changed();
                 ui.end_row();
-                ui.label("Default dot gap");
+                ui.label("Default dot gap")
+                    .on_hover_text(crate::dialogs::LINE_STYLE_VALUE_HELP);
                 changed |= ui
                     .add(
                         egui::DragValue::new(&mut gap)

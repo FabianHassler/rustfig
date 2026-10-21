@@ -23,11 +23,11 @@ S0 ([`source-map.md`](source-map.md)) maps C files to RustFig modules; this file
 
 | Status | Functions |
 |---|---:|
-| ported | 821 |
+| ported | 829 |
 | replaced | 584 |
 | not needed | 218 |
-| partial | 67 |
-| missing | 422 |
+| partial | 66 |
+| missing | 415 |
 | **total** | **2112** (plus 14 in `xfigmain.c`, a generated copy of `main.c`) |
 
 Missing and partial functions by task (a function counts under each task it names):
@@ -49,7 +49,6 @@ Missing and partial functions by task (a function counts under each task it name
 - **W10-15** (10): `e_edit.c`: `make_window_compound`, `modify_compound`, `reposition_top`, `reposition_bottom`, `rescale_compound`, `get_new_compound_values`, `done_compound`, `check_depth`, `collapse_depth`, `collapse_depths`
 - **D4** (9): `e_tangent.c`: `tangent_selected`, `init_tangent_adding`, `init_normal_adding`, `tangent_or_normal`, `tangent_normal_line`; `w_indpanel.c`: `inc_tangnormlen`, `dec_tangnormlen`, `show_tangnormlen`; `w_modepanel.c`: `stub_tangent_selected`
 - **E10** (9): `d_text.c`: `new_text_down`, `new_text_up`, `split_at_cursor`, `initialize_char_handler`, `terminate_char_handler`, `char_handler`; `w_canvas.c`: `get_canvas_clipboard`, `paste_primary_selection`, `canvas_paste`
-- **W10-1** (8): `e_update.c`: `init_update_settings`; `w_indpanel.c`: `note_state`, `tog_all_update`, `set_all_update`, `clr_all_update`, `manage_update_buts`, `unmanage_update_buts`, `tog_selective_update`
 - **W10-2** (8): `w_help.c`: `launch_refman`, `launch_refpdf_en`, `launch_refpdf_jp`, `launch_howto`, `launch_man`, `launch_viewer`, `check_docfile`, `help_ok`
 - **W10-31** (8): `w_indpanel.c`: `arrowsize_panel_dismiss`, `arrowsize_panel_cancel`, `arrowsize_panel_set`, `set_arrow_size_state`, `popup_arrowsize_panel`, `inc_arrowsize`, `dec_arrowsize`, `show_arrowsize`
 - **E3** (7): `w_canvas.c`: `canvas_selected`; `w_zoom.c`: `zoom_selected`, `my_box`, `elastic_mybox`, `init_zoombox_drawing`, `do_zoom`, `cancel_zoom`
@@ -454,7 +453,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_glue.c` | `get_text` | 453 | ported | tools: `ToolKind::Glue` (click or tag region, `glue_event`, `region_click`), command `object.group` |  |
 | `e_glue.c` | `sel_compound` | 478 | ported | tools: `ToolKind::Glue` (click or tag region, `glue_event`, `region_click`), command `object.group` |  |
 | `e_glue.c` | `get_compound` | 499 | ported | tools: `ToolKind::Glue` (click or tag region, `glue_event`, `region_click`), command `object.group` |  |
-| `e_joinsplit.c` | `join_split_selected` | 71 | ported | tools: `ToolKind::JoinSplit` (mask `M_POLYLINE\|M_SPLINE_O\|M_SPLINE_C`, hints `Join Lines/Splines` / `Split Line/Spline`) | D2 |
+| `e_joinsplit.c` | `join_split_selected` | 71 | ported | tools: `ToolKind::JoinSplit` (mask `M_POLYLINE\\|M_SPLINE_O\\|M_SPLINE_C`, hints `Join Lines/Splines` / `Split Line/Spline`) | D2 |
 | `e_joinsplit.c` | `init_join` | 93 | ported | tools: `join_split_event` (left button: the end point under the pointer, `end_point_at`) | D2 |
 | `e_joinsplit.c` | `init_split` | 113 | ported | tools: `join_split_event` (middle button), `object.split`; pictures refused | D2 |
 | `e_joinsplit.c` | `join_lines` | 143 | ported | tools: `join_split_event` (state `ToolState::Join`, markers narrowed to lines); only polylines with an end picked | D2 |
@@ -611,7 +610,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_update.c` | `update_selected` | 92 | ported | tools: `ToolKind::Update` (`click_event`), commands `object.update`, `indicator.*` (take attributes from the object) |  |
 | `e_update.c` | `get_arrow_mode` | 111 | ported | tools: `ToolKind::Update` (`click_event`), commands `object.update`, `indicator.*` (take attributes from the object) |  |
 | `e_update.c` | `get_arrow_type` | 124 | ported | tools: `ToolKind::Update` (`click_event`), commands `object.update`, `indicator.*` (take attributes from the object) |  |
-| `e_update.c` | `init_update_settings` | 143 | partial | Update settings (right button) ported; the per-attribute Update Control mask is not | W10-1 |
+| `e_update.c` | `init_update_settings` | 143 | ported | Update settings (middle button) honour the update flags (`Indicator::take_from`) |  |
 | `e_update.c` | `up_from_arrow` | 315 | ported | tools: `ToolKind::Update` (`click_event`), commands `object.update`, `indicator.*` (take attributes from the object) |  |
 | `e_update.c` | `init_update_object` | 334 | ported | tools: `ToolKind::Update` (`click_event`), commands `object.update`, `indicator.*` (take attributes from the object) |  |
 | `e_update.c` | `update_ellipse` | 433 | ported | tools: `ToolKind::Update` (`click_event`), commands `object.update`, `indicator.*` (take attributes from the object) |  |
@@ -1668,12 +1667,12 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_icons.c` | `setup_icons_big` | 3265 | ported | all 107 bitmaps verbatim in `ui-egui/xfig_icons.rs`, vector versions in `vector_icons.rs`/`mode_icons.rs` (W9) |  |
 | `w_indpanel.c` | `init_ind_panel` | 565 | replaced | attribute (indicator) panel `ui-egui/attributes` and `engine::Indicator`: construction, update, pixmaps and button selection |  |
 | `w_indpanel.c` | `add_ind_actions` | 781 | replaced | attribute (indicator) panel `ui-egui/attributes` and `engine::Indicator`: construction, update, pixmaps and button selection |  |
-| `w_indpanel.c` | `note_state` | 787 | missing | Update Control buttons (which attributes Update copies) | W10-1 |
-| `w_indpanel.c` | `tog_all_update` | 804 | missing | Update Control buttons (which attributes Update copies) | W10-1 |
-| `w_indpanel.c` | `set_all_update` | 822 | missing | Update Control buttons (which attributes Update copies) | W10-1 |
-| `w_indpanel.c` | `clr_all_update` | 840 | missing | Update Control buttons (which attributes Update copies) | W10-1 |
-| `w_indpanel.c` | `manage_update_buts` | 856 | missing | Update Control buttons (which attributes Update copies) | W10-1 |
-| `w_indpanel.c` | `unmanage_update_buts` | 865 | missing | Update Control buttons (which attributes Update copies) | W10-1 |
+| `w_indpanel.c` | `note_state` | 787 | ported | `cmd/indicator.rs` `indicator.set_update_flag`, `indicator.update_flags`; `ui-egui/attributes.rs` update boxes (Update mode only) |  |
+| `w_indpanel.c` | `tog_all_update` | 804 | ported | `cmd/indicator.rs` `indicator.set_update_flag`, `indicator.update_flags`; `ui-egui/attributes.rs` update boxes (Update mode only) |  |
+| `w_indpanel.c` | `set_all_update` | 822 | ported | `cmd/indicator.rs` `indicator.set_update_flag`, `indicator.update_flags`; `ui-egui/attributes.rs` update boxes (Update mode only) |  |
+| `w_indpanel.c` | `clr_all_update` | 840 | ported | `cmd/indicator.rs` `indicator.set_update_flag`, `indicator.update_flags`; `ui-egui/attributes.rs` update boxes (Update mode only) |  |
+| `w_indpanel.c` | `manage_update_buts` | 856 | ported | `cmd/indicator.rs` `indicator.set_update_flag`, `indicator.update_flags`; `ui-egui/attributes.rs` update boxes (Update mode only) |  |
+| `w_indpanel.c` | `unmanage_update_buts` | 865 | ported | `cmd/indicator.rs` `indicator.set_update_flag`, `indicator.update_flags`; `ui-egui/attributes.rs` update boxes (Update mode only) |  |
 | `w_indpanel.c` | `setup_ind_panel` | 874 | replaced | attribute (indicator) panel `ui-egui/attributes` and `engine::Indicator`: construction, update, pixmaps and button selection |  |
 | `w_indpanel.c` | `generate_choice_pixmaps` | 973 | replaced | attribute (indicator) panel `ui-egui/attributes` and `engine::Indicator`: construction, update, pixmaps and button selection |  |
 | `w_indpanel.c` | `update_indpanel` | 990 | replaced | attribute (indicator) panel `ui-egui/attributes` and `engine::Indicator`: construction, update, pixmaps and button selection |  |
@@ -1800,7 +1799,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_indpanel.c` | `show_textstep` | 4787 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `zoom_to_fit` | 4805 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom is W10-32 |  |
 | `w_indpanel.c` | `make_pulldown_menu_images` | 4821 | replaced | attribute (indicator) panel `ui-egui/attributes` and `engine::Indicator`: construction, update, pixmaps and button selection |  |
-| `w_indpanel.c` | `tog_selective_update` | 4846 | missing | Update Control buttons (which attributes Update copies) | W10-1 |
+| `w_indpanel.c` | `tog_selective_update` | 4846 | ported | `cmd/indicator.rs` `indicator.set_update_flag`, `indicator.update_flags`; `ui-egui/attributes.rs` update boxes (Update mode only) |  |
 | `w_intersect.c` | `is_point_on_segment` | 42 | ported | `engine/snap.rs` (W4): intersection of every pair of object kinds, on flattened outlines instead of the analytic ellipse solvers |  |
 | `w_intersect.c` | `insert_isect` | 49 | ported | `engine/snap.rs` (W4): intersection of every pair of object kinds, on flattened outlines instead of the analytic ellipse solvers |  |
 | `w_intersect.c` | `fget_line_from_points` | 65 | ported | `engine/snap.rs` (W4): intersection of every pair of object kinds, on flattened outlines instead of the analytic ellipse solvers |  |

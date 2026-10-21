@@ -65,6 +65,8 @@ fn hostile_values() -> Vec<Value> {
         json!({"text": "", "find": "", "rgb": "#zzzzzz", "units": "parsecs"}),
         json!({"type": "press", "x": 0, "y": 0}),
         json!({"thickness": "thick", "line": "wavy", "grid": "huge"}),
+        json!({"attr": "wavy", "on": 3, "all": "maybe"}),
+        json!({"attr": "line_width", "on": "yes", "all": 7}),
     ]
 }
 

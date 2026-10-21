@@ -299,7 +299,7 @@ Sources: `w_indpanel.c` (every `ind_switches` entry, `popup_choice_panel`, `popu
 | Box Curve (pop-up 2..1000, indicator limits 3..30) | 0..1000 (wider) | extra range, kept |
 | Vert/Horiz Align (7 choices) | 4 | W10-33 |
 | Pen/Fill colour pop-up with colour editor | swatches, user colours | E4 |
-| Update Control (per-button toggles in the corner, Set/Clear/Toggle all) | none | W10-1 |
+| Update Control (per-button toggles in the corner, Set/Clear/Toggle all) | fixed (W10-1): update box on each attribute button in Update mode, Set/Clear/Toggle all buttons, xfig's tooltips and messages | W10-1 |
 | Angle Geom, Smart Links, Num Copies, Num X/Y Copies, Tangent/Norm Length, Dimension line | none (modes missing) | D7, D8, D10, D4 |
 | Mouse: left pop-up, middle/wheel up dec/prev, right/wheel down inc/next, Alt+right = middle | same; **fixed** Alt+right | same |
 | Pop-up closing: Cancel button; Escape; Return sets (number panels) | click outside or Escape; Return commits the field | Return closes: W10-32 (look/behaviour, allowed) |
@@ -328,7 +328,7 @@ Total if all accepted: about 20 h.
 
 | Id | Difference | Fixed or task |
 |---|---|---|
-| W10-1 | Update Control: xfig's Update mode applies only the attributes ticked in the indicator panel's "Update Control" buttons (`upd_ctrl` in `w_indpanel.c`); RustFig's Update copies all | plan W10-1, gaps #29 |
+| W10-1 | Update Control: xfig's Update mode applies only the attributes ticked in the indicator panel's "Update Control" buttons (`upd_ctrl` in `w_indpanel.c`); RustFig's Update copied all; fixed 2026-10-21 | plan W10-1 |
 | W10-2 | Help menu has no link to documentation (xfig: reference, man pages, how-to) | plan W10-2, gaps #29 |
 | W10-3 | View > Show vertex numbers and Autorefresh mode missing (vertex numbers are a debugging aid; autorefresh is moot with a retained canvas) | plan W10-3, gaps #29 |
 | B5, E5, E6, E7, F5, D1-D8, D10 | greyed menu entries and mode buttons, already planned | unchanged |
@@ -339,6 +339,7 @@ Nothing in group 1 needed an in-place fix: labels, order, accelerators and defau
 
 | Date | Note |
 |---|---|
+| 2026-10-21 | W10-1 (Update Control) done. |
 | 2026-10-21 | Group 5 (attribute pop-ups, mode panel) compared with the sources; stepping, ranges, dash/dot fields and mode balloons fixed; W10-25 to W10-27; five proposals; W10 summary. |
 | 2026-10-21 | Created; group 1 compared from xfig's sources. |
 | 2026-10-21 | Group 1 re-checked against captures of the real X11 xfig (menus, main window, Grid Mode pop-up); group 2 (Open, Save As, Merge, Export, Print) compared with captures; W10-4 to W10-10 added; merge as one compound, Figure Offset in the engine and the input-file check for export fixed. |

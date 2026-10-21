@@ -242,35 +242,10 @@ fn for_targets(e: &mut Engine, p: &Value, f: &mut dyn FnMut(&mut Object)) -> Res
 }
 
 pub(super) fn update(e: &mut Engine, p: &Value) -> CmdResult {
-    let style = e.indicator.style();
+    // The indicator's update flags (xfig's Update Control) choose which
+    // attributes are copied.
     let ind = e.indicator.clone();
-    let (fa, ba) = ind.arrows();
-    let n = for_targets(e, p, &mut |o| {
-        if let ObjectKind::Text(t) = &mut o.kind {
-            t.color = ColorRef(ind.pen_color);
-            t.depth = style.depth;
-            t.font = ind.font;
-            t.size = ind.font_size.clamp(1.0, 2000.0);
-            t.justify = ind.justify;
-            t.flags = ind.text_flags();
-            return;
-        }
-        if let Some(s) = o.style_mut() {
-            *s = style;
-        }
-        if let Some((f, b)) = o.arrows_mut() {
-            *f = fa;
-            *b = ba;
-        }
-        if let ObjectKind::Polyline(pl) = &mut o.kind {
-            if pl.kind == PolyKind::ArcBox {
-                pl.radius = ind.box_radius;
-            }
-        }
-        if let ObjectKind::Arc(a) = &mut o.kind {
-            a.pie = ind.pie_arc;
-        }
-    })?;
+    let n = for_targets(e, p, &mut |o| ind.update_object(o))?;
     Ok(json!({"count": n}))
 }
 

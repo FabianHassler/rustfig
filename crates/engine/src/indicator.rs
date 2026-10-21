@@ -5,6 +5,68 @@ use rustfig_model::{
     Arrow, CapStyle, ColorRef, JoinStyle, Justify, LineKind, Object, ObjectKind, PolyKind, Style, Units,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
+
+/// The attribute buttons that carry an update flag in Update mode (xfig's
+/// `I_UPDATEMASK`, `w_indpanel.h`; `cur_updatemask` in `mode.c`). Only the
+/// attributes whose flag is on are copied by Update.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UpdateFlag {
+    TextJust,
+    Font,
+    FontSize,
+    PenColor,
+    FillColor,
+    FillStyle,
+    LineStyle,
+    JoinStyle,
+    CapStyle,
+    LineWidth,
+    Depth,
+    TextAngle,
+    TextFlags,
+    ArrowMode,
+    ArrowType,
+    ArrowSize,
+    BoxRadius,
+    ArcType,
+}
+
+impl UpdateFlag {
+    pub const ALL: [UpdateFlag; 18] = [
+        UpdateFlag::TextJust,
+        UpdateFlag::Font,
+        UpdateFlag::FontSize,
+        UpdateFlag::PenColor,
+        UpdateFlag::FillColor,
+        UpdateFlag::FillStyle,
+        UpdateFlag::LineStyle,
+        UpdateFlag::JoinStyle,
+        UpdateFlag::CapStyle,
+        UpdateFlag::LineWidth,
+        UpdateFlag::Depth,
+        UpdateFlag::TextAngle,
+        UpdateFlag::TextFlags,
+        UpdateFlag::ArrowMode,
+        UpdateFlag::ArrowType,
+        UpdateFlag::ArrowSize,
+        UpdateFlag::BoxRadius,
+        UpdateFlag::ArcType,
+    ];
+
+    /// The flag's name as commands take it (`"line_width"`).
+    pub fn name(self) -> String {
+        serde_json::to_value(self)
+            .ok()
+            .and_then(|v| v.as_str().map(str::to_owned))
+            .unwrap_or_default()
+    }
+
+    pub fn from_name(n: &str) -> Option<UpdateFlag> {
+        UpdateFlag::ALL.iter().copied().find(|f| f.name() == n)
+    }
+}
 
 /// Grid spacing / point positioning steps.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -116,6 +178,9 @@ pub struct Indicator {
     /// Line spacing of the text tool as a multiple of the font's (xfig's
     /// "Text Step").
     pub text_step: f64,
+    /// Update flags that are switched off (xfig's `cur_updatemask`; all on
+    /// at the start, so the set is empty).
+    pub update_off: BTreeSet<UpdateFlag>,
 }
 
 impl Default for Indicator {
@@ -158,6 +223,7 @@ impl Default for Indicator {
             align_v: "none".into(),
             pie_arc: false,
             text_step: 1.0,
+            update_off: BTreeSet::new(),
         }
     }
 }
@@ -183,61 +249,263 @@ impl Indicator {
         }
     }
 
-    pub fn arrows(&self) -> (Option<Arrow>, Option<Arrow>) {
-        let a = Arrow {
+    /// The arrow the indicator describes (type, style and size).
+    pub fn arrow_value(&self) -> Arrow {
+        Arrow {
             thickness: f64::from(self.thickness.max(1)),
             ..self.arrow
-        };
+        }
+    }
+
+    pub fn arrows(&self) -> (Option<Arrow>, Option<Arrow>) {
+        let a = self.arrow_value();
         (self.forward_arrow.then_some(a), self.backward_arrow.then_some(a))
+    }
+
+    /// Whether Update copies this attribute.
+    pub fn updates(&self, f: UpdateFlag) -> bool {
+        !self.update_off.contains(&f)
+    }
+
+    /// Switch one update flag.
+    pub fn set_update_flag(&mut self, f: UpdateFlag, on: bool) {
+        if on {
+            self.update_off.remove(&f);
+        } else {
+            self.update_off.insert(f);
+        }
+    }
+
+    /// An arrow slot after Update: the arrow mode decides whether there is
+    /// an arrow, the type and size flags which parts of an existing one
+    /// change (xfig's `up_arrow`).
+    pub fn updated_arrow(&self, old: Option<Arrow>, present: bool) -> Option<Arrow> {
+        let new = self.arrow_value();
+        let mut a = match old {
+            Some(a) => a,
+            None if self.updates(UpdateFlag::ArrowMode) && present => return Some(new),
+            None => return None,
+        };
+        if self.updates(UpdateFlag::ArrowMode) && !present {
+            return None;
+        }
+        if self.updates(UpdateFlag::ArrowType) {
+            a.kind = new.kind;
+            a.style = new.style;
+        }
+        if self.updates(UpdateFlag::ArrowSize) {
+            a.thickness = new.thickness;
+            a.width = new.width;
+            a.height = new.height;
+        }
+        Some(a)
+    }
+
+    /// Update an object's attributes from the indicator, the flags deciding
+    /// which (xfig's `init_update_object`).
+    pub fn update_object(&self, o: &mut Object) {
+        use rustfig_model::text_flags::POSTSCRIPT;
+        use UpdateFlag as F;
+        let style = self.style();
+        if let ObjectKind::Text(t) = &mut o.kind {
+            if self.updates(F::PenColor) {
+                t.color = ColorRef(self.pen_color);
+            }
+            if self.updates(F::Depth) {
+                t.depth = style.depth;
+            }
+            if self.updates(F::Font) {
+                t.font = self.font;
+            }
+            if self.updates(F::FontSize) {
+                t.size = self.font_size.clamp(1.0, 2000.0);
+            }
+            if self.updates(F::TextJust) {
+                t.justify = self.justify;
+            }
+            if self.updates(F::TextAngle) && self.text_angle.is_finite() {
+                t.angle = self.text_angle.to_radians();
+            }
+            // The PostScript/LaTeX flag goes with the font, the others with
+            // the flags (xfig: "use I_FONT instead of I_TEXTFLAGS").
+            let new = self.text_flags();
+            let mut f = t.flags;
+            if self.updates(F::TextFlags) {
+                f = (f & POSTSCRIPT) | (new & !POSTSCRIPT);
+            }
+            if self.updates(F::Font) {
+                f = (f & !POSTSCRIPT) | (new & POSTSCRIPT);
+            }
+            t.flags = f;
+            return;
+        }
+        if let ObjectKind::Ellipse(el) = &mut o.kind {
+            if self.updates(F::TextAngle) && self.text_angle.is_finite() {
+                el.angle = self.text_angle.to_radians();
+            }
+        }
+        if let Some(s) = o.style_mut() {
+            if self.updates(F::LineStyle) {
+                s.line = style.line;
+                s.style_val = style.style_val;
+            }
+            if self.updates(F::LineWidth) {
+                s.thickness = style.thickness;
+            }
+            if self.updates(F::PenColor) {
+                s.pen_color = style.pen_color;
+            }
+            if self.updates(F::FillColor) {
+                s.fill_color = style.fill_color;
+            }
+            if self.updates(F::FillStyle) {
+                s.area_fill = style.area_fill;
+            }
+            if self.updates(F::Depth) {
+                s.depth = style.depth;
+            }
+            if self.updates(F::CapStyle) {
+                s.cap = style.cap;
+            }
+            if self.updates(F::JoinStyle) {
+                s.join = style.join;
+            }
+        }
+        if let ObjectKind::Polyline(pl) = &mut o.kind {
+            if pl.kind == PolyKind::ArcBox && self.updates(F::BoxRadius) {
+                pl.radius = self.box_radius;
+            }
+        }
+        if let ObjectKind::Arc(a) = &mut o.kind {
+            if self.updates(F::ArcType) {
+                a.pie = self.pie_arc;
+            }
+            // xfig's `update_arc`: a pie-wedge arc has no arrowheads.
+            if a.pie {
+                a.forward_arrow = None;
+                a.backward_arrow = None;
+            }
+        }
+        if let Some((f, b)) = o.arrows_mut() {
+            *f = self.updated_arrow(*f, self.forward_arrow);
+            *b = self.updated_arrow(*b, self.backward_arrow);
+        }
     }
 
     /// Copy an object's attributes into the indicator (xfig's Update mode,
     /// middle button: "update settings"). The reverse of `object.update`.
     pub fn take_from(&mut self, o: &Object) {
+        use UpdateFlag as F;
+        let on = |f: F| !self.update_off.contains(&f);
+        let (j, p, fc, fs, ls, jn, cp, lw, dp, ta, tf, am, at, asz, br, atp, fnt, fsz) = (
+            on(F::TextJust),
+            on(F::PenColor),
+            on(F::FillColor),
+            on(F::FillStyle),
+            on(F::LineStyle),
+            on(F::JoinStyle),
+            on(F::CapStyle),
+            on(F::LineWidth),
+            on(F::Depth),
+            on(F::TextAngle),
+            on(F::TextFlags),
+            on(F::ArrowMode),
+            on(F::ArrowType),
+            on(F::ArrowSize),
+            on(F::BoxRadius),
+            on(F::ArcType),
+            on(F::Font),
+            on(F::FontSize),
+        );
         if let ObjectKind::Text(t) = &o.kind {
             use rustfig_model::text_flags::*;
-            self.pen_color = t.color.0;
-            self.depth = t.depth;
-            self.font = t.font;
-            self.font_size = t.size;
-            self.justify = t.justify;
-            self.text_angle = t.angle.to_degrees();
-            self.rigid_text = t.flags & RIGID != 0;
-            self.special_text = t.flags & SPECIAL != 0;
-            self.postscript = t.flags & POSTSCRIPT != 0;
-            self.hidden_text = t.flags & HIDDEN != 0;
+            if p {
+                self.pen_color = t.color.0;
+            }
+            if dp {
+                self.depth = t.depth;
+            }
+            if fnt {
+                self.font = t.font;
+                self.postscript = t.flags & POSTSCRIPT != 0;
+            }
+            if fsz {
+                self.font_size = t.size;
+            }
+            if j {
+                self.justify = t.justify;
+            }
+            if ta {
+                self.text_angle = t.angle.to_degrees();
+            }
+            if tf {
+                self.rigid_text = t.flags & RIGID != 0;
+                self.special_text = t.flags & SPECIAL != 0;
+                self.hidden_text = t.flags & HIDDEN != 0;
+            }
             return;
         }
+        if let (ObjectKind::Ellipse(el), true) = (&o.kind, ta) {
+            self.text_angle = el.angle.to_degrees();
+        }
         if let Some(s) = o.style() {
-            self.line = s.line;
-            self.thickness = s.thickness;
-            self.pen_color = s.pen_color.0;
-            self.fill_color = s.fill_color.0;
-            self.depth = s.depth;
-            self.area_fill = s.area_fill;
-            if s.style_val > 0.0 {
-                if s.line == LineKind::Dotted {
-                    self.dot_gap = s.style_val;
-                } else {
-                    self.style_val = s.style_val;
+            if ls {
+                self.line = s.line;
+                if s.style_val > 0.0 {
+                    if s.line == LineKind::Dotted {
+                        self.dot_gap = s.style_val;
+                    } else {
+                        self.style_val = s.style_val;
+                    }
                 }
             }
-            self.cap = s.cap;
-            self.join = s.join;
-        }
-        if let Some((f, b)) = o.arrows() {
-            self.forward_arrow = f.is_some();
-            self.backward_arrow = b.is_some();
-            if let Some(a) = f.or(b) {
-                self.arrow = a;
+            if lw {
+                self.thickness = s.thickness;
+            }
+            if p {
+                self.pen_color = s.pen_color.0;
+            }
+            if fc {
+                self.fill_color = s.fill_color.0;
+            }
+            if dp {
+                self.depth = s.depth;
+            }
+            if fs {
+                self.area_fill = s.area_fill;
+            }
+            if cp {
+                self.cap = s.cap;
+            }
+            if jn {
+                self.join = s.join;
             }
         }
-        if let ObjectKind::Polyline(p) = &o.kind {
+        if let Some((f, b)) = o.arrows() {
+            if am {
+                self.forward_arrow = f.is_some();
+                self.backward_arrow = b.is_some();
+            }
+            if let Some(a) = f.or(b) {
+                if at {
+                    self.arrow.kind = a.kind;
+                    self.arrow.style = a.style;
+                }
+                if asz {
+                    self.arrow = Arrow {
+                        kind: self.arrow.kind,
+                        style: self.arrow.style,
+                        ..a
+                    };
+                }
+            }
+        }
+        if let (ObjectKind::Polyline(p), true) = (&o.kind, br) {
             if p.kind == PolyKind::ArcBox {
                 self.box_radius = p.radius;
             }
         }
-        if let ObjectKind::Arc(a) = &o.kind {
+        if let (ObjectKind::Arc(a), true) = (&o.kind, atp) {
             self.pie_arc = a.pie;
         }
     }

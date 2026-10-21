@@ -56,6 +56,7 @@ the score.
 - Export languages: `fig2dev:crates/fig2dev/src/languages.rs` (xfig's list and suffixes), `drivers/latex_box.rs`, `file.export_formats`; tests in `crates/engine/tests/export_languages.rs` and `export_dialog_lists_xfigs_languages` in `ui_smoke.rs`.
 - Corpus comparison with fig2dev's EPS and PDF on xfig's ≈2,550 sample figures: `crates/engine/tests/fig2dev_corpus.rs` (opt-in), baseline `fixtures/corpus-scores.json`, report `target/fig2dev-reference/corpus/`.
 - Reference comparison with fig2dev: `crates/engine/tests/fig2dev_reference.rs`, 11 fixtures with recorded scores (`fixtures/scores.json`); arrowheads, arcs and dashes ported from fig2dev (D9): `geom/arrow.rs`, `model` `dash_pattern`.
+- Update Control (W10-1): `UpdateFlag`, `Indicator::update_object` / `take_from`, commands `indicator.set_update_flag` and `indicator.update_flags`, `crates/engine/tests/update_control.rs`, `update_control_flags_in_update_mode` in `ui_smoke.rs`.
 - UI: `crates/ui-egui/` (mode panel, attribute panel, depth manager, edit/export/search/settings dialogs, menus with shortcuts).
 - Automation: control channel `crates/ui-egui/src/control.rs`, MCP `crates/mcp/`, CLI `apps/cli/`.
 - Main window: classic xfig layout (`crates/ui-egui/src/panels.rs` `classic_top`), mouse hints from the engine (`Engine::mouse_hints`), headless UI tests in `crates/ui-egui/tests/ui_smoke.rs`.
@@ -76,6 +77,7 @@ the score.
 | 2026-10-17 | ≈64 % | B3: pict2e ported, byte-identical to fig2dev on 285 of 300 sample figures (Export 55 → 57 %, 14 h less). |
 | 2026-10-16 | ≈64 % | B12: fig2dev self-contained, every export through `convert` (Export stays 55 %: architecture, no new language). |
 | 2026-10-16 | ≈64 % | G1, B2, B9 audit passes: old Fig files read (File format 85 → 92 %); pstex/pdftex and every ported fig2dev language exported from the app (Export 40 → 55 %; hours up with the audit's B11). |
+| 2026-10-21 | — | W10-1: Update Control (update flags per attribute button; evidence only, score unchanged). |
 | 2026-10-21 | — | W19: Attributes panel tightened, xfig's layout kept (look only; score unchanged). |
 | 2026-10-15 | ≈61 % | W8, W9: xfig's key and mouse bindings; attribute pictures as vectors, arrow types 10–14 selectable (Attributes 75 → 77 %). |
 | 2026-10-15 | ≈61 % | B10: standalone fig2dev (Export stays 40 %: no new language). |
