@@ -32,7 +32,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Open…",
             menu: "",
             shortcut: "",
-            params: "{\"path\": string}  — open a .fig or .rustfig file",
+            params: "{\"path\": string, \"offset_x\"?: number, \"offset_y\"?: number}  — open a .fig or .rustfig file; the optional offset (Fig units) moves the figure, as xfig's Figure Offset",
             mutates: false,
             enabled: always,
             run: open,
@@ -82,7 +82,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Merge…",
             menu: "",
             shortcut: "",
-            params: "{\"path\": string}  — add the objects of another file",
+            params: "{\"path\": string, \"offset_x\"?: number, \"offset_y\"?: number}  — add the objects of another file as one compound (a file that is one compound is added as it is), moved by the optional offset in Fig units, as xfig's Merge",
             mutates: true,
             enabled: always,
             run: merge,
@@ -92,7 +92,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Merge from data",
             menu: "",
             shortcut: "",
-            params: "{\"data\": string}",
+            params: "{\"data\": string, \"offset_x\"?: number, \"offset_y\"?: number}",
             mutates: true,
             enabled: always,
             run: merge_data,
@@ -178,6 +178,12 @@ fn parse(bytes: &[u8]) -> Result<(Document, Vec<String>), EngineError> {
 fn open(e: &mut Engine, p: &Value) -> CmdResult {
     let path = string(p, "path")?;
     let (mut doc, mut warnings) = parse(&read_file(&path)?)?;
+    let (dx, dy) = offset(p)?;
+    if dx != 0.0 || dy != 0.0 {
+        for o in &mut doc.objects {
+            Arc::make_mut(o).translate(dx, dy);
+        }
+    }
     let base = Path::new(&path).parent().map(Path::to_path_buf);
     warnings.extend(import::load_all_pictures(&mut doc, base.as_deref()));
     let count = doc.objects.len();
@@ -271,7 +277,12 @@ fn open_data(e: &mut Engine, p: &Value) -> CmdResult {
     Ok(json!({"objects": count, "warnings": warnings}))
 }
 
-fn merge_doc(e: &mut Engine, other: Document) -> CmdResult {
+/// xfig's Figure Offset of Open and Merge, in Fig units.
+fn offset(p: &Value) -> Result<(f64, f64), EngineError> {
+    Ok((num_or(p, "offset_x", 0.0)?, num_or(p, "offset_y", 0.0)?))
+}
+
+fn merge_doc(e: &mut Engine, other: Document, (dx, dy): (f64, f64)) -> CmdResult {
     // Map user colours of the merged document into this one.
     let mut map = std::collections::BTreeMap::new();
     for c in &other.colors {
@@ -303,6 +314,17 @@ fn merge_doc(e: &mut Engine, other: Document) -> CmdResult {
     }
     let mut objects: Vec<rustfig_model::Object> = other.objects.into_iter().map(Arc::unwrap_or_clone).collect();
     remap(&mut objects, &map);
+    for o in &mut objects {
+        o.translate(dx, dy);
+    }
+    // xfig's merge_file adds the file as one compound, unless it is one
+    // compound already.
+    let single_compound = matches!(objects.as_slice(), [o] if matches!(o.kind, ObjectKind::Compound(_)));
+    if !objects.is_empty() && !single_compound {
+        objects = vec![rustfig_model::Object::new(ObjectKind::Compound(
+            rustfig_model::Compound { objects },
+        ))];
+    }
     let mut ids = Vec::new();
     for o in objects {
         ids.push(e.add_object(o));
@@ -316,12 +338,12 @@ fn merge(e: &mut Engine, p: &Value) -> CmdResult {
     let (mut doc, _) = parse(&read_file(&path)?)?;
     let base = Path::new(&path).parent().map(Path::to_path_buf);
     import::load_all_pictures(&mut doc, base.as_deref());
-    merge_doc(e, doc)
+    merge_doc(e, doc, offset(p)?)
 }
 
 fn merge_data(e: &mut Engine, p: &Value) -> CmdResult {
     let data = string(p, "data")?;
-    merge_doc(e, parse(data.as_bytes())?.0)
+    merge_doc(e, parse(data.as_bytes())?.0, offset(p)?)
 }
 
 fn save(e: &mut Engine, p: &Value) -> CmdResult {
@@ -654,8 +676,32 @@ fn export_language(p: &Value, path: Option<&str>) -> Result<&'static Language, E
     Ok(lang)
 }
 
+/// Whether a picture object of the drawing reads `path` (xfig's "is an
+/// input file" check in `do_export`).
+fn uses_picture_file(objects: &[rustfig_model::Object], dir: Option<&Path>, path: &Path) -> bool {
+    objects.iter().any(|o| match &o.kind {
+        ObjectKind::Polyline(l) => l.picture.as_ref().is_some_and(|pic| {
+            let f = Path::new(&pic.file);
+            let full = if f.is_absolute() {
+                f.to_path_buf()
+            } else {
+                dir.map_or_else(|| f.to_path_buf(), |d| d.join(f))
+            };
+            full == path || pic.file == path.to_string_lossy()
+        }),
+        ObjectKind::Compound(c) => uses_picture_file(&c.objects, dir, path),
+        _ => false,
+    })
+}
+
 fn export_file(e: &mut Engine, p: &Value) -> CmdResult {
     let path = string(p, "path")?;
+    let objs: Vec<rustfig_model::Object> = e.doc().objects.iter().map(|o| (**o).clone()).collect();
+    if uses_picture_file(&objs, doc_dir(e).as_deref(), Path::new(&path)) {
+        return Err(EngineError::bad_params(format!(
+            "\"{path}\" is an input file.\nExport aborted"
+        )));
+    }
     let lang = export_language(p, Some(&path))?;
     let parts = parts(lang, &path);
     // Write every part before touching a file, so a failure leaves none.

@@ -66,7 +66,12 @@ fn fig_2_1_and_1_3_files_open() {
         "{r}"
     );
     e.execute("file.merge_data", &json!({"data": FIG21})).unwrap();
-    assert_eq!(e.doc().objects.len(), 4);
+    // Merge adds the file as one compound (xfig's merge_file).
+    assert_eq!(e.doc().objects.len(), 1);
+    let rustfig_model::ObjectKind::Compound(c) = &e.doc().objects[0].kind else {
+        panic!("not a compound");
+    };
+    assert_eq!(c.objects.len(), 4);
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
