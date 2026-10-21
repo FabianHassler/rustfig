@@ -133,6 +133,25 @@ impl SnapMode {
 /// Visible grid (None hides it).
 pub type GridMode = Option<SnapMode>;
 
+/// Smart links (xfig's `cur_linkmode`): whether the end points of lines
+/// attached to a moved box follow it, and how.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum LinkMode {
+    /// Do not adjust links.
+    #[default]
+    Off,
+    /// Move the attached end point with the box.
+    Move,
+    /// Move the attached end point and slide the point before it so the
+    /// last segment stays axis-aligned (xfig's SMART_SLIDE).
+    Slide,
+}
+
+impl LinkMode {
+    pub const ALL: [LinkMode; 3] = [LinkMode::Off, LinkMode::Move, LinkMode::Slide];
+}
+
 /// Current attributes applied to new objects, and drawing settings.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -181,6 +200,8 @@ pub struct Indicator {
     /// Update flags that are switched off (xfig's `cur_updatemask`; all on
     /// at the start, so the set is empty).
     pub update_off: BTreeSet<UpdateFlag>,
+    /// Smart links: line end points attached to a moved box follow it.
+    pub linkmode: LinkMode,
 }
 
 impl Default for Indicator {
@@ -224,6 +245,8 @@ impl Default for Indicator {
             pie_arc: false,
             text_step: 1.0,
             update_off: BTreeSet::new(),
+            // xfig's `cur_linkmode` starts SMART_OFF (mode.c).
+            linkmode: LinkMode::Off,
         }
     }
 }
@@ -601,6 +624,7 @@ mod tests {
         assert_eq!((i.area_fill, i.pen_color, i.fill_color), (-1, 0, 7));
         assert_eq!((i.align_h.as_str(), i.align_v.as_str()), ("none", "none"));
         assert_eq!((i.sides, i.rotate_angle), (6, 90.0));
+        assert_eq!(i.linkmode, LinkMode::Off, "cur_linkmode 0 (SMART_OFF)");
     }
 
     #[test]

@@ -21,7 +21,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Set current attributes",
             menu: "",
             shortcut: "",
-            params: "{any indicator field: line, thickness, pen_color, fill_color, area_fill, depth, style_val, cap, join, forward_arrow, backward_arrow, arrow, font, font_size, postscript, justify, text_angle, box_radius, dot_gap, sides, rotate_angle, grid, snap, align_h, align_v, pie_arc, text_step}",
+            params: "{any indicator field: line, thickness, pen_color, fill_color, area_fill, depth, style_val, cap, join, forward_arrow, backward_arrow, arrow, font, font_size, postscript, justify, text_angle, box_radius, dot_gap, sides, rotate_angle, grid, snap, align_h, align_v, pie_arc, text_step, linkmode: off|move|slide}",
             mutates: false,
             enabled: always,
             run: set,

@@ -1,6 +1,6 @@
 # Milestones
 
-**Status:** 2026-10-21 (S4 done). Earlier: 2026-10-18. Current focus: **M4 (exports)**: phase W, phase A, B1, B2, B3, B6, B10, B12 and G1 done; every fig2dev language is ported except `sld` (B9); next the audit's hardening passes (B11, octal-escape text bytes first) page layout and previews (B4a/B4b) done 2026-10-18. Task-level plan: [plan.md](plan.md).
+**Status:** 2026-10-22 (S4 done; D8 linked move landed). Earlier: 2026-10-18. Current focus: **M4 (exports)**: phase W, phase A, B1, B2, B3, B6, B10, B12 and G1 done; every fig2dev language is ported except `sld` (B9); next the audit's hardening passes (B11, octal-escape text bytes first) page layout and previews (B4a/B4b) done 2026-10-18. Task-level plan: [plan.md](plan.md).
 
 | Milestone | Content | State |
 |-----------|---------|-------|
@@ -19,6 +19,7 @@
 | Date | Note |
 |------|------|
 | 2026-10-22 | D3 done: Chop mode (`e_chop.c`), intersections in `geom/intersect.rs`; M6 edit modes now open compound, join/split and chop. |
+| 2026-10-22 | D8 done: linked move (smart links) and the Smart Links indicator button. |
 | 2026-10-21 | W16, W17 done (one mouse scheme, one layout); D1 save query. |
 | 2026-10-21 | S4 done: every xfig function audited (`source-audit.md`); S4-1 to S4-7 added to phase S. |
 | 2026-10-21 | DD1–DD10 (dedup with fig2dev) done; docs swept (DD9). |

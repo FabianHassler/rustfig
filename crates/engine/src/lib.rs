@@ -13,6 +13,7 @@ pub mod guard;
 mod history;
 pub mod import;
 mod indicator;
+mod links;
 pub mod prefs;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod recovery;
@@ -22,7 +23,7 @@ pub mod tools;
 mod view;
 
 pub use error::EngineError;
-pub use indicator::{arrow_choice, arrow_choice_of, GridMode, Indicator, SnapMode, UpdateFlag};
+pub use indicator::{arrow_choice, arrow_choice_of, GridMode, Indicator, LinkMode, SnapMode, UpdateFlag};
 pub use region::Region;
 pub use snap::ObjectSnap;
 pub use tools::{Button, Key, MouseHints, Overlay, ToolEvent, ToolKind};

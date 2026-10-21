@@ -9,7 +9,7 @@
 use crate::theme::Tokens;
 use crate::App;
 use egui::{pos2, vec2, Color32, Painter, Pos2, Rect, Sense, Stroke, Ui};
-use rustfig_engine::{arrow_choice, arrow_choice_of, Indicator, SnapMode, ToolKind, UpdateFlag};
+use rustfig_engine::{arrow_choice, arrow_choice_of, Indicator, LinkMode, SnapMode, ToolKind, UpdateFlag};
 use rustfig_model::{area_fill_color, CapStyle, ColorRef, Document, JoinStyle, Justify, LineKind, Rgb};
 use serde_json::{json, Value};
 
@@ -28,6 +28,7 @@ pub enum Attr {
     FillColor,
     FillStyle,
     ArcType,
+    SmartLinks,
     LineWidth,
     LineStyle,
     JoinStyle,
@@ -45,7 +46,7 @@ pub enum Attr {
 }
 
 impl Attr {
-    pub const ORDER: [Attr; 26] = [
+    pub const ORDER: [Attr; 27] = [
         Attr::Zoom,
         Attr::Grid,
         Attr::PointPosn,
@@ -58,6 +59,7 @@ impl Attr {
         Attr::FillColor,
         Attr::FillStyle,
         Attr::ArcType,
+        Attr::SmartLinks,
         Attr::LineWidth,
         Attr::LineStyle,
         Attr::JoinStyle,
@@ -89,6 +91,7 @@ impl Attr {
             Attr::FillColor => ("FillColor", ""),
             Attr::FillStyle => ("Fill", "Style"),
             Attr::ArcType => ("Arc", "Type"),
+            Attr::SmartLinks => ("Smart", "Links"),
             Attr::LineWidth => ("Line", "Width"),
             Attr::LineStyle => ("Line", "Style"),
             Attr::JoinStyle => ("Join", "Style"),
@@ -152,6 +155,7 @@ impl Attr {
             | Attr::HAlign
             | Attr::FillStyle
             | Attr::ArcType
+            | Attr::SmartLinks
             | Attr::LineStyle
             | Attr::JoinStyle
             | Attr::CapStyle
@@ -226,9 +230,8 @@ pub fn attributes_for(tool: ToolKind) -> Vec<Attr> {
         | ToolKind::FlipV
         | ToolKind::FlipH
         | ToolKind::MovePoint
-        | ToolKind::AddPoint
-        | ToolKind::Move
-        | ToolKind::Copy => &[MIN2],
+        | ToolKind::AddPoint => &[MIN2],
+        ToolKind::Move | ToolKind::Copy => &[MIN2, &[SmartLinks]],
         ToolKind::Align => &[&[HAlign, VAlign]],
         ToolKind::Update => &[TEXT0, LINE1, ARROWS, &[BoxRadius, ArcType]],
         // RustFig's own Select tool edits with the same attributes as Update.
@@ -559,6 +562,12 @@ fn value_text(app: &App, a: Attr) -> String {
             f => format!("pattern {f}"),
         },
         Attr::ArcType => if ind.pie_arc { "pie wedge" } else { "open" }.into(),
+        Attr::SmartLinks => match ind.linkmode {
+            LinkMode::Off => "off",
+            LinkMode::Move => "move",
+            LinkMode::Slide => "slide",
+        }
+        .into(),
         Attr::LineWidth => ind.thickness.to_string(),
         Attr::LineStyle => ind.line.name().into(),
         Attr::JoinStyle => format!("{:?}", ind.join).to_lowercase(),
@@ -667,6 +676,11 @@ fn step(app: &mut App, a: Attr, dir: i32) {
             set(app, json!({"area_fill": step_fill(ind.area_fill, plain, dir)}));
         }
         Attr::ArcType => set(app, json!({"pie_arc": !ind.pie_arc})),
+        Attr::SmartLinks => {
+            if let Some(m) = cycle(&LinkMode::ALL, ind.linkmode, dir) {
+                set(app, json!({ "linkmode": m }));
+            }
+        }
         Attr::LineWidth => set(app, json!({"thickness": (ind.thickness + dir).clamp(0, 500)})),
         Attr::LineStyle => {
             if let Some(k) = cycle(&LineKind::ALL, ind.line, dir) {
@@ -1330,6 +1344,17 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             ];
             if let Some(i) = icon_choices(ui, "arc", &items, 2) {
                 set(app, json!({ "pie_arc": i == 1 }));
+            }
+        }
+        Attr::SmartLinks => {
+            for (m, name) in [
+                (LinkMode::Off, "off"),
+                (LinkMode::Move, "move"),
+                (LinkMode::Slide, "slide"),
+            ] {
+                if ui.selectable_label(ind.linkmode == m, name).clicked() {
+                    set(app, json!({ "linkmode": m }));
+                }
             }
         }
         Attr::LineStyle => {

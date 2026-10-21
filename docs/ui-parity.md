@@ -1,6 +1,6 @@
 # UI parity checklist
 
-**Status:** 2026-10-14. ✅ done · 🟡 partial · ❌ missing
+**Status:** 2026-10-22. ✅ done · 🟡 partial · ❌ missing
 
 ## Drawing modes
 | xfig mode | RustFig | |
@@ -52,7 +52,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | View: zoom, fit, pan to origin, page border, portrait/landscape | ✅ | ✅ |
 | View: depth manager | right panel | ✅ |
 | View: character map, style manager | — | ❌ |
-| Indicator panel (line, colours, fill, depth, arrows, caps, joins, fonts, justification, angle, radius, sides, rotation, grid, positioning, arc type, text step, text flags) | xfig's buttons, per mode | 🟡 no Angle Geom (latex/manhattan), Smart Links, copy counts |
+| Indicator panel (line, colours, fill, depth, arrows, caps, joins, fonts, justification, angle, radius, sides, rotation, grid, positioning, arc type, text step, text flags, smart links) | xfig's buttons, per mode | 🟡 no Angle Geom (latex/manhattan), copy counts |
 | Object markers in editing modes | per-mode masks as xfig (`u_markers.c`, `w_modepanel.c`) | ✅ |
 | Rulers | top and side, xfig's ticks and labels, cursor marker, pan buttons | ✅ |
 | Mouse-function panel | top strip, one column per button | ✅ |
@@ -84,6 +84,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 ## Revision history
 | Date | Note |
 |---|---|
+| 2026-10-22 | D8: Smart Links indicator button (off/move/slide). |
 | 2026-10-22 | D3: Chop mode added to the editing-modes table (`tool.chop`, `object.chop`). |
 | 2026-10-13 | First checklist. |
 | 2026-10-13 | Added the main-window section (plan phase W). |

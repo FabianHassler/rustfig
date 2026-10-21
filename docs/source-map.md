@@ -2,7 +2,7 @@
 
 **Paths written `fig2dev:crates/…` are in the fig2dev repository (<https://github.com/FabianHassler/fig2dev>), where figbase, the fig2dev library and the `fig2dev` program moved (B13).**
 
-**Status:** 2026-10-22 (D3: `e_chop.c` ported, `geom/intersect.rs` from `w_intersect.c`); 2026-10-21 (S4: the xfig file statuses corrected from the function-level audit, [`source-audit.md`](source-audit.md); DD9: sweep; DD7: `read.c`'s repairs as functions used by `format/bridge/export`); 2026-10-20 (DD3: `f_read.c` read through fig2dev's reader); 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
+**Status:** 2026-10-22 (D8: smart links, `u_list.c`'s linked move in `engine/links.rs`, the Smart Links button; D3: `e_chop.c` ported, `geom/intersect.rs` from `w_intersect.c`); 2026-10-21 (S4: the xfig file statuses corrected from the function-level audit, [`source-audit.md`](source-audit.md); DD9: sweep; DD7: `read.c`'s repairs as functions used by `format/bridge/export`); 2026-10-20 (DD3: `f_read.c` read through fig2dev's reader); 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
 sources (`LICENSE-xfig`). Nothing has been ported line by line yet: every
 "own" row was written from the manual and the format description and must be
 checked against the C file named in it.
@@ -128,14 +128,14 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `u_elastic.c` | 1004 | rubber-band feedback while drawing | `Engine::overlay` | replaced by `Engine::overlay`; latex/manhattan lines and smart-link rubber bands missing (S4) | D7, D8 |
 | `u_drag.c` | 861 | dragging objects | tools, overlay | ported; array placement missing (S4) | D10 |
 | `u_markers.c` | 462 | object markers, tag highlight | `engine/tools/markers.rs` (masks, markers), `ui-egui/canvas` | ported (W12); highlight of the found object missing (S4) | S4-1 |
-| `u_list.c` | 1358 | object lists, depth bookkeeping | `model::Document` | replaced by `model::Document`; smart-link bookkeeping missing (S4) | D8 |
+| `u_list.c` | 1358 | object lists, depth bookkeeping, linked move | `model::Document`, `engine/links.rs` | replaced by `model::Document`; smart-link bookkeeping (`get_links`, `adjust_links`) ported to `engine/links.rs` (S4) | — |
 | `u_create.c`, `u_free.c` | 1.4 k | allocation | — | n/a | — |
 | `u_translate.c`, `u_scale.c` | 314 | translate/scale objects | `model` transforms | own | — |
 | `u_convert.c` | 259 | line↔spline conversion | `cmd/object` | replaced: UTF-8 strings, raw Fig bytes (S4) | — |
 | `u_colors.c` | 306 | colour tables | `figbase/color` (via `model`) | own | review |
 | `u_fonts.c` | 1264 | PostScript/LaTeX font tables | `text` | ported: font tables, metrics, Symbol/Dingbats maps; X font loading replaced (S4) | — |
 | `u_search.c` | 1029 | picking objects, points, segments | `Engine::hit_test`, tools | ported; Shift-click cycling and highlight missing (S4) | S4-1 |
-| `u_smartsearch.c` | 507 | smart links (lines follow moved boxes) | — | missing | D8 |
+| `u_smartsearch.c` | 507 | smart search (Shift-click cycling, object highlight) | — | missing (20 functions, S4) | S4-1 |
 | `u_undo.c` | 962 | undo (one level) | `engine/history` (multi-level) | replaced: multi-level snapshot undo (S4) | — |
 | `u_error.c` | 136 | emergency save on crash | `engine/guard` | replaced: `engine::guard` and recovery files (A6) (S4) | — |
 | `u_pan.c` | 89 | pan steps | `rulers::pan_step` | ported | — |
@@ -150,7 +150,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_cmdpanel.c` | 1860 | main menus | `menus::XFIG_MENUS` (classic layout) | ported: menus; partial: paste with the mouse, character map, global settings rows (S4) | S4-2, E5, W10-23 |
 | `w_modepanel.c` | 905 | mode panel, mode keys, per-mode attribute masks | `panels::mode_panel`, `ToolKind::shortcut`, `attributes_for` | ported: buttons, keys, masks; Open compound and Join/Split work (D1, D2); the Chop, Tangent, Measure and Library modes are greyed or missing (S4) | D1–D6 |
 | `w_icons.c` | 3270 | mode and attribute icon bitmaps | `ui-egui/xfig_icons.rs` (verbatim), used by `panels::mode_panel` and `attributes` | ported: mode icons and the attribute pictures (line, join, cap, arrow mode and type, arc type, justification, grid, positioning, alignment) | — |
-| `w_indpanel.c` | 4865 | attribute (indicator) panel, choice panels | `ui-egui/attributes` | ported: buttons, order, per-mode masks, choice panels, Update Control; missing: Angle Geom, Smart Links, copy counts, dimension line, tangent length, colour editor, Arrow Size panel (function by function in `source-audit.md`) | D7, D8, D10, D4, E4, W10-31 |
+| `w_indpanel.c` | 4865 | attribute (indicator) panel, choice panels | `ui-egui/attributes` | ported: buttons, order, per-mode masks, choice panels, Update Control, Smart Links; missing: Angle Geom, copy counts, dimension line, tangent length, colour editor, Arrow Size panel (function by function in `source-audit.md`) | D7, D8, D10, D4, E4, W10-31 |
 | `w_mousefun.c` | 432 | mouse-function indicator | `panels::mouse_indicator`, `Engine::mouse_hints` | ported; Shift/Ctrl variants missing (S4) | S4-7 |
 | `w_msgpanel.c` | 881 | message panel, lengths while drawing | `panels::message_panel` | partial: lengths and measure results while drawing (S4) | D10, D5 |
 | `w_layers.c` | 903 | depth panel | `panels::depth_panel` | ported (S4) | — |

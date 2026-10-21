@@ -1,7 +1,7 @@
 //! Geometric transforms of objects.
 
 use super::{has_selection, num, num_or, opt_bool, opt_num, CmdResult, Command};
-use crate::{Engine, EngineError};
+use crate::{Engine, EngineError, LinkMode};
 use rustfig_geom::{Affine, Point};
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -127,7 +127,22 @@ fn center(e: &Engine, p: &Value) -> Result<Point, EngineError> {
 
 fn move_by(e: &mut Engine, p: &Value) -> CmdResult {
     let (dx, dy) = (num(p, "dx")?, num(p, "dy")?);
-    apply(e, p, Affine::translate(dx, dy), false)
+    let mode = e.indicator.linkmode;
+    let copying = opt_bool(p, "copy")?.unwrap_or(false);
+    // Collect the links before the move; the boxes move first, then the
+    // attached line ends follow (xfig's `adjust_links`). Copying does not
+    // link (xfig copies the linked lines too; not ported).
+    let links = if !copying && mode != LinkMode::Off {
+        let ids = e.target_ids(p)?;
+        crate::links::collect(e, &ids)
+    } else {
+        Vec::new()
+    };
+    let result = apply(e, p, Affine::translate(dx, dy), false);
+    if result.is_ok() {
+        crate::links::adjust(e, mode, &links, dx, dy);
+    }
+    result
 }
 
 fn scale(e: &mut Engine, p: &Value) -> CmdResult {
