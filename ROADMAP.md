@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-21 | W10 group 1: main window and all menus compared with xfig (from its sources; the Qt build of xfig could not be captured), `docs/window-parity.md` lists all windows in 5 groups; findings W10-1 to W10-3 (gaps #29). |
 | 2026-10-21 | B15: PDF and EPS picture objects. PDF pages stay vectors in PDF and PS/EPS output (hayro, hayro-write), are rendered in bitmaps and on the canvas; EPS pictures go through ghostscript when installed (optional, PATH lookup, never on wasm). fig2dev v0.6.0 (MSRV 1.92); fig2dev suite 82/6 unchanged, corpus sample unchanged (EPS/PDF/PNG medians 0.0/0.0020/0.0174, 0 errors). |
 | 2026-10-21 | DD9: docs sweep and dead-code cleanup closing the dedup series (reader, bounds, pictures, exports and the `fig2dev` command line all through fig2dev; `fig_read.rs` 662 → 83 lines); no headline number moved. |
 | 2026-10-21 | DD7: exports hand fig2dev's drivers the bridge's objects, no Fig text round trip (the text path stays as reference and as fallback where the reader would print a message); byte-identical over fixtures x every language x 9 option sets, the 300-figure sample and 129,108 generated-document exports; fig2dev 0.5.0 exposes the reader's repairs (`repair_line`, `repair_arc`, validators) which the bridge now calls; export SVG (50k paths) 108 → 86 ms; corpus sample unchanged. |

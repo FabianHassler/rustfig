@@ -38,6 +38,8 @@
 | Join/split, chop, tangent/normal | — | ❌ |
 | Angle / length / area measure | `object.measure` (command only) | 🟡 |
 
+The window-by-window comparison with the real xfig (what each window offers and does, rule: same or more functionality) is in [window-parity.md](window-parity.md) (W10).
+
 ## Menus and panels
 | xfig | RustFig | |
 |---|---|---|
@@ -87,3 +89,4 @@
 | 2026-10-15 | W9 done: mode icons traced; application icon. |
 | 2026-10-14 | Mode panel: xfig's icons and order; modes not yet available shown greyed. |
 | 2026-10-14 | Main menus cloned from xfig. |
+| 2026-10-21 | W10: link to window-parity.md. |
