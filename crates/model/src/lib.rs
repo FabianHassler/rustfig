@@ -14,6 +14,7 @@ pub use object::*;
 
 use rustfig_geom::Point;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc as Shared;
 
 /// Page orientation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -174,6 +175,32 @@ pub struct Document {
     /// Next id handed out by [`Document::alloc_id`].
     #[serde(default)]
     pub next_id: u64,
+    /// Compounds opened for editing in place (xfig's "open compound",
+    /// `e_compound.c`), outermost first. While any is open, `objects` holds
+    /// the members of the innermost one and the levels hold the rest of the
+    /// figure; [`Document::close_all`] puts everything back. Never saved:
+    /// files always hold the whole figure.
+    #[serde(skip)]
+    pub open: Vec<OpenLevel>,
+}
+
+/// Most compounds open inside each other (compounds nest no deeper in any
+/// real figure; the cap keeps hostile input bounded).
+pub const MAX_OPEN_LEVELS: usize = 256;
+
+/// One opened compound: the drawing around it, and the compound itself
+/// without its members (they are `Document::objects` while it is open).
+#[derive(Debug, Clone, PartialEq)]
+pub struct OpenLevel {
+    /// The drawing one level up, without the opened compound.
+    pub parent: Shared<Vec<Shared<Object>>>,
+    /// Where the compound sat in `parent`.
+    pub index: usize,
+    /// The compound with no members (its id and comments).
+    pub shell: Object,
+    /// xfig's `draw_parent` ("open, keep visible"): the rest of the figure
+    /// is drawn gray behind the open compound.
+    pub keep_visible: bool,
 }
 
 impl Document {
@@ -260,6 +287,98 @@ impl Document {
 
     pub fn index_of(&self, id: ObjectId) -> Option<usize> {
         self.objects.iter().position(|o| o.id == id)
+    }
+
+    /// Open the top-level compound `id` for editing in place (xfig's
+    /// `open_this_compound`): its members become `objects`, the rest of the
+    /// drawing waits in [`Document::open`]. `keep_visible` is the middle
+    /// button's "open, keep visible". Returns false (nothing changed) when
+    /// `id` is not a top-level compound or the nesting cap is reached.
+    pub fn open_compound(&mut self, id: ObjectId, keep_visible: bool) -> bool {
+        if self.open.len() >= MAX_OPEN_LEVELS {
+            return false;
+        }
+        let Some(index) = self.index_of(id) else {
+            return false;
+        };
+        let mut parent = std::mem::take(&mut self.objects);
+        let obj = Shared::unwrap_or_clone(parent.remove(index));
+        match obj.kind {
+            ObjectKind::Compound(c) => {
+                let shell = Object {
+                    id: obj.id,
+                    comments: obj.comments,
+                    kind: ObjectKind::Compound(Compound::default()),
+                };
+                self.objects = c.objects.into_iter().map(Shared::new).collect();
+                self.open.push(OpenLevel {
+                    parent: Shared::new(parent),
+                    index,
+                    shell,
+                    keep_visible,
+                });
+                true
+            }
+            kind => {
+                parent.insert(
+                    index,
+                    Shared::new(Object {
+                        id: obj.id,
+                        comments: obj.comments,
+                        kind,
+                    }),
+                );
+                self.objects = parent;
+                false
+            }
+        }
+    }
+
+    /// Close the innermost open compound (xfig's `close_compound`): the
+    /// members go back into the compound, which returns to its place; a
+    /// compound left without members is dropped. Returns the compound's id,
+    /// or `None` when nothing was open.
+    pub fn close_compound(&mut self) -> Option<ObjectId> {
+        let level = self.open.pop()?;
+        let members: Vec<Object> = std::mem::take(&mut self.objects)
+            .into_iter()
+            .map(Shared::unwrap_or_clone)
+            .collect();
+        let mut parent = Shared::unwrap_or_clone(level.parent);
+        let id = level.shell.id;
+        if !members.is_empty() {
+            let mut compound = level.shell;
+            compound.kind = ObjectKind::Compound(Compound { objects: members });
+            let at = level.index.min(parent.len());
+            parent.insert(at, Shared::new(compound));
+        }
+        self.objects = parent;
+        Some(id)
+    }
+
+    /// Close every open compound (xfig's `close_all_compounds`).
+    pub fn close_all(&mut self) {
+        while self.close_compound().is_some() {}
+    }
+
+    /// The whole figure with every compound closed (a copy).
+    pub fn closed_all(&self) -> Document {
+        let mut d = self.clone();
+        d.close_all();
+        d
+    }
+
+    /// Distinct depths of the whole figure, also outside the open compounds.
+    pub fn all_depths(&self) -> Vec<i32> {
+        let mut v = self.depths();
+        for level in &self.open {
+            let mut d = Document::new();
+            d.objects = level.parent.as_ref().clone();
+            v.extend(d.depths());
+        }
+        v.sort_unstable();
+        v.dedup();
+        v
     }
 
     /// Number of leaf objects, counting into compounds.

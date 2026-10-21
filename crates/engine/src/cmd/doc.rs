@@ -200,7 +200,7 @@ pub(super) fn commands() -> Vec<Command> {
             mutates: false,
             enabled: always,
             run: |e, _| {
-                e.hidden_depths = e.doc().depths().into_iter().collect();
+                e.hidden_depths = e.doc().all_depths().into_iter().collect();
                 e.depths_changed();
                 Ok(json!({}))
             },
@@ -214,7 +214,7 @@ pub(super) fn commands() -> Vec<Command> {
             mutates: false,
             enabled: always,
             run: |e, _| {
-                let used = e.doc().depths();
+                let used = e.doc().all_depths();
                 e.hidden_depths = used.into_iter().filter(|d| !e.hidden_depths.contains(d)).collect();
                 e.depths_changed();
                 Ok(json!({}))
@@ -251,7 +251,8 @@ fn info(e: &mut Engine, _: &Value) -> CmdResult {
         "objects": d.objects.len(),
         "leaves": d.leaf_count(),
         "colors": d.colors.len(),
-        "depths": d.depths(),
+        "depths": d.all_depths(),
+        "open_compounds": d.open.len(),
         "hidden_depths": e.hidden_depths.iter().collect::<Vec<_>>(),
         "hidden_depth_display": if e.gray_hidden_depths { "gray" } else { "blank" },
         "orientation": format!("{:?}", s.orientation),

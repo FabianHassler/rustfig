@@ -456,6 +456,7 @@ impl App {
             .show(ctx, |ui| canvas::show(self, ui, &tokens));
         dialogs::show(self, ctx);
         panels::mode_popup(self, ctx, &tokens);
+        panels::close_compound_popup(self, ctx);
         self.handle_requests();
         settings::tick(self);
         #[cfg(not(target_arch = "wasm32"))]

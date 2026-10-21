@@ -22,7 +22,7 @@
 | xfig mode | RustFig | |
 |---|---|---|
 | Glue / break compound | `tool.glue`, `tool.break` | ✅ |
-| Open compound | — | ❌ |
+| Open compound | `tool.open_compound`, `compound.open`, `compound.close`, `compound.close_all`, Close Compound popup | ✅ |
 | Scale | `tool.scale` | ✅ |
 | Align | `tool.align`, `arrange.align` | ✅ |
 | Move / copy | `tool.move`, `tool.copy` | ✅ |
@@ -35,7 +35,8 @@
 | Convert | `tool.convert` | ✅ |
 | Open/close | `tool.open_close` | ✅ |
 | Add/remove arrows | `tool.arrow` | ✅ |
-| Join/split, chop, tangent/normal | — | ❌ |
+| Join/split | `tool.join_split`, `object.join`, `object.split` | ✅ |
+| Chop, tangent/normal | — | ❌ |
 | Angle / length / area measure | `object.measure` (command only) | 🟡 |
 
 The window-by-window comparison with the real xfig (what each window offers and does, rule: same or more functionality) is in [window-parity.md](window-parity.md) (W10).

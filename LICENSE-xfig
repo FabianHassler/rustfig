@@ -8,6 +8,7 @@ Copyright (c) 1985-1988 by Supoj Sutanthavibul
 Copyright (c) 1991 by Micah Beck
 Parts Copyright (c) 1989-2015 by Brian V. Smith
 Parts Copyright (c) 1991 by Paul King
+Parts Copyright (c) 1994 by Bill Taylor
 Parts Copyright (c) 1991 by Henning Spruth
 Parts Copyright (c) 1988 by Frank Schmuck
 Copyright (c) 1988 by Conrad Kwok
@@ -41,9 +42,12 @@ notice. xfig's sources are cited as src/..., fig2dev's as fig2dev/... (its
 drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 `cargo xtask licences` checks that this list and those comments agree.
 
+- crates/engine/src/cmd/compound.rs: xfig src/e_compound.c
 - crates/engine/src/cmd/file.rs: xfig src/u_print.c
+- crates/engine/src/cmd/joinsplit.rs: xfig src/e_joinsplit.c
 - crates/engine/src/prefs.rs: xfig src/main.c (resources, options), doc/xfig.man.in (resource table)
 - crates/engine/src/snap.rs: xfig src/w_snap.c, src/w_intersect.c
+- crates/engine/src/tools/compound.rs: xfig src/e_compound.c, src/e_joinsplit.c
 - crates/engine/src/tools/markers.rs: xfig src/u_markers.c, src/w_modepanel.c, src/object.h
 - crates/engine/src/tools/mod.rs: xfig src/w_modepanel.c, src/d_*.c, src/e_*.c, src/w_canvas.c
 - crates/format/src/fig_write.rs: xfig src/f_save.c

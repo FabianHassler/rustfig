@@ -10,8 +10,8 @@
 | 26 | ✅ closed 2026-10-18 (audit pass 9): pictures get no frame in PS, EPS, PDF and bitmaps (genps strokes none; SVG keeps it) and transparent pixels stay transparent in EPS (colour-key `/ImageType 4`). Left: opaque pixels with the transparent colour are masked too (as fig2dev does for RGB images; for indexed GIFs it masks the index only), PNG with partial alpha is blended over white | Export | Low | 0 |
 | 3 | PostScript output: page layout done 2026-10-18 (B4a); EPS previews (`-A`/`-T`/`-C`) and `-B`/`-R` done 2026-10-18 (B4b); printing remains | Export/Printing | Medium | 20 |
 | 4 | Library objects: browse a directory of .fig files and place them | Libraries | Medium | 40 |
-| 5 | Open compound (edit inside a compound without breaking it) | Editing | Medium | 16 |
-| 6 | Join/split lines, chop, tangent/normal, measure modes | Editing | Medium | 40 |
+| 5 | ✅ closed 2026-10-21 (D1): open compound. Left: the dimension-line recomputation on close (D10), xfig's "save just the visible part" query | Editing | Low | 0 |
+| 6 | Chop, tangent/normal, measure modes (join/split done 2026-10-21, D2) | Editing | Medium | 30 |
 | 7 | Settings persistence (units, grid, recent files) and a style manager | Settings | Medium | 30 |
 | 8 | The zoom box (rulers landed with W6) | View | Medium | 4 |
 | 9 | Character map, compose-key input, LaTeX special-text handling | Text | Medium | 30 |

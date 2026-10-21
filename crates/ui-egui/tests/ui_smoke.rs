@@ -195,15 +195,20 @@ fn polyline_with_xfig_buttons() {
 }
 
 #[test]
-fn global_settings_switch_the_mouse_scheme() {
+fn global_settings_switch_the_xfig_shortcuts() {
     let mut h = harness(app());
-    h.get_by_label_contains("middle: —");
+    let before = h.state().xfig_keys;
     // xfig's Edit › Global settings holds RustFig's preferences.
     h.get_by_label("Edit").click();
     h.run_steps(2);
     h.get_by_label_contains("Global settings...").click();
     h.run_steps(4);
-    h.get_by_label_contains("xfig mouse buttons").click();
+    h.get_by_label_contains("xfig keyboard shortcuts").click();
+    h.run_steps(2);
+    assert_eq!(h.state().xfig_keys, !before);
+    // The mouse scheme is no longer a Global setting; its command remains.
+    assert!(h.query_by_label_contains("xfig mouse buttons").is_none());
+    h.state_mut().run("tool.mouse_buttons", serde_json::json!({}));
     h.run_steps(2);
     assert_eq!(h.state().engine.mouse_scheme(), rustfig_engine::MouseScheme::Modern);
     h.get_by_label_contains("middle: pan");

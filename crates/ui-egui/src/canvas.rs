@@ -94,6 +94,7 @@ fn build_scene(doc: &Document, opts: &SceneOptions, hide: &[ObjectId]) -> Scene 
             colors: doc.colors.clone(),
             objects: Vec::with_capacity(doc.objects.len()),
             next_id: 0,
+            open: doc.open.clone(),
         };
         d.objects = doc.objects.iter().filter(|o| !hide.contains(&o.id)).cloned().collect();
         rustfig_render::build_scene(&d, opts)
@@ -308,6 +309,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
                 colors: doc.colors.clone(),
                 objects: overlay.preview.iter().cloned().map(std::sync::Arc::new).collect(),
                 next_id: 0,
+                open: Vec::new(),
             };
             if let Some(t) = &overlay.text {
                 d.objects.push(std::sync::Arc::new(t.object.clone()));
@@ -359,6 +361,17 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         }
         let r = Rect::from_center_size(p, vec2(5.0, 5.0));
         painter.rect_stroke(r, 0.0, Stroke::new(1.0_f32, tk.handle_stroke), egui::StrokeKind::Middle);
+    }
+    // Join/Split: a magenta square around the first end point (xfig's
+    // `draw_join_marker`, 20 pixels).
+    if let Some(p) = overlay.join_marker {
+        let r = Rect::from_center_size(to_screen(p), vec2(20.0, 20.0));
+        painter.rect_stroke(
+            r,
+            0.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(255, 0, 255)),
+            egui::StrokeKind::Middle,
+        );
     }
     if let Some(ot) = &overlay.text {
         draw_caret(&painter, ot, &to_screen, tk);

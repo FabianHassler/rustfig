@@ -68,7 +68,7 @@ impl AutoSave {
         if self.saved_rev == Some(engine.revision()) {
             return;
         }
-        match self.rec.save(engine.doc(), engine.path()) {
+        match self.rec.save(&engine.whole_doc(), engine.path()) {
             Ok(()) => self.saved_rev = Some(engine.revision()),
             Err(e) => log::warn!("recovery copy: {}", e.message),
         }

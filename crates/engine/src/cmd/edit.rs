@@ -85,8 +85,10 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{}",
             mutates: true,
-            enabled: has_objects,
+            enabled: |e| has_objects(e) || e.open_compounds() > 0,
             run: |e, _| {
+                // xfig closes every open compound first (`e_delete.c`).
+                e.doc_mut().close_all();
                 e.doc_mut().objects.clear();
                 e.set_selection(Vec::new());
                 Ok(json!({}))

@@ -48,8 +48,8 @@ const DRAWING: [Slot; 15] = [
 const EDITING: [Slot; 25] = [
     Slot::Tool(ToolKind::Glue, &xfig_icons::GLUE),
     Slot::Tool(ToolKind::Break, &xfig_icons::BREAK),
-    Slot::Missing(&xfig_icons::OPEN_COMP, "Open compound", "D1"),
-    Slot::Missing(&xfig_icons::JOIN_SPLIT, "Join or split lines/splines", "D2"),
+    Slot::Tool(ToolKind::OpenCompound, &xfig_icons::OPEN_COMP),
+    Slot::Tool(ToolKind::JoinSplit, &xfig_icons::JOIN_SPLIT),
     Slot::Missing(&xfig_icons::CHOP, "Chop objects", "D3"),
     Slot::Tool(ToolKind::Scale, &xfig_icons::SCALE),
     Slot::Tool(ToolKind::Align, &xfig_icons::ALIGN),
@@ -105,6 +105,34 @@ pub fn mode_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
             ui.add_space(4.0);
             ui.label(RichText::new("Editing").small().color(tk.muted));
             slot_grid(app, ui, tk, "edit_tools", &EDITING, size);
+        });
+}
+
+/// xfig's "Close Compound" popup (`popup_close_compound`, `e_compound.c`):
+/// shown while a compound is open, with the two buttons that close it.
+pub fn close_compound_popup(app: &mut App, ctx: &egui::Context) {
+    if app.engine.open_compounds() == 0 {
+        return;
+    }
+    egui::Window::new("Xfig: Close Compound")
+        .collapsible(false)
+        .resizable(false)
+        .default_pos(egui::pos2(MODE_PANEL_WIDTH + 60.0, 90.0))
+        .show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                for (label, id) in [
+                    ("Close This Compound", "compound.close"),
+                    ("Close All Compounds", "compound.close_all"),
+                ] {
+                    if ui.button(label).clicked() {
+                        // xfig finishes a text being typed before closing.
+                        if let Err(e) = app.engine.finish_text() {
+                            app.error(e.message);
+                        }
+                        app.run(id, json!({}));
+                    }
+                }
+            });
         });
 }
 
@@ -222,6 +250,8 @@ fn xfig_tip(t: ToolKind) -> Option<&'static str> {
         ToolKind::Text => "TEXT input from keyboard   (t)",
         ToolKind::Glue => "GLUE objects into COMPOUND object   (g)",
         ToolKind::Break => "BREAK COMPOUND object   (Shift-g)",
+        ToolKind::OpenCompound => "OPEN COMPOUND object   (o)",
+        ToolKind::JoinSplit => "Join or Split lines/splines   (j)",
         ToolKind::Scale => "SCALE objects   (Ctrl-s)",
         ToolKind::Align => "ALIGN objects within a COMPOUND or to CANVAS   (a)",
         ToolKind::MovePoint => "MOVE POINTs   (Shift-m)",

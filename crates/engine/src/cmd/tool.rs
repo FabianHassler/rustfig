@@ -150,6 +150,8 @@ tool_runs!(
     Text,
     Glue,
     Break,
+    OpenCompound,
+    JoinSplit,
     Scale,
     Align,
     Move,

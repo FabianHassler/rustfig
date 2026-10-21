@@ -131,6 +131,7 @@ proptest! {
         let data = s["data"].as_str().unwrap().to_string();
         let mut e2 = Engine::new();
         e2.execute("file.open_data", &json!({"data": data})).unwrap();
-        prop_assert_eq!(e2.doc().objects.len(), e.doc().objects.len());
+        // A compound left open is saved with the rest of the figure.
+        prop_assert_eq!(e2.doc().objects.len(), e.whole_doc().objects.len());
     }
 }

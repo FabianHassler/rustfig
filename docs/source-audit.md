@@ -23,16 +23,16 @@ S0 ([`source-map.md`](source-map.md)) maps C files to RustFig modules; this file
 
 | Status | Functions |
 |---|---:|
-| ported | 797 |
+| ported | 821 |
 | replaced | 584 |
 | not needed | 218 |
-| partial | 66 |
-| missing | 447 |
+| partial | 67 |
+| missing | 422 |
 | **total** | **2112** (plus 14 in `xfigmain.c`, a generated copy of `main.c`) |
 
 Missing and partial functions by task (a function counts under each task it names):
 
-- **D10** (66): `d_line.c`: `init_trace_drawing`; `e_align.c`: `init_align_canvas`; `e_flip.c`: `set_unset_anchor`; `e_rotate.c`: `set_unset_center`; `e_scale.c`: `rescale_dimension_line`; `f_util.c`: `dimline_components`; `u_create.c`: `create_dimension_line`, `create_tick`, `create_dimline_ticks`, `backward_dim_arrow`, `forward_dim_arrow`; `u_drag.c`: `array_place_ellipse`, `array_place_arc`, `array_place_line`, `array_place_text`, `array_place_spline`, `array_place_compound`; `w_canvas.c`: `canvas_selected`, `toggle_show_lengths`; `w_indpanel.c`: `popup_dimline_panel`, `line_color_select`, `box_color_select`, `text_color_select`, `set_fixed_text`, `set_actual_text`, `draw_cur_dimline`, `dimline_style_select`, `left_arrow_type_select`, `right_arrow_type_select`, `dimline_font_popup`, `dimline_set_font_image`, `dimline_panel_preview`, `dimline_panel_ok`, `dimline_panel_cancel`, `get_dimline_values`, `inc_dimline`, `dec_dimline`, `show_dimline`, `inc_numcopies`, `dec_numcopies`, `show_numcopies`, `inc_numxcopies`, `dec_numxcopies`, `show_numxcopies`, `inc_numycopies`, `dec_numycopies`, `show_numycopies`; `w_keyboard.c`: `next_keyboard_history`, `prior_keyboard_history`, `ignore_keyboard_input`, `handle_keyboard_input`, `create_keyboard_panel`, `popup_keyboard_panel`, `popdown_keyboard_panel`; `w_mousefun.c`: `draw_mousefun_kbd`, `clear_mousefun_kbd`, `init_kbd_actions`; `w_msgpanel.c`: `boxsize_msg`, `boxsize_scale_msg`, `erase_box_lengths`, `erase_lengths`, `length_msg`, `altlength_msg`, `length_msg2`, `arc_msg`, `make_dimension_string`
+- **D10** (67): `d_line.c`: `init_trace_drawing`; `e_align.c`: `init_align_canvas`; `e_compound.c`: `close_compound`; `e_flip.c`: `set_unset_anchor`; `e_rotate.c`: `set_unset_center`; `e_scale.c`: `rescale_dimension_line`; `f_util.c`: `dimline_components`; `u_create.c`: `create_dimension_line`, `create_tick`, `create_dimline_ticks`, `backward_dim_arrow`, `forward_dim_arrow`; `u_drag.c`: `array_place_ellipse`, `array_place_arc`, `array_place_line`, `array_place_text`, `array_place_spline`, `array_place_compound`; `w_canvas.c`: `canvas_selected`, `toggle_show_lengths`; `w_indpanel.c`: `popup_dimline_panel`, `line_color_select`, `box_color_select`, `text_color_select`, `set_fixed_text`, `set_actual_text`, `draw_cur_dimline`, `dimline_style_select`, `left_arrow_type_select`, `right_arrow_type_select`, `dimline_font_popup`, `dimline_set_font_image`, `dimline_panel_preview`, `dimline_panel_ok`, `dimline_panel_cancel`, `get_dimline_values`, `inc_dimline`, `dec_dimline`, `show_dimline`, `inc_numcopies`, `dec_numcopies`, `show_numcopies`, `inc_numxcopies`, `dec_numxcopies`, `show_numxcopies`, `inc_numycopies`, `dec_numycopies`, `show_numycopies`; `w_keyboard.c`: `next_keyboard_history`, `prior_keyboard_history`, `ignore_keyboard_input`, `handle_keyboard_input`, `create_keyboard_panel`, `popup_keyboard_panel`, `popdown_keyboard_panel`; `w_mousefun.c`: `draw_mousefun_kbd`, `clear_mousefun_kbd`, `init_kbd_actions`; `w_msgpanel.c`: `boxsize_msg`, `boxsize_scale_msg`, `erase_box_lengths`, `erase_lengths`, `length_msg`, `altlength_msg`, `length_msg2`, `arc_msg`, `make_dimension_string`
 - **D6** (43): `e_placelib.c`: `put_selected`, `transform_lib_obj`, `sel_place_lib_obj_proc`, `sel_place_lib_obj`, `put_draw`, `change_draw_mode`, `place_lib_object_orig`, `place_lib_object`, `move_object`, `init_move_object`, `cancel_place_lib_obj`; `w_library.c`: `SPComp`, `LRComp`, `put_selected_request`, `library_stop`, `library_dismiss`, `library_cancel`, `load_library`, `put_object_sel`, `load_lib_obj`, `NewObjectSel`, `popup_library_panel`, `create_library_panel`, `make_library_menu`, `sel_view`, `change_icon_size`, `set_preview_name`, `set_cur_obj_name`, `erase_pixmap`, `PutLibraryEntry`, `ScanLibraryDirectory`, `MakeLibrary`, `MakeObjectLibrary`, `MakeLibraryFileList`, `libraryStatus`, `preview_libobj`, `update_preview`, `set_comments`, `sel_item_icon`, `unsel_icon`, `sel_icon`, `copy_icon_to_preview`; `w_modepanel.c`: `stub_popup_library`
 - **D8** (38): `e_movept.c`: `init_arcpointmoving`, `cancel_movedarcpoint`, `fix_movedarcpoint`, `init_splinepointmoving`, `cancel_movedsplinepoint`, `fix_movedsplinepoint`, `init_linepointmoving`, `cancel_movedlinepoint`, `fix_movedlinepoint`; `u_create.c`: `new_link`; `u_elastic.c`: `elastic_linelink`, `elastic_links`, `elastic_arclink`; `u_list.c`: `get_links`, `point_on_perim`, `get_interior_links`, `point_on_inside`, `adjust_links`; `u_smartsearch.c`: `init_smart_searchproc_left`, `init_smart_searchproc_middle`, `init_smart_searchproc_right`, `smart_object_search_left`, `smart_object_search_middle`, `smart_object_search_right`, `set_smart_points`, `init_smart_search`, `do_smart_object_search`, `smart_next_arc_found`, `smart_next_ellipse_found`, `smart_next_line_found`, `smart_next_spline_found`, `smart_next_text_found`, `smart_next_compound_found`, `smart_show_objecthighlight`, `smart_erase_objecthighlight`, `smart_toggle_objecthighlight`, `smart_null_proc`; `w_indpanel.c`: `show_linkmode`
 - **E4** (37): `w_color.c`: `create_color_panel`, `pen_fill_activate`, `restore_mixed_colors`, `set_mixed_color`, `set_user_color`, `pick_contrast`, `set_mixed_name`, `cancel_color_popup`, `del_color`, `undel_color`, `switch_edit`, `set_slider_sensitivity`, `set_color_ok`, `_set_std_color`, `set_std_color`, `_pick_memory`, `pick_memory`, `lock_toggle`, `draw_boxed`, `erase_boxed`, `color_borders`, `WhichButton`, `update_from_triple`, `update_scrl_triple`, `update_triple`, `move_scroll`, `StoreMix_and_Mem`, `Scrolled`, `Update_HSV`, `ThumbHSV`, `Thumbed`, `move_lock`, `HSVToRGB`, `RGBToHSV`, `PctToRGB`, `DoGrabPixel`, `doGrab`
@@ -42,7 +42,6 @@ Missing and partial functions by task (a function counts under each task it name
 - **W10-10** (26): `w_export.c`: `exp_getxyoff`, `preview_select`, `orient_select`, `just_select`, `papersize_select`, `multiple_select`, `overlap_select`, `set_postscript_pdf_options`, `set_export_mask`, `smooth_select`, `background_select`, `transp_select`, `export_grid_minor_select`, `export_grid_major_select`, `manage_optional`, `export_update_figure_size`, `fit_page`, `get_magnif`, `update_mag`, `update_figure_size`, `get_quality`, `exp_xoff_unit_select`, `exp_yoff_unit_select`, `toggle_hpgl_pcl_switch`, `toggle_hpgl_font`, `toggle_pdf_pagemode`
 - **W10-4** (26): `w_export.c`: `exp_getxyoff`, `preview_select`, `orient_select`, `just_select`, `papersize_select`, `multiple_select`, `overlap_select`, `set_postscript_pdf_options`, `set_export_mask`, `smooth_select`, `background_select`, `transp_select`, `export_grid_minor_select`, `export_grid_major_select`, `manage_optional`, `export_update_figure_size`, `fit_page`, `get_magnif`, `update_mag`, `update_figure_size`, `get_quality`, `exp_xoff_unit_select`, `exp_yoff_unit_select`, `toggle_hpgl_pcl_switch`, `toggle_hpgl_font`, `toggle_pdf_pagemode`
 - **D7** (19): `d_line.c`: `init_trace_drawing`, `get_intermediatepoint`; `u_elastic.c`: `latex_line`, `constrainedangle_line`, `angle0_line`, `angle90_line`, `angle45_line`, `angle135_line`; `u_geom.c`: `pgcd`, `gcd`, `lcm`, `get_slope`, `latex_endpoint`; `w_indpanel.c`: `show_anglegeom`, `show_pointposn`; `w_modepanel.c`: `force_positioning`, `force_nopositioning`, `force_anglegeom`, `force_noanglegeom`
-- **D2** (17): `e_joinsplit.c`: `join_split_selected`, `init_join`, `init_split`, `join_lines`, `join_splines`, `draw_join_marker`, `erase_join_marker`, `cancel_join`, `join_line2`, `join_spline2`, `connect_line_points`, `connect_spline_points`, `split_line`, `split_polygon`, `split_spline`, `split_cspline`; `w_modepanel.c`: `stub_join_split_selected`
 - **D3** (15): `e_chop.c`: `chop_selected`, `select_axe_object`, `clear_axe_objects`, `point_sort_fcn`, `point_sort_reverse_fcn`, `create_new_line`, `check_poly`, `dice_polygons`, `dice_polylines`, `chop_polyline`, `chop_arc`, `chop_ellipse`, `select_log_object`, `init_chop_right`; `w_modepanel.c`: `stub_chop_selected`
 - **D11** (14): `w_capture.c`: `captureImage`, `rshift`, `getImageData`, `selectedRootArea`, `drawRect`, `getCurrentColors`, `canHandleCapture`; `w_digitize.c`: `popup_digitize_panel`, `create_digitize_panel`, `digitize_panel_done`, `digitize_panel_cancel`, `update_example`, `switch_file_mode`; `w_zoom.c`: `unzoom`
 - **W10-16** (12): `e_edit.c`: `reread_picfile`, `expand_pic`, `shrink_pic`, `origsize_pic`, `scale_percent_pic`, `reposition_picture`, `resize_picture`, `flip_pic_select`, `rotation_select`, `image_edit_button`, `browse_button`, `what_rotation`
@@ -50,7 +49,6 @@ Missing and partial functions by task (a function counts under each task it name
 - **W10-15** (10): `e_edit.c`: `make_window_compound`, `modify_compound`, `reposition_top`, `reposition_bottom`, `rescale_compound`, `get_new_compound_values`, `done_compound`, `check_depth`, `collapse_depth`, `collapse_depths`
 - **D4** (9): `e_tangent.c`: `tangent_selected`, `init_tangent_adding`, `init_normal_adding`, `tangent_or_normal`, `tangent_normal_line`; `w_indpanel.c`: `inc_tangnormlen`, `dec_tangnormlen`, `show_tangnormlen`; `w_modepanel.c`: `stub_tangent_selected`
 - **E10** (9): `d_text.c`: `new_text_down`, `new_text_up`, `split_at_cursor`, `initialize_char_handler`, `terminate_char_handler`, `char_handler`; `w_canvas.c`: `get_canvas_clipboard`, `paste_primary_selection`, `canvas_paste`
-- **D1** (8): `e_compound.c`: `init_open_compound`, `init_open_compound_vis`, `open_this_compound`, `open_compound_selected`, `close_compound`, `close_all_compounds`, `popup_close_compound`; `w_modepanel.c`: `stub_open_compound_selected`
 - **W10-1** (8): `e_update.c`: `init_update_settings`; `w_indpanel.c`: `note_state`, `tog_all_update`, `set_all_update`, `clr_all_update`, `manage_update_buts`, `unmanage_update_buts`, `tog_selective_update`
 - **W10-2** (8): `w_help.c`: `launch_refman`, `launch_refpdf_en`, `launch_refpdf_jp`, `launch_howto`, `launch_man`, `launch_viewer`, `check_docfile`, `help_ok`
 - **W10-31** (8): `w_indpanel.c`: `arrowsize_panel_dismiss`, `arrowsize_panel_cancel`, `arrowsize_panel_set`, `set_arrow_size_state`, `popup_arrowsize_panel`, `inc_arrowsize`, `dec_arrowsize`, `show_arrowsize`
@@ -263,13 +261,13 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_chop.c` | `chop_ellipse` | 699 | missing | Chop mode (cut objects at the intersection with an axe object) | D3 |
 | `e_chop.c` | `select_log_object` | 829 | missing | Chop mode (cut objects at the intersection with an axe object) | D3 |
 | `e_chop.c` | `init_chop_right` | 883 | missing | Chop mode (cut objects at the intersection with an axe object) | D3 |
-| `e_compound.c` | `init_open_compound` | 69 | missing | Open compound / close compound (edit inside a compound) | D1 |
-| `e_compound.c` | `init_open_compound_vis` | 82 | missing | Open compound / close compound (edit inside a compound) | D1 |
-| `e_compound.c` | `open_this_compound` | 97 | missing | Open compound / close compound (edit inside a compound) | D1 |
-| `e_compound.c` | `open_compound_selected` | 122 | missing | Open compound / close compound (edit inside a compound) | D1 |
-| `e_compound.c` | `close_compound` | 142 | missing | Open compound / close compound (edit inside a compound) | D1 |
-| `e_compound.c` | `close_all_compounds` | 190 | missing | Open compound / close compound (edit inside a compound) | D1 |
-| `e_compound.c` | `popup_close_compound` | 233 | missing | Open compound / close compound (edit inside a compound) | D1 |
+| `e_compound.c` | `init_open_compound` | 69 | ported | tools: `open_compound_event` (left button), command `compound.open` | D1 |
+| `e_compound.c` | `init_open_compound_vis` | 82 | ported | tools: `open_compound_event` (middle button; Shift+left in the modern scheme), `compound.open` with `keep_visible` | D1 |
+| `e_compound.c` | `open_this_compound` | 97 | ported | model: `Document::open_compound` (the members become the drawing, the rest waits in `Document::open`); command `compound.open`; undo is the history, as xfig's `F_ENTER_COMP` | D1 |
+| `e_compound.c` | `open_compound_selected` | 122 | ported | tools: `ToolKind::OpenCompound` (mask `M_COMPOUND`, hints `open compound` / `open, keep visible`) | D1 |
+| `e_compound.c` | `close_compound` | 142 | partial | model: `Document::close_compound`; command `compound.close` (refused while drawing, selects the mode again, drops an emptied compound); the dimension-line recomputation of `rescale_dimension_line` waits for D10 | D10 |
+| `e_compound.c` | `close_all_compounds` | 190 | ported | command `compound.close_all`; save, export, new and delete-all close in a copy or first (`Engine::whole_doc`) | D1 |
+| `e_compound.c` | `popup_close_compound` | 233 | ported | ui-egui: `panels::close_compound_popup` (Close This Compound, Close All Compounds) | D1 |
 | `e_convert.c` | `convert_selected` | 52 | ported | tools: `ToolKind::Convert` (left: `object.convert`, right: `object.toggle_closed`) |  |
 | `e_convert.c` | `init_convert_open_closed` | 68 | ported | tools: `ToolKind::Convert` (left: `object.convert`, right: `object.toggle_closed`) |  |
 | `e_convert.c` | `init_convert_line_spline` | 89 | partial | box <-> arc-box conversion with the left button on a box (RustFig turns a box into a spline instead); the spline kind (approximated or interpolated) is not remembered across the round trip | S4-5 |
@@ -456,22 +454,22 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_glue.c` | `get_text` | 453 | ported | tools: `ToolKind::Glue` (click or tag region, `glue_event`, `region_click`), command `object.group` |  |
 | `e_glue.c` | `sel_compound` | 478 | ported | tools: `ToolKind::Glue` (click or tag region, `glue_event`, `region_click`), command `object.group` |  |
 | `e_glue.c` | `get_compound` | 499 | ported | tools: `ToolKind::Glue` (click or tag region, `glue_event`, `region_click`), command `object.group` |  |
-| `e_joinsplit.c` | `join_split_selected` | 71 | missing | Join/Split mode | D2 |
-| `e_joinsplit.c` | `init_join` | 93 | missing | Join/Split mode | D2 |
-| `e_joinsplit.c` | `init_split` | 113 | missing | Join/Split mode | D2 |
-| `e_joinsplit.c` | `join_lines` | 143 | missing | Join/Split mode | D2 |
-| `e_joinsplit.c` | `join_splines` | 167 | missing | Join/Split mode | D2 |
-| `e_joinsplit.c` | `draw_join_marker` | 194 | missing | Join/Split mode | D2 |
-| `e_joinsplit.c` | `erase_join_marker` | 203 | missing | Join/Split mode | D2 |
-| `e_joinsplit.c` | `cancel_join` | 217 | missing | Join/Split mode | D2 |
-| `e_joinsplit.c` | `join_line2` | 226 | missing | Join/Split mode | D2 |
-| `e_joinsplit.c` | `join_spline2` | 275 | missing | Join/Split mode | D2 |
-| `e_joinsplit.c` | `connect_line_points` | 329 | missing | Join/Split mode | D2 |
-| `e_joinsplit.c` | `connect_spline_points` | 382 | missing | Join/Split mode | D2 |
-| `e_joinsplit.c` | `split_line` | 460 | missing | Join/Split mode | D2 |
-| `e_joinsplit.c` | `split_polygon` | 535 | missing | Join/Split mode | D2 |
-| `e_joinsplit.c` | `split_spline` | 571 | missing | Join/Split mode | D2 |
-| `e_joinsplit.c` | `split_cspline` | 668 | missing | Join/Split mode | D2 |
+| `e_joinsplit.c` | `join_split_selected` | 71 | ported | tools: `ToolKind::JoinSplit` (mask `M_POLYLINE\|M_SPLINE_O\|M_SPLINE_C`, hints `Join Lines/Splines` / `Split Line/Spline`) | D2 |
+| `e_joinsplit.c` | `init_join` | 93 | ported | tools: `join_split_event` (left button: the end point under the pointer, `end_point_at`) | D2 |
+| `e_joinsplit.c` | `init_split` | 113 | ported | tools: `join_split_event` (middle button; right in the modern scheme), `object.split`; pictures refused | D2 |
+| `e_joinsplit.c` | `join_lines` | 143 | ported | tools: `join_split_event` (state `ToolState::Join`, markers narrowed to lines); only polylines with an end picked | D2 |
+| `e_joinsplit.c` | `join_splines` | 167 | ported | tools: as `join_lines`, open splines only; unlike xfig the second point is not taken for an end | D2 |
+| `e_joinsplit.c` | `draw_join_marker` | 194 | ported | `Overlay::join_marker`, drawn as a magenta 20 px square | D2 |
+| `e_joinsplit.c` | `erase_join_marker` | 203 | ported | `Overlay::join_marker` (nothing to erase: the overlay is redrawn) | D2 |
+| `e_joinsplit.c` | `cancel_join` | 217 | ported | right button or Escape returns to the first stage | D2 |
+| `e_joinsplit.c` | `join_line2` | 226 | ported | command `object.join` (`join_lines`: a polygon for both ends of one line; the same point twice does nothing) | D2 |
+| `e_joinsplit.c` | `join_spline2` | 275 | ported | command `object.join` (`join_splines`: a closed spline for both ends, whose end factors take the second point's) | D2 |
+| `e_joinsplit.c` | `connect_line_points` | 329 | ported | `cmd/joinsplit.rs` `join_lines`: the four end combinations; the arrows at the join go, the far arrows stay (xfig keeps the first line's) | D2 |
+| `e_joinsplit.c` | `connect_spline_points` | 382 | ported | `join_splines`: points and shape factors reversed together | D2 |
+| `e_joinsplit.c` | `split_line` | 460 | ported | command `object.split` (`split_polyline`: cut after the vertex or segment start; end points refused) | D2 |
+| `e_joinsplit.c` | `split_polygon` | 535 | ported | `split_polyline` for polygons, boxes and arc-boxes: a polyline starting after the cut | D2 |
+| `e_joinsplit.c` | `split_spline` | 571 | ported | `split_spline_at`: both pieces keep two points at least; the new ends get factor 0 | D2 |
+| `e_joinsplit.c` | `split_cspline` | 668 | ported | `split_spline_at` for closed splines: opened at the cut, end factors 0 | D2 |
 | `e_measure.c` | `anglemeas_selected` | 89 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
 | `e_measure.c` | `angle_msg` | 105 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
 | `e_measure.c` | `angle_save` | 111 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
@@ -1942,8 +1940,8 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_modepanel.c` | `stub_align_selected` | 749 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `stub_compound_selected` | 755 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `stub_break_selected` | 761 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
-| `w_modepanel.c` | `stub_join_split_selected` | 767 | missing | Join/Split mode button | D2 |
-| `w_modepanel.c` | `stub_open_compound_selected` | 773 | missing | Open compound mode button | D1 |
+| `w_modepanel.c` | `stub_join_split_selected` | 767 | ported | mode button `JOIN_SPLIT` in the editing group | D2 |
+| `w_modepanel.c` | `stub_open_compound_selected` | 773 | ported | mode button `OPEN_COMP` in the editing group | D1 |
 | `w_modepanel.c` | `stub_scale_selected` | 779 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `stub_point_adding_selected` | 785 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `stub_delete_point_selected` | 791 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |

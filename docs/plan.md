@@ -1,6 +1,6 @@
 # Execution plan
 
-**Status:** 2026-10-21 (S4 done, S4-1 to S4-7 added; B15, DD10, DD1, DD2, DD3, DD5, DD7, DD9 done). Phase W (with W8, W9), phase A (A1–A10) done, A8, A9, A10, D9 and D12 done; B1, B2, B3, B10, B12 and G1 done; B9 (porting fig2dev's drivers) done but `sld`, with the audit's hardening passes in B11. Overall parity ≈65 %.
+**Status:** 2026-10-21 (D1, D2 done; S4 done, S4-1 to S4-7 added; B15, DD10, DD1, DD2, DD3, DD5, DD7, DD9 done). Phase W (with W8, W9), phase A (A1–A10) done, A8, A9, A10, D9 and D12 done; B1, B2, B3, B10, B12 and G1 done; B9 (porting fig2dev's drivers) done but `sld`, with the audit's hardening passes in B11. Overall parity ≈65 %.
 
 This is the committed work plan. [`gaps.md`](gaps.md) ranks every known
 shortfall; this file groups them into phases with task ids, acceptance
@@ -171,8 +171,8 @@ covered by W2.
 
 | Id | Task | Acceptance | Hours |
 |----|------|------------|------:|
-| D1 | **Open compound**: edit members in place, with the rest dimmed; close returns to the top level. | Move a member without breaking the compound; undo works. | 16 |
-| D2 | **Join/split** lines and splines at shared end points. | Tests for joining two polylines and splitting one. | 10 |
+| D1 | ✅ 2026-10-21. **Open compound** (`e_compound.c`): `Document::open` (model) keeps the drawing around the opened compound, so `doc().objects` is the open level and every mode, command and undo step works inside unchanged; commands `compound.open` (`keep_visible` = xfig's middle button, the rest drawn gray by `render::build_scene`), `compound.close`, `compound.close_all`; mode `tool.open_compound` (`o`, mask `M_COMPOUND`, xfig's hints); the "Close Compound" popup (`panels::close_compound_popup`); save, export, recovery copies and depth lists see the whole figure (`Engine::whole_doc`); new and delete-all close first; open and close are history steps (xfig's `F_ENTER_COMP`/`F_EXIT_COMP`). Not done: the dimension-line recomputation on close (D10), xfig's save query "just the visible part or all" (saves all; proposal in the report). | `crates/engine/tests/open_compound.rs` (11: move a member without breaking the compound, nesting, close returns up one level, emptied compound removed, undo across open/close, saving and exporting unchanged, gray backdrop, hostile requests, 300-deep nesting); screenshots `target/window-parity/d1-*.png`. | 16 |
+| D2 | ✅ 2026-10-21. **Join/split** (`e_joinsplit.c`): commands `object.join` (two polylines or open splines at the end points picked, in all four orientations, shape factors reversed with their points; both ends of one object close it into a polygon or closed spline) and `object.split` (polyline or open spline at a vertex or segment, both pieces keeping two points; polygon, box and closed spline opened at the cut, end factors 0); mode `tool.join_split` (`j`, xfig's two-stage hints, magenta marker on the first end, markers narrowed to lines or splines, middle button splits, right cancels; the modern scheme splits with the right button). Deviations (documented in `cmd/joinsplit.rs`): the arrows at the join or cut go and the far ones stay (xfig keeps the first object's both), a spline's second point is not accepted as an end point. | `crates/engine/tests/join_split.rs` (17) and the mouse-hint test with two new fixtures. | 10 |
 | D3 | **Chop** (cut objects at intersections). | Tests with line/line, line/arc and line/ellipse. | 14 |
 | D4 | **Tangent/normal** tool for circles, ellipses, arcs and splines. | Draws the correct line at the clicked point. | 8 |
 | D5 | **Measure modes**: angle, length, area tools showing results in the status bar. | Matches `object.measure`. | 6 |
@@ -406,3 +406,4 @@ User decision 2026-10-20: RustFig uses fig2dev for everything fig2dev can do.
 | 2026-10-21 | B15 done: PDF and EPS pictures in exports and on the canvas (fig2dev v0.6.0 with hayro; optional ghostscript for EPS). |
 | 2026-10-21 | W10 group 1 done (docs/window-parity.md); W10-1 to W10-3 added. |
 | 2026-10-21 | W10 group 3 done (object edit panels); W10-15 to W10-17 added; position rows, arrows, text flags, figure comments, Cancel-restores fixed. |
+| 2026-10-21 | D1 (open compound) and D2 (join/split) done. |

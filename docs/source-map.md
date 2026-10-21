@@ -81,7 +81,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `e_arrow.c` | 293 | add/remove arrowheads | tools, `cmd/object` | ported (S4) | — |
 | `e_break.c` | 92 | break compound (and tag) | tools | ported (S4) | — |
 | `e_chop.c` | 890 | chop objects at intersections | — | missing (14 functions, S4) | D3 |
-| `e_compound.c` | 294 | open/close compound | — | missing (7 functions, S4) | D1 |
+| `e_compound.c` | 294 | open/close compound | `model::Document::open_compound`, `cmd/compound.rs`, `tools/compound.rs`, `panels::close_compound_popup` | ported (dimension-line recomputation on close: D10) | D1 |
 | `e_convert.c` | 420 | line↔spline, box↔arc-box | `cmd/object` | partial: box ↔ arc-box (S4) | S4-5 |
 | `e_copy.c` | 185 | copy, array copy, copy to cut buffer | tools | partial: array copy (S4) | D10 |
 | `e_delete.c` | 307 | delete object/region, cut buffer | tools | ported (S4) | — |
@@ -89,7 +89,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `e_edit.c` | 5996 | the Edit panel for every object type, figure comments, spline point shapes | `ui-egui/dialogs` | partial: compound and picture rows, point table, shape factor on the canvas, live panel (S4) | W10-15, W10-16, W10-19, S4-6 |
 | `e_flip.c` | 452 | flip, copy & flip, anchor | tools, `cmd/transform` | partial: anchor (S4) | D10 |
 | `e_glue.c` | 521 | tag and glue compounds | tools | ported (S4) | — |
-| `e_joinsplit.c` | 714 | join/split lines and splines | — | missing (16 functions, S4) | D2 |
+| `e_joinsplit.c` | 714 | join/split lines and splines | `cmd/joinsplit.rs`, `tools/compound.rs` | ported | D2 |
 | `e_measure.c` | 514 | measure angle, length, area | `object.measure` | missing: interactive modes (25 functions; the values exist as `object.measure`, S4) | D5 |
 | `e_move.c` | 135 | move (constrained) | tools | ported (S4) | — |
 | `e_movept.c` | 845 | move point (constrained, linked) | tools | partial: smart links do not follow (S4) | D8 |
@@ -148,7 +148,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | File | Lines | What it does | RustFig | Status | Task |
 |---|---:|---|---|---|---|
 | `w_cmdpanel.c` | 1860 | main menus | `menus::XFIG_MENUS` (classic layout) | ported: menus; partial: paste with the mouse, character map, global settings rows (S4) | S4-2, E5, W10-23 |
-| `w_modepanel.c` | 905 | mode panel, mode keys, per-mode attribute masks | `panels::mode_panel`, `ToolKind::shortcut`, `attributes_for` | ported: buttons, keys, masks; the Join/Split, Chop, Open compound, Tangent, Measure and Library modes are greyed or missing (S4) | D1–D6 |
+| `w_modepanel.c` | 905 | mode panel, mode keys, per-mode attribute masks | `panels::mode_panel`, `ToolKind::shortcut`, `attributes_for` | ported: buttons, keys, masks; Open compound and Join/Split work (D1, D2); the Chop, Tangent, Measure and Library modes are greyed or missing (S4) | D1–D6 |
 | `w_icons.c` | 3270 | mode and attribute icon bitmaps | `ui-egui/xfig_icons.rs` (verbatim), used by `panels::mode_panel` and `attributes` | ported: mode icons and the attribute pictures (line, join, cap, arrow mode and type, arc type, justification, grid, positioning, alignment) | — |
 | `w_indpanel.c` | 4865 | attribute (indicator) panel, choice panels | `ui-egui/attributes` | ported: buttons, order, per-mode masks, choice panels; missing: Angle Geom, Smart Links, copy counts, dimension line, tangent length, colour editor, Update Control, Arrow Size panel (function by function in `source-audit.md`) | D7, D8, D10, D4, E4, W10-1, W10-31 |
 | `w_mousefun.c` | 432 | mouse-function indicator | `panels::mouse_indicator`, `Engine::mouse_hints` | ported; Shift/Ctrl variants missing (S4) | S4-7 |

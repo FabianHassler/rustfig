@@ -18,9 +18,9 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Measure | Value |
 |---------|-------|
 | Overall parity (weighted) | ≈65 % |
-| Commands (all reachable from the control channel and MCP) | 133 engine (incl. 38 tool modes) + 17 UI |
-| Interactive tools (xfig modes) | 38 |
-| Tests | 509 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
+| Commands (all reachable from the control channel and MCP) | 140 engine (incl. 40 tool modes) + 17 UI |
+| Interactive tools (xfig modes) | 40 |
+| Tests | 537 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 1.3–3.2, write 3.2 |
 | Export formats | all through fig2dev's ported drivers (`convert`): PDF, SVG, EPS, PNG, GIF, JPEG, TIFF, PPM, PCX, XBM, XPM, EPS+PDF pair, LaTeX box from its scene writers (PostScript without page layout yet); LaTeX picture, epic/eepic/eepicemu, PiCTeX, TeXtyl, tpic, pic, pstex/pdftex, pict2e, CGM, HPGL, DXF, MetaPost, METAFONT, ge, image map, Gerber, shape, TikZ, PSTricks, EMF, Tk/Perl-Tk from ported fig2dev drivers (every fig2dev language except `sld`); fig2dev's own suite 79 pass / 9 fail / 1 skipped |
 | Perf, 50k paths (render fit / hit test / open / edit + undo) | 260 ms / 0.1 ms / 20 ms / 0.9 ms |
@@ -30,7 +30,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Dimension | Parity | Details |
 |-----------|--------|---------|
 | Drawing modes | 88 % | all xfig shapes except library objects; freehand and arc by centre |
-| Editing modes | 70 % | missing open-compound, join/split, chop, tangent, measure modes |
+| Editing modes | 75 % | missing chop, tangent, measure modes |
 | Attributes panel | 75 % | xfig's per-mode buttons; missing colour editor, latex/manhattan positioning, smart links |
 | File format | 92 % | Fig 1.3–3.2 read; exact pre-3.2 spline conversion missing |
 | Export | 66 % | every fig2dev language but `sld`; PostScript page layout and previews, hardening passes missing |

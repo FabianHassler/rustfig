@@ -86,7 +86,7 @@ Sources: `w_file.c` (Open, Save As, Merge share one panel), `w_dir.c` (the file 
 | Save As: file exists and name changed | query ""x" already exists. Do you want to overwrite it?" (Yes / No) | the system save dialog asks | modernised |
 | Save: empty figure | message "Empty figure, Save command ignored" | saves an empty figure | extra (more permissive; kept) |
 | Save: unsaved name | opens Save As ("No filename, please enter name") | opens Save As | same |
-| Save with open compound (inside a compound) | query "save just the visible part or all" | not applicable until open compound exists (D1) | follows D1 |
+| Save with open compound (inside a compound) | query "save just the visible part or all" | saves the whole figure (xfig asks "just the visible part or all"; the query is a proposal) | D1 done |
 | Backup: `write_bak` (default true) renames the old file to `name.bak` before saving | yes | atomic write through a temporary file, no `.bak` | difference (W10-9: setting) |
 | Read-only / directory / permission messages (`ok_to_write`) | "is a directory", "Write permission denied", "is read only" | the OS error is shown | same function |
 | New xfig... button | starts another xfig on the chosen file | none (RustFig has one window) | no equivalent (record, low) |

@@ -365,7 +365,7 @@ fn save(e: &mut Engine, p: &Value) -> CmdResult {
             .ok_or_else(|| EngineError::bad_params("no file name: give a \"path\""))?,
     };
     let format = FileFormat::from_path(&path).unwrap_or(FileFormat::Fig);
-    let text = rustfig_format::write(e.doc(), format).map_err(|err| EngineError::format(err.to_string()))?;
+    let text = rustfig_format::write(&e.whole_doc(), format).map_err(|err| EngineError::format(err.to_string()))?;
     write_atomic(&path, text.as_bytes())?;
     e.set_path(Some(path.clone()));
     e.set_modified(false);
@@ -477,7 +477,7 @@ fn save_data(e: &mut Engine, p: &Value) -> CmdResult {
         "rustfig" | "native" => FileFormat::Native,
         other => return Err(EngineError::bad_params(format!("unknown format {other:?}"))),
     };
-    let text = rustfig_format::write(e.doc(), format).map_err(|err| EngineError::format(err.to_string()))?;
+    let text = rustfig_format::write(&e.whole_doc(), format).map_err(|err| EngineError::format(err.to_string()))?;
     Ok(json!({"data": text}))
 }
 
@@ -738,7 +738,7 @@ fn write_part(e: &Engine, part: &Part, p: &Value) -> Result<(Vec<u8>, Vec<String
     if let Some(g) = &part.graphics {
         args.push(('p', Some(g.clone())));
     }
-    crate::fig2dev::export(e.doc(), part.lang, &args, doc_dir(e).as_deref()).map_err(EngineError::format)
+    crate::fig2dev::export(&e.whole_doc(), part.lang, &args, doc_dir(e).as_deref()).map_err(EngineError::format)
 }
 
 /// Whether `part` writes text (the rest comes back as base64).
@@ -792,7 +792,7 @@ fn uses_picture_file(objects: &[rustfig_model::Object], dir: Option<&Path>, path
 
 fn export_file(e: &mut Engine, p: &Value) -> CmdResult {
     let path = string(p, "path")?;
-    let objs: Vec<rustfig_model::Object> = e.doc().objects.iter().map(|o| (**o).clone()).collect();
+    let objs: Vec<rustfig_model::Object> = e.whole_doc().objects.iter().map(|o| (**o).clone()).collect();
     if uses_picture_file(&objs, doc_dir(e).as_deref(), Path::new(&path)) {
         return Err(EngineError::bad_params(format!(
             "\"{path}\" is an input file.\nExport aborted"

@@ -40,6 +40,8 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside.
 | Meta-Y | Show balloons (tooltips) | `app.toggle_balloons` | ✅ |
 | Meta-L | Show line lengths while drawing | — | ❌ D10 (the length display) |
 | Meta-F/E/V/H | Pop up the File/Edit/View/Help menu | `menus::XFIG_MENU_KEYS` | ✅ |
+| o | Open compound mode (`ModeOpenCompound`) | `tool.open_compound` | ✅ (D1) |
+| j | Join/Split mode (`ModeJoinSplit`) | `tool.join_split` | ✅ (D2) |
 
 ## Letters while a menu is open (`Fig*commands*…*translations`)
 

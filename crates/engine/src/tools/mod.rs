@@ -8,6 +8,7 @@
 // editing modes src/d_*.c and src/e_*.c (button behaviour, `set_mousefun`
 // wording) and src/w_canvas.c (snapping) (xfig licence, see LICENSE-xfig).
 
+mod compound;
 mod markers;
 pub use markers::{mode_mask, object_markers, ObjMask};
 
@@ -44,6 +45,8 @@ pub enum ToolKind {
     Text,
     Glue,
     Break,
+    OpenCompound,
+    JoinSplit,
     Scale,
     Align,
     Move,
@@ -64,7 +67,7 @@ pub enum ToolKind {
 }
 
 impl ToolKind {
-    pub const ALL: [ToolKind; 38] = [
+    pub const ALL: [ToolKind; 40] = [
         ToolKind::Select,
         ToolKind::CircleRadius,
         ToolKind::CircleDiameter,
@@ -86,6 +89,8 @@ impl ToolKind {
         ToolKind::Text,
         ToolKind::Glue,
         ToolKind::Break,
+        ToolKind::OpenCompound,
+        ToolKind::JoinSplit,
         ToolKind::Scale,
         ToolKind::Align,
         ToolKind::Move,
@@ -129,6 +134,8 @@ impl ToolKind {
             ToolKind::Text => "tool.text",
             ToolKind::Glue => "tool.glue",
             ToolKind::Break => "tool.break",
+            ToolKind::OpenCompound => "tool.open_compound",
+            ToolKind::JoinSplit => "tool.join_split",
             ToolKind::Scale => "tool.scale",
             ToolKind::Align => "tool.align",
             ToolKind::Move => "tool.move",
@@ -177,6 +184,8 @@ impl ToolKind {
             ToolKind::Text => "Text",
             ToolKind::Glue => "Glue into compound",
             ToolKind::Break => "Break compound",
+            ToolKind::OpenCompound => "Open compound",
+            ToolKind::JoinSplit => "Join/split lines and splines",
             ToolKind::Scale => "Scale",
             ToolKind::Align => "Align",
             ToolKind::Move => "Move",
@@ -220,6 +229,8 @@ impl ToolKind {
             ToolKind::Text => "T",
             ToolKind::Glue => "G",
             ToolKind::Break => "Shift+G",
+            ToolKind::OpenCompound => "O",
+            ToolKind::JoinSplit => "J",
             ToolKind::Align => "A",
             ToolKind::Move => "M",
             ToolKind::MovePoint => "Shift+M",
@@ -388,6 +399,9 @@ pub struct Overlay {
     pub handles: Vec<Point>,
     /// xfig's object markers of the active editing mode (`markers.rs`).
     pub markers: Vec<Point>,
+    /// Join/Split: the end point picked first, drawn as a magenta square of
+    /// 20 screen pixels (`draw_join_marker`).
+    pub join_marker: Option<Point>,
     pub text: Option<OverlayText>,
 }
 
@@ -434,6 +448,9 @@ pub(crate) enum ToolState {
     ThreePoints { pts: Vec<Point>, cursor: Point },
     /// Align mode, right button (W14): the reference object was clicked.
     AlignTo { reference: ObjectId },
+    /// Join/Split: the first end point was picked (`join_lines`,
+    /// `join_splines`); the next click picks the second.
+    Join { id: ObjectId, first: bool, spline: bool },
     Text {
         origin: Point,
         text: String,
@@ -708,6 +725,8 @@ impl Engine {
             ToolKind::MovePoint | ToolKind::AddPoint => self.point_event(ev),
             ToolKind::Scale => self.scale_event(ev),
             ToolKind::Delete => self.delete_event(ev),
+            ToolKind::OpenCompound => self.open_compound_event(ev),
+            ToolKind::JoinSplit => self.join_split_event(ev),
             _ => self.click_event(ev),
         }
     }
@@ -2275,6 +2294,15 @@ impl Engine {
             }
             ToolState::ThreePoints { pts, .. } => h("", "", if pts.len() < 2 { "second point" } else { "final point" }),
             ToolState::AlignTo { .. } => h("cancel", "", "align to first"),
+            ToolState::Join { spline, .. } => h(
+                if *spline {
+                    "Choose next Spline"
+                } else {
+                    "Choose next Line"
+                },
+                "",
+                "cancel",
+            ),
             ToolState::RubberBand {
                 click: true,
                 button: Button::Right,
@@ -2317,6 +2345,8 @@ impl Engine {
                     ToolKind::Text => ("position cursor", "", ""),
                     ToolKind::Glue => ("tag object", "tag region", glue),
                     ToolKind::Break => ("break compound", "break and tag", ""),
+                    ToolKind::OpenCompound => ("open compound", "open, keep visible", ""),
+                    ToolKind::JoinSplit => ("Join Lines/Splines", "Split Line/Spline", ""),
                     ToolKind::Scale => ("scale box", "scale about center", ""),
                     ToolKind::Align => ("align compound", "", ""),
                     ToolKind::Move => ("move object", "horiz/vert move", ""),
@@ -2352,6 +2382,9 @@ impl Engine {
                         ToolKind::Text if self.clipboard_text().is_some() => ("paste as text", r),
                         _ => (m, r),
                     }
+                } else if tool == ToolKind::JoinSplit {
+                    // No middle button: the right one splits.
+                    (m, "Split Line/Spline")
                 } else {
                     (m, r)
                 };
@@ -2366,7 +2399,7 @@ impl Engine {
     pub fn overlay(&self) -> Overlay {
         let mut ov = Overlay::default();
         match &self.tool_state {
-            ToolState::Idle => {}
+            ToolState::Idle | ToolState::Join { .. } => {}
             ToolState::Points {
                 pts, cursor, center, ..
             } => {
@@ -2513,6 +2546,7 @@ impl Engine {
                 }
             }
         }
+        ov.join_marker = self.join_marker();
         ov.markers = self.mode_markers();
         if ov.handles.is_empty() && matches!(self.tool_state, ToolState::Idle) && self.tool == ToolKind::Select {
             let ids = self.selection().to_vec();
@@ -2865,6 +2899,21 @@ mod tests {
                     .unwrap();
                 e.execute("edit.copy", &json!({})).unwrap();
             }
+            5 => {
+                // A line with a vertex at (0, 0): Join/Split can split it there.
+                e.execute(
+                    "shape.polyline",
+                    &json!({"points": [[-1200, 0], [0, 0], [1200, 0], [1200, 1200]]}),
+                )
+                .unwrap();
+            }
+            6 => {
+                // Two lines whose end points are at (0, 0) and (600, 900).
+                e.execute("shape.polyline", &json!({"points": [[0, 0], [0, -1200]]}))
+                    .unwrap();
+                e.execute("shape.polyline", &json!({"points": [[600, 900], [1800, 900]]}))
+                    .unwrap();
+            }
             _ => {
                 e.execute(
                     "shape.rectangle",
@@ -2893,7 +2942,7 @@ mod tests {
         let mut acted: BTreeMap<(String, &str, String, String, &str), bool> = BTreeMap::new();
         for scheme in [MouseScheme::Xfig, MouseScheme::Modern] {
             for tool in ToolKind::ALL {
-                for n in 0..5 {
+                for n in 0..7 {
                     let setup = |prefix: Option<Button>| {
                         let mut e = fixture(n);
                         e.set_mouse_scheme(scheme);

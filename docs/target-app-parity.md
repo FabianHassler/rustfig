@@ -1,6 +1,6 @@
 # Target-app parity assessment: RustFig vs xfig 3.2.9
 
-**Status:** 2026-10-21 (B15: PDF/EPS pictures, Export 66 → 68 %, overall ≈65 %); 2026-10-21 (DD9: evidence paths after the dedup series; scores unchanged); 2026-10-18, overall **≈65 %** (B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk; G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
+**Status:** 2026-10-21 (D1, D2: open compound and join/split, Editing 70 → 75 %); 2026-10-21 (B15: PDF/EPS pictures, Export 66 → 68 %, overall ≈65 %); 2026-10-21 (DD9: evidence paths after the dedup series; scores unchanged); 2026-10-18, overall **≈65 %** (B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk; G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
 
 ## Methodology
 
@@ -20,7 +20,7 @@ the score.
 | Area | Weight | Score | Missing | Hours |
 |------|-------:|------:|---------|------:|
 | Drawing modes | 12 | 88 % | library objects; dimension lines (Shift+left in polyline mode); xfig's click-to-close rules for some shapes | 14 |
-| Editing modes | 12 | 70 % | anchor point for flip/rotate (right button), array copy, align to canvas, figure comments from Edit mode, open compound (edit in place), join/split lines, chop, tangent/normal, angle/length/area measure modes, copy to library | 56 |
+| Editing modes | 12 | 75 % | anchor point for flip/rotate (right button), array copy, align to canvas, figure comments from Edit mode, chop, tangent/normal, angle/length/area measure modes, copy to library | 30 |
 | Attributes / indicator | 10 | 77 % | colour editor UI, Angle Geom (latex, manhattan, mountain), smart links, copy counts | 30 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
 | Export | 12 | 68 % | `sld`, texts with `\ooo` octal escapes (raw bytes, B11 pass 5), the audit's hardening passes (B11), arrows on pie-wedge arcs and file arc centres lost on the way through the Fig writer (gap #25), picture frames and GIF transparency (gap #26) | 90 |
@@ -31,11 +31,12 @@ the score.
 | Printing | 5 | 10 % | print dialog and printer output | 30 |
 | Settings & styles | 5 | 15 % | settings persistence, recent files, style manager, units dialog | 30 |
 | Platforms | 7 | 50 % | Windows/Linux verification, web build and file I/O on the web | 40 |
-| **Overall** | 100 | **≈64 %** | | **449** |
+| **Overall** | 100 | **≈65 %** | | **423** |
 
 ## Evidence of what ships
 
-- Drawing tools: `crates/engine/src/tools/mod.rs` (38 tools; tests draw polylines, boxes and text and move objects).
+- Open compound and join/split (D1, D2): `crates/model/src/lib.rs` (`Document::open`), `crates/engine/src/cmd/{compound,joinsplit}.rs`, `tools/compound.rs`; tests `crates/engine/tests/{open_compound,join_split}.rs`.
+- Drawing tools: `crates/engine/src/tools/mod.rs` (40 tools; tests draw polylines, boxes and text and move objects).
 - PDF/EPS pictures (B15): `fig2dev:crates/fig2dev/src/util/{pdfpic,pdfps,gs}.rs`, tests `tests/pdf_pictures*.rs` there (against the C fig2dev), canvas in `crates/engine/src/import.rs`, hostile files in `crates/engine/tests/import_fuzz.rs`.
 - Commands: `crates/engine/src/cmd/*`, swept with hostile parameters in `crates/engine/tests/command_sweep.rs`.
 - Fig I/O: `crates/format/src/fig_read.rs` (fig2dev's reader through `bridge/`), `fig_write.rs`; round trip and fuzzing in `crates/format/tests/`.

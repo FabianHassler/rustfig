@@ -156,6 +156,22 @@ impl Engine {
         &self.doc
     }
 
+    /// The whole figure for saving and exporting: with a compound open
+    /// (`compound.open`) the drawing waits in the open levels, and this
+    /// closes them in a copy (xfig's `close_all_compounds` before saving).
+    pub fn whole_doc(&self) -> std::borrow::Cow<'_, Document> {
+        if self.doc.open.is_empty() {
+            std::borrow::Cow::Borrowed(&self.doc)
+        } else {
+            std::borrow::Cow::Owned(self.doc.closed_all())
+        }
+    }
+
+    /// How many compounds are open, one inside the other.
+    pub fn open_compounds(&self) -> usize {
+        self.doc.open.len()
+    }
+
     /// Memory the undo and redo steps hold of their own (an estimate; they
     /// share unchanged objects with the document).
     pub fn undo_bytes(&self) -> usize {
@@ -496,12 +512,18 @@ impl Engine {
 
     /// Topmost top-level object within `tol` Fig units of `p`.
     pub fn hit_test(&self, p: Point, tol: f64) -> Option<ObjectId> {
+        self.hit_test_where(p, tol, &|_| true)
+    }
+
+    /// Topmost top-level object within `tol` of `p` that `accept` lets
+    /// through (xfig's searches skip what the mode's mask excludes).
+    pub fn hit_test_where(&self, p: Point, tol: f64, accept: &dyn Fn(&Object) -> bool) -> Option<ObjectId> {
         let boxes = self.object_bboxes();
         // (depth, xfig type rank, index): the front-most is the one drawn last.
         let mut best: Option<(i32, u8, usize)> = None;
         for (i, o) in self.doc.objects.iter().enumerate() {
             let Some((_, bb, _)) = boxes.get(i) else { break };
-            if !bb.expand(tol).contains(p) || !self.is_visible(o) {
+            if !bb.expand(tol).contains(p) || !self.is_visible(o) || !accept(o) {
                 continue;
             }
             let d = o.distance(p);

@@ -37,7 +37,34 @@ pub struct SceneOptions {
 }
 
 /// The scene of a document: its objects back to front, as xfig draws them.
+///
+/// With compounds open (`Document::open`) the scene is the open compound;
+/// where it was opened with "keep visible" the rest of the figure is drawn
+/// behind it, all gray (`redisplay_objects` in xfig's `u_redraw.c`).
 pub fn build_scene(doc: &Document, opts: &SceneOptions) -> Scene {
+    let mut backdrop: Vec<std::sync::Arc<Object>> = Vec::new();
+    for level in doc.open.iter().rev() {
+        if !level.keep_visible {
+            break;
+        }
+        backdrop.extend(level.parent.iter().cloned());
+    }
+    let mut prims = Vec::new();
+    if !backdrop.is_empty() {
+        let behind = Document {
+            settings: doc.settings.clone(),
+            colors: doc.colors.clone(),
+            objects: backdrop,
+            ..Document::default()
+        };
+        prims = scene_prims(&behind, opts);
+        prims.iter_mut().for_each(Prim::gray_out);
+    }
+    prims.extend(scene_prims(doc, opts));
+    Scene { prims }
+}
+
+fn scene_prims(doc: &Document, opts: &SceneOptions) -> Vec<Prim> {
     let mut leaves: Vec<(&Object, bool)> = Vec::with_capacity(doc.leaf_count());
     doc.for_each_leaf_xfig_order(&mut |o| {
         let hidden = opts.hidden_depths.contains(&o.depth());
@@ -59,7 +86,7 @@ pub fn build_scene(doc: &Document, opts: &SceneOptions) -> Scene {
             }
         }
     }
-    Scene { prims }
+    prims
 }
 
 fn color(doc: &Document, c: ColorRef) -> Rgba {

@@ -689,13 +689,7 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
         .show(ctx, |ui| {
             for (id, label, on) in [
                 ("app.toggle_layout", "Classic xfig layout", app.classic()),
-                (
-                    "tool.mouse_buttons",
-                    "xfig mouse buttons (3 buttons)",
-                    app.engine.mouse_scheme() == rustfig_engine::MouseScheme::Xfig,
-                ),
-                ("app.toggle_xfig_keys", "xfig keyboard accelerators", app.xfig_keys),
-                ("app.toggle_indicator", "Show attribute panel", app.show_indicator),
+                ("app.toggle_xfig_keys", "xfig keyboard shortcuts", app.xfig_keys),
                 // xfig's Global Settings panel repeats the View menu's switches.
                 (
                     "view.toggle_page_border",
@@ -704,11 +698,6 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
                 ),
                 ("app.toggle_depths", "Show depth manager", app.show_depths),
                 ("app.toggle_balloons", "Show info balloons", app.show_balloons),
-                (
-                    "app.toggle_vector_icons",
-                    "Sharp attribute pictures (off: xfig's bitmaps)",
-                    app.vector_icons,
-                ),
             ] {
                 let mut v = on;
                 if ui.checkbox(&mut v, label).changed() {

@@ -40,7 +40,7 @@
 // Ported from xfig src/u_markers.c, src/w_modepanel.c and src/object.h
 // (xfig licence, see LICENSE-xfig).
 
-use super::ToolKind;
+use super::{ToolKind, ToolState};
 use crate::Engine;
 use rustfig_geom::{Affine, Point, Rect};
 use rustfig_model::{Object, ObjectKind, PolyKind};
@@ -127,7 +127,8 @@ pub fn mode_mask(tool: ToolKind, rotate_angle: f64) -> ObjMask {
                 ObjMask::ROTATE_ANGLE
             }
         }
-        T::Break | T::Align => ObjMask::COMPOUND,
+        T::Break | T::Align | T::OpenCompound => ObjMask::COMPOUND,
+        T::JoinSplit => ObjMask::POLYLINE.union(ObjMask::SPLINE),
         T::Scale | T::MovePoint | T::FlipV | T::FlipH => ObjMask::NO_TEXT,
         T::AddPoint | T::DeletePoint => ObjMask::VARPTS_OBJECT,
         T::Convert => ObjMask::VARPTS_OBJECT.union(ObjMask::POLYLINE_BOX),
@@ -172,6 +173,15 @@ pub fn object_markers(o: &Object, bbox: &Rect, out: &mut Vec<Point>) {
 impl Engine {
     /// The object mask of the active tool (see the table above).
     pub fn marker_mask(&self) -> ObjMask {
+        // Join/Split, after the first end point: only what can be joined
+        // to it (`join_lines`, `join_splines`: `update_markers`).
+        if let ToolState::Join { spline, .. } = self.tool_state {
+            return if spline {
+                ObjMask::SPLINE_OPEN
+            } else {
+                ObjMask::POLYLINE_LINE
+            };
+        }
         mode_mask(self.tool(), self.indicator.rotate_angle)
     }
 
@@ -187,7 +197,7 @@ impl Engine {
     pub fn mode_markers(&self) -> Vec<Point> {
         let mask = self.marker_mask();
         let mut out = Vec::new();
-        if mask == ObjMask::NONE || self.tool_busy() {
+        if mask == ObjMask::NONE || (self.tool_busy() && !self.joining()) {
             return out;
         }
         let view = self.view.visible();
@@ -338,6 +348,19 @@ mod tests {
             (T::Update, ALL.to_vec()),
             (T::Edit, ALL.to_vec()),
             (T::Break, vec!["compound"]),
+            (T::OpenCompound, vec!["compound"]),
+            (
+                T::JoinSplit,
+                vec![
+                    "line",
+                    "polygon",
+                    "box",
+                    "arcbox",
+                    "picture",
+                    "spline_open",
+                    "spline_closed",
+                ],
+            ),
             (T::Align, vec!["compound"]),
             (T::Scale, no_text.clone()),
             (T::MovePoint, no_text.clone()),
