@@ -8,7 +8,7 @@ egui does those itself.
 
 Legend: ✅ works as in xfig · 🟡 partly · ❌ missing (task) · ↻ replaced by a
 modern equivalent. Meta is Alt (Option on macOS); xfig binds Meta and Alt
-alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside.
+alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside: on macOS always (Cmd), on Linux and Windows wherever xfig's Ctrl keys leave them free (W20); a menu entry shows xfig's key, or the platform's where xfig has none.
 
 ## Accelerators (`Fig*accelerators`)
 

@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-22 | W20: platform edit keys next to xfig's: Cmd+X/C/V on macOS (and Ctrl+X/V elsewhere) now reach cut, copy and paste; menus show xfig's accelerator, or the platform shortcut where xfig has none and its keys leave it free (on Linux and Windows xfig's Ctrl keys win). |
 | 2026-10-21 | E15: Export on save — the Export dialog's "Also export on every save" keeps the chosen file and options up to date on every save; `file.export_on_save` command, per-figure `Document::export_on_save`, stored in `.fig` as a `# RustFigExportOnSave` comment and in `.rustfig` as JSON; save stands when the automatic export fails. |
 | 2026-10-21 | W10-1: Update Control: every attribute button has an update box in Update mode, plus Set/Clear/Toggle all; Update, update region, lasso and update settings copy only the flagged attributes; commands `indicator.set_update_flag`, `indicator.update_flags`. |
 | 2026-10-21 | W15: lasso in every region selection (press and drag with the middle or right button in Glue, Delete, Update, Move and Delete point selects what lies completely inside the freehand path; click, move, click keeps xfig's rectangle; drawn in the overlay, hints say "drag: lasso"); fixed Delete's middle region with an empty selection. |

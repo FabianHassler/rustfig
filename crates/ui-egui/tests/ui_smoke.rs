@@ -1486,3 +1486,23 @@ fn saving_inside_an_open_compound_asks_all_or_part() {
     assert!(h.state().quit_requested());
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn the_platforms_cut_and_paste_keys_reach_the_clipboard_commands() {
+    // Cmd+X/V (macOS) and Ctrl+X/V arrive as clipboard events, not keys.
+    let mut h = harness(app());
+    h.state_mut()
+        .engine
+        .execute(
+            "shape.rectangle",
+            &json!({"x": 600, "y": 600, "width": 1200, "height": 600}),
+        )
+        .unwrap();
+    h.state_mut().engine.execute("edit.select_all", &json!({})).unwrap();
+    h.event(egui::Event::Cut);
+    h.run_steps(2);
+    assert!(h.state().engine.doc().objects.is_empty(), "cut");
+    h.event(egui::Event::Paste(String::new()));
+    h.run_steps(2);
+    assert_eq!(h.state().engine.doc().objects.len(), 1, "pasted once");
+}

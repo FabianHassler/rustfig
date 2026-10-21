@@ -528,13 +528,7 @@ fn menu_entry(app: &mut App, ui: &mut egui::Ui, label: &str, id: &str) {
         Some(false) => format!("    {label}"),
         None => label.to_string(),
     };
-    // With xfig's keys on, an entry shows xfig's accelerator or none
-    // (xfig's Unzoom has none), never RustFig's own shortcut.
-    let shortcut = if app.xfig_keys {
-        xfig_accelerator(id).map(xfig_key_label).unwrap_or_default()
-    } else {
-        display_shortcut(label_of(id).1)
-    };
+    let shortcut = entry_keys(id, app.xfig_keys, cfg!(target_os = "macos"));
     let mut b = egui::Button::new(text);
     if !shortcut.is_empty() {
         b = b.shortcut_text(shortcut);
@@ -665,6 +659,47 @@ pub fn snap_menu(app: &mut App, ui: &mut egui::Ui) {
             }
         }
     }
+}
+
+/// The key a menu entry shows: with xfig's keys on, xfig's accelerator, or
+/// else the platform's shortcut where xfig's keys leave it free (always on
+/// macOS, where the platform's shortcuts use Cmd and xfig's Ctrl and Option;
+/// on Linux and Windows not where xfig's Ctrl keys take it); otherwise the
+/// platform's shortcut.
+fn entry_keys(id: &str, xfig_keys: bool, mac: bool) -> String {
+    let platform = label_of(id).1;
+    let platform = if platform.is_empty() || (xfig_keys && shadowed_by_xfig(platform, mac)) {
+        String::new()
+    } else if mac {
+        platform.replace("Ctrl+", "⌘").replace("Shift+", "⇧")
+    } else {
+        platform.to_string()
+    };
+    let xfig = if xfig_keys {
+        xfig_accelerator(id).map(|k| key_label(k, mac)).unwrap_or_default()
+    } else {
+        String::new()
+    };
+    // One key per entry: xfig's where it has one.
+    if xfig.is_empty() {
+        platform
+    } else {
+        xfig
+    }
+}
+
+/// Whether one of xfig's Ctrl keys takes the platform shortcut `s` (Linux
+/// and Windows, where the platform's Ctrl is xfig's Ctrl too; xfig's keys are
+/// handled first).
+fn shadowed_by_xfig(s: &str, mac: bool) -> bool {
+    let Some(k) = parse_shortcut(s) else { return false };
+    !mac && k.modifiers.command
+        && XFIG_KEYS
+            .iter()
+            .filter_map(|(spec, _)| parse_xfig_key(spec))
+            .any(|(alt, shift, ctrl, key)| {
+                ctrl && key == k.logical_key && shift == k.modifiers.shift && alt == k.modifiers.alt
+            })
 }
 
 /// Human-readable shortcut ("Ctrl" shows as ⌘ on macOS).
@@ -992,9 +1027,33 @@ pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
     if backspace_deletes {
         app.run("edit.delete", json!({}));
     }
+    let mut ran = Vec::new();
     for (id, k) in all {
         if ctx.input_mut(|i| i.consume_shortcut(&k)) && app.enabled(id) {
             app.run(id, json!({}));
+            ran.push(id);
+        }
+    }
+    // The platform's cut, copy and paste keys (Cmd+X/C/V on macOS, Ctrl+X/C/V
+    // elsewhere) reach egui as clipboard events, not as key presses. On Linux
+    // and Windows xfig's Ctrl-C (Copy mode) keeps the key while xfig's keys
+    // are on.
+    let mac = cfg!(target_os = "macos");
+    let clip: Vec<&'static str> = ctx.input(|i| {
+        i.events
+            .iter()
+            .filter_map(|e| match e {
+                egui::Event::Cut => Some("edit.cut"),
+                egui::Event::Copy if mac || !app.xfig_keys => Some("edit.copy"),
+                egui::Event::Paste(_) => Some("edit.paste"),
+                _ => None,
+            })
+            .collect()
+    });
+    for id in clip {
+        if !ran.contains(&id) && app.enabled(id) {
+            app.run(id, json!({}));
+            ran.push(id);
         }
     }
 }
@@ -1123,6 +1182,22 @@ mod tests {
         assert_eq!(key_label("PhysCtrl+L", true), "Ctrl+L");
         assert_eq!(xfig_key_label("Z"), "z");
         assert_eq!(xfig_accelerator("edit.undo"), Some("Alt+U"));
+    }
+
+    #[test]
+    fn menus_show_the_platform_keys_xfig_leaves_free() {
+        // macOS: Cmd never clashes with xfig's Ctrl and Option keys.
+        assert_eq!(entry_keys("edit.undo", true, true), "Option+U");
+        assert_eq!(entry_keys("edit.copy", true, true), "⌘C");
+        // Linux and Windows: xfig's Ctrl-Z (zoom fit) and Ctrl-C (Copy mode)
+        // take the keys; Ctrl+X and Ctrl+V stay free.
+        assert_eq!(entry_keys("edit.undo", true, false), "Alt+U");
+        assert_eq!(entry_keys("edit.copy", true, false), "");
+        assert_eq!(entry_keys("edit.cut", true, false), "Ctrl+X");
+        assert_eq!(entry_keys("edit.paste", true, false), "Alt+T");
+        assert_eq!(entry_keys("view.zoom_fit", true, false), "Ctrl+Z");
+        // Without xfig's keys, the platform's shortcuts.
+        assert_eq!(entry_keys("edit.undo", false, false), "Ctrl+Z");
     }
 
     #[test]
