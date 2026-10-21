@@ -300,11 +300,11 @@ impl App {
                 UiRequest::EditObject { id } => self.dialogs.open_edit(&self.engine, id),
                 UiRequest::EditFigureComments => self.dialogs.open_figure_comments(&self.engine),
                 UiRequest::EditSplinePoint { id, index } => self.dialogs.open_spline_point(&self.engine, id, index),
-                UiRequest::PickPicture { rect } => {
+                UiRequest::PickPicture { rect, keep_aspect } => {
                     if let Some(path) = self.file_dialogs.pick_file("Pictures", dialogs::PICTURE_EXTS) {
                         self.run(
                             "shape.picture",
-                            json!({"path": path, "x": rect.min.x, "y": rect.min.y, "width": rect.width(), "height": rect.height()}),
+                            json!({"path": path, "x": rect.min.x, "y": rect.min.y, "width": rect.width(), "height": rect.height(), "keep_aspect": keep_aspect}),
                         );
                     }
                 }

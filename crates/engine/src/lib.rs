@@ -46,7 +46,7 @@ type BoxEntry = (Arc<Object>, Rect, std::cell::Cell<Option<Rect>>);
 #[derive(Debug, Clone, PartialEq)]
 pub enum UiRequest {
     /// Choose a picture file to place in `rect` (Fig units).
-    PickPicture { rect: Rect },
+    PickPicture { rect: Rect, keep_aspect: bool },
     /// Open the attribute editor for an object.
     EditObject { id: ObjectId },
     /// Edit the whole figure's comments (xfig's middle button in Edit mode).
@@ -470,6 +470,28 @@ impl Engine {
             .filter(|(o, _, b)| self.is_visible(o) && r.contains_rect(&b.get().unwrap_or(Rect::EMPTY)))
             .map(|(o, ..)| o.id)
             .collect()
+    }
+
+    /// Visible top-level objects completely inside `r` that `mask` lets
+    /// through (the region of the functions on xfig's free buttons).
+    pub fn objects_in_region(&self, r: &Rect, mask: tools::ObjMask) -> Vec<ObjectId> {
+        self.objects_within(r)
+            .into_iter()
+            .filter(|id| self.doc.get(*id).is_some_and(|o| mask.admits(o)))
+            .collect()
+    }
+
+    /// The lines of text in the clipboard's text objects, if it holds any.
+    pub fn clipboard_text(&self) -> Option<Vec<String>> {
+        let lines: Vec<String> = self
+            .clipboard
+            .iter()
+            .filter_map(|o| match &o.kind {
+                ObjectKind::Text(t) => Some(t.text.clone()),
+                _ => None,
+            })
+            .collect();
+        (!lines.is_empty()).then_some(lines)
     }
 
     /// Topmost top-level object within `tol` Fig units of `p`.

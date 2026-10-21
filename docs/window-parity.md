@@ -346,3 +346,4 @@ Nothing in group 1 needed an in-place fix: labels, order, accelerators and defau
 | 2026-10-21 | W11: main window look (3D buttons, mode panel fits, compact mouse box, rulers as xfig), screenshots `target/window-parity/w11-*.png`. |
 | 2026-10-21 | Group 3 (object edit panels) compared with captures of the real X11 xfig; position rows, arrow rows, arc type, text flags, units, Cancel-restores, figure comments and the spline point panel added; W10-15 to W10-17 added. |
 | 2026-10-21 | Group 4 (settings and tool windows) compared with captures of the real X11 xfig; Search and Replace, About, Messages and the Global settings view rows fixed; W10-23 and W10-24 added; six proposed modernisations. |
+| 2026-10-21 | W13, W14: mouse box per mode with the new free-button functions, screenshots `target/window-parity/w14-*.png` (update band, circle by three points, centre box). |

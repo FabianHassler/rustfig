@@ -399,6 +399,12 @@ pub(crate) enum Band {
     /// Tag the objects inside for gluing (they join the selection).
     Tag,
     Delete,
+    /// Update mode, right button (W13): update everything inside.
+    UpdateRegion,
+    /// Move mode, right button (W14): move everything inside.
+    MoveRegion,
+    /// Delete point mode, middle button (W14): delete the points inside.
+    DeletePoints,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -421,7 +427,13 @@ pub(crate) enum ToolState {
         /// middle button).
         kind: ToolKind,
         button: Button,
+        /// Shift was held when the drag began (centre boxes: a square).
+        square: bool,
     },
+    /// Circle through three points (right button, W14).
+    ThreePoints { pts: Vec<Point>, cursor: Point },
+    /// Align mode, right button (W14): the reference object was clicked.
+    AlignTo { reference: ObjectId },
     Text {
         origin: Point,
         text: String,
@@ -444,6 +456,8 @@ pub(crate) enum ToolState {
         purpose: Band,
         /// Opened by a click; the next click closes it.
         click: bool,
+        /// The button that opened it (a click with it closes it).
+        button: Button,
     },
     PointDrag {
         id: ObjectId,
@@ -488,6 +502,35 @@ pub fn edit_points(o: &Object) -> Vec<Point> {
 }
 
 /// Keep only the larger of the horizontal and vertical components.
+/// How many points of a line, polygon or spline lie inside `r`.
+fn region_points(o: &Object, r: &Rect) -> Option<usize> {
+    if !matches!(o.kind, ObjectKind::Polyline(_) | ObjectKind::Spline(_))
+        || !mode_mask(ToolKind::DeletePoint, 90.0).admits(o)
+    {
+        return None;
+    }
+    o.points().map(|p| p.iter().filter(|q| r.contains(**q)).count())
+}
+
+/// The centre of a regular polygon of `sides` sides that has the side from
+/// `a` to `b`, on the side where `b` follows `a` in `regular_polygon`'s order.
+fn side_polygon_center(a: Point, b: Point, sides: usize) -> Option<Point> {
+    let n = sides.clamp(3, 1000);
+    let s = a.dist(b);
+    if !s.is_finite() || s < 1e-6 {
+        return None;
+    }
+    let apothem = s / (2.0 * (std::f64::consts::PI / n as f64).tan());
+    let mid = a.lerp(b, 0.5);
+    let dir = (b - a) * (1.0 / s);
+    let normal = Point::new(-dir.y, dir.x);
+    [1.0, -1.0].into_iter().map(|k| mid + normal * (apothem * k)).find(|c| {
+        regular_polygon(*c, a, n)
+            .get(1)
+            .is_some_and(|q| q.dist(b) < s * 1e-6 + 1e-6)
+    })
+}
+
 fn constrain_delta(d: Point) -> Point {
     if d.x.abs() >= d.y.abs() {
         Point::new(d.x, 0.0)
@@ -862,14 +905,68 @@ impl Engine {
     fn drag_event(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
         let tol = self.pick_tol();
         match ev {
-            ToolEvent::Press { pos, button, .. } => {
+            ToolEvent::Press { pos, button, shift } => {
+                let p = self.snap(pos);
+                let circle = matches!(self.tool, ToolKind::CircleRadius | ToolKind::CircleDiameter);
+                let picture = self.tool == ToolKind::Picture;
+                // xfig leaves the right button free in the circle and
+                // picture modes: a circle through three points, a picture
+                // that keeps its proportions.
+                if self.xfig_buttons() && button == Button::Right {
+                    match self.tool_state.clone() {
+                        ToolState::ThreePoints { mut pts, .. } if circle => {
+                            pts.push(p);
+                            if pts.len() < 3 {
+                                self.tool_state = ToolState::ThreePoints { pts, cursor: p };
+                                return Ok(());
+                            }
+                            self.tool_state = ToolState::Idle;
+                            return self.finish_three_points(&pts);
+                        }
+                        ToolState::Idle if circle => {
+                            self.tool_state = ToolState::ThreePoints {
+                                pts: vec![p],
+                                cursor: p,
+                            };
+                            return Ok(());
+                        }
+                        ToolState::Idle if picture => {
+                            self.tool_state = ToolState::Drag {
+                                start: p,
+                                cursor: p,
+                                dragged: false,
+                                kind: ToolKind::Picture,
+                                button,
+                                square: false,
+                            };
+                            return Ok(());
+                        }
+                        ToolState::Drag {
+                            start,
+                            kind: ToolKind::Picture,
+                            button: Button::Right,
+                            ..
+                        } => {
+                            self.tool_state = ToolState::Idle;
+                            return self.finish_drag(ToolKind::Picture, start, p, true);
+                        }
+                        _ => {}
+                    }
+                }
+                if matches!(self.tool_state, ToolState::ThreePoints { .. }) {
+                    // Only the right button works until the circle is done.
+                    return Ok(());
+                }
                 if button == Button::Right {
                     self.tool_state = ToolState::Idle;
                     return Ok(());
                 }
-                let p = self.snap(pos);
                 if let ToolState::Drag {
-                    start, kind, button: b, ..
+                    start,
+                    kind,
+                    button: b,
+                    square,
+                    ..
                 } = self.tool_state
                 {
                     // xfig: an ellipse is finished with either button.
@@ -878,7 +975,8 @@ impl Engine {
                         return Ok(());
                     }
                     self.tool_state = ToolState::Idle;
-                    return self.finish_drag(kind, start, p);
+                    let (a, c) = self.drag_span(kind, b, square, start, p);
+                    return self.finish_drag(kind, a, c, false);
                 }
                 let Some(kind) = self.drag_kind(button) else {
                     return Ok(());
@@ -889,11 +987,15 @@ impl Engine {
                     dragged: false,
                     kind,
                     button,
+                    square: shift && button == Button::Middle,
                 };
                 Ok(())
             }
             ToolEvent::Move { pos } => {
                 let p = self.snap(pos);
+                if let ToolState::ThreePoints { cursor, .. } = &mut self.tool_state {
+                    *cursor = p;
+                }
                 if let ToolState::Drag {
                     start, cursor, dragged, ..
                 } = &mut self.tool_state
@@ -912,12 +1014,14 @@ impl Engine {
                     dragged: true,
                     kind,
                     button: b,
+                    square,
                     ..
                 } = self.tool_state
                 {
                     if b == button && start.dist(p) > tol {
                         self.tool_state = ToolState::Idle;
-                        return self.finish_drag(kind, start, p);
+                        let (a, c) = self.drag_span(kind, b, square, start, p);
+                        return self.finish_drag(kind, a, c, b == Button::Right);
                     }
                 }
                 Ok(())
@@ -942,6 +1046,15 @@ impl Engine {
             Button::Left => Some(t),
             Button::Middle if by_radius => Some(ToolKind::EllipseRadii),
             Button::Middle if by_diameter => Some(ToolKind::EllipseDiameter),
+            // Boxes and pictures from the centre, a regular polygon by one side.
+            Button::Middle
+                if matches!(
+                    t,
+                    ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture | ToolKind::RegularPolygon
+                ) =>
+            {
+                Some(t)
+            }
             _ => None,
         }
     }
@@ -989,10 +1102,50 @@ impl Engine {
         Some(o)
     }
 
-    fn finish_drag(&mut self, kind: ToolKind, a: Point, b: Point) -> Result<(), EngineError> {
+    /// The two points a drag shape is made from. The middle button draws
+    /// a box or picture from its centre (Shift: a square) and a regular
+    /// polygon by the ends of one side (W14); otherwise the points are the
+    /// ones dragged.
+    fn drag_span(&self, kind: ToolKind, button: Button, square: bool, a: Point, b: Point) -> (Point, Point) {
+        if !self.xfig_buttons() || button != Button::Middle {
+            return (a, b);
+        }
+        match kind {
+            ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture => {
+                let mut d = b - a;
+                if square {
+                    let s = d.x.abs().max(d.y.abs());
+                    d = Point::new(if d.x < 0.0 { -s } else { s }, if d.y < 0.0 { -s } else { s });
+                }
+                (a - d, a + d)
+            }
+            ToolKind::RegularPolygon => match side_polygon_center(a, b, self.indicator.sides) {
+                Some(c) => (c, a),
+                None => (a, a),
+            },
+            _ => (a, b),
+        }
+    }
+
+    /// A circle through three points (right button in the circle modes).
+    fn finish_three_points(&mut self, pts: &[Point]) -> Result<(), EngineError> {
+        let kind = if self.tool == ToolKind::CircleDiameter {
+            "diameter"
+        } else {
+            "radius"
+        };
+        let pts: Vec<[f64; 2]> = pts.iter().map(|p| [p.x, p.y]).collect();
+        self.execute("shape.circle3", &json!({"points": pts, "kind": kind}))?;
+        Ok(())
+    }
+
+    fn finish_drag(&mut self, kind: ToolKind, a: Point, b: Point, keep_aspect: bool) -> Result<(), EngineError> {
         if kind == ToolKind::Picture {
             if a.dist(b) > 1e-6 {
-                self.request(UiRequest::PickPicture { rect: Rect::new(a, b) });
+                self.request(UiRequest::PickPicture {
+                    rect: Rect::new(a, b),
+                    keep_aspect,
+                });
             }
             return Ok(());
         }
@@ -1010,7 +1163,17 @@ impl Engine {
                 let typing = matches!(self.tool_state, ToolState::Text { .. });
                 match button {
                     // xfig: the middle button finishes the text (`d_text.c`).
-                    Button::Middle => return if typing { self.finish_text() } else { Ok(()) },
+                    Button::Middle => {
+                        if typing {
+                            return self.finish_text();
+                        }
+                        // W14: paste the clipboard's text as a new text.
+                        if self.xfig_buttons() && self.clipboard_text().is_some() {
+                            let p = self.snap(pos);
+                            self.execute("edit.paste_text", &json!({"x": p.x, "y": p.y}))?;
+                        }
+                        return Ok(());
+                    }
                     // xfig: the right button cancels it (an edited text keeps
                     // its old string); the modern scheme finishes it.
                     Button::Right => {
@@ -1208,6 +1371,7 @@ impl Engine {
                             cursor: pos,
                             purpose: if shift { Band::SelectAdd } else { Band::Select },
                             click: false,
+                            button: Button::Left,
                         };
                     }
                 }
@@ -1247,7 +1411,16 @@ impl Engine {
             }
             ToolEvent::Release {
                 button: Button::Right, ..
-            } => Ok(()),
+            } if !matches!(
+                self.tool_state,
+                ToolState::RubberBand {
+                    button: Button::Right,
+                    ..
+                }
+            ) =>
+            {
+                Ok(())
+            }
             ToolEvent::Release { pos, .. } => match self.tool_state.clone() {
                 ToolState::MoveObjs {
                     ids,
@@ -1349,6 +1522,49 @@ impl Engine {
                     }
                 }
                 self.set_selection(sel);
+            }
+            Band::UpdateRegion | Band::MoveRegion | Band::DeletePoints => {
+                let (a, b) = (r.min, r.max);
+                let mask = mode_mask(self.tool, self.indicator.rotate_angle);
+                let found = self.objects_in_region(&r, mask);
+                let rp = json!({"x1": a.x, "y1": a.y, "x2": b.x, "y2": b.y});
+                match purpose {
+                    Band::UpdateRegion => {
+                        if found.is_empty() {
+                            self.set_status("No objects completely inside the region");
+                        } else {
+                            self.execute("object.update_region", &rp)?;
+                        }
+                    }
+                    Band::MoveRegion => {
+                        if found.is_empty() {
+                            self.set_status("No objects completely inside the region");
+                        } else {
+                            // Place the whole region with the next click.
+                            self.set_selection(found.clone());
+                            self.tool_state = ToolState::MoveObjs {
+                                ids: found,
+                                start: end,
+                                cursor: end,
+                                copy: false,
+                                dragging: false,
+                                constrain: false,
+                            };
+                        }
+                    }
+                    _ => {
+                        let has = self
+                            .doc()
+                            .objects
+                            .iter()
+                            .any(|o| self.is_visible(o) && region_points(o, &r).is_some_and(|n| n > 0));
+                        if has {
+                            self.execute("point.delete_region", &rp)?;
+                        } else {
+                            self.set_status("No point of a line or spline inside the region");
+                        }
+                    }
+                }
             }
             Band::Delete => {
                 if !inside.is_empty() {
@@ -1452,9 +1668,18 @@ impl Engine {
     fn move_event(&mut self, ev: ToolEvent, copy: bool) -> Result<(), EngineError> {
         if let ToolEvent::Press { pos, button, .. } = ev {
             let tol = self.pick_tol();
+            if matches!(self.tool_state, ToolState::RubberBand { .. }) {
+                // Only the button that opened the region closes it.
+                if button == Button::Right {
+                    return self.region_click(pos, Band::MoveRegion, Button::Right);
+                }
+                return Ok(());
+            }
             if button == Button::Right {
                 if self.tool_busy() {
                     self.tool_state = ToolState::Idle;
+                } else if !copy && self.xfig_buttons() {
+                    return self.region_click(pos, Band::MoveRegion, Button::Right);
                 } else if copy {
                     // xfig: copy the object to the cut buffer.
                     if let Some(id) = self.pick(pos, tol) {
@@ -1506,6 +1731,36 @@ impl Engine {
             }
             let constrain = button == Button::Middle;
             if constrain && self.tool == ToolKind::AddPoint {
+                // W14: a point beyond the nearer end of an open line or spline.
+                if self.tool_busy() {
+                    return Ok(());
+                }
+                let tol = self.pick_tol();
+                if let Some(id) = self.pick(pos, tol) {
+                    let ends = match self.doc().get(id).map(|o| &o.kind) {
+                        Some(ObjectKind::Polyline(pl)) if pl.kind == PolyKind::Polyline => Some(&pl.points),
+                        Some(ObjectKind::Spline(sp)) if !sp.closed => Some(&sp.points),
+                        _ => None,
+                    };
+                    if let Some(pts) = ends {
+                        if let (Some(first), Some(last)) = (pts.first(), pts.last()) {
+                            let index = if pos.dist(*first) < pos.dist(*last) {
+                                0
+                            } else {
+                                pts.len()
+                            };
+                            self.tool_state = ToolState::PointDrag {
+                                id,
+                                index,
+                                insert: true,
+                                start: pos,
+                                cursor: pos,
+                                dragging: true,
+                                constrain: false,
+                            };
+                        }
+                    }
+                }
                 return Ok(());
             }
             if let ToolState::PointDrag {
@@ -1662,7 +1917,7 @@ impl Engine {
                         self.execute("object.group", &json!({ "ids": ids }))?;
                     }
                 }
-                Button::Middle => self.region_click(pos, Band::Tag)?,
+                Button::Middle => self.region_click(pos, Band::Tag, Button::Middle)?,
                 Button::Left => {
                     if self.tool_busy() {
                         return Ok(());
@@ -1685,6 +1940,7 @@ impl Engine {
                                 cursor: pos,
                                 purpose: Band::Tag,
                                 click: false,
+                                button: Button::Left,
                             };
                         }
                     }
@@ -1697,14 +1953,18 @@ impl Engine {
 
     /// xfig's region by two clicks: the first opens a band, the second
     /// (with the same button) closes it.
-    fn region_click(&mut self, pos: Point, purpose: Band) -> Result<(), EngineError> {
+    fn region_click(&mut self, pos: Point, purpose: Band, button: Button) -> Result<(), EngineError> {
         if let ToolState::RubberBand {
             start,
             purpose: p,
             click: true,
+            button: b,
             ..
         } = self.tool_state
         {
+            if b != button {
+                return Ok(());
+            }
             self.tool_state = ToolState::Idle;
             return self.finish_band(p, start, pos);
         }
@@ -1713,6 +1973,7 @@ impl Engine {
             cursor: pos,
             purpose,
             click: true,
+            button,
         };
         Ok(())
     }
@@ -1723,7 +1984,7 @@ impl Engine {
         if let ToolEvent::Press { pos, button, .. } = ev {
             let tol = self.pick_tol();
             match button {
-                Button::Middle => return self.region_click(pos, Band::Delete),
+                Button::Middle => return self.region_click(pos, Band::Delete, Button::Middle),
                 Button::Right if self.tool_busy() => self.tool_state = ToolState::Idle,
                 Button::Left if self.tool_busy() => {}
                 Button::Left | Button::Right => {
@@ -1748,10 +2009,54 @@ impl Engine {
 
     fn click_event(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
         let ToolEvent::Press { pos, button, shift } = ev else {
-            return Ok(());
+            return if self.tool_busy() { self.drag_common(ev) } else { Ok(()) };
         };
         let tol = self.pick_tol();
         let tool = self.tool;
+        if self.xfig_buttons() {
+            // Functions on the buttons xfig leaves free (W13, W14).
+            match self.tool_state.clone() {
+                ToolState::RubberBand {
+                    purpose,
+                    button: opened_by,
+                    ..
+                } => {
+                    if button == opened_by {
+                        return self.region_click(pos, purpose, opened_by);
+                    }
+                    if button == Button::Right {
+                        self.tool_state = ToolState::Idle;
+                    }
+                    return Ok(());
+                }
+                ToolState::AlignTo { reference } => {
+                    match button {
+                        Button::Left => self.tool_state = ToolState::Idle,
+                        Button::Right => {
+                            if let Some(id) = self.pick(pos, tol).filter(|i| *i != reference) {
+                                self.set_selection(vec![id]);
+                                self.execute("arrange.align_to", &json!({"reference": reference.0, "ids": [id.0]}))?;
+                            }
+                        }
+                        Button::Middle => {}
+                    }
+                    return Ok(());
+                }
+                _ => {}
+            }
+            match (tool, button) {
+                (ToolKind::Update, Button::Right) => return self.region_click(pos, Band::UpdateRegion, button),
+                (ToolKind::DeletePoint, Button::Middle) => return self.region_click(pos, Band::DeletePoints, button),
+                (ToolKind::Align, Button::Right) => {
+                    if let Some(id) = self.pick(pos, tol) {
+                        self.set_selection(vec![id]);
+                        self.tool_state = ToolState::AlignTo { reference: id };
+                    }
+                    return Ok(());
+                }
+                _ => {}
+            }
+        }
         if tool == ToolKind::DeletePoint {
             if button == Button::Left {
                 if let Some((id, index)) = self.find_vertex(pos, tol) {
@@ -1808,6 +2113,22 @@ impl Engine {
                 // Middle: "break and tag" keeps the parts tagged (selected).
                 if button == Button::Left {
                     self.set_selection(Vec::new());
+                }
+            }
+            (ToolKind::Break, Button::Right) if is_compound && self.xfig_buttons() => {
+                self.set_selection(vec![id]);
+                self.execute("object.break_all", &json!({ "ids": ids }))?;
+            }
+            (ToolKind::Arrow, Button::Right) if self.xfig_buttons() => {
+                let has = matches!(
+                    self.doc().get(id).and_then(Object::arrows),
+                    Some((f, b)) if f.is_some() || b.is_some()
+                );
+                if has {
+                    self.set_selection(vec![id]);
+                    self.execute("object.reverse_arrows", &json!({ "ids": ids }))?;
+                } else {
+                    self.set_status("The object has no arrow to reverse");
                 }
             }
             (ToolKind::Align, Button::Left) if is_compound => {
@@ -1934,6 +2255,7 @@ impl Engine {
             ToolState::Drag { kind, button, .. } => {
                 // xfig finishes an ellipse with either button (`d_ellipse.c`).
                 match kind {
+                    _ if *button == Button::Right => h("", "", "final point"),
                     ToolKind::EllipseRadii if xfig => h("Ellipse corner", "Ellipse corner", "cancel"),
                     ToolKind::EllipseDiameter if xfig => h("final corner", "final corner", "cancel"),
                     ToolKind::CircleRadius => on(*button, "set radius", "cancel"),
@@ -1951,6 +2273,13 @@ impl Engine {
                 let b = if *constrain { Button::Middle } else { Button::Left };
                 on(b, if *dragging { "drop" } else { "place object" }, "cancel")
             }
+            ToolState::ThreePoints { pts, .. } => h("", "", if pts.len() < 2 { "second point" } else { "final point" }),
+            ToolState::AlignTo { .. } => h("cancel", "", "align to first"),
+            ToolState::RubberBand {
+                click: true,
+                button: Button::Right,
+                ..
+            } => h("", "", "final corner"),
             ToolState::RubberBand { click: true, .. } => h("", "final corner", "cancel"),
             ToolState::RubberBand { .. } => h("drag region", "", "cancel"),
             ToolState::PointDrag {
@@ -2006,6 +2335,26 @@ impl Engine {
                     ToolKind::Arrow => ("toggle arrow", "", ""),
                     _ => ("", "", ""),
                 };
+                // The functions on buttons xfig leaves free (W13, W14).
+                let (m, r) = if xfig {
+                    match tool {
+                        ToolKind::Update => (m, "update region"),
+                        ToolKind::Move => (m, "move region"),
+                        ToolKind::DeletePoint => ("delete in region", r),
+                        ToolKind::AddPoint => ("add at end", r),
+                        ToolKind::Arrow => (m, "reverse arrows"),
+                        ToolKind::Break => (m, "break all levels"),
+                        ToolKind::Align => (m, "align to first"),
+                        ToolKind::CircleRadius | ToolKind::CircleDiameter => (m, "circle by 3 points"),
+                        ToolKind::Picture => ("center point", "keep aspect"),
+                        ToolKind::Box | ToolKind::ArcBox => ("center point", r),
+                        ToolKind::RegularPolygon => ("one side", r),
+                        ToolKind::Text if self.clipboard_text().is_some() => ("paste as text", r),
+                        _ => (m, r),
+                    }
+                } else {
+                    (m, r)
+                };
                 h(l, m, r)
             }
         }
@@ -2038,10 +2387,43 @@ impl Engine {
                 ov.handles = pts.clone();
             }
             ToolState::Drag {
-                start, cursor, kind, ..
+                start,
+                cursor,
+                kind,
+                button,
+                square,
+                ..
             } => {
-                if let Some(o) = self.drag_object(*kind, *start, *cursor) {
+                let (a, b) = self.drag_span(*kind, *button, *square, *start, *cursor);
+                if let Some(o) = self.drag_object(*kind, a, b) {
                     ov.preview.push(o);
+                }
+            }
+            ToolState::ThreePoints { pts, cursor } => {
+                let mut all = pts.clone();
+                all.push(*cursor);
+                if let [a, b, c] = all.as_slice() {
+                    if let Some((m, r)) = crate::cmd::circumcircle(*a, *b, *c) {
+                        let kind = if self.tool == ToolKind::CircleDiameter {
+                            EllipseKind::CircleDiameter
+                        } else {
+                            EllipseKind::CircleRadius
+                        };
+                        ov.preview
+                            .push(make_ellipse(self.indicator.style(), m, r, r, 0.0, kind));
+                    }
+                }
+                ov.guides.push(all);
+                ov.handles = pts.clone();
+            }
+            ToolState::AlignTo { reference } => {
+                if let Some(o) = self.doc().get(*reference) {
+                    let bb = o.geometry_bbox();
+                    let mut c = bb.corners().to_vec();
+                    if let Some(f) = c.first().copied() {
+                        c.push(f);
+                    }
+                    ov.guides.push(c);
                 }
             }
             ToolState::Text {
@@ -2477,6 +2859,12 @@ mod tests {
                 .unwrap();
                 e.execute("object.convert", &json!({})).unwrap();
             }
+            4 => {
+                // A text on the clipboard, for the paste function.
+                e.execute("shape.text", &json!({"x": 0, "y": 0, "text": "abc"}))
+                    .unwrap();
+                e.execute("edit.copy", &json!({})).unwrap();
+            }
             _ => {
                 e.execute(
                     "shape.rectangle",
@@ -2505,7 +2893,7 @@ mod tests {
         let mut acted: BTreeMap<(String, &str, String, String, &str), bool> = BTreeMap::new();
         for scheme in [MouseScheme::Xfig, MouseScheme::Modern] {
             for tool in ToolKind::ALL {
-                for n in 0..4 {
+                for n in 0..5 {
                     let setup = |prefix: Option<Button>| {
                         let mut e = fixture(n);
                         e.set_mouse_scheme(scheme);

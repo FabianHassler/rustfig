@@ -68,7 +68,7 @@ pub(super) fn commands() -> Vec<Command> {
         shape_cmd!(
             "shape.picture",
             "Add picture",
-            "{\"path\": string, \"x\", \"y\", \"width\"?, \"height\"?}  — width/height default to the image size at 80 dpi",
+            "{\"path\": string, \"x\", \"y\", \"width\"?, \"height\"?, \"keep_aspect\"?: bool}  — width/height default to the image size at 80 dpi; keep_aspect fits the picture into width x height without distorting it, at the corner (x, y)",
             picture
         ),
         shape_cmd!(
@@ -129,7 +129,7 @@ fn arrows_from(
     Ok((f, b))
 }
 
-fn added(e: &mut Engine, o: Object) -> CmdResult {
+pub(super) fn added(e: &mut Engine, o: Object) -> CmdResult {
     let id = e.add_object(o);
     e.set_selection(vec![id]);
     Ok(json!({"id": id.0}))
@@ -327,6 +327,14 @@ fn picture(e: &mut Engine, p: &Value) -> CmdResult {
     // Default size: 80 pixels per inch, like xfig's screen resolution.
     let w = opt_num(p, "width")?.unwrap_or(f64::from(img.width) * 15.0);
     let h = opt_num(p, "height")?.unwrap_or(f64::from(img.height) * 15.0);
+    let (w, h) = if opt_bool(p, "keep_aspect")?.unwrap_or(false) && img.width > 0 && img.height > 0 {
+        // Fit inside the box, keeping the picture's proportions.
+        let k = (w.abs() / f64::from(img.width)).min(h.abs() / f64::from(img.height));
+        let sign = |v: f64| if v < 0.0 { -1.0 } else { 1.0 };
+        (f64::from(img.width) * k * sign(w), f64::from(img.height) * k * sign(h))
+    } else {
+        (w, h)
+    };
     let r = Rect::new(Point::new(x, y), Point::new(x + w, y + h));
     let mut pl = Polyline::new(PolyKind::Picture, style_from(e, p)?, r.corners().to_vec());
     pl.style.thickness = 0;

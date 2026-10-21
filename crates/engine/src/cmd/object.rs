@@ -241,7 +241,7 @@ fn for_targets(e: &mut Engine, p: &Value, f: &mut dyn FnMut(&mut Object)) -> Res
     Ok(ids.len())
 }
 
-fn update(e: &mut Engine, p: &Value) -> CmdResult {
+pub(super) fn update(e: &mut Engine, p: &Value) -> CmdResult {
     let style = e.indicator.style();
     let ind = e.indicator.clone();
     let (fa, ba) = ind.arrows();
@@ -684,6 +684,12 @@ fn point_add(e: &mut Engine, p: &Value) -> CmdResult {
         .doc_mut()
         .get_mut(id)
         .ok_or_else(|| EngineError::not_found("object vanished"))?;
+    insert_point(o, idx, pt)?;
+    Ok(json!({}))
+}
+
+/// Insert a point before vertex `idx` of a line, polygon or spline.
+pub(super) fn insert_point(o: &mut Object, idx: usize, pt: Point) -> Result<(), EngineError> {
     match &mut o.kind {
         ObjectKind::Polyline(pl) if matches!(pl.kind, PolyKind::Polyline | PolyKind::Polygon) => {
             let i = idx.min(pl.points.len());
@@ -710,7 +716,7 @@ fn point_add(e: &mut Engine, p: &Value) -> CmdResult {
             ))
         }
     }
-    Ok(json!({}))
+    Ok(())
 }
 
 fn point_delete(e: &mut Engine, p: &Value) -> CmdResult {
@@ -719,6 +725,13 @@ fn point_delete(e: &mut Engine, p: &Value) -> CmdResult {
         .doc_mut()
         .get_mut(id)
         .ok_or_else(|| EngineError::not_found("object vanished"))?;
+    remove_point(o, idx)?;
+    Ok(json!({}))
+}
+
+/// Remove vertex `idx` of a line, polygon or spline, keeping the minimum
+/// number of points.
+pub(super) fn remove_point(o: &mut Object, idx: usize) -> Result<(), EngineError> {
     let too_few = || EngineError::bad_params("the object would have too few points");
     match &mut o.kind {
         ObjectKind::Polyline(pl) if matches!(pl.kind, PolyKind::Polyline | PolyKind::Polygon) => {
@@ -752,7 +765,7 @@ fn point_delete(e: &mut Engine, p: &Value) -> CmdResult {
             ))
         }
     }
-    Ok(json!({}))
+    Ok(())
 }
 
 fn point_move(e: &mut Engine, p: &Value) -> CmdResult {

@@ -9,8 +9,10 @@ pub(crate) mod file;
 mod indicator;
 mod object;
 mod prefs;
+mod region;
 pub(crate) mod shape;
 
+pub(crate) use region::circumcircle;
 pub use shape::STYLE_PARAMS;
 mod tool;
 mod transform;
@@ -66,6 +68,7 @@ pub fn all() -> &'static [Command] {
         v.extend(transform::commands());
         v.extend(arrange::commands());
         v.extend(object::commands());
+        v.extend(region::commands());
         v.extend(doc::commands());
         v.extend(indicator::commands());
         v.extend(tool::commands());
