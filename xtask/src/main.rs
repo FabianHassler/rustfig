@@ -147,7 +147,8 @@ fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
         let p = e.path();
         let name = e.file_name().to_string_lossy().to_string();
         if p.is_dir() {
-            if !SKIP_DIRS.contains(&name.as_str()) && !name.starts_with("target") {
+            // `wt-*`: git worktrees of parallel agents (excluded from git).
+            if !SKIP_DIRS.contains(&name.as_str()) && !name.starts_with("target") && !name.starts_with("wt-") {
                 walk(&p, out);
             }
         } else {
