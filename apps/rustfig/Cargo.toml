@@ -18,6 +18,10 @@ egui.workspace = true
 serde_json.workspace = true
 log.workspace = true
 
+[target.'cfg(target_os = "macos")'.dependencies]
+# `--background`: start without activating the app (eframe's own winit).
+winit = "0.30"
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures.workspace = true
 web-sys = { workspace = true, features = ["Window", "Document", "HtmlCanvasElement", "Element"] }

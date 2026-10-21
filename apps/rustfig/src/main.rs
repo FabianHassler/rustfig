@@ -19,11 +19,15 @@ fn main() -> eframe::Result<()> {
     let mut args = std::env::args().skip(1);
     let mut control = None;
     let mut file = None;
+    let mut background = false;
     while let Some(a) = args.next() {
         match a.as_str() {
             "--control" => control = args.next().and_then(|p| p.parse::<u16>().ok()),
+            // For agents and scripts: open behind other windows, without
+            // taking the focus (macOS: no Dock icon either).
+            "--background" => background = true,
             "--help" | "-h" => {
-                println!("usage: rustfig [--control PORT] [FILE.fig|FILE.rustfig]\n       rustfig fig2dev ARGS...   (fig2dev's command line; also when started as `fig2dev`)");
+                println!("usage: rustfig [--control PORT] [--background] [FILE.fig|FILE.rustfig]\n       rustfig fig2dev ARGS...   (fig2dev's command line; also when started as `fig2dev`)");
                 return Ok(());
             }
             "--version" | "-V" => {
@@ -47,10 +51,24 @@ fn main() -> eframe::Result<()> {
     if let Some(icon) = rustfig_ui_egui::app_icon::icon_data() {
         viewport = viewport.with_icon(icon);
     }
-    let options = eframe::NativeOptions {
+    if background {
+        viewport = viewport
+            .with_active(false)
+            .with_window_level(egui::WindowLevel::AlwaysOnBottom);
+    }
+    #[allow(unused_mut)] // set on macOS only
+    let mut options = eframe::NativeOptions {
         viewport,
         ..Default::default()
     };
+    #[cfg(target_os = "macos")]
+    if background {
+        options.event_loop_builder = Some(Box::new(|b| {
+            use winit::platform::macos::{ActivationPolicy, EventLoopBuilderExtMacOS};
+            b.with_activation_policy(ActivationPolicy::Accessory)
+                .with_activate_ignoring_other_apps(false);
+        }));
+    }
     eframe::run_native(
         "RustFig",
         options,
