@@ -102,7 +102,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Save",
             menu: "",
             shortcut: "",
-            params: "{\"path\"?: string}  — save (to the current path if omitted); format from the extension",
+            params: "{\"path\"?: string, \"part\"?: bool}  — save (to the current path if omitted); format from the extension. With a compound open the whole figure is saved; part: true saves only the visible part (the open compound's members), as xfig's \"Save Part\"",
             mutates: false,
             enabled: always,
             run: save,
@@ -122,7 +122,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Save to data",
             menu: "",
             shortcut: "",
-            params: "{\"format\"?: \"fig\"|\"rustfig\"}  — returns {\"data\": string}",
+            params: "{\"format\"?: \"fig\"|\"rustfig\", \"part\"?: bool (only the visible part while a compound is open)}  — returns {\"data\": string}",
             mutates: false,
             enabled: always,
             run: save_data,
@@ -132,7 +132,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Export…",
             menu: "",
             shortcut: "",
-            params: "{\"path\": string, \"format\"?: language id (see file.export_formats; default from the file name), \"magnification\"?: percent, \"margin\"?: fig units, \"dpi\"?: number, \"background\"?: \"#rrggbb\", \"active_layers_only\"?: bool, \"whole_figure_bounds\"?: bool, \"options\"?: {key: value} fig2dev's options for the language, by key or letter (see file.export_formats)}  — active_layers_only leaves out depths that are off; whole_figure_bounds then still sizes the page by the whole figure; pspdf writes NAME.eps and NAME.pdf",
+            params: "{\"path\": string, \"part\"?: bool (only the visible part while a compound is open), \"format\"?: language id (see file.export_formats; default from the file name), \"magnification\"?: percent, \"margin\"?: fig units, \"dpi\"?: number, \"background\"?: \"#rrggbb\", \"active_layers_only\"?: bool, \"whole_figure_bounds\"?: bool, \"options\"?: {key: value} fig2dev's options for the language, by key or letter (see file.export_formats)}  — active_layers_only leaves out depths that are off; whole_figure_bounds then still sizes the page by the whole figure; pspdf writes NAME.eps and NAME.pdf",
             mutates: false,
             enabled: has_objects,
             run: export_file,
@@ -142,7 +142,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Export to data",
             menu: "",
             shortcut: "",
-            params: "{\"format\": language id, ...export options}  — returns {\"data\": text} or {\"base64\": ...}; pspdf returns {\"files\": [{\"extension\", \"data\"|\"base64\"}]}",
+            params: "{\"format\": language id, \"part\"?: bool, ...export options}  — returns {\"data\": text} or {\"base64\": ...}; pspdf returns {\"files\": [{\"extension\", \"data\"|\"base64\"}]}",
             mutates: false,
             enabled: has_objects,
             run: export_data,
@@ -356,6 +356,16 @@ fn merge_data(e: &mut Engine, p: &Value) -> CmdResult {
     merge_doc(e, parse(data.as_bytes())?.0, offset(p)?)
 }
 
+/// What a save or export writes: the whole figure, or with `part: true`
+/// only the visible part while a compound is open (xfig's "Save Part").
+fn scope_doc<'a>(e: &'a Engine, p: &Value) -> Result<std::borrow::Cow<'a, rustfig_model::Document>, EngineError> {
+    Ok(if opt_bool(p, "part")?.unwrap_or(false) {
+        e.visible_part()
+    } else {
+        e.whole_doc()
+    })
+}
+
 fn save(e: &mut Engine, p: &Value) -> CmdResult {
     let path = match opt_str(p, "path")? {
         Some(s) => s.to_string(),
@@ -365,7 +375,7 @@ fn save(e: &mut Engine, p: &Value) -> CmdResult {
             .ok_or_else(|| EngineError::bad_params("no file name: give a \"path\""))?,
     };
     let format = FileFormat::from_path(&path).unwrap_or(FileFormat::Fig);
-    let text = rustfig_format::write(&e.whole_doc(), format).map_err(|err| EngineError::format(err.to_string()))?;
+    let text = rustfig_format::write(&*scope_doc(e, p)?, format).map_err(|err| EngineError::format(err.to_string()))?;
     write_atomic(&path, text.as_bytes())?;
     e.set_path(Some(path.clone()));
     e.set_modified(false);
@@ -477,7 +487,7 @@ fn save_data(e: &mut Engine, p: &Value) -> CmdResult {
         "rustfig" | "native" => FileFormat::Native,
         other => return Err(EngineError::bad_params(format!("unknown format {other:?}"))),
     };
-    let text = rustfig_format::write(&e.whole_doc(), format).map_err(|err| EngineError::format(err.to_string()))?;
+    let text = rustfig_format::write(&*scope_doc(e, p)?, format).map_err(|err| EngineError::format(err.to_string()))?;
     Ok(json!({"data": text}))
 }
 
@@ -738,7 +748,7 @@ fn write_part(e: &Engine, part: &Part, p: &Value) -> Result<(Vec<u8>, Vec<String
     if let Some(g) = &part.graphics {
         args.push(('p', Some(g.clone())));
     }
-    crate::fig2dev::export(&e.whole_doc(), part.lang, &args, doc_dir(e).as_deref()).map_err(EngineError::format)
+    crate::fig2dev::export(&*scope_doc(e, p)?, part.lang, &args, doc_dir(e).as_deref()).map_err(EngineError::format)
 }
 
 /// Whether `part` writes text (the rest comes back as base64).
@@ -792,7 +802,7 @@ fn uses_picture_file(objects: &[rustfig_model::Object], dir: Option<&Path>, path
 
 fn export_file(e: &mut Engine, p: &Value) -> CmdResult {
     let path = string(p, "path")?;
-    let objs: Vec<rustfig_model::Object> = e.whole_doc().objects.iter().map(|o| (**o).clone()).collect();
+    let objs: Vec<rustfig_model::Object> = scope_doc(e, p)?.objects.iter().map(|o| (**o).clone()).collect();
     if uses_picture_file(&objs, doc_dir(e).as_deref(), Path::new(&path)) {
         return Err(EngineError::bad_params(format!(
             "\"{path}\" is an input file.\nExport aborted"

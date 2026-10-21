@@ -20,14 +20,13 @@ struct EndHit {
 
 impl Engine {
     /// Open compound (`init_open_compound`): left opens the compound, middle
-    /// opens it and keeps the rest of the figure visible (gray). The modern
-    /// scheme has no middle button: Shift+left keeps it visible.
+    /// opens it and keeps the rest of the figure visible (gray).
     pub(super) fn open_compound_event(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
-        let ToolEvent::Press { pos, button, shift } = ev else {
+        let ToolEvent::Press { pos, button, .. } = ev else {
             return Ok(());
         };
         let keep_visible = match button {
-            Button::Left => !self.xfig_buttons() && shift,
+            Button::Left => false,
             Button::Middle => true,
             Button::Right => return Ok(()),
         };
@@ -80,14 +79,11 @@ impl Engine {
     /// Join/Split. Left picks an end point (`init_join`) and then the end
     /// point of the second line or spline (`join_line2`, `join_spline2`);
     /// middle splits at the pointer (`init_split`); right cancels a join.
-    /// The modern scheme has no middle button: right splits when nothing is
-    /// being joined (Escape cancels a join).
     pub(super) fn join_split_event(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
         let ToolEvent::Press { pos, button, .. } = ev else {
             return Ok(());
         };
         let tol = self.pick_tol();
-        let xfig = self.xfig_buttons();
         if let ToolState::Join { id, first, spline } = self.tool_state {
             match button {
                 Button::Left => {
@@ -114,7 +110,7 @@ impl Engine {
             }
             return Ok(());
         }
-        let split = button == Button::Middle || (!xfig && button == Button::Right);
+        let split = button == Button::Middle;
         if button == Button::Left {
             let Some(hit) = self.end_point_at(pos, tol, None) else {
                 return Ok(());

@@ -769,13 +769,13 @@ fn align_icon(v: &str, horizontal: bool) -> &'static Xbm {
 }
 
 /// The picture of arc type `pie`.
-fn arc_pic(app: &App, pie: bool) -> Pic {
+fn arc_pic(pie: bool) -> Pic {
     let b = if pie { &xi::PIE_WEDGE_ARC } else { &xi::OPEN_ARC };
-    Pic::of(app, b, VIcon::Arc { pie })
+    Pic::of(b, VIcon::Arc { pie })
 }
 
 /// The picture of arrow mode `m` (xfig's order: none, forward, both, backward).
-fn arrow_mode_pic(app: &App, m: usize) -> Pic {
+fn arrow_mode_pic(m: usize) -> Pic {
     let (forward, backward) = match m {
         1 => (true, false),
         2 => (true, true),
@@ -783,30 +783,30 @@ fn arrow_mode_pic(app: &App, m: usize) -> Pic {
         _ => (false, false),
     };
     let b = ARROW_MODE_ICONS.get(m).copied().unwrap_or(&xi::NOARROWS);
-    Pic::of(app, b, VIcon::ArrowMode { backward, forward })
+    Pic::of(b, VIcon::ArrowMode { backward, forward })
 }
 
 /// The picture of arrow choice `n`.
-fn arrow_type_pic(app: &App, n: i32) -> Pic {
+fn arrow_type_pic(n: i32) -> Pic {
     let (kind, style) = arrow_choice(n);
-    Pic::of(app, arrow_type_icon(n), VIcon::Arrow(kind, style))
+    Pic::of(arrow_type_icon(n), VIcon::Arrow(kind, style))
 }
 
 /// The picture xfig shows on an attribute button, if it shows one.
 fn value_icon(app: &App, a: Attr) -> Option<Pic> {
     let ind = &app.engine.indicator;
     Some(match a {
-        Attr::Grid => Pic::traced(app, grid_icon(ind.grid)),
-        Attr::PointPosn => Pic::traced(app, posn_icon(ind.snap)),
-        Attr::HAlign => Pic::traced(app, align_icon(&ind.align_h, true)),
-        Attr::VAlign => Pic::traced(app, align_icon(&ind.align_v, false)),
-        Attr::ArcType => arc_pic(app, ind.pie_arc),
-        Attr::LineStyle => Pic::of(app, line_icon(ind.line), VIcon::Line(ind.line)),
-        Attr::JoinStyle => Pic::of(app, join_icon(ind.join), VIcon::Join(ind.join)),
-        Attr::CapStyle => Pic::of(app, cap_icon(ind.cap), VIcon::Cap(ind.cap)),
-        Attr::ArrowMode => arrow_mode_pic(app, arrow_mode(ind)),
-        Attr::ArrowType => arrow_type_pic(app, arrow_choice_of(ind.arrow.kind, ind.arrow.style)),
-        Attr::TextJust => Pic::of(app, just_icon(ind.justify), VIcon::Justify(ind.justify)),
+        Attr::Grid => Pic::traced(grid_icon(ind.grid)),
+        Attr::PointPosn => Pic::traced(posn_icon(ind.snap)),
+        Attr::HAlign => Pic::traced(align_icon(&ind.align_h, true)),
+        Attr::VAlign => Pic::traced(align_icon(&ind.align_v, false)),
+        Attr::ArcType => arc_pic(ind.pie_arc),
+        Attr::LineStyle => Pic::of(line_icon(ind.line), VIcon::Line(ind.line)),
+        Attr::JoinStyle => Pic::of(join_icon(ind.join), VIcon::Join(ind.join)),
+        Attr::CapStyle => Pic::of(cap_icon(ind.cap), VIcon::Cap(ind.cap)),
+        Attr::ArrowMode => arrow_mode_pic(arrow_mode(ind)),
+        Attr::ArrowType => arrow_type_pic(arrow_choice_of(ind.arrow.kind, ind.arrow.style)),
+        Attr::TextJust => Pic::of(just_icon(ind.justify), VIcon::Justify(ind.justify)),
         _ => return None,
     })
 }
@@ -821,18 +821,15 @@ enum Pic {
 }
 
 impl Pic {
-    /// The vector picture when they are on, else xfig's bitmap.
-    fn of(app: &App, bitmap: &'static Xbm, vector: VIcon) -> Pic {
-        if app.vector_icons {
-            Pic::Vector(vector)
-        } else {
-            Pic::Bitmap(bitmap)
-        }
+    /// The vector picture (the bitmap stays the reference it was traced from).
+    fn of(_bitmap: &'static Xbm, vector: VIcon) -> Pic {
+        Pic::Vector(vector)
     }
 
-    /// xfig's bitmap, or its traced vector drawing when vectors are on.
-    fn traced(app: &App, bitmap: &'static Xbm) -> Pic {
-        if app.vector_icons && crate::mode_icons::traced(bitmap.name) {
+    /// The traced vector drawing of xfig's bitmap, or the bitmap itself
+    /// where it has not been traced.
+    fn traced(bitmap: &'static Xbm) -> Pic {
+        if crate::mode_icons::traced(bitmap.name) {
             Pic::Vector(VIcon::Traced(bitmap.name))
         } else {
             Pic::Bitmap(bitmap)
@@ -1038,7 +1035,7 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                     (
                         ind.grid == *g,
                         g.map_or("none", |m| m.label(u)).to_string(),
-                        Pic::traced(app, grid_icon(*g)),
+                        Pic::traced(grid_icon(*g)),
                     )
                 })
                 .collect();
@@ -1050,7 +1047,7 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             let u = units(app);
             let items: Vec<_> = SnapMode::ALL
                 .iter()
-                .map(|m| (ind.snap == *m, m.label(u).to_string(), Pic::traced(app, posn_icon(*m))))
+                .map(|m| (ind.snap == *m, m.label(u).to_string(), Pic::traced(posn_icon(*m))))
                 .collect();
             if let Some(m) = icon_choices(ui, "posn", &items, 6).and_then(|i| SnapMode::ALL.get(i)) {
                 set(app, json!({ "snap": m }));
@@ -1065,7 +1062,7 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             };
             let items: Vec<_> = list
                 .iter()
-                .map(|v| (cur == *v, (*v).to_string(), Pic::traced(app, align_icon(v, horizontal))))
+                .map(|v| (cur == *v, (*v).to_string(), Pic::traced(align_icon(v, horizontal))))
                 .collect();
             if let Some(v) = icon_choices(ui, field, &items, 4).and_then(|i| list.get(i)) {
                 let mut m = serde_json::Map::new();
@@ -1180,8 +1177,8 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
         }
         Attr::ArcType => {
             let items = [
-                (!ind.pie_arc, "open".to_string(), arc_pic(app, false)),
-                (ind.pie_arc, "pie wedge".to_string(), arc_pic(app, true)),
+                (!ind.pie_arc, "open".to_string(), arc_pic(false)),
+                (ind.pie_arc, "pie wedge".to_string(), arc_pic(true)),
             ];
             if let Some(i) = icon_choices(ui, "arc", &items, 2) {
                 set(app, json!({ "pie_arc": i == 1 }));
@@ -1194,7 +1191,7 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                     (
                         ind.line == *k,
                         k.name().to_string(),
-                        Pic::of(app, line_icon(*k), VIcon::Line(*k)),
+                        Pic::of(line_icon(*k), VIcon::Line(*k)),
                     )
                 })
                 .collect();
@@ -1242,7 +1239,7 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                     (
                         ind.join == *j,
                         format!("{j:?}").to_lowercase(),
-                        Pic::of(app, join_icon(*j), VIcon::Join(*j)),
+                        Pic::of(join_icon(*j), VIcon::Join(*j)),
                     )
                 })
                 .collect();
@@ -1257,7 +1254,7 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                     (
                         ind.cap == *c,
                         format!("{c:?}").to_lowercase(),
-                        Pic::of(app, cap_icon(*c), VIcon::Cap(*c)),
+                        Pic::of(cap_icon(*c), VIcon::Cap(*c)),
                     )
                 })
                 .collect();
@@ -1270,7 +1267,7 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             let items: Vec<_> = names
                 .iter()
                 .enumerate()
-                .map(|(m, n)| (arrow_mode(&ind) == m, (*n).to_string(), arrow_mode_pic(app, m)))
+                .map(|(m, n)| (arrow_mode(&ind) == m, (*n).to_string(), arrow_mode_pic(m)))
                 .collect();
             if let Some(m) = icon_choices(ui, "arrow_mode", &items, 4) {
                 set_arrow_mode(app, m);
@@ -1286,7 +1283,7 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                     } else {
                         format!("{} type {kind}", if style == 1 { "solid" } else { "hollow" })
                     };
-                    (n == cur, name, arrow_type_pic(app, n))
+                    (n == cur, name, arrow_type_pic(n))
                 })
                 .collect();
             if let Some(n) = icon_choices(ui, "arrow_type", &items, 9) {
@@ -1335,7 +1332,7 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                     (
                         ind.justify == *j,
                         format!("{j:?}").to_lowercase(),
-                        Pic::of(app, just_icon(*j), VIcon::Justify(*j)),
+                        Pic::of(just_icon(*j), VIcon::Justify(*j)),
                     )
                 })
                 .collect();

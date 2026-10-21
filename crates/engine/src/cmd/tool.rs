@@ -1,7 +1,7 @@
 //! Tool (mode) selection and synthetic tool events.
 
 use super::{always, num, opt_bool, opt_str, CmdResult, Command};
-use crate::tools::{Button, Key, MouseScheme, ToolEvent, ToolKind};
+use crate::tools::{Button, Key, ToolEvent, ToolKind};
 use crate::{Engine, EngineError};
 use rustfig_geom::Point;
 use serde_json::{json, Value};
@@ -79,31 +79,7 @@ pub(super) fn commands() -> Vec<Command> {
             Ok(json!({"held": false}))
         },
     });
-    v.push(Command {
-        id: "tool.mouse_buttons",
-        label: "xfig mouse buttons (3 buttons)",
-        menu: "View",
-        shortcut: "",
-        params: "{\"scheme\"?: xfig|modern}  — toggles when omitted. xfig: left, middle and right have per-mode functions, right cancels; modern: left works, right or double click finishes, middle pans",
-        mutates: false,
-        enabled: always,
-        run: mouse_buttons,
-    });
     v
-}
-
-fn mouse_buttons(e: &mut Engine, p: &Value) -> CmdResult {
-    let scheme = match opt_str(p, "scheme")? {
-        Some(n) => {
-            MouseScheme::from_name(n).ok_or_else(|| EngineError::bad_params(format!("unknown mouse scheme {n:?}")))?
-        }
-        None => match e.mouse_scheme() {
-            MouseScheme::Xfig => MouseScheme::Modern,
-            MouseScheme::Modern => MouseScheme::Xfig,
-        },
-    };
-    e.set_mouse_scheme(scheme);
-    Ok(json!({"scheme": scheme.name()}))
 }
 
 fn set(e: &mut Engine, kind: ToolKind) -> CmdResult {

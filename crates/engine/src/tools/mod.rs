@@ -338,35 +338,6 @@ impl Button {
     }
 }
 
-/// How the mouse buttons map to tool functions (a setting).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum MouseScheme {
-    /// xfig's three buttons: each mode gives the left, middle and right
-    /// buttons their own function, and the right button cancels.
-    #[default]
-    Xfig,
-    /// The left button does the work, a double click or the right button
-    /// finishes, the middle button pans.
-    Modern,
-}
-
-impl MouseScheme {
-    pub fn name(self) -> &'static str {
-        match self {
-            MouseScheme::Xfig => "xfig",
-            MouseScheme::Modern => "modern",
-        }
-    }
-
-    pub fn from_name(s: &str) -> Option<MouseScheme> {
-        match s {
-            "xfig" => Some(MouseScheme::Xfig),
-            "modern" => Some(MouseScheme::Modern),
-            _ => None,
-        }
-    }
-}
-
 /// A pointer or key event in Fig coordinates.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ToolEvent {
@@ -580,20 +551,6 @@ impl Engine {
         self.set_status(kind.label());
     }
 
-    /// The mouse-button scheme.
-    pub fn mouse_scheme(&self) -> MouseScheme {
-        self.mouse_scheme
-    }
-
-    /// Change the mouse-button scheme, abandoning any work in progress.
-    pub fn set_mouse_scheme(&mut self, scheme: MouseScheme) {
-        if let Err(e) = self.finish_text() {
-            self.set_status(e.message);
-        }
-        self.tool_state = ToolState::Idle;
-        self.mouse_scheme = scheme;
-    }
-
     /// The point being drawn from (xfig's `cur_point`): the last point of a
     /// line being entered, the first corner of a drag shape, or where a move
     /// started.
@@ -613,10 +570,6 @@ impl Engine {
     fn pick(&self, pos: Point, tol: f64) -> Option<ObjectId> {
         self.hit_test(pos, tol)
             .or_else(|| self.snap_click.and_then(|c| self.hit_test(c, tol)))
-    }
-
-    fn xfig_buttons(&self) -> bool {
-        self.mouse_scheme == MouseScheme::Xfig
     }
 
     /// Whether a tool has work in progress (keys go to the tool).
@@ -691,20 +644,6 @@ impl Engine {
             },
             other => other,
         };
-        // In the modern scheme the middle button pans; the UI handles it.
-        let middle = matches!(
-            ev,
-            ToolEvent::Press {
-                button: Button::Middle,
-                ..
-            } | ToolEvent::Release {
-                button: Button::Middle,
-                ..
-            }
-        );
-        if middle && !self.xfig_buttons() {
-            return Ok(());
-        }
         let tool = self.tool;
         if tool == ToolKind::None {
             return Ok(());
@@ -736,16 +675,12 @@ impl Engine {
     fn points_event(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
         let tool = self.tool;
         let tol = self.pick_tol();
-        let xfig = self.xfig_buttons();
         match ev {
             ToolEvent::Press { pos, button, shift } => {
                 let p = self.snap(pos);
                 let busy = matches!(self.tool_state, ToolState::Points { .. });
                 match button {
                     Button::Right => {
-                        if !xfig {
-                            return self.finish_points();
-                        }
                         if busy {
                             self.tool_state = ToolState::Idle;
                             return Ok(());
@@ -789,7 +724,7 @@ impl Engine {
                             if *freehand {
                                 return Ok(());
                             }
-                            if xfig && shift {
+                            if shift {
                                 // xfig: Shift+left removes the last point.
                                 pts.pop();
                                 if pts.is_empty() {
@@ -931,7 +866,7 @@ impl Engine {
                 // xfig leaves the right button free in the circle and
                 // picture modes: a circle through three points, a picture
                 // that keeps its proportions.
-                if self.xfig_buttons() && button == Button::Right {
+                if button == Button::Right {
                     match self.tool_state.clone() {
                         ToolState::ThreePoints { mut pts, .. } if circle => {
                             pts.push(p);
@@ -990,7 +925,7 @@ impl Engine {
                 {
                     // xfig: an ellipse is finished with either button.
                     let ellipse = matches!(kind, ToolKind::EllipseRadii | ToolKind::EllipseDiameter);
-                    if b != button && !(ellipse && self.xfig_buttons()) {
+                    if b != button && !ellipse {
                         return Ok(());
                     }
                     self.tool_state = ToolState::Idle;
@@ -1054,9 +989,6 @@ impl Engine {
     /// ellipses with the middle one, as xfig's ellipse modes do.
     fn drag_kind(&self, button: Button) -> Option<ToolKind> {
         let t = self.tool;
-        if !self.xfig_buttons() {
-            return (button == Button::Left).then_some(t);
-        }
         let by_radius = matches!(t, ToolKind::CircleRadius | ToolKind::EllipseRadii);
         let by_diameter = matches!(t, ToolKind::CircleDiameter | ToolKind::EllipseDiameter);
         match button {
@@ -1126,7 +1058,7 @@ impl Engine {
     /// polygon by the ends of one side (W14); otherwise the points are the
     /// ones dragged.
     fn drag_span(&self, kind: ToolKind, button: Button, square: bool, a: Point, b: Point) -> (Point, Point) {
-        if !self.xfig_buttons() || button != Button::Middle {
+        if button != Button::Middle {
             return (a, b);
         }
         match kind {
@@ -1187,21 +1119,17 @@ impl Engine {
                             return self.finish_text();
                         }
                         // W14: paste the clipboard's text as a new text.
-                        if self.xfig_buttons() && self.clipboard_text().is_some() {
+                        if self.clipboard_text().is_some() {
                             let p = self.snap(pos);
                             self.execute("edit.paste_text", &json!({"x": p.x, "y": p.y}))?;
                         }
                         return Ok(());
                     }
                     // xfig: the right button cancels it (an edited text keeps
-                    // its old string); the modern scheme finishes it.
+                    // its old string).
                     Button::Right => {
-                        return if self.xfig_buttons() {
-                            self.tool_state = ToolState::Idle;
-                            Ok(())
-                        } else {
-                            self.finish_text()
-                        };
+                        self.tool_state = ToolState::Idle;
+                        return Ok(());
                     }
                     Button::Left => self.finish_text()?,
                 }
@@ -1697,7 +1625,7 @@ impl Engine {
             if button == Button::Right {
                 if self.tool_busy() {
                     self.tool_state = ToolState::Idle;
-                } else if !copy && self.xfig_buttons() {
+                } else if !copy {
                     return self.region_click(pos, Band::MoveRegion, Button::Right);
                 } else if copy {
                     // xfig: copy the object to the cut buffer.
@@ -2032,7 +1960,7 @@ impl Engine {
         };
         let tol = self.pick_tol();
         let tool = self.tool;
-        if self.xfig_buttons() {
+        {
             // Functions on the buttons xfig leaves free (W13, W14).
             match self.tool_state.clone() {
                 ToolState::RubberBand {
@@ -2134,11 +2062,11 @@ impl Engine {
                     self.set_selection(Vec::new());
                 }
             }
-            (ToolKind::Break, Button::Right) if is_compound && self.xfig_buttons() => {
+            (ToolKind::Break, Button::Right) if is_compound => {
                 self.set_selection(vec![id]);
                 self.execute("object.break_all", &json!({ "ids": ids }))?;
             }
-            (ToolKind::Arrow, Button::Right) if self.xfig_buttons() => {
+            (ToolKind::Arrow, Button::Right) => {
                 let has = matches!(
                     self.doc().get(id).and_then(Object::arrows),
                     Some((f, b)) if f.is_some() || b.is_some()
@@ -2210,10 +2138,9 @@ impl Engine {
                 // The forward arrow sits at the last point.
                 let at_end = pos.dist(*last) <= pos.dist(*first);
                 let present = if at_end { fwd.is_some() } else { back.is_some() };
-                // xfig: left adds an arrow, middle removes one; the modern
-                // scheme toggles with the left button.
+                // xfig: left adds an arrow, middle removes one.
                 let toggle = match button {
-                    Button::Left => !self.xfig_buttons() || !present,
+                    Button::Left => !present,
                     _ => present,
                 };
                 if toggle {
@@ -2235,15 +2162,10 @@ impl Engine {
 
     /// The current function of each mouse button, for the mouse indicator.
     /// Must describe what [`Engine::tool_event`] actually does: a test
-    /// checks every tool and state in both schemes. The wording is xfig's
+    /// checks every tool and state. The wording is xfig's
     /// (`set_mousefun` calls in xfig's `d_*.c` and `e_*.c`).
     pub fn mouse_hints(&self) -> MouseHints {
-        let xfig = self.xfig_buttons();
-        let h = |left, middle, right| MouseHints {
-            left,
-            middle: if xfig { middle } else { "pan" },
-            right,
-        };
+        let h = |left, middle, right| MouseHints { left, middle, right };
         // A label on the button that started the operation.
         let on = |button: Button, label, right| match button {
             Button::Middle => h("", label, right),
@@ -2265,26 +2187,24 @@ impl Engine {
                         (false, _) => "final point",
                     };
                     h(left, "", "cancel")
-                } else if xfig {
-                    h("next point", "final point", "cancel")
                 } else {
-                    h("next point", "", "finish")
+                    h("next point", "final point", "cancel")
                 }
             }
             ToolState::Drag { kind, button, .. } => {
                 // xfig finishes an ellipse with either button (`d_ellipse.c`).
                 match kind {
                     _ if *button == Button::Right => h("", "", "final point"),
-                    ToolKind::EllipseRadii if xfig => h("Ellipse corner", "Ellipse corner", "cancel"),
-                    ToolKind::EllipseDiameter if xfig => h("final corner", "final corner", "cancel"),
+                    ToolKind::EllipseRadii => h("Ellipse corner", "Ellipse corner", "cancel"),
+                    ToolKind::EllipseDiameter => h("final corner", "final corner", "cancel"),
                     ToolKind::CircleRadius => on(*button, "set radius", "cancel"),
                     _ => on(*button, "final point", "cancel"),
                 }
             }
             ToolState::Text { .. } => MouseHints {
                 left: "new text",
-                middle: if xfig { "finish text" } else { "pan" },
-                right: if xfig { "cancel" } else { "finish text" },
+                middle: "finish text",
+                right: "cancel",
             },
             ToolState::MoveObjs {
                 dragging, constrain, ..
@@ -2329,17 +2249,12 @@ impl Engine {
                 };
                 let (l, m, r) = match tool {
                     ToolKind::Select => ("select / drag", "", ""),
-                    ToolKind::Polyline => ("first point", "freehand", if xfig { "single point" } else { "" }),
+                    ToolKind::Polyline => ("first point", "freehand", "single point"),
                     ToolKind::Polygon => ("first point", "freehand", ""),
                     t if t.spline_kind().is_some() => ("first point", "freehand", ""),
                     ToolKind::Arc => ("first point", "center point", ""),
-                    ToolKind::CircleRadius | ToolKind::EllipseRadii if xfig => ("Circle center", "Ellipse center", ""),
-                    ToolKind::CircleDiameter | ToolKind::EllipseDiameter if xfig => {
-                        ("Circle diameter", "Ellipse corner", "")
-                    }
-                    ToolKind::CircleRadius | ToolKind::EllipseRadii => ("center", "", ""),
-                    ToolKind::CircleDiameter => ("diameter start", "", ""),
-                    ToolKind::EllipseDiameter => ("first corner", "", ""),
+                    ToolKind::CircleRadius | ToolKind::EllipseRadii => ("Circle center", "Ellipse center", ""),
+                    ToolKind::CircleDiameter | ToolKind::EllipseDiameter => ("Circle diameter", "Ellipse corner", ""),
                     ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture => ("corner point", "", ""),
                     ToolKind::RegularPolygon => ("center point", "", ""),
                     ToolKind::Text => ("position cursor", "", ""),
@@ -2361,32 +2276,24 @@ impl Engine {
                     ToolKind::RotateCcw | ToolKind::RotateCw => ("rotate object", "copy & rotate", ""),
                     ToolKind::Convert => ("spline<->line", "", "open<->closed"),
                     ToolKind::OpenClose => ("open/close", "", ""),
-                    ToolKind::Arrow if xfig => ("add arrow", "delete arrow", ""),
-                    ToolKind::Arrow => ("toggle arrow", "", ""),
+                    ToolKind::Arrow => ("add arrow", "delete arrow", ""),
                     _ => ("", "", ""),
                 };
                 // The functions on buttons xfig leaves free (W13, W14).
-                let (m, r) = if xfig {
-                    match tool {
-                        ToolKind::Update => (m, "update region"),
-                        ToolKind::Move => (m, "move region"),
-                        ToolKind::DeletePoint => ("delete in region", r),
-                        ToolKind::AddPoint => ("add at end", r),
-                        ToolKind::Arrow => (m, "reverse arrows"),
-                        ToolKind::Break => (m, "break all levels"),
-                        ToolKind::Align => (m, "align to first"),
-                        ToolKind::CircleRadius | ToolKind::CircleDiameter => (m, "circle by 3 points"),
-                        ToolKind::Picture => ("center point", "keep aspect"),
-                        ToolKind::Box | ToolKind::ArcBox => ("center point", r),
-                        ToolKind::RegularPolygon => ("one side", r),
-                        ToolKind::Text if self.clipboard_text().is_some() => ("paste as text", r),
-                        _ => (m, r),
-                    }
-                } else if tool == ToolKind::JoinSplit {
-                    // No middle button: the right one splits.
-                    (m, "Split Line/Spline")
-                } else {
-                    (m, r)
+                let (m, r) = match tool {
+                    ToolKind::Update => (m, "update region"),
+                    ToolKind::Move => (m, "move region"),
+                    ToolKind::DeletePoint => ("delete in region", r),
+                    ToolKind::AddPoint => ("add at end", r),
+                    ToolKind::Arrow => (m, "reverse arrows"),
+                    ToolKind::Break => (m, "break all levels"),
+                    ToolKind::Align => (m, "align to first"),
+                    ToolKind::CircleRadius | ToolKind::CircleDiameter => (m, "circle by 3 points"),
+                    ToolKind::Picture => ("center point", "keep aspect"),
+                    ToolKind::Box | ToolKind::ArcBox => ("center point", r),
+                    ToolKind::RegularPolygon => ("one side", r),
+                    ToolKind::Text if self.clipboard_text().is_some() => ("paste as text", r),
+                    _ => (m, r),
                 };
                 h(l, m, r)
             }
@@ -2846,11 +2753,6 @@ mod tests {
         press(&mut e, 0.0, 0.0);
         assert_eq!(e.mouse_hints().middle, "final point");
         assert_eq!(e.mouse_hints().right, "cancel");
-        e.set_mouse_scheme(MouseScheme::Modern);
-        e.set_tool(ToolKind::Polyline);
-        press(&mut e, 0.0, 0.0);
-        assert_eq!(e.mouse_hints().middle, "pan");
-        assert_eq!(e.mouse_hints().right, "finish");
         e.set_tool(ToolKind::Text);
         press(&mut e, 0.0, 0.0);
         assert_eq!(e.mouse_hints().left, "new text");
@@ -2929,7 +2831,7 @@ mod tests {
         e
     }
 
-    /// The indicator must tell the truth: in every tool, state and scheme,
+    /// The indicator must tell the truth: in every tool and state,
     /// a button with no label does nothing, and a labelled button does
     /// something in at least one of the fixture documents.
     #[test]
@@ -2938,14 +2840,13 @@ mod tests {
         const BUTTONS: [Button; 3] = [Button::Left, Button::Middle, Button::Right];
         let p = (0.0, 0.0);
         let q = (600.0, 900.0);
-        // (scheme, tool, how the state was reached, button, label) -> acted
-        let mut acted: BTreeMap<(String, &str, String, String, &str), bool> = BTreeMap::new();
-        for scheme in [MouseScheme::Xfig, MouseScheme::Modern] {
+        // (tool, how the state was reached, button, label) -> acted
+        let mut acted: BTreeMap<(&str, String, String, &str), bool> = BTreeMap::new();
+        {
             for tool in ToolKind::ALL {
                 for n in 0..7 {
                     let setup = |prefix: Option<Button>| {
                         let mut e = fixture(n);
-                        e.set_mouse_scheme(scheme);
                         e.set_tool(tool);
                         if let Some(b) = prefix {
                             click(&mut e, p.0, p.1, b);
@@ -2968,26 +2869,11 @@ mod tests {
                                 shift: false,
                             });
                             let changed = snapshot(&e) != before;
-                            let what = format!(
-                                "{} {} after {prefix:?}, {b:?} ({label:?}) in fixture {n}",
-                                scheme.name(),
-                                tool.id()
-                            );
-                            if scheme == MouseScheme::Modern && *b == Button::Middle {
-                                assert_eq!(label, "pan", "{what}");
-                                assert!(!changed, "{what}: the middle button pans in the modern scheme");
-                                continue;
-                            }
+                            let what = format!("{} after {prefix:?}, {b:?} ({label:?}) in fixture {n}", tool.id());
                             if label.is_empty() {
                                 assert!(!changed, "{what}: no label, but the press changed something");
                             } else {
-                                let key = (
-                                    scheme.name().to_string(),
-                                    tool.id(),
-                                    format!("{prefix:?}"),
-                                    format!("{b:?}"),
-                                    label,
-                                );
+                                let key = (tool.id(), format!("{prefix:?}"), format!("{b:?}"), label);
                                 *acted.entry(key).or_default() |= changed;
                             }
                         }
@@ -3085,18 +2971,6 @@ mod tests {
             panic!()
         };
         assert_eq!(t.text, "Hi");
-    }
-
-    #[test]
-    fn modern_scheme_right_finishes_and_middle_is_ignored() {
-        let mut e = Engine::new();
-        e.set_mouse_scheme(MouseScheme::Modern);
-        e.set_tool(ToolKind::Polyline);
-        click(&mut e, 0.0, 0.0, Button::Left);
-        click(&mut e, 1200.0, 0.0, Button::Middle);
-        click(&mut e, 1200.0, 1200.0, Button::Left);
-        click(&mut e, 1200.0, 1200.0, Button::Right);
-        assert_eq!(e.doc().objects[0].points().unwrap().len(), 2);
     }
 
     #[test]
@@ -3261,12 +3135,8 @@ mod tests {
 
     #[test]
     fn every_tool_survives_random_events() {
-        for (t, scheme) in ToolKind::ALL
-            .iter()
-            .flat_map(|t| [(*t, MouseScheme::Xfig), (*t, MouseScheme::Modern)])
-        {
+        for t in ToolKind::ALL.iter().copied() {
             let mut e = Engine::new();
-            e.set_mouse_scheme(scheme);
             e.execute(
                 "shape.rectangle",
                 &json!({"x": 0, "y": 0, "width": 1200, "height": 600}),

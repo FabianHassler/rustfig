@@ -59,11 +59,11 @@ The window-by-window comparison with the real xfig (what each window offers and 
 ## Main window (xfig screen map)
 | xfig | RustFig | Plan |
 |---|---|---|
-| Main menus File, Edit, View, Snap, Help | ✅ classic layout: xfig's menus word for word and in order (`w_cmdpanel.c`), missing entries greyed with their task, RustFig preferences under Edit › Global settings; Object and Tools menus only in the modern layout; Snap: Hold, Release, Endpoint, Midpoint, Nearest, Focus, Normal, Tangent, Intersection, Diameter, with the Snap Mode box | — |
+| Main menus File, Edit, View, Snap, Help | ✅ classic layout: xfig's menus word for word and in order (`w_cmdpanel.c`), missing entries greyed with their task, RustFig preferences under Edit › Global settings; RustFig's extras after xfig's entries in Edit, View and File and an Object menu between Snap and Help (W17); Snap: Hold, Release, Endpoint, Midpoint, Nearest, Focus, Normal, Tangent, Intersection, Diameter, with the Snap Mode box | — |
 | Current file name | ✅ next to the menus, marks unsaved changes | — |
 | Message panel | ✅ under the menus; click for the history | — |
 | Mouse-function indicator | ✅ xfig's layout and wording, each button's current function per tool and state, checked against the tools by a test | — |
-| Three-button mouse semantics | ✅ xfig's per-mode functions (default) or a modern scheme (View › xfig mouse buttons); Alt+click = middle, Ctrl+click = right. Missing: dimension lines, rotate/flip anchor, array copy, align to canvas | D |
+| Three-button mouse semantics | ✅ xfig's per-mode functions, the only scheme (W16); Alt+click = middle, Ctrl+click = right. Missing: dimension lines, rotate/flip anchor, array copy, align to canvas | D |
 | Units box | ✅ "1cm = 1.00cm" in the ruler corner; left: pan to origin, right: Unit menu (ruler units, figure unit, scale) | — |
 | Top and side rulers | ✅ ported from `w_rulers.c` | — |
 | Depth panel: checkboxes, drag-toggle, All On/Off/Toggle, Gray/Blank | ✅ with object counts; hidden depths can't be picked; export of active layers only | — |
@@ -86,6 +86,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | 2026-10-13 | Added the main-window section (plan phase W). |
 | 2026-10-13 | W1: classic layout, message panel, mouse indicator, units box. |
 | 2026-10-14 | W2: three-button mouse semantics and the modern scheme. |
+| 2026-10-21 | W16, W17: the modern scheme, the layout choice, the attribute-panel switch and the icon choice removed; Object menu; Save All / Save Part query. |
 | 2026-10-14 | W3: depth panel. |
 | 2026-10-14 | W5: attribute panel. |
 | 2026-10-14 | W6: rulers and units box. |

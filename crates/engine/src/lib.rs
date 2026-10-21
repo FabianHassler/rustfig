@@ -23,7 +23,7 @@ mod view;
 pub use error::EngineError;
 pub use indicator::{arrow_choice, arrow_choice_of, GridMode, Indicator, SnapMode};
 pub use snap::ObjectSnap;
-pub use tools::{Button, Key, MouseHints, MouseScheme, Overlay, ToolEvent, ToolKind};
+pub use tools::{Button, Key, MouseHints, Overlay, ToolEvent, ToolKind};
 pub use view::{UnitScale, View};
 
 pub use rustfig_format as format;
@@ -83,7 +83,6 @@ pub struct Engine {
     snap_click: Option<Point>,
     tool: ToolKind,
     tool_state: tools::ToolState,
-    mouse_scheme: tools::MouseScheme,
     clipboard: Vec<Object>,
     path: Option<String>,
     modified: bool,
@@ -134,7 +133,6 @@ impl Engine {
             snap_click: None,
             tool: ToolKind::None,
             tool_state: tools::ToolState::Idle,
-            mouse_scheme: tools::MouseScheme::default(),
             clipboard: Vec::new(),
             path: None,
             modified: false,
@@ -164,6 +162,19 @@ impl Engine {
             std::borrow::Cow::Borrowed(&self.doc)
         } else {
             std::borrow::Cow::Owned(self.doc.closed_all())
+        }
+    }
+
+    /// Only the visible part of the figure: the members of the innermost
+    /// open compound (xfig's "Save Part"), or the whole figure when none is
+    /// open.
+    pub fn visible_part(&self) -> std::borrow::Cow<'_, Document> {
+        if self.doc.open.is_empty() {
+            std::borrow::Cow::Borrowed(&self.doc)
+        } else {
+            let mut d = self.doc.clone();
+            d.open.clear();
+            std::borrow::Cow::Owned(d)
         }
     }
 

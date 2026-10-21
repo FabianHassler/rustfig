@@ -204,6 +204,9 @@ pub struct Dialogs {
     pub resources_open: bool,
     /// A new file name that another file already has: asking before replacing.
     pub rename_confirm: Option<String>,
+    /// xfig's query when saving inside an open compound: the command (Save
+    /// or Save As) waiting for "Save All", "Save Part" or "Cancel".
+    pub save_scope: Option<&'static str>,
     resource_filter: String,
     /// Values being typed into the resources window, by resource.
     resource_edits: std::collections::BTreeMap<&'static str, String>,
@@ -626,6 +629,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     global_dialog(app, ctx);
     unsaved_dialog(app, ctx);
     rename_dialog(app, ctx);
+    save_scope_dialog(app, ctx);
 }
 
 /// Rename the figure's file (`file.rename`): the saved file moves on disk,
@@ -675,8 +679,42 @@ fn rename_dialog(app: &mut App, ctx: &egui::Context) {
     }
 }
 
-/// xfig's Global settings panel holds its preferences; RustFig's are its
-/// layout, mouse and keyboard choices.
+/// xfig's query when saving with a compound open (`do_save`, `w_file.c`;
+/// `popup_query` with QUERY_ALLPARTCAN, `w_util.c`): save only the visible
+/// part or all of the figure. "Save All" closes the compounds first.
+fn save_scope_dialog(app: &mut App, ctx: &egui::Context) {
+    let Some(id) = app.dialogs.save_scope else { return };
+    let mut choice = None;
+    egui::Modal::new(egui::Id::new("save_scope")).show(ctx, |ui| {
+        ui.heading("Xfig: Query");
+        ui.label("You have opened a compound. You may save just\nthe visible part or all of the figure.");
+        ui.horizontal(|ui| {
+            if ui.button("Save All").clicked() {
+                choice = Some(Some(false));
+            }
+            if ui.button("Save Part").clicked() {
+                choice = Some(Some(true));
+            }
+            if ui.button("Cancel").clicked() {
+                choice = Some(None);
+            }
+        });
+    });
+    let Some(choice) = choice else { return };
+    app.dialogs.save_scope = None;
+    let Some(part) = choice else { return };
+    if !part {
+        // xfig: `close_all_compounds` before saving.
+        if let Err(e) = app.engine.finish_text() {
+            app.error(e.message);
+        }
+        app.run("compound.close_all", json!({}));
+    }
+    app.run(id, json!({ "part": part }));
+}
+
+/// xfig's Global settings panel holds its preferences; RustFig's is the
+/// keyboard choice.
 fn global_dialog(app: &mut App, ctx: &egui::Context) {
     if !app.dialogs.global_open {
         return;
@@ -688,7 +726,6 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
         .collapsible(false)
         .show(ctx, |ui| {
             for (id, label, on) in [
-                ("app.toggle_layout", "Classic xfig layout", app.classic()),
                 ("app.toggle_xfig_keys", "xfig keyboard shortcuts", app.xfig_keys),
                 // xfig's Global Settings panel repeats the View menu's switches.
                 (

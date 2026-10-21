@@ -262,7 +262,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_chop.c` | `select_log_object` | 829 | missing | Chop mode (cut objects at the intersection with an axe object) | D3 |
 | `e_chop.c` | `init_chop_right` | 883 | missing | Chop mode (cut objects at the intersection with an axe object) | D3 |
 | `e_compound.c` | `init_open_compound` | 69 | ported | tools: `open_compound_event` (left button), command `compound.open` | D1 |
-| `e_compound.c` | `init_open_compound_vis` | 82 | ported | tools: `open_compound_event` (middle button; Shift+left in the modern scheme), `compound.open` with `keep_visible` | D1 |
+| `e_compound.c` | `init_open_compound_vis` | 82 | ported | tools: `open_compound_event` (middle button), `compound.open` with `keep_visible` | D1 |
 | `e_compound.c` | `open_this_compound` | 97 | ported | model: `Document::open_compound` (the members become the drawing, the rest waits in `Document::open`); command `compound.open`; undo is the history, as xfig's `F_ENTER_COMP` | D1 |
 | `e_compound.c` | `open_compound_selected` | 122 | ported | tools: `ToolKind::OpenCompound` (mask `M_COMPOUND`, hints `open compound` / `open, keep visible`) | D1 |
 | `e_compound.c` | `close_compound` | 142 | partial | model: `Document::close_compound`; command `compound.close` (refused while drawing, selects the mode again, drops an emptied compound); the dimension-line recomputation of `rescale_dimension_line` waits for D10 | D10 |
@@ -456,7 +456,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_glue.c` | `get_compound` | 499 | ported | tools: `ToolKind::Glue` (click or tag region, `glue_event`, `region_click`), command `object.group` |  |
 | `e_joinsplit.c` | `join_split_selected` | 71 | ported | tools: `ToolKind::JoinSplit` (mask `M_POLYLINE\|M_SPLINE_O\|M_SPLINE_C`, hints `Join Lines/Splines` / `Split Line/Spline`) | D2 |
 | `e_joinsplit.c` | `init_join` | 93 | ported | tools: `join_split_event` (left button: the end point under the pointer, `end_point_at`) | D2 |
-| `e_joinsplit.c` | `init_split` | 113 | ported | tools: `join_split_event` (middle button; right in the modern scheme), `object.split`; pictures refused | D2 |
+| `e_joinsplit.c` | `init_split` | 113 | ported | tools: `join_split_event` (middle button), `object.split`; pictures refused | D2 |
 | `e_joinsplit.c` | `join_lines` | 143 | ported | tools: `join_split_event` (state `ToolState::Join`, markers narrowed to lines); only polylines with an end picked | D2 |
 | `e_joinsplit.c` | `join_splines` | 167 | ported | tools: as `join_lines`, open splines only; unlike xfig the second point is not taken for an end | D2 |
 | `e_joinsplit.c` | `draw_join_marker` | 194 | ported | `Overlay::join_marker`, drawn as a magenta 20 px square | D2 |

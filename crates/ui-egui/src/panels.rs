@@ -179,7 +179,7 @@ fn slot_grid(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, id: &str, slots: &[S
     egui::Grid::new(id).spacing(vec2(2.0, 2.0)).show(ui, |ui| {
         for (i, slot) in slots.iter().filter(|s| !wide(s)).enumerate() {
             match slot {
-                Slot::Missing(icon, tip, task) => missing_button(ui, app.vector_icons, tk, icon, tip, task, size),
+                Slot::Missing(icon, tip, task) => missing_button(ui, tk, icon, tip, task, size),
                 Slot::Tool(t, icon) => tool_button(app, ui, tk, *t, icon, size),
             }
             if i % 2 == 1 {
@@ -189,15 +189,7 @@ fn slot_grid(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, id: &str, slots: &[S
     });
     for slot in slots.iter().filter(|s| wide(s)) {
         if let Slot::Missing(icon, tip, task) = slot {
-            missing_button(
-                ui,
-                app.vector_icons,
-                tk,
-                icon,
-                tip,
-                task,
-                vec2(size.x * 2.0 + 2.0, size.y),
-            );
+            missing_button(ui, tk, icon, tip, task, vec2(size.x * 2.0 + 2.0, size.y));
         }
     }
 }
@@ -218,7 +210,7 @@ fn tool_button(
     // A sunken button's picture sinks a pixel with it.
     let sunk = matches!(state, crate::bevel::State::Selected | crate::bevel::State::Pressed) && tk.bevel;
     let inner = if sunk { rect.translate(vec2(1.0, 1.0)) } else { rect };
-    paint_mode_icon(ui, app.vector_icons, icon, inner, ink);
+    paint_mode_icon(ui, icon, inner, ink);
     let tip = match xfig_tip(t) {
         Some(tip) => tip.to_string(),
         None if t.shortcut().is_empty() => t.label().to_string(),
@@ -272,10 +264,10 @@ fn xfig_tip(t: ToolKind) -> Option<&'static str> {
     })
 }
 
-/// A mode icon: the vector redraw when vector pictures are on and the icon
-/// has been traced (W9), else xfig's bitmap.
-fn paint_mode_icon(ui: &egui::Ui, vector: bool, icon: &'static xfig_icons::Xbm, rect: egui::Rect, ink: Color32) {
-    if vector && crate::mode_icons::traced(icon.name) {
+/// A mode icon: the vector redraw when the icon has been traced (W9), else
+/// xfig's bitmap.
+fn paint_mode_icon(ui: &egui::Ui, icon: &'static xfig_icons::Xbm, rect: egui::Rect, ink: Color32) {
+    if crate::mode_icons::traced(icon.name) {
         crate::vector_icons::paint(ui, crate::vector_icons::VIcon::Traced(icon.name), rect, ink);
     } else {
         xfig_icons::paint(ui, icon, rect, ink);
@@ -284,7 +276,6 @@ fn paint_mode_icon(ui: &egui::Ui, vector: bool, icon: &'static xfig_icons::Xbm, 
 
 fn missing_button(
     ui: &mut egui::Ui,
-    vector: bool,
     tk: &Tokens,
     icon: &'static xfig_icons::Xbm,
     tip: &str,
@@ -293,7 +284,7 @@ fn missing_button(
 ) {
     let (rect, resp) = ui.allocate_exact_size(size, Sense::hover());
     crate::bevel::paint(ui.painter(), rect, tk, crate::bevel::State::Disabled);
-    paint_mode_icon(ui, vector, icon, rect, tk.muted.gamma_multiply(0.6));
+    paint_mode_icon(ui, icon, rect, tk.muted.gamma_multiply(0.6));
     let text = format!("{tip} (not available yet, plan task {task})");
     resp.on_hover_text(text.clone())
         .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, false, text.clone()));
@@ -758,7 +749,6 @@ pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
     if let Some((left, middle, right)) = app.hint_shown {
         h = rustfig_engine::MouseHints { left, middle, right };
     }
-    let xfig = app.engine.mouse_scheme() == rustfig_engine::MouseScheme::Xfig;
     let (rect, resp) = ui.allocate_exact_size(INDICATOR_SIZE, Sense::hover());
     let p = ui.painter_at(rect);
     crate::bevel::field(&p, rect, tk, if tk.bevel { tk.inset_bg } else { Color32::TRANSPARENT });
@@ -768,11 +758,7 @@ pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
     p.text(
         rect.left_top() + vec2(5.0, 3.0),
         egui::Align2::LEFT_TOP,
-        if xfig {
-            "Mouse Buttons"
-        } else {
-            "Mouse Buttons (modern)"
-        },
+        "Mouse Buttons",
         small,
         tk.muted,
     );
@@ -835,41 +821,10 @@ pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
     );
     let resp = resp.on_hover_text(format!(
         "{summary}\n\nTwo-button mouse or trackpad: Alt/Option+click is the middle button, \
-         Ctrl+click the right button. View › xfig mouse buttons switches between xfig's \
-         three-button scheme and the modern one."
+         Ctrl+click the right button (macOS); on Linux and Windows left and right together \
+         are the middle button."
     ));
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, summary.clone()));
-}
-
-pub fn status_bar(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
-    ui.horizontal(|ui| {
-        ui.label(RichText::new(app.engine.tool().label()).strong());
-        ui.separator();
-        let doc = app.engine.doc();
-        if let Some(c) = app.canvas.cursor {
-            ui.monospace(format!(
-                "{:>8.3} {:>8.3} {}",
-                doc.to_units(c.x),
-                doc.to_units(c.y),
-                doc.unit_name()
-            ));
-            ui.separator();
-        }
-        ui.label(format!("{:.0}%", app.engine.view.zoom * 100.0));
-        ui.separator();
-        let n = app.engine.selection().len();
-        if n > 0 {
-            ui.label(format!("{n} selected"));
-            ui.separator();
-        }
-        if let Some(m) = &app.message {
-            let c = if m.error { tk.error } else { ui.visuals().text_color() };
-            ui.label(RichText::new(&m.text).color(c));
-        }
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.label(RichText::new(format!("{} objects", app.engine.doc().leaf_count())).color(tk.muted));
-        });
-    });
 }
 
 /// RGB of a colour number, for UI swatches.

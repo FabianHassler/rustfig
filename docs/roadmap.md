@@ -18,6 +18,7 @@
 
 | Date | Note |
 |------|------|
+| 2026-10-21 | W16, W17 done (one mouse scheme, one layout); D1 save query. |
 | 2026-10-21 | S4 done: every xfig function audited (`source-audit.md`); S4-1 to S4-7 added to phase S. |
 | 2026-10-21 | DD1–DD10 (dedup with fig2dev) done; docs swept (DD9). |
 | 2026-10-13 | M0–M3 landed. |

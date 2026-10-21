@@ -176,6 +176,7 @@ pub fn open_state(app: &App, ctx: &egui::Context) -> Value {
         ("global_settings", d.global_open),
         ("resources", d.resources_open),
         ("rename_confirm", d.rename_confirm.is_some()),
+        ("save_scope", d.save_scope.is_some()),
         ("units", app.unit_panel_open),
         ("unsaved_changes", app.pending.is_some()),
     ];

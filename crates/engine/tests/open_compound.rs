@@ -261,17 +261,6 @@ fn the_open_compound_mode_and_its_buttons() {
     e.set_tool(ToolKind::OpenCompound);
     click(&mut e, 1200.0, 400.0, Button::Middle);
     assert!(e.doc().open[0].keep_visible);
-    // The modern scheme: Shift+left keeps it visible.
-    e.execute("compound.close", &json!({})).unwrap();
-    e.set_mouse_scheme(rustfig_engine::MouseScheme::Modern);
-    e.set_tool(ToolKind::OpenCompound);
-    e.tool_event(ToolEvent::Press {
-        pos: Point::new(1200.0, 400.0),
-        button: Button::Left,
-        shift: true,
-    })
-    .unwrap();
-    assert!(e.doc().open[0].keep_visible);
 }
 
 #[test]
@@ -360,4 +349,38 @@ fn deep_nesting_is_bounded() {
     assert!(opened >= 256, "{opened}");
     e.execute("compound.close_all", &json!({})).unwrap();
     assert_eq!(e.open_compounds(), 0);
+}
+
+/// xfig's "Save All" / "Save Part" (`do_save`, `w_file.c`): the engine's
+/// default is the whole figure; `part: true` writes only the open
+/// compound's members.
+#[test]
+fn saving_part_writes_only_the_visible_members() {
+    let (mut e, _, comp) = figure();
+    e.execute("compound.open", &json!({"id": comp.0})).unwrap();
+    let data = |e: &mut Engine, p: Value| {
+        let d = e.execute("file.save_data", &p).unwrap()["data"].clone();
+        rustfig_engine::format::read_any(d.as_str().unwrap().as_bytes()).unwrap()
+    };
+    let whole = data(&mut e, json!({"format": "fig"}));
+    assert_eq!(whole.objects.len(), 2, "the box and the compound");
+    let part = data(&mut e, json!({"format": "fig", "part": true}));
+    assert_eq!(part.objects.len(), 2, "the line and the circle");
+    assert!(part.objects.iter().all(|o| !matches!(o.kind, ObjectKind::Compound(_))));
+    // A file save takes the same choice, and the figure stays open.
+    let dir = std::env::temp_dir().join(format!("rustfig-save-part-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("part.fig").to_string_lossy().into_owned();
+    e.execute("file.save", &json!({"path": path, "part": true})).unwrap();
+    let text = std::fs::read(&path).unwrap();
+    let saved = rustfig_engine::format::read_any(&text).unwrap();
+    assert!(saved.objects.iter().all(|o| !matches!(o.kind, ObjectKind::Compound(_))));
+    assert_eq!(e.open_compounds(), 1);
+    e.execute("file.save", &json!({"path": path})).unwrap();
+    let text = std::fs::read(&path).unwrap();
+    let saved = rustfig_engine::format::read_any(&text).unwrap();
+    assert!(saved.objects.iter().any(|o| matches!(o.kind, ObjectKind::Compound(_))));
+    // A bad value is refused.
+    assert!(e.execute("file.save_data", &json!({"part": "yes"})).is_err());
+    let _ = std::fs::remove_dir_all(&dir);
 }

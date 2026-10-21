@@ -18,7 +18,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Measure | Value |
 |---------|-------|
 | Overall parity (weighted) | ≈65 % |
-| Commands (all reachable from the control channel and MCP) | 140 engine (incl. 40 tool modes) + 17 UI |
+| Commands (all reachable from the control channel and MCP) | 139 engine (incl. 40 tool modes) + 14 UI |
 | Interactive tools (xfig modes) | 40 |
 | Tests | 537 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 1.3–3.2, write 3.2 |
@@ -35,7 +35,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | File format | 92 % | Fig 1.3–3.2 read; exact pre-3.2 spline conversion missing |
 | Export | 66 % | every fig2dev language but `sld`; PostScript page layout and previews, hardening passes missing |
 | Text | 55 % | fallback fonts, no character map or LaTeX special text |
-| View & navigation | 96 % | classic xfig layout, xfig's three-button mouse (or a modern scheme), depth panel, rulers and units box, object snaps; zoom box missing |
+| View & navigation | 96 % | xfig's layout and three-button mouse (the only ones, W16/W17), depth panel, rulers and units box, object snaps; zoom box missing |
 | Undo | 100 % | multi-level (xfig: single level) |
 | Libraries | 0 % | not started |
 | Printing | 10 % | export PDF only |
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-21 | W16, W17: one mouse scheme (xfig's), one layout, no attribute-panel or icon switch; RustFig's extras in Edit, View, File and a new Object menu (every command reachable from a menu or listed as menu-less, tested); D1 follow-up: xfig's Save All / Save Part / Cancel query when saving inside an open compound (`part` param on save and export commands). One engine command (`tool.mouse_buttons`) and three UI commands fewer. |
 | 2026-10-21 | W13, W14: functions on xfig's free mouse buttons (update, move and delete-point regions; add point at an end; reverse arrows; break all levels; align to first; centre boxes and pictures, Shift square; picture keeps aspect; regular polygon by one side; circle through three points; paste text), 8 new commands, `tests/free_buttons.rs` (17), hints checked by `mouse_hints_match_behaviour`; Scale right skipped (already proportional). |
 | 2026-10-21 | S4: function-level audit of xfig (`docs/source-audit.md`, `cargo xtask source-audit`): 2,126 functions, each ported, replaced, not needed, partial or missing with its task; seven gaps without a task became S4-1 to S4-7 (20 h); `docs/source-map.md` statuses corrected. |
 | 2026-10-21 | W10 group 5 (attribute pop-ups, mode panel) compared with xfig's sources; W10 done. Indicator stepping as xfig (rotation presets, 15 degree angles, font size and text step ladders, fill wrap and tint skip), dash length and dot gap both shown, xfig's mode balloons, Alt+right is middle; W10-31 to W10-33 added. |

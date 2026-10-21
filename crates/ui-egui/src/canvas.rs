@@ -4,7 +4,7 @@
 use crate::theme::Tokens;
 use crate::App;
 use egui::{pos2, vec2, Color32, Pos2, Rect, Sense, Shape, Stroke, TextureHandle, TextureOptions};
-use rustfig_engine::{Button, MouseScheme, Overlay, ToolEvent};
+use rustfig_engine::{Button, Overlay, ToolEvent};
 use rustfig_geom::{Affine, Point};
 use rustfig_model::{Document, ObjectId, ObjectKind, Orientation};
 use rustfig_render::raster::{rasterize, RasterOptions};
@@ -64,7 +64,7 @@ pub struct CanvasState {
     last_sent: Option<Point>,
     /// The tool button of a press that started on the canvas.
     pressing: Option<(egui::PointerButton, Button)>,
-    /// Panning with space+drag (or the middle button in the modern scheme).
+    /// Panning with space+drag.
     panning: bool,
     /// Milliseconds the last document render took.
     pub render_ms: f64,
@@ -440,7 +440,7 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
         egui::PointerButton::Middle,
         egui::PointerButton::Secondary,
     ];
-    let (hover, pressed, released, mid_down, any_down, double, scroll, zoom, space) = ui.input(|i| {
+    let (hover, pressed, released, any_down, double, scroll, zoom, space) = ui.input(|i| {
         (
             i.pointer.hover_pos(),
             // Presses with the modifiers held at that moment.
@@ -457,7 +457,6 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
                 })
                 .collect::<Vec<_>>(),
             BUTTONS.map(|b| i.pointer.button_released(b)),
-            i.pointer.middle_down(),
             i.pointer.any_down(),
             i.pointer.button_double_clicked(egui::PointerButton::Primary),
             i.smooth_scroll_delta,
@@ -487,8 +486,7 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
             app.engine.view.pan_pixels(f64::from(scroll.x), f64::from(scroll.y));
         }
     }
-    let mid_pans = mid_down && app.engine.mouse_scheme() == MouseScheme::Modern;
-    if (mid_pans || space) && (resp.dragged() || app.canvas.panning) && (over || app.canvas.panning) {
+    if space && (resp.dragged() || app.canvas.panning) && (over || app.canvas.panning) {
         app.canvas.panning = true;
         let d = ui.input(|i| i.pointer.delta());
         app.engine.view.pan_pixels(f64::from(d.x), f64::from(d.y));

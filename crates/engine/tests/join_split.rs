@@ -528,12 +528,6 @@ fn the_middle_button_splits_and_a_failure_changes_nothing() {
     assert_eq!(e.doc().objects.len(), 2);
     assert!(e.undo());
     assert_eq!(snapshot(&e), before);
-    // The modern scheme splits with the right button.
-    e.set_mouse_scheme(rustfig_engine::MouseScheme::Modern);
-    e.set_tool(ToolKind::JoinSplit);
-    assert_eq!(hints(&e)[2], "Split Line/Spline");
-    press(&mut e, 1000.0, 0.0, Button::Right);
-    assert_eq!(e.doc().objects.len(), 2);
 }
 
 #[test]

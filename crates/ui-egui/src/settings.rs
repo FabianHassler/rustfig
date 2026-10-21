@@ -5,9 +5,8 @@
 //! balloons, layout, keymap, mouse buttons and export panel, and writes the
 //! file whenever a setting changes.
 
-use crate::{App, Layout};
+use crate::App;
 use rustfig_engine::prefs::Prefs;
-use rustfig_engine::MouseScheme;
 
 /// The browser storage key (web).
 #[cfg(target_arch = "wasm32")]
@@ -155,24 +154,8 @@ pub fn apply_ui(app: &mut App) {
         app.dialogs.export.margin = (m.clamp(0, 10_000) as f64) * 1200.0 / 72.0;
     }
     let r = &p.rustfig;
-    if let Some(l) = r.layout.as_deref() {
-        app.layout = if l == "modern" { Layout::Modern } else { Layout::Classic };
-    }
-    if let Some(m) = r.mouse.as_deref() {
-        app.engine.set_mouse_scheme(if m == "modern" {
-            MouseScheme::Modern
-        } else {
-            MouseScheme::Xfig
-        });
-    }
     if let Some(b) = r.xfig_keys {
         app.xfig_keys = b;
-    }
-    if let Some(b) = r.show_attribute_panel {
-        app.show_indicator = b;
-    }
-    if let Some(b) = r.vector_icons {
-        app.vector_icons = b;
     }
     if let Some(style) = r.button_style.as_deref() {
         app.button_3d = style != "flat";
@@ -181,15 +164,6 @@ pub fn apply_ui(app: &mut App) {
 
 /// Write the current switches into the preferences (they persist).
 pub fn collect_ui(app: &mut App) {
-    let layout = Some(if app.classic() { "classic" } else { "modern" }.to_string());
-    let mouse = Some(
-        if app.engine.mouse_scheme() == MouseScheme::Modern {
-            "modern"
-        } else {
-            "xfig"
-        }
-        .to_string(),
-    );
     let (balloons, depths, border) = (app.show_balloons, app.show_depths, app.engine.show_page_border);
     let p = &mut app.engine.prefs;
     let r = &mut p.rustfig;
@@ -200,21 +174,13 @@ pub fn collect_ui(app: &mut App) {
             changed = true;
         }
     };
-    upd(&mut r.layout, layout);
-    upd(&mut r.mouse, mouse);
     upd(
         &mut r.button_style,
         Some(if app.button_3d { "3d" } else { "flat" }.to_string()),
     );
-    for (slot, v) in [
-        (&mut r.xfig_keys, app.xfig_keys),
-        (&mut r.show_attribute_panel, app.show_indicator),
-        (&mut r.vector_icons, app.vector_icons),
-    ] {
-        if *slot != Some(v) {
-            *slot = Some(v);
-            changed = true;
-        }
+    if r.xfig_keys != Some(app.xfig_keys) {
+        r.xfig_keys = Some(app.xfig_keys);
+        changed = true;
     }
     // xfig's own switches in Global settings and the View menu.
     for (name, v) in [

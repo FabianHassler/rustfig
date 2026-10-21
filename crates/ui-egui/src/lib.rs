@@ -30,16 +30,6 @@ use serde_json::{json, Value};
 /// Most messages kept in the message panel's history.
 pub const MAX_MESSAGES: usize = 200;
 
-/// Window layout.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Layout {
-    /// xfig's arrangement: menus, file name, message panel, mouse indicator and
-    /// units box at the top; depth panel on the right.
-    Classic,
-    /// Menu bar at the top, status bar at the bottom.
-    Modern,
-}
-
 /// A message shown in the message panel / status bar.
 #[derive(Debug, Clone)]
 pub struct Message {
@@ -64,13 +54,9 @@ pub struct App {
     pub message: Option<Message>,
     /// Message history, oldest first.
     pub messages: Vec<Message>,
-    pub layout: Layout,
     pub show_depths: bool,
     /// xfig's "Show info balloons" (Meta-Y): tooltips on or off.
     pub show_balloons: bool,
-    /// Attribute pictures drawn as vectors at the screen's density (W9);
-    /// off shows xfig's 1-bit bitmaps.
-    pub vector_icons: bool,
     /// A theme to switch to on the next frame (`app.theme`).
     pub theme_request: Option<egui::ThemePreference>,
     /// Button style: bevelled "3D" buttons (default) or flat ones.
@@ -92,7 +78,6 @@ pub struct App {
     pub settings: settings::Settings,
     /// xfig's compose key while typing text (`menus::compose_text`).
     pub(crate) compose: menus::Compose,
-    pub show_indicator: bool,
     /// The file-name box while it is a text field: the text being typed.
     pub file_edit: Option<String>,
     /// While dragging across depth checkboxes: the state they are set to.
@@ -141,10 +126,8 @@ impl App {
             dialogs: dialogs::Dialogs::default(),
             message: None,
             messages: Vec::new(),
-            layout: Layout::Classic,
             show_depths: true,
             show_balloons: true,
-            vector_icons: true,
             theme_request: None,
             button_3d: true,
             mode_popup: None,
@@ -154,7 +137,6 @@ impl App {
             frame_times: std::collections::VecDeque::new(),
             settings: settings::Settings::default(),
             compose: menus::Compose::default(),
-            show_indicator: true,
             file_edit: None,
             depth_drag: None,
             hint_override: None,
@@ -231,11 +213,6 @@ impl App {
                 })
                 .collect();
         }
-    }
-
-    /// Whether the classic xfig layout is active.
-    pub fn classic(&self) -> bool {
-        self.layout == Layout::Classic
     }
 
     fn push_message(&mut self, m: Message) {
@@ -432,15 +409,8 @@ impl App {
         // Panels set the hint override while hovered; show last frame's.
         self.hint_shown = self.hint_override.take();
         menus::handle_shortcuts(self, ctx);
-        if self.classic() {
-            egui::TopBottomPanel::top("xfig_top").show(ctx, |ui| panels::classic_top(self, ui, &tokens));
-        } else {
-            egui::TopBottomPanel::top("menu").show(ctx, |ui| menus::menu_bar(self, ui));
-            egui::TopBottomPanel::bottom("status").show(ctx, |ui| panels::status_bar(self, ui, &tokens));
-        }
-        if self.show_indicator {
-            egui::TopBottomPanel::bottom("indicator").show(ctx, |ui| attributes::attribute_panel(self, ui, &tokens));
-        }
+        egui::TopBottomPanel::top("xfig_top").show(ctx, |ui| panels::classic_top(self, ui, &tokens));
+        egui::TopBottomPanel::bottom("indicator").show(ctx, |ui| attributes::attribute_panel(self, ui, &tokens));
         egui::SidePanel::left("modes")
             .resizable(false)
             .exact_width(panels::MODE_PANEL_WIDTH)

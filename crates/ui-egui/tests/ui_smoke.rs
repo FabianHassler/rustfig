@@ -6,7 +6,7 @@ use egui_kittest::kittest::Queryable;
 use egui_kittest::Harness;
 use rustfig_engine::{Engine, ToolKind};
 use rustfig_ui_egui::dialogs::ScriptedDialogs;
-use rustfig_ui_egui::{App, Layout};
+use rustfig_ui_egui::App;
 use serde_json::json;
 
 fn harness(app: App) -> Harness<'static, App> {
@@ -39,24 +39,6 @@ fn classic_layout_has_xfig_regions() {
     h.get_by_label("Depths");
     h.get_by_label("Drawing");
     h.get_by_label("Editing");
-}
-
-#[test]
-fn modern_layout_hides_the_classic_strip() {
-    let mut a = app();
-    a.layout = Layout::Modern;
-    let h = harness(a);
-    h.get_by_label("File");
-    assert!(h.query_by_label_contains("Left: ").is_none());
-}
-
-#[test]
-fn layout_toggle_command() {
-    let mut h = harness(app());
-    h.state_mut().run("app.toggle_layout", json!({}));
-    h.run_steps(2);
-    assert_eq!(h.state().layout, Layout::Modern);
-    assert!(h.query_by_label_contains("Left: ").is_none());
 }
 
 #[test]
@@ -206,12 +188,21 @@ fn global_settings_switch_the_xfig_shortcuts() {
     h.get_by_label_contains("xfig keyboard shortcuts").click();
     h.run_steps(2);
     assert_eq!(h.state().xfig_keys, !before);
-    // The mouse scheme is no longer a Global setting; its command remains.
+    // W16/W17: no mouse scheme, layout or icon switch is left, and the
+    // commands are gone.
     assert!(h.query_by_label_contains("xfig mouse buttons").is_none());
-    h.state_mut().run("tool.mouse_buttons", serde_json::json!({}));
-    h.run_steps(2);
-    assert_eq!(h.state().engine.mouse_scheme(), rustfig_engine::MouseScheme::Modern);
-    h.get_by_label_contains("middle: pan");
+    assert!(h.query_by_label_contains("Classic xfig layout").is_none());
+    for id in [
+        "tool.mouse_buttons",
+        "app.toggle_layout",
+        "app.toggle_indicator",
+        "app.toggle_vector_icons",
+    ] {
+        assert!(
+            rustfig_engine::cmd::find(id).is_none() && rustfig_ui_egui::menus::find_ui(id).is_none(),
+            "{id}"
+        );
+    }
 }
 
 #[test]
@@ -477,9 +468,9 @@ fn xfig_keys_select_modes_and_run_menu_entries() {
 #[test]
 fn classic_menus_are_xfigs() {
     let mut h = harness(app());
-    // xfig has no Object or Tools menu.
-    assert!(h.query_by_label("Object").is_none());
-    assert!(h.query_by_label("Tools").is_none());
+    // RustFig's own Object menu sits between Snap and Help.
+    h.get_by_label("Snap");
+    h.get_by_label("Object");
     h.get_by_label("File").click();
     h.run_steps(2);
     // (Labels include xfig's accelerator, e.g. "Open... Meta-O".)
@@ -660,7 +651,7 @@ fn xfig_menu_letters_name_menu_entries() {
         let found = items.iter().any(|i| match i {
             XfigItem::Cmd(_, id) => id == target,
             XfigItem::Missing(label, _, _) => label == target,
-            XfigItem::Sep => false,
+            XfigItem::Own(_) | XfigItem::Sub(..) | XfigItem::Sep => false,
         });
         assert!(found, "{menu} {letter}: {target} isn't in the menu");
     }
@@ -775,14 +766,11 @@ fn return_exports_from_the_panel() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// W9: all of xfig's 29 arrow choices (types 0–14), with vector pictures
-/// or xfig's bitmaps.
+/// W9: all of xfig's 29 arrow choices (types 0–14).
 #[test]
-fn arrow_types_up_to_14_in_both_picture_modes() {
-    for vector in [true, false] {
-        let mut a = app();
-        a.vector_icons = vector;
-        let mut h = harness(a);
+fn arrow_types_up_to_14() {
+    {
+        let mut h = harness(app());
         h.state_mut().engine.set_tool(ToolKind::Polyline);
         h.run_steps(2);
         h.get_by_label_contains("Arrow Type: ").click();
@@ -790,13 +778,13 @@ fn arrow_types_up_to_14_in_both_picture_modes() {
         h.get_by_label("hollow type 13").click();
         h.run_steps(2);
         let a = h.state().engine.indicator.arrow;
-        assert_eq!((a.kind, a.style), (13, 0), "vector {vector}");
+        assert_eq!((a.kind, a.style), (13, 0), "arrow");
         h.get_by_label_contains("Arrow Type: ").click();
         h.run_steps(2);
         h.get_by_label("solid type 14").click();
         h.run_steps(2);
         let a = h.state().engine.indicator.arrow;
-        assert_eq!((a.kind, a.style), (14, 1), "vector {vector}");
+        assert_eq!((a.kind, a.style), (14, 1), "arrow");
     }
 }
 
@@ -853,7 +841,7 @@ fn settings_survive_a_restart() {
     let path = settings_file("restart");
     {
         let mut h = harness(app_with_settings(&path));
-        h.state_mut().run("app.toggle_layout", json!({ "classic": false }));
+        h.state_mut().run("app.toggle_xfig_keys", json!({ "on": false }));
         h.state_mut()
             .run("prefs.set", json!({ "resource": "startfontsize", "value": 18 }));
         h.state_mut()
@@ -864,12 +852,35 @@ fn settings_survive_a_restart() {
     }
     let text = std::fs::read_to_string(&path).unwrap();
     assert!(text.contains("startfontsize = 18"), "{text}");
-    assert!(text.contains("layout = \"modern\""), "{text}");
+    assert!(text.contains("xfig_keys = false"), "{text}");
     let a = app_with_settings(&path);
-    assert!(!a.classic());
+    assert!(!a.xfig_keys);
     assert_eq!(a.engine.indicator.font_size, 18.0);
     assert!(a.engine.indicator.grid.is_some());
     assert_eq!(a.engine.prefs.rustfig.user_colors[0].name, "Rust");
+    let _ = std::fs::remove_dir_all(path.parent().unwrap());
+}
+
+/// W16/W17: settings files from before (layout, mouse scheme, attribute
+/// panel switch, icon choice) still load, and the keys are dropped on save.
+#[test]
+fn retired_settings_load_and_vanish() {
+    let path = settings_file("retired");
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(
+        &path,
+        "[rustfig]\nlayout = \"modern\"\nmouse = \"modern\"\nshow_attribute_panel = false\nvector_icons = false\nxfig_keys = false\n",
+    )
+    .unwrap();
+    let mut h = harness(app_with_settings(&path));
+    assert!(!h.state().xfig_keys, "the other keys still apply");
+    assert!(h.state().message.as_ref().is_none_or(|m| !m.error));
+    h.state_mut().run("app.toggle_xfig_keys", json!({"on": true}));
+    h.run_steps(2);
+    let text = std::fs::read_to_string(&path).unwrap();
+    for gone in ["layout", "mouse", "show_attribute_panel", "vector_icons"] {
+        assert!(!text.contains(gone), "{gone} written back:\n{text}");
+    }
     let _ = std::fs::remove_dir_all(path.parent().unwrap());
 }
 
@@ -880,7 +891,6 @@ fn damaged_settings_fall_back_to_defaults() {
     std::fs::create_dir_all(path.parent().unwrap()).unwrap();
     std::fs::write(&path, "[xfig\nstartfontsize = ").unwrap();
     let a = app_with_settings(&path);
-    assert!(a.classic());
     assert!(a
         .message
         .as_ref()
@@ -1254,15 +1264,10 @@ fn injected_clicks_open_menu_submenu_and_dialog_by_label() {
     inject(&mut h, "ui.click_label", json!({"label": "About"}));
     let open = open_state(&mut h);
     assert!(open["dialogs"].as_array().unwrap().contains(&json!("about")), "{open}");
-    // A submenu (modern layout): Tools > Draw lists the drawing tools.
-    let mut m = harness(app());
-    m.state_mut().layout = Layout::Modern;
-    let ctx = m.ctx.clone();
-    m.state_mut().attach(&ctx);
-    m.run_steps(3);
-    inject(&mut m, "ui.click_label", json!({"label": "Tools"}));
-    inject(&mut m, "ui.click_label", json!({"label": "Draw"}));
-    let labels: Vec<String> = m
+    // A submenu: Object > Arrange lists the arrange commands.
+    inject(&mut h, "ui.click_label", json!({"label": "Object"}));
+    inject(&mut h, "ui.click_label", json!({"label": "Arrange"}));
+    let labels: Vec<String> = h
         .state()
         .widgets
         .lock()
@@ -1270,7 +1275,7 @@ fn injected_clicks_open_menu_submenu_and_dialog_by_label() {
         .iter()
         .map(|w| w.label.clone())
         .collect();
-    assert!(labels.iter().any(|l| l.contains("Box")), "{labels:?}");
+    assert!(labels.iter().any(|l| l.contains("Align")), "{labels:?}");
 }
 
 #[test]
@@ -1330,4 +1335,72 @@ fn control_input_hostile_params_never_panic() {
         let _ = rustfig_ui_egui::control::input_steps(h.state(), m, &p);
     }
     h.run_steps(2);
+}
+
+/// D1 follow-up: saving inside an open compound asks "Save All / Save
+/// Part / Cancel" (xfig's `do_save` query, `w_file.c`).
+#[test]
+fn saving_inside_an_open_compound_asks_all_or_part() {
+    let dir = std::env::temp_dir().join(format!("rustfig-ui-savequery-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("fig.fig").to_string_lossy().into_owned();
+    let make = || {
+        let mut a = app();
+        for (x, y) in [(0, 0), (2400, 0)] {
+            a.engine
+                .execute("shape.rectangle", &json!({"x": x, "y": y, "width": 600, "height": 600}))
+                .unwrap();
+        }
+        a.engine.execute("edit.select_all", &json!({})).unwrap();
+        a.engine.execute("object.group", &json!({})).unwrap();
+        a.engine
+            .execute("shape.circle", &json!({"cx": 9000, "cy": 0, "r": 300}))
+            .unwrap();
+        let id = a.engine.doc().objects[0].id;
+        a.engine.execute("compound.open", &json!({"id": id.0})).unwrap();
+        a.engine.set_path(Some(path.clone()));
+        a
+    };
+    let count = || {
+        let doc = rustfig_engine::format::read_any(&std::fs::read(&path).unwrap()).unwrap();
+        doc.objects.len()
+    };
+    // Cancel: nothing written, the compound stays open.
+    let mut h = harness(make());
+    h.state_mut().run("app.save", json!({}));
+    h.run_steps(2);
+    h.get_by_label_contains("You have opened a compound");
+    h.get_by_label("Save All");
+    h.get_by_label("Save Part");
+    h.get_by_label("Cancel").click();
+    h.run_steps(2);
+    assert!(!std::path::Path::new(&path).exists());
+    assert_eq!(h.state().engine.open_compounds(), 1);
+    // Save Part: the two members only, the compound stays open.
+    h.state_mut().run("app.save", json!({}));
+    h.run_steps(2);
+    h.get_by_label("Save Part").click();
+    h.run_steps(2);
+    assert_eq!(count(), 2);
+    assert_eq!(h.state().engine.open_compounds(), 1);
+    // Save All: the compounds are closed (xfig's close_all_compounds) and
+    // the whole figure written: the compound and the circle.
+    h.state_mut().run("app.save", json!({}));
+    h.run_steps(2);
+    h.get_by_label("Save All").click();
+    h.run_steps(2);
+    assert_eq!(count(), 2);
+    assert_eq!(h.state().engine.open_compounds(), 0);
+    let doc = rustfig_engine::format::read_any(&std::fs::read(&path).unwrap()).unwrap();
+    assert!(doc
+        .objects
+        .iter()
+        .any(|o| matches!(o.kind, rustfig_engine::model::ObjectKind::Compound(_))));
+    // A script that says which (or names the file) is not asked.
+    let mut h = harness(make());
+    h.state_mut().run("app.save", json!({"part": false}));
+    h.run_steps(2);
+    assert!(h.query_by_label_contains("You have opened a compound").is_none());
+    assert_eq!(h.state().engine.open_compounds(), 1);
+    let _ = std::fs::remove_dir_all(&dir);
 }

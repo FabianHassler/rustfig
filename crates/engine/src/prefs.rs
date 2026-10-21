@@ -197,18 +197,8 @@ pub struct NamedColor {
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct RustFigPrefs {
-    /// "classic" or "modern".
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub layout: Option<String>,
-    /// "xfig" (three buttons) or "modern".
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub mouse: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub xfig_keys: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub show_attribute_panel: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub vector_icons: Option<bool>,
     /// "3d" (bevelled buttons, default) or "flat".
     #[serde(skip_serializing_if = "Option::is_none")]
     pub button_style: Option<String>,
@@ -229,6 +219,9 @@ pub struct Prefs {
     #[serde(flatten)]
     pub other: toml::Table,
 }
+
+/// `[rustfig]` keys of switches that no longer exist.
+const RETIRED: [&str; 4] = ["layout", "mouse", "show_attribute_panel", "vector_icons"];
 
 const HEADER: &str = "# RustFig settings.
 # [xfig] holds xfig's resources under xfig's names (see xfig(1)); xfig's
@@ -255,6 +248,9 @@ impl Prefs {
                 Some(_) => {}
             }
         }
+        // Switches removed in W16/W17 (layout, mouse scheme, attribute-panel
+        // switch, icon choice): read and ignored, not written back.
+        p.rustfig.other.retain(|k, _| !RETIRED.contains(&k));
         p.rustfig.recent_files.truncate(MAX_RECENT);
         p.rustfig.user_colors.truncate(MAX_USER_COLORS);
         Ok((p, warnings))
@@ -547,6 +543,8 @@ futureResource = 3
 
 [rustfig]
 layout = \"modern\"
+mouse = \"modern\"
+vector_icons = false
 recent_files = [\"/a.fig\"]
 future_switch = true
 
@@ -561,7 +559,8 @@ x = 1
         assert_eq!(p.float("startfontsize"), Some(14.0));
         assert_eq!(p.bool("inches"), Some(false));
         assert_eq!(warnings.len(), 1, "{warnings:?}");
-        assert_eq!(p.rustfig.layout.as_deref(), Some("modern"));
+        // Retired switches load without complaint and are not written back.
+        assert!(!p.to_toml().contains("layout") && !p.to_toml().contains("vector_icons"));
         assert_eq!(p.rustfig.user_colors[0].rgb, "#d2692a");
         let again = Prefs::parse(&p.to_toml()).unwrap().0;
         assert_eq!(again, p);

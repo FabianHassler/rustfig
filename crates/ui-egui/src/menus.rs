@@ -42,12 +42,6 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}",
     },
     UiCommand {
-        id: "app.toggle_layout",
-        label: "Classic xfig layout",
-        shortcut: "",
-        params: "{\"classic\"?: bool}",
-    },
-    UiCommand {
         id: "app.new",
         label: "New",
         shortcut: "Ctrl+N",
@@ -69,13 +63,13 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         id: "app.save",
         label: "Save",
         shortcut: "Ctrl+S",
-        params: "{}",
+        params: "{\"part\"?: bool}  — with a compound open, asks (xfig's Save All / Save Part) unless part is given",
     },
     UiCommand {
         id: "app.save_as",
         label: "Save As…",
         shortcut: "Ctrl+Shift+S",
-        params: "{\"path\"?: string}",
+        params: "{\"path\"?: string, \"part\"?: bool}  — with a compound open, asks unless path or part is given",
     },
     UiCommand {
         id: "app.export",
@@ -120,12 +114,6 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}",
     },
     UiCommand {
-        id: "app.toggle_vector_icons",
-        label: "Sharp attribute pictures",
-        shortcut: "",
-        params: "{}  — vector pictures at the screen's density, or xfig's bitmaps",
-    },
-    UiCommand {
         id: "app.button_style",
         label: "Button style",
         shortcut: "",
@@ -142,12 +130,6 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         label: "Show info balloons",
         shortcut: "",
         params: "{}  — xfig's tooltips (Alt+Y, macOS Option+Y)",
-    },
-    UiCommand {
-        id: "app.toggle_indicator",
-        label: "Attribute Panel",
-        shortcut: "",
-        params: "{}",
     },
     UiCommand {
         id: "app.commands",
@@ -169,6 +151,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
     },
 ];
 
+/// Whether a save asks "all or part" first: with a compound open, unless
+/// the caller (a script) already said which with `part` or named the file.
+fn asks_scope(app: &App, p: &Value) -> bool {
+    app.engine.open_compounds() > 0 && p.get("part").is_none() && p.get("path").is_none()
+}
+
 pub fn find_ui(id: &str) -> Option<&'static UiCommand> {
     UI_COMMANDS.iter().find(|c| c.id == id)
 }
@@ -187,19 +175,28 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
                     .map_err(|e| e.message);
             }
         }
+        "app.save" | "app.save_as" if asks_scope(app, p) => {
+            // xfig asks before saving inside an open compound.
+            app.dialogs.save_scope = Some(if id == "app.save" { "app.save" } else { "app.save_as" });
+        }
         "app.save" => {
+            let part = p.get("part").and_then(Value::as_bool).unwrap_or(false);
             if app.engine.path().is_some() {
-                let r = app.engine.execute("file.save", &json!({})).map_err(|e| e.message)?;
+                let r = app
+                    .engine
+                    .execute("file.save", &json!({ "part": part }))
+                    .map_err(|e| e.message)?;
                 app.info("Saved");
                 return Ok(r);
             }
             return run_ui(app, "app.save_as", p);
         }
         "app.save_as" => {
+            let part = p.get("part").and_then(Value::as_bool).unwrap_or(false);
             if let Some(p) = path.or_else(|| app.file_dialogs.save_file("figure.fig", "Figures", &["fig", "rustfig"])) {
                 let r = app
                     .engine
-                    .execute("file.save", &json!({ "path": p }))
+                    .execute("file.save", &json!({ "path": p, "part": part }))
                     .map_err(|e| e.message)?;
                 app.info(format!("Saved {p}"));
                 return Ok(r);
@@ -221,7 +218,6 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         }
         "app.toggle_depths" => app.show_depths = !app.show_depths,
         "app.toggle_balloons" => app.show_balloons = !app.show_balloons,
-        "app.toggle_vector_icons" => app.vector_icons = !app.vector_icons,
         "app.button_style" => {
             app.button_3d = match p.get("style").and_then(Value::as_str) {
                 Some("3d") => true,
@@ -239,15 +235,6 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
             });
         }
         "app.redraw" => app.canvas.invalidate(),
-        "app.toggle_layout" => {
-            let classic = p.get("classic").and_then(Value::as_bool).unwrap_or(!app.classic());
-            app.layout = if classic {
-                crate::Layout::Classic
-            } else {
-                crate::Layout::Modern
-            };
-        }
-        "app.toggle_indicator" => app.show_indicator = !app.show_indicator,
         "app.commands" => app.dialogs.commands_open = true,
         "app.about" => app.dialogs.about_open = true,
         "app.import_picture" => {
@@ -265,106 +252,6 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
     Ok(json!({}))
 }
 
-/// Menu layout, after xfig's (File, Edit, View, Snap, Help) with RustFig's
-/// Object and Tools menus as extras. "-" is a separator, "Name>" opens a
-/// submenu until "<". The Snap menu is built in code ([`snap_menu`]).
-const LAYOUT: &[(&str, &[&str])] = &[
-    (
-        "File",
-        &[
-            "app.new",
-            "app.open",
-            "app.merge",
-            "app.save",
-            "app.save_as",
-            "app.export",
-            "-",
-            "app.import_picture",
-            "-",
-            "app.quit",
-        ],
-    ),
-    (
-        "Edit",
-        &[
-            "edit.undo",
-            "edit.redo",
-            "-",
-            "edit.paste",
-            "edit.cut",
-            "edit.copy",
-            "edit.duplicate",
-            "edit.delete",
-            "-",
-            "app.search",
-            "edit.delete_all",
-            "-",
-            "app.document_settings",
-            "app.unit_panel",
-            "-",
-            "edit.select_all",
-            "edit.select_none",
-            "app.edit_selected",
-        ],
-    ),
-    (
-        "View",
-        &[
-            "app.redraw",
-            "doc.toggle_orientation",
-            "-",
-            "view.zoom_in",
-            "view.zoom_out",
-            "view.zoom_fit",
-            "view.zoom_actual",
-            "view.pan_origin",
-            "-",
-            "view.toggle_page_border",
-            "app.toggle_depths",
-            "view.toggle_grid",
-            "app.toggle_indicator",
-            "depth.show_all",
-            "-",
-            "app.toggle_layout",
-            "tool.mouse_buttons",
-            "app.toggle_xfig_keys",
-        ],
-    ),
-    (
-        "Object",
-        &[
-            "object.group",
-            "object.ungroup",
-            "-",
-            "object.update",
-            "object.convert",
-            "object.toggle_closed",
-            "Arrows>",
-            "object.toggle_forward_arrow",
-            "object.toggle_backward_arrow",
-            "<",
-            "Transform>",
-            "transform.rotate_ccw",
-            "transform.rotate_cw",
-            "transform.flip_horizontal",
-            "transform.flip_vertical",
-            "<",
-            "Arrange>",
-            "arrange.align",
-            "arrange.distribute",
-            "-",
-            "arrange.to_front",
-            "arrange.forward",
-            "arrange.backward",
-            "arrange.to_back",
-            "<",
-            "-",
-            "object.measure",
-        ],
-    ),
-    ("Help", &["app.commands", "app.about"]),
-];
-
 /// An entry of xfig's menus (`file_menu_items` … in `w_cmdpanel.c`).
 #[derive(Clone, Copy)]
 pub enum XfigItem {
@@ -372,14 +259,19 @@ pub enum XfigItem {
     Cmd(&'static str, &'static str),
     /// An entry RustFig doesn't have yet: label, xfig's accelerator, plan task.
     Missing(&'static str, &'static str, &'static str),
+    /// A RustFig command xfig has no entry for, labelled as the command is.
+    Own(&'static str),
+    /// A submenu.
+    Sub(&'static str, &'static [XfigItem]),
     Sep,
 }
 
-/// xfig's menus, word for word and in order, for the classic layout. The
-/// Snap menu is [`snap_menu`]. RustFig's own menus (Object, Tools) are in
-/// the modern layout; its preferences are under Edit › Global settings.
+/// xfig's menus, word for word and in order; RustFig's extra entries
+/// (`Own`) follow xfig's own, and the Object menu is RustFig's. The Snap
+/// menu is [`snap_menu`] and sits before Help; preferences are under
+/// Edit › Global settings.
 pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
-    use XfigItem::{Cmd, Missing, Sep};
+    use XfigItem::{Cmd, Missing, Own, Sep, Sub};
     &[
         (
             "File",
@@ -391,6 +283,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Save", "app.save"),
                 Cmd("Save As...", "app.save_as"),
                 Cmd("Export...", "app.export"),
+                Own("app.import_picture"),
                 Missing("Print...", "Alt+P", "B5"),
                 Cmd("Exit", "app.quit"),
             ],
@@ -407,6 +300,15 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Sep,
                 Cmd("Global settings...", "app.global_settings"),
                 Cmd("Set units...", "app.unit_panel"),
+                Own("app.document_settings"),
+                Sep,
+                Own("edit.redo"),
+                Own("edit.delete"),
+                Own("edit.cut"),
+                Own("edit.copy"),
+                Own("edit.duplicate"),
+                Own("edit.select_all"),
+                Own("edit.select_none"),
             ],
         ),
         (
@@ -428,6 +330,47 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Missing("Show line lengths", "Alt+L", "D10"),
                 Missing("Show vertex numbers", "", "—"),
                 Missing("Autorefresh mode", "", "—"),
+                Own("view.toggle_grid"),
+                Own("depth.show_all"),
+            ],
+        ),
+        (
+            "Object",
+            &[
+                Own("object.group"),
+                Own("object.ungroup"),
+                Sep,
+                Own("object.update"),
+                Own("object.convert"),
+                Own("object.toggle_closed"),
+                Sub(
+                    "Arrows",
+                    &[Own("object.toggle_forward_arrow"), Own("object.toggle_backward_arrow")],
+                ),
+                Sub(
+                    "Transform",
+                    &[
+                        Own("transform.rotate_ccw"),
+                        Own("transform.rotate_cw"),
+                        Own("transform.flip_horizontal"),
+                        Own("transform.flip_vertical"),
+                    ],
+                ),
+                Sub(
+                    "Arrange",
+                    &[
+                        Own("arrange.align"),
+                        Own("arrange.distribute"),
+                        Sep,
+                        Own("arrange.to_front"),
+                        Own("arrange.forward"),
+                        Own("arrange.backward"),
+                        Own("arrange.to_back"),
+                    ],
+                ),
+                Sep,
+                Own("object.measure"),
+                Own("app.edit_selected"),
             ],
         ),
         (
@@ -534,33 +477,23 @@ fn xfig_menu(app: &mut App, ui: &mut egui::Ui, menu: &str, items: &[XfigItem]) {
             }
         }
     }
+    xfig_items(app, ui, items);
+    if menu == "File" {
+        recent_files(app, ui);
+    }
+}
+
+fn xfig_items(app: &mut App, ui: &mut egui::Ui, items: &[XfigItem]) {
     for item in items {
         match *item {
             XfigItem::Sep => {
                 ui.separator();
             }
-            XfigItem::Cmd(label, id) => {
-                let text = match checked(app, id) {
-                    Some(true) => format!("✔ {label}"),
-                    Some(false) => format!("    {label}"),
-                    None => label.to_string(),
-                };
-                // With xfig's keys on, an entry shows xfig's accelerator or none
-                // (xfig's Unzoom has none), never RustFig's own shortcut.
-                let shortcut = if app.xfig_keys {
-                    xfig_accelerator(id).map(xfig_key_label).unwrap_or_default()
-                } else {
-                    display_shortcut(label_of(id).1)
-                };
-                let mut b = egui::Button::new(text);
-                if !shortcut.is_empty() {
-                    b = b.shortcut_text(shortcut);
-                }
-                if ui.add_enabled(app.enabled(id), b).clicked() {
-                    ui.close();
-                    app.run(id, json!({}));
-                }
+            XfigItem::Sub(name, sub) => {
+                ui.menu_button(name, |ui| xfig_items(app, ui, sub));
             }
+            XfigItem::Own(id) => menu_entry(app, ui, label_of(id).0, id),
+            XfigItem::Cmd(label, id) => menu_entry(app, ui, label, id),
             XfigItem::Missing(label, accel, task) => {
                 let mut b = egui::Button::new(label);
                 if !accel.is_empty() {
@@ -575,8 +508,28 @@ fn xfig_menu(app: &mut App, ui: &mut egui::Ui, menu: &str, items: &[XfigItem]) {
             }
         }
     }
-    if menu == "File" {
-        recent_files(app, ui);
+}
+
+fn menu_entry(app: &mut App, ui: &mut egui::Ui, label: &str, id: &str) {
+    let text = match checked(app, id) {
+        Some(true) => format!("✔ {label}"),
+        Some(false) => format!("    {label}"),
+        None => label.to_string(),
+    };
+    // With xfig's keys on, an entry shows xfig's accelerator or none
+    // (xfig's Unzoom has none), never RustFig's own shortcut.
+    let shortcut = if app.xfig_keys {
+        xfig_accelerator(id).map(xfig_key_label).unwrap_or_default()
+    } else {
+        display_shortcut(label_of(id).1)
+    };
+    let mut b = egui::Button::new(text);
+    if !shortcut.is_empty() {
+        b = b.shortcut_text(shortcut);
+    }
+    if ui.add_enabled(app.enabled(id), b).clicked() {
+        ui.close();
+        app.run(id, json!({}));
     }
 }
 
@@ -588,7 +541,6 @@ const MENU_LABELS: &[(&str, &str)] = &[
     ("view.toggle_page_border", "Show page borders"),
     ("app.toggle_depths", "Show depth manager"),
     ("view.toggle_grid", "Show grid"),
-    ("app.toggle_indicator", "Show attribute panel"),
     ("app.document_settings", "Units and Page…"),
 ];
 
@@ -599,10 +551,7 @@ fn checked(app: &App, id: &str) -> Option<bool> {
         "app.toggle_depths" => Some(app.show_depths),
         "app.toggle_balloons" => Some(app.show_balloons),
         "view.toggle_grid" => Some(app.engine.indicator.grid.is_some()),
-        "app.toggle_indicator" => Some(app.show_indicator),
-        "app.toggle_layout" => Some(app.classic()),
         "app.toggle_xfig_keys" => Some(app.xfig_keys),
-        "tool.mouse_buttons" => Some(app.engine.mouse_scheme() == rustfig_engine::MouseScheme::Xfig),
         _ => None,
     }
 }
@@ -622,51 +571,6 @@ fn label_of(id: &str) -> (&'static str, &'static str) {
         return (c.label, c.shortcut);
     }
     ("?", "")
-}
-
-fn entry(app: &mut App, ui: &mut egui::Ui, id: &str) {
-    let (label, platform) = label_of(id);
-    // With xfig's keymap the menus show its accelerators, as xfig does.
-    let xfig = app.xfig_keys.then(|| xfig_accelerator(id)).flatten();
-    let shortcut = xfig.map(xfig_key_label).unwrap_or_else(|| display_shortcut(platform));
-    let text = match checked(app, id) {
-        Some(true) => format!("✔ {label}"),
-        Some(false) => format!("    {label}"),
-        None => label.to_string(),
-    };
-    let mut b = egui::Button::new(text);
-    if !shortcut.is_empty() {
-        b = b.shortcut_text(shortcut);
-    }
-    let enabled = app.enabled(id);
-    if ui.add_enabled(enabled, b).clicked() {
-        ui.close();
-        app.run(id, json!({}));
-    }
-}
-
-fn entries(app: &mut App, ui: &mut egui::Ui, list: &[&str]) {
-    let mut i = 0;
-    while let Some(id) = list.get(i).copied() {
-        i += 1;
-        if id == "-" {
-            ui.separator();
-        } else if let Some(name) = id.strip_suffix('>') {
-            let start = i;
-            while list.get(i).is_some_and(|x| *x != "<") {
-                i += 1;
-            }
-            let sub = list.get(start..i).unwrap_or(&[]);
-            i += 1;
-            ui.menu_button(name, |ui| entries(app, ui, sub));
-        } else {
-            entry(app, ui, id);
-        }
-    }
-}
-
-pub fn menu_bar(app: &mut App, ui: &mut egui::Ui) {
-    egui::MenuBar::new().ui(ui, |ui| menu_buttons(app, ui));
 }
 
 /// One of the classic top strip's menu buttons, bevelled in the 3D style
@@ -697,47 +601,17 @@ fn bar_button(
 
 /// The menu buttons alone, laid out in the current row.
 pub fn menu_buttons(app: &mut App, ui: &mut egui::Ui) {
-    if app.classic() {
-        // xfig's menus: File, Edit, View, Snap, Help.
-        let tk = crate::theme::Tokens::new(ui.visuals().dark_mode, app.button_3d);
-        for (name, items) in XFIG_MENUS {
-            if *name == "Help" {
-                bar_button(app, ui, &tk, "Snap", snap_menu);
-            }
-            let resp = bar_button(app, ui, &tk, name, |app, ui| xfig_menu(app, ui, name, items));
-            if app.open_menu == Some(*name) {
-                app.open_menu = None;
-                egui::Popup::close_all(ui.ctx());
-                egui::Popup::open_id(ui.ctx(), egui::Popup::default_response_id(&resp));
-            }
+    // xfig's menus: File, Edit, View, Snap, then RustFig's Object, Help.
+    let tk = crate::theme::Tokens::new(ui.visuals().dark_mode, app.button_3d);
+    for (name, items) in XFIG_MENUS {
+        if *name == "Object" {
+            bar_button(app, ui, &tk, "Snap", snap_menu);
         }
-        return;
-    }
-    {
-        for (name, list) in LAYOUT {
-            if *name == "Object" {
-                ui.menu_button("Snap", |ui| snap_menu(app, ui));
-            }
-            ui.menu_button(*name, |ui| {
-                entries(app, ui, list);
-                if *name == "File" {
-                    recent_files(app, ui);
-                }
-            });
-            if *name == "Object" {
-                ui.menu_button("Tools", |ui| {
-                    ui.menu_button("Draw", |ui| {
-                        for t in rustfig_engine::ToolKind::ALL.iter().filter(|t| t.is_drawing()) {
-                            entry(app, ui, t.id());
-                        }
-                    });
-                    ui.menu_button("Edit", |ui| {
-                        for t in rustfig_engine::ToolKind::ALL.iter().filter(|t| !t.is_drawing()) {
-                            entry(app, ui, t.id());
-                        }
-                    });
-                });
-            }
+        let resp = bar_button(app, ui, &tk, name, |app, ui| xfig_menu(app, ui, name, items));
+        if app.open_menu == Some(*name) {
+            app.open_menu = None;
+            egui::Popup::close_all(ui.ctx());
+            egui::Popup::open_id(ui.ctx(), egui::Popup::default_response_id(&resp));
         }
     }
 }
@@ -1071,7 +945,7 @@ pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
     }
     // Meta-F/E/V/H pop up xfig's menus; while a menu or another popup is
     // open, letters belong to it, not to the shortcuts (xfig's mode keys).
-    if app.xfig_keys && app.classic() {
+    if app.xfig_keys {
         for (spec, menu) in XFIG_MENU_KEYS {
             if take_xfig_key(ctx, spec) {
                 app.open_menu = Some(menu);
@@ -1117,26 +991,106 @@ pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
 mod tests {
     use super::*;
 
-    #[test]
-    fn layout_ids_exist() {
-        for (_, list) in LAYOUT {
-            for id in *list {
-                if *id == "-" || *id == "<" || id.ends_with('>') {
-                    continue;
-                }
-                assert!(cmd::find(id).is_some() || find_ui(id).is_some(), "unknown id {id}");
+    fn menu_ids(items: &[XfigItem], out: &mut Vec<&'static str>) {
+        for item in items {
+            match item {
+                XfigItem::Cmd(_, id) | XfigItem::Own(id) => out.push(id),
+                XfigItem::Sub(_, sub) => menu_ids(sub, out),
+                XfigItem::Missing(..) | XfigItem::Sep => {}
             }
         }
     }
 
     #[test]
     fn xfig_menus_reach_commands() {
+        let mut ids = Vec::new();
         for (_, items) in XFIG_MENUS {
-            for item in *items {
-                if let XfigItem::Cmd(_, id) = item {
-                    assert!(cmd::find(id).is_some() || find_ui(id).is_some(), "unknown {id}");
-                }
+            menu_ids(items, &mut ids);
+        }
+        for id in ids {
+            assert!(cmd::find(id).is_some() || find_ui(id).is_some(), "unknown {id}");
+        }
+    }
+
+    /// Commands that are deliberately in no menu, with the reason.
+    const MENU_LESS: &[(&str, &str)] = &[
+        // A prefix ending in "." covers every command that starts with it.
+        ("tool.", "the mode panel's buttons and the mode keys choose tools"),
+        (
+            "file.",
+            "the File menu's app.* entries wrap them (dialogs, unsaved-changes guard)",
+        ),
+        ("shape.", "scripting API; the drawing tools make shapes"),
+        ("point.", "scripting API; the point tools edit vertices"),
+        ("compound.", "the Open compound tool and the Close Compound popup"),
+        ("prefs.", "scripting API; Global settings and the resources window"),
+        ("indicator.", "scripting API; the attribute panel sets them"),
+        ("color.", "scripting API; the colour dialogs"),
+        (
+            "doc.",
+            "scripting API; Units and Page, Set units and the document dialogs",
+        ),
+        ("depth.", "scripting API; the depth manager"),
+        (
+            "view.",
+            "scripting API (zoom, pan, grid and snap by value); the View menu and the rulers have the rest",
+        ),
+        ("app.toggle_xfig_keys", "a checkbox in Global settings"),
+        ("app.button_style", "a choice in Global settings"),
+        ("app.theme", "set by the system; for screenshots and tests"),
+        ("app.export_now", "the Export panel's Export button and the E key"),
+        ("edit.select", "scripting API; the Select tool picks objects"),
+        ("edit.search_replace", "scripting API; Search/Replace... runs it"),
+        ("edit.paste_text", "the middle button of the Text tool"),
+        ("object.add", "scripting API"),
+        (
+            "object.set_",
+            "scripting API; the Edit panel and the attribute panel set them",
+        ),
+        ("object.get", "scripting API"),
+        ("object.list", "scripting API"),
+        ("object.join", "the Join/Split tool"),
+        ("object.split", "the Join/Split tool"),
+        ("object.update_region", "the Update tool's right button"),
+        ("object.reverse_arrows", "the Arrow tool's right button"),
+        ("object.break_all", "the Break tool's right button"),
+        ("transform.move", "scripting API; the Move tools"),
+        ("transform.scale", "scripting API; the Scale tool"),
+        ("transform.rotate", "scripting API; the Rotate tools"),
+        (
+            "arrange.set_depth",
+            "scripting API; the Depth box of the attribute panel",
+        ),
+        ("arrange.align_to", "the Align tool's right button"),
+    ];
+
+    /// Every command is in a menu or listed above with a reason.
+    #[test]
+    fn every_command_is_reachable_from_a_menu() {
+        let mut ids = Vec::new();
+        for (_, items) in XFIG_MENUS {
+            menu_ids(items, &mut ids);
+        }
+        // The Snap menu is built in code.
+        let mut missing = Vec::new();
+        let all = cmd::all().iter().map(|c| c.id).chain(UI_COMMANDS.iter().map(|c| c.id));
+        for id in all {
+            let exempt = MENU_LESS.iter().any(|(p, _)| id.starts_with(p));
+            if !exempt && !ids.contains(&id) && !id.starts_with("snap.") {
+                missing.push(id);
             }
+        }
+        assert!(missing.is_empty(), "in no menu: {missing:#?}");
+        // The exemptions are not stale.
+        for (p, _) in MENU_LESS {
+            assert!(
+                cmd::all()
+                    .iter()
+                    .map(|c| c.id)
+                    .chain(UI_COMMANDS.iter().map(|c| c.id))
+                    .any(|i| i.starts_with(p)),
+                "{p}"
+            );
         }
     }
 
