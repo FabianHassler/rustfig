@@ -20,7 +20,7 @@ fn sorted(scene: &Scene) -> Vec<String> {
 fn check(name: &str, src: &[u8]) {
     let mut ctx = Ctx::default();
     let objects = fig2dev::read::readfp_fig(&mut ctx, src).unwrap();
-    let doc = rustfig_engine::fig2dev::to_model::to_document(&ctx, &objects);
+    let doc = rustfig_format::bridge::to_model::to_document(&ctx, &objects);
     let ours = build_scene(&doc, &SceneOptions::default());
     let (theirs, _) = fig2dev::scene::build(&mut ctx, &objects, TextOptions::default());
     assert_eq!(ours.prims.len(), theirs.prims.len(), "{name}");

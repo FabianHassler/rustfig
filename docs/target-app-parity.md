@@ -1,6 +1,6 @@
 # Target-app parity assessment: RustFig vs xfig 3.2.9
 
-**Status:** 2026-10-18, overall **≈65 %** (B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk; G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
+**Status:** 2026-10-21 (DD9: evidence paths after the dedup series; scores unchanged); 2026-10-18, overall **≈65 %** (B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk; G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
 
 ## Methodology
 
@@ -37,7 +37,7 @@ the score.
 
 - Drawing tools: `crates/engine/src/tools/mod.rs` (38 tools; tests draw polylines, boxes and text and move objects).
 - Commands: `crates/engine/src/cmd/*`, swept with hostile parameters in `crates/engine/tests/command_sweep.rs`.
-- Fig I/O: `crates/format/src/fig_read.rs` and `fig_write.rs`; round trip and fuzzing in `crates/format/tests/`.
+- Fig I/O: `crates/format/src/fig_read.rs` (fig2dev's reader through `bridge/`), `fig_write.rs`; round trip and fuzzing in `crates/format/tests/`.
 - Rendering: the canvas scene in `crates/render/src/lib.rs`; fig2dev's scene, tiny-skia rasteriser, EPS, PDF, SVG and bitmap writers in `fig2dev:crates/fig2dev/src/scene/` (all 22 fill patterns; arrowheads; dashes); geometry, fonts and colours shared through `fig2dev:crates/figbase/`; line widths as fig2dev (`figbase::geom::stroke_width`).
 - Fill patterns as fig2dev's PostScript (`fig2dev:crates/fig2dev/src/scene/pattern.rs`, from `psprolog.h`).
 - Export bounds as fig2dev's (`fig2dev:crates/fig2dev/src/bound.rs`, ported from `bound.c`): bounding boxes equal fig2dev's on 2,532 of 2,568 sample figures.
@@ -46,8 +46,8 @@ the score.
 - TikZ, PSTricks, pict2e, EMF, Tk/Perl-Tk (B1, B3, B9): `fig2dev:crates/fig2dev/src/drivers/{tikz,pstricks,pict2e,emf,tk}.rs`, `util/tkpattern.rs`; byte-identical to fig2dev 3.2.9a on the fixtures, the suite's figures and ~285 of 300 sample figures (rest: octal-escape texts); fig2dev's suite 79 pass / 9 fail / 1 skipped / 0 unported.
 - Bitmap languages (B6): `fig2dev:crates/fig2dev/src/scene/bitmaps.rs`; tests in `crates/engine/tests/export_bitmaps.rs`.
 - fig2dev port (B9): `fig2dev:crates/fig2dev` (reader, bounds, spline conversion, helpers); tests in `fig2dev:crates/fig2dev/tests/`.
-- One reader for every fig2dev language (`fig2dev:crates/fig2dev/src/read.rs`; `crates/engine/src/fig2dev/to_model.rs` for the app); old Fig 1.3–2.1 files open in the app through it (`crates/engine/src/fig2dev/mod.rs`, tests `crates/engine/tests/fig2dev_bridge.rs`); every ported language exports from the engine, the export dialog and `rustfig-cli`.
-- fig2dev as a program of its own (B12): every export writes Fig text and runs `fig2dev::convert` (`crates/engine/src/fig2dev/mod.rs` `export`); `fig2dev` and `fig2dev:apps/fig2dev` depend only on `figbase` (`cargo xtask layers`).
+- One reader for every fig2dev language (`fig2dev:crates/fig2dev/src/read.rs`; `crates/format/src/bridge/to_model.rs` for the app); every Fig file (1.3–3.2) opens in the app through it (`crates/format/src/fig_read.rs`, 83 lines, tests `crates/engine/tests/fig2dev_bridge.rs`); every ported language exports from the engine, the export dialog and `rustfig-cli`.
+- fig2dev as a program of its own (B12): every export hands the bridge's objects (`crates/format/src/bridge/export.rs`, DD7; Fig text only as fallback) to `fig2dev::convert` (`crates/engine/src/fig2dev/mod.rs` `export`); `fig2dev` and `fig2dev:apps/fig2dev` depend only on `figbase` (`cargo xtask layers`).
 - pict2e (B3): `fig2dev:crates/fig2dev/src/drivers/pict2e.rs`, byte-identical to fig2dev 3.2.9a on the fixtures, fig2dev's suite figures and 285 of the 300-figure corpus sample with 13 option sets; golden tests in `fig2dev:crates/fig2dev/tests/pict2e.rs`.
 - pstex/pdftex (B2): `fig2dev:crates/fig2dev/src/drivers/pstex.rs`, the `_t` file byte-identical to fig2dev's on a test figure; pictures in exports through `fig2dev:crates/fig2dev/src/util/readpics.rs`, EPS pictures embedded by `fig2dev:crates/fig2dev/src/scene/eps.rs`.
 - Standalone `fig2dev` (B10): `fig2dev:apps/fig2dev` with fig2dev 3.2.9a's command line; tests in `fig2dev:apps/fig2dev/tests/cli.rs`; fig2dev's own suite in `fig2dev:apps/fig2dev/tests/fig2dev_suite.rs` (opt-in): 73 pass, 9 fail, 1 skipped, 6 need unported languages (2026-10-17, with pict2e).
@@ -68,6 +68,7 @@ the score.
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-21 | ≈65 % | DD9: evidence paths after the dedup series (reader, bounds, exports through fig2dev); no score moved. |
 | 2026-10-18 | ≈65 % | B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk ported (Export 57 → 66 %, 50 h less). |
 | 2026-10-17 | ≈64 % | B3: pict2e ported, byte-identical to fig2dev on 285 of 300 sample figures (Export 55 → 57 %, 14 h less). |
 | 2026-10-16 | ≈64 % | B12: fig2dev self-contained, every export through `convert` (Export stays 55 %: architecture, no new language). |

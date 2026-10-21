@@ -24,9 +24,9 @@ RustFig is an open-source, Rust-native reimplementation of xfig: close to the or
 | L0 | `rustfig-geom` | `crates/geom` | figbase's geometry + hit testing |
 | L1 | `rustfig-model` | `crates/model` | document model, styles, colours, object transforms, flattening |
 | L1 | `rustfig-text` | `crates/text` | Fig font tables, font selection, metrics, glyph outlines |
-| L2 | `rustfig-format` | `crates/format` | Fig 3.0–3.2 read, Fig 3.2 write, native `.rustfig` JSON, bridge model ↔ fig2dev objects (`bridge/`) |
+| L2 | `rustfig-format` | `crates/format` | Fig 1.3–3.2 read (fig2dev's reader through the bridge), Fig 3.2 write, native `.rustfig` JSON, bridge model ↔ fig2dev objects (`bridge/`: bounds, exports) |
 | L3 | `rustfig-render` | `crates/render` | document → scene for the canvas (fig2dev's display list and rasteriser) |
-| L4 | `rustfig-engine` | `crates/engine` | commands, undo, selection, indicator, view, tools, guard; exports (Fig text → fig2dev's `convert`, `engine::fig2dev`), old Fig files through fig2dev's reader |
+| L4 | `rustfig-engine` | `crates/engine` | commands, undo, selection, indicator, view, tools, guard; exports (bridge objects → fig2dev's `convert`, `engine::fig2dev`), pictures through fig2dev's `readpics`, the bundled `fig2dev` command line |
 | L5 | `rustfig-mcp` | `crates/mcp` | MCP server over stdio |
 | L6 | `rustfig-ui-egui` | `crates/ui-egui` | egui app: canvas, panels, menus, dialogs, control channel |
 | L7 | `rustfig`, `rustfig-cli` | `apps/` | desktop/web app; CLI (convert, info, perf, bench, mcp) |

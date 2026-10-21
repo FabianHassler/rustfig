@@ -18,6 +18,7 @@
 
 | Date | Note |
 |------|------|
+| 2026-10-21 | DD1–DD10 (dedup with fig2dev) done; docs swept (DD9). |
 | 2026-10-13 | M0–M3 landed. |
 | 2026-10-14 | Phase W: W1 (layout), W2 (mouse buttons) and W3 (depth panel) landed. |
 | 2026-10-14 | Phase W done (W4 Snap menu, W5 attribute panel, W6 rulers, W7 accelerators). |

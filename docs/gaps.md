@@ -1,12 +1,12 @@
 # Known gaps (ranked work list)
 
-**Status:** 2026-10-21 (#14 restated: EPS/PDF pictures in exports need a PostScript interpreter). Earlier: 2026-10-18 (B2, G1, B12, pict2e, TikZ, PSTricks, EMF, Tk (B1, B3, B9) landed; B11 added from the fig2dev audit). Ranked by user impact per hour. Pick work from the top.
+**Status:** 2026-10-21 (DD9: #25 restated after DD7; #14 restated: EPS/PDF pictures in exports need a PostScript interpreter). Earlier: 2026-10-18 (B2, G1, B12, pict2e, TikZ, PSTricks, EMF, Tk (B1, B3, B9) landed; B11 added from the fig2dev audit). Ranked by user impact per hour. Pick work from the top.
 
 | # | Gap | Area | Impact | Hours |
 |---|-----|------|--------|------:|
 | 1 | LaTeX exports closed: TikZ, PSTricks, pict2e, pstex/pdftex ported (B1, B2, B3); text bytes now as C (#27 closed 2026-10-18) | Export | High | 0 |
 | 2 | Web build: compiles locally (2026-10-14); still to do: the wasm check in CI, trunk packaging and browser open/save/download | Platforms | High | 24 |
-| 25 | Exports go through RustFig's Fig writer (B12), which drops arrows on pie-wedge arcs and refits arc centres from the rounded points instead of keeping the file's centre; fig2dev draws both from the file (`fig2dev_reference` arcs, 2 corpus bounding boxes). Saving loses them too | Export/File format | Medium | 3 |
+| 25 | Exports hand fig2dev the objects the Fig 3.2 text would give (the bridge, DD7; the writer's rules, not the model, decide), which drop arrows on pie-wedge arcs and refits arc centres from the rounded points instead of keeping the file's centre; fig2dev draws both from the file (`fig2dev_reference` arcs, 2 corpus bounding boxes). Saving loses them too | Export/File format | Medium | 3 |
 | 26 | ✅ closed 2026-10-18 (audit pass 9): pictures get no frame in PS, EPS, PDF and bitmaps (genps strokes none; SVG keeps it) and transparent pixels stay transparent in EPS (colour-key `/ImageType 4`). Left: opaque pixels with the transparent colour are masked too (as fig2dev does for RGB images; for indexed GIFs it masks the index only), PNG with partial alpha is blended over white | Export | Low | 0 |
 | 3 | PostScript output: page layout done 2026-10-18 (B4a); EPS previews (`-A`/`-T`/`-C`) and `-B`/`-R` done 2026-10-18 (B4b); printing remains | Export/Printing | Medium | 20 |
 | 4 | Library objects: browse a directory of .fig files and place them | Libraries | Medium | 40 |
@@ -38,6 +38,7 @@
 | 2026-10-18 | #27 closed (text bytes as C, audit passes 5 and 6). |
 | 2026-10-18 | #1 closed (TikZ, PSTricks), #21 shrank to `sld` (EMF, Tk/Perl-Tk ported); #27 added (octal-escape text bytes). |
 | 2026-10-17 | #1 shrank: pict2e ported (B3). |
+| 2026-10-21 | DD9: #25 restated (exports come from the bridge's objects, not the Fig text; the writer's arc losses are unchanged). |
 | 2026-10-16 | #25 added (B12: exports through the Fig writer expose its arc losses); #26 added (the corpus now exports pictures as the app does). |
 | 2026-10-16 | #13 closed (G1: the app reads Fig 1.3–2.1 through fig2dev's reader); #1 shrank (B2 pstex/pdftex), #21 shrank to EMF and Tk, #14 shrank (pictures in exports); #24 added from the fig2dev audit (B11). |
 | 2026-10-15 | #23 closed: start values are xfig's (positioning magnet 1/16 inch, alignment none, stick arrows, dot gap 3 apart from dash length 4); the man page's text step 1.2 is a documentation error, xfig's code starts at 1.0 as RustFig does. |

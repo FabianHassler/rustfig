@@ -1,6 +1,6 @@
 # Architecture
 
-**Status:** 2026-10-21 (DD7: exports from the bridge's objects); 2026-10-16 (B12: fig2dev a program of its own; every export goes through it). Which xfig and fig2dev source file each module
+**Status:** 2026-10-21 (DD9: sweep of stale statements); 2026-10-21 (DD7: exports from the bridge's objects); 2026-10-16 (B12: fig2dev a program of its own; every export goes through it). Which xfig and fig2dev source file each module
 corresponds to: [source-map.md](source-map.md).
 
 RustFig is a Cargo workspace of layered crates. A crate may depend only on
@@ -89,7 +89,7 @@ fig2dev's objects with the same primitives the canvas uses
 writes. Every Fig file (1.3–3.2) opens through fig2dev's reader (`Ctx::editing`), converted by the
 bridge (`crates/format/src/bridge/`, L2: `to_model` fig2dev objects → document,
 `from_model` document → fig2dev `Ctx` + objects, which equal what fig2dev's reader
-returns for `write_fig`'s text; `export_objects` adds the reader's repairs for the exports; `engine::fig2dev::to_model` re-exports `to_model`). `format`
+returns for `write_fig`'s text; `export_objects` adds the reader's repairs for the exports). `format`
 depends on the `fig2dev` crate for this (it sits below every layer).
 
 ## Robustness
@@ -106,4 +106,5 @@ protocols are fuzzed with proptest.
 |---|---|
 | 2026-10-13 | First version. |
 | 2026-10-16 | B12: `figbase`, fig2dev at L0 and self-contained, render canvas-only, exports through `convert`. |
+| 2026-10-21 | DD9: removed the `engine::fig2dev::to_model` re-export from the text. |
 | 2026-10-21 | DD7: exports from the bridge's objects (`export_objects`), text path as reference and fallback. |

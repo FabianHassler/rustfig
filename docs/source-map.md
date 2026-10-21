@@ -2,7 +2,7 @@
 
 **Paths written `fig2dev:crates/…` are in the fig2dev repository (<https://github.com/FabianHassler/fig2dev>), where figbase, the fig2dev library and the `fig2dev` program moved (B13).**
 
-**Status:** 2026-10-21 (DD7: `read.c`'s repairs as functions used by `format/bridge/export`); 2026-10-20 (DD3: `f_read.c` read through fig2dev's reader); 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
+**Status:** 2026-10-21 (DD9: sweep; DD7: `read.c`'s repairs as functions used by `format/bridge/export`); 2026-10-20 (DD3: `f_read.c` read through fig2dev's reader); 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
 sources (`LICENSE-xfig`). Nothing has been ported line by line yet: every
 "own" row was written from the manual and the format description and must be
 checked against the C file named in it.
@@ -102,7 +102,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | File | Lines | What it does | RustFig | Status | Task |
 |---|---:|---|---|---|---|
 | `f_read.c` | 2034 | Fig 3.x reader (all quirks) | fig2dev's `read.c` through `format/bridge/to_model` (`format/fig_read`, 83 lines; DD3) | via fig2dev | DD3 ✅ |
-| `f_readold.c` | 537 | Fig 1.x/2.x reader | — | missing | G1 |
+| `f_readold.c` | 537 | Fig 1.x/2.x reader | fig2dev's `read/read1_3` and `read.c` through the bridge (`format/fig_read`) | via fig2dev | G1, DD3 ✅ |
 | `f_save.c` | 665 | Fig 3.2 writer (type order) | `format/fig_write` | own; type order ported | review |
 | `f_load.c` | 384 | load, merge | `cmd/file` | own | review |
 | `f_util.c` | 1291 | directories, image colours, `~/.xfigrc` | — | missing: settings | S3/E1 |
@@ -182,7 +182,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `iso2tex.c` | 236 | Latin-1 characters to TeX sequences | `fig2dev/util/iso2tex` | ported | B9 |
 | `creationdate.c` | 114 | creation date for reproducible output (`SOURCE_DATE_EPOCH`) | `fig2dev/util/creationdate` | ported | B9 |
 | `localmath.c`, `messages.c` | 114 | math helpers, error messages | `geom`, errors; `fig2dev:apps/fig2dev` (messages) | n/a | — |
-| `read.c` | 2048 | Fig reader (second reference) | `format/fig_read` (RustFig's reader); `fig2dev/read` + `crates/format/src/bridge/to_model.rs` (port: the only reader of every export and of the standalone fig2dev; the app opens Fig 1.3–2.1 through it, `engine/fig2dev`); texts and comments keep their input bytes beside the Unicode decoding (`Text::raw`, `Comment`); its repairs and checks are functions (`read::repair_line`, `repair_arc`, `*_invalid`, DD7) that `format/bridge/export.rs` calls | ported | B9, G1 |
+| `read.c` | 2048 | Fig reader (second reference) | `fig2dev/read` + `crates/format/src/bridge/to_model.rs` (port: the only reader, for every export, the standalone fig2dev and the app, which opens every Fig version through it, `format/fig_read`); texts and comments keep their input bytes beside the Unicode decoding (`Text::raw`, `Comment`); its repairs and checks are functions (`read::repair_line`, `repair_arc`, `*_invalid`, DD7) that `format/bridge/export.rs` calls | ported | B9, G1 |
 | `read1_3.c` | 549 | Fig 1.3 reader | `fig2dev/read/read1_3` | ported | B9 |
 | `bound.c` | 1156 | bounds incl. arrows and text | `fig2dev:crates/figbase/src/geom/arrow.rs` (arrowheads for the scene); `fig2dev/bound` (port on fig2dev's objects: the bounds of every export; RustFig's own model bounds are gone) | ported (D9, B0); ellipse extents analytic instead of the scan | — |
 | `trans_spline.c` | 661 | splines to polylines for exporters | `fig2dev/trans_spline` | ported | B9 |
@@ -221,6 +221,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | 2026-10-17 | B3: `genpict2e.c` ported (`drivers/pict2e.rs`); `genpstricks.c` on a row of its own. |
 | 2026-10-17 | B3: `genpstricks.c` ported (`drivers/pstricks.rs`). |
 | 2026-10-18 | B9: `genemf.c`, `gentk.c`, `genptk.c`, `tkpattern.c` ported. |
+| 2026-10-21 | DD9: rows `read.c`, `bound.c`, `f_read.c` checked against DD1–DD7; `engine/fig2dev/to_model` path corrected to `format/bridge`. |
 | 2026-10-20 | DD1: `to_model` moved to `crates/format/src/bridge/` (with the new `from_model`). |
 | 2026-10-16 | B12: paths after the move (geometry, fonts, colours → `fig2dev:crates/figbase`; EPS/PDF/SVG/bitmap writers, rasteriser, patterns → `fig2dev:crates/fig2dev/src/scene/`; options, languages → `fig2dev:crates/fig2dev/src`; `to_model` → `crates/engine/src/fig2dev/`). |
 | 2026-10-16 | `genpstex.c` ported (B2); `readeps.c` and genps's picture branch in `render/eps` (now `fig2dev:crates/fig2dev/src/scene/eps.rs`); `read.c` the only reader for every fig2dev language and for Fig 1.3–2.1 in the app (G1). |

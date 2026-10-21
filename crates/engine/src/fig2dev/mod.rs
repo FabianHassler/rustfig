@@ -1,22 +1,21 @@
 //! fig2dev in the engine (`fig2dev`, a program of its own that
 //! RustFig depends on, plan B12):
 //!
-//! - Every export goes through fig2dev: the document is written as Fig 3.2
-//!   (`rustfig_format`), read by fig2dev's reader and handed to the
-//!   language's driver with fig2dev's options ([`export`]), as xfig hands
-//!   a figure to fig2dev. A language is available as soon as
-//!   `fig2dev::drivers::driver` provides it; the combined LaTeX
-//!   exports (`pstex`, `pdftex`, `pspdftex`) need both halves.
-//! - Fig files before 3.0 (1.3, 1.4, 2.0, 2.1, which RustFig's own reader
-//!   doesn't read) open through fig2dev's reader, converted to a document
-//!   by [`to_model`] (plan G1, S3).
+//! - Every export goes through fig2dev: the document's objects, as fig2dev's
+//!   reader would return them for the saved Fig 3.2 text, go straight to
+//!   the language's driver with fig2dev's options ([`export`]); where the
+//!   reader would print a message or refuse the file, the text is written
+//!   and read ([`export_via_text`], as xfig hands a figure to fig2dev). A
+//!   language is available as soon as `fig2dev::drivers::driver` provides
+//!   it; the combined LaTeX exports (`pstex`, `pdftex`, `pspdftex`) need
+//!   both halves.
+//! - Every Fig file (1.3 to 3.2) opens through fig2dev's reader, converted by
+//!   `rustfig_format::bridge` (`rustfig_format::read_any`).
 //! - Pictures as fig2dev reads them (`readpics.c`), where the `image`
 //!   crate can't.
 //!
 //! fig2dev's language and option tables are re-exported here
 //! ([`languages`], [`options`]) for the export dialog and the CLI.
-
-pub use rustfig_format::bridge::to_model;
 
 pub use fig2dev::util::readpics::LoadedPicture;
 pub use fig2dev::{languages, options};
