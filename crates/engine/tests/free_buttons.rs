@@ -90,14 +90,17 @@ fn update_region_updates_what_is_inside() {
     rect(&mut e, 5000, 5000, 500, 500);
     e.execute("indicator.set", &json!({"thickness": 6})).unwrap();
     e.set_tool(ToolKind::Update);
-    assert_eq!(hints(&e)[2], "update region");
+    assert_eq!(hints(&e)[2], "update region (drag: lasso)");
     let before = snapshot(&e);
     press(&mut e, -200.0, -200.0, Button::Right, false);
     assert_eq!(hints(&e), ["", "", "final corner"]);
     let ov = e.overlay();
     assert_eq!(ov.guides.len(), 1, "a rubber band is drawn");
+    // Dragging draws a lasso (W15): here along a rectangle.
+    mv(&mut e, 2500.0, -200.0);
     mv(&mut e, 2500.0, 1000.0);
-    release(&mut e, 2500.0, 1000.0, Button::Right);
+    mv(&mut e, -200.0, 1000.0);
+    release(&mut e, -200.0, 900.0, Button::Right);
     assert_eq!((thickness(&e, 0), thickness(&e, 1)), (6, 6));
     assert_ne!(thickness(&e, 2), 6, "outside objects are untouched");
     assert!(!e.tool_busy());
@@ -115,7 +118,8 @@ fn update_region_by_two_clicks_and_hidden_depths() {
     .unwrap();
     rect(&mut e, 1500, 0, 500, 500);
     e.execute("indicator.set", &json!({"thickness": 7})).unwrap();
-    e.execute("view.toggle_depth", &json!({"depth": 70})).ok();
+    e.execute("depth.set_visible", &json!({"depth": 70, "visible": false}))
+        .unwrap();
     e.set_tool(ToolKind::Update);
     click(&mut e, -200.0, -200.0, Button::Right);
     assert!(e.tool_busy());
@@ -142,9 +146,10 @@ fn move_region_moves_everything_inside() {
     rect(&mut e, 1500, 0, 500, 500);
     rect(&mut e, 5000, 5000, 500, 500);
     e.set_tool(ToolKind::Move);
-    assert_eq!(hints(&e)[2], "move region");
+    assert_eq!(hints(&e)[2], "move region (drag: lasso)");
     let before = snapshot(&e);
-    drag(&mut e, (-200.0, -200.0), (2500.0, 1000.0), Button::Right);
+    click(&mut e, -200.0, -200.0, Button::Right);
+    click(&mut e, 2500.0, 1000.0, Button::Right);
     assert!(e.tool_busy(), "waits for the place click");
     assert_eq!(hints(&e), ["place object", "", "cancel"]);
     click(&mut e, 2500.0, 1000.0, Button::Left);
@@ -157,7 +162,8 @@ fn move_region_moves_everything_inside() {
     rect(&mut e, 5000, 5000, 500, 500);
     e.set_tool(ToolKind::Move);
     let before = snapshot(&e);
-    drag(&mut e, (-200.0, -200.0), (2500.0, 1000.0), Button::Right);
+    click(&mut e, -200.0, -200.0, Button::Right);
+    click(&mut e, 2500.0, 1000.0, Button::Right);
     press(&mut e, 2600.0, 1200.0, Button::Left, false);
     release(&mut e, 2600.0, 1200.0, Button::Left);
     assert_eq!(bbox(&e, 0).0, Point::new(100.0, 200.0));
@@ -201,7 +207,7 @@ fn delete_points_in_a_region() {
     )
     .unwrap();
     e.set_tool(ToolKind::DeletePoint);
-    assert_eq!(hints(&e)[..2], ["delete point", "delete in region"]);
+    assert_eq!(hints(&e)[..2], ["delete point", "delete in region (drag: lasso)"]);
     let before = snapshot(&e);
     click(&mut e, 900.0, -500.0, Button::Middle);
     assert_eq!(hints(&e), ["", "final corner", "cancel"]);

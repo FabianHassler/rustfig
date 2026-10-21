@@ -5,14 +5,14 @@
 //! pasting the clipboard as text.
 //!
 //! A region is the rectangle between two corners `(x1, y1)` and `(x2, y2)`
-//! in Fig units. It takes the objects completely inside it, on visible
+//! in Fig units, or a lasso `polygon` (W15). It takes the objects completely inside it, on visible
 //! depths, that the mode's object mask lets through (`tools::mode_mask`).
 
 use super::object::{insert_point, remove_point};
 use super::shape::{added, make_ellipse, make_text, style_from};
 use super::{has_objects, ids_value, num, opt_str, point_value, CmdResult, Command};
 use crate::tools::{mode_mask, ToolKind};
-use crate::{Engine, EngineError};
+use crate::{Engine, EngineError, Region};
 use rustfig_geom::{Affine, Point, Rect};
 use rustfig_model::{EllipseKind, Object, ObjectId, ObjectKind, PolyKind};
 use serde_json::{json, Value};
@@ -25,7 +25,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Update Region",
             menu: "",
             shortcut: "",
-            params: "{\"x1\", \"y1\", \"x2\", \"y2\"}  — every object completely inside the rectangle (visible depths) takes the indicator's attributes, as object.update does; Update mode, right button",
+            params: "{\"x1\", \"y1\", \"x2\", \"y2\" | \"polygon\": [[x,y]…] (lasso)}  — every object completely inside the rectangle (visible depths) takes the indicator's attributes, as object.update does; Update mode, right button",
             mutates: true,
             enabled: has_objects,
             run: update_region,
@@ -35,7 +35,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Move Region",
             menu: "",
             shortcut: "",
-            params: "{\"x1\", \"y1\", \"x2\", \"y2\", \"dx\", \"dy\"}  — move every object completely inside the rectangle (visible depths); Move mode, right button",
+            params: "{\"x1\", \"y1\", \"x2\", \"y2\" | \"polygon\", \"dx\", \"dy\"}  — move every object completely inside the rectangle (visible depths); Move mode, right button",
             mutates: true,
             enabled: has_objects,
             run: move_region,
@@ -45,7 +45,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Delete Points in Region",
             menu: "",
             shortcut: "",
-            params: "{\"x1\", \"y1\", \"x2\", \"y2\", \"id\"?}  — delete the points inside the rectangle from one line, polygon or spline: the given one, else the front-most with a point inside; Delete point mode, middle button",
+            params: "{\"x1\", \"y1\", \"x2\", \"y2\" | \"polygon\", \"id\"?}  — delete the points inside the rectangle from one line, polygon or spline: the given one, else the front-most with a point inside; Delete point mode, middle button",
             mutates: true,
             enabled: has_objects,
             run: delete_points_region,
@@ -113,10 +113,19 @@ pub(super) fn commands() -> Vec<Command> {
     ]
 }
 
-fn region(p: &Value) -> Result<Rect, EngineError> {
+/// The region of the parameters: `"polygon": [[x, y], …]` (a lasso, at
+/// least three points), else the rectangle `x1, y1, x2, y2`.
+fn region(p: &Value) -> Result<Region, EngineError> {
+    if p.get("polygon").is_some_and(|v| !v.is_null()) {
+        let pts = super::points(p, "polygon")?;
+        if pts.len() < 3 {
+            return Err(EngineError::bad_params("a lasso needs at least three points"));
+        }
+        return Ok(Region::Lasso(pts));
+    }
     let a = Point::new(num(p, "x1")?, num(p, "y1")?);
     let b = Point::new(num(p, "x2")?, num(p, "y2")?);
-    Ok(Rect::new(a, b))
+    Ok(Region::Rect(Rect::new(a, b)))
 }
 
 fn update_region(e: &mut Engine, p: &Value) -> CmdResult {

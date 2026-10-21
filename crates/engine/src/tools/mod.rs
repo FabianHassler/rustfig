@@ -10,6 +10,7 @@
 
 mod compound;
 mod markers;
+use crate::Region;
 pub use markers::{mode_mask, object_markers, ObjMask};
 
 use crate::cmd::shape::make_ellipse;
@@ -446,6 +447,10 @@ pub(crate) enum ToolState {
         click: bool,
         /// The button that opened it (a click with it closes it).
         button: Button,
+        /// The opening button is still down (W15): moving draws a lasso.
+        held: bool,
+        /// The freehand path since the press (W15), the start first.
+        lasso: Vec<Point>,
     },
     PointDrag {
         id: ObjectId,
@@ -491,7 +496,7 @@ pub fn edit_points(o: &Object) -> Vec<Point> {
 
 /// Keep only the larger of the horizontal and vertical components.
 /// How many points of a line, polygon or spline lie inside `r`.
-fn region_points(o: &Object, r: &Rect) -> Option<usize> {
+fn region_points(o: &Object, r: &Region) -> Option<usize> {
     if !matches!(o.kind, ObjectKind::Polyline(_) | ObjectKind::Spline(_))
         || !mode_mask(ToolKind::DeletePoint, 90.0).admits(o)
     {
@@ -1319,6 +1324,8 @@ impl Engine {
                             purpose: if shift { Band::SelectAdd } else { Band::Select },
                             click: false,
                             button: Button::Left,
+                            held: false,
+                            lasso: Vec::new(),
                         };
                     }
                 }
@@ -1347,6 +1354,13 @@ impl Engine {
         let tol = self.pick_tol();
         match ev {
             ToolEvent::Move { pos } => {
+                if let ToolState::RubberBand { held: true, lasso, .. } = &mut self.tool_state {
+                    // A lasso point per few pixels, capped.
+                    let min_step = tol / 3.0;
+                    if lasso.len() < MAX_FREEHAND_POINTS && lasso.last().is_none_or(|l| l.dist(pos) >= min_step) {
+                        lasso.push(pos);
+                    }
+                }
                 match &mut self.tool_state {
                     ToolState::MoveObjs { cursor, .. }
                     | ToolState::RubberBand { cursor, .. }
@@ -1397,14 +1411,31 @@ impl Engine {
                     }
                 }
                 ToolState::RubberBand {
-                    start, purpose, click, ..
+                    start,
+                    purpose,
+                    click,
+                    button,
+                    held,
+                    lasso,
+                    ..
                 } => {
-                    if click && start.dist(pos) <= tol {
+                    let dragged = start.dist(pos) > tol || (held && lasso.iter().any(|q| start.dist(*q) > tol));
+                    if click && !dragged {
                         // The release of the click that opened the band.
+                        if let ToolState::RubberBand { held, lasso, .. } = &mut self.tool_state {
+                            *held = false;
+                            lasso.clear();
+                        }
                         return Ok(());
                     }
                     self.tool_state = ToolState::Idle;
-                    self.finish_band(purpose, start, pos)
+                    if held && lasso.len() >= 2 && button != Button::Left {
+                        // Press and drag: the freehand lasso (W15).
+                        let mut path = lasso;
+                        path.push(pos);
+                        return self.finish_band(purpose, Region::Lasso(path), pos);
+                    }
+                    self.finish_band(purpose, Region::Rect(Rect::new(start, pos)), pos)
                 }
                 ToolState::PointDrag {
                     id,
@@ -1448,9 +1479,8 @@ impl Engine {
     }
 
     /// Close a rubber band from `start` to `end`.
-    fn finish_band(&mut self, purpose: Band, start: Point, end: Point) -> Result<(), EngineError> {
-        let r = Rect::new(start, end);
-        let inside: Vec<ObjectId> = self.objects_within(&r);
+    fn finish_band(&mut self, purpose: Band, region: Region, end: Point) -> Result<(), EngineError> {
+        let inside: Vec<ObjectId> = self.objects_within_region(&region);
         match purpose {
             Band::Select | Band::SelectAdd => {
                 let mut sel = if purpose == Band::SelectAdd {
@@ -1471,10 +1501,14 @@ impl Engine {
                 self.set_selection(sel);
             }
             Band::UpdateRegion | Band::MoveRegion | Band::DeletePoints => {
-                let (a, b) = (r.min, r.max);
                 let mask = mode_mask(self.tool, self.indicator.rotate_angle);
-                let found = self.objects_in_region(&r, mask);
-                let rp = json!({"x1": a.x, "y1": a.y, "x2": b.x, "y2": b.y});
+                let found = self.objects_in_region(&region, mask);
+                let rp = match &region {
+                    Region::Rect(r) => json!({"x1": r.min.x, "y1": r.min.y, "x2": r.max.x, "y2": r.max.y}),
+                    Region::Lasso(path) => {
+                        json!({"polygon": path.iter().map(|p| json!([p.x, p.y])).collect::<Vec<_>>()})
+                    }
+                };
                 match purpose {
                     Band::UpdateRegion => {
                         if found.is_empty() {
@@ -1504,7 +1538,7 @@ impl Engine {
                             .doc()
                             .objects
                             .iter()
-                            .any(|o| self.is_visible(o) && region_points(o, &r).is_some_and(|n| n > 0));
+                            .any(|o| self.is_visible(o) && region_points(o, &region).is_some_and(|n| n > 0));
                         if has {
                             self.execute("point.delete_region", &rp)?;
                         } else {
@@ -1515,6 +1549,8 @@ impl Engine {
             }
             Band::Delete => {
                 if !inside.is_empty() {
+                    // The command acts on the selection (it must not be empty).
+                    self.set_selection(inside.clone());
                     self.execute("edit.delete", &json!({"ids": crate::cmd::ids_value(&inside)}))?;
                 }
             }
@@ -1888,6 +1924,8 @@ impl Engine {
                                 purpose: Band::Tag,
                                 click: false,
                                 button: Button::Left,
+                                held: false,
+                                lasso: Vec::new(),
                             };
                         }
                     }
@@ -1913,7 +1951,7 @@ impl Engine {
                 return Ok(());
             }
             self.tool_state = ToolState::Idle;
-            return self.finish_band(p, start, pos);
+            return self.finish_band(p, Region::Rect(Rect::new(start, pos)), pos);
         }
         self.tool_state = ToolState::RubberBand {
             start: pos,
@@ -1921,6 +1959,8 @@ impl Engine {
             purpose,
             click: true,
             button,
+            held: true,
+            lasso: vec![pos],
         };
         Ok(())
     }
@@ -2224,6 +2264,18 @@ impl Engine {
                 "cancel",
             ),
             ToolState::RubberBand {
+                held: true,
+                button: Button::Right,
+                lasso,
+                ..
+            } if lasso.len() >= 2 => h("", "", "release: close lasso"),
+            ToolState::RubberBand {
+                held: true,
+                button: Button::Middle,
+                lasso,
+                ..
+            } if lasso.len() >= 2 => h("", "release: close lasso", "cancel"),
+            ToolState::RubberBand {
                 click: true,
                 button: Button::Right,
                 ..
@@ -2258,7 +2310,7 @@ impl Engine {
                     ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture => ("corner point", "", ""),
                     ToolKind::RegularPolygon => ("center point", "", ""),
                     ToolKind::Text => ("position cursor", "", ""),
-                    ToolKind::Glue => ("tag object", "tag region", glue),
+                    ToolKind::Glue => ("tag object", "tag region (drag: lasso)", glue),
                     ToolKind::Break => ("break compound", "break and tag", ""),
                     ToolKind::OpenCompound => ("open compound", "open, keep visible", ""),
                     ToolKind::JoinSplit => ("Join Lines/Splines", "Split Line/Spline", ""),
@@ -2269,7 +2321,7 @@ impl Engine {
                     ToolKind::MovePoint => ("move point", "horiz/vert move", ""),
                     ToolKind::AddPoint => ("break/add here", "", ""),
                     ToolKind::DeletePoint => ("delete point", "", ""),
-                    ToolKind::Delete => ("delete object", "delete region", "del to cut buf"),
+                    ToolKind::Delete => ("delete object", "delete region (drag: lasso)", "del to cut buf"),
                     ToolKind::Update => ("update object", "update settings", ""),
                     ToolKind::Edit => ("edit object", "edit Main comment", "edit point"),
                     ToolKind::FlipV | ToolKind::FlipH => ("flip", "copy & flip", ""),
@@ -2281,9 +2333,9 @@ impl Engine {
                 };
                 // The functions on buttons xfig leaves free (W13, W14).
                 let (m, r) = match tool {
-                    ToolKind::Update => (m, "update region"),
-                    ToolKind::Move => (m, "move region"),
-                    ToolKind::DeletePoint => ("delete in region", r),
+                    ToolKind::Update => (m, "update region (drag: lasso)"),
+                    ToolKind::Move => (m, "move region (drag: lasso)"),
+                    ToolKind::DeletePoint => ("delete in region (drag: lasso)", r),
                     ToolKind::AddPoint => ("add at end", r),
                     ToolKind::Arrow => (m, "reverse arrows"),
                     ToolKind::Break => (m, "break all levels"),
@@ -2406,6 +2458,13 @@ impl Engine {
                 if !copy && d.len() > 0.0 {
                     ov.hide.clone_from(ids);
                 }
+            }
+            ToolState::RubberBand { held: true, lasso, .. } if lasso.len() >= 2 => {
+                let mut c = lasso.clone();
+                if let Some(f) = c.first().copied() {
+                    c.push(f);
+                }
+                ov.guides.push(c);
             }
             ToolState::RubberBand { start, cursor, .. } => {
                 let r = Rect::new(*start, *cursor);

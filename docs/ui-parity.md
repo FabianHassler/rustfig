@@ -102,3 +102,4 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | 2026-10-14 | Main menus cloned from xfig. |
 | 2026-10-21 | W10: link to window-parity.md. |
 | 2026-10-21 | W13, W14: the mouse-function box shows the new functions on the free buttons (xfig scheme), rubber bands are drawn for the regions, the three-point circle and the align reference. |
+| 2026-10-21 | W15: pressing the middle or right button and dragging in a region function (tag, delete, update, move, delete points) draws a freehand lasso; the mouse-function box says "(drag: lasso)" and "release: close lasso". |

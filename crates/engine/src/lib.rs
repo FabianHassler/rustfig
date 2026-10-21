@@ -16,12 +16,14 @@ mod indicator;
 pub mod prefs;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod recovery;
+mod region;
 pub mod snap;
 pub mod tools;
 mod view;
 
 pub use error::EngineError;
 pub use indicator::{arrow_choice, arrow_choice_of, GridMode, Indicator, SnapMode};
+pub use region::Region;
 pub use snap::ObjectSnap;
 pub use tools::{Button, Key, MouseHints, Overlay, ToolEvent, ToolKind};
 pub use view::{UnitScale, View};
@@ -492,17 +494,24 @@ impl Engine {
 
     /// Top-level objects (visible ones) whose fig2dev bounds lie inside `r`.
     pub fn objects_within(&self, r: &Rect) -> Vec<ObjectId> {
+        self.objects_within_region(&Region::Rect(*r))
+    }
+
+    /// Top-level objects on active depths (a compound counts when any
+    /// member is active, xfig's `active_layer`) whose fig2dev bounds lie
+    /// completely inside the region.
+    pub fn objects_within_region(&self, region: &Region) -> Vec<ObjectId> {
         self.fig_bounds()
             .iter()
-            .filter(|(o, _, b)| self.is_visible(o) && r.contains_rect(&b.get().unwrap_or(Rect::EMPTY)))
+            .filter(|(o, _, b)| self.is_visible(o) && region.contains_rect(&b.get().unwrap_or(Rect::EMPTY)))
             .map(|(o, ..)| o.id)
             .collect()
     }
 
-    /// Visible top-level objects completely inside `r` that `mask` lets
-    /// through (the region of the functions on xfig's free buttons).
-    pub fn objects_in_region(&self, r: &Rect, mask: tools::ObjMask) -> Vec<ObjectId> {
-        self.objects_within(r)
+    /// Visible top-level objects completely inside the region that `mask`
+    /// lets through (the region of the functions on xfig's free buttons).
+    pub fn objects_in_region(&self, region: &Region, mask: tools::ObjMask) -> Vec<ObjectId> {
+        self.objects_within_region(region)
             .into_iter()
             .filter(|id| self.doc.get(*id).is_some_and(|o| mask.admits(o)))
             .collect()

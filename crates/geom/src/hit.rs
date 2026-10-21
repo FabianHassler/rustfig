@@ -1,6 +1,6 @@
 //! Distances, containment and measurement.
 
-use crate::Point;
+use crate::{Point, Rect};
 
 /// Distance from `p` to the segment `a`–`b`.
 pub fn dist_to_segment(p: Point, a: Point, b: Point) -> f64 {
@@ -96,6 +96,34 @@ pub fn segments_intersect(a1: Point, a2: Point, b1: Point, b2: Point) -> bool {
     ((d1 > 0.0) != (d2 > 0.0)) && ((d3 > 0.0) != (d4 > 0.0))
 }
 
+/// Whether the rectangle `r` lies completely inside the polygon `poly`
+/// (even-odd): all four corners are inside and no polygon edge crosses a
+/// side of the rectangle.
+pub fn polygon_contains_rect(poly: &[Point], r: &Rect) -> bool {
+    let n = poly.len();
+    if n < 3 || r.is_empty() {
+        return false;
+    }
+    let c = r.corners();
+    if !c.iter().all(|q| point_in_polygon(*q, poly)) {
+        return false;
+    }
+    for i in 0..n {
+        let (Some(a), Some(b)) = (poly.get(i), poly.get((i + 1) % n)) else {
+            return false;
+        };
+        for k in 0..4 {
+            let (Some(p), Some(q)) = (c.get(k), c.get((k + 1) % 4)) else {
+                return false;
+            };
+            if segments_intersect(*a, *b, *p, *q) {
+                return false;
+            }
+        }
+    }
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -106,6 +134,32 @@ mod tests {
         assert!((d - 5.0).abs() < 1e-12);
         let d = dist_to_segment(Point::new(-3.0, 4.0), Point::ZERO, Point::new(10.0, 0.0));
         assert!((d - 5.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn polygon_contains_rect_cases() {
+        let sq = [
+            Point::ZERO,
+            Point::new(10.0, 0.0),
+            Point::new(10.0, 10.0),
+            Point::new(0.0, 10.0),
+        ];
+        let r = |a: f64, b: f64, c: f64, d: f64| Rect::new(Point::new(a, b), Point::new(c, d));
+        assert!(polygon_contains_rect(&sq, &r(2.0, 2.0, 8.0, 8.0)));
+        assert!(!polygon_contains_rect(&sq, &r(5.0, 5.0, 15.0, 8.0)));
+        // A notch cuts through the rectangle although all corners are inside.
+        let u = [
+            Point::ZERO,
+            Point::new(10.0, 0.0),
+            Point::new(10.0, 10.0),
+            Point::new(6.0, 10.0),
+            Point::new(6.0, 4.0),
+            Point::new(4.0, 4.0),
+            Point::new(4.0, 10.0),
+            Point::new(0.0, 10.0),
+        ];
+        assert!(!polygon_contains_rect(&u, &r(1.0, 3.0, 9.0, 8.0)));
+        assert!(polygon_contains_rect(&u, &r(1.0, 1.0, 9.0, 3.0)));
     }
 
     #[test]

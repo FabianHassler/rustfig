@@ -7,4 +7,7 @@
 mod hit;
 
 pub use figbase::geom::*;
-pub use hit::{dist_to_polyline, dist_to_segment, point_in_polygon, polygon_area, polyline_length, segments_intersect};
+pub use hit::{
+    dist_to_polyline, dist_to_segment, point_in_polygon, polygon_area, polygon_contains_rect, polyline_length,
+    segments_intersect,
+};
