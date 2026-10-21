@@ -62,7 +62,7 @@ the score.
 - Depth panel: `panels::depth_panel` (counts, drag-toggle, All On/Off/Toggle, Gray/Blank), `Engine::depths_changed`; tests in `crates/engine/tests/depths.rs` (picking, selection, buttons, active-layer export) and `ui_smoke.rs` (rows, buttons, drag, click).
 - Object snaps: `crates/engine/src/snap.rs` (ported from `w_snap.c`, `w_intersect.c`), unit tests there and `crates/engine/tests/snap.rs` (endpoint, the manual's move-focus-to-midpoint example, hold/release, intersect, tangent); `snap_menu_arms_a_snap_mode` in `ui_smoke.rs`.
 - Rulers and units box: `ui-egui/rulers` (ported from `w_rulers.c`, `u_pan.c`), unit tests for the tick tables, `rulers_pan_and_units_box` in `ui_smoke.rs`, `crates/engine/tests/units.rs`.
-- Attribute panel (W19: compact, short captions, content-sized buttons; tests `every_mode_fits_in_about_sixty_percent_of_xfigs_width`, `captions_fit_their_buttons`): `ui-egui/attributes` (ported from `w_indpanel.c`), tests `attribute_panel_shows_the_modes_attributes` and `attribute_buttons_step_and_choose` in `ui_smoke.rs`.
+- Attribute panel (W19: xfig's layout, buttons narrowed to their content): `ui-egui/attributes` (ported from `w_indpanel.c`), tests `attribute_panel_shows_the_modes_attributes` and `attribute_buttons_step_and_choose` in `ui_smoke.rs`.
 - Mouse buttons: xfig's three-button semantics per mode, the only scheme (W16 removed the modern one); `mouse_hints_match_behaviour` in `crates/engine/src/tools/mod.rs` presses every button in every tool and state and checks the indicator against what happened; Alt/Ctrl+click map to middle/right (`canvas::tool_button`), tested in `ui_smoke.rs`.
 - Verified on macOS by driving the app over the control channel and reviewing screenshots.
 
@@ -76,7 +76,7 @@ the score.
 | 2026-10-17 | ≈64 % | B3: pict2e ported, byte-identical to fig2dev on 285 of 300 sample figures (Export 55 → 57 %, 14 h less). |
 | 2026-10-16 | ≈64 % | B12: fig2dev self-contained, every export through `convert` (Export stays 55 %: architecture, no new language). |
 | 2026-10-16 | ≈64 % | G1, B2, B9 audit passes: old Fig files read (File format 85 → 92 %); pstex/pdftex and every ported fig2dev language exported from the app (Export 40 → 55 %; hours up with the audit's B11). |
-| 2026-10-21 | — | W19: Attributes panel made compact (look only; score unchanged). |
+| 2026-10-21 | — | W19: Attributes panel tightened, xfig's layout kept (look only; score unchanged). |
 | 2026-10-15 | ≈61 % | W8, W9: xfig's key and mouse bindings; attribute pictures as vectors, arrow types 10–14 selectable (Attributes 75 → 77 %). |
 | 2026-10-15 | ≈61 % | B10: standalone fig2dev (Export stays 40 %: no new language). |
 | 2026-10-15 | ≈61 % | B0: fig2dev's export options (Export 39 → 40 %). |
