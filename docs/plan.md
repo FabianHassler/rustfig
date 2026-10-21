@@ -89,6 +89,7 @@ match it, with the modern additions kept but optional.
 | W10-12 | **Open with preview** (accepted 2026-10-21, proposal 4; includes W10-6): in-app Open/Merge panel with preview, figure comments, object count, Figure Offset X/Y with units; Merge as one compound (done). | Preview, comments, count and offset shown; merge at offset tested. | 4 |
 | W10-13 | **Export in the background** (accepted 2026-10-21, proposal 5): progress, cancel and "Show in folder"; the UI stays responsive (native; on the web a download). | A long export can be cancelled; the UI keeps drawing; tested. | 4 |
 | W10-14 | **Autosave versions** (accepted 2026-10-21, proposal 6): the last N saved versions kept in the recovery folder, next to the `.bak` (W10-9). | Older versions can be restored from the recovery list; N is a preference. | 4 |
+| W11 | **3D buttons** (asked 2026-10-21): the mode panel (left), depth and snap panels (right), attribute/indicator panel (bottom) and the top strip (menu buttons, mouse indicator, units box) get raised, bevelled buttons (light top-left edge, dark bottom-right, soft shading), sunken when pressed or selected, as a modern take on xfig's Xaw3d look; colours from `theme::Tokens` in light and dark themes, crisp at every scale. A Global setting "Button style: 3D / Flat" (default 3D), saved in the preferences. Also check that the mode panel is never clipped (the second column and the last rows are cut off in the 2026-10-21 screenshot) and that the dark strip between mode panel and canvas is intended. | Screenshots in light and dark theme at 1x and 2x reviewed; selected and pressed states visible; the setting switches styles; no panel clipped at the default window size; UI tests green. | 6 |
 
 Global settings (Edit › Global settings, E1), the character map (View, E5)
 and Manage styles (View, E6) complete the xfig menus. E8 (mouse hint bar) is
@@ -267,6 +268,7 @@ User decision 2026-10-20: RustFig uses fig2dev for everything fig2dev can do.
 | 2026-10-14 | A3: the web build compiles locally with rustup's toolchain; xtask uses the running toolchain's rustc. |
 | 2026-10-21 | DD9: docs sweep and dead-code cleanup after the dedup series; dedup plan closed (D4, D6 only on request). |
 | 2026-10-21 | B15 added: PDF pictures as vectors (hayro-write/hayro), EPS pictures through optional ghostscript. |
+| 2026-10-21 | W11 added: 3D (bevelled) buttons in the side, bottom and top panels. |
 | 2026-10-21 | A11 added: mouse and keys through the control channel, for screenshots of menus and pop-ups. |
 | 2026-10-21 | W10 group 2 decisions: B5 widened (print dialog with preview), W10-10 to W10-14 added, `.bak` on, PDF stays the default export. |
 | 2026-10-21 | E4 widened (modern colour picker and editor); E10 (canvas text editing) and E11 (font chooser) added. |
