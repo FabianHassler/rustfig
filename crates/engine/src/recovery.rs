@@ -222,7 +222,16 @@ mod tests {
         // A stops without cleaning up (as a crash or kill -9: the system
         // releases its lock).
         drop(a);
-        let found = b.orphans();
+        // A process another test spawns at this moment can hold a copy of
+        // A's lock until it has started (fork, then exec), so wait a little.
+        let mut found = b.orphans();
+        for _ in 0..50 {
+            if !found.is_empty() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(20));
+            found = b.orphans();
+        }
         assert_eq!(found.len(), 1);
         assert_eq!(found[0].original.as_deref(), Some("/x/fig.fig"));
         let text = std::fs::read_to_string(&found[0].file).unwrap();
