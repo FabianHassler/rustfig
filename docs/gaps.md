@@ -31,6 +31,7 @@
 | 29 | Main-window leftovers found by W10 group 1 ([window-parity.md](window-parity.md)): Update Control (W10-1), Help documentation entries (W10-2), Show vertex numbers and Autorefresh (W10-3) | UI | Low | 13 |
 | 30 | File-window leftovers found by W10 group 2 ([window-parity.md](window-parity.md)): Export panel options (W10-4), Open/Merge offset field, preview and comments (W10-6), Open of a missing name (W10-8), `.bak` on save (W10-9), New xfig button (no task); the Print panel is B5 | UI/Export | Medium | 25 |
 | 31 | Edit-panel leftovers found by W10 group 3 ([window-parity.md](window-parity.md)): compound panel rows (W10-15), picture panel rows (W10-16), Done as one undo step and live point panel (W10-17); the position rows, arrow rows, text flags, arc type, figure comments and Cancel-restores were fixed in the same pass | UI | Medium | 16 |
+| 32 | Settings and tool windows found by W10 group 4 ([window-parity.md](window-parity.md)): Global settings rows with effect (W10-23), Unit/Scale panel details (W10-24); the colour panel, character map, Manage Styles, font menus, spell check, libraries and zoom box are E4, E5, E6, E11, F5, D6, E3; Search and Replace results list, Update settings, empty search, About copyrights, Messages Dismiss/Clear and Global settings view rows were fixed in the same pass | UI | Medium | 11 |
 
 ## Revision history
 

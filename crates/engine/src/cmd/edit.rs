@@ -140,7 +140,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Search/Replace text",
             menu: "",
             shortcut: "",
-            params: "{\"find\": string, \"replace\"?: string, \"case_sensitive\"?: bool}  — without replace, selects matching texts",
+            params: "{\"find\": string, \"replace\"?: string, \"case_sensitive\"?: bool}  — without replace, selects matching texts and lists them in \"texts\" ({x,y,text}); an empty find matches every text",
             mutates: true,
             enabled: has_objects,
             run: search_replace,
@@ -218,13 +218,17 @@ fn select(e: &mut Engine, p: &Value) -> CmdResult {
 
 fn search_replace(e: &mut Engine, p: &Value) -> CmdResult {
     let find = string(p, "find")?;
-    if find.is_empty() {
-        return Err(EngineError::bad_params("\"find\" must not be empty"));
-    }
     let replace = super::opt_str(p, "replace")?.map(str::to_string);
+    // xfig: an empty search string matches every text (`w_srchrepl.c`);
+    // replacing an empty string is refused.
+    if find.is_empty() && replace.is_some() {
+        return Err(EngineError::bad_params("\"find\" must not be empty when replacing"));
+    }
     let case = opt_bool(p, "case_sensitive")?.unwrap_or(true);
     let matches = |s: &str| {
-        if case {
+        if find.is_empty() {
+            true
+        } else if case {
             s.contains(&find)
         } else {
             s.to_lowercase().contains(&find.to_lowercase())
@@ -257,8 +261,26 @@ fn search_replace(e: &mut Engine, p: &Value) -> CmdResult {
             }
         }
     }
+    // xfig lists each match as "[x=.. y=..] text" (the text's anchor).
+    let mut found = Vec::new();
+    for o in e.doc().objects.iter() {
+        if hits.contains(&o.id) {
+            collect_texts(o, &matches, &mut found);
+        }
+    }
     e.set_selection(hits.clone());
-    Ok(json!({"matches": hits.len(), "replaced": count, "ids": ids_value(&hits)}))
+    Ok(json!({"matches": hits.len(), "replaced": count, "ids": ids_value(&hits), "texts": found}))
+}
+
+/// The matching texts (also inside compounds) with their anchor positions.
+fn collect_texts(o: &Object, m: &dyn Fn(&str) -> bool, out: &mut Vec<Value>) {
+    match &o.kind {
+        ObjectKind::Text(t) if m(&t.text) => {
+            out.push(json!({"x": t.origin.x, "y": t.origin.y, "text": t.text}));
+        }
+        ObjectKind::Compound(c) => c.objects.iter().for_each(|x| collect_texts(x, m, out)),
+        _ => {}
+    }
 }
 
 fn contains_text(o: &Object, m: &dyn Fn(&str) -> bool) -> bool {

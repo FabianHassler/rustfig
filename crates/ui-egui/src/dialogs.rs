@@ -178,6 +178,13 @@ pub struct SearchState {
     pub find: String,
     pub replace: String,
     pub case_sensitive: bool,
+    /// xfig's results list ("[x=.. y=..] text" per match) and its message line.
+    pub results: Vec<String>,
+    pub message: String,
+    /// Ids of the texts found (for "Update settings" and "Replace").
+    pub found: Vec<u64>,
+    /// "Replace" with an empty string was asked once (xfig asks twice).
+    pub empty_warned: bool,
 }
 
 #[derive(Default)]
@@ -689,6 +696,14 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
                 ),
                 ("app.toggle_xfig_keys", "xfig keyboard accelerators", app.xfig_keys),
                 ("app.toggle_indicator", "Show attribute panel", app.show_indicator),
+                // xfig's Global Settings panel repeats the View menu's switches.
+                (
+                    "view.toggle_page_border",
+                    "Show page borders",
+                    app.engine.show_page_border,
+                ),
+                ("app.toggle_depths", "Show depth manager", app.show_depths),
+                ("app.toggle_balloons", "Show info balloons", app.show_balloons),
                 (
                     "app.toggle_vector_icons",
                     "Sharp attribute pictures (off: xfig's bitmaps)",
@@ -700,6 +715,23 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
                     app.run(id, serde_json::json!({}));
                 }
             }
+            ui.horizontal(|ui| {
+                ui.label("Balloon delay (ms):");
+                let mut ms = app
+                    .engine
+                    .prefs
+                    .xfig
+                    .iter()
+                    .find(|(k, _)| k.eq_ignore_ascii_case("balloon_delay"))
+                    .and_then(|(_, v)| v.as_integer())
+                    .unwrap_or(500);
+                if ui.add(egui::DragValue::new(&mut ms).range(0..=100_000)).changed() {
+                    app.run(
+                        "prefs.set",
+                        serde_json::json!({ "resource": "balloon_delay", "value": ms.to_string() }),
+                    );
+                }
+            });
             ui.horizontal(|ui| {
                 ui.label("Button style:");
                 for (style, label) in [("3d", "3D"), ("flat", "Flat")] {
@@ -1495,43 +1527,79 @@ fn search_dialog(app: &mut App, ctx: &egui::Context) {
         return;
     }
     let mut open = true;
+    // Some(false) = search, Some(true) = replace, and the update button.
     let mut action: Option<bool> = None;
+    let mut update = false;
     let st = &mut app.dialogs.search;
+    let found = !st.found.is_empty();
     egui::Window::new("Search and Replace")
         .open(&mut open)
         .collapsible(false)
+        .default_size([460.0, 320.0])
         .show(ctx, |ui| {
             egui::Grid::new("search_grid").num_columns(2).show(ui, |ui| {
                 // xfig: Return in the search field searches, in the
                 // replace field replaces (`w_srchrepl.c`).
                 let enter =
                     |r: &egui::Response, ui: &egui::Ui| r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-                ui.label("Find");
+                ui.label("Search for");
                 let r = ui.text_edit_singleline(&mut st.find);
                 if enter(&r, ui) {
                     action = Some(false);
                 }
                 ui.end_row();
-                ui.label("Replace with");
-                let r = ui.text_edit_singleline(&mut st.replace);
-                if enter(&r, ui) {
+                ui.add_enabled(found, egui::Label::new("Replace with"));
+                let r = ui.add_enabled(found, egui::TextEdit::singleline(&mut st.replace));
+                if enter(&r, ui) && found {
                     action = Some(true);
                 }
                 ui.end_row();
             });
-            ui.checkbox(&mut st.case_sensitive, "Match case");
+            ui.checkbox(&mut st.case_sensitive, "Case sensitive");
             ui.horizontal(|ui| {
-                if ui.button("Find").clicked() {
+                if ui.button("Search").clicked() {
                     action = Some(false);
                 }
-                if ui.button("Replace all").clicked() {
+                if ui.add_enabled(found, egui::Button::new("Replace")).clicked() {
                     action = Some(true);
+                }
+                if ui
+                    .add_enabled(found, egui::Button::new("Update settings"))
+                    .on_hover_text("Give the found texts the attribute panel's font, size, colour and flags (xfig: UPDATE settings)")
+                    .clicked()
+                {
+                    update = true;
+                }
+            });
+            ui.label(if st.message.is_empty() {
+                "Enter search string and press \"Search\""
+            } else {
+                st.message.as_str()
+            });
+            egui::ScrollArea::vertical().max_height(160.0).show(ui, |ui| {
+                for line in &st.results {
+                    ui.monospace(line);
                 }
             });
         });
     app.dialogs.search.open = open;
+    if update {
+        let ids = app.dialogs.search.found.clone();
+        if app.run("object.update", json!({ "ids": ids })).is_some() {
+            let n = ids.len();
+            app.dialogs.search.message = format!("{n} object{} updated", if n == 1 { "" } else { "s" });
+            app.dialogs.search.found.clear();
+        }
+    }
     if let Some(replace) = action {
         let st = app.dialogs.search.clone();
+        if replace && st.replace.is_empty() && !st.empty_warned {
+            // xfig asks for a second click before removing the found string.
+            app.dialogs.search.empty_warned = true;
+            app.dialogs.search.message = "Click \"Replace\" again if you want remove \"Search for\" string".to_string();
+            return;
+        }
+        // Replace works on what the last search found: search first.
         let mut p = json!({"find": st.find, "case_sensitive": st.case_sensitive});
         if replace {
             p["replace"] = json!(st.replace);
@@ -1539,11 +1607,47 @@ fn search_dialog(app: &mut App, ctx: &egui::Context) {
         if let Some(r) = app.run("edit.search_replace", p) {
             let m = r.get("matches").and_then(Value::as_u64).unwrap_or(0);
             let n = r.get("replaced").and_then(Value::as_u64).unwrap_or(0);
-            app.info(if replace {
-                format!("Replaced {n} occurrences")
+            let d = &mut app.dialogs.search;
+            d.empty_warned = false;
+            if replace {
+                d.message = format!("{n} object{} replaced", if n == 1 { "" } else { "s" });
+                d.results.clear();
+                d.found.clear();
             } else {
-                format!("{m} matching texts selected")
-            });
+                d.results = r
+                    .get("texts")
+                    .and_then(Value::as_array)
+                    .map(|a| {
+                        a.iter()
+                            .map(|t| {
+                                let x = t.get("x").and_then(Value::as_f64).unwrap_or(0.0);
+                                let y = t.get("y").and_then(Value::as_f64).unwrap_or(0.0);
+                                let text = t.get("text").and_then(Value::as_str).unwrap_or("");
+                                let (u, per) = if app.engine.doc().settings.units == rustfig_model::Units::Metric {
+                                    ("cm", 450.0)
+                                } else {
+                                    ("in", 1200.0)
+                                };
+                                format!("[x={:4.1}{u} y={:4.1}{u}] {text}", x / per, y / per)
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                d.found = r
+                    .get("ids")
+                    .and_then(Value::as_array)
+                    .map(|a| a.iter().filter_map(Value::as_u64).collect())
+                    .unwrap_or_default();
+                d.message = if m == 0 {
+                    "No match".to_string()
+                } else {
+                    format!(
+                        "{m} line{} match{}",
+                        if m == 1 { "" } else { "s" },
+                        if m == 1 { "es" } else { "" }
+                    )
+                };
+            }
         }
     }
 }
@@ -1656,10 +1760,20 @@ fn messages_dialog(app: &mut App, ctx: &egui::Context) {
     }
     let mut open = true;
     let tk = crate::theme::Tokens::for_dark(ctx.style().visuals.dark_mode);
+    let mut dismiss = false;
     egui::Window::new("Messages")
         .open(&mut open)
         .default_size([460.0, 260.0])
         .show(ctx, |ui| {
+            // xfig's message window has Dismiss and Clear (`w_msgpanel.c`).
+            ui.horizontal(|ui| {
+                if ui.button("Dismiss").clicked() {
+                    dismiss = true;
+                }
+                if ui.button("Clear").clicked() {
+                    app.messages.clear();
+                }
+            });
             egui::ScrollArea::vertical().stick_to_bottom(true).show(ui, |ui| {
                 if app.messages.is_empty() {
                     ui.label("No messages yet.");
@@ -1672,7 +1786,7 @@ fn messages_dialog(app: &mut App, ctx: &egui::Context) {
         });
     // xfig's Return dismisses the message panel (`w_msgpanel.c`).
     let enter = ctx.input(|i| i.key_pressed(egui::Key::Enter)) && ctx.memory(|m| m.focused()).is_none();
-    app.dialogs.messages_open = open && !(enter && !app.engine.is_typing());
+    app.dialogs.messages_open = open && !dismiss && !(enter && !app.engine.is_typing());
 }
 
 fn about_dialog(app: &mut App, ctx: &egui::Context) {
@@ -1687,9 +1801,21 @@ fn about_dialog(app: &mut App, ctx: &egui::Context) {
         .show(ctx, |ui| {
             ui.heading("RustFig");
             ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
-            ui.label("A clean-room, Rust-native vector drawing program in the spirit of xfig.");
+            ui.label("A Rust-native reimplementation of xfig, close to the original in look and behaviour.");
             ui.label("Reads and writes Fig 3.2 files; exports PDF, SVG, EPS, PNG and the LaTeX box (more of fig2dev's languages are being ported).");
-            ui.label("Licensed MIT OR Apache-2.0.");
+            ui.label("Licensed MIT OR Apache-2.0; ported parts also under the xfig licence.");
+            ui.separator();
+            // xfig's About lists the copyright holders (`w_help.c`); ported code keeps them.
+            for line in [
+                "Based on xfig 3.2.9a:",
+                "  Parts Copyright \u{a9} 2016-2024 by Thomas Loimer",
+                "  Parts Copyright \u{a9} 1989-2015 by Brian V. Smith",
+                "  Parts Copyright \u{a9} 1991 by Paul King",
+                "  Copyright \u{a9} 1985-1988 by Supoj Sutanthavibul",
+                "  See the xfig licence file and NOTICE for other copyrights",
+            ] {
+                ui.label(line);
+            }
         });
     app.dialogs.about_open = open;
 }

@@ -1,6 +1,6 @@
 # Window-by-window comparison with xfig (W10)
 
-**Status:** 2026-10-21. Group 1 (main window and menus) compared and re-checked against screenshots of the real xfig; group 2 (file windows: Open, Save As, Merge, Export, Print) compared; group 3 (object edit panels) compared with captures and fixed in part; groups 4 and 5 not yet compared.
+**Status:** 2026-10-21. Group 1 (main window and menus) compared and re-checked against screenshots of the real xfig; group 2 (file windows: Open, Save As, Merge, Export, Print) compared; group 3 (object edit panels) compared with captures and fixed in part; group 4 (settings and tool windows) compared; group 5 not yet compared.
 
 ## Rule (decided 2026-10-21)
 
@@ -19,7 +19,7 @@ RustFig may look nicer and more modern than xfig; the **functionality** must sta
 | 1 | Main window and all menus | compared 2026-10-21 (below) |
 | 2 | File dialogs: Open, Save As, Merge, Export, Print | compared 2026-10-21 (below) |
 | 3 | Edit panels per object kind: arc, box/arc-box, circle/ellipse, polyline/polygon, spline, text, picture, compound, regular polygon, dimension line | compared 2026-10-21 (below); position rows, text flags, arrow rows, arc type, figure comments, spline point panel and Cancel-restores fixed; picture and compound rows open (W10-15, W10-16) |
-| 4 | Global settings, colour editor, font panel, style manager, search/replace, spell check, units, libraries, character map, about, set-value/choice popups of the zoom and unit boxes | not yet compared |
+| 4 | Global settings, colour editor, font panel, style manager, search/replace, spell check, units, libraries, character map, about, set-value/choice popups of the zoom and unit boxes | compared 2026-10-21 (below); Search and Replace, About, Messages and the Global settings view rows fixed; the rest is W10-23, W10-24 and the planned E3, E4, E5, E6, E11, F5, D6 |
 | 5 | Attribute pop-ups (line style, width, fill, colour, arrows, joins, caps, justification, ...) and mode panels' option panels | not yet compared |
 
 ## Group 1: main window
@@ -225,6 +225,52 @@ Not implemented. E4 (colour picker and editor), E10 (canvas text editing) and E1
 
 Total if all accepted: about 35 h besides W10-15 (5), W10-16 (8), W10-17 (3).
 
+## Group 4: settings and tool windows
+
+Sources: `w_cmdpanel.c` (menus, `create_global_panel`, `global_panel_done`), `w_rulers.c` (`popup_unit_panel`), `w_srchrepl.c` (search/replace and spell panels), `w_help.c`, `w_msgpanel.c`, `w_color.c`, `w_fontpanel.c`/`w_fontbits.c`, `w_style.c`, `w_library.c`, `w_keyboard.c`, `w_zoom.c`. Captures of the real X11 xfig 3.2.9a on a hidden Xvfb: `target/window-parity/g4-xfig-{menu-edit,menu-view,menu-help,global,units,search,spell,styles,charmap,about}.png` (not committed); RustFig: `g4-rf-{global_settings,unit_panel,search,about,search2,global-about}.png` (control channel). The installed xfig's Global settings has no "Track mouse in rulers" row although the 3.2.9a source has one; the source is followed.
+
+| Window (xfig) | xfig functions | RustFig | Status |
+|---|---|---|---|
+| Global Settings (Edit, Meta-G) | check boxes Autorefresh figure, (Track mouse in rulers), Show page borders, Show depth manager, Show info balloons with Delay (ms), Show line lengths, Show vertex numbers, Allow negative coords, Draw axis lines; spinners Freehand drawing resolution, Recently used files (0..9), Maximum image colors; entries Image editor, Spell checker, HTML Browser, PDF Viewer; Cancel, Ok | "Global settings" with layout, mouse, keys, attribute panel, icon and button style, Units and page, "xfig resources…" (every resource editable, value kept), colours; **added now**: Show page borders, Show depth manager, Show info balloons, Balloon delay | partial: the other rows exist only as resources without effect (W10-23); changes apply at once instead of on Ok (look/behaviour, allowed) |
+| Set units (Edit, Shift-U): "Unit/Scale settings" | Ruler units (Metric cm / Imperial fraction / Imperial decimal), Figure units (Ruler units / User defined) with Unit name, Show fractions, Figure scale (Unity / User defined) with Scale factor, Cancel, Set | "Unit menu" window: the same ruler units, figure unit name, scale factor; opens from Edit and the units box (right button; left pans to the origin as xfig); Close | partial (W10-24: Show fractions, Cancel/Set, explicit menus) |
+| Search & Replace (Edit, Meta-I) | Search for, Case sensitive (default off), Search, message line ("No match", "N lines match(es)"), results list "[x= y=] text", Replace with (enabled after a match), Replace (asks again before deleting text), UPDATE settings (found texts get the indicator's font, size, flags), Dismiss; an empty search lists every text | all of it | **fixed now** (command returns `texts`; dialog list, message, Update settings through `object.update`; tests `crates/engine/tests/search_panel.rs`) |
+| Spell Check (Meta-K) | panel "Spell checker": Misspelled words list, Correction entry, Correct, Recheck, Dismiss, message line; runs `spellcheckcommand` on all texts | menu entry greyed | F5 (acceptance widened to this panel) |
+| Manage Styles (Ctrl-Y) | Family list with Choice, Add, Delete; Style list with Choice, Add, Delete; Save settings, Reload settings, Close | menu entry greyed | E6 |
+| Character map | grid of the current font's characters (Times-Roman etc.), click inserts into the text, Close, Redraw | greyed | E5 |
+| Colour panel and editor (pop-up from a colour button, Edit Pen / Edit Fill) | Standard Colors grid, User Defined Colors with "x In use", Add Color, Lookup and Add (X11 name or hex), Delete, UnDelete, Delete Unused, RGB and HSV sliders with Lock, hex entry, "No more user colors allowed", "That color is in use by an object" | colour menus with swatches; `color.add`, `color.remove_unused`, user colours in Global settings | E4 (accepted) |
+| Font menus (PostScript 35, LaTeX 6, pictorial) | in the indicator and the text edit panel | combo of names | E11 (accepted) |
+| Library panel (Library mode) | Load a Library, status and Stop, Icon/List view with icon size, selected object, preview, comments, Select object, Cancel; libraries in `library_dir` | mode button greyed | D6 (acceptance widened to this panel) |
+| Help menu | Reference (HTML), Reference (PDF), Man Pages (HTML), How-To (PDF), About Xfig | "RustFig Reference (commands)…", "About RustFig…" | W10-2 |
+| About | version, icon, four copyright lines, Ok | version, description, licence | **fixed now**: lists xfig's copyrights (the licence asks for them); "clean-room" removed (it was wrong for ported code) |
+| File message window | list of messages, Dismiss, Clear; Return dismisses | list; Return dismisses | **fixed now**: Dismiss and Clear added |
+| Message line | one-line `put_msg` | status line | same |
+| Zoom box (Zoom indicator, left button drags a box, middle pan to origin, right unzoom, wheel) | `w_zoom.c` | wheel and fit exist; no box | E3 |
+| Keyboard panel ("Coordinate:") | type the next point's coordinates, "Shift => Button2; Control => Button3" | none | D10 (typed coordinates) |
+| Digitize, Screen capture | `w_digitize.c`, `w_capture.c` | greyed | D11 |
+| Grid Mode, Snap, depth manager | `w_grid.c`, `w_snap.c`, `w_layers.c` | pop-up, Snap menu, depth panel exist | group 1/5 |
+
+### Findings of group 4
+
+| Id | Difference | Fixed or task |
+|---|---|---|
+| (fixed) | Search/Replace result list, message line, Update settings, empty search, double-click guard on empty Replace; About copyrights; Messages Dismiss/Clear; Global settings view switches and balloon delay | W10 group 4 |
+| W10-23 | Global settings rows without effect or without a row | plan W10-23, gaps #32 |
+| W10-24 | Unit/Scale panel details | plan W10-24, gaps #32 |
+| E3, E4, E5, E6, E11, F5, D6, D10, W10-2, W10-3 | windows not there yet | planned, acceptance widened |
+
+### Proposed modernisations (group 4)
+
+Not implemented. E4 (colour picker and editor), E10 and E11 are accepted and not repeated.
+
+1. **Settings in tabs with search.** xfig: one long panel of check boxes. Proposal: Global settings with tabs (Window, Drawing, Files, Programs) and a filter field, the xfig resources table folded in as an "Advanced" tab. Kept: every row of xfig's panel, Ok/Cancel and the apply-on-Ok behaviour as an option. Hours: 6.
+2. **Search across the figure with highlighting and step-through.** xfig lists matches in a text box. Proposal: "Next/Previous" that selects and centres each match, the list clickable to jump to a text, optional whole-word and regular expressions, search in comments. Kept: the list, Replace, Update settings, case option. Hours: 5.
+3. **Spell check inside the text editor.** xfig: a separate panel with an external `spell` command. Proposal: red underlines while typing, suggestions from bundled Hunspell dictionaries, the xfig panel as the list view. Kept: Misspelled words, Correction, Correct, Recheck, Dismiss and the external `spellcheckcommand`. Hours: 8 on top of F5.
+4. **Help as a bundled searchable manual.** xfig launches a browser and PDF viewer on installed files. Proposal: the manual and how-to as an in-app Help window and the same pages on the web build; the external viewers stay selectable. Kept: all five Help entries. Hours: 8 on top of W10-2.
+5. **Message history with levels and "copy".** xfig's file-message window is a plain list. Proposal: errors and info marked, filter and copy to the clipboard. Kept: Dismiss, Clear. Hours: 2.
+6. **Library browser with search and favourites** (D6): thumbnails, text search across libraries, a favourites row. Kept: Load a Library, Icon/List view and size, preview, comments. Hours: 6 on top of D6.
+
+Total if all accepted: about 35 h.
+
 ## Findings and ids
 
 | Id | Difference | Fixed or task |
@@ -245,3 +291,4 @@ Nothing in group 1 needed an in-place fix: labels, order, accelerators and defau
 | 2026-10-21 | A11: group 1 menus re-compared with real screenshots of RustFig (`a11-*.png`); Unzoom/Zoom Out accelerator labels fixed. |
 | 2026-10-21 | W11: main window look (3D buttons, mode panel fits, compact mouse box, rulers as xfig), screenshots `target/window-parity/w11-*.png`. |
 | 2026-10-21 | Group 3 (object edit panels) compared with captures of the real X11 xfig; position rows, arrow rows, arc type, text flags, units, Cancel-restores, figure comments and the spline point panel added; W10-15 to W10-17 added. |
+| 2026-10-21 | Group 4 (settings and tool windows) compared with captures of the real X11 xfig; Search and Replace, About, Messages and the Global settings view rows fixed; W10-23 and W10-24 added; six proposed modernisations. |
