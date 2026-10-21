@@ -36,7 +36,8 @@
 | Open/close | `tool.open_close` | ✅ |
 | Add/remove arrows | `tool.arrow` | ✅ |
 | Join/split | `tool.join_split`, `object.join`, `object.split` | ✅ |
-| Chop, tangent/normal | — | ❌ |
+| Chop | `tool.chop`, `object.chop` | ✅ |
+| Tangent/normal | — | ❌ |
 | Angle / length / area measure | `object.measure` (command only) | 🟡 |
 
 The window-by-window comparison with the real xfig (what each window offers and does, rule: same or more functionality) is in [window-parity.md](window-parity.md) (W10).
@@ -83,6 +84,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 ## Revision history
 | Date | Note |
 |---|---|
+| 2026-10-22 | D3: Chop mode added to the editing-modes table (`tool.chop`, `object.chop`). |
 | 2026-10-13 | First checklist. |
 | 2026-10-13 | Added the main-window section (plan phase W). |
 | 2026-10-13 | W1: classic layout, message panel, mouse indicator, units box. |

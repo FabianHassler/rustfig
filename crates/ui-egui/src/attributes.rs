@@ -239,6 +239,7 @@ pub fn attributes_for(tool: ToolKind) -> Vec<Attr> {
         | ToolKind::Break
         | ToolKind::OpenCompound
         | ToolKind::JoinSplit
+        | ToolKind::Chop
         | ToolKind::Delete
         | ToolKind::DeletePoint
         | ToolKind::Edit

@@ -13,8 +13,9 @@ and Linux, with a web (WASM) build on the way.
 - Draw: circles, ellipses, approximated/interpolated/X-splines, polylines,
   polygons, boxes, rounded boxes, regular polygons, arcs, text, pictures.
 - Edit: select, move, copy, delete, scale, rotate, flip, edit attributes,
-  update, add/move/delete points, glue/break compounds, align, distribute,
-  convert line ↔ spline, open/close, arrows, depth ordering, multi-level undo.
+  update, add/move/delete points, glue/break compounds, join/split, chop,
+  align, distribute, convert line ↔ spline, open/close, arrows, depth
+  ordering, multi-level undo.
 - Files: reads Fig 1.3–3.2, writes Fig 3.2 and a native JSON format.
 - Export (every format through fig2dev's drivers, ported to Rust): PDF, SVG, EPS, PNG, GIF, JPEG, TIFF, PPM, PCX, XBM, XPM, LaTeX box (all 22 xfig fill patterns, arrowheads and dashes as fig2dev draws them); from fig2dev's ported drivers LaTeX picture, epic/eepic/eepicemu, PiCTeX, TeXtyl, tpic, pic, pstex/pdftex, pict2e, CGM, HPGL, DXF, MetaPost, METAFONT, ge, image map, Gerber, shape, TikZ, PSTricks, EMF, Tk/Perl-Tk and AutoCAD slides (every fig2dev language).
 - Automation: every action is a command, reachable from a JSON control

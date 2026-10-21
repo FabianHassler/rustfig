@@ -129,6 +129,7 @@ pub fn mode_mask(tool: ToolKind, rotate_angle: f64) -> ObjMask {
         }
         T::Break | T::Align | T::OpenCompound => ObjMask::COMPOUND,
         T::JoinSplit => ObjMask::POLYLINE.union(ObjMask::SPLINE),
+        T::Chop => ObjMask::POLYLINE.union(ObjMask::ARC).union(ObjMask::ELLIPSE),
         T::Scale | T::MovePoint | T::FlipV | T::FlipH => ObjMask::NO_TEXT,
         T::AddPoint | T::DeletePoint => ObjMask::VARPTS_OBJECT,
         T::Convert => ObjMask::VARPTS_OBJECT.union(ObjMask::POLYLINE_BOX),
@@ -360,6 +361,10 @@ mod tests {
                     "spline_open",
                     "spline_closed",
                 ],
+            ),
+            (
+                T::Chop,
+                vec!["line", "polygon", "box", "arcbox", "picture", "ellipse", "arc"],
             ),
             (T::Align, vec!["compound"]),
             (T::Scale, no_text.clone()),

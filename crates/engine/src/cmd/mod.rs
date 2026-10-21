@@ -3,6 +3,7 @@
 //! predicate and a `run` function.
 
 mod arrange;
+mod chop;
 mod compound;
 mod doc;
 mod edit;
@@ -71,6 +72,7 @@ pub fn all() -> &'static [Command] {
         v.extend(arrange::commands());
         v.extend(object::commands());
         v.extend(compound::commands());
+        v.extend(chop::commands());
         v.extend(joinsplit::commands());
         v.extend(region::commands());
         v.extend(doc::commands());

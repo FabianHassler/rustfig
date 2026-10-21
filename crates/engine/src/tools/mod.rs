@@ -8,6 +8,7 @@
 // editing modes src/d_*.c and src/e_*.c (button behaviour, `set_mousefun`
 // wording) and src/w_canvas.c (snapping) (xfig licence, see LICENSE-xfig).
 
+mod chop;
 mod compound;
 mod markers;
 use crate::Region;
@@ -48,6 +49,7 @@ pub enum ToolKind {
     Break,
     OpenCompound,
     JoinSplit,
+    Chop,
     Scale,
     Align,
     Move,
@@ -68,7 +70,7 @@ pub enum ToolKind {
 }
 
 impl ToolKind {
-    pub const ALL: [ToolKind; 40] = [
+    pub const ALL: [ToolKind; 41] = [
         ToolKind::Select,
         ToolKind::CircleRadius,
         ToolKind::CircleDiameter,
@@ -92,6 +94,7 @@ impl ToolKind {
         ToolKind::Break,
         ToolKind::OpenCompound,
         ToolKind::JoinSplit,
+        ToolKind::Chop,
         ToolKind::Scale,
         ToolKind::Align,
         ToolKind::Move,
@@ -137,6 +140,7 @@ impl ToolKind {
             ToolKind::Break => "tool.break",
             ToolKind::OpenCompound => "tool.open_compound",
             ToolKind::JoinSplit => "tool.join_split",
+            ToolKind::Chop => "tool.chop",
             ToolKind::Scale => "tool.scale",
             ToolKind::Align => "tool.align",
             ToolKind::Move => "tool.move",
@@ -187,6 +191,7 @@ impl ToolKind {
             ToolKind::Break => "Break compound",
             ToolKind::OpenCompound => "Open compound",
             ToolKind::JoinSplit => "Join/split lines and splines",
+            ToolKind::Chop => "Chop",
             ToolKind::Scale => "Scale",
             ToolKind::Align => "Align",
             ToolKind::Move => "Move",
@@ -232,6 +237,7 @@ impl ToolKind {
             ToolKind::Break => "Shift+G",
             ToolKind::OpenCompound => "O",
             ToolKind::JoinSplit => "J",
+            ToolKind::Chop => "x",
             ToolKind::Align => "A",
             ToolKind::Move => "M",
             ToolKind::MovePoint => "Shift+M",
@@ -423,6 +429,8 @@ pub(crate) enum ToolState {
     /// Join/Split: the first end point was picked (`join_lines`,
     /// `join_splines`); the next click picks the second.
     Join { id: ObjectId, first: bool, spline: bool },
+    /// Chop: the axe (cutting) objects selected so far.
+    Chop { axes: Vec<ObjectId> },
     Text {
         origin: Point,
         text: String,
@@ -671,6 +679,7 @@ impl Engine {
             ToolKind::Delete => self.delete_event(ev),
             ToolKind::OpenCompound => self.open_compound_event(ev),
             ToolKind::JoinSplit => self.join_split_event(ev),
+            ToolKind::Chop => self.chop_event(ev),
             _ => self.click_event(ev),
         }
     }
@@ -2263,6 +2272,7 @@ impl Engine {
                 "",
                 "cancel",
             ),
+            ToolState::Chop { .. } => h("Select axe object", "Select log object", "Clear axe list"),
             ToolState::RubberBand {
                 held: true,
                 button: Button::Right,
@@ -2314,6 +2324,7 @@ impl Engine {
                     ToolKind::Break => ("break compound", "break and tag", ""),
                     ToolKind::OpenCompound => ("open compound", "open, keep visible", ""),
                     ToolKind::JoinSplit => ("Join Lines/Splines", "Split Line/Spline", ""),
+                    ToolKind::Chop => ("Select axe object", "Select log object", "Clear axe list"),
                     ToolKind::Scale => ("scale box", "scale about center", ""),
                     ToolKind::Align => ("align compound", "", ""),
                     ToolKind::Move => ("move object", "horiz/vert move", ""),
@@ -2359,6 +2370,18 @@ impl Engine {
         let mut ov = Overlay::default();
         match &self.tool_state {
             ToolState::Idle | ToolState::Join { .. } => {}
+            ToolState::Chop { axes } => {
+                for id in axes {
+                    if let Some(o) = self.doc().get(*id) {
+                        let bb = o.geometry_bbox();
+                        let mut c = bb.corners().to_vec();
+                        if let Some(f) = c.first().copied() {
+                            c.push(f);
+                        }
+                        ov.guides.push(c);
+                    }
+                }
+            }
             ToolState::Points {
                 pts, cursor, center, ..
             } => {
@@ -2875,6 +2898,14 @@ mod tests {
                 e.execute("shape.polyline", &json!({"points": [[600, 900], [1800, 900]]}))
                     .unwrap();
             }
+            7 => {
+                // Two crossing lines: an axe through (0, 0) and a log through
+                // (600, 900) that intersect, so Chop's middle button cuts.
+                e.execute("shape.polyline", &json!({"points": [[0, 0], [0, 1200]]}))
+                    .unwrap();
+                e.execute("shape.polyline", &json!({"points": [[-600, 900], [1800, 900]]}))
+                    .unwrap();
+            }
             _ => {
                 e.execute(
                     "shape.rectangle",
@@ -2903,7 +2934,7 @@ mod tests {
         let mut acted: BTreeMap<(&str, String, String, &str), bool> = BTreeMap::new();
         {
             for tool in ToolKind::ALL {
-                for n in 0..7 {
+                for n in 0..8 {
                     let setup = |prefix: Option<Button>| {
                         let mut e = fixture(n);
                         e.set_tool(tool);

@@ -2,7 +2,7 @@
 
 **Paths written `fig2dev:crates/…` are in the fig2dev repository (<https://github.com/FabianHassler/fig2dev>), where figbase, the fig2dev library and the `fig2dev` program moved (B13).**
 
-**Status:** 2026-10-21 (S4: the xfig file statuses corrected from the function-level audit, [`source-audit.md`](source-audit.md); DD9: sweep; DD7: `read.c`'s repairs as functions used by `format/bridge/export`); 2026-10-20 (DD3: `f_read.c` read through fig2dev's reader); 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
+**Status:** 2026-10-22 (D3: `e_chop.c` ported, `geom/intersect.rs` from `w_intersect.c`); 2026-10-21 (S4: the xfig file statuses corrected from the function-level audit, [`source-audit.md`](source-audit.md); DD9: sweep; DD7: `read.c`'s repairs as functions used by `format/bridge/export`); 2026-10-20 (DD3: `f_read.c` read through fig2dev's reader); 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
 sources (`LICENSE-xfig`). Nothing has been ported line by line yet: every
 "own" row was written from the manual and the format description and must be
 checked against the C file named in it.
@@ -80,7 +80,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `e_align.c` | 962 | align compound / canvas, distribute | `cmd/arrange`, tools | partial: align to canvas, distribute choices in the mode (S4) | D10, W10-33 |
 | `e_arrow.c` | 293 | add/remove arrowheads | tools, `cmd/object` | ported (S4) | — |
 | `e_break.c` | 92 | break compound (and tag) | tools | ported (S4) | — |
-| `e_chop.c` | 890 | chop objects at intersections | — | missing (14 functions, S4) | D3 |
+| `e_chop.c` | 890 | chop objects at intersections | `cmd/chop.rs`, `tools/chop.rs` | ported (S4) | D3 |
 | `e_compound.c` | 294 | open/close compound | `model::Document::open_compound`, `cmd/compound.rs`, `tools/compound.rs`, `panels::close_compound_popup` | ported (dimension-line recomputation on close: D10) | D1 |
 | `e_convert.c` | 420 | line↔spline, box↔arc-box | `cmd/object` | partial: box ↔ arc-box (S4) | S4-5 |
 | `e_copy.c` | 185 | copy, array copy, copy to cut buffer | tools | partial: array copy (S4) | D10 |
@@ -155,7 +155,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_msgpanel.c` | 881 | message panel, lengths while drawing | `panels::message_panel` | partial: lengths and measure results while drawing (S4) | D10, D5 |
 | `w_layers.c` | 903 | depth panel | `panels::depth_panel` | ported (S4) | — |
 | `w_rulers.c` | 1479 | rulers and units box | `ui-egui/rulers`, `view.set_scale` | ported: tick tables, labels, marker, ruler buttons, units box, Unit menu | — |
-| `w_snap.c`, `w_intersect.c` | 2.8 k | Snap menu (object snaps) | `engine/snap.rs`, `snap.*` commands | ported (curves on flattened outlines instead of the quartic solver) | — |
+| `w_snap.c`, `w_intersect.c` | 2.8 k | Snap menu (object snaps); intersections for Chop | `engine/snap.rs`, `snap.*` commands, `geom/intersect.rs` | ported (curves on flattened outlines instead of the quartic solver) | — |
 | `w_keyboard.c` | 518 | type coordinates for the next point | — | missing (7 functions, S4) | D10 |
 | `w_zoom.c` | 202 | zoom panel | `cmd/view` | missing: zoom box, unzoom semantics (S4) | E3, D11 |
 | `w_grid.c` | 238 | grid drawing | canvas | ported (S4) | — |
@@ -239,3 +239,4 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | 2026-10-21 | S4: every xfig function audited (`source-audit.md`); file statuses of `d_*`, `e_*`, `f_*`, `u_*` and `w_*` rows corrected (f_readpcx/xbm/xpm and f_wrpcx/png, u_ghostscript, u_error are done or replaced, not missing). |
 | 2026-10-21 | DD7: `read.c`'s repairs and checks exposed as functions, used by the bridge's export. |
 | 2026-10-21 | B15: `f_readeps.c`, `readeps.c` (`read_pdf`, `pdftops`, `gsexe`) and the picture part of `genps.c` now covered by `util/{pdfpic,pdfps,gs}.rs`. |
+| 2026-10-22 | D3: `e_chop.c` ported (`cmd/chop.rs`, `tools/chop.rs`); `w_intersect.c`'s intersection math in `geom/intersect.rs`. |

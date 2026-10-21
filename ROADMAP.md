@@ -1,6 +1,6 @@
 # RustFig roadmap
 
-**Status (2026-10-18):** Stage **Alpha**. Overall xfig parity **≈65 %**
+**Status (2026-10-22):** Stage **Alpha**. Overall xfig parity **≈65 %**
 ([assessment](docs/target-app-parity.md)). The native app draws, edits,
 saves and exports. The web build compiles; it is not yet packaged or tested in a browser.
 
@@ -18,9 +18,9 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Measure | Value |
 |---------|-------|
 | Overall parity (weighted) | ≈65 % |
-| Commands (all reachable from the control channel and MCP) | 142 engine (incl. 40 tool modes) + 14 UI |
-| Interactive tools (xfig modes) | 40 |
-| Tests | 550 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
+| Commands (all reachable from the control channel and MCP) | 143 engine (incl. 41 tool modes) + 14 UI |
+| Interactive tools (xfig modes) | 41 |
+| Tests | 565 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 1.3–3.2, write 3.2 |
 | Export formats | all through fig2dev's ported drivers (`convert`): PDF, SVG, EPS, PNG, GIF, JPEG, TIFF, PPM, PCX, XBM, XPM, EPS+PDF pair, LaTeX box from its scene writers (PostScript without page layout yet); LaTeX picture, epic/eepic/eepicemu, PiCTeX, TeXtyl, tpic, pic, pstex/pdftex, pict2e, CGM, HPGL, DXF, MetaPost, METAFONT, ge, image map, Gerber, shape, TikZ, PSTricks, EMF, Tk/Perl-Tk from ported fig2dev drivers (every fig2dev language except `sld`); fig2dev's own suite 79 pass / 9 fail / 1 skipped |
 | Perf, 50k paths (render fit / hit test / open / edit + undo) | 260 ms / 0.1 ms / 20 ms / 0.9 ms |
@@ -30,7 +30,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Dimension | Parity | Details |
 |-----------|--------|---------|
 | Drawing modes | 88 % | all xfig shapes except library objects; freehand and arc by centre |
-| Editing modes | 75 % | missing chop, tangent, measure modes |
+| Editing modes | 78 % | missing tangent, measure modes |
 | Attributes panel | 75 % | xfig's per-mode buttons; missing colour editor, latex/manhattan positioning, smart links |
 | File format | 92 % | Fig 1.3–3.2 read; exact pre-3.2 spline conversion missing |
 | Export | 66 % | every fig2dev language but `sld`; PostScript page layout and previews, hardening passes missing |
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-22 | D3: Chop mode (`e_chop.c`, `w_intersect.c`): command `object.chop` (cut a polyline, polygon, arc or circle at every intersection with the axe objects, pieces keeping the object's attributes, one undo step) and mode `tool.chop` (`x`; left collects axe objects, middle chops the log, right clears the axes); intersections in `crates/geom/src/intersect.rs`; elliptical arcs unsupported as xfig; `tests/chop.rs` (10) and a mouse-hint fixture. 2 engine commands, 1 tool, 15 tests. |
 | 2026-10-22 | W20: platform edit keys next to xfig's: Cmd+X/C/V on macOS (and Ctrl+X/V elsewhere) now reach cut, copy and paste; menus show xfig's accelerator, or the platform shortcut where xfig has none and its keys leave it free (on Linux and Windows xfig's Ctrl keys win). |
 | 2026-10-21 | E15: Export on save — the Export dialog's "Also export on every save" keeps the chosen file and options up to date on every save; `file.export_on_save` command, per-figure `Document::export_on_save`, stored in `.fig` as a `# RustFigExportOnSave` comment and in `.rustfig` as JSON; save stands when the automatic export fails. |
 | 2026-10-21 | W10-1: Update Control: every attribute button has an update box in Update mode, plus Set/Clear/Toggle all; Update, update region, lasso and update settings copy only the flagged attributes; commands `indicator.set_update_flag`, `indicator.update_flags`. |

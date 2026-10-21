@@ -10,7 +10,7 @@
 | M3 | Engine (commands, undo, tools), egui app, control channel, MCP, CLI | done |
 | M4 | Exports: LaTeX family, PostScript/print, more bitmaps | in progress (every fig2dev language but `sld` done; page layout, previews, hardening left) |
 | M5 | Web build verified and packaged; browser file I/O | planned |
-| M6 | Libraries, open compound, remaining edit modes | planned |
+| M6 | Libraries, tangent/normal and measure modes (open compound, join/split, chop done) | planned |
 | M7 | Settings, rulers, colour editor, character map | planned |
 | M8 | Beta: parity ≥ 85 % | planned |
 
@@ -18,6 +18,7 @@
 
 | Date | Note |
 |------|------|
+| 2026-10-22 | D3 done: Chop mode (`e_chop.c`), intersections in `geom/intersect.rs`; M6 edit modes now open compound, join/split and chop. |
 | 2026-10-21 | W16, W17 done (one mouse scheme, one layout); D1 save query. |
 | 2026-10-21 | S4 done: every xfig function audited (`source-audit.md`); S4-1 to S4-7 added to phase S. |
 | 2026-10-21 | DD1–DD10 (dedup with fig2dev) done; docs swept (DD9). |

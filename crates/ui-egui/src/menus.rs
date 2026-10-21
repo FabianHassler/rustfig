@@ -1154,6 +1154,7 @@ mod tests {
         ("object.list", "scripting API"),
         ("object.join", "the Join/Split tool"),
         ("object.split", "the Join/Split tool"),
+        ("object.chop", "the Chop tool"),
         ("object.update_region", "the Update tool's right button"),
         ("object.reverse_arrows", "the Arrow tool's right button"),
         ("object.break_all", "the Break tool's right button"),

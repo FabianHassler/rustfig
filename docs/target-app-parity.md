@@ -1,6 +1,6 @@
 # Target-app parity assessment: RustFig vs xfig 3.2.9
 
-**Status:** 2026-10-21 (W16, W17: one mouse scheme and one layout, scores unchanged; save query for open compounds); 2026-10-21 (D1, D2: open compound and join/split, Editing 70 → 75 %); 2026-10-21 (B15: PDF/EPS pictures, Export 66 → 68 %, overall ≈65 %); 2026-10-21 (DD9: evidence paths after the dedup series; scores unchanged); 2026-10-18, overall **≈65 %** (B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk; G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
+**Status:** 2026-10-22 (D3: chop, Editing 75 → 78 %); 2026-10-21 (W16, W17: one mouse scheme and one layout, scores unchanged; save query for open compounds); 2026-10-21 (D1, D2: open compound and join/split, Editing 70 → 75 %); 2026-10-21 (B15: PDF/EPS pictures, Export 66 → 68 %, overall ≈65 %); 2026-10-21 (DD9: evidence paths after the dedup series; scores unchanged); 2026-10-18, overall **≈65 %** (B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk; G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
 
 ## Methodology
 
@@ -20,7 +20,7 @@ the score.
 | Area | Weight | Score | Missing | Hours |
 |------|-------:|------:|---------|------:|
 | Drawing modes | 12 | 88 % | library objects; dimension lines (Shift+left in polyline mode); xfig's click-to-close rules for some shapes | 14 |
-| Editing modes | 12 | 75 % | anchor point for flip/rotate (right button), array copy, align to canvas, figure comments from Edit mode, chop, tangent/normal, angle/length/area measure modes, copy to library | 30 |
+| Editing modes | 12 | 78 % | anchor point for flip/rotate (right button), array copy, align to canvas, figure comments from Edit mode, tangent/normal, angle/length/area measure modes, copy to library | 26 |
 | Attributes / indicator | 10 | 77 % | colour editor UI, Angle Geom (latex, manhattan, mountain), smart links, copy counts | 30 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
 | Export | 12 | 68 % | `sld`, texts with `\ooo` octal escapes (raw bytes, B11 pass 5), the audit's hardening passes (B11), arrows on pie-wedge arcs and file arc centres lost on the way through the Fig writer (gap #25), picture frames and GIF transparency (gap #26) | 90 |
@@ -36,7 +36,8 @@ the score.
 ## Evidence of what ships
 
 - Open compound and join/split (D1, D2): `crates/model/src/lib.rs` (`Document::open`), `crates/engine/src/cmd/{compound,joinsplit}.rs`, `tools/compound.rs`; tests `crates/engine/tests/{open_compound,join_split}.rs`.
-- Drawing tools: `crates/engine/src/tools/mod.rs` (40 tools; tests draw polylines, boxes and text and move objects).
+- Chop (D3): `crates/engine/src/cmd/chop.rs` (command `object.chop`), `crates/engine/src/tools/chop.rs` (mode `tool.chop`), intersection math in `crates/geom/src/intersect.rs`; tests `crates/engine/tests/chop.rs`.
+- Drawing tools: `crates/engine/src/tools/mod.rs` (41 tools; tests draw polylines, boxes and text and move objects).
 - PDF/EPS pictures (B15): `fig2dev:crates/fig2dev/src/util/{pdfpic,pdfps,gs}.rs`, tests `tests/pdf_pictures*.rs` there (against the C fig2dev), canvas in `crates/engine/src/import.rs`, hostile files in `crates/engine/tests/import_fuzz.rs`.
 - Commands: `crates/engine/src/cmd/*`, swept with hostile parameters in `crates/engine/tests/command_sweep.rs`.
 - Fig I/O: `crates/format/src/fig_read.rs` (fig2dev's reader through `bridge/`), `fig_write.rs`; round trip and fuzzing in `crates/format/tests/`.
@@ -71,6 +72,7 @@ the score.
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-22 | ≈65 % | D3: Chop mode (cut objects at intersections), Editing 75 → 78 %. |
 | 2026-10-21 | ≈65 % | W16, W17: one mouse scheme and one layout; save query for open compounds; no score moved. |
 | 2026-10-21 | ≈65 % | DD9: evidence paths after the dedup series (reader, bounds, exports through fig2dev); no score moved. |
 | 2026-10-18 | ≈65 % | B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk ported (Export 57 → 66 %, 50 h less). |

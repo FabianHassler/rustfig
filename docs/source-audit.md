@@ -23,11 +23,11 @@ S0 ([`source-map.md`](source-map.md)) maps C files to RustFig modules; this file
 
 | Status | Functions |
 |---|---:|
-| ported | 829 |
+| ported | 844 |
 | replaced | 584 |
 | not needed | 218 |
 | partial | 66 |
-| missing | 415 |
+| missing | 400 |
 | **total** | **2112** (plus 14 in `xfigmain.c`, a generated copy of `main.c`) |
 
 Missing and partial functions by task (a function counts under each task it names):
@@ -42,7 +42,6 @@ Missing and partial functions by task (a function counts under each task it name
 - **W10-10** (26): `w_export.c`: `exp_getxyoff`, `preview_select`, `orient_select`, `just_select`, `papersize_select`, `multiple_select`, `overlap_select`, `set_postscript_pdf_options`, `set_export_mask`, `smooth_select`, `background_select`, `transp_select`, `export_grid_minor_select`, `export_grid_major_select`, `manage_optional`, `export_update_figure_size`, `fit_page`, `get_magnif`, `update_mag`, `update_figure_size`, `get_quality`, `exp_xoff_unit_select`, `exp_yoff_unit_select`, `toggle_hpgl_pcl_switch`, `toggle_hpgl_font`, `toggle_pdf_pagemode`
 - **W10-4** (26): `w_export.c`: `exp_getxyoff`, `preview_select`, `orient_select`, `just_select`, `papersize_select`, `multiple_select`, `overlap_select`, `set_postscript_pdf_options`, `set_export_mask`, `smooth_select`, `background_select`, `transp_select`, `export_grid_minor_select`, `export_grid_major_select`, `manage_optional`, `export_update_figure_size`, `fit_page`, `get_magnif`, `update_mag`, `update_figure_size`, `get_quality`, `exp_xoff_unit_select`, `exp_yoff_unit_select`, `toggle_hpgl_pcl_switch`, `toggle_hpgl_font`, `toggle_pdf_pagemode`
 - **D7** (19): `d_line.c`: `init_trace_drawing`, `get_intermediatepoint`; `u_elastic.c`: `latex_line`, `constrainedangle_line`, `angle0_line`, `angle90_line`, `angle45_line`, `angle135_line`; `u_geom.c`: `pgcd`, `gcd`, `lcm`, `get_slope`, `latex_endpoint`; `w_indpanel.c`: `show_anglegeom`, `show_pointposn`; `w_modepanel.c`: `force_positioning`, `force_nopositioning`, `force_anglegeom`, `force_noanglegeom`
-- **D3** (15): `e_chop.c`: `chop_selected`, `select_axe_object`, `clear_axe_objects`, `point_sort_fcn`, `point_sort_reverse_fcn`, `create_new_line`, `check_poly`, `dice_polygons`, `dice_polylines`, `chop_polyline`, `chop_arc`, `chop_ellipse`, `select_log_object`, `init_chop_right`; `w_modepanel.c`: `stub_chop_selected`
 - **D11** (14): `w_capture.c`: `captureImage`, `rshift`, `getImageData`, `selectedRootArea`, `drawRect`, `getCurrentColors`, `canHandleCapture`; `w_digitize.c`: `popup_digitize_panel`, `create_digitize_panel`, `digitize_panel_done`, `digitize_panel_cancel`, `update_example`, `switch_file_mode`; `w_zoom.c`: `unzoom`
 - **W10-16** (12): `e_edit.c`: `reread_picfile`, `expand_pic`, `shrink_pic`, `origsize_pic`, `scale_percent_pic`, `reposition_picture`, `resize_picture`, `flip_pic_select`, `rotation_select`, `image_edit_button`, `browse_button`, `what_rotation`
 - **S4-1** (10): `u_markers.c`: `toggle_csrhighlight`, `toggle_ellipsehighlight`, `toggle_archighlight`, `toggle_texthighlight`, `toggle_compoundhighlight`, `toggle_linehighlight`, `toggle_splinehighlight`; `u_search.c`: `show_objecthighlight`, `erase_objecthighlight`, `toggle_objecthighlight`
@@ -103,6 +102,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | Date | Note |
 |------|------|
 | 2026-10-21 | First version (S4): 2,126 function definitions of xfig 3.2.9a listed by `cargo xtask source-audit`, each with a status; S4-1 to S4-7 added; `source-map.md` statuses corrected. |
+| 2026-10-22 | D3: `e_chop.c`'s 14 functions and `w_modepanel.c`'s `stub_chop_selected` marked ported. |
 
 ## Table
 
@@ -246,20 +246,20 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_break.c` | `init_break_only` | 59 | ported | tools: `ToolKind::Break`, command `object.ungroup` |  |
 | `e_break.c` | `init_break_tag` | 65 | ported | tools: `ToolKind::Break`, command `object.ungroup` |  |
 | `e_break.c` | `init_break` | 71 | ported | tools: `ToolKind::Break`, command `object.ungroup` |  |
-| `e_chop.c` | `chop_selected` | 85 | missing | Chop mode (cut objects at the intersection with an axe object) | D3 |
-| `e_chop.c` | `select_axe_object` | 110 | missing | Chop mode (cut objects at the intersection with an axe object) | D3 |
-| `e_chop.c` | `clear_axe_objects` | 134 | missing | Chop mode (cut objects at the intersection with an axe object) | D3 |
-| `e_chop.c` | `point_sort_fcn` | 143 | missing | Chop mode (cut objects at the intersection with an axe object) | D3 |
-| `e_chop.c` | `point_sort_reverse_fcn` | 152 | missing | Chop mode (cut objects at the intersection with an axe object) | D3 |
-| `e_chop.c` | `create_new_line` | 162 | missing | Chop mode (cut objects at the intersection with an axe object) | D3 |
-| `e_chop.c` | `check_poly` | 191 | missing | Chop mode (cut objects at the intersection with an axe object) | D3 |
-| `e_chop.c` | `dice_polygons` | 228 | missing | Chop mode (cut objects at the intersection with an axe object) | D3 |
-| `e_chop.c` | `dice_polylines` | 335 | missing | Chop mode (cut objects at the intersection with an axe object) | D3 |
-| `e_chop.c` | `chop_polyline` | 402 | missing | Chop mode (cut objects at the intersection with an axe object) | D3 |
-| `e_chop.c` | `chop_arc` | 549 | missing | Chop mode (cut objects at the intersection with an axe object) | D3 |
-| `e_chop.c` | `chop_ellipse` | 699 | missing | Chop mode (cut objects at the intersection with an axe object) | D3 |
-| `e_chop.c` | `select_log_object` | 829 | missing | Chop mode (cut objects at the intersection with an axe object) | D3 |
-| `e_chop.c` | `init_chop_right` | 883 | missing | Chop mode (cut objects at the intersection with an axe object) | D3 |
+| `e_chop.c` | `chop_selected` | 85 | ported | Chop mode (cut objects at the intersection with an axe object) | D3 |
+| `e_chop.c` | `select_axe_object` | 110 | ported | Chop mode (cut objects at the intersection with an axe object) | D3 |
+| `e_chop.c` | `clear_axe_objects` | 134 | ported | Chop mode (cut objects at the intersection with an axe object) | D3 |
+| `e_chop.c` | `point_sort_fcn` | 143 | ported | Chop mode (cut objects at the intersection with an axe object) | D3 |
+| `e_chop.c` | `point_sort_reverse_fcn` | 152 | ported | Chop mode (cut objects at the intersection with an axe object) | D3 |
+| `e_chop.c` | `create_new_line` | 162 | ported | Chop mode (cut objects at the intersection with an axe object) | D3 |
+| `e_chop.c` | `check_poly` | 191 | ported | Chop mode (cut objects at the intersection with an axe object) | D3 |
+| `e_chop.c` | `dice_polygons` | 228 | ported | Chop mode (cut objects at the intersection with an axe object) | D3 |
+| `e_chop.c` | `dice_polylines` | 335 | ported | Chop mode (cut objects at the intersection with an axe object) | D3 |
+| `e_chop.c` | `chop_polyline` | 402 | ported | Chop mode (cut objects at the intersection with an axe object) | D3 |
+| `e_chop.c` | `chop_arc` | 549 | ported | Chop mode (cut objects at the intersection with an axe object) | D3 |
+| `e_chop.c` | `chop_ellipse` | 699 | ported | Chop mode (cut objects at the intersection with an axe object) | D3 |
+| `e_chop.c` | `select_log_object` | 829 | ported | Chop mode (cut objects at the intersection with an axe object) | D3 |
+| `e_chop.c` | `init_chop_right` | 883 | ported | Chop mode (cut objects at the intersection with an axe object) | D3 |
 | `e_compound.c` | `init_open_compound` | 69 | ported | tools: `open_compound_event` (left button), command `compound.open` | D1 |
 | `e_compound.c` | `init_open_compound_vis` | 82 | ported | tools: `open_compound_event` (middle button), `compound.open` with `keep_visible` | D1 |
 | `e_compound.c` | `open_this_compound` | 97 | ported | model: `Document::open_compound` (the members become the drawing, the rest waits in `Document::open`); command `compound.open`; undo is the history, as xfig's `F_ENTER_COMP` | D1 |
@@ -453,7 +453,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_glue.c` | `get_text` | 453 | ported | tools: `ToolKind::Glue` (click or tag region, `glue_event`, `region_click`), command `object.group` |  |
 | `e_glue.c` | `sel_compound` | 478 | ported | tools: `ToolKind::Glue` (click or tag region, `glue_event`, `region_click`), command `object.group` |  |
 | `e_glue.c` | `get_compound` | 499 | ported | tools: `ToolKind::Glue` (click or tag region, `glue_event`, `region_click`), command `object.group` |  |
-| `e_joinsplit.c` | `join_split_selected` | 71 | ported | tools: `ToolKind::JoinSplit` (mask `M_POLYLINE\\|M_SPLINE_O\\|M_SPLINE_C`, hints `Join Lines/Splines` / `Split Line/Spline`) | D2 |
+| `e_joinsplit.c` | `join_split_selected` | 71 | ported | tools: `ToolKind::JoinSplit` (mask `M_POLYLINE\\\|M_SPLINE_O\\\|M_SPLINE_C`, hints `Join Lines/Splines` / `Split Line/Spline`) | D2 |
 | `e_joinsplit.c` | `init_join` | 93 | ported | tools: `join_split_event` (left button: the end point under the pointer, `end_point_at`) | D2 |
 | `e_joinsplit.c` | `init_split` | 113 | ported | tools: `join_split_event` (middle button), `object.split`; pictures refused | D2 |
 | `e_joinsplit.c` | `join_lines` | 143 | ported | tools: `join_split_event` (state `ToolState::Join`, markers narrowed to lines); only polylines with an end picked | D2 |
@@ -1954,7 +1954,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_modepanel.c` | `stub_flip_ud_selected` | 839 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `stub_flip_lr_selected` | 845 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `stub_convert_selected` | 851 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
-| `w_modepanel.c` | `stub_chop_selected` | 857 | missing | Chop mode button | D3 |
+| `w_modepanel.c` | `stub_chop_selected` | 857 | ported | Chop mode button | D3 |
 | `w_modepanel.c` | `stub_arrow_head_selected` | 863 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `stub_edit_item_selected` | 869 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `stub_update_selected` | 875 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
