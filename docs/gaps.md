@@ -30,12 +30,14 @@
 | 20 | Real PostScript font metrics when craft-fonts lacks a face (synthetic bold/italic today); the A10 corpus shows text widths as the main remaining difference from fig2dev | Text | Medium | 12 |
 | 29 | Main-window leftovers found by W10 group 1 ([window-parity.md](window-parity.md)): Update Control (W10-1), Help documentation entries (W10-2), Show vertex numbers and Autorefresh (W10-3) | UI | Low | 13 |
 | 30 | File-window leftovers found by W10 group 2 ([window-parity.md](window-parity.md)): Export panel options (W10-4), Open/Merge offset field, preview and comments (W10-6), Open of a missing name (W10-8), `.bak` on save (W10-9), New xfig button (no task); the Print panel is B5 | UI/Export | Medium | 25 |
+| 31 | Edit-panel leftovers found by W10 group 3 ([window-parity.md](window-parity.md)): compound panel rows (W10-15), picture panel rows (W10-16), Done as one undo step and live point panel (W10-17); the position rows, arrow rows, text flags, arc type, figure comments and Cancel-restores were fixed in the same pass | UI | Medium | 16 |
 
 ## Revision history
 
 | Date | Note |
 |------|------|
 | 2026-10-21 | #30 added (W10 group 2: file windows). |
+| 2026-10-21 | #31 added (W10 group 3: edit panels). |
 | 2026-10-18 | #26 closed (audit pass 9: genps object fidelity in the scene builder). |
 | 2026-10-18 | #27 remainder closed: `-E` charsets through `encoding_rs`. |
 | 2026-10-18 | #27 closed (text bytes as C, audit passes 5 and 6). |

@@ -265,6 +265,8 @@ impl App {
         for r in self.engine.take_requests() {
             match r {
                 UiRequest::EditObject { id } => self.dialogs.open_edit(&self.engine, id),
+                UiRequest::EditFigureComments => self.dialogs.open_figure_comments(&self.engine),
+                UiRequest::EditSplinePoint { id, index } => self.dialogs.open_spline_point(&self.engine, id, index),
                 UiRequest::PickPicture { rect } => {
                     if let Some(path) = self.file_dialogs.pick_file("Pictures", dialogs::PICTURE_EXTS) {
                         self.run(

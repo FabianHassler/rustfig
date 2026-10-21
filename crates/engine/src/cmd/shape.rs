@@ -162,6 +162,12 @@ pub(crate) fn make_ellipse(style: Style, center: Point, rx: f64, ry: f64, angle:
 fn ellipse(e: &mut Engine, p: &Value) -> CmdResult {
     let c = Point::new(num(p, "cx")?, num(p, "cy")?);
     let (rx, ry) = (num(p, "rx")?, num(p, "ry")?);
+    // xfig deletes an ellipse without a radius when it reads the file.
+    if rx.abs() < 1.0 || ry.abs() < 1.0 {
+        return Err(EngineError::bad_params(
+            "an ellipse needs two radii of at least 1 Fig unit",
+        ));
+    }
     let angle = num_or(p, "angle", 0.0)?.to_radians();
     let style = style_from(e, p)?;
     added(e, make_ellipse(style, c, rx, ry, angle, EllipseKind::EllipseRadii))
@@ -170,6 +176,11 @@ fn ellipse(e: &mut Engine, p: &Value) -> CmdResult {
 fn circle(e: &mut Engine, p: &Value) -> CmdResult {
     let c = Point::new(num(p, "cx")?, num(p, "cy")?);
     let r = num(p, "r")?;
+    if r.abs() < 1.0 {
+        return Err(EngineError::bad_params(
+            "a circle needs a radius of at least 1 Fig unit",
+        ));
+    }
     let style = style_from(e, p)?;
     added(e, make_ellipse(style, c, r, r, 0.0, EllipseKind::CircleRadius))
 }

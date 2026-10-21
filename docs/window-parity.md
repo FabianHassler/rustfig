@@ -1,6 +1,6 @@
 # Window-by-window comparison with xfig (W10)
 
-**Status:** 2026-10-21. Group 1 (main window and menus) compared and re-checked against screenshots of the real xfig; group 2 (file windows: Open, Save As, Merge, Export, Print) compared; groups 3 to 5 not yet compared.
+**Status:** 2026-10-21. Group 1 (main window and menus) compared and re-checked against screenshots of the real xfig; group 2 (file windows: Open, Save As, Merge, Export, Print) compared; group 3 (object edit panels) compared with captures and fixed in part; groups 4 and 5 not yet compared.
 
 ## Rule (decided 2026-10-21)
 
@@ -18,7 +18,7 @@ RustFig may look nicer and more modern than xfig; the **functionality** must sta
 |---|---|---|
 | 1 | Main window and all menus | compared 2026-10-21 (below) |
 | 2 | File dialogs: Open, Save As, Merge, Export, Print | compared 2026-10-21 (below) |
-| 3 | Edit panels per object kind: arc, box/arc-box, circle/ellipse, polyline/polygon, spline, text, picture, compound, regular polygon, dimension line | not yet compared |
+| 3 | Edit panels per object kind: arc, box/arc-box, circle/ellipse, polyline/polygon, spline, text, picture, compound, regular polygon, dimension line | compared 2026-10-21 (below); position rows, text flags, arrow rows, arc type, figure comments, spline point panel and Cancel-restores fixed; picture and compound rows open (W10-15, W10-16) |
 | 4 | Global settings, colour editor, font panel, style manager, search/replace, spell check, units, libraries, character map, about, set-value/choice popups of the zoom and unit boxes | not yet compared |
 | 5 | Attribute pop-ups (line style, width, fill, colour, arrows, joins, caps, justification, ...) and mode panels' option panels | not yet compared |
 
@@ -147,7 +147,7 @@ All of it is plan B5 (12 h) plus the findings W10-4 for the options both panels 
 | W10-7 | (closed in W10) Merge made loose objects instead of one compound and had no offset; Export did not refuse an input picture file | fixed, tests `crates/engine/tests/file_windows.rs` |
 | W10-8 | Open of a name that does not exist should start a new figure with that name (xfig: "(new file)") | plan W10-8, gaps #30 |
 | W10-9 | `write_bak`: xfig renames the old file to `.bak` when saving (default on); RustFig writes atomically without a backup. Needs a preference (decide with the user: a `.bak` per save is what xfig users expect) | plan W10-9, gaps #30 |
-| W10-10 | New xfig... button (start another window on the file): no equivalent; low value (record only) | gaps #30 |
+| W10-10 (note only; the plan's W10-10 is the export preview) | New xfig... button (start another window on the file): no equivalent; low value (record only) | gaps #30 |
 
 ### Proposed modernisations (group 2)
 
@@ -161,6 +161,66 @@ Not implemented; the user asked to be asked first. Each keeps every xfig functio
 6. **Save safety: autosave versions instead of `.bak`.** xfig writes `name.bak`. Proposal: keep `.bak` as an option (W10-9) and also keep the last N saved versions in the recovery folder. Hours: 4.
 
 Total if all accepted: about 57 h (item 1 24, item 2 10, item 3 3, item 4 12, item 5 4, item 6 4) besides W10-4 (14), W10-6 (8), W10-8 (1), W10-9 (2).
+
+## Group 3: object edit panels
+
+Sources: `e_edit.c` (every panel: `make_window_line/text/ellipse/arc/spline/compound/figure`, `generic_window`, `get_new_*_values`, `done_*`, spline point panel), `w_indpanel.c` (the pop-ups the panel shares with the indicator). Captures of the real X11 xfig (Edit mode, objects of every kind in one figure): `g3-xfig-edit-{box,arcbox,polygon,polyline,picture,ellipse-radii,ellipse-diam,circle-radii,circle-diam,arc-open,arc-pie,spline-open-approx,spline-closed-approx,spline-open-interp,spline-closed-interp,xspline-open,xspline-closed,text,compound,figure-comments,spline-point}.png`, pop-ups `g3-xfig-pop-{pencolor,fillstyle,linestyle,cap,join,arrowtype,units}.png`; RustFig `g3-rf-edit-*.png` (control channel, tool events; the egui combo pop-ups cannot be opened through it, so those are compared from the code). All under `target/window-parity/`, not committed. A regular polygon is a plain polygon in xfig (same panel); a dimension line is a compound (compound panel).
+
+### How the panel works (all kinds)
+
+| Function | xfig | RustFig | Status |
+|---|---|---|---|
+| Open | Edit mode, left button on an object; the panel opens beside the object. Middle button: **whole-figure comments** panel (Done, Cancel); Shift+middle on an object: shows its comments; right button on a spline control point: **point behaviour panel** | left button as before; middle and right buttons were unused | fixed in W10: middle opens "Whole Figure" comments (command `doc.set_comments` existed, no UI), Shift+middle shows the comments in the message line, right button opens the spline point panel (messages "Cannot edit end-points" and "Only spline points can be edited" as xfig); mouse hints "edit object / edit Main comment / edit point" |
+| Done, Apply, Cancel | Done applies and closes (one undo step); Apply applies and stays open; **Cancel restores the object as it was, also after Apply**; Esc cancels, Return applies, Ctrl+Return done (translations) | same keys; Apply used to be final | fixed in W10: Cancel, Esc and the close box undo the Applies; Done and Return as before. Difference kept: each Apply is its own undo step (xfig: Done makes one), W10-17 |
+| Live update | none: nothing changes until Apply or Done (only the point panel draws live) | same | same |
+| Edit several objects at once | none (one object per panel; Update mode copies attributes) | the panel opens for one object | same (multi-edit is a proposal below) |
+| Units of coordinates | "Units:" menu per panel: figure units (in or cm) or "Fig units" | "Units" combo with the same two choices | fixed in W10 (new) |
+| Comments | text box in every panel (also compound, figure) | multi-line field in every panel except the figure's | same; the figure's comment panel is new |
+| Colour, line style, cap, join, arrow type pop-ups | pictorial pop-up panels (colour grid with Default + 32 + user colours and Cancel; 6 line styles; 3 caps; 3 joins; 29 arrow types as pictures) | combos with the same entries as text (colours with swatches; arrows as "type N hollow/filled") | same function; look (allowed); pictorial pop-ups are a proposal below |
+| Fill | "Fill style" menu (No fill, Filled, Pattern) with intensity % field (0 to 200 in steps of 5; tints above 100 not for black/white) or pattern number (0 to 21) and a picture | one combo of None, 0 to 40 (shade/tint, 5% steps) and the 22 named patterns | same function (colour change by the E4 picker is accepted) |
+| Ranges | width 0 to 1000 (check_thick clamps to 500), depth 0 to 999, text size 1 to 500, text and ellipse angle -360 to 360, arc-box radius 2 to 1000, arrow thick/width/length 0 to 10000 | width was 0 to 100, radius 0 to 500 | fixed in W10 (width 0 to 1000, radius 0 to 1000; radius 0 stays allowed) |
+
+### Per object kind
+
+| Kind (xfig title) | xfig rows | RustFig now | Status |
+|---|---|---|---|
+| POLYLINE: Polyline | comments; width, depth; pen, fill colour; fill style, intensity, pattern; line style with dash length; cap style, join style; forward and backward arrow (type, thick, width, length); points N with units and X/Y per point | all rows | fixed in W10 (position rows, arrow type and size per arrow, cap/join only where xfig has them) |
+| POLYLINE: Box | same without arrows and cap; join style; first and opposite corner | all rows | fixed in W10 |
+| POLYLINE: ArcBox | box rows without join style; corner radius | all rows (radius range widened) | fixed in W10 |
+| POLYLINE: Polygon | like polyline without arrows and cap; points | all rows | fixed in W10 |
+| (regular polygon) | polygon | polygon | same |
+| POLYLINE: Picture Object | pen colour (greyed unless XBM), depth, **file name (editable), Reread, Browse**, type (10 boxes), size in pixels, colours, transparent colour, first/opposite corner, width and length (Return resizes), **orientation Normal / Flipped about diagonal, rotation 0/90/180/270**, current and original h/w ratio, Shrink / Expand to orig, Use original size, Scale by %, buttons Screen Capture and Edit Image | depth, comments, file name (read only), flipped check box, corner rows | partial: flip and corners fixed in W10; rest W10-16 |
+| ELLIPSE: by radii / diameters, CIRCLE: by radius / diameter | generic rows; ellipse only: angle; centre X/Y; radii X/Y (circle: one radius) | all rows; start/end points recomputed as xfig does (`get_new_ellipse_values`) | fixed in W10 |
+| ARC: Specified by 3 points | arc type menu (Open, Pie Wedge); generic rows; cap; arrows (hidden for pie wedge); first, second, third point; "Invalid ARC points!" when collinear | all rows; collinear points are refused with a message | fixed in W10 |
+| SPLINE: open/closed approximated, open/closed interpolated, X-Spline open/closed | generic rows; cap (open only); arrows (not for closed approximated and interpolated); points X/Y (no shape factors in this panel) | all rows; shape factors only through the point panel, as xfig | fixed in W10 |
+| Spline point panel (right button) | slider for the shape factor, buttons Approximated, Angular, Interpolated, Done, Cancel; a factor that differs from the kind's turns it into an X-spline; end points refused | same controls; applied on Done (no live drawing: W10-17); Angular = 0, Interpolated = -1 (xfig stores 1e-5 and -0.5) | fixed in W10 |
+| TEXT | size, pen colour, depth, angle, justification menu, hidden flag, rigid flag, TeX flag, origin X/Y, font (picture menu: 35 PostScript + LaTeX), text field | size, pen colour, depth, angle, justification, flags, origin, font combo, text | fixed in W10; font chooser E11, canvas editing E10 (both accepted) |
+| COMPOUND | comments; top-left corner (Return moves), bottom-right corner (Return moves), width/height (Return scales), minimum and maximum depth, **Collapse Depths**, number of objects, **one text field per text in it** | comments, depth ("Collapse depths to": sets every member), number of objects | partial: W10-15. Fixed in W10: the comment now belongs to the compound itself (it was written into every member) |
+| Whole Figure | comments, Done, Cancel | same | new in W10 |
+
+### Findings of group 3
+
+| Id | Difference | Fixed or task |
+|---|---|---|
+| (fixed) | Position rows missing for every kind, units choice, arrow type and size per arrow, arc type, text hidden/rigid/TeX flags and origin, picture flip, cap/join only where xfig has them, width and radius ranges, Cancel after Apply, figure comments, shape-factor panel, Edit mouse hints | W10 group 3: `object.set_geometry` and extra `object.set_attributes` parameters (`geometry`, `pie`, `rigid`, `special`, `flipped`, `arrow_thickness`, `forward_arrow_spec`, `backward_arrow_spec`), `UiRequest::EditFigureComments` / `EditSplinePoint`; tests `crates/engine/tests/edit_panel.rs`, `ui_smoke.rs` |
+| W10-15 | Compound panel: reposition by corner, rescale by width/height, minimum and maximum depth, Collapse Depths as a button, one text field per contained text | plan W10-15, gaps #31 |
+| W10-16 | Picture panel: editable file name with Reread and Browse, type, size, colours and transparent colour, width/length fields that resize, rotation 0/90/180/270, h/w ratio, Shrink / Expand to orig, Use original size, Scale by %, Edit Image (external editor) and Screen Capture, XBM pen colour | plan W10-16, gaps #31 |
+| W10-17 | Done as one undo step for all Applies; point panel drawing live; fill intensity limits for black and white (>100 clamps) | plan W10-17, gaps #31 |
+
+xfig features with no equivalent that are not gaps: Screen Capture grabs an X11 screen region (platform specific; only the file route is needed), "Edit Image" runs an external editor named in a resource (part of W10-16).
+
+### Proposed modernisations (group 3)
+
+Not implemented. E4 (colour picker and editor), E10 (canvas text editing) and E11 (font chooser) are accepted and not repeated here. Each keeps every xfig function listed above.
+
+1. **Live edit panel with preview.** xfig: nothing changes until Apply or Done. Proposal: changes show on the canvas as they are made (as the indicator does), Cancel undoes, Done is one undo step; kept: Done, Apply, Cancel, Return and Esc. Hours: 8 (includes W10-17).
+2. **Edit several objects at once.** xfig: one object per panel, Update mode copies attributes. Proposal: the panel opens for the whole selection, shows common values and "mixed" where they differ, and changes only what is touched. Kept: single-object panel and Update. Hours: 10.
+3. **Point table.** xfig: a fixed list of X/Y fields, shape factors through the right-button panel. Proposal: a table with add, delete and insert point rows, paste of coordinates, and a shape-factor column for X-splines (the right-button panel stays). Hours: 6.
+4. **Fields that take units and expressions** ("2.5cm", "1/3 in", "3*1.5") with the unit shown. Kept: the Units menu. Hours: 3.
+5. **Picture rows with a preview.** Thumbnail with size, colours and transparent colour, a missing-file marker with Relink, drag and drop of a file onto the panel. Kept: all W10-16 rows. Hours: 5.
+6. **Pictorial pop-ups** for line style, cap, join and arrow type using the existing vector icons (`vector_icons.rs`), like xfig's picture menus but at any density. Kept: text names as tooltips. Hours: 3.
+
+Total if all accepted: about 35 h besides W10-15 (5), W10-16 (8), W10-17 (3).
 
 ## Findings and ids
 
@@ -179,3 +239,4 @@ Nothing in group 1 needed an in-place fix: labels, order, accelerators and defau
 |---|---|
 | 2026-10-21 | Created; group 1 compared from xfig's sources. |
 | 2026-10-21 | Group 1 re-checked against captures of the real X11 xfig (menus, main window, Grid Mode pop-up); group 2 (Open, Save As, Merge, Export, Print) compared with captures; W10-4 to W10-10 added; merge as one compound, Figure Offset in the engine and the input-file check for export fixed. |
+| 2026-10-21 | Group 3 (object edit panels) compared with captures of the real X11 xfig; position rows, arrow rows, arc type, text flags, units, Cancel-restores, figure comments and the spline point panel added; W10-15 to W10-17 added. |

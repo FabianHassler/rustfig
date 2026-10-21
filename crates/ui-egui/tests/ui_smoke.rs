@@ -504,7 +504,7 @@ fn edit_attributes_dialog_opens_for_the_selection() {
     h.state_mut().engine.execute("edit.select_all", &json!({})).unwrap();
     h.state_mut().run("app.edit_selected", json!({}));
     h.run_steps(2);
-    assert!(h.query_all_by_label("Edit box").count() >= 1);
+    assert!(h.query_all_by_label("POLYLINE: Box").count() >= 1);
 }
 
 #[test]
@@ -885,4 +885,55 @@ fn recent_files_in_the_file_menu() {
     h.run_steps(2);
     assert_eq!(h.state().engine.doc().objects.len(), 1);
     let _ = std::fs::remove_dir_all(path.parent().unwrap());
+}
+
+/// W10 group 3: Cancel in the edit panel restores the object also after
+/// Apply (xfig `done_*` with CANCEL), Done keeps it.
+#[test]
+fn edit_panel_cancel_restores_after_apply_and_geometry_rows_apply() {
+    use rustfig_model::ObjectKind;
+    let mut h = harness(app());
+    h.state_mut()
+        .engine
+        .execute("shape.rectangle", &json!({"x": 0, "y": 0, "width": 600, "height": 300}))
+        .unwrap();
+    h.state_mut().engine.execute("edit.select_all", &json!({})).unwrap();
+    h.state_mut().run("app.edit_selected", json!({}));
+    h.run_steps(2);
+    let before = h.state().engine.doc().objects[0].clone();
+    // Change a corner and the width in the panel's state, then Apply.
+    {
+        let st = h.state_mut().dialogs.edit.as_mut().unwrap();
+        assert_eq!(st.title, "POLYLINE: Box");
+        st.thickness = 9;
+        if let rustfig_ui_egui::dialogs::Geo::Corners(c) = &mut st.geo {
+            c[1] = [900.0, 700.0];
+        } else {
+            panic!("a box edits its two corners");
+        }
+    }
+    press_key(&mut h, egui::Key::Enter, egui::Modifiers::NONE);
+    let after = h.state().engine.doc().objects[0].clone();
+    let ObjectKind::Polyline(p) = &after.kind else { panic!() };
+    assert_eq!((p.style.thickness, p.points[2].x, p.points[2].y), (9, 900.0, 700.0));
+    // Escape is Cancel: the original comes back.
+    press_key(&mut h, egui::Key::Escape, egui::Modifiers::NONE);
+    assert!(h.state().dialogs.edit.is_none());
+    assert_eq!(h.state().engine.doc().objects[0], before);
+}
+
+/// W10 group 3: the middle button in Edit mode edits the figure's comments.
+#[test]
+fn edit_mode_middle_button_opens_the_figure_comments() {
+    let mut h = harness(app());
+    h.state_mut().engine.execute("tool.edit", &json!({})).unwrap();
+    h.state_mut()
+        .engine
+        .execute(
+            "tool.event",
+            &json!({"type": "press", "x": 5000, "y": 5000, "button": "middle"}),
+        )
+        .unwrap();
+    h.run_steps(2);
+    assert!(h.state().dialogs.figure_comments.is_some());
 }

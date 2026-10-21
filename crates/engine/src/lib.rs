@@ -49,6 +49,11 @@ pub enum UiRequest {
     PickPicture { rect: Rect },
     /// Open the attribute editor for an object.
     EditObject { id: ObjectId },
+    /// Edit the whole figure's comments (xfig's middle button in Edit mode).
+    EditFigureComments,
+    /// Edit the shape factor of one control point of a spline (xfig's right
+    /// button in Edit mode).
+    EditSplinePoint { id: ObjectId, index: usize },
 }
 
 /// The document session.

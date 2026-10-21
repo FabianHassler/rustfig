@@ -47,10 +47,20 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Set attributes",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id], \"line\"?, \"thickness\"?, \"pen_color\"?, \"fill_color\"?, \"area_fill\"?, \"depth\"?, \"style_val\"?, \"cap\"?: butt|round|projecting, \"join\"?: miter|round|bevel, \"forward_arrow\"?: bool, \"backward_arrow\"?: bool, \"arrow_kind\"?, \"arrow_style\"?, \"arrow_width\"?, \"arrow_height\"?, \"radius\"?, \"font\"?, \"font_size\"?, \"justify\"?, \"angle\"?: degrees, \"text\"?, \"postscript\"?: bool, \"hidden\"?: bool, \"comment\"?: string}",
+            params: "{\"ids\"?: [id], \"line\"?, \"thickness\"?, \"pen_color\"?, \"fill_color\"?, \"area_fill\"?, \"depth\"?, \"style_val\"?, \"cap\"?: butt|round|projecting, \"join\"?: miter|round|bevel, \"forward_arrow\"?: bool, \"backward_arrow\"?: bool, \"arrow_kind\"?, \"arrow_style\"?, \"arrow_width\"?, \"arrow_height\"?, \"radius\"?, \"font\"?, \"font_size\"?, \"justify\"?, \"angle\"?: degrees, \"text\"?, \"postscript\"?: bool, \"hidden\"?: bool, \"rigid\"?: bool, \"special\"?: bool, \"pie\"?: bool, \"flipped\"?: bool (pictures), \"arrow_thickness\"?, \"comment\"?: string, \"forward_arrow_spec\"?, \"backward_arrow_spec\"?: {kind, style, thickness, width, height}, \"geometry\"?: as object.set_geometry without id}",
             mutates: true,
             enabled: |_| true,
             run: set_attributes,
+        },
+        Command {
+            id: "object.set_geometry",
+            label: "Set geometry",
+            menu: "",
+            shortcut: "",
+            params: "{\"id\", \"points\"?: [[x, y]...] (box/arc-box/picture: two opposite corners; polyline/polygon/spline: all points, same count; arc: three points; ellipse/circle: [centre]; text: [origin]), \"radii\"?: [rx, ry], \"angle\"?: degrees (ellipse), \"shapes\"?: [factor per spline point]}  — xfig's edit panel rows, Fig units",
+            mutates: true,
+            enabled: |_| true,
+            run: set_geometry,
         },
         Command {
             id: "object.get",
@@ -265,6 +275,22 @@ fn update(e: &mut Engine, p: &Value) -> CmdResult {
 }
 
 fn set_attributes(e: &mut Engine, p: &Value) -> CmdResult {
+    // The edit panel's position rows travel with its attributes, so one
+    // Apply is one undo step.
+    if let Some(g) = p.get("geometry") {
+        let ids = e.target_ids(p)?;
+        let [id] = ids.as_slice() else {
+            return Err(EngineError::bad_params("geometry needs exactly one object"));
+        };
+        let mut gp = g.clone();
+        match gp.as_object_mut() {
+            Some(m) => {
+                m.insert("id".into(), json!(id.0));
+            }
+            None => return Err(EngineError::bad_params("geometry must be an object")),
+        }
+        set_geometry(e, &gp)?;
+    }
     // Parse everything first so errors leave nothing half-applied.
     let line = match opt_str(p, "line")? {
         Some(n) => {
@@ -309,6 +335,11 @@ fn set_attributes(e: &mut Engine, p: &Value) -> CmdResult {
     }
     let postscript = opt_bool(p, "postscript")?;
     let hidden = opt_bool(p, "hidden")?;
+    let rigid = opt_bool(p, "rigid")?;
+    let special = opt_bool(p, "special")?;
+    let pie = opt_bool(p, "pie")?;
+    let flipped = opt_bool(p, "flipped")?;
+    let athick = opt_num(p, "arrow_thickness")?.map(|v| v.clamp(0.0, 1.0e4));
     let fwd = opt_bool(p, "forward_arrow")?;
     let back = opt_bool(p, "backward_arrow")?;
     let akind = int("arrow_kind", 0, 14)?;
@@ -316,15 +347,10 @@ fn set_attributes(e: &mut Engine, p: &Value) -> CmdResult {
     let aw = opt_num(p, "arrow_width")?.map(|v| v.clamp(1.0, 1.0e5));
     let ah = opt_num(p, "arrow_height")?.map(|v| v.clamp(1.0, 1.0e5));
     let comment = opt_str(p, "comment")?.map(str::to_string);
+    let forward_spec = arrow_spec(p, "forward_arrow_spec")?;
+    let backward_spec = arrow_spec(p, "backward_arrow_spec")?;
     let template = e.indicator.arrow;
     let n = for_targets(e, p, &mut |o| {
-        if let Some(c) = &comment {
-            o.comments = if c.is_empty() {
-                Vec::new()
-            } else {
-                c.lines().map(str::to_string).collect()
-            };
-        }
         if let ObjectKind::Text(t) = &mut o.kind {
             if let Some(v) = pen {
                 t.color = ColorRef(v);
@@ -354,6 +380,8 @@ fn set_attributes(e: &mut Engine, p: &Value) -> CmdResult {
             };
             set(&mut t.flags, rustfig_model::text_flags::POSTSCRIPT, postscript);
             set(&mut t.flags, rustfig_model::text_flags::HIDDEN, hidden);
+            set(&mut t.flags, rustfig_model::text_flags::RIGID, rigid);
+            set(&mut t.flags, rustfig_model::text_flags::SPECIAL, special);
             return;
         }
         if let Some(s) = o.style_mut() {
@@ -391,6 +419,14 @@ fn set_attributes(e: &mut Engine, p: &Value) -> CmdResult {
         if let (Some(r), ObjectKind::Polyline(pl)) = (radius, &mut o.kind) {
             pl.radius = r;
         }
+        if let (Some(v), ObjectKind::Arc(a)) = (pie, &mut o.kind) {
+            a.pie = v;
+        }
+        if let (Some(v), ObjectKind::Polyline(pl)) = (flipped, &mut o.kind) {
+            if let Some(pic) = &mut pl.picture {
+                pic.flipped = v;
+            }
+        }
         if let Some((f, b)) = o.arrows_mut() {
             let adjust = |a: &mut Option<Arrow>, on: Option<bool>| {
                 match on {
@@ -411,12 +447,40 @@ fn set_attributes(e: &mut Engine, p: &Value) -> CmdResult {
                     if let Some(v) = ah {
                         a.height = v;
                     }
+                    if let Some(v) = athick {
+                        a.thickness = v;
+                    }
                 }
             };
             adjust(f, fwd);
             adjust(b, back);
+            // Per-arrow type and size (xfig's two arrow rows).
+            for (slot, spec) in [(f, forward_spec.as_ref()), (b, backward_spec.as_ref())] {
+                if let (Some(a), Some(sp)) = (slot.as_mut(), spec) {
+                    a.kind = sp.0.kind;
+                    a.style = sp.0.style;
+                    a.thickness = sp.0.thickness;
+                    a.width = sp.0.width;
+                    a.height = sp.0.height;
+                }
+            }
         }
     })?;
+    // A comment belongs to the edited object itself (a compound's own
+    // comment, not its members').
+    if let Some(c) = &comment {
+        let ids = e.target_ids(p)?;
+        let lines: Vec<String> = if c.is_empty() {
+            Vec::new()
+        } else {
+            c.lines().map(str::to_string).collect()
+        };
+        for o in e.doc_mut().objects.iter_mut() {
+            if ids.contains(&o.id) {
+                Arc::make_mut(o).comments = lines.clone();
+            }
+        }
+    }
     Ok(json!({"count": n}))
 }
 
@@ -744,4 +808,216 @@ fn point_move(e: &mut Engine, p: &Value) -> CmdResult {
         _ => return Err(bad()),
     }
     Ok(json!({}))
+}
+
+fn pt_list(p: &Value, key: &str) -> Result<Option<Vec<Point>>, EngineError> {
+    let Some(v) = p.get(key) else { return Ok(None) };
+    let arr = v
+        .as_array()
+        .ok_or_else(|| EngineError::bad_params(format!("{key} must be an array of [x, y]")))?;
+    let mut out = Vec::new();
+    for item in arr {
+        let xy = item.as_array().filter(|a| a.len() == 2);
+        let (Some(x), Some(y)) = (
+            xy.and_then(|a| a.first()).and_then(Value::as_f64),
+            xy.and_then(|a| a.get(1)).and_then(Value::as_f64),
+        ) else {
+            return Err(EngineError::bad_params(format!("{key} must be an array of [x, y]")));
+        };
+        if !x.is_finite() || !y.is_finite() || x.abs() > 1.0e7 || y.abs() > 1.0e7 {
+            return Err(EngineError::bad_params("coordinate out of range"));
+        }
+        out.push(Point::new(x, y));
+    }
+    Ok(Some(out))
+}
+
+/// xfig's edit panel rows for positions (`get_new_*_values` in `e_edit.c`).
+fn set_geometry(e: &mut Engine, p: &Value) -> CmdResult {
+    let id = ObjectId(
+        p.get("id")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| EngineError::bad_params("id is required"))?,
+    );
+    let points = pt_list(p, "points")?;
+    let radii = match p.get("radii") {
+        Some(v) => {
+            let a = v.as_array().filter(|a| a.len() == 2);
+            match (
+                a.and_then(|a| a.first()).and_then(Value::as_f64),
+                a.and_then(|a| a.get(1)).and_then(Value::as_f64),
+            ) {
+                (Some(x), Some(y)) if x.is_finite() && y.is_finite() => {
+                    Some(Point::new(x.abs().min(1.0e7), y.abs().min(1.0e7)))
+                }
+                _ => return Err(EngineError::bad_params("radii must be [rx, ry]")),
+            }
+        }
+        None => None,
+    };
+    let angle = opt_num(p, "angle")?;
+    let shapes: Option<Vec<f64>> = match p.get("shapes") {
+        None => None,
+        Some(v) => Some(
+            v.as_array()
+                .ok_or_else(|| EngineError::bad_params("shapes must be an array of numbers"))?
+                .iter()
+                .map(|x| x.as_f64().filter(|f| f.is_finite()).map(|f| f.clamp(-1.0, 1.0)))
+                .collect::<Option<Vec<f64>>>()
+                .ok_or_else(|| EngineError::bad_params("shapes must be an array of numbers"))?,
+        ),
+    };
+    let bad = |m: &str| EngineError::bad_params(m.to_string());
+    let o = e
+        .doc_mut()
+        .get_mut(id)
+        .ok_or_else(|| EngineError::not_found("no such object"))?;
+    let mut new = o.clone();
+    match &mut new.kind {
+        ObjectKind::Polyline(pl) if pl.kind.is_rect() => {
+            if let Some(pts) = &points {
+                let (Some(a), Some(b)) = (pts.first(), pts.get(1)) else {
+                    return Err(bad("two corners are required"));
+                };
+                // xfig deletes a zero-size box when it reads the file.
+                if a.x == b.x || a.y == b.y {
+                    return Err(bad("a box needs a width and a height"));
+                }
+                pl.points = vec![*a, Point::new(b.x, a.y), *b, Point::new(a.x, b.y)];
+            }
+        }
+        ObjectKind::Polyline(pl) => {
+            if let Some(pts) = points {
+                if pts.len() != pl.points.len() {
+                    return Err(bad("the number of points cannot change"));
+                }
+                // xfig deletes a polygon with fewer than 3 distinct points.
+                if pl.kind == PolyKind::Polygon && distinct_run(&pts) < 3 {
+                    return Err(bad("a polygon needs at least 3 distinct points"));
+                }
+                pl.points = pts;
+            }
+        }
+        ObjectKind::Spline(s) => {
+            if let Some(pts) = points {
+                if pts.len() != s.points.len() {
+                    return Err(bad("the number of points cannot change"));
+                }
+                if pts.iter().all(|q| Some(q) == pts.first()) {
+                    return Err(bad("a spline needs at least two different points"));
+                }
+                s.points = pts;
+            }
+            if let Some(sh) = shapes {
+                if sh.len() != s.points.len() {
+                    return Err(bad("one shape factor per point is required"));
+                }
+                // xfig: a factor that is not the kind's own makes it an X-spline.
+                let own = match s.kind {
+                    SplineKind::Approximated => Some(1.0),
+                    SplineKind::Interpolated => Some(-1.0),
+                    SplineKind::X => None,
+                };
+                if let Some(own) = own {
+                    let n = sh.len();
+                    let differs = sh.iter().enumerate().any(|(i, v)| {
+                        let end = !s.closed && (i == 0 || i + 1 == n);
+                        !end && (*v - own).abs() > 1e-9
+                    });
+                    if differs {
+                        s.kind = SplineKind::X;
+                    }
+                }
+                s.shapes = sh;
+                if !s.closed {
+                    if let Some(f) = s.shapes.first_mut() {
+                        *f = 0.0;
+                    }
+                    if let Some(l) = s.shapes.last_mut() {
+                        *l = 0.0;
+                    }
+                }
+            }
+        }
+        ObjectKind::Arc(a) => {
+            if let Some(pts) = points {
+                let [p0, p1, p2] = pts.as_slice() else {
+                    return Err(bad("three points are required"));
+                };
+                let (p0, p1, p2) = (*p0, *p1, *p2);
+                if rustfig_geom::arc_from_three_points(p0, p1, p2).is_none() {
+                    return Err(bad("arc points must not be collinear"));
+                }
+                a.points = [p0, p1, p2];
+                a.refit();
+            }
+        }
+        ObjectKind::Ellipse(el) => {
+            if let Some(c) = points.as_ref().and_then(|v| v.first()) {
+                el.center = *c;
+            }
+            if let Some(r) = radii {
+                if r.x < 1.0 || (!el.kind.is_circle() && r.y < 1.0) {
+                    return Err(bad("radii must be above zero"));
+                }
+                el.radii = if el.kind.is_circle() { Point::new(r.x, r.x) } else { r };
+            }
+            if let Some(a) = angle {
+                el.angle = a.to_radians().rem_euclid(std::f64::consts::TAU);
+            }
+            use rustfig_model::EllipseKind as K;
+            el.start = match el.kind {
+                K::EllipseRadii | K::CircleRadius => el.center,
+                K::EllipseDiameter | K::CircleDiameter => Point::new(el.center.x - el.radii.x, el.center.y),
+            };
+            el.end = Point::new(el.center.x + el.radii.x, el.center.y);
+        }
+        ObjectKind::Text(t) => {
+            if let Some(c) = points.as_ref().and_then(|v| v.first()) {
+                t.origin = *c;
+            }
+        }
+        ObjectKind::Compound(_) => {
+            return Err(bad(
+                "compounds are moved and scaled with transform.move and transform.scale",
+            ))
+        }
+    }
+    *o = new;
+    Ok(json!({}))
+}
+
+/// `{"kind", "style", "thickness", "width", "height"}` (width and height in
+/// Fig units) for one arrow, as the edit panel's arrow rows give it.
+struct ArrowSpec(Arrow);
+
+fn arrow_spec(p: &Value, key: &str) -> Result<Option<ArrowSpec>, EngineError> {
+    let Some(v) = p.get(key) else { return Ok(None) };
+    let f = |k: &str, lo: f64, hi: f64| -> Result<f64, EngineError> {
+        v.get(k)
+            .and_then(Value::as_f64)
+            .filter(|x| x.is_finite())
+            .map(|x| x.clamp(lo, hi))
+            .ok_or_else(|| EngineError::bad_params(format!("{key}.{k} must be a number")))
+    };
+    Ok(Some(ArrowSpec(Arrow {
+        kind: f("kind", 0.0, 14.0)? as i32,
+        style: f("style", 0.0, 1.0)? as i32,
+        thickness: f("thickness", 0.0, 1.0e4)?,
+        width: f("width", 0.0, 1.0e5)?,
+        height: f("height", 0.0, 1.0e5)?,
+    })))
+}
+
+/// Number of points after dropping consecutive repeats.
+fn distinct_run(pts: &[Point]) -> usize {
+    let mut n = 0;
+    let mut last = None;
+    for p in pts {
+        if last != Some(*p) {
+            n += 1;
+        }
+        last = Some(*p);
+    }
+    n
 }

@@ -1757,6 +1757,41 @@ impl Engine {
             }
             return Ok(());
         }
+        if tool == ToolKind::Edit {
+            match button {
+                // xfig `e_edit.c`: the middle button edits the figure's
+                // comments; with Shift it shows an object's comments.
+                Button::Middle if !shift => {
+                    self.request(UiRequest::EditFigureComments);
+                    return Ok(());
+                }
+                Button::Middle => {
+                    let text = match self.pick(pos, tol).and_then(|id| self.doc().get(id)) {
+                        Some(o) if !o.comments.is_empty() => format!("Comments: {}", o.comments.join(" / ")),
+                        Some(_) => "Comments: (None)".to_string(),
+                        None => return Ok(()),
+                    };
+                    self.set_status(text);
+                    return Ok(());
+                }
+                Button::Right => {
+                    let hit = self.find_vertex(pos, tol);
+                    let Some((id, index)) = hit else { return Ok(()) };
+                    match self.doc().get(id).map(|o| &o.kind) {
+                        Some(ObjectKind::Spline(s)) => {
+                            if !s.closed && (index == 0 || index + 1 == s.points.len()) {
+                                self.set_status("Cannot edit end-points".to_string());
+                            } else {
+                                self.request(UiRequest::EditSplinePoint { id, index });
+                            }
+                        }
+                        _ => self.set_status("Only spline points can be edited".to_string()),
+                    }
+                    return Ok(());
+                }
+                _ => {}
+            }
+        }
         let Some(id) = self.pick(pos, tol) else {
             return Ok(());
         };
@@ -1961,7 +1996,7 @@ impl Engine {
                     ToolKind::DeletePoint => ("delete point", "", ""),
                     ToolKind::Delete => ("delete object", "delete region", "del to cut buf"),
                     ToolKind::Update => ("update object", "update settings", ""),
-                    ToolKind::Edit => ("edit object", "", ""),
+                    ToolKind::Edit => ("edit object", "edit Main comment", "edit point"),
                     ToolKind::FlipV | ToolKind::FlipH => ("flip", "copy & flip", ""),
                     ToolKind::RotateCcw | ToolKind::RotateCw => ("rotate object", "copy & rotate", ""),
                     ToolKind::Convert => ("spline<->line", "", "open<->closed"),
@@ -2441,6 +2476,15 @@ mod tests {
                     e.execute("object.toggle_backward_arrow", &json!({})).unwrap();
                 }
             }
+            3 => {
+                // A spline whose middle control point is at (0, 0).
+                e.execute(
+                    "shape.polyline",
+                    &json!({"points": [[1200, -1200], [0, 0], [1200, 1200]]}),
+                )
+                .unwrap();
+                e.execute("object.convert", &json!({})).unwrap();
+            }
             _ => {
                 e.execute(
                     "shape.rectangle",
@@ -2469,7 +2513,7 @@ mod tests {
         let mut acted: BTreeMap<(String, &str, String, String, &str), bool> = BTreeMap::new();
         for scheme in [MouseScheme::Xfig, MouseScheme::Modern] {
             for tool in ToolKind::ALL {
-                for n in 0..3 {
+                for n in 0..4 {
                     let setup = |prefix: Option<Button>| {
                         let mut e = fixture(n);
                         e.set_mouse_scheme(scheme);
