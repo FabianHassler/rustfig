@@ -35,6 +35,33 @@ proptest! {
         let _ = e.execute("file.merge_data", &json!({"data": data}));
     }
 
+    /// PDF and EPS pictures (B15): hostile bytes after the signatures never
+    /// panic, on the canvas or in an export.
+    #[test]
+    fn hostile_pdf_and_eps_pictures(
+        head in "(%PDF-1\\.[0-7]\n|%!PS-Adobe-3\\.0 EPSF-3\\.0\n%%BoundingBox: [0-9 ]{0,12}\n)",
+        body in proptest::collection::vec(any::<u8>(), 0..400),
+    ) {
+        let dir = std::env::temp_dir().join(format!("rustfig-b15-fuzz-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let mut bytes = head.into_bytes();
+        bytes.extend_from_slice(&body);
+        let file = dir.join(if bytes.starts_with(b"%PDF") { "h.pdf" } else { "h.eps" });
+        std::fs::write(&file, &bytes).unwrap();
+        let _ = rustfig_engine::import::load_picture(&file);
+        let fig = format!(
+            "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+             2 5 0 1 0 -1 50 -1 -1 0.000 0 0 -1 0 0 5\n\t0 {}\n\t 0 0 2400 0 2400 1200 0 1200 0 0\n",
+            file.display()
+        );
+        let mut e = Engine::new();
+        if e.execute("file.open_data", &json!({"data": fig})).is_ok() {
+            for f in ["pdf", "eps", "png", "svg"] {
+                let _ = e.execute("file.export_data", &json!({"format": f}));
+            }
+        }
+    }
+
     #[test]
     fn raw_object_json(s in "[ -~]{0,300}") {
         let mut e = Engine::new();

@@ -1,6 +1,6 @@
 # Execution plan
 
-**Status:** 2026-10-21 (DD10, DD1, DD2, DD3, DD5, DD7, DD9 done). Phase W (with W8, W9), phase A (A1–A10) done, A8, A9, A10, D9 and D12 done; B1, B2, B3, B10, B12 and G1 done; B9 (porting fig2dev's drivers) done but `sld`, with the audit's hardening passes in B11. Overall parity ≈65 %.
+**Status:** 2026-10-21 (B15, DD10, DD1, DD2, DD3, DD5, DD7, DD9 done). Phase W (with W8, W9), phase A (A1–A10) done, A8, A9, A10, D9 and D12 done; B1, B2, B3, B10, B12 and G1 done; B9 (porting fig2dev's drivers) done but `sld`, with the audit's hardening passes in B11. Overall parity ≈65 %.
 
 This is the committed work plan. [`gaps.md`](gaps.md) ranks every known
 shortfall; this file groups them into phases with task ids, acceptance
@@ -310,3 +310,4 @@ User decision 2026-10-20: RustFig uses fig2dev for everything fig2dev can do.
 | 2026-10-13 | A2: Windows and macOS CI only for releases (user decision). |
 | 2026-10-13 | Reviewed phase A against the code: measured A1, corrected A5 and A7 (the root causes were different), added A9; phase A now ≈84 h. |
 | 2026-10-13 | Added phase W (xfig window parity: layout, mouse setup and indicator, depth panel, Snap menu, attribute panel, rulers, accelerators); moved E2 and E10 into it. |
+| 2026-10-21 | B15 done: PDF and EPS pictures in exports and on the canvas (fig2dev v0.6.0 with hayro; optional ghostscript for EPS). |

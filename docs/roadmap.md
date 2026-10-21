@@ -27,3 +27,4 @@
 | 2026-10-16 | M4: B12 done, fig2dev a program of its own; every export through it. |
 | 2026-10-17 | M4: pict2e ported (B3). |
 | 2026-10-18 | M4: TikZ, PSTricks, EMF, Tk/Perl-Tk ported (B1, B3, B9); suite 79 pass. |
+| 2026-10-21 | M4: B15 done, PDF and EPS picture objects in exports and on the canvas. |

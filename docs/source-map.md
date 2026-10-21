@@ -107,7 +107,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `f_load.c` | 384 | load, merge | `cmd/file` | own | review |
 | `f_util.c` | 1291 | directories, image colours, `~/.xfigrc` | — | missing: settings | S3/E1 |
 | `f_picobj.c` | 970 | picture loading and caching | `engine/import` | own | review |
-| `f_readeps.c` | 343 | EPS/PDF pictures (bounding box, ghostscript preview) | `fig2dev:crates/fig2dev/src/scene/eps.rs` (EPS pictures embedded in EPS output); canvas: placeholder box | partial | G2 |
+| `f_readeps.c` | 343 | EPS/PDF pictures (bounding box, ghostscript preview) | `fig2dev:crates/fig2dev/src/scene/eps.rs` (EPS pictures embedded in EPS output), `util/{pdfpic,pdfps,gs}.rs` (PDF pictures through hayro; ghostscript for EPS in PDF/bitmaps, optional); canvas: `engine/src/import.rs` renders PDF pages and EPS through gs or the preview | ported (B15) | B15 |
 | `f_readgif.c`, `f_readjpg.c`, `f_readpng.c`, `f_readppm.c`, `f_readtif.c` | 1.6 k | bitmap pictures | `image` crate | modern | — |
 | `f_readpcx.c`, `f_readxbm.c`, `f_readxpm.c` | 790 | PCX, XBM, XPM pictures | — | missing | G2 |
 | `f_wrpcx.c`, `f_wrpng.c` | 317 | bitmap writers (for export) | `fig2dev:crates/fig2dev/src/scene/{raster,bitmaps}.rs` (PNG and fig2dev's bitmap languages) | partial | B6 |
@@ -235,3 +235,4 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | 2026-10-14 | W5: attribute panel ported (`w_indpanel.c`, masks from `w_modepanel.c`). |
 | 2026-10-14 | S2: mouse indicator ported (`w_mousefun.c`, `set_mousefun` wording); notes from the real xfig. |
 | 2026-10-21 | DD7: `read.c`'s repairs and checks exposed as functions, used by the bridge's export. |
+| 2026-10-21 | B15: `f_readeps.c`, `readeps.c` (`read_pdf`, `pdftops`, `gsexe`) and the picture part of `genps.c` now covered by `util/{pdfpic,pdfps,gs}.rs`. |

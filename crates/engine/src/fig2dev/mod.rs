@@ -17,6 +17,7 @@
 //! fig2dev's language and option tables are re-exported here
 //! ([`languages`], [`options`]) for the export dialog and the CLI.
 
+pub use fig2dev::util::pdfpic::PdfPicture;
 pub use fig2dev::util::readpics::LoadedPicture;
 pub use fig2dev::{languages, options};
 
@@ -121,6 +122,13 @@ fn finish(
 /// PCX, EPS, PDF and the common bitmaps).
 pub fn load_picture(path: &Path) -> Result<LoadedPicture, String> {
     fig2dev::util::readpics::load_picture(&mut Ctx::default(), &path.to_string_lossy())
+}
+
+/// An EPS file as a PDF page by ghostscript, when it is installed (B15;
+/// fig2dev's `util::gs`: `gs` on `PATH`, no shell, time and size limits).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn gs_eps_to_pdf(eps: &[u8]) -> Result<std::sync::Arc<Vec<u8>>, String> {
+    fig2dev::util::gs::eps_to_pdf(eps)
 }
 
 /// fig2dev's command line (`fig2dev::cli::run`) on the process's stdin,

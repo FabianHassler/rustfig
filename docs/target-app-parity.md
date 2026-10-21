@@ -1,6 +1,6 @@
 # Target-app parity assessment: RustFig vs xfig 3.2.9
 
-**Status:** 2026-10-21 (DD9: evidence paths after the dedup series; scores unchanged); 2026-10-18, overall **≈65 %** (B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk; G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
+**Status:** 2026-10-21 (B15: PDF/EPS pictures, Export 66 → 68 %, overall ≈65 %); 2026-10-21 (DD9: evidence paths after the dedup series; scores unchanged); 2026-10-18, overall **≈65 %** (B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk; G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
 
 ## Methodology
 
@@ -23,7 +23,7 @@ the score.
 | Editing modes | 12 | 70 % | anchor point for flip/rotate (right button), array copy, align to canvas, figure comments from Edit mode, open compound (edit in place), join/split lines, chop, tangent/normal, angle/length/area measure modes, copy to library | 56 |
 | Attributes / indicator | 10 | 77 % | colour editor UI, Angle Geom (latex, manhattan, mountain), smart links, copy counts | 30 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
-| Export | 12 | 66 % | `sld`, texts with `\ooo` octal escapes (raw bytes, B11 pass 5), PDF pictures and EPS pictures outside EPS output, the audit's hardening passes (B11), arrows on pie-wedge arcs and file arc centres lost on the way through the Fig writer (gap #25), picture frames and GIF transparency (gap #26) | 90 |
+| Export | 12 | 68 % | `sld`, texts with `\ooo` octal escapes (raw bytes, B11 pass 5), the audit's hardening passes (B11), arrows on pie-wedge arcs and file arc centres lost on the way through the Fig writer (gap #25), picture frames and GIF transparency (gap #26) | 90 |
 | Text | 10 | 55 % | character map, LaTeX special-text export, exact PostScript font metrics, compose keys, spell check | 60 |
 | View & navigation | 8 | 96 % | zoom box (Ctrl+left), pan to origin with Ctrl+middle | 4 |
 | Undo | 4 | 100 % | — | 0 |
@@ -36,6 +36,7 @@ the score.
 ## Evidence of what ships
 
 - Drawing tools: `crates/engine/src/tools/mod.rs` (38 tools; tests draw polylines, boxes and text and move objects).
+- PDF/EPS pictures (B15): `fig2dev:crates/fig2dev/src/util/{pdfpic,pdfps,gs}.rs`, tests `tests/pdf_pictures*.rs` there (against the C fig2dev), canvas in `crates/engine/src/import.rs`, hostile files in `crates/engine/tests/import_fuzz.rs`.
 - Commands: `crates/engine/src/cmd/*`, swept with hostile parameters in `crates/engine/tests/command_sweep.rs`.
 - Fig I/O: `crates/format/src/fig_read.rs` (fig2dev's reader through `bridge/`), `fig_write.rs`; round trip and fuzzing in `crates/format/tests/`.
 - Rendering: the canvas scene in `crates/render/src/lib.rs`; fig2dev's scene, tiny-skia rasteriser, EPS, PDF, SVG and bitmap writers in `fig2dev:crates/fig2dev/src/scene/` (all 22 fill patterns; arrowheads; dashes); geometry, fonts and colours shared through `fig2dev:crates/figbase/`; line widths as fig2dev (`figbase::geom::stroke_width`).
@@ -88,3 +89,4 @@ the score.
 | 2026-10-14 | 60 % | W5: Attributes 70 → 75 % (xfig's attribute panel per mode, arc type, text step). |
 | 2026-10-14 | 60 % | W3: View & navigation 85 → 88 % (depth panel parity, active-layer export). |
 | 2026-10-14 | 60 % | W2: View & navigation 80 → 85 %, Drawing 85 → 88 % (freehand, arc by centre), Editing 65 → 70 % (delete region, cut buffer, copy & flip/rotate, update settings, break and tag, scale about corner or centre). |
+| 2026-10-21 | ≈65 % | B15: PDF and EPS picture objects in exports and on the canvas (fig2dev v0.6.0, hayro, optional ghostscript); Export 66 → 68 %. |

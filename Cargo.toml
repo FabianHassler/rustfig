@@ -20,13 +20,13 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/FabianHassler/rustfig"
-rust-version = "1.89"
+rust-version = "1.92"
 
 [workspace.dependencies]
 # fig2dev's own repository. For joint work, a [patch."https://github.com/FabianHassler/fig2dev"]
 # with path = "../fig2dev/crates/…" points at a local clone.
-figbase = { git = "https://github.com/FabianHassler/fig2dev", tag = "v0.5.0" }
-fig2dev = { git = "https://github.com/FabianHassler/fig2dev", tag = "v0.5.0" }
+figbase = { git = "https://github.com/FabianHassler/fig2dev", tag = "v0.6.0" }
+fig2dev = { git = "https://github.com/FabianHassler/fig2dev", tag = "v0.6.0" }
 rustfig-geom = { path = "crates/geom" }
 rustfig-model = { path = "crates/model" }
 rustfig-text = { path = "crates/text" }
@@ -41,7 +41,7 @@ toml = { version = "1", default-features = false, features = ["parse", "display"
 tiny-skia = "0.11"
 ttf-parser = "0.25"
 epaint_default_fonts = "0.33"
-pdf-writer = "0.12"
+pdf-writer = "0.15"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "bmp", "pnm", "tiff"] }
 egui = "0.33"
 eframe = { version = "0.33", default-features = false, features = ["accesskit", "default_fonts", "glow", "wayland", "x11"] }

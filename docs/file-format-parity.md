@@ -1,6 +1,6 @@
 # File format parity checklist
 
-**Status:** 2026-10-21 (DD9 sweep); 2026-10-20 (DD3: one reader, fig2dev's, for Fig 1.3–3.2); 2026-10-18 (B9: EMF, Tk; G1: Fig 1.3–2.1; B2: pstex/pdftex; B3: pict2e; B1: tikz; B3: PSTricks; ported languages exported from the app; B12: every export through fig2dev).
+**Status:** 2026-10-21 (B15: PDF/EPS pictures); 2026-10-21 (DD9 sweep); 2026-10-20 (DD3: one reader, fig2dev's, for Fig 1.3–3.2); 2026-10-18 (B9: EMF, Tk; G1: Fig 1.3–2.1; B2: pstex/pdftex; B3: pict2e; B1: tikz; B3: PSTricks; ported languages exported from the app; B12: every export through fig2dev).
 
 | Format | Read | Write | Notes |
 |---|---|---|---|
@@ -33,7 +33,7 @@
 | MetaPost (`mp`, `mmp`), METAFONT, ge, image map | — | ✅ | ported from fig2dev (B9): mf and map identical to fig2dev 3.2.9a on all 342 runs each, mp on 672/684, pictex and gbx on all runs (with `SOURCE_DATE_EPOCH`; without it their dates are UTC, fig2dev's local time), ge on all runs without user colours; the rest are escaped high bytes in text and pre-3.2 interpolated splines. ge's user colours are written as black, where fig2dev reads past its `GE_COLORS` table and prints whatever follows it |
 | EMF | — | ✅ | ported from fig2dev (B9, 2026-10-18): texts, PNG pictures, all shapes; byte-identical to fig2dev (texts as the input's bytes) except CJK-locale iconv fonts |
 | Tk, Perl-Tk | — | ✅ | ported from fig2dev (B9), byte-identical on the sample (texts as the input's bytes; one figure differs by stack garbage in C) |
-| Pictures in exports | ✅ | — | `fig2dev/util/readpics`: .gz/.Z, XBM, XPM, PCX with fig2dev's messages; EPS pictures embedded in EPS as genps does; no frame around pictures and transparent pixels stay transparent in EPS (pass 9); PDF pictures, and EPS pictures in PDF/SVG/bitmaps, still a placeholder box |
+| Pictures in exports | ✅ | — | `fig2dev/util/readpics`: .gz/.Z, XBM, XPM, PCX with fig2dev's messages; EPS pictures embedded in EPS as genps does; no frame around pictures and transparent pixels stay transparent in EPS (pass 9); PDF pictures: vector in PDF (Form XObject) and EPS/PS (`pdfps`), rendered in bitmaps and on the canvas, linked in SVG; EPS pictures in PDF/bitmaps/canvas through optional ghostscript (preview or left out without it); JPEG keeps its data in PDF (B15) |
 | epic, eepic, eepicemu, tpic, pic | — | ✅ | ported from fig2dev (B9): identical to fig2dev 3.2.9a on ≈99% of runs (every sample, several option sets); the rest differ in Latin-1 text, one ellipse bound, ±1 point in some closed X-splines |
 | Picture import PNG/JPEG/GIF/BMP/TIFF/PNM | ✅ | — | |
 | Picture import EPS/PDF/XPM/XBM/PCX | ❌ | — | gap #14 |
@@ -54,3 +54,4 @@ Fuzzing: `crates/format/tests/prop_format.rs`, `crates/engine/tests/import_fuzz.
 | 2026-10-17 | tikz (B1), byte-identical to fig2dev on 285 of 300 sample figures. |
 | 2026-10-17 | PSTricks (B3), byte-identical to fig2dev on 285 of 300 sample figures. |
 | 2026-10-20 | DD3: one reader, fig2dev's, for Fig 1.3–3.2; its repairs listed. |
+| 2026-10-21 | B15: PDF and EPS picture objects (row "Pictures in exports"). |

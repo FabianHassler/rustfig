@@ -28,6 +28,9 @@ pub fn decode_picture(bytes: &[u8]) -> Result<RasterImage, String> {
     })
 }
 
+/// Longest side of a rendered PDF page on the canvas, in pixels.
+const CANVAS_PDF_EDGE: f64 = 2400.0;
+
 /// Resolve a picture path relative to the document's directory.
 pub fn resolve(file: &str, base: Option<&Path>) -> PathBuf {
     let p = PathBuf::from(file);
@@ -41,8 +44,9 @@ pub fn resolve(file: &str, base: Option<&Path>) -> PathBuf {
 /// gamma and transparency, GIF transparent colour, XBM, XPM, PCX, `name.gz`
 /// for `name`), so the canvas shows the pixels the exports show; what
 /// `readpics` refuses (BMP, palette TIFF) goes to the `image` crate.
-/// EPS and PDF pictures have no pixels: they are shown as a box (and
-/// embedded in EPS exports).
+/// A PDF picture is its first page rendered (B15); an EPS picture is
+/// ghostscript's rendering when `gs` is installed, else its preview image,
+/// else a box. Exports use the files themselves.
 pub fn load_picture(path: &Path) -> Result<RasterImage, String> {
     if let Ok(meta) = std::fs::metadata(path) {
         if meta.len() > MAX_PICTURE_BYTES {
@@ -62,13 +66,41 @@ pub fn load_picture(path: &Path) -> Result<RasterImage, String> {
             }
             Ok(img)
         }
-        Ok(crate::fig2dev::LoadedPicture::Eps { .. }) => Err(format!(
-            "{}: EPS picture shown as a box (embedded in EPS exports)",
-            path.display()
-        )),
-        Ok(crate::fig2dev::LoadedPicture::Pdf) => Err(format!("{}: PDF picture shown as a box", path.display())),
+        // An EPS file: ghostscript's rendering where it is installed (B15),
+        // else the preview the file carries; exports embed the file itself.
+        Ok(crate::fig2dev::LoadedPicture::Eps { ps, preview, .. }) => canvas_eps(path, &ps, preview),
+        // A PDF file: its first page, rendered (exports keep it a vector).
+        Ok(crate::fig2dev::LoadedPicture::Pdf(Some(pdf))) => canvas_pdf(path, &pdf),
+        Ok(crate::fig2dev::LoadedPicture::Pdf(None)) => Err(format!("{}: PDF picture can't be read", path.display())),
         Ok(crate::fig2dev::LoadedPicture::Jpeg { raster: None, .. }) | Err(_) => load_picture_direct(path),
     }
+}
+
+/// The canvas's pixels for a PDF page: up to 3 pixels per point and
+/// `CANVAS_PDF_EDGE` on the longer side.
+fn canvas_pdf(path: &Path, pdf: &crate::fig2dev::PdfPicture) -> Result<RasterImage, String> {
+    let (w, h) = pdf.size();
+    let s = 3.0f64.min(CANVAS_PDF_EDGE / w.max(h));
+    pdf.render((w * s).ceil() as u32, (h * s).ceil() as u32)
+        .ok_or_else(|| format!("{}: PDF picture can't be drawn", path.display()))
+}
+
+/// The canvas's pixels for an EPS file (native: ghostscript's, when it is
+/// installed; else the file's preview image).
+fn canvas_eps(path: &Path, ps: &[u8], preview: Option<RasterImage>) -> Result<RasterImage, String> {
+    #[cfg(not(target_arch = "wasm32"))]
+    if let Ok(pdf) = crate::fig2dev::gs_eps_to_pdf(ps) {
+        if let Some(p) = crate::fig2dev::PdfPicture::open(pdf.to_vec()) {
+            return canvas_pdf(path, &p);
+        }
+    }
+    let _ = ps;
+    preview.ok_or_else(|| {
+        format!(
+            "{}: EPS picture without preview shown as a box (embedded in exports)",
+            path.display()
+        )
+    })
 }
 
 fn load_picture_direct(path: &Path) -> Result<RasterImage, String> {
@@ -140,6 +172,73 @@ mod tests {
         let d = std::env::temp_dir().join(format!("rustfig-d5-{}", std::process::id()));
         std::fs::create_dir_all(&d).unwrap();
         d.join(name)
+    }
+
+    /// A one-page PDF (100 x 50 pt) with a red rectangle over the left half.
+    fn tiny_pdf() -> Vec<u8> {
+        let content = b"1 0 0 rg 0 0 50 50 re f";
+        let objs: Vec<Vec<u8>> = vec![
+            b"<< /Type /Catalog /Pages 2 0 R >>".to_vec(),
+            b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_vec(),
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 50] /Contents 4 0 R /Resources << >> >>".to_vec(),
+            [
+                format!("<< /Length {} >>\nstream\n", content.len()).as_bytes(),
+                content,
+                b"\nendstream",
+            ]
+            .concat(),
+        ];
+        let mut out = b"%PDF-1.4\n".to_vec();
+        let mut offs = Vec::new();
+        for (i, o) in objs.iter().enumerate() {
+            offs.push(out.len());
+            out.extend_from_slice(format!("{} 0 obj\n", i + 1).as_bytes());
+            out.extend_from_slice(o);
+            out.extend_from_slice(b"\nendobj\n");
+        }
+        let xref = out.len();
+        out.extend_from_slice(b"xref\n0 5\n0000000000 65535 f \n");
+        for o in &offs {
+            out.extend_from_slice(format!("{o:010} 00000 n \n").as_bytes());
+        }
+        out.extend_from_slice(format!("trailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n").as_bytes());
+        out
+    }
+
+    #[test]
+    fn pdf_picture_is_its_page_on_the_canvas() {
+        let path = scratch("page.pdf");
+        std::fs::write(&path, tiny_pdf()).unwrap();
+        let img = load_picture(&path).unwrap();
+        assert!(img.width >= 300 && img.height >= 150, "{}x{}", img.width, img.height);
+        let at = |x: u32, y: u32| {
+            let i = ((y * img.width + x) * 4) as usize;
+            [img.rgba[i], img.rgba[i + 1], img.rgba[i + 2], img.rgba[i + 3]]
+        };
+        assert_eq!(at(img.width / 4, img.height / 2), [255, 0, 0, 255]);
+        assert_eq!(at(img.width * 3 / 4, img.height / 2)[3], 0);
+        // a file that is only a PDF's start is an error, not a panic
+        let bad = scratch("bad.pdf");
+        std::fs::write(&bad, b"%PDF-1.4\n/MediaBox [0 0 5 5]\n").unwrap();
+        assert!(load_picture(&bad).is_err());
+    }
+
+    #[test]
+    fn eps_picture_is_drawn_through_ghostscript_or_its_preview() {
+        let path = scratch("box.eps");
+        std::fs::write(
+            &path,
+            "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 40 20\n0 0 1 setrgbcolor 0 0 40 20 rectfill\nshowpage\n",
+        )
+        .unwrap();
+        match load_picture(&path) {
+            Ok(img) => {
+                let i = (((img.height / 2) * img.width + img.width / 2) * 4) as usize;
+                assert_eq!(&img.rgba[i..i + 3], &[0, 0, 255]);
+            }
+            // without ghostscript (and a preview) it is a box, with a reason
+            Err(e) => assert!(e.contains("EPS picture"), "{e}"),
+        }
     }
 
     #[test]

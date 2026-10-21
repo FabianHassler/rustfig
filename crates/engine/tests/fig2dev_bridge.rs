@@ -5,7 +5,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use rustfig_engine::Engine;
-use serde_json::{json, Value};
+use serde_json::json;
 use std::path::PathBuf;
 
 fn temp_dir(name: &str) -> PathBuf {
@@ -255,9 +255,9 @@ fn eps_pictures_are_embedded_in_eps() {
     let path = dir.join("withpic.fig");
     std::fs::write(&path, fig).unwrap();
     let mut e = Engine::new();
-    let r = e.execute("file.open", &json!({"path": path})).unwrap();
-    let w: Vec<Value> = r["warnings"].as_array().unwrap().clone();
-    assert!(w.iter().any(|m| m.as_str().unwrap().contains("EPS picture")), "{r}");
+    e.execute("file.open", &json!({"path": path})).unwrap();
+    // (the canvas draws it through ghostscript or its preview when it can,
+    // else warns; the export embeds the file either way)
     let eps = e.execute("file.export_data", &json!({"format": "eps"})).unwrap();
     let eps = eps["data"].as_str().unwrap();
     assert!(eps.contains("% Begin Imported EPS File: inner.eps"), "{eps}");
