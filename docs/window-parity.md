@@ -240,4 +240,5 @@ Nothing in group 1 needed an in-place fix: labels, order, accelerators and defau
 |---|---|
 | 2026-10-21 | Created; group 1 compared from xfig's sources. |
 | 2026-10-21 | Group 1 re-checked against captures of the real X11 xfig (menus, main window, Grid Mode pop-up); group 2 (Open, Save As, Merge, Export, Print) compared with captures; W10-4 to W10-10 added; merge as one compound, Figure Offset in the engine and the input-file check for export fixed. |
+| 2026-10-21 | W11: main window look (3D buttons, mode panel fits, compact mouse box, rulers as xfig), screenshots `target/window-parity/w11-*.png`. |
 | 2026-10-21 | Group 3 (object edit panels) compared with captures of the real X11 xfig; position rows, arrow rows, arc type, text flags, units, Cancel-restores, figure comments and the spline point panel added; W10-15 to W10-17 added. |

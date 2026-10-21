@@ -174,6 +174,9 @@ pub fn apply_ui(app: &mut App) {
     if let Some(b) = r.vector_icons {
         app.vector_icons = b;
     }
+    if let Some(style) = r.button_style.as_deref() {
+        app.button_3d = style != "flat";
+    }
 }
 
 /// Write the current switches into the preferences (they persist).
@@ -199,6 +202,10 @@ pub fn collect_ui(app: &mut App) {
     };
     upd(&mut r.layout, layout);
     upd(&mut r.mouse, mouse);
+    upd(
+        &mut r.button_style,
+        Some(if app.button_3d { "3d" } else { "flat" }.to_string()),
+    );
     for (slot, v) in [
         (&mut r.xfig_keys, app.xfig_keys),
         (&mut r.show_attribute_panel, app.show_indicator),

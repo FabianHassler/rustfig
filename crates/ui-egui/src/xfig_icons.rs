@@ -34,7 +34,14 @@ pub fn paint(ui: &egui::Ui, icon: &'static Xbm, rect: egui::Rect, tint: egui::Co
         ui.ctx().data_mut(|d| d.insert_temp(id, t.clone()));
         t
     });
-    let r = egui::Rect::from_center_size(rect.center(), egui::vec2(icon.width as f32, icon.height as f32));
+    // One bitmap pixel per point, smaller only when the button is.
+    let fit = (rect.width() / icon.width as f32)
+        .min(rect.height() / icon.height as f32)
+        .clamp(0.1, 1.0);
+    let r = egui::Rect::from_center_size(
+        rect.center(),
+        egui::vec2(icon.width as f32 * fit, icon.height as f32 * fit),
+    );
     ui.painter().with_clip_rect(rect).image(
         tex.id(),
         r,

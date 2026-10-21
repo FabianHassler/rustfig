@@ -108,6 +108,16 @@ pub(super) fn commands() -> Vec<Command> {
             run: save,
         },
         Command {
+            id: "file.rename",
+            label: "Rename file",
+            menu: "",
+            shortcut: "",
+            params: "{\"name\": string, \"overwrite\"?: bool, \"save\"?: bool}  — rename the saved file on disk (a bare name keeps the directory and, without an extension, the extension; a path moves it), or for an unsaved figure set the name the next Save uses; fails with code \"exists\" when another file has that name unless overwrite is true; save writes the figure to the new name afterwards (the UI does it when there are unsaved changes)",
+            mutates: false,
+            enabled: always,
+            run: rename,
+        },
+        Command {
             id: "file.save_data",
             label: "Save to data",
             menu: "",
@@ -363,6 +373,92 @@ fn save(e: &mut Engine, p: &Value) -> CmdResult {
     e.prefs_dirty = true;
     e.set_status(format!("Saved {path}"));
     Ok(json!({"path": path}))
+}
+
+/// Longest file name or path `file.rename` accepts.
+const MAX_NAME_BYTES: usize = 4096;
+
+/// The path a typed name means: a bare name stays in the directory of the
+/// current file and takes its extension when it has none.
+fn renamed_path(current: Option<&str>, name: &str) -> Result<String, EngineError> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err(EngineError::bad_params("the file name is empty"));
+    }
+    if name.len() > MAX_NAME_BYTES || name.contains('\0') || name.chars().any(char::is_control) {
+        return Err(EngineError::bad_params("the file name is not valid"));
+    }
+    if name.ends_with('/') || name.ends_with('\\') || name == "." || name == ".." {
+        return Err(EngineError::bad_params("the file name must name a file, not a folder"));
+    }
+    let has_dir = name.contains('/') || name.contains('\\');
+    let cur = current.map(Path::new);
+    let mut file = name.to_string();
+    if !has_dir && Path::new(name).extension().is_none() {
+        let ext = cur
+            .and_then(|c| c.extension())
+            .and_then(|x| x.to_str())
+            .unwrap_or("fig");
+        file = format!("{name}.{ext}");
+    }
+    if has_dir {
+        // A bare relative path is relative to the current file's folder.
+        let typed = Path::new(&file);
+        let full = match cur.and_then(Path::parent) {
+            Some(dir) if typed.is_relative() => dir.join(typed),
+            _ => typed.to_path_buf(),
+        };
+        return Ok(full.to_string_lossy().into_owned());
+    }
+    let full = match cur.and_then(Path::parent) {
+        Some(dir) => dir.join(&file),
+        None => Path::new(&file).to_path_buf(),
+    };
+    Ok(full.to_string_lossy().into_owned())
+}
+
+fn rename(e: &mut Engine, p: &Value) -> CmdResult {
+    let name = string(p, "name")?;
+    let overwrite = opt_bool(p, "overwrite")?.unwrap_or(false);
+    let save_after = opt_bool(p, "save")?.unwrap_or(false);
+    let old = e.path().map(str::to_string);
+    let new = renamed_path(old.as_deref(), &name)?;
+    let same = old.as_deref() == Some(new.as_str());
+    if !same {
+        if let (Some(o), Some(old_fmt), Some(new_fmt)) = (
+            &old,
+            old.as_deref().and_then(FileFormat::from_path),
+            FileFormat::from_path(&new),
+        ) {
+            if old_fmt != new_fmt && Path::new(o).is_file() {
+                return Err(EngineError::bad_params(
+                    "renaming can't change the file format; keep the extension (or use Save as)",
+                ));
+            }
+        }
+        let target = Path::new(&new);
+        if target.is_dir() {
+            return Err(EngineError::bad_params(format!("{new} is a folder")));
+        }
+        if target.exists() && !overwrite {
+            return Err(EngineError::new("exists", format!("{new} already exists")));
+        }
+        if let Some(o) = old.as_deref().filter(|o| Path::new(o).is_file()) {
+            if std::fs::rename(o, &new).is_err() {
+                // Another volume: copy, then remove the old file.
+                std::fs::copy(o, &new).map_err(|err| EngineError::io(format!("{new}: {err}")))?;
+                if let Err(err) = std::fs::remove_file(o) {
+                    e.set_status(format!("Copied to {new}, but {o} could not be removed: {err}"));
+                }
+            }
+        }
+        e.set_path(Some(new.clone()));
+    }
+    if save_after {
+        return save(e, &json!({"path": new}));
+    }
+    e.set_status(format!("File name is {new}"));
+    Ok(json!({"path": new, "renamed": !same}))
 }
 
 /// Write via a temporary file and rename, so a failed save never truncates the old file.

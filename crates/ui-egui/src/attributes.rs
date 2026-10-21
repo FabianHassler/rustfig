@@ -226,10 +226,9 @@ pub fn attribute_panel(app: &mut App, ui: &mut Ui, tk: &Tokens) {
 /// One attribute button; returns whether the pointer is over it.
 fn button(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) -> bool {
     let (rect, resp) = ui.allocate_exact_size(vec2(a.width(), BUTTON_HEIGHT), Sense::click());
-    let visuals = ui.style().interact(&resp);
+    let open = egui::Popup::is_id_open(ui.ctx(), egui::Popup::default_response_id(&resp));
+    crate::bevel::paint(ui.painter(), rect, tk, crate::bevel::State::of(&resp, false, open));
     let p = ui.painter();
-    p.rect_filled(rect, 2.0, visuals.weak_bg_fill);
-    p.rect_stroke(rect, 2.0, Stroke::new(1.0_f32, tk.muted), egui::StrokeKind::Inside);
     let text = ui.visuals().text_color();
     let font = egui::FontId::proportional(11.0);
     let (l1, l2) = a.label();

@@ -93,7 +93,7 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside.
 | Mode panel | middle/right button on a mode | nothing (`notused_middle`, `notused_right`) | ✅ (nothing either) |
 | Depth panel (`w_layers.c`) | left click, left drag | toggle, sweep | ✅ (W3) |
 | Depth panel | right click | set the depth of new objects to that layer | ✅ (`indicator.set`) |
-| Rulers (`w_rulers.c`) | left, middle drag, right; Meta+right drag | pan, drag, pan; drag | ✅ (W6) |
+| Rulers (`w_rulers.c`) | left, middle drag, right; Meta+right drag; wheel (buttons 4, 5) | pan, drag, pan; drag; pan | ✅ (W6, W11: wheel and left-drag added) |
 | Units box | left / right | pan to origin / Unit menu | ✅ (W6) |
 
 ## Revision history

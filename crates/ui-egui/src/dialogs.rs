@@ -195,6 +195,8 @@ pub struct Dialogs {
     pub global_open: bool,
     /// The xfig resources window (E1).
     pub resources_open: bool,
+    /// A new file name that another file already has: asking before replacing.
+    pub rename_confirm: Option<String>,
     resource_filter: String,
     /// Values being typed into the resources window, by resource.
     resource_edits: std::collections::BTreeMap<&'static str, String>,
@@ -616,6 +618,54 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     messages_dialog(app, ctx);
     global_dialog(app, ctx);
     unsaved_dialog(app, ctx);
+    rename_dialog(app, ctx);
+}
+
+/// Rename the figure's file (`file.rename`): the saved file moves on disk,
+/// an unsaved figure just gets the name the next Save uses; with unsaved
+/// changes in a saved figure it is saved under the new name. A name another
+/// file has asks before replacing it.
+pub fn rename_file(app: &mut App, name: &str, overwrite: bool) {
+    let save = app.engine.is_modified() && app.engine.path().is_some();
+    let params = json!({"name": name, "overwrite": overwrite, "save": save});
+    match app.engine.execute("file.rename", &params) {
+        Ok(_) => {
+            let s = app.engine.status().to_string();
+            if !s.is_empty() {
+                app.info(s);
+                app.engine.set_status("");
+            }
+        }
+        Err(e) if e.code == "exists" => app.dialogs.rename_confirm = Some(name.to_string()),
+        Err(e) => app.error(e.message),
+    }
+}
+
+fn rename_dialog(app: &mut App, ctx: &egui::Context) {
+    let Some(name) = app.dialogs.rename_confirm.clone() else {
+        return;
+    };
+    let mut choice = None;
+    egui::Modal::new(egui::Id::new("rename_exists")).show(ctx, |ui| {
+        ui.heading("Replace file?");
+        ui.label(format!("A file named {name:?} already exists. Replace it?"));
+        ui.horizontal(|ui| {
+            if ui.button("Replace").clicked() {
+                choice = Some(true);
+            }
+            if ui.button("Cancel").clicked() {
+                choice = Some(false);
+            }
+        });
+    });
+    match choice {
+        Some(true) => {
+            app.dialogs.rename_confirm = None;
+            rename_file(app, &name, true);
+        }
+        Some(false) => app.dialogs.rename_confirm = None,
+        None => {}
+    }
 }
 
 /// xfig's Global settings panel holds its preferences; RustFig's are its
@@ -650,6 +700,14 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
                     app.run(id, serde_json::json!({}));
                 }
             }
+            ui.horizontal(|ui| {
+                ui.label("Button style:");
+                for (style, label) in [("3d", "3D"), ("flat", "Flat")] {
+                    if ui.radio(app.button_3d == (style == "3d"), label).clicked() {
+                        app.run("app.button_style", serde_json::json!({ "style": style }));
+                    }
+                }
+            });
             ui.separator();
             ui.horizontal(|ui| {
                 if ui.button("Units and page…").clicked() {

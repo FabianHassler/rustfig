@@ -209,6 +209,9 @@ pub struct RustFigPrefs {
     pub show_attribute_panel: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vector_icons: Option<bool>,
+    /// "3d" (bevelled buttons, default) or "flat".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub button_style: Option<String>,
     pub recent_files: Vec<String>,
     pub user_colors: Vec<NamedColor>,
     /// Keys this version doesn't know, kept as they are.

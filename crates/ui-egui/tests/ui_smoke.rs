@@ -412,6 +412,22 @@ fn snap_menu_arms_a_snap_mode() {
     h.get_by_label("Snap Mode: Endpoint (held)");
 }
 
+#[test]
+fn snap_hold_is_visible_and_release_needs_it() {
+    let mut h = harness(app());
+    assert!(h.query_by_label("Snap Mode: None (held)").is_none());
+    h.state_mut().run("snap.hold", json!({}));
+    h.run_steps(2);
+    h.get_by_label("Snap Mode: None (held)");
+    h.get_by_label("Snap").click();
+    h.run_steps(2);
+    h.get_by_label_contains("Hold");
+    h.state_mut().run("snap.release", json!({}));
+    h.run_steps(2);
+    assert!(h.query_by_label("Snap Mode: None (held)").is_none());
+    h.get_by_label("Snap Mode: None");
+}
+
 fn press_key(h: &mut Harness<'static, App>, key: egui::Key, modifiers: egui::Modifiers) {
     h.event(egui::Event::Key {
         key,
@@ -936,4 +952,250 @@ fn edit_mode_middle_button_opens_the_figure_comments() {
         .unwrap();
     h.run_steps(2);
     assert!(h.state().dialogs.figure_comments.is_some());
+}
+
+/// Press, move in steps and release one button, with the modifiers held
+/// (the way a user drags: the pointer is over the widget before the press).
+fn drag_button(
+    h: &mut Harness<'static, App>,
+    from: egui::Pos2,
+    to: egui::Pos2,
+    button: egui::PointerButton,
+    modifiers: egui::Modifiers,
+) {
+    h.hover_at(from);
+    h.run_steps(1);
+    h.event(egui::Event::PointerButton {
+        pos: from,
+        button,
+        pressed: true,
+        modifiers,
+    });
+    h.run_steps(1);
+    for k in 1..=4 {
+        let p = from + (to - from) * (k as f32 / 4.0);
+        h.event(egui::Event::PointerMoved(p));
+        h.run_steps(1);
+    }
+    h.event(egui::Event::PointerButton {
+        pos: to,
+        button,
+        pressed: false,
+        modifiers,
+    });
+    h.run_steps(1);
+}
+
+fn wheel_at(h: &mut Harness<'static, App>, pos: egui::Pos2, dy: f32, modifiers: egui::Modifiers) {
+    h.hover_at(pos);
+    h.run_steps(1);
+    h.event(egui::Event::MouseWheel {
+        unit: egui::MouseWheelUnit::Point,
+        delta: vec2(0.0, dy),
+        modifiers,
+    });
+    h.run_steps(2);
+}
+
+/// xfig's rulers (`w_rulers.c`): left pans left/up and right pans right/down
+/// on release (Shift five times as far), the middle button and Alt+right
+/// drag the view, the wheel is buttons 4 and 5, and left-drag drags too.
+#[test]
+fn rulers_follow_xfig_buttons() {
+    use egui::{Modifiers, PointerButton as B};
+    let alt = Modifiers {
+        alt: true,
+        ..Modifiers::NONE
+    };
+    let shift = Modifiers {
+        shift: true,
+        ..Modifiers::NONE
+    };
+    for horizontal in [true, false] {
+        let name = if horizontal { "Top ruler" } else { "Side ruler" };
+        let mut h = harness(app());
+        let pos = h.get_by_label(name).rect().center();
+        let step = |h: &Harness<'static, App>, mult: f64| {
+            let v = &h.state().engine.view;
+            600.0 / v.zoom * mult
+        };
+        let coord = |h: &Harness<'static, App>| {
+            let o = h.state().engine.view.origin;
+            if horizontal {
+                o.x
+            } else {
+                o.y
+            }
+        };
+        let along = |d: f32| if horizontal { vec2(d, 0.0) } else { vec2(0.0, d) };
+        let c0 = coord(&h);
+        // Left: pan left/up (the drawing moves left/up: the view origin grows).
+        click_button(&mut h, pos, B::Primary, Modifiers::NONE);
+        let s = step(&h, 1.0);
+        assert!((coord(&h) - c0 - s).abs() < 1e-6, "{name} left: {}", coord(&h) - c0);
+        // Right: back.
+        click_button(&mut h, pos, B::Secondary, Modifiers::NONE);
+        assert!((coord(&h) - c0).abs() < 1e-6, "{name} right");
+        // Shift: five times.
+        click_button(&mut h, pos, B::Primary, shift);
+        assert!((coord(&h) - c0 - 5.0 * s).abs() < 1e-6, "{name} shift+left");
+        click_button(&mut h, pos, B::Secondary, shift);
+        assert!((coord(&h) - c0).abs() < 1e-6, "{name} shift+right");
+        // Middle and Alt+right clicks (no movement) pan nothing, as in xfig.
+        click_button(&mut h, pos, B::Middle, Modifiers::NONE);
+        assert!((coord(&h) - c0).abs() < 1e-6, "{name} middle click");
+        click_button(&mut h, pos, B::Secondary, alt);
+        assert!((coord(&h) - c0).abs() < 1e-6, "{name} alt+right click");
+        // A click with a little pointer jitter is still a click: one step
+        // up/left (a real mouse never holds perfectly still).
+        drag_button(&mut h, pos, pos + along(2.0), B::Primary, Modifiers::NONE);
+        assert!(
+            (coord(&h) - c0 - s).abs() < 1e-6,
+            "{name} left click with jitter: {}",
+            coord(&h) - c0
+        );
+        drag_button(&mut h, pos, pos + along(2.0), B::Secondary, Modifiers::NONE);
+        assert!((coord(&h) - c0).abs() < 1e-6, "{name} right click with jitter");
+        // Wheel: up is button 4 (left), down is button 5 (right).
+        wheel_at(&mut h, pos, 40.0, Modifiers::NONE);
+        assert!((coord(&h) - c0 - s).abs() < 1e-6, "{name} wheel up");
+        wheel_at(&mut h, pos, -40.0, Modifiers::NONE);
+        assert!((coord(&h) - c0).abs() < 1e-6, "{name} wheel down");
+        // Middle, Alt+right and left drags: the view follows the pointer.
+        for (button, mods, label) in [
+            (B::Middle, Modifiers::NONE, "middle"),
+            (B::Secondary, alt, "alt+right"),
+            (B::Primary, Modifiers::NONE, "left"),
+        ] {
+            let before = coord(&h);
+            drag_button(&mut h, pos, pos + along(40.0), button, mods);
+            let moved = coord(&h) - before;
+            let zoom = h.state().engine.view.zoom;
+            let want = -40.0 / (zoom * 96.0 / 1200.0 * 1.0);
+            let _ = want;
+            assert!(moved < -1.0, "{name} {label} drag moved {moved}");
+            // Back to where it was for the next button.
+            drag_button(&mut h, pos + along(40.0), pos, button, mods);
+            assert!((coord(&h) - before).abs() < 1.0, "{name} {label} drag back");
+        }
+        // A drag must not also pan by a step when released.
+        let before = coord(&h);
+        drag_button(&mut h, pos, pos + along(12.0), B::Middle, Modifiers::NONE);
+        let moved = (coord(&h) - before).abs();
+        assert!(moved < 3.0 * step(&h, 1.0), "{name} middle drag then release");
+    }
+}
+
+/// W11: the button style is a setting, kept in the preferences.
+#[test]
+fn button_style_switches_and_persists() {
+    let path = settings_file("buttons");
+    {
+        let mut h = harness(app_with_settings(&path));
+        assert!(h.state().button_3d, "3D is the default");
+        h.state_mut().run("app.button_style", json!({"style": "flat"}));
+        h.run_steps(2);
+        assert!(!h.state().button_3d);
+        assert!(h
+            .state_mut()
+            .run("app.button_style", json!({"style": "round"}))
+            .is_none());
+        h.state_mut().run("app.button_style", json!({}));
+        assert!(h.state().button_3d, "toggles when omitted");
+        h.state_mut().run("app.button_style", json!({"style": "flat"}));
+        h.run_steps(2);
+    }
+    let text = std::fs::read_to_string(&path).unwrap();
+    assert!(text.contains("button_style = \"flat\""), "{text}");
+    assert!(!app_with_settings(&path).button_3d);
+    // The Global settings window offers both.
+    let mut h = harness(app());
+    h.state_mut().run("app.global_settings", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Flat");
+    h.get_by_label("3D").click();
+    h.run_steps(2);
+    assert!(h.state().button_3d);
+    let _ = std::fs::remove_dir_all(path.parent().unwrap());
+}
+
+/// W11: every mode button is inside the panel and the window at the default
+/// size (nothing clipped, no scrolling needed).
+#[test]
+fn mode_panel_is_not_clipped() {
+    let h = harness(app());
+    let right = rustfig_ui_egui::panels::MODE_PANEL_WIDTH;
+    for t in [
+        ToolKind::CircleRadius,
+        ToolKind::Text,
+        ToolKind::Glue,
+        ToolKind::Arrow,
+        ToolKind::RotateCw,
+    ] {
+        let r = h.get_by_label(t.label()).rect();
+        assert!(r.right() <= right, "{} right edge {} > {right}", t.label(), r.right());
+        assert!(r.left() >= 0.0 && r.top() >= 0.0, "{}", t.label());
+        // Above the attribute panel at the bottom of the 860-high window.
+        assert!(r.bottom() <= 860.0 - 40.0, "{} bottom {}", t.label(), r.bottom());
+    }
+}
+
+/// W11: the Snap Mode box is a chooser with the same modes as the Snap menu.
+#[test]
+fn snap_box_chooses_a_mode() {
+    let mut h = harness(app());
+    h.get_by_label("Snap Mode: None").click();
+    h.run_steps(3);
+    h.get_by_label("Midpoint").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.snap_indicator(), "Midpoint");
+    h.get_by_label("Snap Mode: Midpoint").click();
+    h.run_steps(3);
+    h.get_by_label("None").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.snap_indicator(), "None");
+}
+
+/// W11: the file-name box turns into a field; Enter names the figure.
+#[test]
+fn file_name_box_renames() {
+    let dir = std::env::temp_dir().join(format!("rustfig-name-box-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let mut h = harness(app());
+    // An unsaved figure: the name is what the next Save uses.
+    h.get_by_label("(untitled)").click();
+    h.run_steps(3);
+    h.get_by_label("File name").type_text("mine");
+    h.run_steps(2);
+    press_key(&mut h, egui::Key::Enter, egui::Modifiers::NONE);
+    h.run_steps(2);
+    assert_eq!(h.state().engine.path(), Some("mine.fig"));
+    h.get_by_label("mine.fig");
+    // Escape cancels.
+    h.get_by_label("mine.fig").click();
+    h.run_steps(3);
+    h.get_by_label("File name").type_text("zzz");
+    press_key(&mut h, egui::Key::Escape, egui::Modifiers::NONE);
+    h.run_steps(2);
+    assert_eq!(h.state().engine.path(), Some("mine.fig"));
+    h.get_by_label("mine.fig");
+    // A saved file moves; another file of that name asks first.
+    let a = dir.join("a.fig").to_string_lossy().into_owned();
+    let b = dir.join("b.fig").to_string_lossy().into_owned();
+    h.state_mut().run("file.save", json!({"path": a}));
+    std::fs::write(&b, "x").unwrap();
+    h.run_steps(2);
+    h.get_by_label("a.fig").click();
+    h.run_steps(3);
+    h.get_by_label("File name").type_text("b");
+    h.run_steps(1);
+    press_key(&mut h, egui::Key::Enter, egui::Modifiers::NONE);
+    h.run_steps(3);
+    assert_eq!(h.state().engine.path(), Some(a.as_str()), "asked before replacing");
+    h.get_by_label("Replace").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.path(), Some(b.as_str()));
+    assert!(!std::path::Path::new(&a).exists());
+    let _ = std::fs::remove_dir_all(&dir);
 }

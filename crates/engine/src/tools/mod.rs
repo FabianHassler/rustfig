@@ -470,8 +470,6 @@ pub struct MouseHints {
     pub left: &'static str,
     pub middle: &'static str,
     pub right: &'static str,
-    /// Keyboard input goes to the tool (the text tool is typing).
-    pub keyboard: bool,
 }
 
 /// Pick tolerance in screen pixels.
@@ -1905,7 +1903,6 @@ impl Engine {
             left,
             middle: if xfig { middle } else { "pan" },
             right,
-            keyboard: false,
         };
         // A label on the button that started the operation.
         let on = |button: Button, label, right| match button {
@@ -1947,7 +1944,6 @@ impl Engine {
                 left: "new text",
                 middle: if xfig { "finish text" } else { "pan" },
                 right: if xfig { "cancel" } else { "finish text" },
-                keyboard: true,
             },
             ToolState::MoveObjs {
                 dragging, constrain, ..
@@ -2441,7 +2437,7 @@ mod tests {
         assert_eq!(e.mouse_hints().right, "finish");
         e.set_tool(ToolKind::Text);
         press(&mut e, 0.0, 0.0);
-        assert!(e.mouse_hints().keyboard);
+        assert_eq!(e.mouse_hints().left, "new text");
     }
 
     /// What a button press can change.

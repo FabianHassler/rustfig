@@ -126,6 +126,18 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}  — vector pictures at the screen's density, or xfig's bitmaps",
     },
     UiCommand {
+        id: "app.button_style",
+        label: "Button style",
+        shortcut: "",
+        params: "{\"style\"?: \"3d\"|\"flat\"}  — bevelled or flat buttons; toggles when omitted",
+    },
+    UiCommand {
+        id: "app.theme",
+        label: "Theme",
+        shortcut: "",
+        params: "{\"theme\": \"light\"|\"dark\"|\"system\"}  — colour theme (for screenshots and tests)",
+    },
+    UiCommand {
         id: "app.toggle_balloons",
         label: "Show info balloons",
         shortcut: "",
@@ -210,6 +222,22 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.toggle_depths" => app.show_depths = !app.show_depths,
         "app.toggle_balloons" => app.show_balloons = !app.show_balloons,
         "app.toggle_vector_icons" => app.vector_icons = !app.vector_icons,
+        "app.button_style" => {
+            app.button_3d = match p.get("style").and_then(Value::as_str) {
+                Some("3d") => true,
+                Some("flat") => false,
+                Some(other) => return Err(format!("unknown button style {other:?} (3d or flat)")),
+                None => !app.button_3d,
+            };
+        }
+        "app.theme" => {
+            app.theme_request = Some(match p.get("theme").and_then(Value::as_str) {
+                Some("light") => egui::ThemePreference::Light,
+                Some("dark") => egui::ThemePreference::Dark,
+                Some("system") => egui::ThemePreference::System,
+                _ => return Err("theme must be light, dark or system".into()),
+            });
+        }
         "app.redraw" => app.canvas.invalidate(),
         "app.toggle_layout" => {
             let classic = p.get("classic").and_then(Value::as_bool).unwrap_or(!app.classic());
@@ -640,15 +668,42 @@ pub fn menu_bar(app: &mut App, ui: &mut egui::Ui) {
     egui::MenuBar::new().ui(ui, |ui| menu_buttons(app, ui));
 }
 
+/// One of the classic top strip's menu buttons, bevelled in the 3D style
+/// (sunken while its menu is open).
+fn bar_button(
+    app: &mut App,
+    ui: &mut egui::Ui,
+    tk: &crate::theme::Tokens,
+    name: &str,
+    content: impl FnOnce(&mut App, &mut egui::Ui),
+) -> egui::Response {
+    let ctx = ui.ctx().clone();
+    let resp = crate::bevel::around(
+        ui,
+        tk,
+        |r| egui::Popup::is_id_open(&ctx, egui::Popup::default_response_id(r)),
+        |ui| {
+            ui.scope(|ui| {
+                crate::bevel::bare_buttons(ui, tk);
+                ui.add(egui::Button::new(name))
+            })
+            .inner
+        },
+    );
+    egui::Popup::menu(&resp).show(|ui| content(app, ui));
+    resp
+}
+
 /// The menu buttons alone, laid out in the current row.
 pub fn menu_buttons(app: &mut App, ui: &mut egui::Ui) {
     if app.classic() {
         // xfig's menus: File, Edit, View, Snap, Help.
+        let tk = crate::theme::Tokens::new(ui.visuals().dark_mode, app.button_3d);
         for (name, items) in XFIG_MENUS {
             if *name == "Help" {
-                ui.menu_button("Snap", |ui| snap_menu(app, ui));
+                bar_button(app, ui, &tk, "Snap", snap_menu);
             }
-            let resp = ui.menu_button(*name, |ui| xfig_menu(app, ui, name, items)).response;
+            let resp = bar_button(app, ui, &tk, name, |app, ui| xfig_menu(app, ui, name, items));
             if app.open_menu == Some(*name) {
                 app.open_menu = None;
                 egui::Popup::close_all(ui.ctx());
@@ -692,15 +747,20 @@ pub fn menu_buttons(app: &mut App, ui: &mut egui::Ui) {
 pub fn snap_menu(app: &mut App, ui: &mut egui::Ui) {
     use rustfig_engine::ObjectSnap as S;
     let held = app.engine.snap_held();
+    let hold_label = if held { "\u{2713} Hold" } else { "Hold" };
     if ui
-        .add(egui::Button::new("Hold").selected(held))
-        .on_hover_text("Keep the snap mode until Release")
+        .add(egui::Button::new(hold_label).selected(held))
+        .on_hover_text("Keep the snap mode after each point until Release")
         .clicked()
     {
         app.run("snap.hold", json!({}));
         ui.close();
     }
-    if ui.button("Release").clicked() {
+    if ui
+        .add_enabled(held, egui::Button::new("Release"))
+        .on_hover_text("Stop holding and disarm the snap mode")
+        .clicked()
+    {
         app.run("snap.release", json!({}));
         ui.close();
     }

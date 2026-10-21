@@ -70,6 +70,12 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | xfig accelerators (Meta-key) | ✅ xfig keymap (on by default): Meta = Alt/Option menu keys, physical Ctrl mode keys, xfig's mode letters; menus show "Meta-N"; platform shortcuts stay | — |
 | Preferences (xfig's resources, recent files, user colours) | ✅ `settings.toml`; Edit › Global settings › xfig resources… | — |
 | Icons at HiDPI | ✅ every icon and picture is drawn as a vector at the screen's density (xfig's bitmaps optional); application icon | — |
+| 3D (bevelled) buttons, Global setting "Button style: 3D / Flat" | ✅ raised light/dark edges and soft shading, sunken when pressed or selected; mode, depth, snap, attribute and top-strip buttons; `app.button_style`, saved in the preferences (W11) | — |
+| Mode panel never clipped | ✅ two columns and every row fit at the default window size; buttons shrink to 26 pt before the panel scrolls (W11) | — |
+| Snap Mode box | ✅ a chooser (None and the Snap menu's modes), HOLD tag while held, Hold checked and Release enabled only when held (additions, W11) | — |
+| File-name box | ✅ click to type; Enter renames the file (`file.rename`), asks before replacing; unsaved figure: sets the name for Save (addition, W11) | — |
+| Mouse Buttons box | ✅ compact, labels next to the buttons; no keyboard label (decided 2026-10-21) | — |
+| Rulers | ✅ left up/left, right down/right on release (Shift x5), middle and Alt+right drag, wheel = buttons 4/5, left-drag added; pan limit at 0 not copied (decided 2026-10-21) | — |
 | xfig's other key and mouse bindings (menu letters, panel keys, wheel bindings, compose keys) | ✅ audited in [keys-parity.md](keys-parity.md): each works, is replaced, or waits for a named task | — |
 
 ## Revision history
@@ -88,6 +94,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | 2026-10-15 | W9 planned: vector icons. |
 | 2026-10-15 | W9: attribute pictures as vectors; arrow types 10–14. |
 | 2026-10-15 | W9 done: mode icons traced; application icon. |
+| 2026-10-21 | W11: 3D buttons and button style setting, mode panel fits, snap chooser and hold mark, editable file-name box, compact Mouse Buttons box, rulers follow the button events. |
 | 2026-10-14 | Mode panel: xfig's icons and order; modes not yet available shown greyed. |
 | 2026-10-14 | Main menus cloned from xfig. |
 | 2026-10-21 | W10: link to window-parity.md. |

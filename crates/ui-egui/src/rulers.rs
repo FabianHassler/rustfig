@@ -340,10 +340,98 @@ fn ruler(app: &mut App, ui: &mut Ui, tk: &Tokens, canvas: Rect, r: Rect, horizon
             }
         }
     }
-    // Buttons: left pans left/up, right pans right/down, middle drags
-    // (Alt+right too, as in xfig); Shift makes it five times as far.
+    // Buttons (xfig's `topruler_selected` / `sideruler_selected`): left pans
+    // left/up and right pans right/down on release, Shift five times as far;
+    // the middle button and Alt+right drag the view (and so does left once
+    // the pointer moves, an addition for one-button mice); the wheel is
+    // buttons 4 and 5, so up pans left/up and down right/down.
+    //
+    // Driven by the button events themselves, not by egui's click/drag
+    // inference: egui reports a press as "dragged" from the first frame, so
+    // a click with a little pointer jitter would pan like a drag.
+    let key = resp.id.with("press");
+    let mut press: Option<Press> = ui.data(|d| d.get_temp(key));
+    let events = ui.input(|i| i.events.clone());
+    let pan_by_step = |app: &mut App, sign: f64, shift: bool| {
+        let px = pan_step(units, view.zoom, shift) * s * sign;
+        let (dx, dy) = if horizontal { (px, 0.0) } else { (0.0, px) };
+        app.run("view.pan", json!({"dx": dx, "dy": dy}));
+    };
+    let latest = ui.input(|i| i.pointer.latest_pos());
+    for ev in events {
+        match ev {
+            egui::Event::PointerButton {
+                pos,
+                button,
+                pressed: true,
+                modifiers,
+            } if r.contains(pos) && press.is_none() && ui.rect_contains_pointer(r) => {
+                press = Some(Press {
+                    button,
+                    alt: modifiers.alt,
+                    start: pos,
+                    last: pos,
+                    dragging: false,
+                });
+            }
+            egui::Event::PointerButton {
+                button,
+                pressed: false,
+                modifiers,
+                ..
+            } => {
+                if let Some(p) = press.filter(|p| p.button == button) {
+                    press = None;
+                    // Alt with the right button is the middle button (X11
+                    // decides on the press); that and a drag do nothing more
+                    // on release.
+                    if !p.dragging {
+                        match button {
+                            egui::PointerButton::Primary => pan_by_step(app, -1.0, modifiers.shift),
+                            egui::PointerButton::Secondary if !p.alt => pan_by_step(app, 1.0, modifiers.shift),
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
     let shift = ui.input(|i| i.modifiers.shift);
-    if resp.hovered() || resp.dragged() {
+    if let (Some(p), Some(pos)) = (press.as_mut(), latest) {
+        let moved = pos - p.last;
+        p.last = pos;
+        let drags = match p.button {
+            egui::PointerButton::Middle => true,
+            egui::PointerButton::Secondary => p.alt,
+            egui::PointerButton::Primary => {
+                if !p.dragging && (pos - p.start).length() > DRAG_START {
+                    p.dragging = true;
+                }
+                p.dragging
+            }
+            _ => false,
+        };
+        if drags && moved != vec2(0.0, 0.0) {
+            // A drag is no click: nothing more on release.
+            p.dragging = true;
+            let k = if shift { 5.0 } else { 1.0 };
+            let (dx, dy) = if horizontal {
+                (f64::from(moved.x) * k, 0.0)
+            } else {
+                (0.0, f64::from(moved.y) * k)
+            };
+            app.run("view.pan", json!({"dx": dx, "dy": dy}));
+        }
+    }
+    if !ui.input(|i| i.pointer.any_down()) {
+        press = None;
+    }
+    ui.data_mut(|d| match press {
+        Some(p) => d.insert_temp(key, p),
+        None => d.remove::<Press>(key),
+    });
+    if resp.hovered() || press.is_some() {
         app.hint_override = Some(match (horizontal, shift) {
             (true, false) => ("Pan Left", "Drag", "Pan Right"),
             (true, true) => ("Pan Left x5", "Drag x5", "Pan Right x5"),
@@ -351,44 +439,47 @@ fn ruler(app: &mut App, ui: &mut Ui, tk: &Tokens, canvas: Rect, r: Rect, horizon
             (false, true) => ("Pan Up x5", "Drag x5", "Pan Down x5"),
         });
     }
-    let step_px = pan_step(units, view.zoom, shift) * s;
-    let pan = |app: &mut App, sign: f64| {
-        let (dx, dy) = if horizontal {
-            (sign * step_px, 0.0)
-        } else {
-            (0.0, sign * step_px)
-        };
-        app.run("view.pan", json!({"dx": dx, "dy": dy}));
-    };
-    let alt = ui.input(|i| i.modifiers.alt);
-    if resp.clicked() {
-        // Pan left/up: the drawing moves left/up by one step.
-        pan(app, -1.0);
-    } else if resp.secondary_clicked() && !alt {
-        pan(app, 1.0);
-    }
-    let dragging_middle =
-        resp.dragged_by(egui::PointerButton::Middle) || (alt && resp.dragged_by(egui::PointerButton::Secondary));
-    if dragging_middle {
-        let d = resp.drag_delta();
-        let k = if shift { 5.0 } else { 1.0 };
-        let (dx, dy) = if horizontal {
-            (f64::from(d.x) * k, 0.0)
-        } else {
-            (0.0, f64::from(d.y) * k)
-        };
-        app.run("view.pan", json!({"dx": dx, "dy": dy}));
+    let pan = |app: &mut App, sign: f64| pan_by_step(app, sign, shift);
+    if resp.hovered() {
+        // One step per wheel notch (a trackpad's small deltas add up).
+        let (dx, dy) = ui.input(|i| (i.raw_scroll_delta.x, i.raw_scroll_delta.y));
+        let delta = if dy != 0.0 { dy } else { dx };
+        if delta != 0.0 {
+            let id = resp.id.with("wheel");
+            let acc = ui.data(|d| d.get_temp::<f32>(id).unwrap_or(0.0)) + delta;
+            let notch = 40.0;
+            let steps = (acc / notch).trunc();
+            ui.data_mut(|d| d.insert_temp(id, acc - steps * notch));
+            let n = steps.abs().min(20.0) as usize;
+            for _ in 0..n {
+                pan(app, if steps > 0.0 { -1.0 } else { 1.0 });
+            }
+        }
     }
     let name = if horizontal { "Top ruler" } else { "Side ruler" };
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, name));
 }
 
+/// A mouse button held down on a ruler.
+#[derive(Clone, Copy)]
+struct Press {
+    button: egui::PointerButton,
+    /// Alt was held at the press (right becomes middle).
+    alt: bool,
+    start: egui::Pos2,
+    last: egui::Pos2,
+    /// The pointer has been dragged: release pans no step.
+    dragging: bool,
+}
+
+/// How far (points) the left button must move before it drags instead of
+/// clicking.
+const DRAG_START: f32 = 4.0;
+
 fn units_box(app: &mut App, ui: &mut Ui, tk: &Tokens, r: Rect) {
     let resp = ui.interact(r, ui.id().with("units box"), Sense::click());
     let p = ui.painter_at(r);
-    let v = ui.style().interact(&resp);
-    p.rect_filled(r, 0.0, v.weak_bg_fill);
-    p.rect_stroke(r, 0.0, Stroke::new(1.0_f32, tk.muted), egui::StrokeKind::Inside);
+    crate::bevel::paint(&p, r, tk, crate::bevel::State::of(&resp, false, app.unit_panel_open));
     let label = app.engine.unit_label();
     p.text(
         r.center(),

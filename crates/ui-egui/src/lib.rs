@@ -8,6 +8,7 @@ pub mod app_icon;
 pub mod attributes;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod autosave;
+pub mod bevel;
 pub mod canvas;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod control;
@@ -68,6 +69,10 @@ pub struct App {
     /// Attribute pictures drawn as vectors at the screen's density (W9);
     /// off shows xfig's 1-bit bitmaps.
     pub vector_icons: bool,
+    /// A theme to switch to on the next frame (`app.theme`).
+    pub theme_request: Option<egui::ThemePreference>,
+    /// Button style: bevelled "3D" buttons (default) or flat ones.
+    pub button_3d: bool,
     /// xfig's mode menu popped up by Alt+wheel over the canvas: drawing
     /// (wheel up) or editing modes, at the pointer.
     pub mode_popup: Option<(bool, egui::Pos2)>,
@@ -86,6 +91,8 @@ pub struct App {
     /// xfig's compose key while typing text (`menus::compose_text`).
     pub(crate) compose: menus::Compose,
     pub show_indicator: bool,
+    /// The file-name box while it is a text field: the text being typed.
+    pub file_edit: Option<String>,
     /// While dragging across depth checkboxes: the state they are set to.
     depth_drag: Option<bool>,
     /// Mouse hints shown instead of the tool's while the pointer is over a
@@ -122,6 +129,8 @@ impl App {
             show_depths: true,
             show_balloons: true,
             vector_icons: true,
+            theme_request: None,
+            button_3d: true,
             mode_popup: None,
             #[cfg(not(target_arch = "wasm32"))]
             autosave: None,
@@ -130,6 +139,7 @@ impl App {
             settings: settings::Settings::default(),
             compose: menus::Compose::default(),
             show_indicator: true,
+            file_edit: None,
             depth_drag: None,
             hint_override: None,
             hint_shown: None,
@@ -367,9 +377,12 @@ impl App {
 
     fn frame(&mut self, ctx: &egui::Context) {
         apply_balloons(ctx, self.show_balloons);
+        if let Some(t) = self.theme_request.take() {
+            ctx.set_theme(t);
+        }
         #[cfg(not(target_arch = "wasm32"))]
         self.poll_control(ctx);
-        let tokens = theme::Tokens::for_dark(ctx.style().visuals.dark_mode);
+        let tokens = theme::Tokens::new(ctx.style().visuals.dark_mode, self.button_3d);
         // Panels set the hint override while hovered; show last frame's.
         self.hint_shown = self.hint_override.take();
         menus::handle_shortcuts(self, ctx);
@@ -384,7 +397,8 @@ impl App {
         }
         egui::SidePanel::left("modes")
             .resizable(false)
-            .exact_width(84.0)
+            .exact_width(panels::MODE_PANEL_WIDTH)
+            .frame(egui::Frame::side_top_panel(&ctx.style()).inner_margin(panels::MODE_PANEL_MARGIN))
             .show(ctx, |ui| panels::mode_panel(self, ui, &tokens));
         if self.show_depths {
             egui::SidePanel::right("depths")

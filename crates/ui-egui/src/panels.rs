@@ -8,7 +8,7 @@
 
 use crate::theme::Tokens;
 use crate::{xfig_icons, App};
-use egui::{vec2, Color32, RichText, Sense};
+use egui::{vec2, Color32, RichText, Sense, Stroke};
 use rustfig_engine::ToolKind;
 use rustfig_model::{Document, LineKind, Rgb, STANDARD_COLORS, STANDARD_COLOR_NAMES};
 use serde_json::json;
@@ -73,17 +73,39 @@ const EDITING: [Slot; 25] = [
     Slot::Missing(&xfig_icons::AREAMEAS, "Measure area", "D5"),
 ];
 
+/// Width of the mode panel: two columns of buttons, the frame's margin and
+/// stroke (nothing is clipped).
+pub const MODE_PANEL_MARGIN: f32 = 3.0;
+pub const MODE_PANEL_WIDTH: f32 = 2.0 * SLOT.x + 2.0 + 2.0 * MODE_PANEL_MARGIN + 2.0;
+
+/// Rows of buttons in the mode panel: the drawing modes with the library row
+/// and the editing modes.
+const MODE_ROWS: f32 = 8.0 + 13.0;
+
+/// The height of one mode button so that every row fits the panel (xfig's
+/// window is sized to fit); only a very short window falls back to
+/// scrolling.
+fn slot_height(available: f32) -> f32 {
+    // Two captions, the gap between the groups and the grid spacing.
+    let overhead = 2.0 * 16.0 + 6.0 + 2.0 * MODE_ROWS + 4.0;
+    ((available - overhead) / MODE_ROWS).floor().clamp(26.0, SLOT.y)
+}
+
 /// xfig's mode panel: its icons (`w_icons.c`, 36×32), two columns, the
-/// active mode shown inverted.
+/// active mode shown sunken.
 pub fn mode_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
-    egui::ScrollArea::vertical().show(ui, |ui| {
-        ui.add_space(2.0);
-        ui.label(RichText::new("Drawing").small().color(tk.muted));
-        slot_grid(app, ui, tk, "draw_tools", &DRAWING);
-        ui.add_space(4.0);
-        ui.label(RichText::new("Editing").small().color(tk.muted));
-        slot_grid(app, ui, tk, "edit_tools", &EDITING);
-    });
+    let size = vec2(SLOT.x, slot_height(ui.available_height()));
+    egui::ScrollArea::vertical()
+        .auto_shrink([false, false])
+        .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::VisibleWhenNeeded)
+        .show(ui, |ui| {
+            ui.spacing_mut().item_spacing.y = 2.0;
+            ui.label(RichText::new("Drawing").small().color(tk.muted));
+            slot_grid(app, ui, tk, "draw_tools", &DRAWING, size);
+            ui.add_space(4.0);
+            ui.label(RichText::new("Editing").small().color(tk.muted));
+            slot_grid(app, ui, tk, "edit_tools", &EDITING, size);
+        });
 }
 
 /// xfig's mode menus popped up by Alt+wheel (`PopupModePanel` in
@@ -101,9 +123,9 @@ pub fn mode_popup(app: &mut App, ctx: &egui::Context, tk: &Tokens) {
                 let title = if drawing { "Drawing modes" } else { "Editing modes" };
                 ui.label(RichText::new(title).small().color(tk.muted));
                 if drawing {
-                    slot_grid(app, ui, tk, "popup_draw_tools", &DRAWING);
+                    slot_grid(app, ui, tk, "popup_draw_tools", &DRAWING, SLOT);
                 } else {
-                    slot_grid(app, ui, tk, "popup_edit_tools", &EDITING);
+                    slot_grid(app, ui, tk, "popup_edit_tools", &EDITING, SLOT);
                 }
             });
         })
@@ -123,14 +145,14 @@ pub fn mode_popup(app: &mut App, ctx: &egui::Context, tk: &Tokens) {
 
 const SLOT: egui::Vec2 = vec2(38.0, 34.0);
 
-fn slot_grid(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, id: &str, slots: &[Slot]) {
+fn slot_grid(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, id: &str, slots: &[Slot], size: egui::Vec2) {
     // The library icon is twice as wide: it gets its own row below.
     let wide = |s: &Slot| matches!(s, Slot::Missing(icon, ..) if icon.width > 40);
     egui::Grid::new(id).spacing(vec2(2.0, 2.0)).show(ui, |ui| {
         for (i, slot) in slots.iter().filter(|s| !wide(s)).enumerate() {
             match slot {
-                Slot::Missing(icon, tip, task) => missing_button(ui, app.vector_icons, tk, icon, tip, task, SLOT),
-                Slot::Tool(t, icon) => tool_button(app, ui, tk, *t, icon),
+                Slot::Missing(icon, tip, task) => missing_button(ui, app.vector_icons, tk, icon, tip, task, size),
+                Slot::Tool(t, icon) => tool_button(app, ui, tk, *t, icon, size),
             }
             if i % 2 == 1 {
                 ui.end_row();
@@ -146,25 +168,29 @@ fn slot_grid(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, id: &str, slots: &[S
                 icon,
                 tip,
                 task,
-                vec2(SLOT.x * 2.0 + 2.0, SLOT.y),
+                vec2(size.x * 2.0 + 2.0, size.y),
             );
         }
     }
 }
 
-fn tool_button(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, t: ToolKind, icon: &'static xfig_icons::Xbm) {
-    let (rect, resp) = ui.allocate_exact_size(SLOT, Sense::click());
+fn tool_button(
+    app: &mut App,
+    ui: &mut egui::Ui,
+    tk: &Tokens,
+    t: ToolKind,
+    icon: &'static xfig_icons::Xbm,
+    size: egui::Vec2,
+) {
+    let (rect, resp) = ui.allocate_exact_size(size, Sense::click());
     let active = app.engine.tool() == t;
-    let bg = if active {
-        tk.tool_active_bg
-    } else if resp.hovered() {
-        ui.visuals().widgets.hovered.bg_fill
-    } else {
-        ui.visuals().widgets.inactive.bg_fill
-    };
-    ui.painter().rect_filled(rect, 2.0, bg);
+    let state = crate::bevel::State::of(&resp, active, false);
+    crate::bevel::paint(ui.painter(), rect, tk, state);
     let ink = if active { tk.icon_active } else { tk.icon };
-    paint_mode_icon(ui, app.vector_icons, icon, rect, ink);
+    // A sunken button's picture sinks a pixel with it.
+    let sunk = matches!(state, crate::bevel::State::Selected | crate::bevel::State::Pressed) && tk.bevel;
+    let inner = if sunk { rect.translate(vec2(1.0, 1.0)) } else { rect };
+    paint_mode_icon(ui, app.vector_icons, icon, inner, ink);
     let tip = if t.shortcut().is_empty() {
         t.label().to_string()
     } else {
@@ -197,8 +223,7 @@ fn missing_button(
     size: egui::Vec2,
 ) {
     let (rect, resp) = ui.allocate_exact_size(size, Sense::hover());
-    ui.painter()
-        .rect_filled(rect, 2.0, ui.visuals().widgets.noninteractive.bg_fill);
+    crate::bevel::paint(ui.painter(), rect, tk, crate::bevel::State::Disabled);
     paint_mode_icon(ui, vector, icon, rect, tk.muted.gamma_multiply(0.6));
     let text = format!("{tip} (not available yet, plan task {task})");
     resp.on_hover_text(text.clone())
@@ -338,23 +363,66 @@ pub fn font_combo(ui: &mut egui::Ui, id: &str, font: i32, postscript: bool) -> O
 /// object count. Pressing a checkbox and dragging over others sets them all
 /// to the new state of the first one.
 pub fn depth_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
-    // xfig's Snap Mode indicator sits above the depth panel (`w_snap.c`).
+    // xfig's Snap Mode indicator sits above the depth panel (`w_snap.c`); here
+    // it is also a chooser, opening the same modes as the Snap menu.
     let snap = app.engine.snap_indicator();
     ui.label(RichText::new("Snap Mode").strong());
-    let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 20.0), Sense::hover());
-    ui.painter()
-        .rect_stroke(r, 2.0, egui::Stroke::new(1.0_f32, tk.muted), egui::StrokeKind::Inside);
+    let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 22.0), Sense::click());
+    let open = egui::Popup::is_id_open(ui.ctx(), egui::Popup::default_response_id(&resp));
+    crate::bevel::paint(ui.painter(), r, tk, crate::bevel::State::of(&resp, false, open));
     let armed = snap != "None";
+    let ink = if armed { tk.selection } else { ui.visuals().text_color() };
     ui.painter().text(
-        r.left_center() + vec2(6.0, 0.0),
+        r.left_center() + vec2(7.0, 0.0),
         egui::Align2::LEFT_CENTER,
         snap,
         egui::FontId::proportional(12.0),
-        if armed { tk.selection } else { ui.visuals().text_color() },
+        ink,
     );
-    let held = if app.engine.snap_held() { " (held)" } else { "" };
-    resp.on_hover_text("Choose a snap in the Snap menu")
-        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, format!("Snap Mode: {snap}{held}")));
+    // A drop-down arrow (drawn: the font has no glyph for it).
+    let c = r.right_center() - vec2(10.0, 0.0);
+    ui.painter().add(egui::Shape::convex_polygon(
+        vec![c + vec2(-4.0, -2.0), c + vec2(4.0, -2.0), c + vec2(0.0, 3.0)],
+        tk.muted,
+        Stroke::NONE,
+    ));
+    let is_held = app.engine.snap_held();
+    let held = if is_held { " (held)" } else { "" };
+    if is_held {
+        // xfig keeps this only in a variable; a tag makes it visible.
+        let font = egui::FontId::proportional(10.0);
+        let galley = ui.painter().layout_no_wrap("HOLD".to_string(), font, tk.icon_active);
+        let tag = egui::Rect::from_center_size(
+            egui::pos2(r.right() - 26.0 - galley.size().x / 2.0, r.center().y),
+            galley.size() + vec2(8.0, 2.0),
+        );
+        ui.painter().rect_filled(tag, 2.0, tk.tool_active_bg);
+        ui.painter()
+            .galley(tag.center() - galley.size() / 2.0, galley, tk.icon_active);
+    }
+    egui::Popup::from_toggle_button_response(&resp)
+        .align(egui::RectAlign::BOTTOM_START)
+        .close_behavior(egui::PopupCloseBehavior::CloseOnClick)
+        .show(|ui| {
+            ui.set_min_width(130.0);
+            if ui
+                .add(egui::Button::new("None").selected(!armed))
+                .on_hover_text("Don't snap to objects")
+                .clicked()
+            {
+                app.run("snap.mode", json!({"mode": "none"}));
+                ui.close();
+            }
+            ui.separator();
+            crate::menus::snap_menu(app, ui);
+        });
+    let tip = if is_held {
+        "Snap held: stays on after each point; Snap > Release to stop"
+    } else {
+        "Click to choose what the next point snaps to (as the Snap menu)"
+    };
+    resp.on_hover_text(tip)
+        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, format!("Snap Mode: {snap}{held}")));
     ui.separator();
     ui.heading("Depths");
     ui.horizontal_wrapped(|ui| {
@@ -364,7 +432,7 @@ pub fn depth_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
             ("All Off", "depth.hide_all", "Hide every depth"),
             ("Toggle", "depth.toggle_all", "Switch every depth"),
         ] {
-            if ui.small_button(label).on_hover_text(tip).clicked() {
+            if crate::bevel::text_button(ui, tk, label).on_hover_text(tip).clicked() {
                 app.run(cmd, json!({}));
             }
         }
@@ -495,25 +563,75 @@ pub fn classic_top(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     });
 }
 
-fn current_file(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
+/// The file-name box: xfig's is a label (`name_panel`); here a click turns
+/// it into a text field. Enter renames the file (`file.rename`), Escape or
+/// clicking away cancels.
+fn current_file(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     let name = app
         .engine
         .path()
         .and_then(|p| std::path::Path::new(p).file_name())
         .and_then(|n| n.to_str())
-        .unwrap_or("(untitled)");
+        .unwrap_or("(untitled)")
+        .to_string();
+    let saved_name = app.engine.path().is_some();
+    let full = app.engine.path().unwrap_or("not saved yet").to_string();
+    let id = egui::Id::new("file_name_field");
+    if let Some(text) = app.file_edit.as_mut() {
+        let width = (text.chars().count() as f32 * 8.0 + 16.0).clamp(120.0, 360.0);
+        let len = text.chars().count();
+        let mut out = egui::TextEdit::singleline(text)
+            .id(id)
+            .font(egui::TextStyle::Monospace)
+            .desired_width(width)
+            .show(ui);
+        let resp = out.response.clone();
+        if !resp.has_focus() && !resp.lost_focus() {
+            // First frame: focus the field with the whole name selected.
+            resp.request_focus();
+            out.state.cursor.set_char_range(Some(egui::text::CCursorRange::two(
+                egui::text::CCursor::new(0),
+                egui::text::CCursor::new(len),
+            )));
+            out.state.store(ui.ctx(), id);
+        }
+        let (enter, escape) = ui.input(|i| (i.key_pressed(egui::Key::Enter), i.key_pressed(egui::Key::Escape)));
+        resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "File name"));
+        resp.clone().on_hover_text(full);
+        if escape {
+            ui.memory_mut(|m| m.surrender_focus(id));
+            app.file_edit = None;
+        } else if resp.lost_focus() {
+            let typed = app.file_edit.take().unwrap_or_default();
+            if enter {
+                crate::dialogs::rename_file(app, &typed, false);
+            }
+        }
+        return;
+    }
     let text = if app.engine.is_modified() {
         format!("{name} (modified)")
     } else {
-        name.to_string()
+        name.clone()
     };
-    egui::Frame::NONE
-        .stroke(egui::Stroke::new(1.0_f32, tk.muted))
-        .inner_margin(vec2(6.0, 1.0))
-        .show(ui, |ui| {
-            ui.label(RichText::new(text).monospace())
-                .on_hover_text(app.engine.path().unwrap_or("not saved yet"));
-        });
+    let galley = ui.painter().layout_no_wrap(
+        text.clone(),
+        egui::TextStyle::Monospace.resolve(ui.style()),
+        ui.visuals().text_color(),
+    );
+    let size = galley.size() + vec2(14.0, 4.0);
+    let (rect, resp) = ui.allocate_exact_size(size, Sense::click());
+    let state = crate::bevel::State::of(&resp, false, false);
+    crate::bevel::paint(ui.painter(), rect, tk, state);
+    ui.painter()
+        .galley(rect.center() - galley.size() / 2.0, galley, ui.visuals().text_color());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, text.clone()));
+    let clicked = resp.clicked();
+    resp.on_hover_text(format!("{full}\nClick to rename the file"));
+    if clicked {
+        // An unsaved figure starts with an empty field.
+        app.file_edit = Some(if saved_name { name } else { String::new() });
+    }
 }
 
 fn message_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
@@ -526,69 +644,63 @@ fn message_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         None if app.engine.tool() == ToolKind::None => ("READY. Select a mode or load a file".to_string(), tk.muted),
         None => (format!("{} mode", app.engine.tool().label()), tk.muted),
     };
-    let resp = egui::Frame::NONE
-        .fill(ui.visuals().extreme_bg_color)
-        .inner_margin(vec2(6.0, 2.0))
-        .show(ui, |ui| {
-            ui.set_width(ui.available_width());
-            ui.add(
-                egui::Label::new(RichText::new(text).color(color))
-                    .truncate()
-                    .sense(Sense::click()),
-            )
-        })
-        .inner;
+    let fill = if tk.bevel {
+        tk.inset_bg
+    } else {
+        ui.visuals().extreme_bg_color
+    };
+    let slot = ui.painter().add(egui::Shape::Noop);
+    let resp = egui::Frame::NONE.inner_margin(vec2(6.0, 2.0)).show(ui, |ui| {
+        ui.set_width(ui.available_width());
+        ui.add(
+            egui::Label::new(RichText::new(text).color(color))
+                .truncate()
+                .sense(Sense::click()),
+        )
+    });
+    let rect = resp.response.rect;
+    ui.painter().set(slot, egui::Shape::rect_filled(rect, 0.0, fill));
+    if tk.bevel {
+        crate::bevel::field(ui.painter(), rect, tk, Color32::TRANSPARENT);
+    }
+    let resp = resp.inner;
     if resp.on_hover_text("Click for the message history").clicked() {
         app.dialogs.messages_open = !app.dialogs.messages_open;
     }
 }
 
-const INDICATOR_SIZE: egui::Vec2 = vec2(380.0, 44.0);
+const INDICATOR_SIZE: egui::Vec2 = vec2(290.0, 46.0);
 
 /// xfig's mouse-function indicator: a small three-button mouse in the
 /// middle, the left button's function left of it, the middle one's above
 /// and the right one's to the right, each button with a tick pointing at its
-/// label. Geometry ported from xfig's `w_mousefun.c` (xfig licence, see
+/// label. Geometry from xfig's `w_mousefun.c` (xfig licence, see
 /// LICENSE-xfig): buttons 4.5 % of the width wide and half the height high,
-/// starting at 45 % of the height.
+/// starting at 45 % of the height; the box is compact and the left and
+/// right labels sit next to the ticks (xfig centres them in the free space).
 pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
     let mut h = app.engine.mouse_hints();
     if let Some((left, middle, right)) = app.hint_shown {
-        h = rustfig_engine::MouseHints {
-            left,
-            middle,
-            right,
-            keyboard: h.keyboard,
-        };
+        h = rustfig_engine::MouseHints { left, middle, right };
     }
     let xfig = app.engine.mouse_scheme() == rustfig_engine::MouseScheme::Xfig;
     let (rect, resp) = ui.allocate_exact_size(INDICATOR_SIZE, Sense::hover());
     let p = ui.painter_at(rect);
-    let stroke = egui::Stroke::new(1.0_f32, tk.muted);
-    p.rect_stroke(rect, 2.0, stroke, egui::StrokeKind::Inside);
+    crate::bevel::field(&p, rect, tk, if tk.bevel { tk.inset_bg } else { Color32::TRANSPARENT });
     let text = ui.visuals().text_color();
     let small = egui::FontId::proportional(10.0);
     let font = egui::FontId::proportional(12.0);
     p.text(
-        rect.left_top() + vec2(4.0, 2.0),
+        rect.left_top() + vec2(5.0, 3.0),
         egui::Align2::LEFT_TOP,
         if xfig {
             "Mouse Buttons"
         } else {
             "Mouse Buttons (modern)"
         },
-        small.clone(),
+        small,
         tk.muted,
     );
-    if h.keyboard {
-        p.text(
-            rect.right_top() + vec2(-4.0, 2.0),
-            egui::Align2::RIGHT_TOP,
-            "keyboard",
-            small,
-            tk.caret,
-        );
-    }
     let (w, ht) = (rect.width(), rect.height());
     let but_w = (w * 0.045).round();
     let but_h = (ht * 0.5).round();
@@ -598,29 +710,47 @@ pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
     let line = egui::Stroke::new(1.0_f32, text);
     for k in [0.0, 1.5, 3.0] {
         let r = egui::Rect::from_min_size(egui::pos2(x0 + k * but_w, top), vec2(but_w, but_h));
-        p.rect_stroke(r, 1.0, line, egui::StrokeKind::Inside);
+        if tk.bevel {
+            crate::bevel::paint(&p, r, tk, crate::bevel::State::Normal);
+        } else {
+            p.rect_stroke(r, 1.0, line, egui::StrokeKind::Inside);
+        }
     }
     let mid_y = top + but_h / 2.0;
-    p.line_segment([egui::pos2(x0, mid_y), egui::pos2(x0 - 5.0, mid_y)], line);
+    let tick = 5.0;
+    p.line_segment([egui::pos2(x0, mid_y), egui::pos2(x0 - tick, mid_y)], line);
     let mid_x = x0 + 2.0 * but_w;
-    p.line_segment([egui::pos2(mid_x, top), egui::pos2(mid_x, top - 5.0)], line);
+    p.line_segment([egui::pos2(mid_x, top), egui::pos2(mid_x, top - tick)], line);
     let right_x = x0 + 4.0 * but_w;
-    p.line_segment([egui::pos2(right_x, mid_y), egui::pos2(right_x + 5.0, mid_y)], line);
-    // Labels centred in the space beside the mouse (left, right) and above
-    // it (middle), truncated to fit.
-    let label = |s: &str, centre: egui::Pos2, max_w: f32| {
+    p.line_segment([egui::pos2(right_x, mid_y), egui::pos2(right_x + tick, mid_y)], line);
+    // The left label ends at its tick, the right one starts at its tick, the
+    // middle one is centred above its button; all truncated to fit.
+    let gap = 3.0;
+    let label = |s: &str, anchor: egui::Pos2, align: egui::Align2, max_w: f32| {
         let mut job = egui::text::LayoutJob::simple_singleline(s.to_string(), font.clone(), text);
-        job.wrap = egui::text::TextWrapping::truncate_at_width(max_w);
+        job.wrap = egui::text::TextWrapping::truncate_at_width(max_w.max(10.0));
         let g = ui.fonts_mut(|f| f.layout_job(job));
-        p.galley(centre - g.size() / 2.0, g, text);
+        let pos = align.anchor_size(anchor, g.size()).min;
+        p.galley(pos, g, text);
     };
-    let side_w = left_space - 10.0;
-    label(h.left, egui::pos2(rect.left() + left_space / 2.0, mid_y + 2.0), side_w);
-    label(h.middle, egui::pos2(rect.center().x, rect.top() + 8.0), w - 2.0 * 90.0);
+    let side_w = left_space - tick - gap - 4.0;
+    label(
+        h.left,
+        egui::pos2(x0 - tick - gap, mid_y),
+        egui::Align2::RIGHT_CENTER,
+        side_w,
+    );
     label(
         h.right,
-        egui::pos2(rect.right() - left_space / 2.0, mid_y + 2.0),
+        egui::pos2(right_x + tick + gap, mid_y),
+        egui::Align2::LEFT_CENTER,
         side_w,
+    );
+    label(
+        h.middle,
+        egui::pos2(mid_x, top - tick - 1.0),
+        egui::Align2::CENTER_BOTTOM,
+        w - 2.0 * 80.0,
     );
     let summary = format!(
         "Left: {}; middle: {}; right: {}",
