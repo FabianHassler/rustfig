@@ -173,8 +173,13 @@ impl Dialogs {
 
 /// Extensions offered when picking a figure.
 pub const FIGURE_EXTS: &[&str] = &["fig", "xfig", "rustfig"];
-/// Extensions offered when picking a picture.
-pub const PICTURE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "bmp", "tif", "tiff", "ppm", "pgm"];
+/// Extensions offered when picking a picture: xfig's picture types
+/// (`f_picobj.c`: EPS/PS, PDF, GIF, PCX, PPM, TIFF, XBM, JPEG, PNG, XPM),
+/// BMP, and compressed files (`.gz`, `.Z`), which fig2dev's reader unpacks.
+pub const PICTURE_EXTS: &[&str] = &[
+    "eps", "epsi", "epsf", "ps", "pdf", "png", "jpg", "jpeg", "gif", "pcx", "ppm", "pgm", "pbm", "pnm", "tif", "tiff",
+    "xbm", "xpm", "bmp", "gz", "Z",
+];
 
 /// File pickers. The app uses [`NativeDialogs`]; tests substitute a script.
 pub trait FileDialogs {
@@ -1139,5 +1144,17 @@ fn unsaved_dialog(app: &mut App, ctx: &egui::Context) {
         }
         Some(2) => app.pending = None,
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn picture_picker_offers_xfigs_picture_types() {
+        for ext in [
+            "eps", "ps", "pdf", "gif", "pcx", "ppm", "tif", "xbm", "jpg", "png", "xpm", "gz",
+        ] {
+            assert!(super::PICTURE_EXTS.contains(&ext), "{ext}");
+        }
     }
 }

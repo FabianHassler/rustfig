@@ -14,7 +14,7 @@
 | Box, arc-box | `tool.box`, `tool.arc_box` | ✅ |
 | Regular polygon | `tool.regular_polygon` | ✅ |
 | Arc | `tool.arc` (three clicks) | ✅ |
-| Picture | `tool.picture` (PNG/JPEG/GIF/BMP/TIFF/PNM) | 🟡 no EPS/PDF/XPM |
+| Picture | `tool.picture` (xfig's types: EPS/PS, PDF, GIF, JPEG, PCX, PNG, PPM, TIFF, XBM, XPM, `.gz`/`.Z`; also BMP) | ✅ |
 | Text | `tool.text` | 🟡 no character map |
 | Library object | — | ❌ |
 
