@@ -92,11 +92,11 @@ fn drawing(icon: VIcon) -> Vec<Object> {
             vec![line(st, &[(2.0, 16.0), (30.0, 16.0)])]
         }
         VIcon::Join(join) => {
-            let st = Style { join, ..style(10) };
+            let st = Style { join, ..style(4) };
             vec![line(st, &[(6.0, 15.0), (26.0, 15.0), (7.0, 28.0)])]
         }
         VIcon::Cap(cap) => {
-            let thick = Style { cap, ..style(10) };
+            let thick = Style { cap, ..style(4) };
             let thin = style(1);
             vec![
                 line(thick, &[(8.0, 16.0), (24.0, 16.0)]),
