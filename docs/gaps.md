@@ -1,6 +1,6 @@
 # Known gaps (ranked work list)
 
-**Status:** 2026-10-18 (B2, G1, B12, pict2e, TikZ, PSTricks, EMF, Tk (B1, B3, B9) landed; B11 added from the fig2dev audit). Ranked by user impact per hour. Pick work from the top.
+**Status:** 2026-10-21 (#14 restated: EPS/PDF pictures in exports need a PostScript interpreter). Earlier: 2026-10-18 (B2, G1, B12, pict2e, TikZ, PSTricks, EMF, Tk (B1, B3, B9) landed; B11 added from the fig2dev audit). Ranked by user impact per hour. Pick work from the top.
 
 | # | Gap | Area | Impact | Hours |
 |---|-----|------|--------|------:|
@@ -18,7 +18,7 @@
 | 10 | Bitmap exports GIF/JPEG/TIFF/PPM (with transparent colour) | Export | Medium | 12 |
 | 11 | Colour editor (create and edit user colours in the UI) | Attributes | Medium | 12 |
 | 12 | Point positioning modes: latex lines, manhattan, mountain; linked move | Attributes | Low | 20 |
-| 14 | EPS/PDF/XBM/XPM/PCX picture objects (currently a crossed box on the canvas); in exports XBM/XPM/PCX and .gz/.Z load and EPS pictures embed in EPS, but PDF pictures, and EPS pictures in PDF/SVG/bitmaps, are a placeholder box | File format | Low | 24 |
+| 14 | EPS and PDF picture objects. Canvas: EPS/PDF pictures are a crossed box (XBM/XPM/PCX/.gz load through fig2dev's `readpics` since DD5). Exports (fig2dev has no PostScript interpreter; the C fig2dev uses ghostscript): an EPS picture is complete only in PS/EPS (and pstex/pspdftex), where it is embedded as genps does; bitmaps draw its preview image (DOS EPS TIFF or EPSI) or nothing; PDF leaves it out; PDF files as pictures are left out everywhere; JPEG pictures in PDF are decoded pixels (ghostscript keeps the JPEG data). SVG links pictures as gensvg does (complete). Closing it needs a PostScript/PDF interpreter: a new heavy dependency, the user's decision. | File format/Export | Low | 24 |
 | 16 | Windows and Linux smoke tests in CI | Platforms | Low | 8 |
 | 17 | Localization of UI strings | Localization | Low | 24 |
 | 18 | Spell check | Text | Low | 16 |
@@ -58,3 +58,4 @@
 | 2026-10-14 | #0 shrank: W4 landed. |
 | 2026-10-14 | #0 closed: W7 landed, phase W done. |
 | 2026-10-13 | Linked #1 to the fig2dev backend (B0); added #21 (reference tests, A8). |
+| 2026-10-21 | #14 restated: EPS/PDF pictures in exports need a PostScript interpreter (fig2dev has none); the canvas half shrank with DD5. |
