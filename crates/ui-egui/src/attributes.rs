@@ -269,8 +269,9 @@ fn button(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) -> bool {
     };
     draw_value(app, ui, p, value_rect, rect, tk, a);
     let summary = format!("{}: {}", a.name(), value_text(app, a));
+    // xfig: Alt + right button is the middle button (`sel_ind_but`).
     if resp.secondary_clicked() {
-        step(app, a, 1);
+        step(app, a, if ui.input(|i| i.modifiers.alt) { -1 } else { 1 });
     } else if resp.middle_clicked() {
         step(app, a, -1);
     } else if resp.hovered() {
@@ -467,7 +468,6 @@ fn font_name(font: i32, postscript: bool) -> String {
 /// Middle button (dir −1) and right button (dir +1).
 fn step(app: &mut App, a: Attr, dir: i32) {
     let ind = app.engine.indicator.clone();
-    let d = f64::from(dir);
     match a {
         Attr::Zoom => {
             app.run(if dir > 0 { "view.zoom_in" } else { "view.zoom_out" }, json!({}));
@@ -486,10 +486,7 @@ fn step(app: &mut App, a: Attr, dir: i32) {
             app,
             json!({"depth": (ind.depth + dir).clamp(0, rustfig_model::MAX_DEPTH)}),
         ),
-        Attr::RotnAngle => set(
-            app,
-            json!({"rotate_angle": (ind.rotate_angle + 15.0 * d).clamp(-360.0, 360.0)}),
-        ),
+        Attr::RotnAngle => set(app, json!({"rotate_angle": step_rotn(ind.rotate_angle, dir)})),
         Attr::NumSides => set(app, json!({"sides": (ind.sides as i64 + i64::from(dir)).clamp(3, 200)})),
         Attr::VAlign => {
             if let Some(v) = cycle(&V_ALIGN, ind.align_v.as_str(), dir) {
@@ -515,7 +512,10 @@ fn step(app: &mut App, a: Attr, dir: i32) {
             }
         }
         // xfig darkens and lightens the fill one step at a time.
-        Attr::FillStyle => set(app, json!({"area_fill": (ind.area_fill + dir).clamp(-1, 62)})),
+        Attr::FillStyle => {
+            let plain = matches!(ind.fill_color, -1 | 0 | 7);
+            set(app, json!({"area_fill": step_fill(ind.area_fill, plain, dir)}));
+        }
         Attr::ArcType => set(app, json!({"pie_arc": !ind.pie_arc})),
         Attr::LineWidth => set(app, json!({"thickness": (ind.thickness + dir).clamp(0, 500)})),
         Attr::LineStyle => {
@@ -544,15 +544,9 @@ fn step(app: &mut App, a: Attr, dir: i32) {
                 set(app, json!({ "justify": j }));
             }
         }
-        Attr::TextAngle => set(
-            app,
-            json!({"text_angle": (ind.text_angle + 15.0 * d).clamp(-360.0, 360.0)}),
-        ),
-        Attr::FontSize => set(app, json!({"font_size": (ind.font_size + d).clamp(1.0, 500.0)})),
-        Attr::TextStep => set(
-            app,
-            json!({"text_step": ((ind.text_step + 0.1 * d) * 10.0).round() / 10.0}),
-        ),
+        Attr::TextAngle => set(app, json!({"text_angle": step_angle(ind.text_angle, dir)})),
+        Attr::FontSize => set(app, json!({"font_size": step_font_size(ind.font_size, dir)})),
+        Attr::TextStep => set(app, json!({"text_step": step_text_step(ind.text_step, dir)})),
         Attr::Font => {
             let count = if ind.postscript {
                 rustfig_text::PS_FONT_COUNT
@@ -564,6 +558,95 @@ fn step(app: &mut App, a: Attr, dir: i32) {
         // These open panels only.
         Attr::ArrowSize | Attr::TextFlags => {}
     }
+}
+
+/// xfig's `inc_rotnangle`/`dec_rotnangle`: the preset angles 15, 30, 45, 60,
+/// 90, 120, 180, wrapping.
+fn step_rotn(cur: f64, dir: i32) -> f64 {
+    const P: [f64; 7] = [15.0, 30.0, 45.0, 60.0, 90.0, 120.0, 180.0];
+    if dir > 0 {
+        P.iter().copied().find(|p| *p > cur).unwrap_or(15.0)
+    } else {
+        P.iter().rev().copied().find(|p| *p < cur).unwrap_or(180.0)
+    }
+}
+
+/// xfig's `inc_elltextangle`/`dec_elltextangle`: the next multiple of 15
+/// degrees, within -360..360.
+fn step_angle(cur: f64, dir: i32) -> f64 {
+    let v = if dir > 0 {
+        ((cur + 15.0 + 1e-9) / 15.0).floor() * 15.0
+    } else {
+        ((cur - 15.0 - 1e-9) / 15.0).ceil() * 15.0
+    };
+    v.clamp(-360.0, 360.0)
+}
+
+/// xfig's `inc_fontsize`/`dec_fontsize`: steps of 1, 2 (from 24), 4 (from
+/// 64) and 10 (from 120), kept within 1..500.
+fn step_font_size(cur: f64, dir: i32) -> f64 {
+    let v = if dir > 0 {
+        if cur >= 120.0 {
+            (cur / 10.0).floor() * 10.0 + 10.0
+        } else if cur >= 64.0 {
+            (cur / 4.0).floor() * 4.0 + 4.0
+        } else if cur >= 24.0 {
+            (cur / 2.0).floor() * 2.0 + 2.0
+        } else {
+            cur.floor() + 1.0
+        }
+    } else if cur > 120.0 {
+        (cur / 10.0).ceil() * 10.0 - 10.0
+    } else if cur > 64.0 {
+        (cur / 4.0).ceil() * 4.0 - 4.0
+    } else if cur > 24.0 {
+        (cur / 2.0).ceil() * 2.0 - 2.0
+    } else {
+        cur.ceil() - 1.0
+    };
+    v.clamp(1.0, 500.0)
+}
+
+/// xfig's `inc_textstep`/`dec_textstep`: 0.1 below 2, 0.2 up to 5, 0.5 up to
+/// 10, then 1; rounded to 0.1, within 0..1000.
+fn step_text_step(cur: f64, dir: i32) -> f64 {
+    let v = if dir > 0 {
+        if cur >= 10.0 {
+            cur.trunc() + 1.0
+        } else if cur >= 5.0 {
+            ((cur * 2.0 + 0.01).trunc()) / 2.0 + 0.5
+        } else if cur >= 2.0 {
+            ((cur * 5.0 + 0.01).trunc()) / 5.0 + 0.2
+        } else {
+            cur + 0.1
+        }
+    } else if cur > 10.0 {
+        cur.trunc() - 1.0
+    } else if cur > 5.0 {
+        ((cur * 2.0 + 0.01).trunc()) / 2.0 - 0.5
+    } else if cur > 2.0 {
+        ((cur * 5.0 + 0.01).trunc()) / 5.0 - 0.2
+    } else if cur > 0.4 {
+        cur - 0.1
+    } else {
+        cur
+    };
+    ((v * 10.0).round() / 10.0).clamp(0.0, 1000.0)
+}
+
+/// xfig's `darken_fill`/`lighten_fill`: -1 (none) to 62, wrapping; the tints
+/// 21..=40 are skipped for black, white and default fill colours.
+fn step_fill(cur: i32, plain: bool, dir: i32) -> i32 {
+    let mut v = cur + dir;
+    if v > 62 {
+        v = -1;
+    } else if v < -1 {
+        v = 62;
+    }
+    if plain && (21..=40).contains(&v) {
+        v = if dir > 0 { 41 } else { 20 };
+    }
+    v
 }
 
 fn set_arrow_type(app: &mut App, ind: &Indicator, n: i32) {
@@ -927,7 +1010,7 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             if ui
                 .add(
                     egui::DragValue::new(&mut z)
-                        .range(0.05..=50.0)
+                        .range(0.01..=128.0)
                         .speed(0.01)
                         .fixed_decimals(2),
                 )
@@ -1059,7 +1142,8 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             let doc = app.engine.doc();
             ui.label("Fill Style");
             egui::Grid::new("fill_shades").spacing(vec2(2.0, 2.0)).show(ui, |ui| {
-                for (i, f) in (-1..=40).enumerate() {
+                let plain = matches!(ind.fill_color, -1 | 0 | 7);
+                for (i, f) in (-1..=40).filter(|f| !(plain && (21..=40).contains(f))).enumerate() {
                     let name = if f < 0 { "none".to_string() } else { format!("{f}") };
                     if cell(ui, vec2(26.0, 26.0), ind.area_fill == f, &name, |p, r| {
                         fill_swatch(p, r, doc, ind.fill_color, f, ink, tk)
@@ -1115,31 +1199,39 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             if let Some(k) = icon_choices(ui, "line", &items, 6).and_then(|i| LineKind::ALL.get(i)) {
                 set(app, json!({ "line": k }));
             }
-            // xfig: "Default dash length" / "Default dot gap", kept apart.
-            let dotted = ind.line == LineKind::Dotted;
-            let mut sv = if dotted { ind.dot_gap } else { ind.style_val };
-            ui.horizontal(|ui| {
-                ui.label(if ind.line == LineKind::Dotted {
-                    "Dot gap"
-                } else {
-                    "Dash length"
-                });
-                if ui
+            // xfig: "Default dash length" and "Default dot gap" (0..10000,
+            // both shown; a value of 0 or less means the default).
+            let mut dash = ind.style_val;
+            let mut gap = ind.dot_gap;
+            let mut changed = false;
+            egui::Grid::new("dash_gap").show(ui, |ui| {
+                ui.label("Default dash length");
+                changed |= ui
                     .add(
-                        egui::DragValue::new(&mut sv)
-                            .range(0.5..=100.0)
+                        egui::DragValue::new(&mut dash)
+                            .range(0.0..=10000.0)
                             .speed(0.1)
-                            .suffix(" /80 in"),
+                            .max_decimals(1),
                     )
-                    .changed()
-                {
-                    if dotted {
-                        set(app, json!({ "dot_gap": sv }));
-                    } else {
-                        set(app, json!({ "style_val": sv }));
-                    }
-                }
+                    .changed();
+                ui.end_row();
+                ui.label("Default dot gap");
+                changed |= ui
+                    .add(
+                        egui::DragValue::new(&mut gap)
+                            .range(0.0..=10000.0)
+                            .speed(0.1)
+                            .max_decimals(1),
+                    )
+                    .changed();
+                ui.end_row();
             });
+            if changed {
+                set(
+                    app,
+                    json!({ "style_val": if dash <= 0.0 { 4.0 } else { dash }, "dot_gap": if gap <= 0.0 { 3.0 } else { gap } }),
+                );
+            }
         }
         Attr::JoinStyle => {
             let items: Vec<_> = JOINS
@@ -1345,5 +1437,56 @@ fn value_entry(app: &mut App, ui: &mut Ui, ind: &Indicator, a: Attr) {
         let mut m = serde_json::Map::new();
         m.insert(field.into(), value);
         set(app, Value::Object(m));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rotation_steps_through_xfigs_presets() {
+        assert_eq!(step_rotn(90.0, 1), 120.0);
+        assert_eq!(step_rotn(180.0, 1), 15.0);
+        assert_eq!(step_rotn(90.0, -1), 60.0);
+        assert_eq!(step_rotn(15.0, -1), 180.0);
+        assert_eq!(step_rotn(0.0, 1), 15.0);
+    }
+
+    #[test]
+    fn angle_steps_to_multiples_of_fifteen() {
+        assert_eq!(step_angle(0.0, 1), 15.0);
+        assert_eq!(step_angle(20.0, 1), 30.0);
+        assert_eq!(step_angle(20.0, -1), 15.0);
+        assert_eq!(step_angle(-20.0, -1), -30.0);
+        assert_eq!(step_angle(360.0, 1), 360.0);
+    }
+
+    #[test]
+    fn font_size_steps_grow_with_size() {
+        assert_eq!(step_font_size(12.0, 1), 13.0);
+        assert_eq!(step_font_size(24.0, 1), 26.0);
+        assert_eq!(step_font_size(64.0, 1), 68.0);
+        assert_eq!(step_font_size(120.0, 1), 130.0);
+        assert_eq!(step_font_size(130.0, -1), 120.0);
+        assert_eq!(step_font_size(1.0, -1), 1.0);
+    }
+
+    #[test]
+    fn text_step_steps() {
+        assert_eq!(step_text_step(1.0, 1), 1.1);
+        assert_eq!(step_text_step(2.0, 1), 2.2);
+        assert_eq!(step_text_step(5.0, 1), 5.5);
+        assert_eq!(step_text_step(10.0, 1), 11.0);
+        assert_eq!(step_text_step(0.4, -1), 0.4);
+    }
+
+    #[test]
+    fn fill_steps_wrap_and_skip_tints_for_black() {
+        assert_eq!(step_fill(62, false, 1), -1);
+        assert_eq!(step_fill(-1, false, -1), 62);
+        assert_eq!(step_fill(20, true, 1), 41);
+        assert_eq!(step_fill(41, true, -1), 20);
+        assert_eq!(step_fill(20, false, 1), 21);
     }
 }

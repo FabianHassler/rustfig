@@ -191,16 +191,55 @@ fn tool_button(
     let sunk = matches!(state, crate::bevel::State::Selected | crate::bevel::State::Pressed) && tk.bevel;
     let inner = if sunk { rect.translate(vec2(1.0, 1.0)) } else { rect };
     paint_mode_icon(ui, app.vector_icons, icon, inner, ink);
-    let tip = if t.shortcut().is_empty() {
-        t.label().to_string()
-    } else {
-        format!("{} ({})", t.label(), t.shortcut())
+    let tip = match xfig_tip(t) {
+        Some(tip) => tip.to_string(),
+        None if t.shortcut().is_empty() => t.label().to_string(),
+        None => format!("{} ({})", t.label(), t.shortcut()),
     };
     let label = t.label();
     resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, active, label));
     if resp.on_hover_text(tip).clicked() {
         app.run(t.id(), json!({}));
     }
+}
+
+/// The balloon text of xfig's mode buttons (`mode_switches`, `w_modepanel.c`).
+fn xfig_tip(t: ToolKind) -> Option<&'static str> {
+    Some(match t {
+        ToolKind::CircleRadius => "CIRCLE/ELLIPSE drawing: specify RADII   (c or e)",
+        ToolKind::CircleDiameter => "CIRCLE/ELLIPSE drawing: specify DIAMETER(S)   (Shift-c or e)",
+        ToolKind::SplineApproxClosed => "CLOSED APPROXIMATED SPLINE drawing: specify control points   (Shift-s)",
+        ToolKind::SplineApprox => "APPROXIMATED SPLINE drawing: specify control points   (s)",
+        ToolKind::SplineInterpClosed => "CLOSED INTERPOLATED SPLINE drawing: specify control points   (Shift-i)",
+        ToolKind::SplineInterp => "INTERPOLATED SPLINE drawing: specify control points   (i)",
+        ToolKind::Polygon => "POLYGON drawing   (p)",
+        ToolKind::Polyline => "POLYLINE drawing   (l)",
+        ToolKind::Box => "Rectangular BOX drawing   (b)",
+        ToolKind::ArcBox => "Rectangular BOX drawing with ROUNDED CORNERS   (Shift-b)",
+        ToolKind::RegularPolygon => "Regular Polygon   (Shift-p)",
+        ToolKind::Arc => "ARC drawing: specify three points on the arc   (r)",
+        ToolKind::Picture => "Picture Object   (Ctrl-p)",
+        ToolKind::Text => "TEXT input from keyboard   (t)",
+        ToolKind::Glue => "GLUE objects into COMPOUND object   (g)",
+        ToolKind::Break => "BREAK COMPOUND object   (Shift-g)",
+        ToolKind::Scale => "SCALE objects   (Ctrl-s)",
+        ToolKind::Align => "ALIGN objects within a COMPOUND or to CANVAS   (a)",
+        ToolKind::MovePoint => "MOVE POINTs   (Shift-m)",
+        ToolKind::Move => "MOVE objects   (m)",
+        ToolKind::AddPoint => "ADD POINTs to lines, polygons and splines   (Ctrl-a)",
+        ToolKind::Copy => "COPY objects  (Ctrl-c)",
+        ToolKind::DeletePoint => "DELETE POINTs from lines, polygons and splines   (Shift-d)",
+        ToolKind::Delete => "DELETE objects   (d)",
+        ToolKind::Update => "UPDATE object <-> current settings   (u)",
+        ToolKind::Edit => "CHANGE OBJECT via EDIT panel   (Ctrl-e)",
+        ToolKind::FlipV => "FLIP objects up or down   (f)",
+        ToolKind::FlipH => "FLIP objects left or right   (Shift-f)",
+        ToolKind::RotateCw => "ROTATE objects clockwise   (Ctrl-r)",
+        ToolKind::RotateCcw => "ROTATE objects counter-clockwise   (Shift-r)",
+        ToolKind::Convert => "CONVERSION between lines, polygons and splines   (v)",
+        ToolKind::Arrow => "ADD/DELETE ARROWHEADS   (Shift-a)",
+        _ => return None,
+    })
 }
 
 /// A mode icon: the vector redraw when vector pictures are on and the icon

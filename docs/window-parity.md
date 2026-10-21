@@ -1,6 +1,10 @@
 # Window-by-window comparison with xfig (W10)
 
-**Status:** 2026-10-21. Group 1 (main window and menus) compared and re-checked against screenshots of the real xfig; group 2 (file windows: Open, Save As, Merge, Export, Print) compared; group 3 (object edit panels) compared with captures and fixed in part; group 4 (settings and tool windows) compared; group 5 not yet compared.
+**Status:** 2026-10-21. Group 1 (main window and menus) compared and re-checked against screenshots of the real xfig; group 2 (file windows: Open, Save As, Merge, Export, Print) compared; group 3 (object edit panels) compared with captures and fixed in part; group 4 (settings and tool windows) compared; group 5 (attribute pop-ups and mode panel) compared. W10 is done.
+
+## W10 summary (2026-10-21)
+
+All five groups compared with xfig 3.2.9a (sources and captures). Fixed in place: group 1 (accelerator labels, merge, offsets), group 2 (about 6: merge as one compound, offsets, input-file check), group 3 (about 8: position rows, arrow rows, arc type, text flags, units, Cancel-restores, comments, spline points), group 4 (about 6: Search/Replace, About, Messages, view switches), group 5 (8: see below). Open tasks: W10-1 to W10-4, W10-6, W10-8 to W10-33 (see `plan.md`) plus the planned D1 to D11, E3 to E11, F5. Proposed modernisations pending the user: group 2 (6, mostly accepted), group 3 (accepted), group 4 (6), group 5 (5, below).
 
 ## Rule (decided 2026-10-21)
 
@@ -20,7 +24,7 @@ RustFig may look nicer and more modern than xfig; the **functionality** must sta
 | 2 | File dialogs: Open, Save As, Merge, Export, Print | compared 2026-10-21 (below) |
 | 3 | Edit panels per object kind: arc, box/arc-box, circle/ellipse, polyline/polygon, spline, text, picture, compound, regular polygon, dimension line | compared 2026-10-21 (below); position rows, text flags, arrow rows, arc type, figure comments, spline point panel and Cancel-restores fixed; picture and compound rows open (W10-15, W10-16) |
 | 4 | Global settings, colour editor, font panel, style manager, search/replace, spell check, units, libraries, character map, about, set-value/choice popups of the zoom and unit boxes | compared 2026-10-21 (below); Search and Replace, About, Messages and the Global settings view rows fixed; the rest is W10-23, W10-24 and the planned E3, E4, E5, E6, E11, F5, D6 |
-| 5 | Attribute pop-ups (line style, width, fill, colour, arrows, joins, caps, justification, ...) and mode panels' option panels | not yet compared |
+| 5 | Attribute pop-ups (line style, width, fill, colour, arrows, joins, caps, justification, ...) and mode panels' option panels | compared 2026-10-21 (below) |
 
 ## Group 1: main window
 
@@ -271,6 +275,55 @@ Not implemented. E4 (colour picker and editor), E10 and E11 are accepted and not
 
 Total if all accepted: about 35 h.
 
+## Group 5: attribute pop-ups and mode panel
+
+Sources: `w_indpanel.c` (every `ind_switches` entry, `popup_choice_panel`, `popup_nval_panel`, `popup_arrowsize_panel`, `popup_flags_panel`, the `inc_*`/`dec_*`/`show_*` functions), `w_indpanel.h` (per-mode masks), `w_modepanel.c`, `w_mousefun.c`. Method: sources, plus RustFig pop-ups through the control channel (`target/window-parity/g5-linestyle.png`, `g5-linestyle2.png`, `g5-fill.png`; not committed).
+
+**Mode panel.** Drawing modes (15) and editing modes (25) in xfig's order with xfig's icons; modes RustFig lacks are greyed with their plan task (D1 open compound, D2 join/split, D3 chop, D4 tangent, D5 three measures, D6 library). The user's rule keeps xfig's set, so the extra tools (Select, X-splines, open/close, separate ellipse tools) have no button. Accelerators are all in `XFIG_KEYS` (Ctrl-p, -s, -a, -c, -e, -r and the letters). **Fixed:** the balloon texts are xfig's full wording ("CIRCLE/ELLIPSE drawing: specify RADII   (c or e)", ...).
+
+**Per-mode attribute sets** (`I_*` masks) equal xfig's for every existing mode, minus the buttons below. Zoom and Grid Mode always show; order as `ind_switches`.
+
+| xfig indicator | RustFig | Status |
+|---|---|---|
+| Zoom (0.01 to 128; pop-up with Fit to canvas and Integer zoom) | drag value 0.01 to 128 (**fixed**, was 0.05 to 50), Fit, 1.00; wheel zoom | Integer zoom: W10-32 |
+| Grid Mode (9 choices incl. 4 isometric), Point Posn (6) | 5 and 6 | isometric grids W10-33; Point Posn matches |
+| Depth 0..999, Num Sides 3..200, Line Width 0..500 | same ranges, +-1 per step | same |
+| Rotn Angle (steps 15, 30, 45, 60, 90, 120, 180, wrapping) | **fixed** (was +-15) | same |
+| Text/Ellipse Angle (multiples of 15, +-360) | **fixed** (snaps to multiples) | same |
+| Text Size 1..500 (steps 1, 2 from 24, 4 from 64, 10 from 120) | **fixed** (was +-1) | same |
+| Text Step 0..1000 (steps 0.1, 0.2, 0.5, 1) | **fixed** (was +-0.1) | same |
+| Fill Style (wraps; no tints for black, white, default fill) | **fixed** (clamped; grid listed tints for black) | same |
+| Line Style pop-up: 6 styles, Default dash length and Default dot gap (0 to 10000, 0 = default) | **fixed**: both fields always shown (was one, 0.5 to 100) | same |
+| Join, Cap, Arc Type, Arrow Mode (4), Arrow Type (29), Text Just, Text Flags (Hidden, Rigid, Special), Font lists | present with xfig's choices | same |
+| Arrow Size panel (Absolute / Multiple of Line Width, Thickness, Width, Length) | width and length only | W10-31 |
+| Box Curve (pop-up 2..1000, indicator limits 3..30) | 0..1000 (wider) | extra range, kept |
+| Vert/Horiz Align (7 choices) | 4 | W10-33 |
+| Pen/Fill colour pop-up with colour editor | swatches, user colours | E4 |
+| Update Control (per-button toggles in the corner, Set/Clear/Toggle all) | none | W10-1 |
+| Angle Geom, Smart Links, Num Copies, Num X/Y Copies, Tangent/Norm Length, Dimension line | none (modes missing) | D7, D8, D10, D4 |
+| Mouse: left pop-up, middle/wheel up dec/prev, right/wheel down inc/next, Alt+right = middle | same; **fixed** Alt+right | same |
+| Pop-up closing: Cancel button; Escape; Return sets (number panels) | click outside or Escape; Return commits the field | Return closes: W10-32 (look/behaviour, allowed) |
+
+### Findings of group 5
+
+| Id | Difference | Fixed or task |
+|---|---|---|
+| (fixed) | stepping of rotation, angle, font size, text step, fill; fill tints for black; dash/dot fields; zoom range; Alt+right; xfig mode balloons | W10 group 5, unit tests in `attributes.rs` |
+| W10-1, W10-31, W10-32, W10-33 | Update Control, Arrow Size panel, number pop-up details, Align/grid choices | plan, gaps #33 |
+| D4, D7, D8, D10 | indicator buttons waiting for their modes | planned |
+
+### Proposed modernisations (group 5)
+
+Not implemented.
+
+1. **Live value pop-ups with sliders and presets.** xfig: modal "Value" panel with Cancel/Set. Proposal: non-modal pop-up, slider plus field, preset chips (15/30/45/90 degrees, common font sizes), changes apply at once, Escape reverts. Kept: every xfig range, the step ladders, Set/Cancel semantics as an option. Hours: 5.
+2. **Hover preview of attribute choices.** Pointing at a line style, fill or arrow choice previews it on the selected object or the cursor shape. Kept: the pop-up grids and one-click choice. Hours: 4.
+3. **Colour and fill pop-up with recent colours and eyedropper.** On top of E4: recently used colours row, pick a colour from the canvas. Kept: Standard and User Defined colours, fill intensity grid, patterns. Hours: 4.
+4. **Mode panel search and favourites.** Ctrl-K style command finder for modes, plus a user-pinned "favourite modes" strip; the 40 xfig buttons stay unchanged. Kept: panel, accelerators, Alt+wheel menus. Hours: 4.
+5. **Per-object attribute tooltips.** Update Control shown as a checklist pop-up ("Update will change: line width, colour, ...") instead of 20 corner toggles (alongside W10-1's toggles). Kept: toggles, Set/Clear/Toggle all. Hours: 3.
+
+Total if all accepted: about 20 h.
+
 ## Findings and ids
 
 | Id | Difference | Fixed or task |
@@ -286,6 +339,7 @@ Nothing in group 1 needed an in-place fix: labels, order, accelerators and defau
 
 | Date | Note |
 |---|---|
+| 2026-10-21 | Group 5 (attribute pop-ups, mode panel) compared with the sources; stepping, ranges, dash/dot fields and mode balloons fixed; W10-25 to W10-27; five proposals; W10 summary. |
 | 2026-10-21 | Created; group 1 compared from xfig's sources. |
 | 2026-10-21 | Group 1 re-checked against captures of the real X11 xfig (menus, main window, Grid Mode pop-up); group 2 (Open, Save As, Merge, Export, Print) compared with captures; W10-4 to W10-10 added; merge as one compound, Figure Offset in the engine and the input-file check for export fixed. |
 | 2026-10-21 | A11: group 1 menus re-compared with real screenshots of RustFig (`a11-*.png`); Unzoom/Zoom Out accelerator labels fixed. |
