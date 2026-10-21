@@ -148,6 +148,19 @@ impl Default for DocSettings {
     }
 }
 
+/// An export that follows every save (plan E15): the file to write and the
+/// export parameters (`file.export` without its `path` and `part`; `part`
+/// follows the save's scope). Stored per figure, in `.rustfig` as JSON and
+/// in `.fig` as one whole-figure comment ignored by xfig and fig2dev.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ExportOnSave {
+    pub path: String,
+    /// The remaining `file.export` parameters, e.g. `format`, `options`,
+    /// `magnification`, `margin`, `dpi`, `background`.
+    #[serde(default)]
+    pub params: serde_json::Map<String, serde_json::Value>,
+}
+
 /// A user-defined colour (Fig colour numbers 32–543).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UserColor {
@@ -167,6 +180,9 @@ pub struct Document {
     /// Whole-figure comments.
     #[serde(default)]
     pub comments: Vec<String>,
+    /// Export on every save (E15), when the user asked for it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub export_on_save: Option<ExportOnSave>,
     #[serde(default)]
     pub colors: Vec<UserColor>,
     /// Top-level objects, shared so an undo snapshot copies pointers;

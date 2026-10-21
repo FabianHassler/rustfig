@@ -514,6 +514,40 @@ fn classic_menus_are_xfigs() {
 }
 
 #[test]
+fn export_on_save_checkbox_keeps_the_export_current() {
+    let dir = std::env::temp_dir().join(format!("rustfig-ui-e15-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let pdf = dir.join("drawing.pdf").to_string_lossy().into_owned();
+    let fig = dir.join("drawing.fig").to_string_lossy().into_owned();
+    let mut a = app();
+    a.file_dialogs = Box::new(ScriptedDialogs::new([Some(pdf.clone()), Some(fig.clone())]));
+    a.run("shape.rectangle", json!({"x": 0, "y": 0, "width": 600, "height": 300}));
+    let mut h = harness(a);
+    h.state_mut().run("app.export", json!({}));
+    h.run_steps(2);
+    h.get_by_label("Also export on every save").click();
+    h.run_steps(2);
+    h.get_by_label("Export…").click();
+    h.run_steps(2);
+    let setting = h
+        .state()
+        .engine
+        .doc()
+        .export_on_save
+        .clone()
+        .expect("checkbox stored the setting");
+    assert_eq!(setting.path, pdf);
+
+    // The dialog's export wrote once; a later save writes it again.
+    std::fs::remove_file(&pdf).unwrap();
+    h.state_mut().run("app.save_as", json!({}));
+    h.run_steps(2);
+    assert!(std::path::Path::new(&pdf).exists(), "save re-exported the chosen file");
+    assert!(std::path::Path::new(&fig).exists());
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn export_dialog_lists_xfigs_languages() {
     let dir = std::env::temp_dir().join(format!("rustfig-ui-export-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();

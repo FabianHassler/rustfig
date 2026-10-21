@@ -186,7 +186,13 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
                     .engine
                     .execute("file.save", &json!({ "part": part }))
                     .map_err(|e| e.message)?;
-                app.info("Saved");
+                let status = app.engine.status().to_string();
+                if status.is_empty() {
+                    app.info("Saved");
+                } else {
+                    app.info(status);
+                    app.engine.set_status("");
+                }
                 return Ok(r);
             }
             return run_ui(app, "app.save_as", p);
@@ -198,7 +204,13 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
                     .engine
                     .execute("file.save", &json!({ "path": p, "part": part }))
                     .map_err(|e| e.message)?;
-                app.info(format!("Saved {p}"));
+                let status = app.engine.status().to_string();
+                if status.is_empty() {
+                    app.info(format!("Saved {p}"));
+                } else {
+                    app.info(status);
+                    app.engine.set_status("");
+                }
                 return Ok(r);
             }
         }

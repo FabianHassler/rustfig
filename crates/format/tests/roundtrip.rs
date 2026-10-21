@@ -1,7 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use rustfig_format::{read_any, read_fig, read_native, write_fig, write_native};
-use rustfig_model::{ObjectKind, PolyKind, SplineKind, Units};
+use rustfig_model::{ExportOnSave, ObjectKind, PolyKind, SplineKind, Units};
 
 const SAMPLE: &[u8] = include_bytes!("sample.fig");
 
@@ -57,6 +57,31 @@ fn fig_roundtrip_is_stable() {
     assert_eq!(doc.objects.len(), doc2.objects.len());
     let out2 = write_fig(&doc2);
     assert_eq!(out, out2);
+}
+
+#[test]
+fn export_on_save_comment_roundtrips_and_garbage_stays_a_comment() {
+    let mut doc = read_fig(SAMPLE).unwrap();
+    doc.export_on_save = Some(ExportOnSave {
+        path: "/tmp/figure.svg".to_string(),
+        params: serde_json::Map::new(),
+    });
+    let out = write_fig(&doc);
+    assert!(out.contains("# RustFigExportOnSave "), "{out}");
+    let back = read_fig(out.as_bytes()).unwrap();
+    assert_eq!(back.export_on_save, doc.export_on_save);
+    assert_eq!(back.comments, doc.comments, "the setting is not a user comment");
+
+    // A comment that names the marker but isn't valid JSON is the user's
+    // text, not a setting (hostile files must not surprise the parser).
+    let src = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n\
+# RustFigExportOnSave not-json\n\
+# a real comment\n\
+1200 2\n";
+    let parsed = read_fig(src.as_bytes()).unwrap();
+    assert!(parsed.export_on_save.is_none());
+    assert!(parsed.comments.iter().any(|c| c == "RustFigExportOnSave not-json"));
+    assert!(parsed.comments.iter().any(|c| c == "a real comment"));
 }
 
 #[test]

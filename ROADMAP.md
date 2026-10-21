@@ -18,9 +18,9 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Measure | Value |
 |---------|-------|
 | Overall parity (weighted) | ≈65 % |
-| Commands (all reachable from the control channel and MCP) | 139 engine (incl. 40 tool modes) + 14 UI |
+| Commands (all reachable from the control channel and MCP) | 142 engine (incl. 40 tool modes) + 14 UI |
 | Interactive tools (xfig modes) | 40 |
-| Tests | 537 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
+| Tests | 550 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 1.3–3.2, write 3.2 |
 | Export formats | all through fig2dev's ported drivers (`convert`): PDF, SVG, EPS, PNG, GIF, JPEG, TIFF, PPM, PCX, XBM, XPM, EPS+PDF pair, LaTeX box from its scene writers (PostScript without page layout yet); LaTeX picture, epic/eepic/eepicemu, PiCTeX, TeXtyl, tpic, pic, pstex/pdftex, pict2e, CGM, HPGL, DXF, MetaPost, METAFONT, ge, image map, Gerber, shape, TikZ, PSTricks, EMF, Tk/Perl-Tk from ported fig2dev drivers (every fig2dev language except `sld`); fig2dev's own suite 79 pass / 9 fail / 1 skipped |
 | Perf, 50k paths (render fit / hit test / open / edit + undo) | 260 ms / 0.1 ms / 20 ms / 0.9 ms |
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-21 | E15: Export on save — the Export dialog's "Also export on every save" keeps the chosen file and options up to date on every save; `file.export_on_save` command, per-figure `Document::export_on_save`, stored in `.fig` as a `# RustFigExportOnSave` comment and in `.rustfig` as JSON; save stands when the automatic export fails. |
 | 2026-10-21 | W10-1: Update Control: every attribute button has an update box in Update mode, plus Set/Clear/Toggle all; Update, update region, lasso and update settings copy only the flagged attributes; commands `indicator.set_update_flag`, `indicator.update_flags`. |
 | 2026-10-21 | W15: lasso in every region selection (press and drag with the middle or right button in Glue, Delete, Update, Move and Delete point selects what lies completely inside the freehand path; click, move, click keeps xfig's rectangle; drawn in the overlay, hints say "drag: lasso"); fixed Delete's middle region with an empty selection. |
 | 2026-10-21 | W19: attribute panel tightened: xfig's labels and layout kept, each button narrowed to what its label and value need (a short-caption version was tried and reverted at the user's request); thinner join and cap pictures. |

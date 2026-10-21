@@ -91,6 +91,7 @@ fn build_scene(doc: &Document, opts: &SceneOptions, hide: &[ObjectId]) -> Scene 
         let mut d = Document {
             settings: doc.settings.clone(),
             comments: Vec::new(),
+            export_on_save: doc.export_on_save.clone(),
             colors: doc.colors.clone(),
             objects: Vec::with_capacity(doc.objects.len()),
             next_id: 0,
@@ -325,6 +326,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
             let mut d = Document {
                 settings: doc.settings.clone(),
                 comments: Vec::new(),
+                export_on_save: doc.export_on_save.clone(),
                 colors: doc.colors.clone(),
                 objects: overlay.preview.iter().cloned().map(std::sync::Arc::new).collect(),
                 next_id: 0,

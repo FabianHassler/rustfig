@@ -759,6 +759,12 @@ fn point_move(e: &mut Engine, p: &Value) -> CmdResult {
             let opposite = pl.points.get((idx + 2) % 4).copied().ok_or_else(bad)?;
             // Keep the vertex order so the moved corner stays at `idx`.
             let r = Rect::new(opposite, pt);
+            // The Fig writer rounds coordinates to integers, so a box
+            // smaller than half a unit would be written (and read back)
+            // as a zero-size box and dropped.
+            if r.width().round() <= 0.0 || r.height().round() <= 0.0 {
+                return Err(EngineError::bad_params("box corners must not coincide"));
+            }
             pl.points = r.corners().to_vec();
         }
         ObjectKind::Polyline(pl) => *pl.points.get_mut(idx).ok_or_else(bad)? = pt,

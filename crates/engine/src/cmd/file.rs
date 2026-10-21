@@ -148,6 +148,16 @@ pub(super) fn commands() -> Vec<Command> {
             run: export_data,
         },
         Command {
+            id: "file.export_on_save",
+            label: "Export on save",
+            menu: "",
+            shortcut: "",
+            params: "{\"path\"?: string, \"format\"?: language id, \"options\"?: {key: value}, ...export options, \"off\"?: bool}  — keep an export up to date on every save; without a path returns the current setting; off: true clears it",
+            mutates: true,
+            enabled: always,
+            run: export_on_save,
+        },
+        Command {
             id: "file.export_formats",
             label: "Export formats",
             menu: "",
@@ -367,6 +377,7 @@ fn scope_doc<'a>(e: &'a Engine, p: &Value) -> Result<std::borrow::Cow<'a, rustfi
 }
 
 fn save(e: &mut Engine, p: &Value) -> CmdResult {
+    let part = opt_bool(p, "part")?.unwrap_or(false);
     let path = match opt_str(p, "path")? {
         Some(s) => s.to_string(),
         None => e
@@ -381,8 +392,119 @@ fn save(e: &mut Engine, p: &Value) -> CmdResult {
     e.set_modified(false);
     e.prefs.add_recent(&path);
     e.prefs_dirty = true;
-    e.set_status(format!("Saved {path}"));
-    Ok(json!({"path": path}))
+
+    // The save itself stands whatever the automatic export does (E15).
+    let export_error = export_after_save(e, &path, part);
+    if export_error.is_none() && e.doc().export_on_save.is_none() {
+        e.set_status(format!("Saved {path}"));
+    }
+    let mut result = json!({ "path": path });
+    if let Some(error) = export_error {
+        result["export_on_save_error"] = json!(error);
+    }
+    Ok(result)
+}
+
+/// The keys of `file.export` kept in [`rustfig_model::ExportOnSave`];
+/// `path` and `part` are not stored (the path is the setting's own, and
+/// `part` follows the save's scope).
+fn export_on_save_params(p: &Value) -> serde_json::Map<String, Value> {
+    let mut out = serde_json::Map::new();
+    let Some(obj) = p.as_object() else { return out };
+    for key in [
+        "format",
+        "magnification",
+        "margin",
+        "dpi",
+        "background",
+        "active_layers_only",
+        "whole_figure_bounds",
+        "options",
+    ] {
+        if let Some(value) = obj.get(key) {
+            out.insert(key.to_string(), value.clone());
+        }
+    }
+    out
+}
+
+/// Whether the parameters of a `file.export` that is to be stored look
+/// valid, without writing the export. The remaining checks happen when the
+/// save runs the export.
+fn validate_export_on_save(e: &Engine, p: &Value) -> Result<(), EngineError> {
+    let path = string(p, "path")?;
+    if path.is_empty() || path.contains('\0') || path.chars().any(char::is_control) {
+        return Err(EngineError::bad_params("the export file name is not valid"));
+    }
+    let lang = export_language(p, Some(&path))?;
+    for (_, part) in parts(lang, &path) {
+        driver_args(e, part.lang, part.half, p)?;
+    }
+    Ok(())
+}
+
+/// `file.export_on_save`: keep an export up to date on every save, clear
+/// it, or report it. A command (not only a dialog) so the control channel
+/// and MCP reach the setting too.
+fn export_on_save(e: &mut Engine, p: &Value) -> CmdResult {
+    if opt_bool(p, "off")?.unwrap_or(false) {
+        if e.doc().export_on_save.is_some() {
+            e.doc_mut().export_on_save = None;
+        }
+        return Ok(json!({ "export_on_save": false }));
+    }
+    let Some(path) = opt_str(p, "path")? else {
+        let setting = e.doc().export_on_save.clone();
+        return Ok(match setting {
+            Some(s) => json!({ "export_on_save": true, "path": s.path, "params": s.params }),
+            None => json!({ "export_on_save": false }),
+        });
+    };
+    validate_export_on_save(e, p)?;
+    let setting = rustfig_model::ExportOnSave {
+        path: path.to_string(),
+        params: export_on_save_params(p),
+    };
+    let params = setting.params.clone();
+    e.doc_mut().export_on_save = Some(setting);
+    Ok(json!({ "export_on_save": true, "path": path, "params": params }))
+}
+
+/// Run the stored export after a save. Returns the export's error message,
+/// or `None` when there was no setting or the export succeeded. On any path
+/// the `.fig`/`.rustfig` save already happened.
+fn export_after_save(e: &mut Engine, save_path: &str, part: bool) -> Option<String> {
+    let setting = e.doc().export_on_save.clone()?;
+    if setting.path == save_path {
+        let msg = "Saved, but the automatic export was skipped: it would overwrite the saved file".to_string();
+        e.set_status(msg.clone());
+        return Some(msg);
+    }
+    let mut params = setting.params;
+    params.insert("path".into(), json!(setting.path));
+    params.insert("part".into(), json!(part));
+    let p = Value::Object(params);
+    match export_file(e, &p) {
+        Ok(v) => {
+            let paths = v
+                .get("paths")
+                .and_then(Value::as_array)
+                .map(|a| a.iter().filter_map(Value::as_str).collect::<Vec<_>>().join(" and "))
+                .unwrap_or_default();
+            let msg = if paths.is_empty() {
+                format!("Saved {save_path}")
+            } else {
+                format!("Saved {save_path}; exported {paths}")
+            };
+            e.set_status(msg);
+            None
+        }
+        Err(err) => {
+            let msg = format!("Saved {save_path}, but the automatic export failed: {}", err.message);
+            e.set_status(msg);
+            Some(err.message)
+        }
+    }
 }
 
 /// Longest file name or path `file.rename` accepts.

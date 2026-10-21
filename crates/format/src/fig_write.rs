@@ -7,6 +7,12 @@ use rustfig_geom::Point;
 use rustfig_model::{Arrow, Document, Object, ObjectKind, Orientation, PolyKind, Style, Units};
 use std::fmt::Write as _;
 
+/// The whole-figure comment line that carries [`Document::export_on_save`]
+/// through the Fig format (plan E15). xfig and fig2dev keep such comment
+/// lines but never interpret them; the line is written after the real
+/// comments and read back into the model, not shown as a user comment.
+const EXPORT_ON_SAVE_MARKER: &str = "RustFigExportOnSave";
+
 fn i(v: f64) -> i64 {
     if v.is_finite() {
         v.round().clamp(-2.0e9, 2.0e9) as i64
@@ -268,6 +274,7 @@ pub fn write_fig(doc: &Document) -> String {
     out.push_str(if s.multiple_pages { "Multiple\n" } else { "Single\n" });
     let _ = writeln!(out, "{}", s.transparent_color);
     comments(&mut out, &doc.comments);
+    write_export_on_save(&mut out, doc);
     out.push_str("1200 2\n");
     let mut colors = doc.colors.clone();
     colors.sort_by_key(|c| c.number);
@@ -279,4 +286,43 @@ pub fn write_fig(doc: &Document) -> String {
         object(&mut out, o);
     }
     out
+}
+
+/// The one-line representation of [`Document::export_on_save`]. The JSON is
+/// compact and escaped, so it stays on one line; `serde_json` failing to
+/// serialise the already-JSON values it holds is impossible, and a missing
+/// setting writes nothing.
+fn write_export_on_save(out: &mut String, doc: &Document) {
+    let Some(setting) = &doc.export_on_save else {
+        return;
+    };
+    if let Ok(json) = serde_json::to_string(setting) {
+        let _ = writeln!(out, "# {EXPORT_ON_SAVE_MARKER} {json}");
+    }
+}
+
+/// Take [`Document::export_on_save`] out of a Fig file's whole-figure
+/// comments (which [`rustfig_model`] otherwise keeps as user comments).
+/// A comment that names the marker but does not parse is left untouched:
+/// it is the user's text, not our setting.
+pub(crate) fn restore_export_on_save(doc: &mut Document) {
+    if doc.export_on_save.is_some() {
+        return;
+    }
+    let mut kept = Vec::with_capacity(doc.comments.len());
+    let prefix = format!("{EXPORT_ON_SAVE_MARKER} ");
+    for line in std::mem::take(&mut doc.comments) {
+        match line.strip_prefix(&prefix) {
+            Some(json) if doc.export_on_save.is_none() => {
+                match serde_json::from_str::<rustfig_model::ExportOnSave>(json) {
+                    Ok(setting) if !setting.path.is_empty() && !setting.path.contains('\0') => {
+                        doc.export_on_save = Some(setting);
+                    }
+                    _ => kept.push(line),
+                }
+            }
+            _ => kept.push(line),
+        }
+    }
+    doc.comments = kept;
 }

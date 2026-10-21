@@ -144,6 +144,11 @@ pub struct ExportState {
     pub margin: f64,
     pub dpi: f64,
     pub white_background: bool,
+    /// Keep this export up to date on every save (plan E15).
+    pub export_on_save: bool,
+    /// Set once from the document when the panel opens, so typing in the
+    /// panel is not overwritten.
+    pub export_on_save_synced: bool,
     /// Leave out depths that are off (xfig's "active layers only").
     pub active_layers_only: bool,
     /// With active layers only: size the page by the whole figure.
@@ -164,6 +169,8 @@ impl Default for ExportState {
             margin: 0.0,
             dpi: 150.0,
             white_background: false,
+            export_on_save: false,
+            export_on_save_synced: false,
             active_layers_only: false,
             whole_figure_bounds: false,
             smoothing: Some(4),
@@ -1388,7 +1395,12 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
 
 fn export_dialog(app: &mut App, ctx: &egui::Context) {
     if !app.dialogs.export.open {
+        app.dialogs.export.export_on_save_synced = false;
         return;
+    }
+    if !app.dialogs.export.export_on_save_synced {
+        app.dialogs.export.export_on_save = app.engine.doc().export_on_save.is_some();
+        app.dialogs.export.export_on_save_synced = true;
     }
     let mut open = true;
     let mut go = false;
@@ -1492,6 +1504,12 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
                         });
                     });
                     ui.end_row();
+                    ui.label("On save");
+                    ui.checkbox(&mut st.export_on_save, "Also export on every save")
+                        .on_hover_text(
+                            "Whenever this figure is saved, write the chosen export file again with these options",
+                        );
+                    ui.end_row();
                 });
             ui.separator();
             if ui.button("Export…").clicked() {
@@ -1519,7 +1537,12 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
         let ext = language(st.format).map_or(st.format, |l| l.extension);
         if let Some(path) = app.file_dialogs.save_file(&format!("{stem}.{ext}"), ext, &[ext]) {
             let p = export_params(app, &st, &path);
-            if app.run("file.export", p).is_some() {
+            if app.run("file.export", p.clone()).is_some() {
+                if st.export_on_save {
+                    app.run("file.export_on_save", p);
+                } else if app.engine.doc().export_on_save.is_some() {
+                    app.run("file.export_on_save", json!({ "off": true }));
+                }
                 app.dialogs.export.open = false;
             }
         }
