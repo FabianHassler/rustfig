@@ -147,6 +147,9 @@ tool_runs!(
     OpenClose,
     Arrow,
     Tangent,
+    AngleMeasure,
+    LengthMeasure,
+    AreaMeasure,
 );
 
 fn event(e: &mut Engine, p: &Value) -> CmdResult {

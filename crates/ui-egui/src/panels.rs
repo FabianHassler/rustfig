@@ -68,9 +68,9 @@ const EDITING: [Slot; 25] = [
     Slot::Tool(ToolKind::Convert, &xfig_icons::CONVERT),
     Slot::Tool(ToolKind::Arrow, &xfig_icons::AUTOARROW),
     Slot::Tool(ToolKind::Tangent, &xfig_icons::TANGENT),
-    Slot::Missing(&xfig_icons::ANGLEMEAS, "Measure angle", "D5"),
-    Slot::Missing(&xfig_icons::LENMEAS, "Measure length", "D5"),
-    Slot::Missing(&xfig_icons::AREAMEAS, "Measure area", "D5"),
+    Slot::Tool(ToolKind::AngleMeasure, &xfig_icons::ANGLEMEAS),
+    Slot::Tool(ToolKind::LengthMeasure, &xfig_icons::LENMEAS),
+    Slot::Tool(ToolKind::AreaMeasure, &xfig_icons::AREAMEAS),
 ];
 
 /// Width of the mode panel: two columns of buttons, the frame's margin and
@@ -246,6 +246,9 @@ fn xfig_tip(t: ToolKind) -> Option<&'static str> {
         ToolKind::JoinSplit => "Join or Split lines/splines   (j)",
         ToolKind::Chop => "Chop objects   (x)",
         ToolKind::Tangent => "Add TANGENT/NORMAL to curve   (n)",
+        ToolKind::AngleMeasure => "MEASURE angle (specify three points or select object)   (Ctrl-g)",
+        ToolKind::LengthMeasure => "Measure LENGTH of polylines, arcs and ellipses   (Ctrl-n)",
+        ToolKind::AreaMeasure => "Measure AREA of polygons, arcs and ellipses   (Ctrl-m)",
         ToolKind::Scale => "SCALE objects   (Ctrl-s)",
         ToolKind::Align => "ALIGN objects within a COMPOUND or to CANVAS   (a)",
         ToolKind::MovePoint => "MOVE POINTs   (Shift-m)",

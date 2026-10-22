@@ -1,6 +1,6 @@
 # Function-level source audit of xfig (S4)
 
-**Status:** 2026-10-22 (D4: the `e_tangent.c` functions, the Tangent/Norm Length button and `smart_next_{arc,ellipse,line,spline}_found` are ported). 2026-10-22 (S4 done: every function definition of `old/xfig-3.2.9a/src/*.c` has a status). Regenerate the table with `cargo xtask source-audit` (skips quietly when `old/` is absent; keeps the status, note and task columns of existing rows, merged by file, function name and occurrence).
+**Status:** 2026-10-22 (D5: the `e_measure.c` functions, the measure results and the angle `compute_*` functions are ported). 2026-10-22 (D4: the `e_tangent.c` functions, the Tangent/Norm Length button and `smart_next_{arc,ellipse,line,spline}_found` are ported). 2026-10-22 (S4 done: every function definition of `old/xfig-3.2.9a/src/*.c` has a status). Regenerate the table with `cargo xtask source-audit` (skips quietly when `old/` is absent; keeps the status, note and task columns of existing rows, merged by file, function name and occurrence).
 
 S0 ([`source-map.md`](source-map.md)) maps C files to RustFig modules; this file goes one level down, to every function. It covers xfig only. fig2dev's functions were audited one by one in the fig2dev repository (<https://github.com/FabianHassler/fig2dev>, its audit passes; the inventory of the first rounds is `plan/fig2dev-audit.md` here, local and gitignored) and their hardening is task B11; they are not repeated here.
 
@@ -37,7 +37,6 @@ Missing and partial functions by task (a function counts under each task it name
 - **E4** (37): `w_color.c`: `create_color_panel`, `pen_fill_activate`, `restore_mixed_colors`, `set_mixed_color`, `set_user_color`, `pick_contrast`, `set_mixed_name`, `cancel_color_popup`, `del_color`, `undel_color`, `switch_edit`, `set_slider_sensitivity`, `set_color_ok`, `_set_std_color`, `set_std_color`, `_pick_memory`, `pick_memory`, `lock_toggle`, `draw_boxed`, `erase_boxed`, `color_borders`, `WhichButton`, `update_from_triple`, `update_scrl_triple`, `update_triple`, `move_scroll`, `StoreMix_and_Mem`, `Scrolled`, `Update_HSV`, `ThumbHSV`, `Thumbed`, `move_lock`, `HSVToRGB`, `RGBToHSV`, `PctToRGB`, `DoGrabPixel`, `doGrab`
 - **E6** (34): `w_style.c`: `construct_style`, `set_style`, `print_indent`, `print_style`, `print_style_family`, `print_family_set`, `get_nstyle_line`, `trim`, `parse_style`, `parse_family_style`, `parse_family_set`, `load_family_set`, `save_family_set`, `add_family_to_family_set`, `add_style_to_family`, `delete_family_from_family_set`, `delete_style_from_family`, `build_family_text`, `build_style_text`, `style_update`, `family_select`, `style_select`, `add_family`, `delete_family`, `add_style`, `delete_style`, `save_style`, `load_style`, `confirm_close_style`, `close_style`, `init_manage_style_panel`, `add_style_actions`, `setup_manage_style_panel`, `popup_manage_style_panel`
 - **B5** (33): `u_print.c`: `cmdlinetoargarray`, `start_argumentlist`, `print_to_printer`, `print_to_batchfile`, `strsub`, `pass_environment`, `print_spawn_printcmd`; `w_print.c`: `print_panel_dismiss`, `do_print`, `fit_page`, `get_magnif`, `update_mag`, `update_figure_size`, `do_print_batch`, `do_clear_batch`, `update_batch_count`, `orient_select`, `just_select`, `papersize_select`, `multiple_select`, `overlap_select`, `background_select`, `print_grid_minor_select`, `print_grid_major_select`, `print_command_select`, `printer_select`, `print_update_figure_size`, `popup_print_panel`, `create_print_panel`, `switch_print_layers`, `switch_bound`, `parse_printcap`, `make_layer_choice`
-- **D5** (33): `e_measure.c`: `anglemeas_selected`, `angle_msg`, `angle_save`, `init_anglemeas_object_m`, `init_anglemeas_object_r`, `init_anglemeas_object`, `anglemeas_line`, `anglemeas_arc`, `init_anglemeas_threepoints`, `anglemeas_second`, `anglemeas_third_l`, `anglemeas_third_m`, `anglemeas_third`, `cancel_anglemeas`, `freehand_line_nomsg`, `lenmeas_selected`, `init_lenmeas_object`, `init_lenmeas_object_l`, `init_lenmeas_object_m`, `clear_lenmeas_memory`, `areameas_selected`, `init_areameas_object`, `init_areameas_object_l`, `init_areameas_object_m`, `clear_areameas_memory`; `u_geom.c`: `compute_3p_angle`, `compute_line_angle`, `compute_arc_angle`; `w_modepanel.c`: `stub_anglemeas_selected`, `stub_lenmeas_selected`, `stub_areameas_selected`; `w_msgpanel.c`: `lenmeas_msg`, `areameas_msg`
 - **D8** (32): `e_movept.c`: `init_arcpointmoving`, `cancel_movedarcpoint`, `fix_movedarcpoint`, `init_splinepointmoving`, `cancel_movedsplinepoint`, `fix_movedsplinepoint`, `init_linepointmoving`, `cancel_movedlinepoint`, `fix_movedlinepoint`; `u_create.c`: `new_link`; `u_elastic.c`: `elastic_linelink`, `elastic_links`, `elastic_arclink`; `u_smartsearch.c`: `init_smart_searchproc_left`, `init_smart_searchproc_middle`, `init_smart_searchproc_right`, `smart_object_search_left`, `smart_object_search_middle`, `smart_object_search_right`, `set_smart_points`, `init_smart_search`, `do_smart_object_search`, `smart_next_arc_found`, `smart_next_ellipse_found`, `smart_next_line_found`, `smart_next_spline_found`, `smart_next_text_found`, `smart_next_compound_found`, `smart_show_objecthighlight`, `smart_erase_objecthighlight`, `smart_toggle_objecthighlight`, `smart_null_proc`
 - **W10-10** (26): `w_export.c`: `exp_getxyoff`, `preview_select`, `orient_select`, `just_select`, `papersize_select`, `multiple_select`, `overlap_select`, `set_postscript_pdf_options`, `set_export_mask`, `smooth_select`, `background_select`, `transp_select`, `export_grid_minor_select`, `export_grid_major_select`, `manage_optional`, `export_update_figure_size`, `fit_page`, `get_magnif`, `update_mag`, `update_figure_size`, `get_quality`, `exp_xoff_unit_select`, `exp_yoff_unit_select`, `toggle_hpgl_pcl_switch`, `toggle_hpgl_font`, `toggle_pdf_pagemode`
 - **W10-4** (26): `w_export.c`: `exp_getxyoff`, `preview_select`, `orient_select`, `just_select`, `papersize_select`, `multiple_select`, `overlap_select`, `set_postscript_pdf_options`, `set_export_mask`, `smooth_select`, `background_select`, `transp_select`, `export_grid_minor_select`, `export_grid_major_select`, `manage_optional`, `export_update_figure_size`, `fit_page`, `get_magnif`, `update_mag`, `update_figure_size`, `get_quality`, `exp_xoff_unit_select`, `exp_yoff_unit_select`, `toggle_hpgl_pcl_switch`, `toggle_hpgl_font`, `toggle_pdf_pagemode`
@@ -468,31 +467,31 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_joinsplit.c` | `split_polygon` | 535 | ported | `split_polyline` for polygons, boxes and arc-boxes: a polyline starting after the cut | D2 |
 | `e_joinsplit.c` | `split_spline` | 571 | ported | `split_spline_at`: both pieces keep two points at least; the new ends get factor 0 | D2 |
 | `e_joinsplit.c` | `split_cspline` | 668 | ported | `split_spline_at` for closed splines: opened at the cut, end factors 0 | D2 |
-| `e_measure.c` | `anglemeas_selected` | 89 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `angle_msg` | 105 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `angle_save` | 111 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `init_anglemeas_object_m` | 125 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `init_anglemeas_object_r` | 132 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `init_anglemeas_object` | 139 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `anglemeas_line` | 162 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `anglemeas_arc` | 179 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `init_anglemeas_threepoints` | 193 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `anglemeas_second` | 214 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `anglemeas_third_l` | 235 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `anglemeas_third_m` | 242 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `anglemeas_third` | 249 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `cancel_anglemeas` | 275 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `freehand_line_nomsg` | 290 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `lenmeas_selected` | 302 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `init_lenmeas_object` | 319 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `init_lenmeas_object_l` | 386 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `init_lenmeas_object_m` | 393 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `clear_lenmeas_memory` | 400 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `areameas_selected` | 410 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `init_areameas_object` | 428 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `init_areameas_object_l` | 490 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `init_areameas_object_m` | 497 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
-| `e_measure.c` | `clear_areameas_memory` | 504 | missing | Measure modes (angle, length, area); the values exist as `object.measure`, the interactive modes and running sums do not | D5 |
+| `e_measure.c` | `anglemeas_selected` | 89 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `angle_msg` | 105 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `angle_save` | 111 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `init_anglemeas_object_m` | 125 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `init_anglemeas_object_r` | 132 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `init_anglemeas_object` | 139 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `anglemeas_line` | 162 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `anglemeas_arc` | 179 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `init_anglemeas_threepoints` | 193 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `anglemeas_second` | 214 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `anglemeas_third_l` | 235 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `anglemeas_third_m` | 242 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `anglemeas_third` | 249 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `cancel_anglemeas` | 275 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `freehand_line_nomsg` | 290 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `lenmeas_selected` | 302 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `init_lenmeas_object` | 319 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `init_lenmeas_object_l` | 386 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `init_lenmeas_object_m` | 393 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `clear_lenmeas_memory` | 400 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `areameas_selected` | 410 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `init_areameas_object` | 428 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `init_areameas_object_l` | 490 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `init_areameas_object_m` | 497 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `e_measure.c` | `clear_areameas_memory` | 504 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
 | `e_move.c` | `move_selected` | 42 | ported | tools: `ToolKind::Move` (`move_event`, `commit_move`, constrained with middle button), `transform.move` |  |
 | `e_move.c` | `init_arb_move` | 58 | ported | tools: `ToolKind::Move` (`move_event`, `commit_move`, constrained with middle button), `transform.move` |  |
 | `e_move.c` | `init_constrained_move` | 68 | ported | tools: `ToolKind::Move` (`move_event`, `commit_move`, constrained with middle button), `transform.move` |  |
@@ -1044,12 +1043,12 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `u_free.c` | `free_Fonts` | 280 | not needed | memory management (Rust ownership) |  |
 | `u_free.c` | `free_objects` | 312 | not needed | memory management (Rust ownership) |  |
 | `u_geom.c` | `rotate_vector` | 40 | ported | `rustfig_geom` `Affine::rotate`, hit tests (`geom::hit`: distance to segment, arc, ellipse, polyline, spline) |  |
-| `u_geom.c` | `compute_normal` | 61 | ported | `rustfig_geom` `Affine::rotate`, hit tests (`geom::hit`: distance to segment, arc, ellipse, polyline, spline) |  |
+| `u_geom.c` | `compute_normal` | 61 | ported | `cmd/measure.rs` (`angle_3p`, `line_angle`, `arc_angle`, `poly_length`, `arc_length`, `poly_area`, `arc_area`) | |
 | `u_geom.c` | `close_to_vector` | 91 | ported | `rustfig_geom` `Affine::rotate`, hit tests (`geom::hit`: distance to segment, arc, ellipse, polyline, spline) |  |
-| `u_geom.c` | `compute_arcradius` | 159 | ported | `rustfig_geom` `Affine::rotate`, hit tests (`geom::hit`: distance to segment, arc, ellipse, polyline, spline) |  |
-| `u_geom.c` | `compute_arccenter` | 198 | ported | `rustfig_geom` `Affine::rotate`, hit tests (`geom::hit`: distance to segment, arc, ellipse, polyline, spline) |  |
+| `u_geom.c` | `compute_arcradius` | 159 | ported | `cmd/measure.rs` (`angle_3p`, `line_angle`, `arc_angle`, `poly_length`, `arc_length`, `poly_area`, `arc_area`) | |
+| `u_geom.c` | `compute_arccenter` | 198 | ported | `cmd/measure.rs` (`angle_3p`, `line_angle`, `arc_angle`, `poly_length`, `arc_length`, `poly_area`, `arc_area`) | |
 | `u_geom.c` | `close_to_arc` | 253 | ported | `rustfig_geom` `Affine::rotate`, hit tests (`geom::hit`: distance to segment, arc, ellipse, polyline, spline) |  |
-| `u_geom.c` | `compute_ellipse_distance` | 334 | ported | `rustfig_geom` `Affine::rotate`, hit tests (`geom::hit`: distance to segment, arc, ellipse, polyline, spline) |  |
+| `u_geom.c` | `compute_ellipse_distance` | 334 | ported | `cmd/measure.rs` (`angle_3p`, `line_angle`, `arc_angle`, `poly_length`, `arc_length`, `poly_area`, `arc_area`) | |
 | `u_geom.c` | `close_to_ellipse` | 359 | ported | `rustfig_geom` `Affine::rotate`, hit tests (`geom::hit`: distance to segment, arc, ellipse, polyline, spline) |  |
 | `u_geom.c` | `close_to_polyline` | 443 | ported | `rustfig_geom` `Affine::rotate`, hit tests (`geom::hit`: distance to segment, arc, ellipse, polyline, spline) |  |
 | `u_geom.c` | `close_to_float_vector` | 496 | ported | `rustfig_geom` `Affine::rotate`, hit tests (`geom::hit`: distance to segment, arc, ellipse, polyline, spline) |  |
@@ -1057,16 +1056,16 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `u_geom.c` | `add_point` | 559 | not needed | point array helpers and `atan2` |  |
 | `u_geom.c` | `add_closepoint` | 586 | not needed | point array helpers and `atan2` |  |
 | `u_geom.c` | `close_to_spline` | 591 | ported | `rustfig_geom` `Affine::rotate`, hit tests (`geom::hit`: distance to segment, arc, ellipse, polyline, spline) |  |
-| `u_geom.c` | `compute_angle` | 625 | not needed | point array helpers and `atan2` |  |
-| `u_geom.c` | `compute_direction` | 663 | not needed | point array helpers and `atan2` |  |
-| `u_geom.c` | `compute_3p_angle` | 692 | missing | angle measurement: three points, line angle, arc angle | D5 |
-| `u_geom.c` | `compute_line_angle` | 722 | missing | angle measurement: three points, line angle, arc angle | D5 |
-| `u_geom.c` | `compute_arc_angle` | 754 | missing | angle measurement: three points, line angle, arc angle | D5 |
-| `u_geom.c` | `compute_poly_length` | 798 | ported | lengths and areas of polylines, arcs and ellipses in `object.measure` (flattened outlines, `polyline_length`, `polygon_area`) |  |
-| `u_geom.c` | `compute_arc_length` | 831 | ported | lengths and areas of polylines, arcs and ellipses in `object.measure` (flattened outlines, `polyline_length`, `polygon_area`) |  |
-| `u_geom.c` | `compute_poly_area` | 857 | ported | lengths and areas of polylines, arcs and ellipses in `object.measure` (flattened outlines, `polyline_length`, `polygon_area`) |  |
-| `u_geom.c` | `compute_arc_area` | 882 | ported | lengths and areas of polylines, arcs and ellipses in `object.measure` (flattened outlines, `polyline_length`, `polygon_area`) |  |
-| `u_geom.c` | `compute_ellipse_area` | 919 | ported | lengths and areas of polylines, arcs and ellipses in `object.measure` (flattened outlines, `polyline_length`, `polygon_area`) |  |
+| `u_geom.c` | `compute_angle` | 625 | ported | `cmd/measure.rs` (`angle_3p`, `line_angle`, `arc_angle`, `poly_length`, `arc_length`, `poly_area`, `arc_area`) | |
+| `u_geom.c` | `compute_direction` | 663 | ported | `cmd/measure.rs` (`angle_3p`, `line_angle`, `arc_angle`, `poly_length`, `arc_length`, `poly_area`, `arc_area`) | |
+| `u_geom.c` | `compute_3p_angle` | 692 | ported | `cmd/measure.rs` (`angle_3p`, `line_angle`, `arc_angle`, `poly_length`, `arc_length`, `poly_area`, `arc_area`) | |
+| `u_geom.c` | `compute_line_angle` | 722 | ported | `cmd/measure.rs` (`angle_3p`, `line_angle`, `arc_angle`, `poly_length`, `arc_length`, `poly_area`, `arc_area`) | |
+| `u_geom.c` | `compute_arc_angle` | 754 | ported | `cmd/measure.rs` (`angle_3p`, `line_angle`, `arc_angle`, `poly_length`, `arc_length`, `poly_area`, `arc_area`) | |
+| `u_geom.c` | `compute_poly_length` | 798 | ported | `cmd/measure.rs` (`angle_3p`, `line_angle`, `arc_angle`, `poly_length`, `arc_length`, `poly_area`, `arc_area`) | |
+| `u_geom.c` | `compute_arc_length` | 831 | ported | `cmd/measure.rs` (`angle_3p`, `line_angle`, `arc_angle`, `poly_length`, `arc_length`, `poly_area`, `arc_area`) | |
+| `u_geom.c` | `compute_poly_area` | 857 | ported | `cmd/measure.rs` (`angle_3p`, `line_angle`, `arc_angle`, `poly_length`, `arc_length`, `poly_area`, `arc_area`) | |
+| `u_geom.c` | `compute_arc_area` | 882 | ported | `cmd/measure.rs` (`angle_3p`, `line_angle`, `arc_angle`, `poly_length`, `arc_length`, `poly_area`, `arc_area`) | |
+| `u_geom.c` | `compute_ellipse_area` | 919 | ported | `cmd/measure.rs` (`angle_3p`, `line_angle`, `arc_angle`, `poly_length`, `arc_length`, `poly_area`, `arc_area`) | |
 | `u_geom.c` | `pgcd` | 933 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
 | `u_geom.c` | `gcd` | 944 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
 | `u_geom.c` | `lcm` | 958 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
@@ -1958,9 +1957,9 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_modepanel.c` | `stub_edit_item_selected` | 869 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `stub_update_selected` | 875 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `stub_tangent_selected` | 881 | ported | Tangent mode button, key `n` | |
-| `w_modepanel.c` | `stub_anglemeas_selected` | 887 | missing | Angle, length and area measure mode buttons | D5 |
-| `w_modepanel.c` | `stub_lenmeas_selected` | 893 | missing | Angle, length and area measure mode buttons | D5 |
-| `w_modepanel.c` | `stub_areameas_selected` | 899 | missing | Angle, length and area measure mode buttons | D5 |
+| `w_modepanel.c` | `stub_anglemeas_selected` | 887 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `w_modepanel.c` | `stub_lenmeas_selected` | 893 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
+| `w_modepanel.c` | `stub_areameas_selected` | 899 | ported | `cmd/measure.rs`, `tools/measure.rs` (`tool.angle_measure`, `tool.length_measure`, `tool.area_measure`) | |
 | `w_mousefun.c` | `init_mousefun` | 69 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
 | `w_mousefun.c` | `setup_mousefun` | 97 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
 | `w_mousefun.c` | `update_mousepanel` | 111 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
@@ -1998,8 +1997,8 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_msgpanel.c` | `altlength_msg` | 306 | missing | lengths, sizes and angles shown while drawing (Show lengths), dimension strings | D10 |
 | `w_msgpanel.c` | `length_msg2` | 483 | missing | lengths, sizes and angles shown while drawing (Show lengths), dimension strings | D10 |
 | `w_msgpanel.c` | `arc_msg` | 521 | missing | lengths, sizes and angles shown while drawing (Show lengths), dimension strings | D10 |
-| `w_msgpanel.c` | `lenmeas_msg` | 550 | missing | measure results of length and area modes | D5 |
-| `w_msgpanel.c` | `areameas_msg` | 566 | missing | measure results of length and area modes | D5 |
+| `w_msgpanel.c` | `lenmeas_msg` | 550 | ported | `cmd/measure.rs` (`length_message`, `area_message`, `dimension_string`) | |
+| `w_msgpanel.c` | `areameas_msg` | 566 | ported | `cmd/measure.rs` (`length_message`, `area_message`, `dimension_string`) | |
 | `w_msgpanel.c` | `free_filename` | 582 | ported | file name message and the message history (`file_msg`, `dialogs::messages_dialog`; filter and copy W10-29) |  |
 | `w_msgpanel.c` | `file_msg` | 594 | ported | file name message and the message history (`file_msg`, `dialogs::messages_dialog`; filter and copy W10-29) |  |
 | `w_msgpanel.c` | `clear_file_message` | 670 | ported | file name message and the message history (`file_msg`, `dialogs::messages_dialog`; filter and copy W10-29) |  |

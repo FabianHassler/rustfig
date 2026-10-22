@@ -141,6 +141,9 @@ pub fn mode_mask(tool: ToolKind, rotate_angle: f64) -> ObjMask {
         T::Convert => ObjMask::VARPTS_OBJECT.union(ObjMask::POLYLINE_BOX),
         T::Arrow => ObjMask::OPEN_OBJECT,
         T::Tangent => ObjMask::TANGENT_OBJECT,
+        T::AngleMeasure => ObjMask::ANGLEMEAS_OBJECT,
+        T::LengthMeasure => ObjMask::LENMEAS_OBJECT,
+        T::AreaMeasure => ObjMask::AREAMEAS_OBJECT,
         // RustFig's own mode: lines, polygons and splines open and close.
         T::OpenClose => ObjMask::VARPTS_OBJECT,
         // Drawing modes, the pick tool and "no mode yet".

@@ -11,6 +11,7 @@
 mod chop;
 mod compound;
 mod markers;
+mod measure;
 mod tangent;
 use crate::Region;
 pub use markers::{mode_mask, object_markers, ObjMask};
@@ -70,10 +71,17 @@ pub enum ToolKind {
     Arrow,
     /// Add a tangent or normal line to a curve (xfig's `F_TANGENT`).
     Tangent,
+    /// Measure an angle: three points, or a corner of a line or an arc
+    /// (xfig's `F_ANGLEMEAS`).
+    AngleMeasure,
+    /// Measure the length of lines, arcs and ellipses (`F_LENMEAS`).
+    LengthMeasure,
+    /// Measure the area of polygons, arcs and ellipses (`F_AREAMEAS`).
+    AreaMeasure,
 }
 
 impl ToolKind {
-    pub const ALL: [ToolKind; 42] = [
+    pub const ALL: [ToolKind; 45] = [
         ToolKind::Select,
         ToolKind::CircleRadius,
         ToolKind::CircleDiameter,
@@ -116,6 +124,9 @@ impl ToolKind {
         ToolKind::OpenClose,
         ToolKind::Arrow,
         ToolKind::Tangent,
+        ToolKind::AngleMeasure,
+        ToolKind::LengthMeasure,
+        ToolKind::AreaMeasure,
     ];
 
     pub fn id(self) -> &'static str {
@@ -163,6 +174,9 @@ impl ToolKind {
             ToolKind::OpenClose => "tool.open_close",
             ToolKind::Arrow => "tool.arrow",
             ToolKind::Tangent => "tool.tangent",
+            ToolKind::AngleMeasure => "tool.angle_measure",
+            ToolKind::LengthMeasure => "tool.length_measure",
+            ToolKind::AreaMeasure => "tool.area_measure",
         }
     }
 
@@ -215,6 +229,9 @@ impl ToolKind {
             ToolKind::OpenClose => "Open/close",
             ToolKind::Arrow => "Add/remove arrows",
             ToolKind::Tangent => "Add tangent/normal to curve",
+            ToolKind::AngleMeasure => "Measure angle",
+            ToolKind::LengthMeasure => "Measure length",
+            ToolKind::AreaMeasure => "Measure area",
         }
     }
 
@@ -450,6 +467,9 @@ pub(crate) enum ToolState {
     ThreePoints { pts: Vec<Point>, cursor: Point },
     /// Align mode, right button (W14): the reference object was clicked.
     AlignTo { reference: ObjectId },
+    /// Angle measuring by three points: the points placed (one or two) and
+    /// the pointer (`anglemeas_second`, `anglemeas_third`).
+    Angle { pts: Vec<Point>, cursor: Point },
     /// Join/Split: the first end point was picked (`join_lines`,
     /// `join_splines`); the next click picks the second.
     Join { id: ObjectId, first: bool, spline: bool },
@@ -599,6 +619,7 @@ impl Engine {
     fn current_point(&self) -> Option<Point> {
         match &self.tool_state {
             ToolState::Points { pts, center, .. } => pts.last().copied().or(*center),
+            ToolState::Angle { pts, .. } => pts.last().copied(),
             ToolState::Drag { start, .. }
             | ToolState::MoveObjs { start, .. }
             | ToolState::PointDrag { start, .. }
@@ -726,6 +747,7 @@ impl Engine {
             ToolKind::JoinSplit => self.join_split_event(ev),
             ToolKind::Chop => self.chop_event(ev),
             ToolKind::Tangent => self.tangent_event(ev),
+            ToolKind::AngleMeasure | ToolKind::LengthMeasure | ToolKind::AreaMeasure => self.measure_event(ev),
             _ => self.click_event(ev),
         }
     }
@@ -2370,6 +2392,7 @@ impl Engine {
             (ToolState::Idle, ToolKind::Select) => ("add/remove", "", ""),
             (ToolState::Idle, ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture) => ("", "square at center", ""),
             (ToolState::Idle, ToolKind::Edit) => ("", "show comments", ""),
+            (ToolState::Idle, ToolKind::AreaMeasure) => ("", "", "reset to +-0"),
             (ToolState::Idle, ToolKind::RotateCcw | ToolKind::RotateCw) => ("rotate other way", "copy, other way", ""),
             _ => ("", "", ""),
         }
@@ -2441,6 +2464,8 @@ impl Engine {
                 "cancel",
             ),
             ToolState::Chop { .. } => h("Select axe object", "Select log object", "Clear axe list"),
+            ToolState::Angle { pts, .. } if pts.len() < 2 => h("angle tip", "", "cancel"),
+            ToolState::Angle { .. } => h("final point", "save angle", "cancel"),
             ToolState::RubberBand {
                 held: true,
                 button: Button::Right,
@@ -2509,6 +2534,8 @@ impl Engine {
                     ToolKind::OpenClose => ("open/close", "", ""),
                     ToolKind::Arrow => ("add arrow", "delete arrow", ""),
                     ToolKind::Tangent => ("add tangent", "add normal", ""),
+                    ToolKind::AngleMeasure => ("first point", "select & save", "select object"),
+                    ToolKind::LengthMeasure | ToolKind::AreaMeasure => ("select object", "select & add", "reset to 0"),
                     _ => ("", "", ""),
                 };
                 // The functions on buttons xfig leaves free (W13, W14).
@@ -2539,6 +2566,14 @@ impl Engine {
         let mut ov = Overlay::default();
         match &self.tool_state {
             ToolState::Idle | ToolState::Join { .. } => {}
+            ToolState::Angle { pts, cursor } => {
+                // The rubber band: the lines from the first point through
+                // the second to the pointer (`elastic_line`).
+                let mut all = pts.clone();
+                all.push(*cursor);
+                ov.guides.push(all);
+                ov.handles = pts.clone();
+            }
             ToolState::Chop { axes, hover } => {
                 let highlight = |o: &Object| {
                     let bb = o.geometry_bbox();
@@ -3175,6 +3210,14 @@ mod tests {
                 e.execute("shape.polyline", &json!({"points": [[-600, 900], [1800, 900]]}))
                     .unwrap();
             }
+            8 => {
+                // A box with a corner at (0, 0): the measure modes' object.
+                e.execute(
+                    "shape.rectangle",
+                    &json!({"x": 0, "y": 0, "width": 1200, "height": 600}),
+                )
+                .unwrap();
+            }
             _ => {
                 e.execute(
                     "shape.rectangle",
@@ -3203,7 +3246,11 @@ mod tests {
         let mut acted: BTreeMap<(&str, String, String, &str), bool> = BTreeMap::new();
         {
             for tool in ToolKind::ALL {
-                for n in 0..8 {
+                for n in 0..9 {
+                    // Fixture 8 (a plain box) is for the measure modes.
+                    if n == 8 && !matches!(tool, ToolKind::LengthMeasure | ToolKind::AreaMeasure) {
+                        continue;
+                    }
                     let setup = |prefix: Option<Button>| {
                         let mut e = fixture(n);
                         e.set_tool(tool);

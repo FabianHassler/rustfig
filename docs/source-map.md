@@ -2,7 +2,7 @@
 
 **Paths written `fig2dev:crates/…` are in the fig2dev repository (<https://github.com/FabianHassler/fig2dev>), where figbase, the fig2dev library and the `fig2dev` program moved (B13).**
 
-**Status:** 2026-10-22 (D4: `e_tangent.c` ported with the curve search of `u_smartsearch.c`/`u_geom.c`); 2026-10-22 (D14: `engine/links.rs` generalised); 2026-10-22 (D7: `u_elastic.c`/`u_geom.c` constraints in `engine/anglegeom.rs`; D8: smart links, `u_list.c`'s linked move in `engine/links.rs`, the Smart Links button; D3: `e_chop.c` ported, `geom/intersect.rs` from `w_intersect.c`); 2026-10-21 (S4: the xfig file statuses corrected from the function-level audit, [`source-audit.md`](source-audit.md); DD9: sweep; DD7: `read.c`'s repairs as functions used by `format/bridge/export`); 2026-10-20 (DD3: `f_read.c` read through fig2dev's reader); 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
+**Status:** 2026-10-22 (D5: `e_measure.c` ported); 2026-10-22 (D4: `e_tangent.c` ported with the curve search of `u_smartsearch.c`/`u_geom.c`); 2026-10-22 (D14: `engine/links.rs` generalised); 2026-10-22 (D7: `u_elastic.c`/`u_geom.c` constraints in `engine/anglegeom.rs`; D8: smart links, `u_list.c`'s linked move in `engine/links.rs`, the Smart Links button; D3: `e_chop.c` ported, `geom/intersect.rs` from `w_intersect.c`); 2026-10-21 (S4: the xfig file statuses corrected from the function-level audit, [`source-audit.md`](source-audit.md); DD9: sweep; DD7: `read.c`'s repairs as functions used by `format/bridge/export`); 2026-10-20 (DD3: `f_read.c` read through fig2dev's reader); 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
 sources (`LICENSE-xfig`). Nothing has been ported line by line yet: every
 "own" row was written from the manual and the format description and must be
 checked against the C file named in it.
@@ -90,7 +90,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `e_flip.c` | 452 | flip, copy & flip, anchor | tools, `cmd/transform` | partial: anchor (S4) | D10 |
 | `e_glue.c` | 521 | tag and glue compounds | tools | ported (S4) | — |
 | `e_joinsplit.c` | 714 | join/split lines and splines | `cmd/joinsplit.rs`, `tools/compound.rs` | ported | D2 |
-| `e_measure.c` | 514 | measure angle, length, area | `object.measure` | missing: interactive modes (25 functions; the values exist as `object.measure`, S4) | D5 |
+| `e_measure.c` | 514 | measure angle, length, area | `cmd/measure.rs`, `tools/measure.rs` | ported (S4) | D5 |
 | `e_move.c` | 135 | move (constrained) | tools | ported (S4) | — |
 | `e_movept.c` | 845 | move point (constrained, linked) | tools | ported; xfig does not link here, a box corner resizes the attached ends in RustFig (D14) | D14 |
 | `e_placelib.c` | 337 | place library object | — | missing (11 functions, S4) | D6 |
@@ -123,7 +123,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `u_draw_spline.c` | 384 | X-spline evaluation | `fig2dev:crates/figbase/src/geom/xspline.rs` (from the paper) | own | review (step size) |
 | `u_redraw.c` | 731 | redraw order, gray layers | `rustfig_render::build_scene` | ported: draw order, gray layers first | — |
 | `u_bound.c` | 653 | bounding boxes | `fig2dev:crates/fig2dev/src/bound.rs` through `crates/format/src/bridge/bounds.rs` (DD2); `model` keeps only `Object::approx_bbox` (hit-test prefilter) and `geometry_bbox` | ported via fig2dev's `bound.c` | — |
-| `u_geom.c` | 1072 | normals, slopes, latex/manhattan endpoints, closeness | `geom` | partial: lengths and areas via `object.measure`; angle measure missing; `get_slope`, `latex_endpoint` and the slope tables ported to `engine/anglegeom.rs` (D7) | D5 |
+| `u_geom.c` | 1072 | normals, slopes, latex/manhattan endpoints, closeness | `geom` | partial: lengths, areas and angles ported to `cmd/measure.rs`; `get_slope`, `latex_endpoint` and the slope tables ported to `engine/anglegeom.rs` (D7) | D5 |
 | `u_quartic.c` | 298 | quartic solver (intersections) | `snap.rs` (flattened outlines) | modern | — |
 | `u_elastic.c` | 1004 | rubber-band feedback while drawing | `Engine::overlay` | replaced by `Engine::overlay`; latex/manhattan/mountain constraints ported to `engine/anglegeom.rs` (D7); smart-link rubber bands done (D8; every follower, box-corner and scale previews D14) | |
 | `u_drag.c` | 861 | dragging objects | tools, overlay | ported; array placement missing (S4) | D10 |

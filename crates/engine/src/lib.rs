@@ -78,6 +78,8 @@ pub struct Engine {
     snap_held: bool,
     /// Intersect: the first object, waiting for the second.
     intersect_first: Option<Object>,
+    /// The measure modes' running totals (plan D5).
+    measure: cmd::measure::MeasureState,
     /// Points placed by an object snap during the current operation; grid
     /// rounding leaves them alone.
     exact_points: Vec<Point>,
@@ -136,6 +138,7 @@ impl Engine {
             object_snap: None,
             snap_held: false,
             intersect_first: None,
+            measure: cmd::measure::MeasureState::default(),
             exact_points: Vec::new(),
             release_at: None,
             snap_click: None,

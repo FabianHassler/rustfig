@@ -11,6 +11,7 @@ mod edit;
 pub(crate) mod file;
 mod indicator;
 mod joinsplit;
+pub(crate) mod measure;
 mod object;
 mod outline;
 mod prefs;
@@ -77,6 +78,7 @@ pub fn all() -> &'static [Command] {
         v.extend(compound::commands());
         v.extend(chop::commands());
         v.extend(tangent::commands());
+        v.extend(measure::commands());
         v.extend(joinsplit::commands());
         v.extend(region::commands());
         v.extend(doc::commands());

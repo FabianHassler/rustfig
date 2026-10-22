@@ -1,6 +1,6 @@
 # Target-app parity assessment: RustFig vs xfig 3.2.9
 
-**Status:** 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: tangent/normal, Editing 79 → 80 %, 26 → 18 h); 2026-10-22 (D15: Chop extended, Editing 78 → 79 %; D15 was a new task, so the hours stay); 2026-10-22 (D14: smart links extended, Attributes 83 → 84 %; D14 was a new task, so the hours stay); 2026-10-22 (D7: Angle Geom, Attributes 80 → 83 %; D3: chop, Editing 75 → 78 %; D8: linked move, Attributes 77 → 80 %, 10 h less); 2026-10-21 (W16, W17: one mouse scheme and one layout, scores unchanged; save query for open compounds); 2026-10-21 (D1, D2: open compound and join/split, Editing 70 → 75 %); 2026-10-21 (B15: PDF/EPS pictures, Export 66 → 68 %, overall ≈65 %); 2026-10-21 (DD9: evidence paths after the dedup series; scores unchanged); 2026-10-18, overall **≈65 %** (B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk; G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
+**Status:** 2026-10-22 (D5: measure modes, Editing 80 → 81 %, 18 → 12 h); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: tangent/normal, Editing 79 → 80 %, 26 → 18 h); 2026-10-22 (D15: Chop extended, Editing 78 → 79 %; D15 was a new task, so the hours stay); 2026-10-22 (D14: smart links extended, Attributes 83 → 84 %; D14 was a new task, so the hours stay); 2026-10-22 (D7: Angle Geom, Attributes 80 → 83 %; D3: chop, Editing 75 → 78 %; D8: linked move, Attributes 77 → 80 %, 10 h less); 2026-10-21 (W16, W17: one mouse scheme and one layout, scores unchanged; save query for open compounds); 2026-10-21 (D1, D2: open compound and join/split, Editing 70 → 75 %); 2026-10-21 (B15: PDF/EPS pictures, Export 66 → 68 %, overall ≈65 %); 2026-10-21 (DD9: evidence paths after the dedup series; scores unchanged); 2026-10-18, overall **≈65 %** (B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk; G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
 
 ## Methodology
 
@@ -20,7 +20,7 @@ the score.
 | Area | Weight | Score | Missing | Hours |
 |------|-------:|------:|---------|------:|
 | Drawing modes | 12 | 88 % | library objects; dimension lines (Shift+left in polyline mode); xfig's click-to-close rules for some shapes | 14 |
-| Editing modes | 12 | 80 % | anchor point for flip/rotate (right button), array copy, align to canvas, figure comments from Edit mode, angle/length/area measure modes, copy to library | 18 |
+| Editing modes | 12 | 81 % | anchor point for flip/rotate (right button), array copy, align to canvas, figure comments from Edit mode, copy to library | 18 |
 | Attributes / indicator | 10 | 84 % | colour editor UI, copy counts | 20 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
 | Export | 12 | 68 % | `sld`, texts with `\ooo` octal escapes (raw bytes, B11 pass 5), the audit's hardening passes (B11), arrows on pie-wedge arcs and file arc centres lost on the way through the Fig writer (gap #25), picture frames and GIF transparency (gap #26) | 90 |
@@ -37,6 +37,7 @@ the score.
 
 - Open compound and join/split (D1, D2): `crates/model/src/lib.rs` (`Document::open`), `crates/engine/src/cmd/{compound,joinsplit}.rs`, `tools/compound.rs`; tests `crates/engine/tests/{open_compound,join_split}.rs`.
 - Chop (D3): `crates/engine/src/cmd/chop.rs` (command `object.chop`), `crates/engine/src/tools/chop.rs` (mode `tool.chop`), intersection math in `crates/geom/src/intersect.rs`; tests `crates/engine/tests/chop.rs`.
+- Measure modes (D5): `crates/engine/src/cmd/measure.rs` (commands `object.measure_angle`, `_length`, `_area`, `_reset`; `compute_*` of `u_geom.c`, messages of `w_msgpanel.c`), `crates/engine/src/tools/measure.rs` (modes `tool.angle_measure`, `tool.length_measure`, `tool.area_measure`, keys Ctrl+G/N/M), `crates/engine/tests/measure.rs`, manual `measure.md`.
 - Tangent/normal (D4): `crates/engine/src/cmd/tangent.rs` (command `object.tangent_line`, curve geometry from `u_smartsearch.c`/`u_geom.c`), `crates/engine/src/tools/tangent.rs` (mode `tool.tangent`, key `n`), Tangent/Norm Length in `Indicator::tangent_length` and `ui-egui/attributes.rs`; tests `crates/engine/tests/tangent.rs`.
 - Chop extended (D15): `crates/engine/src/cmd/outline.rs`, `cmd/chop_ext.rs` (commands `object.trim`, `object.split_at`, `object.cut_all`, `object.extend`), Shift buttons in `tools/chop.rs`; tests `crates/engine/tests/chop_extended.rs`.
 - Drawing tools: `crates/engine/src/tools/mod.rs` (41 tools; tests draw polylines, boxes and text and move objects).
@@ -80,6 +81,7 @@ the score.
 | 2026-10-22 | ≈65 % | D7: Angle Geom (Attributes 80 → 83 %). |
 | 2026-10-22 | ≈65 % | D14: smart links extended (Attributes 83 → 84 %). |
 | 2026-10-22 | ≈65 % | D8: linked move (Attributes 77 → 80 %, 10 h less). |
+| 2026-10-22 | ≈65 % | D5: measure modes (angle, length, area), Editing 80 → 81 %. |
 | 2026-10-22 | ≈65 % | D4: Tangent/normal mode (`object.tangent_line`, `tool.tangent`, Tangent/Norm Length), Editing 79 → 80 %. |
 | 2026-10-22 | ≈65 % | D15: Chop extended (boxes, ellipses, splines, compounds; Trim, Split, Cut all, Extend), Editing 78 → 79 %. |
 | 2026-10-22 | ≈65 % | D3: Chop mode (cut objects at intersections), Editing 75 → 78 %. |

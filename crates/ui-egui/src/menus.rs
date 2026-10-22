@@ -815,6 +815,9 @@ pub const XFIG_KEYS: &[(&str, &str)] = &[
     ("PhysCtrl+E", "tool.edit"),
     ("PhysCtrl+R", "tool.rotate_cw"),
     ("PhysCtrl+P", "tool.picture"),
+    ("PhysCtrl+G", "tool.angle_measure"),
+    ("PhysCtrl+N", "tool.length_measure"),
+    ("PhysCtrl+M", "tool.area_measure"),
 ];
 
 /// (alt, shift, physical ctrl, key) of an xfig key spec.
@@ -1172,6 +1175,13 @@ mod tests {
             "object.tangent_line",
             "the Tangent tool (left button; middle button for the normal)",
         ),
+        (
+            "object.measure_angle",
+            "the Measure angle tool (three points, or a corner or arc)",
+        ),
+        ("object.measure_length", "the Measure length tool"),
+        ("object.measure_area", "the Measure area tool"),
+        ("object.measure_reset", "the measure tools' right button"),
         ("object.cut_all", "scripting API (cut the selection against itself)"),
         ("object.update_region", "the Update tool's right button"),
         ("object.reverse_arrows", "the Arrow tool's right button"),

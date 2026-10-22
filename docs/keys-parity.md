@@ -1,6 +1,6 @@
 # xfig key and mouse bindings checklist (W8)
 
-**Status:** 2026-10-22 (D4: Tangent mode key `n`). 2026-10-22 (D3: Chop mode key `x`). 2026-10-15: audit complete: every binding works, is replaced by a modern equivalent, or waits for the feature it needs (task named). Every binding xfig defines, from
+**Status:** 2026-10-22 (D5: measure keys Ctrl-g, Ctrl-n, Ctrl-m). 2026-10-22 (D4: Tangent mode key `n`). 2026-10-22 (D3: Chop mode key `x`). 2026-10-15: audit complete: every binding works, is replaced by a modern equivalent, or waits for the feature it needs (task named). Every binding xfig defines, from
 `app-defaults/Fig` and the 78 translation tables (210 bindings) in xfig's
 `src/*.c`, with what RustFig does. X plumbing (window-manager close
 messages, expose and resize events, highlight on enter/leave) is left out:
@@ -44,6 +44,7 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside: on mac
 | j | Join/Split mode (`ModeJoinSplit`) | `tool.join_split` | ✅ (D2) |
 | x | Chop mode (`ModeChopObject`) | `tool.chop` | ✅ (D3) |
 | n | Tangent/normal mode (`ModeTangent`) | `tool.tangent` | ✅ (D4) |
+| Ctrl-g / Ctrl-n / Ctrl-m | Measure angle / length / area (`ModeAnglemeas`, `ModeLenmeas`, `ModeAreameas`) | `tool.angle_measure`, `tool.length_measure`, `tool.area_measure` | ✅ (D5) |
 
 ## Letters while a menu is open (`Fig*commands*…*translations`)
 

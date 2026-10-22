@@ -248,6 +248,8 @@ pub fn attributes_for(tool: ToolKind) -> Vec<Attr> {
         ToolKind::Arrow => &[&[LineWidth, ArrowType, ArrowSize]],
         // xfig's `I_TANGENT`: the line attributes, the arrows and the length.
         ToolKind::Tangent => &[MIN2, LINE1, ARROWS, &[TangentLength]],
+        // `I_MIN2` only (`w_modepanel.c`).
+        ToolKind::AngleMeasure | ToolKind::LengthMeasure | ToolKind::AreaMeasure => &[MIN2],
         ToolKind::None
         | ToolKind::Break
         | ToolKind::OpenCompound

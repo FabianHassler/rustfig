@@ -16,6 +16,9 @@ The keys that choose a mode are shown in the mode sections: for example `C` Circ
 | Ctrl+E | Edit attributes |
 | Ctrl+R | Rotate clockwise |
 | Ctrl+P | Picture |
+| Ctrl+G | Measure angle |
+| Ctrl+N | Measure length |
+| Ctrl+M | Measure area |
 
 Mode keys do nothing while a menu is open or while you type text.
 
