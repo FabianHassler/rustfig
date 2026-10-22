@@ -23,11 +23,11 @@ S0 ([`source-map.md`](source-map.md)) maps C files to RustFig modules; this file
 
 | Status | Functions |
 |---|---:|
-| ported | 850 |
+| ported | 868 |
 | replaced | 584 |
 | not needed | 218 |
-| partial | 66 |
-| missing | 394 |
+| partial | 58 |
+| missing | 384 |
 | **total** | **2112** (plus 14 in `xfigmain.c`, a generated copy of `main.c`) |
 
 Missing and partial functions by task (a function counts under each task it names):
@@ -41,7 +41,6 @@ Missing and partial functions by task (a function counts under each task it name
 - **D8** (32): `e_movept.c`: `init_arcpointmoving`, `cancel_movedarcpoint`, `fix_movedarcpoint`, `init_splinepointmoving`, `cancel_movedsplinepoint`, `fix_movedsplinepoint`, `init_linepointmoving`, `cancel_movedlinepoint`, `fix_movedlinepoint`; `u_create.c`: `new_link`; `u_elastic.c`: `elastic_linelink`, `elastic_links`, `elastic_arclink`; `u_smartsearch.c`: `init_smart_searchproc_left`, `init_smart_searchproc_middle`, `init_smart_searchproc_right`, `smart_object_search_left`, `smart_object_search_middle`, `smart_object_search_right`, `set_smart_points`, `init_smart_search`, `do_smart_object_search`, `smart_next_arc_found`, `smart_next_ellipse_found`, `smart_next_line_found`, `smart_next_spline_found`, `smart_next_text_found`, `smart_next_compound_found`, `smart_show_objecthighlight`, `smart_erase_objecthighlight`, `smart_toggle_objecthighlight`, `smart_null_proc`
 - **W10-10** (26): `w_export.c`: `exp_getxyoff`, `preview_select`, `orient_select`, `just_select`, `papersize_select`, `multiple_select`, `overlap_select`, `set_postscript_pdf_options`, `set_export_mask`, `smooth_select`, `background_select`, `transp_select`, `export_grid_minor_select`, `export_grid_major_select`, `manage_optional`, `export_update_figure_size`, `fit_page`, `get_magnif`, `update_mag`, `update_figure_size`, `get_quality`, `exp_xoff_unit_select`, `exp_yoff_unit_select`, `toggle_hpgl_pcl_switch`, `toggle_hpgl_font`, `toggle_pdf_pagemode`
 - **W10-4** (26): `w_export.c`: `exp_getxyoff`, `preview_select`, `orient_select`, `just_select`, `papersize_select`, `multiple_select`, `overlap_select`, `set_postscript_pdf_options`, `set_export_mask`, `smooth_select`, `background_select`, `transp_select`, `export_grid_minor_select`, `export_grid_major_select`, `manage_optional`, `export_update_figure_size`, `fit_page`, `get_magnif`, `update_mag`, `update_figure_size`, `get_quality`, `exp_xoff_unit_select`, `exp_yoff_unit_select`, `toggle_hpgl_pcl_switch`, `toggle_hpgl_font`, `toggle_pdf_pagemode`
-- **D7** (19): `d_line.c`: `init_trace_drawing`, `get_intermediatepoint`; `u_elastic.c`: `latex_line`, `constrainedangle_line`, `angle0_line`, `angle90_line`, `angle45_line`, `angle135_line`; `u_geom.c`: `pgcd`, `gcd`, `lcm`, `get_slope`, `latex_endpoint`; `w_indpanel.c`: `show_anglegeom`, `show_pointposn`; `w_modepanel.c`: `force_positioning`, `force_nopositioning`, `force_anglegeom`, `force_noanglegeom`
 - **D11** (14): `w_capture.c`: `captureImage`, `rshift`, `getImageData`, `selectedRootArea`, `drawRect`, `getCurrentColors`, `canHandleCapture`; `w_digitize.c`: `popup_digitize_panel`, `create_digitize_panel`, `digitize_panel_done`, `digitize_panel_cancel`, `update_example`, `switch_file_mode`; `w_zoom.c`: `unzoom`
 - **W10-16** (12): `e_edit.c`: `reread_picfile`, `expand_pic`, `shrink_pic`, `origsize_pic`, `scale_percent_pic`, `reposition_picture`, `resize_picture`, `flip_pic_select`, `rotation_select`, `image_edit_button`, `browse_button`, `what_rotation`
 - **S4-1** (10): `u_markers.c`: `toggle_csrhighlight`, `toggle_ellipsehighlight`, `toggle_archighlight`, `toggle_texthighlight`, `toggle_compoundhighlight`, `toggle_linehighlight`, `toggle_splinehighlight`; `u_search.c`: `show_objecthighlight`, `erase_objecthighlight`, `toggle_objecthighlight`
@@ -144,9 +143,9 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `d_line.c` | `init_line_freehand_drawing` | 76 | ported | tools: polyline, polygon, freehand (`points_event`, `push_point`, `finish_points`) |  |
 | `d_line.c` | `init_line_drawing` | 85 | ported | tools: polyline, polygon, freehand (`points_event`, `push_point`, `finish_points`) |  |
 | `d_line.c` | `cancel_line_drawing` | 98 | ported | tools: polyline, polygon, freehand (`points_event`, `push_point`, `finish_points`) |  |
-| `d_line.c` | `init_trace_drawing` | 114 | partial | polyline and freehand ported; dimension-line branch (two-point line with ticks) and latex/manhattan/mountain constraints are not | D10, D7 |
+| `d_line.c` | `init_trace_drawing` | 114 | partial | polyline, freehand and the latex/manhattan/mountain constraints ported (D7); dimension-line branch (two-point line with ticks) is not | D10 |
 | `d_line.c` | `freehand_get_intermediatepoint` | 163 | ported | tools: polyline, polygon, freehand (`points_event`, `push_point`, `finish_points`) |  |
-| `d_line.c` | `get_intermediatepoint` | 175 | partial | next point and Shift-delete-point ported; constrained point positions (latex, manhattan, mountain) are not | D7 |
+| `d_line.c` | `get_intermediatepoint` | 175 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
 | `d_line.c` | `create_lineobject` | 236 | ported | tools: polyline, polygon, freehand (`points_event`, `push_point`, `finish_points`) |  |
 | `d_picobj.c` | `picobj_drawing_selected` | 48 | ported | tools: `ToolKind::Picture` (box drag, then picture file through `engine::import::load_picture`) |  |
 | `d_picobj.c` | `init_picobj_drawing` | 61 | ported | tools: `ToolKind::Picture` (box drag, then picture file through `engine::import::load_picture`) |  |
@@ -453,7 +452,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_glue.c` | `get_text` | 453 | ported | tools: `ToolKind::Glue` (click or tag region, `glue_event`, `region_click`), command `object.group` |  |
 | `e_glue.c` | `sel_compound` | 478 | ported | tools: `ToolKind::Glue` (click or tag region, `glue_event`, `region_click`), command `object.group` |  |
 | `e_glue.c` | `get_compound` | 499 | ported | tools: `ToolKind::Glue` (click or tag region, `glue_event`, `region_click`), command `object.group` |  |
-| `e_joinsplit.c` | `join_split_selected` | 71 | ported | tools: `ToolKind::JoinSplit` (mask `M_POLYLINE\\\\|M_SPLINE_O\\\\|M_SPLINE_C`, hints `Join Lines/Splines` / `Split Line/Spline`) | D2 |
+| `e_joinsplit.c` | `join_split_selected` | 71 | ported | tools: `ToolKind::JoinSplit` (mask `M_POLYLINE\\\\\|M_SPLINE_O\\\\\|M_SPLINE_C`, hints `Join Lines/Splines` / `Split Line/Spline`) | D2 |
 | `e_joinsplit.c` | `init_join` | 93 | ported | tools: `join_split_event` (left button: the end point under the pointer, `end_point_at`) | D2 |
 | `e_joinsplit.c` | `init_split` | 113 | ported | tools: `join_split_event` (middle button), `object.split`; pictures refused | D2 |
 | `e_joinsplit.c` | `join_lines` | 143 | ported | tools: `join_split_event` (state `ToolState::Join`, markers narrowed to lines); only polylines with an end picked | D2 |
@@ -955,12 +954,12 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `u_elastic.c` | `elastic_scalecompound` | 150 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
 | `u_elastic.c` | `elastic_line` | 176 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
 | `u_elastic.c` | `unconstrained_line` | 189 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
-| `u_elastic.c` | `latex_line` | 199 | partial | Shift constrains moves to horizontal or vertical (`constrain_delta`); the 45/135 degree constraints of manhattan/mountain modes and the latex-line mode are not there | D7 |
-| `u_elastic.c` | `constrainedangle_line` | 216 | partial | Shift constrains moves to horizontal or vertical (`constrain_delta`); the 45/135 degree constraints of manhattan/mountain modes and the latex-line mode are not there | D7 |
-| `u_elastic.c` | `angle0_line` | 265 | partial | Shift constrains moves to horizontal or vertical (`constrain_delta`); the 45/135 degree constraints of manhattan/mountain modes and the latex-line mode are not there | D7 |
-| `u_elastic.c` | `angle90_line` | 273 | partial | Shift constrains moves to horizontal or vertical (`constrain_delta`); the 45/135 degree constraints of manhattan/mountain modes and the latex-line mode are not there | D7 |
-| `u_elastic.c` | `angle45_line` | 281 | partial | Shift constrains moves to horizontal or vertical (`constrain_delta`); the 45/135 degree constraints of manhattan/mountain modes and the latex-line mode are not there | D7 |
-| `u_elastic.c` | `angle135_line` | 293 | partial | Shift constrains moves to horizontal or vertical (`constrain_delta`); the 45/135 degree constraints of manhattan/mountain modes and the latex-line mode are not there | D7 |
+| `u_elastic.c` | `latex_line` | 199 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
+| `u_elastic.c` | `constrainedangle_line` | 216 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
+| `u_elastic.c` | `angle0_line` | 265 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
+| `u_elastic.c` | `angle90_line` | 273 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
+| `u_elastic.c` | `angle45_line` | 281 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
+| `u_elastic.c` | `angle135_line` | 293 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
 | `u_elastic.c` | `reshaping_line` | 305 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
 | `u_elastic.c` | `elastic_linelink` | 322 | missing | smart links: line ends of attached lines follow the moved box/arc/ellipse while dragging | D8 |
 | `u_elastic.c` | `moving_line` | 335 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
@@ -1068,11 +1067,11 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `u_geom.c` | `compute_poly_area` | 857 | ported | lengths and areas of polylines, arcs and ellipses in `object.measure` (flattened outlines, `polyline_length`, `polygon_area`) |  |
 | `u_geom.c` | `compute_arc_area` | 882 | ported | lengths and areas of polylines, arcs and ellipses in `object.measure` (flattened outlines, `polyline_length`, `polygon_area`) |  |
 | `u_geom.c` | `compute_ellipse_area` | 919 | ported | lengths and areas of polylines, arcs and ellipses in `object.measure` (flattened outlines, `polyline_length`, `polygon_area`) |  |
-| `u_geom.c` | `pgcd` | 933 | missing | latex-line endpoint and slope tables for the latex/arrow positioning modes | D7 |
-| `u_geom.c` | `gcd` | 944 | missing | latex-line endpoint and slope tables for the latex/arrow positioning modes | D7 |
-| `u_geom.c` | `lcm` | 958 | missing | latex-line endpoint and slope tables for the latex/arrow positioning modes | D7 |
-| `u_geom.c` | `get_slope` | 1015 | missing | latex-line endpoint and slope tables for the latex/arrow positioning modes | D7 |
-| `u_geom.c` | `latex_endpoint` | 1052 | missing | latex-line endpoint and slope tables for the latex/arrow positioning modes | D7 |
+| `u_geom.c` | `pgcd` | 933 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
+| `u_geom.c` | `gcd` | 944 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
+| `u_geom.c` | `lcm` | 958 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
+| `u_geom.c` | `get_slope` | 1015 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
+| `u_geom.c` | `latex_endpoint` | 1052 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
 | `u_ghostscript.c` | `stdin_void` | 129 | replaced | EPS/PDF size and preview: fig2dev `util/{pdfpic,pdfps,gs}.rs` (ghostscript run as an executable when installed, PDF by hayro) |  |
 | `u_ghostscript.c` | `stderr_buf` | 138 | replaced | EPS/PDF size and preview: fig2dev `util/{pdfpic,pdfps,gs}.rs` (ghostscript run as an executable when installed, PDF by hayro) |  |
 | `u_ghostscript.c` | `stdout_mediabox` | 157 | replaced | EPS/PDF size and preview: fig2dev `util/{pdfpic,pdfps,gs}.rs` (ghostscript run as an executable when installed, PDF by hayro) |  |
@@ -1733,7 +1732,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_indpanel.c` | `inc_tangnormlen` | 3537 | missing | Tangent/Normal length indicator button | D4 |
 | `w_indpanel.c` | `dec_tangnormlen` | 3544 | missing | Tangent/Normal length indicator button | D4 |
 | `w_indpanel.c` | `show_tangnormlen` | 3551 | missing | Tangent/Normal length indicator button | D4 |
-| `w_indpanel.c` | `show_anglegeom` | 3569 | missing | Angle Geom indicator button (point position angle geometry) | D7 |
+| `w_indpanel.c` | `show_anglegeom` | 3569 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
 | `w_indpanel.c` | `show_arctype` | 3621 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `show_joinstyle` | 3638 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `show_capstyle` | 3657 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
@@ -1741,7 +1740,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_indpanel.c` | `show_valign` | 3713 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `show_halign` | 3744 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `show_gridmode` | 3775 | partial | Grid Mode button with its choices; the four isometric grids are W10-33 | W10-33 |
-| `w_indpanel.c` | `show_pointposn` | 3799 | partial | Point Posn button exists with xfig's choices but latex, manhattan and mountain modes do not act | D7 |
+| `w_indpanel.c` | `show_pointposn` | 3799 | ported | Point Posn choices act on every point (`Indicator::snap_point`); a mode never hides the button (xfig's forced on/off only greys it) |  |
 | `w_indpanel.c` | `show_linkmode` | 3824 | ported | Smart Links indicator button off/move/slide (`ui-egui/attributes.rs`) |  |
 | `w_indpanel.c` | `show_textjust` | 3843 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `dec_boxradius` | 3862 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
@@ -1914,10 +1913,10 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_modepanel.c` | `setup_mode_panel` | 459 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `update_modepanel` | 499 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `sel_mode_but` | 522 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
-| `w_modepanel.c` | `force_positioning` | 601 | missing | forcing point positioning / angle geometry when a mode needs it | D7 |
-| `w_modepanel.c` | `force_nopositioning` | 608 | missing | forcing point positioning / angle geometry when a mode needs it | D7 |
-| `w_modepanel.c` | `force_anglegeom` | 615 | missing | forcing point positioning / angle geometry when a mode needs it | D7 |
-| `w_modepanel.c` | `force_noanglegeom` | 621 | missing | forcing point positioning / angle geometry when a mode needs it | D7 |
+| `w_modepanel.c` | `force_positioning` | 601 | ported | Point Posn choices act on every point (`Indicator::snap_point`); a mode never hides the button (xfig's forced on/off only greys it) |  |
+| `w_modepanel.c` | `force_nopositioning` | 608 | ported | Point Posn choices act on every point (`Indicator::snap_point`); a mode never hides the button (xfig's forced on/off only greys it) |  |
+| `w_modepanel.c` | `force_anglegeom` | 615 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
+| `w_modepanel.c` | `force_noanglegeom` | 621 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
 | `w_modepanel.c` | `turn_on` | 627 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `turn_on_current` | 633 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `turn_off_current` | 639 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |

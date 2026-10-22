@@ -65,6 +65,9 @@ fn hostile_values() -> Vec<Value> {
         json!({"text": "", "find": "", "rgb": "#zzzzzz", "units": "parsecs"}),
         json!({"type": "press", "x": 0, "y": 0}),
         json!({"thickness": "thick", "line": "wavy", "grid": "huge"}),
+        json!({"angle_geom": "wavy"}),
+        json!({"angle_geom": "latex_arrow", "linkmode": 1e308}),
+        json!({"angle_geom": [1e308, null]}),
         json!({"attr": "wavy", "on": 3, "all": "maybe"}),
         json!({"attr": "line_width", "on": "yes", "all": 7}),
     ]

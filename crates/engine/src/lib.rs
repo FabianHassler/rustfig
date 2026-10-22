@@ -6,6 +6,7 @@
 //! events into commands. The UI, the control channel and MCP all drive the
 //! engine through [`Engine::execute`] and [`Engine::tool_event`].
 
+mod anglegeom;
 pub mod cmd;
 mod error;
 pub mod fig2dev;
@@ -23,6 +24,7 @@ pub mod snap;
 pub mod tools;
 mod view;
 
+pub use anglegeom::{constrain as constrain_angle, AngleGeom};
 pub use error::EngineError;
 pub use indicator::{arrow_choice, arrow_choice_of, GridMode, Indicator, LinkMode, SnapMode, UpdateFlag};
 pub use region::Region;

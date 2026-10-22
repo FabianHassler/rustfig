@@ -9,7 +9,7 @@
 use crate::theme::Tokens;
 use crate::App;
 use egui::{pos2, vec2, Color32, Painter, Pos2, Rect, Sense, Stroke, Ui};
-use rustfig_engine::{arrow_choice, arrow_choice_of, Indicator, LinkMode, SnapMode, ToolKind, UpdateFlag};
+use rustfig_engine::{arrow_choice, arrow_choice_of, AngleGeom, Indicator, LinkMode, SnapMode, ToolKind, UpdateFlag};
 use rustfig_model::{area_fill_color, CapStyle, ColorRef, Document, JoinStyle, Justify, LineKind, Rgb};
 use serde_json::{json, Value};
 
@@ -24,6 +24,7 @@ pub enum Attr {
     NumSides,
     VAlign,
     HAlign,
+    AngleGeom,
     PenColor,
     FillColor,
     FillStyle,
@@ -46,7 +47,7 @@ pub enum Attr {
 }
 
 impl Attr {
-    pub const ORDER: [Attr; 27] = [
+    pub const ORDER: [Attr; 28] = [
         Attr::Zoom,
         Attr::Grid,
         Attr::PointPosn,
@@ -55,6 +56,7 @@ impl Attr {
         Attr::NumSides,
         Attr::VAlign,
         Attr::HAlign,
+        Attr::AngleGeom,
         Attr::PenColor,
         Attr::FillColor,
         Attr::FillStyle,
@@ -87,6 +89,7 @@ impl Attr {
             Attr::NumSides => ("Num", "Sides"),
             Attr::VAlign => ("Vert", "Align"),
             Attr::HAlign => ("Horiz", "Align"),
+            Attr::AngleGeom => ("Angle", "Geom"),
             Attr::PenColor => ("PenColor", ""),
             Attr::FillColor => ("FillColor", ""),
             Attr::FillStyle => ("Fill", "Style"),
@@ -153,6 +156,7 @@ impl Attr {
             | Attr::PointPosn
             | Attr::VAlign
             | Attr::HAlign
+            | Attr::AngleGeom
             | Attr::FillStyle
             | Attr::ArcType
             | Attr::SmartLinks
@@ -199,11 +203,13 @@ impl Attr {
 /// The attributes a mode shows (xfig's per-mode masks: `I_ELLIPSE`,
 /// `I_CLOSED`, `I_OPEN`, `I_LINE`, `I_BOX`, … in `w_indpanel.h`). Zoom and
 /// Grid Mode are always shown. Attributes whose feature RustFig doesn't
-/// have yet (Angle Geom, Smart Links, copy counts, dimension lines, tangent
+/// have yet (copy counts, dimension lines, tangent
 /// length) are left out until it does.
 pub fn attributes_for(tool: ToolKind) -> Vec<Attr> {
     use Attr::*;
     const MIN2: &[Attr] = &[PointPosn];
+    // `I_CLOSED` / `I_OPEN` / `I_LINE` / `I_ADDMOVPT` carry Angle Geom.
+    const GEOM: &[Attr] = &[AngleGeom];
     const LINE0: &[Attr] = &[FillStyle, LineStyle, LineWidth, PenColor, FillColor, Depth];
     const LINE1: &[Attr] = &[
         FillStyle, LineStyle, JoinStyle, LineWidth, PenColor, FillColor, Depth, CapStyle,
@@ -215,22 +221,18 @@ pub fn attributes_for(tool: ToolKind) -> Vec<Attr> {
             &[MIN2, LINE0, &[TextAngle]]
         }
         ToolKind::SplineApproxClosed | ToolKind::SplineInterpClosed | ToolKind::XSplineClosed | ToolKind::Polygon => {
-            &[MIN2, LINE1]
+            &[MIN2, GEOM, LINE1]
         }
-        ToolKind::SplineApprox | ToolKind::SplineInterp | ToolKind::XSpline => &[MIN2, LINE1, ARROWS],
-        ToolKind::Polyline => &[MIN2, LINE1, ARROWS],
+        ToolKind::SplineApprox | ToolKind::SplineInterp | ToolKind::XSpline => &[MIN2, GEOM, LINE1, ARROWS],
+        ToolKind::Polyline => &[MIN2, GEOM, LINE1, ARROWS],
         ToolKind::Box => &[MIN2, LINE1],
         ToolKind::ArcBox => &[MIN2, LINE1, &[BoxRadius]],
         ToolKind::RegularPolygon => &[MIN2, LINE1, &[NumSides]],
         ToolKind::Arc => &[MIN2, LINE1, ARROWS, &[ArcType]],
         ToolKind::Picture => &[MIN2, &[Depth, PenColor]],
         ToolKind::Text => &[MIN2, &[TextStep], TEXT0],
-        ToolKind::Glue
-        | ToolKind::Scale
-        | ToolKind::FlipV
-        | ToolKind::FlipH
-        | ToolKind::MovePoint
-        | ToolKind::AddPoint => &[MIN2],
+        ToolKind::Glue | ToolKind::Scale | ToolKind::FlipV | ToolKind::FlipH => &[MIN2],
+        ToolKind::MovePoint | ToolKind::AddPoint => &[MIN2, GEOM],
         ToolKind::Move | ToolKind::Copy => &[MIN2, &[SmartLinks]],
         ToolKind::Align => &[&[HAlign, VAlign]],
         ToolKind::Update => &[TEXT0, LINE1, ARROWS, &[BoxRadius, ArcType]],
@@ -562,6 +564,7 @@ fn value_text(app: &App, a: Attr) -> String {
             f => format!("pattern {f}"),
         },
         Attr::ArcType => if ind.pie_arc { "pie wedge" } else { "open" }.into(),
+        Attr::AngleGeom => ind.angle_geom.label().into(),
         Attr::SmartLinks => link_name(ind.linkmode).into(),
         Attr::LineWidth => ind.thickness.to_string(),
         Attr::LineStyle => ind.line.name().into(),
@@ -671,6 +674,11 @@ fn step(app: &mut App, a: Attr, dir: i32) {
             set(app, json!({"area_fill": step_fill(ind.area_fill, plain, dir)}));
         }
         Attr::ArcType => set(app, json!({"pie_arc": !ind.pie_arc})),
+        Attr::AngleGeom => {
+            if let Some(m) = cycle(&AngleGeom::ALL, ind.angle_geom, dir) {
+                set(app, json!({ "angle_geom": m }));
+            }
+        }
         Attr::SmartLinks => {
             if let Some(m) = cycle(&LinkMode::ALL, ind.linkmode, dir) {
                 set(app, json!({ "linkmode": m }));
@@ -872,6 +880,19 @@ fn line_icon(k: LineKind) -> &'static Xbm {
 }
 
 /// xfig's Smart Links pictures (`smartoff`, `smartmove`, `smartslide`).
+/// xfig's Angle Geom pictures (`unconstrained`, `latexline`, `latexarrow`,
+/// `mounthattan`, `manhattan`, `mountain`).
+fn geom_icon(m: AngleGeom) -> &'static Xbm {
+    match m {
+        AngleGeom::Unconstrained => &xi::UNCONSTRAINED,
+        AngleGeom::LatexLine => &xi::LATEXLINE,
+        AngleGeom::LatexArrow => &xi::LATEXARROW,
+        AngleGeom::MountHattan => &xi::MOUNTHATTAN,
+        AngleGeom::Manhattan => &xi::MANHATTAN,
+        AngleGeom::Mountain => &xi::MOUNTAIN,
+    }
+}
+
 fn link_icon(m: LinkMode) -> &'static Xbm {
     match m {
         LinkMode::Off => &xi::SMARTOFF,
@@ -977,6 +998,7 @@ fn value_icon(app: &App, a: Attr) -> Option<Pic> {
         Attr::ArcType => arc_pic(ind.pie_arc),
         Attr::LineStyle => Pic::of(line_icon(ind.line), VIcon::Line(ind.line)),
         Attr::JoinStyle => Pic::of(join_icon(ind.join), VIcon::Join(ind.join)),
+        Attr::AngleGeom => Pic::traced(geom_icon(ind.angle_geom)),
         Attr::SmartLinks => Pic::traced(link_icon(ind.linkmode)),
         Attr::CapStyle => Pic::of(cap_icon(ind.cap), VIcon::Cap(ind.cap)),
         Attr::ArrowMode => arrow_mode_pic(arrow_mode(ind)),
@@ -1359,6 +1381,15 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                 set(app, json!({ "pie_arc": i == 1 }));
             }
         }
+        Attr::AngleGeom => {
+            let items: Vec<_> = AngleGeom::ALL
+                .iter()
+                .map(|m| (ind.angle_geom == *m, m.label().to_string(), Pic::traced(geom_icon(*m))))
+                .collect();
+            if let Some(m) = icon_choices(ui, "angle_geom", &items, 3).and_then(|i| AngleGeom::ALL.get(i)) {
+                set(app, json!({ "angle_geom": m }));
+            }
+        }
         Attr::SmartLinks => {
             let modes = [LinkMode::Off, LinkMode::Move, LinkMode::Slide];
             let items: Vec<_> = modes
@@ -1635,6 +1666,30 @@ fn value_entry(app: &mut App, ui: &mut Ui, ind: &Indicator, a: Attr) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn angle_geom_shows_in_xfigs_modes() {
+        // I_LINE, I_OPEN, I_CLOSED and I_ADDMOVPT carry I_ANGLEGEOM; boxes
+        // and circles do not.
+        for t in [
+            ToolKind::Polyline,
+            ToolKind::Polygon,
+            ToolKind::SplineApprox,
+            ToolKind::SplineInterpClosed,
+            ToolKind::XSpline,
+            ToolKind::MovePoint,
+            ToolKind::AddPoint,
+        ] {
+            assert!(attributes_for(t).contains(&Attr::AngleGeom), "{t:?}");
+        }
+        for t in [ToolKind::Box, ToolKind::CircleRadius, ToolKind::Arc, ToolKind::Move] {
+            assert!(!attributes_for(t).contains(&Attr::AngleGeom), "{t:?}");
+        }
+        // Between Horiz Align and PenColor, as in xfig's panel.
+        let a = attributes_for(ToolKind::Polyline);
+        let i = a.iter().position(|x| *x == Attr::AngleGeom).unwrap();
+        assert_eq!(a.get(i + 1), Some(&Attr::PenColor));
+    }
 
     #[test]
     fn rotation_steps_through_xfigs_presets() {

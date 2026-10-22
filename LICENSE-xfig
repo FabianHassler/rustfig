@@ -42,6 +42,7 @@ notice. xfig's sources are cited as src/..., fig2dev's as fig2dev/... (its
 drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 `cargo xtask licences` checks that this list and those comments agree.
 
+- crates/engine/src/anglegeom.rs: xfig src/u_elastic.c, src/u_geom.c, src/w_indpanel.c
 - crates/engine/src/cmd/chop.rs: xfig src/e_chop.c, src/w_intersect.c
 - crates/engine/src/cmd/compound.rs: xfig src/e_compound.c
 - crates/engine/src/cmd/file.rs: xfig src/u_print.c

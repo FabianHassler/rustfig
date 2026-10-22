@@ -35,7 +35,7 @@ RustFig may look nicer and more modern than xfig; the **functionality** must sta
 | Mouse-function panel | title "Mouse Buttons", three rows, per mode and state (`w_mousefun.c`) | same title, per-tool text from `Engine::mouse_hints()` (a test checks it against the tools) | same | Missing mouse functions are listed under the modes (D4, D5, D10 etc.). |
 | Mode panel: drawing | 15 buttons in `mode_switches` order (ellipse by radius ... text, library) | same order and icons | same except D6 | Library button greyed with tooltip (D6). Extra: Alt+wheel pop-up of the panels (xfig's `PopupModePanel`) exists. |
 | Mode panel: editing | 25 buttons (glue, break, open compound, join/split, chop, scale, align, move point, move, add point, copy, delete point, delete, update, edit, flip UD/LR, rotate CW/CCW, convert, auto arrow, tangent, angle/length/area measure) | same order and icons | same except D1-D5 | Open compound (D1), join/split (D2), chop (D3), tangent/normal (D4), three measure modes (D5) greyed with tooltips. |
-| Attribute (indicator) panel | `ind_switches` in `w_indpanel.c`: Zoom, Grid Mode, Point Posn, Depth, Rotn Angle, Num Sides, Num Copies (X, Y), Vert/Horiz Align, Angle Geom, colours, Fill Style, Arc Type, Smart Links, Line Width/Style, Tangent/Norm Length, Join/Cap Style, Arrow Mode/Type/Size, Box Curve, Dimension line, Text Just/Angle/Flags/Size/Step/Font, **Update Control** | xfig's order and per-mode masks, choice panels, middle/right button stepping | partial | Missing: **Update Control** (which attributes Update applies; new W10-1), Angle Geom (D7), Num Copies/X/Y copies (D10), Tangent/Norm Length (D4), Dimension line settings (D10). |
+| Attribute (indicator) panel | `ind_switches` in `w_indpanel.c`: Zoom, Grid Mode, Point Posn, Depth, Rotn Angle, Num Sides, Num Copies (X, Y), Vert/Horiz Align, Angle Geom, colours, Fill Style, Arc Type, Smart Links, Line Width/Style, Tangent/Norm Length, Join/Cap Style, Arrow Mode/Type/Size, Box Curve, Dimension line, Text Just/Angle/Flags/Size/Step/Font, **Update Control** | xfig's order and per-mode masks, choice panels, middle/right button stepping | partial | Missing: **Update Control** (which attributes Update applies; new W10-1), Num Copies/X/Y copies (D10), Tangent/Norm Length (D4), Dimension line settings (D10). |
 | Object markers (W12) | `u_markers.c`: 5 px squares on the objects each editing mode acts on (mask table in `engine/tools/markers.rs`) | same objects and points; hollow squares in the theme's handle colour | Look (allowed). Screenshots `target/window-parity/w12-*.png`. |
 | Rulers | top and left, `w_rulers.c` ticks and labels, cursor marker, pan buttons | same | same | Look (allowed). |
 | Units box | `1in = 1.00in` (`1cm`, `1:1.00` for scale), left button pans to origin, right button Set Units | same text, same buttons | same | |
@@ -300,7 +300,7 @@ Sources: `w_indpanel.c` (every `ind_switches` entry, `popup_choice_panel`, `popu
 | Vert/Horiz Align (7 choices) | 4 | W10-33 |
 | Pen/Fill colour pop-up with colour editor | swatches, user colours | E4 |
 | Update Control (per-button toggles in the corner, Set/Clear/Toggle all) | fixed (W10-1): update box on each attribute button in Update mode, Set/Clear/Toggle all buttons, xfig's tooltips and messages | W10-1 |
-| Angle Geom, Num Copies, Num X/Y Copies, Tangent/Norm Length, Dimension line | none (modes missing) | D7, D10, D4 |
+| Num Copies, Num X/Y Copies, Tangent/Norm Length, Dimension line | none (modes missing; Angle Geom done, D7) | D10, D4 |
 | Mouse: left pop-up, middle/wheel up dec/prev, right/wheel down inc/next, Alt+right = middle | same; **fixed** Alt+right | same |
 | Pop-up closing: Cancel button; Escape; Return sets (number panels) | click outside or Escape; Return commits the field | Return closes: W10-32 (look/behaviour, allowed) |
 
@@ -310,7 +310,7 @@ Sources: `w_indpanel.c` (every `ind_switches` entry, `popup_choice_panel`, `popu
 |---|---|---|
 | (fixed) | stepping of rotation, angle, font size, text step, fill; fill tints for black; dash/dot fields; zoom range; Alt+right; xfig mode balloons | W10 group 5, unit tests in `attributes.rs` |
 | W10-1, W10-31, W10-32, W10-33 | Update Control, Arrow Size panel, number pop-up details, Align/grid choices | plan, gaps #33 |
-| D4, D7, D8, D10 | indicator buttons waiting for their modes | planned |
+| D4, D10 | indicator buttons waiting for their modes (D7 Angle Geom and D8 Smart Links done) | planned |
 
 ### Proposed modernisations (group 5)
 

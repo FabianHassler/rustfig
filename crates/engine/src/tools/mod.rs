@@ -692,6 +692,13 @@ impl Engine {
         match ev {
             ToolEvent::Press { pos, button, shift } => {
                 let p = self.snap(pos);
+                // Angle Geom: the point is the constrained one (xfig clicks
+                // at the rubber band's end, `cur_x`/`cur_y`).
+                let p = if button == Button::Right {
+                    p
+                } else {
+                    self.angle_constrained(p)
+                };
                 let busy = matches!(self.tool_state, ToolState::Points { .. });
                 match button {
                     Button::Right => {
@@ -761,6 +768,7 @@ impl Engine {
             }
             ToolEvent::Move { pos } => {
                 let p = self.snap(pos);
+                let p = self.angle_constrained(p);
                 if let ToolState::Points {
                     pts, cursor, freehand, ..
                 } = &mut self.tool_state
@@ -783,6 +791,30 @@ impl Engine {
                 Ok(())
             }
             _ => Ok(()),
+        }
+    }
+
+    /// `p` as constrained by Angle Geom from the last point entered (xfig's
+    /// `latex_line` / `constrainedangle_line` locmove procedures of
+    /// `init_trace_drawing`): lines, polygons and splines, not freehand, not
+    /// arcs, and not for points an object snap placed exactly.
+    fn angle_constrained(&self, p: Point) -> Point {
+        let mode = self.indicator.angle_geom;
+        if mode == crate::AngleGeom::Unconstrained || self.tool == ToolKind::Arc || self.exact_points.contains(&p) {
+            return p;
+        }
+        let ToolState::Points {
+            pts,
+            freehand: false,
+            center: None,
+            ..
+        } = &self.tool_state
+        else {
+            return p;
+        };
+        match pts.last() {
+            Some(fix) => crate::constrain_angle(mode, *fix, p, self.indicator.magnet(self.doc().settings.units)),
+            None => p,
         }
     }
 
@@ -1611,7 +1643,17 @@ impl Engine {
     ) -> Point {
         let p = self.snap(pos);
         if !constrain {
-            return p;
+            // Angle Geom applies to the end of an open line or spline
+            // (xfig's `move_point_selected`, `init_linepointadding`).
+            return match self.angle_anchor(id, index, insert) {
+                Some(fix) if !self.exact_points.contains(&p) => crate::constrain_angle(
+                    self.indicator.angle_geom,
+                    fix,
+                    p,
+                    self.indicator.magnet(self.doc().settings.units),
+                ),
+                _ => p,
+            };
         }
         let origin = if insert {
             self.snap(start)
@@ -1622,6 +1664,35 @@ impl Engine {
                 .unwrap_or(start)
         };
         origin + constrain_delta(p - origin)
+    }
+
+    /// The fixed point Angle Geom constrains a dragged point from: the
+    /// neighbour of an end point of an open polyline or spline, or the end a
+    /// point is added to. Points in the middle or of closed shapes have
+    /// none (xfig's `force_noanglegeom`).
+    fn angle_anchor(&self, id: ObjectId, index: usize, insert: bool) -> Option<Point> {
+        let o = self.doc().get(id)?;
+        let pts = match &o.kind {
+            ObjectKind::Polyline(pl) if pl.kind == PolyKind::Polyline => &pl.points,
+            ObjectKind::Spline(sp) if !sp.closed => &sp.points,
+            _ => return None,
+        };
+        let n = pts.len();
+        if insert {
+            if index == 0 {
+                pts.first().copied()
+            } else if index == n {
+                pts.last().copied()
+            } else {
+                None
+            }
+        } else if n >= 2 && index == 0 {
+            pts.get(1).copied()
+        } else if n >= 2 && index + 1 == n {
+            pts.get(n - 2).copied()
+        } else {
+            None
+        }
     }
 
     fn commit_point(

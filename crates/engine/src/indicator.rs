@@ -202,6 +202,9 @@ pub struct Indicator {
     pub update_off: BTreeSet<UpdateFlag>,
     /// Smart links: line end points attached to a moved box follow it.
     pub linkmode: LinkMode,
+    /// Angle geometry: constrains the next point of lines and splines
+    /// (xfig's `cur_anglegeom`).
+    pub angle_geom: crate::AngleGeom,
 }
 
 impl Default for Indicator {
@@ -247,6 +250,8 @@ impl Default for Indicator {
             update_off: BTreeSet::new(),
             // xfig's `cur_linkmode` starts SMART_OFF (mode.c).
             linkmode: LinkMode::Off,
+            // xfig's `cur_anglegeom` starts L_UNCONSTRAINED.
+            angle_geom: crate::AngleGeom::Unconstrained,
         }
     }
 }
@@ -551,6 +556,18 @@ impl Indicator {
         f
     }
 
+    /// The point positioning step as an integer, the "magnet" of the LaTeX
+    /// angle modes (xfig: 1 when positioning is free, else
+    /// `max(1, point_spacing())`).
+    pub fn magnet(&self, units: Units) -> i64 {
+        let step = self.snap.step(units);
+        if step.is_finite() && step >= 1.0 {
+            step as i64
+        } else {
+            1
+        }
+    }
+
     /// Snap a point to the positioning grid.
     pub fn snap_point(&self, p: Point, units: Units) -> Point {
         let step = self.snap.step(units);
@@ -625,6 +642,11 @@ mod tests {
         assert_eq!((i.align_h.as_str(), i.align_v.as_str()), ("none", "none"));
         assert_eq!((i.sides, i.rotate_angle), (6, 90.0));
         assert_eq!(i.linkmode, LinkMode::Off, "cur_linkmode 0 (SMART_OFF)");
+        assert_eq!(
+            i.angle_geom,
+            crate::AngleGeom::Unconstrained,
+            "cur_anglegeom L_UNCONSTRAINED"
+        );
     }
 
     #[test]
