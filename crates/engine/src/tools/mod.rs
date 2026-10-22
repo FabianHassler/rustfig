@@ -735,6 +735,45 @@ impl Engine {
         self.set_status(kind.label());
     }
 
+    /// Escape, one level per press (decided 2026-10-22; xfig has no Escape
+    /// on the canvas): (1) cancel what is in progress (a shape being drawn,
+    /// a move, paste, zoom box…; text input is finished instead), (2) clear
+    /// what the mode has collected (Chop's axe list, the located object,
+    /// the rotate/flip centre, the selection), (3) leave the mode. Returns
+    /// what was done.
+    pub fn escape(&mut self) -> Result<&'static str, EngineError> {
+        match &self.tool_state {
+            ToolState::Idle => {}
+            ToolState::Text { .. } => {
+                self.finish_text()?;
+                return Ok("text finished");
+            }
+            ToolState::Chop { axes, .. } if axes.is_empty() => {}
+            ToolState::Chop { .. } => {
+                self.tool_state = ToolState::Idle;
+                self.set_status("Axe object list cleared.");
+                return Ok("axes cleared");
+            }
+            _ => {
+                self.tool_state = ToolState::Idle;
+                self.set_status("Cancelled.");
+                return Ok("cancelled");
+            }
+        }
+        if self.locate.take().is_some() || self.set_point.take().is_some() {
+            return Ok("cleared");
+        }
+        if !self.selection().is_empty() {
+            self.set_selection(Vec::new());
+            return Ok("selection cleared");
+        }
+        if self.tool != ToolKind::None {
+            self.set_tool(ToolKind::None);
+            return Ok("mode left");
+        }
+        Ok("nothing")
+    }
+
     /// The point being drawn from (xfig's `cur_point`): the last point of a
     /// line being entered, the first corner of a drag shape, or where a move
     /// started.

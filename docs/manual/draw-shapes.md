@@ -51,7 +51,7 @@ Key `L`. An open line of straight segments (the same buttons as Polygon).
 - Left, “first point”, then “next point” for each further point.
 - Middle, “freehand” to start a freehand line; “final point” ends the line.
 - Right, “single point”: before a line is started, enters a single dot; while drawing, cancels.
-- Shift+left, “del point”: removes the last point. Shift+middle, “finish here”: ends the line at the last point placed, without adding the clicked point.
+- Shift+left, “del point”, or Backspace: removes the last point. Escape drops the whole line. Shift+middle, “finish here”: ends the line at the last point placed, without adding the clicked point.
 - Shift+left before the first point, “dimension line”: starts a dimension line (xfig's trigger, `d_line.c`). Click its second point (“final point”; Shift+left removes the first). The result is a compound of the line with arrows at both ends, a box in the middle with the length in the figure's units and scale, and a tick at each end; the compound's comment reads “Dimension line: 2.0 in”. The settings are the indicator's `dimline` group, edited in the “Dimension line” button's window (shown in Polyline mode; xfig's “Dimension Line Settings”: line thickness, style and colour; box thickness and colour; the two arrow types, length and width; ticks and their thickness; text font, size and colour; actual length or fixed text; decimals; OK stores, Cancel drops) — (thickness, arrows, ticks, box and text colours, font, decimals, fixed text). When the line is scaled, or an open dimension line is closed again after its main line was edited, the length, box and ticks are recomputed (`object.recompute_dimension`). Command `shape.dimension_line`.
 
 ### Lengths while drawing

@@ -1067,13 +1067,10 @@ pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
     }
     app.compose = Compose::Off;
     pan_keys(app, ctx, false);
-    // Keys a busy tool wants (finish, cancel, remove last point).
+    // Keys a busy tool wants (finish, remove last point). Escape is the
+    // `tool.escape` shortcut: cancel, clear, leave the mode, one per press.
     if app.engine.tool_busy() {
-        let keys = [
-            (egui::Key::Enter, Key::Enter),
-            (egui::Key::Escape, Key::Escape),
-            (egui::Key::Backspace, Key::Backspace),
-        ];
+        let keys = [(egui::Key::Enter, Key::Enter), (egui::Key::Backspace, Key::Backspace)];
         for (k, tk) in keys {
             if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, k)) {
                 if let Err(e) = app.engine.tool_event(ToolEvent::Key(tk)) {

@@ -7,7 +7,7 @@ No key. RustFig's modern selection tool; xfig has no such mode. It selects objec
 - Left, “select / drag”: click an object to select it; drag an object to move it; drag on empty canvas to draw a selection rectangle. Double-click an object to open its edit panel.
 - Shift+left adds an object to the selection or removes it (Shift with a rectangle adds to the selection).
 - A single selected line shows its points as handles: drag a handle to move that point. The ends of lines attached to selected shapes are marked ([Smart links](smart-links.md)).
-- Delete or Backspace deletes the selection; Escape selects nothing.
+- Delete or Backspace deletes the selection; Escape selects nothing (a second Escape leaves the mode, see [Keys](keys.md)).
 
 ## Move
 

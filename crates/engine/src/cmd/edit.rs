@@ -138,7 +138,7 @@ pub(super) fn commands() -> Vec<Command> {
             id: "edit.select_none",
             label: "Select None",
             menu: "Edit",
-            shortcut: "Escape",
+            shortcut: "",
             params: "{}",
             mutates: false,
             enabled: always,

@@ -17,6 +17,6 @@
 
 - Most modes have three mouse button functions. See [The mouse](mouse.md) for how to press the middle and right buttons without a three-button mouse.
 - Hold Shift to see Shift variants in the mouse indicator.
-- Press Escape or the right button to cancel what you are doing in most modes.
+- Press Escape or the right button to cancel what you are doing in most modes. Escape again clears the selection, and once more leaves the mode. While drawing a line, Backspace removes the last point.
 - Coordinates are in 1/1200 inch (Fig units); you work in inches or centimetres as the units box says.
 - The figure is never lost when the program stops unexpectedly: see [Files](files.md) (recovery).

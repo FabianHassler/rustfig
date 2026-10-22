@@ -907,7 +907,9 @@ pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
         ""
     };
     let os_note = crate::platform::Os::current(ui.ctx()).mouse_note();
-    let resp = resp.on_hover_text(format!("{summary}{shift_note}{region_note}\n\n{os_note}"));
+    let keys = "Escape: cancel what is in progress, then clear the selection, then leave the mode. \
+                Backspace: remove the last point of a line being drawn.";
+    let resp = resp.on_hover_text(format!("{summary}{shift_note}{region_note}\n\n{keys}\n\n{os_note}"));
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, summary.clone()));
 }
 
