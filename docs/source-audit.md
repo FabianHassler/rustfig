@@ -1975,8 +1975,8 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_mousefun.c` | `draw_mousefun_unitbox` | 260 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
 | `w_mousefun.c` | `draw_mousefun_topruler` | 266 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
 | `w_mousefun.c` | `draw_mousefun_sideruler` | 281 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
-| `w_mousefun.c` | `draw_shift_mousefun_canvas` | 296 | missing | the indicator's Shift and Ctrl variants while the key is held (Shift: del point, dimension line, ...; Ctrl: Zoom area, Pan to origin, Unzoom; Ctrl+Shift: More approx, Cycle shapes, More interp) | S4-7 |
-| `w_mousefun.c` | `draw_shift_mousefun_canvas2` | 302 | missing | the indicator's Shift and Ctrl variants while the key is held (Shift: del point, dimension line, ...; Ctrl: Zoom area, Pan to origin, Unzoom; Ctrl+Shift: More approx, Cycle shapes, More interp) | S4-7 |
+| `w_mousefun.c` | `draw_shift_mousefun_canvas` | 296 | partial | the indicator's Shift and Ctrl variants while the key is held (Shift: del point, dimension line, ...; Ctrl: Zoom area, Pan to origin, Unzoom; Ctrl+Shift: More approx, Cycle shapes, More interp) | S4-7 |
+| `w_mousefun.c` | `draw_shift_mousefun_canvas2` | 302 | partial | the indicator's Shift and Ctrl variants while the key is held (Shift: del point, dimension line, ...; Ctrl: Zoom area, Pan to origin, Unzoom; Ctrl+Shift: More approx, Cycle shapes, More interp) | S4-7 |
 | `w_mousefun.c` | `draw_mousefun_canvas` | 314 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
 | `w_mousefun.c` | `draw_mousefun_msg` | 320 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
 | `w_mousefun.c` | `draw_mousefun` | 334 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |

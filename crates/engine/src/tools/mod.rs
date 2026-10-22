@@ -2301,11 +2301,42 @@ impl Engine {
     /// checks every tool and state. The wording is xfig's
     /// (`set_mousefun` calls in xfig's `d_*.c` and `e_*.c`).
     pub fn mouse_hints(&self) -> MouseHints {
+        self.mouse_hints_with(false)
+    }
+
+    /// [`Engine::mouse_hints`] while Shift is (or is not) held: the buttons
+    /// that do something else with Shift show that instead (xfig's
+    /// `draw_shift_mousefun_canvas`). xfig's other Shift labels belong to
+    /// functions not ported yet: "Locate Object" (S4-1) and "dimension
+    /// line" (D10).
+    pub fn mouse_hints_with(&self, shift: bool) -> MouseHints {
         let mut h = self.mouse_hints_plain();
         if self.tool == ToolKind::Chop {
             h.shift = "Shift: left trims the clicked piece, middle splits at the point, right extends a line end";
         }
+        if shift {
+            let (l, m, r) = self.shift_hints();
+            for (slot, s) in [(&mut h.left, l), (&mut h.middle, m), (&mut h.right, r)] {
+                if !s.is_empty() {
+                    *slot = s;
+                }
+            }
+        }
         h
+    }
+
+    /// The Shift meanings of the buttons in the current tool and state;
+    /// empty where Shift changes nothing.
+    fn shift_hints(&self) -> (&'static str, &'static str, &'static str) {
+        match (&self.tool_state, self.tool) {
+            (ToolState::Points { freehand: false, .. }, _) => ("del point", "", ""),
+            (ToolState::Idle | ToolState::Chop { .. }, ToolKind::Chop) => ("trim piece", "split here", "extend line"),
+            (ToolState::Idle, ToolKind::Select) => ("add/remove", "", ""),
+            (ToolState::Idle, ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture) => ("", "square at center", ""),
+            (ToolState::Idle, ToolKind::Edit) => ("", "show comments", ""),
+            (ToolState::Idle, ToolKind::RotateCcw | ToolKind::RotateCw) => ("rotate other way", "copy, other way", ""),
+            _ => ("", "", ""),
+        }
     }
 
     fn mouse_hints_plain(&self) -> MouseHints {
@@ -2968,6 +2999,35 @@ mod tests {
         assert!(e.selection().len() <= 1 && e.doc().objects.len() == 1);
         let h = e.mouse_hints();
         assert!(h.left.is_empty() && h.right.is_empty());
+    }
+
+    #[test]
+    fn shift_hints_show_what_shift_does() {
+        let mut e = Engine::new();
+        e.set_tool(ToolKind::Chop);
+        let h = e.mouse_hints_with(true);
+        assert_eq!((h.left, h.middle, h.right), ("trim piece", "split here", "extend line"));
+        assert_eq!(e.mouse_hints_with(false).left, "Select axe object");
+        // Shift+left removes the last point of a line being drawn.
+        e.set_tool(ToolKind::Polyline);
+        click(&mut e, 0.0, 0.0, Button::Left);
+        click(&mut e, 600.0, 0.0, Button::Left);
+        assert_eq!(e.mouse_hints_with(true).left, "del point");
+        assert_eq!(e.mouse_hints_with(true).middle, "final point");
+        let pos = Point::new(900.0, 0.0);
+        e.tool_event(ToolEvent::Press {
+            pos,
+            button: Button::Left,
+            shift: true,
+        })
+        .unwrap();
+        let ToolState::Points { pts, .. } = &e.tool_state else {
+            panic!("still drawing")
+        };
+        assert_eq!(pts.len(), 1);
+        // Modes without Shift meanings keep their labels.
+        e.set_tool(ToolKind::Delete);
+        assert_eq!(e.mouse_hints_with(true), e.mouse_hints());
     }
 
     #[test]

@@ -747,7 +747,9 @@ const INDICATOR_SIZE: egui::Vec2 = vec2(290.0, 46.0);
 /// starting at 45 % of the height; the box is compact and the left and
 /// right labels sit next to the ticks (xfig centres them in the free space).
 pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
-    let mut h = app.engine.mouse_hints();
+    // xfig shows the Shift meanings while Shift is held (S4-7).
+    let shift = ui.input(|i| i.modifiers.shift);
+    let mut h = app.engine.mouse_hints_with(shift);
     if let Some((left, middle, right)) = app.hint_shown {
         h = rustfig_engine::MouseHints {
             left,
