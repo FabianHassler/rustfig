@@ -6,7 +6,11 @@
 2. Press the left button on the canvas, drag, and release. The box is drawn with the current attributes shown in the indicator panel at the bottom (line width, colours, fill and so on).
 3. Pick **Move** (key `M`), click the box and click again where it should go. Or use **Select** and drag it.
 4. Change how things look: set an attribute in the indicator panel, then use **Update attributes** (key `U`) on an object, or double-click an object with Select to open its edit panel.
-5. Press Alt+U (Option+U on macOS) or Ctrl+Z to undo. RustFig keeps many undo levels.
+<!-- os: mac -->
+5. Press Option+U or Cmd+Z to undo. RustFig keeps many undo levels.
+<!-- os: linux windows -->
+5. Press Alt+U or Ctrl+Z to undo. RustFig keeps many undo levels.
+<!-- os: end -->
 6. File > Save As writes a `.fig` file. File > Export writes PDF, SVG, EPS, PNG and other formats.
 
 ## Things worth knowing early

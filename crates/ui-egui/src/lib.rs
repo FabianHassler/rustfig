@@ -22,6 +22,7 @@ pub mod input;
 pub mod menus;
 pub mod mode_icons;
 pub mod panels;
+pub mod platform;
 pub mod point_entry;
 pub mod rulers;
 pub mod settings;

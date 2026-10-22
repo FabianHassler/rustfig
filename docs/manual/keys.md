@@ -1,8 +1,14 @@
 # Keys
 
-RustFig understands two sets of keys: xfig's own, and the usual ones of your platform. xfig's set can be switched off in Edit > Global settings ("xfig keyboard shortcuts"). On macOS the platform's shortcuts use Cmd (written Ctrl below); xfig's Meta is the Option key (Alt on Linux and Windows).
+<!-- os: mac -->
+RustFig understands two sets of keys: xfig's own, and the usual ones of macOS. xfig's set can be switched off in Edit > Global settings ("xfig keyboard shortcuts"). The macOS shortcuts use Cmd (written Ctrl in the tables below); xfig's Meta is the Option key. Where a table says "the physical Ctrl key", it means the Control key, not Cmd.
 
-Where both sets want the same key (Ctrl+S, Ctrl+C and so on on Linux and Windows), xfig's meaning wins while xfig's keys are on. The menus show the key that applies.
+The menus show the key that applies.
+<!-- os: linux windows -->
+RustFig understands two sets of keys: xfig's own, and the usual ones of your system. xfig's set can be switched off in Edit > Global settings ("xfig keyboard shortcuts"). xfig's Meta is the Alt key.
+
+Where both sets want the same key (Ctrl+S, Ctrl+C and so on), xfig's meaning wins while xfig's keys are on. The menus show the key that applies.
+<!-- os: end -->
 
 ## Mode keys
 
@@ -41,7 +47,7 @@ Mode keys do nothing while a menu is open or while you type text.
 | Meta+G | Global settings |
 | Shift+U | Set units |
 | Shift+Z, Z | Zoom in, zoom out |
-| Ctrl+Z (the physical Ctrl key, also on macOS) | Zoom to fit |
+| Ctrl+Z (the physical Ctrl key) | Zoom to fit |
 
 Meta+F, E, V and H open the File, Edit, View and Help menus; while a menu is open, the underlined letter of an entry picks it (for example `i` for Zoom In in the View menu). In the Help menu `x` opens this manual.
 

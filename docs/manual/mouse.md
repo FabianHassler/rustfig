@@ -4,14 +4,21 @@ xfig is drawn with three mouse buttons, and almost every mode gives each button 
 
 ## Getting three buttons
 
-| Computer | Left | Middle | Right |
+<!-- os: mac -->
+| Mouse | Left | Middle | Right |
 |---|---|---|---|
-| Any, with a three-button mouse | left button | middle button (wheel click) | right button |
-| macOS, trackpad or one-button mouse | click | Option+click | Ctrl+click (or a two-finger click) |
-| Linux and Windows, two-button mouse | left button | left and right buttons together (a chord) | right button |
-| Any, keyboard substitute | click | Alt+click | Ctrl+click |
+| Three-button mouse | left button | middle button (wheel click) | right button |
+| Trackpad or one-button mouse | click | Option+click | Ctrl+click (or a two-finger click) |
 
-Alt+click and Ctrl+click work on every platform; on macOS Option is Alt. The chord on Linux and Windows works like xfig on a two-button mouse: press both buttons within a moment of each other.
+<!-- os: linux windows -->
+| Mouse | Left | Middle | Right |
+|---|---|---|---|
+| Three-button mouse | left button | middle button (wheel click) | right button |
+| Two-button mouse | left button | left and right buttons together (a chord) | right button |
+| Keyboard substitute | click | Alt+click | Ctrl+click |
+
+The chord works like xfig on a two-button mouse: press both buttons within a moment of each other.
+<!-- os: end -->
 
 ## What the buttons do
 

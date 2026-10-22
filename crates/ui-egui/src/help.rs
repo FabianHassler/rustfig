@@ -571,6 +571,7 @@ pub fn help_dialog(app: &mut App, ctx: &egui::Context) {
     let tk = Tokens::for_dark(ctx.style().visuals.dark_mode);
     let mut open = true;
     let mut nav: Option<String> = None;
+    let os = crate::platform::Os::current(ctx);
     let st = &mut app.dialogs.help;
     egui::Window::new("Manual")
         .open(&mut open)
@@ -615,7 +616,7 @@ pub fn help_dialog(app: &mut App, ctx: &egui::Context) {
                 scroll.show(ui, |ui| {
                     if st.query.trim().is_empty() {
                         let Some(t) = TOPICS.get(st.topic) else { return };
-                        show_blocks(ui, &tk, &parse(t.text), &mut nav);
+                        show_blocks(ui, &tk, &parse(&crate::platform::for_os(t.text, os)), &mut nav);
                         return;
                     }
                     let hits = search(&st.query);
@@ -711,6 +712,28 @@ mod tests {
         for (i, t) in TOPICS.iter().enumerate() {
             assert!(t.text.starts_with("# "), "{} must start with a title", t.file);
             assert!(TOPICS.iter().skip(i + 1).all(|o| o.file != t.file), "{} twice", t.file);
+        }
+    }
+
+    /// Each block written for some systems (`<!-- os: … -->`) is closed
+    /// with `<!-- os: end -->`, and every system still gets the title.
+    #[test]
+    fn system_blocks_are_closed() {
+        use crate::platform::{for_os, Os};
+        for t in TOPICS {
+            let mut open = false;
+            for line in t.text.lines().map(str::trim) {
+                if line == "<!-- os: end -->" {
+                    assert!(open, "{}: end without a block", t.file);
+                    open = false;
+                } else if line.starts_with("<!-- os:") {
+                    open = true;
+                }
+            }
+            assert!(!open, "{}: block not closed", t.file);
+            for os in [Os::Mac, Os::Windows, Os::Linux] {
+                assert!(for_os(t.text, os).starts_with("# "), "{}", t.file);
+            }
         }
     }
 

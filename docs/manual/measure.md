@@ -4,7 +4,7 @@ The three measure modes (the last three buttons of the editing column) report in
 
 ## Measure angle
 
-Key Ctrl+G (the Control key itself, also on a Mac). Measures an angle between three points you click, or at a corner of a line or at the centre of an arc.
+Key Ctrl+G (the physical Ctrl key). Measures an angle between three points you click, or at a corner of a line or at the centre of an arc.
 
 - Left, “first point”: click the first point of the angle. A rubber band follows the pointer. The next click (“angle tip”) is the corner, then the third click (“final point”, left button) measures the angle at the corner between the two lines and reports “Angle defined by three points: 45.00 Degrees”, between -180 and 180 degrees (the sign says which way it turns).
 - Middle, “select & save”: click a vertex of a line or polygon, or one of the three defining points of an arc. The angle is reported and also stored as the **Rotation Angle** (0 to 180 degrees) of the Rotate modes. While the three points are being placed the middle button's label is “save angle”: the third point clicked with it also stores the angle.

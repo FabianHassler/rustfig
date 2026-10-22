@@ -902,11 +902,8 @@ pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
     } else {
         ""
     };
-    let resp = resp.on_hover_text(format!(
-        "{summary}{shift_note}{region_note}\n\nTwo-button mouse or trackpad: Alt/Option+click is the middle button, \
-         Ctrl+click the right button (macOS); on Linux and Windows left and right together \
-         are the middle button."
-    ));
+    let os_note = crate::platform::Os::current(ui.ctx()).mouse_note();
+    let resp = resp.on_hover_text(format!("{summary}{shift_note}{region_note}\n\n{os_note}"));
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, summary.clone()));
 }
 
