@@ -1564,3 +1564,83 @@ fn manual_opens_from_the_help_menu_and_searches() {
     // Unknown topics are reported, not ignored.
     assert!(h.state_mut().try_run("help.open", &json!({"topic": "nope"})).is_err());
 }
+
+/// W10-16, W10-20: the picture edit panel's rows, Relink and file drop.
+#[test]
+fn picture_panel_rows_relink_and_drop() {
+    let dir = std::env::temp_dir().join(format!("rustfig-pic-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let xpm = |name: &str, w: usize| {
+        let row = "a".repeat(w);
+        let text =
+            format!("/* XPM */\nstatic char *a[] = {{\n\"{w} 2 1 1\",\n\"a c #ff0000\",\n\"{row}\",\n\"{row}\"}};\n");
+        let p = dir.join(name);
+        std::fs::write(&p, text).unwrap();
+        p.to_string_lossy().into_owned()
+    };
+    let (first, second, third) = (xpm("a.xpm", 4), xpm("b.xpm", 6), xpm("c.xpm", 8));
+    let mut a = app();
+    a.file_dialogs = Box::new(ScriptedDialogs::new([Some(second.clone())]));
+    let mut h = harness(a);
+    let r = h
+        .state_mut()
+        .engine
+        .execute(
+            "shape.picture",
+            &json!({"path": first, "x": 0, "y": 0, "width": 600, "height": 300}),
+        )
+        .unwrap();
+    let id = r["id"].as_u64().unwrap();
+    h.state_mut().engine.execute("edit.select_all", &json!({})).unwrap();
+    h.state_mut().run("app.edit_selected", json!({}));
+    h.run_steps(3);
+    for label in [
+        "Picture filename",
+        "Reread",
+        "Browse",
+        "Type",
+        "Size (pixels)",
+        "Colours",
+        "Transparent colour",
+        "Rotation",
+        "Shrink to orig",
+        "Expand to orig",
+        "Use original size",
+        "Scale by %",
+        "Edit Image",
+        "Picture thumbnail",
+    ] {
+        assert!(h.query_all_by_label(label).count() >= 1, "{label}");
+    }
+    // Use original size: 4x2 pixels -> 60 x 30 units.
+    h.get_by_label("Use original size").click();
+    h.run_steps(2);
+    // Drop a file onto the panel.
+    h.input_mut().dropped_files.push(egui::DroppedFile {
+        path: Some(third.clone().into()),
+        ..Default::default()
+    });
+    h.run_steps(3);
+    let info = h
+        .state_mut()
+        .engine
+        .execute("picture.info", &json!({"id": id}))
+        .unwrap();
+    assert_eq!(info["file"], json!(third));
+    assert_eq!(info["width"], 8);
+    // The file goes missing: the button becomes Relink and takes the picked file.
+    std::fs::remove_file(&third).unwrap();
+    h.state_mut().run("app.edit_selected", json!({}));
+    h.run_steps(3);
+    assert!(h.query_all_by_label("Browse").next().is_none());
+    h.get_by_label("Relink").click();
+    h.run_steps(3);
+    let info = h
+        .state_mut()
+        .engine
+        .execute("picture.info", &json!({"id": id}))
+        .unwrap();
+    assert_eq!(info["file"], json!(second));
+    assert_eq!(info["exists"], true);
+    let _ = std::fs::remove_dir_all(&dir);
+}

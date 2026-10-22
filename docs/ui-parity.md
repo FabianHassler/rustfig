@@ -1,6 +1,6 @@
 # UI parity checklist
 
-**Status:** 2026-10-22 (D5: measure modes); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: Tangent mode and its length button). ✅ done · 🟡 partial · ❌ missing
+**Status:** 2026-10-22 (W10-16, W10-20: picture edit panel); 2026-10-22 (D5: measure modes); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: Tangent mode and its length button). ✅ done · 🟡 partial · ❌ missing
 
 ## Drawing modes
 | xfig mode | RustFig | |
@@ -14,6 +14,7 @@
 | Box, arc-box | `tool.box`, `tool.arc_box` | ✅ |
 | Regular polygon | `tool.regular_polygon` | ✅ |
 | Arc | `tool.arc` (three clicks) | ✅ |
+| Picture edit panel | Reread, Browse/Relink, drop a file, type, size, colours, transparency, thumbnail, width/length, rotation, h/w ratios, Shrink/Expand/Original/Scale %, Edit Image, XBM pen colour (W10-16, W10-20) | ✅ |
 | Picture | `tool.picture` (xfig's types: EPS/PS, PDF, GIF, JPEG, PCX, PNG, PPM, TIFF, XBM, XPM, `.gz`/`.Z`; also BMP) | ✅ |
 | Text | `tool.text` | 🟡 no character map |
 | Library object | — | ❌ |

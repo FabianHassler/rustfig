@@ -298,18 +298,18 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_edit.c` | `popup_show_comments` | 724 | replaced | figure comments in `dialogs::figure_comments_dialog` and `doc.set_comments`; clicking empty canvas in Edit mode to open them is D11 | D11 |
 | `e_edit.c` | `popdown_comments` | 815 | replaced | figure comments in `dialogs::figure_comments_dialog` and `doc.set_comments`; clicking empty canvas in Edit mode to open them is D11 | D11 |
 | `e_edit.c` | `edit_item` | 821 | replaced | edit dialog `dialogs::edit_dialog` (egui) per object kind; Done/Apply/Cancel as one undo step (W10-17/18 for the live version) |  |
-| `e_edit.c` | `reread_picfile` | 944 | missing | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
+| `e_edit.c` | `reread_picfile` | 944 | ported | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
 | `e_edit.c` | `edit_spline_point` | 971 | replaced | spline point panel `dialogs::spline_point_dialog`; shape-factor column in the point table is W10-19 | W10-19 |
-| `e_edit.c` | `expand_pic` | 1001 | missing | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
-| `e_edit.c` | `shrink_pic` | 1049 | missing | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
-| `e_edit.c` | `origsize_pic` | 1098 | missing | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
-| `e_edit.c` | `scale_percent_pic` | 1132 | missing | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
+| `e_edit.c` | `expand_pic` | 1001 | ported | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
+| `e_edit.c` | `shrink_pic` | 1049 | ported | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
+| `e_edit.c` | `origsize_pic` | 1098 | ported | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
+| `e_edit.c` | `scale_percent_pic` | 1132 | ported | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
 | `e_edit.c` | `make_window_figure` | 1178 | replaced | figure comments in `dialogs::figure_comments_dialog` and `doc.set_comments`; clicking empty canvas in Edit mode to open them is D11 | D11 |
 | `e_edit.c` | `done_figure_comments` | 1185 | replaced | figure comments in `dialogs::figure_comments_dialog` and `doc.set_comments`; clicking empty canvas in Edit mode to open them is D11 | D11 |
 | `e_edit.c` | `make_window_compound` | 1209 | partial | compound panel: corner and size fields, depth range, per-text fields | W10-15 |
 | `e_edit.c` | `modify_compound` | 1377 | partial | compound panel: corner and size fields, depth range, per-text fields | W10-15 |
-| `e_edit.c` | `reposition_picture` | 1390 | missing | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
-| `e_edit.c` | `resize_picture` | 1433 | missing | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
+| `e_edit.c` | `reposition_picture` | 1390 | ported | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
+| `e_edit.c` | `resize_picture` | 1433 | ported | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
 | `e_edit.c` | `reposition_top` | 1478 | partial | compound panel: corner and size fields, depth range, per-text fields | W10-15 |
 | `e_edit.c` | `reposition_bottom` | 1506 | partial | compound panel: corner and size fields, depth range, per-text fields | W10-15 |
 | `e_edit.c` | `rescale_compound` | 1535 | partial | compound panel: corner and size fields, depth range, per-text fields | W10-15 |
@@ -394,8 +394,8 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_edit.c` | `rigid_text_select` | 5385 | replaced | pictorial menus in the edit panel are egui combo boxes; pictures for choices are W10-21 | W10-21 |
 | `e_edit.c` | `special_text_select` | 5395 | replaced | pictorial menus in the edit panel are egui combo boxes; pictures for choices are W10-21 | W10-21 |
 | `e_edit.c` | `textjust_select` | 5405 | replaced | pictorial menus in the edit panel are egui combo boxes; pictures for choices are W10-21 | W10-21 |
-| `e_edit.c` | `flip_pic_select` | 5415 | missing | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
-| `e_edit.c` | `rotation_select` | 5449 | missing | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
+| `e_edit.c` | `flip_pic_select` | 5415 | ported | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
+| `e_edit.c` | `rotation_select` | 5449 | ported | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
 | `e_edit.c` | `fill_style_select` | 5562 | replaced | pictorial menus in the edit panel are egui combo boxes; pictures for choices are W10-21 | W10-21 |
 | `e_edit.c` | `fill_style_sens` | 5623 | replaced | pictorial menus in the edit panel are egui combo boxes; pictures for choices are W10-21 | W10-21 |
 | `e_edit.c` | `fill_pat_sens` | 5631 | replaced | pictorial menus in the edit panel are egui combo boxes; pictures for choices are W10-21 | W10-21 |
@@ -408,11 +408,11 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_edit.c` | `check_thick` | 5771 | replaced | Xt panel helpers: egui widgets (`xy_row`, `coord`, `arrow_rows`, drag values) |  |
 | `e_edit.c` | `push_apply_button` | 5792 | replaced | Xt panel helpers: egui widgets (`xy_row`, `coord`, `arrow_rows`, drag values) |  |
 | `e_edit.c` | `grab_button` | 5803 | replaced | Xt panel helpers: egui widgets (`xy_row`, `coord`, `arrow_rows`, drag values) |  |
-| `e_edit.c` | `image_edit_button` | 5846 | missing | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
-| `e_edit.c` | `browse_button` | 5915 | missing | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
+| `e_edit.c` | `image_edit_button` | 5846 | ported | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
+| `e_edit.c` | `browse_button` | 5915 | ported | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
 | `e_edit.c` | `collapse_depth` | 5927 | partial | compound panel: corner and size fields, depth range, per-text fields | W10-15 |
 | `e_edit.c` | `collapse_depths` | 5941 | partial | compound panel: corner and size fields, depth range, per-text fields | W10-15 |
-| `e_edit.c` | `what_rotation` | 5984 | missing | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
+| `e_edit.c` | `what_rotation` | 5984 | ported | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
 | `e_flip.c` | `flip_ud_selected` | 69 | ported | commands `transform.flip_horizontal`, `transform.flip_vertical`; tools `FlipV`, `FlipH` (also copy and flip) |  |
 | `e_flip.c` | `flip_lr_selected` | 85 | ported | commands `transform.flip_horizontal`, `transform.flip_vertical`; tools `FlipV`, `FlipH` (also copy and flip) |  |
 | `e_flip.c` | `flip_selected` | 101 | ported | commands `transform.flip_horizontal`, `transform.flip_vertical`; tools `FlipV`, `FlipH` (also copy and flip) |  |

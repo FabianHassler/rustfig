@@ -71,6 +71,16 @@ impl ArrowRows {
 }
 
 /// Attribute editor state for one object.
+/// A texture handle that can sit in a `Debug` state.
+#[derive(Clone)]
+pub struct Thumb(pub egui::TextureHandle);
+
+impl std::fmt::Debug for Thumb {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Thumb")
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct EditState {
     pub id: ObjectId,
@@ -113,6 +123,15 @@ pub struct EditState {
     /// Picture rows.
     pub picture_file: String,
     pub flipped: bool,
+    /// The file name the object has now (the typed name differs until Reread).
+    pub picture_saved_file: String,
+    /// The picture's file facts and pixels (W10-16).
+    pub picture_info: Option<rustfig_engine::cmd::picture::PictureInfo>,
+    pub picture_image: Option<std::sync::Arc<rustfig_model::RasterImage>>,
+    /// Thumbnail texture, made on the first frame (and after a reread).
+    pub picture_thumb: Option<Thumb>,
+    /// "Scale by %" entry.
+    pub picture_percent: f64,
     /// Compound rows: member count.
     pub members: usize,
     /// How many times Apply was pressed; Cancel undoes them.
@@ -224,6 +243,16 @@ pub struct Dialogs {
     command_filter: String,
 }
 
+impl EditState {
+    /// Take the picture's file facts and pixels from the object.
+    pub fn refresh_picture(&mut self, pic: &rustfig_model::Picture) {
+        self.picture_saved_file = pic.file.clone();
+        self.picture_info = Some(rustfig_engine::cmd::picture::info(pic));
+        self.picture_image = pic.image.clone();
+        self.picture_thumb = None;
+    }
+}
+
 impl Dialogs {
     pub fn open_edit(&mut self, engine: &Engine, id: ObjectId) {
         let Some(o) = engine.doc().get(id) else { return };
@@ -266,6 +295,11 @@ impl Dialogs {
             fig_units: false,
             picture_file: String::new(),
             flipped: false,
+            picture_saved_file: String::new(),
+            picture_info: None,
+            picture_image: None,
+            picture_thumb: None,
+            picture_percent: 100.0,
             members: 0,
             applies: 0,
         };
@@ -319,6 +353,7 @@ impl Dialogs {
                     if let Some(pic) = &p.picture {
                         st.picture_file = pic.file.clone();
                         st.flipped = pic.flipped;
+                        st.refresh_picture(pic);
                     }
                 }
                 let sub = match p.kind {
@@ -416,6 +451,9 @@ impl Dialogs {
         }
         if st.is_picture {
             p["flipped"] = json!(st.flipped);
+            if st.picture_info.as_ref().is_some_and(|i| i.kind == "XBM") {
+                p["pen_color"] = json!(st.pen);
+            }
         }
         if st.has_arrows {
             p["forward_arrow"] = json!(st.fwd.on);
@@ -1127,6 +1165,14 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
         }
     };
     let scale = if st.fig_units { 1.0 } else { doc_scale };
+    if st.is_picture {
+        // W10-20: a file dropped on the window becomes the picture's file.
+        let dropped = ctx.input(|i| i.raw.dropped_files.first().and_then(|f| f.path.clone()));
+        if let Some(path) = dropped.and_then(|p| p.to_str().map(str::to_string)) {
+            st.picture_file = path;
+            picture_set_file(app, &mut st);
+        }
+    }
     egui::Window::new(&st.title)
         .open(&mut open)
         .resizable(false)
@@ -1266,16 +1312,7 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                         ui.end_row();
                     }
                     if st.is_picture {
-                        ui.label("Picture filename");
-                        ui.label(if st.picture_file.is_empty() {
-                            "(none)"
-                        } else {
-                            &st.picture_file
-                        });
-                        ui.end_row();
-                        ui.label("Orientation");
-                        ui.checkbox(&mut st.flipped, "Flipped about diagonal");
-                        ui.end_row();
+                        picture_rows(ui, ctx, app, &mut st, scale);
                     }
                     ui.label(if st.is_compound { "Collapse depths to" } else { "Depth" });
                     ui.add(egui::DragValue::new(&mut st.depth).range(0..=999));
@@ -1388,6 +1425,9 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
         return;
     }
     if apply {
+        if st.is_picture && st.picture_file != st.picture_saved_file {
+            picture_set_file(app, &mut st);
+        }
         let p = Dialogs::edit_params(&st);
         if app.run("object.set_attributes", p).is_some() {
             st.applies += 1;
@@ -1932,6 +1972,209 @@ fn unsaved_dialog(app: &mut App, ctx: &egui::Context) {
         Some(2) => app.pending = None,
         _ => {}
     }
+}
+
+// ---- picture panel (W10-16, W10-20) -------------------------------------
+
+/// Load the typed (or dropped, or browsed) file into the picture: undoable
+/// by Cancel like Apply.
+fn picture_set_file(app: &mut App, st: &mut EditState) {
+    let p = json!({"id": st.id.0, "path": st.picture_file});
+    if app.run("picture.set_file", p).is_some() {
+        st.applies += 1;
+        let pic = match app.engine.doc().get(st.id).map(|o| &o.kind) {
+            Some(ObjectKind::Polyline(pl)) => pl.picture.clone(),
+            _ => None,
+        };
+        if let Some(pic) = pic {
+            st.refresh_picture(&pic);
+        }
+    }
+}
+
+/// The thumbnail's texture: the image sampled down to at most 128 pixels.
+fn picture_thumb(ctx: &egui::Context, st: &mut EditState) -> Option<egui::TextureHandle> {
+    if st.picture_thumb.is_none() {
+        let img = st.picture_image.as_ref()?;
+        let (w, h) = (img.width as usize, img.height as usize);
+        if w == 0 || h == 0 || img.rgba.len() < w.checked_mul(h)?.checked_mul(4)? {
+            return None;
+        }
+        let k = (w.max(h) / 128).max(1);
+        let (tw, th) = (w / k, h / k);
+        let mut px = Vec::with_capacity(tw * th);
+        for y in 0..th {
+            for x in 0..tw {
+                let i = ((y * k) * w + x * k) * 4;
+                let c = img.rgba.get(i..i + 4)?;
+                px.push(egui::Color32::from_rgba_unmultiplied(c[0], c[1], c[2], c[3]));
+            }
+        }
+        let ci = egui::ColorImage {
+            size: [tw, th],
+            source_size: egui::vec2(tw as f32, th as f32),
+            pixels: px,
+        };
+        st.picture_thumb = Some(Thumb(ctx.load_texture(
+            "picture_thumb",
+            ci,
+            egui::TextureOptions::LINEAR,
+        )));
+    }
+    st.picture_thumb.as_ref().map(|t| t.0.clone())
+}
+
+/// The picture panel's rows (xfig's `e_edit.c` picture fields).
+fn picture_rows(ui: &mut egui::Ui, ctx: &egui::Context, app: &mut App, st: &mut EditState, scale: f64) {
+    use rustfig_engine::cmd::picture::{resize_corner, rotation_of, with_rotation, Resize};
+    let info = st.picture_info.clone();
+    ui.label("Picture filename");
+    ui.horizontal(|ui| {
+        ui.add(egui::TextEdit::singleline(&mut st.picture_file).desired_width(220.0))
+            .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Picture filename"));
+        if ui.button("Reread").clicked() {
+            picture_set_file(app, st);
+        }
+        let missing = info.as_ref().is_some_and(|i| !i.exists);
+        if ui.button(if missing { "Relink" } else { "Browse" }).clicked() {
+            if let Some(f) = app.file_dialogs.pick_file("Pictures", PICTURE_EXTS) {
+                st.picture_file = f;
+                picture_set_file(app, st);
+            }
+        }
+    });
+    ui.end_row();
+    if let Some(i) = &info {
+        if !i.exists {
+            ui.label("");
+            ui.colored_label(egui::Color32::RED, "File not found: use Relink, or drop a file here");
+            ui.end_row();
+        }
+        ui.label("Type");
+        ui.label(&i.kind);
+        ui.end_row();
+        ui.label("Size (pixels)");
+        ui.label(format!("{} x {}", i.width, i.height));
+        ui.end_row();
+        ui.label("Colours");
+        ui.label(if i.colours > 256 {
+            "more than 256".to_string()
+        } else {
+            i.colours.to_string()
+        });
+        ui.end_row();
+        ui.label("Transparent colour");
+        ui.label(if i.transparent { "yes" } else { "none" });
+        ui.end_row();
+    }
+    if let Some(tex) = picture_thumb(ctx, st) {
+        ui.label("Preview");
+        let s = tex.size_vec2();
+        ui.image((tex.id(), s))
+            .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, "Picture thumbnail"));
+        ui.end_row();
+    }
+    let (w, h) = info.as_ref().map(|i| (i.width, i.height)).unwrap_or((0, 0));
+    if let Geo::Corners([a, b]) = &mut st.geo {
+        let (pa, pb) = (
+            rustfig_geom::Point::new(a[0], a[1]),
+            rustfig_geom::Point::new(b[0], b[1]),
+        );
+        let mut rot = rotation_of(pa, pb);
+        ui.label("Width");
+        let mut wd = (b[0] - a[0]).abs();
+        let wd0 = wd;
+        ui.horizontal(|ui| {
+            coord(ui, &mut wd, scale);
+            ui.label("Length");
+            let mut ln = (b[1] - a[1]).abs();
+            let before = ln;
+            coord(ui, &mut ln, scale);
+            if ln != before && ln > 0.0 {
+                b[1] = a[1] + if b[1] < a[1] { -ln } else { ln };
+            }
+        });
+        if wd != wd0 && wd > 0.0 {
+            b[0] = a[0] + if b[0] < a[0] { -wd } else { wd };
+        }
+        ui.end_row();
+        ui.label("Rotation");
+        let rot0 = rot;
+        egui::ComboBox::from_id_salt("edit_pic_rotation")
+            .selected_text(format!("{rot}"))
+            .show_ui(ui, |ui| {
+                for r in [0, 90, 180, 270] {
+                    ui.selectable_value(&mut rot, r, format!("{r}"));
+                }
+            });
+        if rot != rot0 {
+            if let Some(q) = with_rotation(pa, rustfig_geom::Point::new(b[0], b[1]), rot) {
+                *b = [q.x, q.y];
+            }
+        }
+        ui.end_row();
+        let orig = if w > 0 { f64::from(h) / f64::from(w) } else { 0.0 };
+        let cur = if (b[0] - a[0]).abs() > 0.0 {
+            (b[1] - a[1]).abs() / (b[0] - a[0]).abs()
+        } else {
+            0.0
+        };
+        ui.label("h/w ratio");
+        ui.label(format!("{orig:.1} (original), {cur:.1} (now)"));
+        ui.end_row();
+        // Two grid rows: a wrapping row inside a grid cell spills into the
+        // next row's label.
+        let mut mode = None;
+        ui.label("Size");
+        ui.horizontal(|ui| {
+            if ui.button("Shrink to orig").clicked() {
+                mode = Some(Resize::Shrink);
+            }
+            if ui.button("Expand to orig").clicked() {
+                mode = Some(Resize::Expand);
+            }
+            if ui.button("Use original size").clicked() {
+                mode = Some(Resize::Original);
+            }
+        });
+        ui.end_row();
+        ui.label("");
+        ui.horizontal(|ui| {
+            if ui.button("Scale by %").clicked() {
+                mode = Some(Resize::Percent(st.picture_percent));
+            }
+            ui.add(
+                egui::DragValue::new(&mut st.picture_percent)
+                    .range(0.001..=100000.0)
+                    .max_decimals(3),
+            );
+        });
+        ui.end_row();
+        if let Some(m) = mode {
+            let (pa, pb) = (
+                rustfig_geom::Point::new(a[0], a[1]),
+                rustfig_geom::Point::new(b[0], b[1]),
+            );
+            if let Some(q) = resize_corner(m, pa, pb, st.flipped, w, h) {
+                *b = [q.x, q.y];
+            }
+        }
+    }
+    ui.label("Orientation");
+    ui.checkbox(&mut st.flipped, "Flipped about diagonal");
+    ui.end_row();
+    if info.as_ref().is_some_and(|i| i.kind == "XBM") {
+        ui.label("XBM pen colour");
+        if let Some(c) = color_combo(ui, "edit_xbm_pen", app.engine.doc(), st.pen) {
+            st.pen = c;
+        }
+        ui.end_row();
+    }
+    ui.label("");
+    if ui.button("Edit Image").clicked() {
+        app.run("picture.edit_image", json!({"id": st.id.0}));
+    }
+    ui.end_row();
 }
 
 #[cfg(test)]

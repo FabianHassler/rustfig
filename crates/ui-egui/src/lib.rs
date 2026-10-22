@@ -290,10 +290,14 @@ impl App {
                 UiRequest::EditSplinePoint { id, index } => self.dialogs.open_spline_point(&self.engine, id, index),
                 UiRequest::PickPicture { rect, keep_aspect } => {
                     if let Some(path) = self.file_dialogs.pick_file("Pictures", dialogs::PICTURE_EXTS) {
-                        self.run(
+                        let added = self.run(
                             "shape.picture",
                             json!({"path": path, "x": rect.min.x, "y": rect.min.y, "width": rect.width(), "height": rect.height(), "keep_aspect": keep_aspect}),
                         );
+                        // xfig opens the picture's edit panel after the box is drawn.
+                        if let Some(id) = added.and_then(|v| v.get("id").and_then(serde_json::Value::as_u64)) {
+                            self.dialogs.open_edit(&self.engine, rustfig_model::ObjectId(id));
+                        }
                     }
                 }
             }

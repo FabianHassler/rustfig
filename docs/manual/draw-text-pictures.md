@@ -19,4 +19,17 @@ No key (xfig key Ctrl+P). Places an image file in a box.
 - Middle, “center point”: draw the box from its centre (Shift+middle: a square).
 - Right, “keep aspect”: draw the box with the right button (click and click again, or drag); the picture then keeps its proportions.
 
+### The picture panel
+
+After the box is drawn and the file chosen, xfig's Edit panel for a picture opens; Edit mode (or Edit attributes) on a picture opens the same panel. Its rows:
+
+- **Picture filename**: edit the name and press Reread to load that file (the box keeps its place). **Browse** picks a file. When the file is missing, a red note says so and Browse becomes **Relink**: pick the file's new place. You can also drop a file from the file manager onto the panel. Apply also takes a changed name.
+- **Type**, **Size (pixels)**, **Colours** (counted up to 256) and **Transparent colour** (yes when the picture has transparent pixels). A small **preview** shows the picture.
+- **Width** and **Length** resize the box; **Rotation** (0, 90, 180, 270) turns the picture by changing the order of the box corners, as xfig does; **Flipped about diagonal** mirrors it. **h/w ratio** shows the picture's own ratio next to the box's.
+- **Shrink to orig** and **Expand to orig** fit the box to the picture's proportions (shrink the longer side, expand the shorter one); **Use original size** gives the box the picture's size at 80 pixels per inch; **Scale by %** sets it to that percentage of the original size. These change the opposite corner in the panel; Apply commits them.
+- **Edit Image** opens the file in the system's default application (desktop only; an error appears in the message panel if none starts). Reread afterwards to see the change.
+- **XBM pen colour** appears for XBM pictures.
+
+Reread and Relink are undone by Cancel. The same actions are the commands `picture.resize`, `picture.rotate`, `picture.set_file`, `picture.info` and `picture.edit_image`.
+
 File > Import picture does the same without drawing a box first: the picture goes to the centre of the view at its own size. Pictures can be EPS, PDF, PNG, JPEG, GIF, PCX, PPM, TIFF and others; EPS needs ghostscript (optional) to show on the canvas. The picture is referenced by its file name in the figure; keep it next to the figure file.

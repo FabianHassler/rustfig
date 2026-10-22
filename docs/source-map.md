@@ -86,7 +86,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `e_copy.c` | 185 | copy, array copy, copy to cut buffer | tools | partial: array copy (S4) | D10 |
 | `e_delete.c` | 307 | delete object/region, cut buffer | tools | ported (S4) | — |
 | `e_deletept.c` | 214 | delete point | tools | ported (S4) | — |
-| `e_edit.c` | 5996 | the Edit panel for every object type, figure comments, spline point shapes | `ui-egui/dialogs` | partial: compound and picture rows, point table, shape factor on the canvas, live panel (S4) | W10-15, W10-16, W10-19, S4-6 |
+| `e_edit.c` | 5996 | the Edit panel for every object type, figure comments, spline point shapes | `ui-egui/dialogs` | partial: compound and picture rows, point table, shape factor on the canvas, live panel (S4) | W10-15, W10-16 (done), W10-19, S4-6 |
 | `e_flip.c` | 452 | flip, copy & flip, anchor | tools, `cmd/transform` | partial: anchor (S4) | D10 |
 | `e_glue.c` | 521 | tag and glue compounds | tools | ported (S4) | — |
 | `e_joinsplit.c` | 714 | join/split lines and splines | `cmd/joinsplit.rs`, `tools/compound.rs` | ported | D2 |

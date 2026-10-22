@@ -48,6 +48,7 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/engine/src/cmd/file.rs: xfig src/u_print.c
 - crates/engine/src/cmd/joinsplit.rs: xfig src/e_joinsplit.c
 - crates/engine/src/cmd/measure.rs: xfig src/e_measure.c, src/u_geom.c, src/w_msgpanel.c
+- crates/engine/src/cmd/picture.rs: xfig src/e_edit.c (picture panel)
 - crates/engine/src/cmd/tangent.rs: xfig src/e_tangent.c, src/u_smartsearch.c, src/u_geom.c
 - crates/engine/src/links.rs: xfig src/u_list.c, src/u_elastic.c
 - crates/engine/src/cmdline.rs: xfig src/main.c (option table, help list, option parsing), doc/xfig.man.in (options)

@@ -1198,6 +1198,7 @@ mod tests {
             "scripting API; the Depth box of the attribute panel",
         ),
         ("arrange.align_to", "the Align tool's right button"),
+        ("picture.", "the picture edit panel's buttons; scripting API"),
     ];
 
     /// Every command is in a menu or listed above with a reason.

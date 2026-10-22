@@ -14,6 +14,7 @@ mod joinsplit;
 pub(crate) mod measure;
 mod object;
 mod outline;
+pub mod picture;
 mod prefs;
 mod region;
 pub(crate) mod shape;
@@ -72,6 +73,7 @@ pub fn all() -> &'static [Command] {
         v.extend(edit::commands());
         v.extend(view::commands());
         v.extend(shape::commands());
+        v.extend(picture::commands());
         v.extend(transform::commands());
         v.extend(arrange::commands());
         v.extend(object::commands());
