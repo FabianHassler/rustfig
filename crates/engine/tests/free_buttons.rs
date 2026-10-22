@@ -245,6 +245,32 @@ fn add_point_at_the_nearest_end() {
     assert_eq!(e.doc().objects[0].points().unwrap()[0], Point::new(-500.0, 0.0));
 }
 
+/// Middle click, move, left click: the middle click starts the new end
+/// point, the left click places it; a middle click meanwhile does nothing.
+#[test]
+fn add_point_middle_click_click_adds_at_end() {
+    let mut e = engine();
+    e.execute("shape.polyline", &json!({"points": [[0, 0], [2000, 0]]}))
+        .unwrap();
+    e.set_tool(ToolKind::AddPoint);
+    click(&mut e, 1900.0, 0.0, Button::Middle);
+    mv(&mut e, 2600.0, 600.0);
+    // The line follows the pointer while the new point is placed.
+    let ov = e.overlay();
+    let shown = ov.preview.first().and_then(|o| o.points()).map(<[Point]>::to_vec);
+    assert_eq!(
+        shown.as_deref().and_then(<[Point]>::last),
+        Some(&Point::new(2600.0, 600.0))
+    );
+    click(&mut e, 2600.0, 600.0, Button::Middle);
+    assert_eq!(e.doc().objects[0].points().unwrap().len(), 2);
+    click(&mut e, 2600.0, 600.0, Button::Left);
+    let pts = e.doc().objects[0].points().unwrap().to_vec();
+    assert_eq!(pts.len(), 3, "{pts:?}");
+    assert_eq!(pts[2], Point::new(2600.0, 600.0));
+    assert!(!e.tool_busy());
+}
+
 #[test]
 fn arrow_right_reverses() {
     let mut e = engine();

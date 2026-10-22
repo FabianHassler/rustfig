@@ -74,6 +74,16 @@ fn shift_click_cycles_through_overlapping_objects_and_a_plain_click_acts_on_the_
 }
 
 #[test]
+fn shift_right_sets_the_centre_in_rotate_as_in_xfig() {
+    let mut e = Engine::new();
+    e.set_tool(ToolKind::RotateCw);
+    let h = e.mouse_hints_with(true);
+    assert_eq!((h.left, h.middle, h.right), ("locate object", "", "set center"));
+    press(&mut e, 500.0, 500.0, Button::Right, true);
+    assert_eq!(e.mouse_hints_with(false).right, "unset center");
+}
+
+#[test]
 fn shift_locate_does_not_apply_where_xfig_has_no_object_search() {
     let mut e = Engine::new();
     e.set_tool(ToolKind::Box);

@@ -876,7 +876,7 @@ impl Engine {
                 // Shift+right are left free for later use (decided
                 // 2026-10-22), except xfig's own Shift+middle in Edit, which
                 // shows an object's comments.
-                if shift && !(self.tool == ToolKind::Edit && button == Button::Middle) {
+                if shift && !self.shift_keeps_button(button) {
                     if button == Button::Left {
                         self.locate_press(pos);
                     }
@@ -957,6 +957,20 @@ impl Engine {
     fn locate_mode(&self) -> bool {
         let idle = matches!(self.tool_state, ToolState::Idle | ToolState::Chop { .. });
         idle && self.tool.locates()
+    }
+
+    /// xfig's own Shift meanings in the locating modes, which pass the
+    /// click on: Edit's Shift+middle shows comments, and Rotate's and
+    /// Flip's Shift+right sets the centre / anchor like the right button.
+    fn shift_keeps_button(&self, button: Button) -> bool {
+        match button {
+            Button::Middle => self.tool == ToolKind::Edit,
+            Button::Right => matches!(
+                self.tool,
+                ToolKind::RotateCw | ToolKind::RotateCcw | ToolKind::FlipH | ToolKind::FlipV
+            ),
+            Button::Left => false,
+        }
     }
 
     /// Shift+click: highlight the next overlapping object under the pointer
@@ -1876,7 +1890,10 @@ impl Engine {
                     constrain,
                     ..
                 } => {
-                    if start.dist(pos) > tol || insert {
+                    // A drag places the point on release; a click starts it on
+                    // a rubber band and the next click places it (xfig's
+                    // "place new point", `e_addpt.c`).
+                    if start.dist(pos) > tol {
                         self.tool_state = ToolState::Idle;
                         self.commit_point(id, index, insert, start, pos, constrain)
                     } else if self.tool == ToolKind::Select {
@@ -2197,11 +2214,9 @@ impl Engine {
                 return Ok(());
             }
             let constrain = button == Button::Middle;
-            if constrain && self.tool == ToolKind::AddPoint {
-                // W14: a point beyond the nearer end of an open line or spline.
-                if self.tool_busy() {
-                    return Ok(());
-                }
+            // W14: a point beyond the nearer end of an open line or spline
+            // (a second middle click while one waits places it, below).
+            if constrain && self.tool == ToolKind::AddPoint && !self.tool_busy() {
                 let tol = self.pick_tol();
                 if let Some(id) = self.pick(pos, tol) {
                     let ends = match self.doc().get(id).map(|o| &o.kind) {
@@ -2240,6 +2255,9 @@ impl Engine {
                 ..
             } = self.tool_state.clone()
             {
+                // Placed with the left button only, also a new end point
+                // started with the middle one (decided 2026-10-22: no two
+                // buttons for one function).
                 if c != constrain {
                     return Ok(());
                 }
@@ -2250,6 +2268,9 @@ impl Engine {
             let found = if self.tool == ToolKind::MovePoint {
                 self.find_vertex(pos, tol).map(|(id, i)| (id, i, false))
             } else {
+                // xfig also adds beyond an end when the click is at an end
+                // point (`init_linepointadding`); RustFig leaves that to
+                // the middle button (decided 2026-10-22).
                 self.find_segment(pos, tol).map(|(id, i)| (id, i, true))
             };
             if let Some((id, index, insert)) = found {
@@ -2748,10 +2769,12 @@ impl Engine {
             // In the locating modes Shift+middle and Shift+right do nothing
             // (Edit's Shift+middle aside): their labels are blank.
             if self.locate_mode() {
-                if self.tool != ToolKind::Edit {
+                if !self.shift_keeps_button(Button::Middle) {
                     h.middle = "";
                 }
-                h.right = "";
+                if !self.shift_keeps_button(Button::Right) {
+                    h.right = "";
+                }
             }
         }
         h
