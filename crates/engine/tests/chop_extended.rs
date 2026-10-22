@@ -490,3 +490,39 @@ fn shift_buttons_trim_split_and_extend_in_chop_mode() {
     press(&mut e, 1000.0, 500.0, Button::Left, false);
     assert!(e.status().contains("Axe object 1"), "{}", e.status());
 }
+
+#[test]
+fn a_cut_at_an_end_point_leaves_no_one_point_piece() {
+    // Found by command_sweep: after this sequence Cut all made a spline piece
+    // whose points all coincide, which the Fig reader refuses.
+    let mut e = Engine::new();
+    for (id, p) in [
+        ("shape.rectangle", json!({"x": 0, "y": 0, "width": 1200, "height": 600})),
+        ("shape.circle", json!({"cx": 2000, "cy": 300, "r": 300})),
+        (
+            "shape.polyline",
+            json!({"points": [[0, 900], [600, 1500], [1200, 900]]}),
+        ),
+        (
+            "shape.spline",
+            json!({"points": [[0, 2000], [600, 2600], [1200, 2000]], "kind": "x"}),
+        ),
+        ("shape.arc", json!({"points": [[3000, 0], [3300, 300], [3600, 0]]})),
+        ("edit.select_all", json!({})),
+        ("point.move", json!({"id": 1, "index": 1, "x": -74.0, "y": 2229.8})),
+        (
+            "transform.scale",
+            json!({"sx": 1.5, "x": 0.0, "y": -428.3, "cx": 0.0, "cy": -428.3}),
+        ),
+        ("object.cut_all", json!({})),
+    ] {
+        let _ = e.execute(id, &p);
+    }
+    for o in &e.doc().objects {
+        let pts = flat(&e, o.id);
+        assert!(pts.iter().any(|q| q.dist(pts[0]) > 0.5), "one-point piece {:?}", o.kind);
+    }
+    let data = e.execute("file.save_data", &json!({})).unwrap();
+    let mut e2 = Engine::new();
+    e2.execute("file.open_data", &json!({"data": data["data"]})).unwrap();
+}

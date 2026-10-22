@@ -71,6 +71,13 @@ pub(super) fn replace_with(e: &mut Engine, log: &Object, cut: Cut) -> Vec<Object
             None => Vec::new(),
         },
         Cut::Pieces(kinds) => {
+            // A piece that shrank to one point (a cut exactly at a vertex)
+            // is dropped: Fig readers refuse a spline whose points all
+            // coincide, as xfig's `read_splineobject` does.
+            let kinds: Vec<ObjectKind> = kinds.into_iter().filter(|k| !collapsed(k)).collect();
+            if kinds.is_empty() {
+                return Vec::new();
+            }
             let Some(at) = doc.objects.iter().position(|o| o.id == log.id) else {
                 return Vec::new();
             };
@@ -89,6 +96,20 @@ pub(super) fn replace_with(e: &mut Engine, log: &Object, cut: Cut) -> Vec<Object
             doc.objects.extend(tail);
             ids
         }
+    }
+}
+
+/// Whether a line or spline's points all round to the same Fig coordinate.
+fn collapsed(k: &ObjectKind) -> bool {
+    let pts = match k {
+        ObjectKind::Polyline(l) if l.kind != PolyKind::Picture => &l.points,
+        ObjectKind::Spline(s) => &s.points,
+        _ => return false,
+    };
+    let round = |p: &Point| (p.x.round(), p.y.round());
+    match pts.first() {
+        Some(first) => pts.iter().all(|p| round(p) == round(first)),
+        None => true,
     }
 }
 
