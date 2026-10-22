@@ -25,7 +25,7 @@ Key `Shift+C`. Draws a circle from one end of its diameter.
 Key `E`. Same buttons as Circle (radius), but the ellipse is the main shape.
 
 - Left, “Circle center”: a circle from its centre.
-- Middle, “Ellipse center”: press at the centre; the radii follow the pointer. Either button finishes it.
+- Middle, “Ellipse center”: press at the centre; the radii follow the pointer. A left click finishes it (“Ellipse corner”), or release the middle button after dragging; xfig also lets the middle button finish, RustFig keeps the middle button free (one function per button).
 
 ## Ellipse (diameter)
 

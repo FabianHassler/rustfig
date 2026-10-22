@@ -313,9 +313,12 @@ impl App {
         menus::find_ui(id).is_some()
     }
 
-    fn handle_requests(&mut self) {
+    fn handle_requests(&mut self, ctx: &egui::Context) {
         for r in self.engine.take_requests() {
             match r {
+                // The clipboard's text arrives as a paste event next frame,
+                // which the text tool types.
+                UiRequest::PasteText => ctx.send_viewport_cmd(egui::ViewportCommand::RequestPaste),
                 UiRequest::EditObject { id } => self.dialogs.open_edit(&self.engine, id),
                 UiRequest::EditFigureComments => self.dialogs.open_figure_comments(&self.engine),
                 UiRequest::EditSplinePoint { id, index } => self.dialogs.open_spline_point(&self.engine, id, index),
@@ -476,7 +479,7 @@ impl App {
         reload::ask(self, ctx);
         panels::mode_popup(self, ctx, &tokens);
         panels::close_compound_popup(self, ctx);
-        self.handle_requests();
+        self.handle_requests(ctx);
         settings::tick(self);
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(a) = &mut self.autosave {

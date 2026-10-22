@@ -30,4 +30,4 @@ Key Ctrl+M. Measures the area of polygons, boxes, arcs, circles and ellipses; li
 - Middle, “select & add”: the same, and the area is added to a running total: “Area of polygon is 2.0 square in, accumulated 3.0 square in”.
 - Right, “reset to 0”: sets the total to 0 (“area reset to 0”). With Shift held the label reads “reset to +-0” and the total is reset to 0 and signed from now on (“signed area reset to 0”): an area is then negative when the polygon's points turn counter-clockwise on the screen (an arc by its direction), so overlapping and opposite parts cancel in the total. The ordinary right button turns the sign off again. Metric areas are given with three decimals, “square cm”.
 
-Shift held while clicking with the left or middle button does nothing in these modes; xfig uses it to highlight the object under the pointer (“Locate Object”), which RustFig does not have yet.
+Shift+left locates an object under another one (“locate object”, see [Mouse](mouse.md)); the next plain click measures the located object. Shift+middle does nothing.

@@ -65,6 +65,9 @@ pub enum UiRequest {
     /// Edit the shape factor of one control point of a spline (xfig's right
     /// button in Edit mode).
     EditSplinePoint { id: ObjectId, index: usize },
+    /// Paste the system clipboard's text into the text being typed (xfig's
+    /// Shift+middle "paste text" in Text mode); it comes back as text input.
+    PasteText,
 }
 
 /// The document session.

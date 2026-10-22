@@ -117,6 +117,13 @@ impl ToolKind {
                 | Arrow
                 | OpenClose
                 | Tangent
+                // xfig's LOC_OBJ on Shift+left in Glue (`e_glue.c`) and the
+                // length/area measures (`e_measure.c`); also Angle measure
+                // (decided 2026-10-22, xfig leaves it blank there).
+                | Glue
+                | AngleMeasure
+                | LengthMeasure
+                | AreaMeasure
         )
     }
 
@@ -1013,9 +1020,10 @@ impl Engine {
     fn shift_keeps_button(&self, button: Button) -> bool {
         match button {
             Button::Middle => self.tool == ToolKind::Edit,
+            // Area measure's Shift+right is "reset to +-0" (`e_measure.c`).
             Button::Right => matches!(
                 self.tool,
-                ToolKind::RotateCw | ToolKind::RotateCcw | ToolKind::FlipH | ToolKind::FlipV
+                ToolKind::RotateCw | ToolKind::RotateCcw | ToolKind::FlipH | ToolKind::FlipV | ToolKind::AreaMeasure
             ),
             Button::Left => false,
         }
@@ -1420,9 +1428,13 @@ impl Engine {
                     ..
                 } = self.tool_state
                 {
-                    // xfig: an ellipse is finished with either button.
+                    // xfig finishes an ellipse with either button; RustFig
+                    // with the left one only (no two buttons for one
+                    // function, decided 2026-10-22). A drag ends on the
+                    // release of its own button.
                     let ellipse = matches!(kind, ToolKind::EllipseRadii | ToolKind::EllipseDiameter);
-                    if b != button && !ellipse {
+                    let finishes = if ellipse { button == Button::Left } else { b == button };
+                    if !finishes {
                         return Ok(());
                     }
                     self.tool_state = ToolState::Idle;
@@ -1610,6 +1622,12 @@ impl Engine {
             ToolEvent::Press { pos, button, shift } => {
                 let typing = matches!(self.tool_state, ToolState::Text { .. });
                 match button {
+                    // xfig: Shift+middle pastes text into the text being
+                    // typed (`d_text.c`, "paste text").
+                    Button::Middle if typing && shift => {
+                        self.request(UiRequest::PasteText);
+                        return Ok(());
+                    }
                     // xfig: the middle button finishes the text (`d_text.c`).
                     Button::Middle => {
                         if typing {
@@ -2996,10 +3014,11 @@ impl Engine {
             (ToolState::Points { freehand: false, .. }, ToolKind::Arc) => ("del point", "", ""),
             (ToolState::Points { dimension: true, .. }, _) => ("del point", "", ""),
             (ToolState::Idle, ToolKind::Polyline) => ("dimension line", "", ""),
+            (ToolState::Text { .. }, _) => ("", "paste text", ""),
             (ToolState::Points { freehand: false, .. }, _) => ("del point", "finish here", ""),
             (ToolState::Idle, ToolKind::Select) => ("add/remove", "", ""),
             (ToolState::Idle, ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture) => ("", "square at center", ""),
-            (ToolState::Idle, ToolKind::AreaMeasure) => ("", "", "reset to +-0"),
+            (ToolState::Idle, ToolKind::AreaMeasure) => ("locate object", "", "reset to +-0"),
             (ToolState::Idle, ToolKind::Edit) => ("locate object", "show comments", ""),
             (ToolState::Idle | ToolState::Chop { .. }, t) if t.locates() => ("locate object", "", ""),
             _ => ("", "", ""),
@@ -3047,11 +3066,12 @@ impl Engine {
                 }
             }
             ToolState::Drag { kind, button, .. } => {
-                // xfig finishes an ellipse with either button (`d_ellipse.c`).
+                // xfig finishes an ellipse with either button
+                // (`d_ellipse.c`); RustFig with the left one only.
                 match kind {
                     _ if *button == Button::Right => h("", "", "final point"),
-                    ToolKind::EllipseRadii => h("Ellipse corner", "Ellipse corner", "cancel"),
-                    ToolKind::EllipseDiameter => h("final corner", "final corner", "cancel"),
+                    ToolKind::EllipseRadii => h("Ellipse corner", "", "cancel"),
+                    ToolKind::EllipseDiameter => h("final corner", "", "cancel"),
                     ToolKind::CircleRadius => on(*button, "set radius", "cancel"),
                     _ => on(*button, "final point", "cancel"),
                 }
@@ -4124,12 +4144,15 @@ mod tests {
         let mut e = Engine::new();
         e.set_tool(ToolKind::CircleRadius);
         click(&mut e, 0.0, 0.0, Button::Middle);
+        // The middle button does not finish it (one function per button).
         click(&mut e, 1200.0, 600.0, Button::Middle);
+        assert!(e.doc().objects.is_empty());
+        click(&mut e, 1200.0, 600.0, Button::Left);
         let ObjectKind::Ellipse(el) = objects_of(&e)[0] else {
             panic!()
         };
         assert_eq!(el.radii, Point::new(1200.0, 600.0));
-        // xfig finishes an ellipse with either button (`d_ellipse.c`).
+        // The left button finishes an ellipse started with the middle one.
         click(&mut e, 0.0, 0.0, Button::Middle);
         click(&mut e, 600.0, 300.0, Button::Left);
         assert_eq!(e.doc().objects.len(), 2);
