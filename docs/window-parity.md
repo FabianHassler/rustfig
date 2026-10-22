@@ -286,7 +286,7 @@ Sources: `w_indpanel.c` (every `ind_switches` entry, `popup_choice_panel`, `popu
 | xfig indicator | RustFig | Status |
 |---|---|---|
 | Zoom (0.01 to 128; pop-up with Fit to canvas and Integer zoom) | drag value 0.01 to 128 (**fixed**, was 0.05 to 50), Fit, 1.00; wheel zoom | Integer zoom: W10-32 |
-| Grid Mode (9 choices incl. 4 isometric), Point Posn (6) | 5 and 6 | isometric grids W10-33; Point Posn matches |
+| Grid Mode (9 choices incl. 4 isometric), Point Posn (6) | 5 and 6 | done (W10-33, 2026-10-22); Point Posn matches |
 | Depth 0..999, Num Sides 3..200, Line Width 0..500 | same ranges, +-1 per step | same |
 | Rotn Angle (steps 15, 30, 45, 60, 90, 120, 180, wrapping) | **fixed** (was +-15) | same |
 | Text/Ellipse Angle (multiples of 15, +-360) | **fixed** (snaps to multiples) | same |
@@ -295,7 +295,7 @@ Sources: `w_indpanel.c` (every `ind_switches` entry, `popup_choice_panel`, `popu
 | Fill Style (wraps; no tints for black, white, default fill) | **fixed** (clamped; grid listed tints for black) | same |
 | Line Style pop-up: 6 styles, Default dash length and Default dot gap (0 to 10000, 0 = default) | **fixed**: both fields always shown (was one, 0.5 to 100) | same |
 | Join, Cap, Arc Type, Arrow Mode (4), Arrow Type (29), Text Just, Text Flags (Hidden, Rigid, Special), Font lists | present with xfig's choices | same |
-| Arrow Size panel (Absolute / Multiple of Line Width, Thickness, Width, Length) | width and length only | W10-31 |
+| Arrow Size panel (Absolute / Multiple of Line Width, Thickness, Width, Length) | done (W10-31, 2026-10-22) | — |
 | Box Curve (pop-up 2..1000, indicator limits 3..30) | 0..1000 (wider) | extra range, kept |
 | Vert/Horiz Align (7 choices) | 4 | W10-33 |
 | Pen/Fill colour pop-up with colour editor | swatches, user colours | E4 |

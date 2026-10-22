@@ -567,16 +567,34 @@ fn set_arrow_mode(app: &mut App, m: usize) {
     set(app, json!({"forward_arrow": f, "backward_arrow": b}));
 }
 
-const H_ALIGN: [&str; 4] = ["none", "left", "center", "right"];
-const V_ALIGN: [&str; 4] = ["none", "top", "center", "bottom"];
+/// xfig's seven align choices (`halign_choices`, `valign_choices`).
+const H_ALIGN: [&str; 7] = [
+    "none",
+    "left",
+    "center",
+    "right",
+    "distribute_centres",
+    "distribute_edges",
+    "abut",
+];
+const V_ALIGN: [&str; 7] = [
+    "none",
+    "top",
+    "center",
+    "bottom",
+    "distribute_centres",
+    "distribute_edges",
+    "abut",
+];
 const JUSTIFY: [Justify; 3] = [Justify::Left, Justify::Center, Justify::Right];
 const JOINS: [JoinStyle; 3] = [JoinStyle::Miter, JoinStyle::Round, JoinStyle::Bevel];
 const CAPS: [CapStyle; 3] = [CapStyle::Butt, CapStyle::Round, CapStyle::Projecting];
 
 /// Grid choices (xfig's): none, then grid steps 1–4.
-fn grid_choices() -> Vec<Option<SnapMode>> {
-    std::iter::once(None)
-        .chain(SnapMode::ALL.iter().skip(2).map(|m| Some(*m)))
+fn grid_choices() -> Vec<(Option<SnapMode>, bool)> {
+    std::iter::once((None, false))
+        .chain(SnapMode::ALL.iter().skip(2).map(|m| (Some(*m), false)))
+        .chain(SnapMode::ALL.iter().skip(2).map(|m| (Some(*m), true)))
         .collect()
 }
 
@@ -595,7 +613,7 @@ fn value_text(app: &App, a: Attr) -> String {
     let u = units(app);
     match a {
         Attr::Zoom => format!("{:.2}", app.engine.view.zoom),
-        Attr::Grid => ind.grid.map_or("none", |g| g.label(u)).to_string(),
+        Attr::Grid => grid_label(ind.grid, ind.grid_iso, u),
         Attr::PointPosn => ind.snap.label(u).to_string(),
         Attr::Depth => ind.depth.to_string(),
         Attr::RotnAngle => format!("{:.1}", ind.rotate_angle),
@@ -634,11 +652,22 @@ fn value_text(app: &App, a: Attr) -> String {
                 format!("{} type {}", if a.style == 1 { "solid" } else { "hollow" }, a.kind)
             }
         }
-        Attr::ArrowSize => format!(
-            "{:.1} × {:.1}",
-            ind.arrow.width / rustfig_geom::FIG_PER_STYLE_UNIT,
-            ind.arrow.height / rustfig_geom::FIG_PER_STYLE_UNIT
-        ),
+        Attr::ArrowSize => {
+            // Thickness, width and length: absolute, or as multiples of the line width.
+            let (t, w, h) = if ind.arrow_absolute {
+                let u = rustfig_geom::FIG_PER_STYLE_UNIT;
+                (ind.arrow.thickness, ind.arrow.width / u, ind.arrow.height / u)
+            } else {
+                ind.arrow_mult
+            };
+            format!(
+                "{} {} {}{}",
+                fmt_g(t),
+                fmt_g(w),
+                fmt_g(h),
+                if ind.arrow_absolute { "" } else { " ×" }
+            )
+        }
         Attr::BoxRadius => ind.box_radius.to_string(),
         Attr::TextJust => format!("{:?}", ind.justify).to_lowercase(),
         Attr::TextAngle => format!("{:.1}", ind.text_angle),
@@ -682,8 +711,8 @@ fn step(app: &mut App, a: Attr, dir: i32) {
             app.run(if dir > 0 { "view.zoom_in" } else { "view.zoom_out" }, json!({}));
         }
         Attr::Grid => {
-            if let Some(g) = cycle(&grid_choices(), ind.grid, dir) {
-                set(app, json!({ "grid": g }));
+            if let Some((g, iso)) = cycle(&grid_choices(), (ind.grid, ind.grid_iso), dir) {
+                set(app, json!({ "grid": g, "grid_iso": iso }));
             }
         }
         Attr::PointPosn => {
@@ -1017,14 +1046,37 @@ fn posn_icon(m: SnapMode) -> &'static Xbm {
     }
 }
 
-fn grid_icon(g: Option<SnapMode>) -> &'static Xbm {
-    g.map_or(&xi::NONE, posn_icon)
+fn grid_icon(g: Option<SnapMode>, iso: bool) -> &'static Xbm {
+    let Some(m) = g else { return &xi::NONE };
+    if !iso {
+        return posn_icon(m);
+    }
+    match m {
+        SnapMode::Small => &xi::GRID_ISO1,
+        SnapMode::Medium => &xi::GRID_ISO2,
+        SnapMode::Large => &xi::GRID_ISO3,
+        _ => &xi::GRID_ISO4,
+    }
+}
+
+fn grid_label(g: Option<SnapMode>, iso: bool, u: rustfig_model::Units) -> String {
+    match g {
+        None => "none".to_string(),
+        Some(m) if iso => format!("{} isometric", m.label(u)),
+        Some(m) => m.label(u).to_string(),
+    }
 }
 
 fn align_icon(v: &str, horizontal: bool) -> &'static Xbm {
     match (v, horizontal) {
         ("left", true) => &xi::HALIGNL,
         ("center", true) => &xi::HALIGNC,
+        ("distribute_centres", true) => &xi::HALIGNDC,
+        ("distribute_edges", true) => &xi::HALIGNDE,
+        ("abut", true) => &xi::HALIGNA,
+        ("distribute_centres", false) => &xi::VALIGNDC,
+        ("distribute_edges", false) => &xi::VALIGNDE,
+        ("abut", false) => &xi::VALIGNA,
         ("right", true) => &xi::HALIGNR,
         ("top", false) => &xi::VALIGNT,
         ("center", false) => &xi::VALIGNC,
@@ -1061,7 +1113,7 @@ fn arrow_type_pic(n: i32) -> Pic {
 fn value_icon(app: &App, a: Attr) -> Option<Pic> {
     let ind = &app.engine.indicator;
     Some(match a {
-        Attr::Grid => Pic::traced(grid_icon(ind.grid)),
+        Attr::Grid => Pic::traced(grid_icon(ind.grid, ind.grid_iso)),
         Attr::PointPosn => Pic::traced(posn_icon(ind.snap)),
         Attr::HAlign => Pic::traced(align_icon(&ind.align_h, true)),
         Attr::VAlign => Pic::traced(align_icon(&ind.align_v, false)),
@@ -1378,7 +1430,8 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
     let ink = ui.visuals().text_color();
     match a {
         Attr::Zoom => {
-            let mut z = app.engine.view.zoom;
+            // xfig's number pop-up with the Integer zoom check box.
+            let mut z = nval_draft(ui, a, app.engine.view.zoom);
             if ui
                 .add(
                     egui::DragValue::new(&mut z)
@@ -1388,32 +1441,46 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                 )
                 .changed()
             {
-                app.run("view.zoom_set", json!({ "zoom": z }));
+                nval_store(ui, a, z);
+            }
+            let mut int_zoom = app.engine.view.integer_zoom;
+            if ui.checkbox(&mut int_zoom, "Integer zoom").changed() {
+                app.run("view.set_integer_zoom", json!({ "on": int_zoom }));
             }
             ui.horizontal(|ui| {
                 if ui.button("Fit to canvas").clicked() {
                     app.run("view.zoom_fit", json!({}));
+                    nval_forget(ui, a);
                 }
                 if ui.button("1.00").clicked() {
                     app.run("view.zoom_set", json!({ "zoom": 1.0 }));
+                    nval_forget(ui, a);
                 }
             });
+            let (set_it, cancel) = nval_buttons(ui);
+            if set_it {
+                app.run("view.zoom_set", json!({ "zoom": z }));
+            }
+            if set_it || cancel {
+                nval_forget(ui, a);
+                ui.close();
+            }
         }
         Attr::Grid => {
             let u = units(app);
             let list = grid_choices();
             let items: Vec<_> = list
                 .iter()
-                .map(|g| {
+                .map(|(g, iso)| {
                     (
-                        ind.grid == *g,
-                        g.map_or("none", |m| m.label(u)).to_string(),
-                        Pic::traced(grid_icon(*g)),
+                        ind.grid == *g && (ind.grid_iso == *iso || g.is_none()),
+                        grid_label(*g, *iso, u),
+                        Pic::traced(grid_icon(*g, *iso)),
                     )
                 })
                 .collect();
-            if let Some(g) = icon_choices(ui, "grid", &items, 5).and_then(|i| list.get(i)) {
-                set(app, json!({ "grid": g }));
+            if let Some((g, iso)) = icon_choices(ui, "grid", &items, 5).and_then(|i| list.get(i)) {
+                set(app, json!({ "grid": g, "grid_iso": iso }));
             }
         }
         Attr::PointPosn => {
@@ -1727,38 +1794,71 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             }
         }
         Attr::ArrowSize => {
+            // xfig's `popup_arrowsize_panel`: Absolute Values or Multiple of
+            // Line Width, each with Thickness, Width and Length; Cancel and Set.
             let unit = rustfig_geom::FIG_PER_STYLE_UNIT;
-            let mut w = ind.arrow.width / unit;
-            let mut h = ind.arrow.height / unit;
-            let mut changed = false;
+            let id = egui::Id::new("arrow_size_draft");
+            let frame = ui.ctx().cumulative_frame_nr();
+            let start = (
+                ind.arrow_absolute,
+                [ind.arrow.thickness, ind.arrow.width / unit, ind.arrow.height / unit],
+                [ind.arrow_mult.0, ind.arrow_mult.1, ind.arrow_mult.2],
+            );
+            let (mut absolute, mut abs, mut mult) = ui
+                .data(|d| d.get_temp::<((bool, [f64; 3], [f64; 3]), u64)>(id))
+                .filter(|(_, last)| frame <= last + 2)
+                .map_or(start, |(v, _)| v);
             egui::Grid::new("arrow_size").show(ui, |ui| {
-                ui.label("Width");
-                changed |= ui
-                    .add(
-                        egui::DragValue::new(&mut w)
-                            .range(0.5..=200.0)
-                            .speed(0.1)
-                            .suffix(" /80 in"),
-                    )
-                    .changed();
+                ui.radio_value(&mut absolute, true, "Absolute Values");
                 ui.end_row();
-                ui.label("Length");
-                changed |= ui
-                    .add(
-                        egui::DragValue::new(&mut h)
-                            .range(0.5..=200.0)
-                            .speed(0.1)
-                            .suffix(" /80 in"),
-                    )
-                    .changed();
+                for (i, name) in ["Thickness", "Width", "Length"].iter().enumerate() {
+                    ui.label(format!("   {name}"));
+                    if let Some(v) = abs.get_mut(i) {
+                        ui.add_enabled(
+                            absolute,
+                            egui::DragValue::new(v).range(0.1..=10_000.0).speed(0.1).max_decimals(2),
+                        )
+                        .widget_info(|| {
+                            egui::WidgetInfo::labeled(egui::WidgetType::DragValue, absolute, format!("Absolute {name}"))
+                        });
+                    }
+                    ui.end_row();
+                }
+                ui.radio_value(&mut absolute, false, "Multiple of Line Width");
                 ui.end_row();
+                for (i, name) in ["Thickness", "Width", "Length"].iter().enumerate() {
+                    ui.label(format!("   {name}"));
+                    if let Some(v) = mult.get_mut(i) {
+                        ui.add_enabled(
+                            !absolute,
+                            egui::DragValue::new(v).range(0.1..=10_000.0).speed(0.1).max_decimals(2),
+                        )
+                        .widget_info(|| {
+                            egui::WidgetInfo::labeled(
+                                egui::WidgetType::DragValue,
+                                !absolute,
+                                format!("Multiple {name}"),
+                            )
+                        });
+                    }
+                    ui.end_row();
+                }
             });
-            ui.label(egui::RichText::new("Thickness follows the line width.").small());
-            if changed {
+            ui.data_mut(|d| d.insert_temp(id, ((absolute, abs, mult), frame)));
+            let (set_it, cancel) = nval_buttons(ui);
+            if set_it {
                 let mut arrow = ind.arrow;
-                arrow.width = w * unit;
-                arrow.height = h * unit;
-                set(app, json!({ "arrow": arrow }));
+                arrow.thickness = abs[0];
+                arrow.width = abs[1] * unit;
+                arrow.height = abs[2] * unit;
+                set(
+                    app,
+                    json!({ "arrow": arrow, "arrow_absolute": absolute, "arrow_mult": mult }),
+                );
+            }
+            if set_it || cancel {
+                ui.data_mut(|d| d.remove::<((bool, [f64; 3], [f64; 3]), u64)>(id));
+                ui.close();
             }
         }
         Attr::TextJust => {
@@ -1864,6 +1964,9 @@ fn value_entry(app: &mut App, ui: &mut Ui, ind: &Indicator, a: Attr) {
             | Attr::LineWidth
             | Attr::BoxRadius
     );
+    // xfig's number pop-up (`popup_nval_panel`): the value is edited here and
+    // only Set (or Return) applies it; Cancel closes without a change.
+    v = nval_draft(ui, a, v);
     let mut dv = egui::DragValue::new(&mut v).range(lo..=hi).speed(speed);
     if integer {
         dv = dv.fixed_decimals(0);
@@ -1891,11 +1994,61 @@ fn value_entry(app: &mut App, ui: &mut Ui, ind: &Indicator, a: Attr) {
         }
     }
     if changed {
+        nval_store(ui, a, v);
+    }
+    let (set_it, cancel) = nval_buttons(ui);
+    if set_it {
         let value = if integer { json!(v.round() as i64) } else { json!(v) };
         let mut m = serde_json::Map::new();
         m.insert(field.into(), value);
         set(app, Value::Object(m));
     }
+    if set_it || cancel {
+        nval_forget(ui, a);
+        ui.close();
+    }
+}
+
+/// A number without trailing zeros ("4", "0.5").
+fn fmt_g(v: f64) -> String {
+    let s = format!("{v:.1}");
+    s.strip_suffix(".0").map_or(s.clone(), str::to_string)
+}
+
+fn nval_id(a: Attr) -> egui::Id {
+    egui::Id::new(("nval_draft", format!("{a:?}")))
+}
+
+/// The value being edited in a number pop-up: `current` when the pop-up has
+/// just opened (it was not shown in the last frames), else the draft.
+fn nval_draft(ui: &Ui, a: Attr, current: f64) -> f64 {
+    let frame = ui.ctx().cumulative_frame_nr();
+    let kept = ui
+        .data(|d| d.get_temp::<(f64, u64)>(nval_id(a)))
+        .filter(|(_, last)| frame <= last + 2);
+    let v = kept.map_or(current, |(v, _)| v);
+    ui.data_mut(|d| d.insert_temp(nval_id(a), (v, frame)));
+    v
+}
+
+fn nval_store(ui: &Ui, a: Attr, v: f64) {
+    let frame = ui.ctx().cumulative_frame_nr();
+    ui.data_mut(|d| d.insert_temp(nval_id(a), (v, frame)));
+}
+
+fn nval_forget(ui: &Ui, a: Attr) {
+    ui.data_mut(|d| d.remove::<(f64, u64)>(nval_id(a)));
+}
+
+/// Cancel and Set; Return sets too. Returns (set, cancel).
+fn nval_buttons(ui: &mut Ui) -> (bool, bool) {
+    let enter = ui.input(|i| i.key_pressed(egui::Key::Enter));
+    let mut out = (enter, false);
+    ui.horizontal(|ui| {
+        out.1 = ui.button("Cancel").clicked();
+        out.0 |= ui.button("Set").clicked();
+    });
+    out
 }
 
 #[cfg(test)]

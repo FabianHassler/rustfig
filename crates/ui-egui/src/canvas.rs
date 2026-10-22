@@ -203,21 +203,66 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         if step > 0.0 && px >= 5.0 {
             let vis = view.visible();
             let stroke = Stroke::new(1.0_f32, tk.grid);
-            let mut x = (vis.min.x / step).floor() * step;
-            let mut n = 0;
-            while x <= vis.max.x && n < 4000 {
-                let sx = to_screen(Point::new(x, 0.0)).x;
-                painter.line_segment([pos2(sx, rect.top()), pos2(sx, rect.bottom())], stroke);
-                x += step;
-                n += 1;
+            if app.engine.indicator.grid_iso {
+                // xfig's isometric grid (w_grid.c): vertical lines `step * cos 30`
+                // apart and diagonals at plus and minus 30 degrees, a step apart.
+                let xs = step * 0.75_f64.sqrt();
+                let slope = 30.0_f64.to_radians().tan();
+                let mut i = (vis.min.x / xs).floor();
+                let mut n = 0;
+                while i * xs <= vis.max.x && n < 4000 {
+                    let sx = to_screen(Point::new(i * xs, 0.0)).x;
+                    painter.line_segment([pos2(sx, rect.top()), pos2(sx, rect.bottom())], stroke);
+                    i += 1.0;
+                    n += 1;
+                }
+                let (x0, x1) = (vis.min.x, vis.max.x);
+                for sign in [1.0, -1.0] {
+                    let (lo, hi) = if sign > 0.0 {
+                        (vis.min.y - x1 * slope, vis.max.y - x0 * slope)
+                    } else {
+                        (vis.min.y + x0 * slope, vis.max.y + x1 * slope)
+                    };
+                    let mut k = (lo / step).floor();
+                    let mut n = 0;
+                    while k * step <= hi && n < 4000 {
+                        let y = k * step;
+                        let a = to_screen(Point::new(x0, y + sign * x0 * slope));
+                        let b = to_screen(Point::new(x1, y + sign * x1 * slope));
+                        painter.line_segment([pos2(a.x, a.y), pos2(b.x, b.y)], stroke);
+                        k += 1.0;
+                        n += 1;
+                    }
+                }
+            } else {
+                let mut x = (vis.min.x / step).floor() * step;
+                let mut n = 0;
+                while x <= vis.max.x && n < 4000 {
+                    let sx = to_screen(Point::new(x, 0.0)).x;
+                    painter.line_segment([pos2(sx, rect.top()), pos2(sx, rect.bottom())], stroke);
+                    x += step;
+                    n += 1;
+                }
+                let mut y = (vis.min.y / step).floor() * step;
+                while y <= vis.max.y && n < 8000 {
+                    let sy = to_screen(Point::new(0.0, y)).y;
+                    painter.line_segment([pos2(rect.left(), sy), pos2(rect.right(), sy)], stroke);
+                    y += step;
+                    n += 1;
+                }
             }
-            let mut y = (vis.min.y / step).floor() * step;
-            while y <= vis.max.y && n < 8000 {
-                let sy = to_screen(Point::new(0.0, y)).y;
-                painter.line_segment([pos2(rect.left(), sy), pos2(rect.right(), sy)], stroke);
-                y += step;
-                n += 1;
-            }
+        }
+    }
+
+    // Axis lines through the origin (xfig's "Draw axis lines", pink).
+    if app.engine.show_axis_lines() {
+        let stroke = Stroke::new(1.0_f32, Color32::from_rgb(255, 192, 203));
+        let o = to_screen(Point::new(0.0, 0.0));
+        if o.x >= rect.left() && o.x <= rect.right() {
+            painter.line_segment([pos2(o.x, rect.top()), pos2(o.x, rect.bottom())], stroke);
+        }
+        if o.y >= rect.top() && o.y <= rect.bottom() {
+            painter.line_segment([pos2(rect.left(), o.y), pos2(rect.right(), o.y)], stroke);
         }
     }
 
@@ -356,6 +401,21 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     for g in &overlay.guides {
         let pts: Vec<Pos2> = g.iter().map(|p| to_screen(*p)).collect();
         painter.extend(Shape::dashed_line(&pts, guide, 4.0, 3.0));
+    }
+    // Show vertex numbers (xfig's `shownums`): the point's number beside it.
+    if app.engine.show_vertex_numbers() {
+        let vis = view.visible();
+        for (p, n) in app.engine.vertex_numbers() {
+            if p.x >= vis.min.x && p.x <= vis.max.x && p.y >= vis.min.y && p.y <= vis.max.y {
+                painter.text(
+                    to_screen(p) + egui::vec2(3.0, -3.0),
+                    egui::Align2::LEFT_BOTTOM,
+                    n.to_string(),
+                    egui::FontId::monospace(10.0),
+                    Color32::from_rgb(0, 0, 255),
+                );
+            }
+        }
     }
     // Show Lengths: the sides' lengths in red (xfig draws them in RED).
     for (p, s) in &overlay.lengths {

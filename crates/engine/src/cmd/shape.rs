@@ -116,10 +116,7 @@ pub(super) fn arrows_from(
 ) -> Result<(Option<rustfig_model::Arrow>, Option<rustfig_model::Arrow>), EngineError> {
     let (mut f, mut b) = e.indicator.arrows();
     let template = e.indicator.arrows();
-    let a = rustfig_model::Arrow {
-        thickness: f64::from(e.indicator.thickness.max(1)),
-        ..e.indicator.arrow
-    };
+    let a = e.indicator.arrow_value();
     if let Some(on) = opt_bool(p, "forward_arrow")? {
         f = if on { template.0.or(Some(a)) } else { None };
     }

@@ -2,8 +2,24 @@
 
 Edit > Global settings holds RustFig's preferences; they are saved when you change them and loaded at every start (the panel shows where).
 
-- **xfig keyboard shortcuts**: on by default; xfig's Meta and Ctrl keys ([Keys](keys.md)).
+The upper part is xfig's panel, with the same rows. **Ok** applies every row you changed; **Cancel** (or closing the window) throws the changes away. Each row is a command (`prefs.set`, the View toggles) and is kept in the preferences:
+
+- **Autorefresh figure**: reload the figure when its file changes on disk (View > Autorefresh mode).
+- **Track mouse in rulers**: the markers in the rulers follow the pointer (resource `trackCursor`).
 - **Show page borders**, **Show depth manager**, **Show info balloons** and the **balloon delay**: the View menu's switches.
+- **Show line lengths**: the length triangle while drawing lines (View > Show line lengths).
+- **Show vertex numbers**: numbers the points of lines, polygons and splines on the canvas (View > Show vertex numbers, resource `shownums`).
+- **Allow negative coords**: when off, points are kept right of and below the origin and the view moves to the origin (`allownegcoords`).
+- **Draw axis lines**: pink lines through the origin (`showaxislines`).
+- **Freehand drawing resolution**: the least distance, in Fig units (1/1200 inch), between two points of a freehand stroke (`freehand_resolution`, default 25).
+- **Recently used files**: 0 to 9 entries in File > Open recent (`max_recent_files`).
+- **Maximum image colors**: kept for pictures (`max_image_colors`; 0 is no limit); RustFig shows pictures in full colour, so it has no effect yet.
+- **Image editor**: the program Edit Image starts (`image_editor`); `%f` stands for the picture file, and without `%f` the file is added at the end. The default (`open` on macOS, `start` on Windows, `xdg-open` on Linux) uses the system's own program for the file type.
+- **Spell checker**, **HTML Browser**, **PDF Viewer**: kept for the features that use them (`spellcheckcommand`, `browser`, `pdf_viewer`).
+
+The lower part is RustFig's own:
+
+- **xfig keyboard shortcuts**: on by default; xfig's Meta and Ctrl keys ([Keys](keys.md)).
 - **Button style**: 3D (xfig's bevelled buttons) or flat.
 - **Units and page**: opens Document settings.
 - **xfig resources**: every X resource and command-line option of xfig under its xfig name (for example `startfontsize`, `startlinewidth`), with its value, default and what RustFig does with it. A value set here is kept for every start; xfig's command-line options override it for one run.

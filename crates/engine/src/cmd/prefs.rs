@@ -109,6 +109,13 @@ fn set(e: &mut Engine, p: &Value) -> CmdResult {
     };
     e.prefs.set(r.name, value).map_err(EngineError::bad_params)?;
     e.prefs_dirty = true;
+    let max = e.prefs.recent_max();
+    e.prefs.rustfig.recent_files.truncate(max);
+    if !e.allow_negative_coords() {
+        // xfig pans to the origin when negative coordinates are switched off.
+        e.view.origin.x = e.view.origin.x.max(0.0);
+        e.view.origin.y = e.view.origin.y.max(0.0);
+    }
     let warnings = if r.status == Status::Applied {
         let prefs = e.prefs.clone();
         prefs.apply(e)

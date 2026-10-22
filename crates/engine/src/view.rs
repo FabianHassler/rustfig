@@ -15,6 +15,9 @@ pub struct View {
     pub origin: Point,
     /// Canvas size in pixels (set by the UI).
     pub size: (f64, f64),
+    /// xfig's "Integer zoom" (`integral_zoom`): zoom values above 1 stay whole
+    /// numbers when set from the zoom pop-up or by Fit.
+    pub integer_zoom: bool,
 }
 
 impl Default for View {
@@ -23,6 +26,7 @@ impl Default for View {
             zoom: 1.0,
             origin: Point::new(-600.0, -600.0),
             size: (1000.0, 700.0),
+            integer_zoom: false,
         }
     }
 }
@@ -79,6 +83,31 @@ impl View {
         let s = self.px_per_fig();
         let c = r.center();
         self.origin = Point::new(c.x - w / 2.0 / s, c.y - h / 2.0 / s);
+    }
+
+    /// With Integer zoom on, make the zoom a whole number about the canvas
+    /// centre: rounded above 1.99 after the pop-up sets it, truncated above 1
+    /// after Fit (xfig's `show_zoom` and `zoom_to_fit`).
+    pub fn apply_integer_zoom(&mut self, truncate: bool) {
+        if !self.integer_zoom || !self.zoom.is_finite() {
+            return;
+        }
+        let z = self.zoom;
+        let n = if truncate {
+            if z > 1.0 {
+                z.trunc()
+            } else {
+                z
+            }
+        } else if z > 1.99 {
+            z.round()
+        } else {
+            z
+        };
+        if n != z {
+            let c = Point::new(self.size.0 / 2.0, self.size.1 / 2.0);
+            self.zoom_about(n, c);
+        }
     }
 
     /// Pan by a screen-pixel delta.

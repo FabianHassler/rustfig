@@ -319,13 +319,44 @@ fn edit_image(e: &mut Engine, p: &Value) -> CmdResult {
     if !std::path::Path::new(&pic.file).is_file() {
         return Err(EngineError::not_found(format!("{}: file not found", pic.file)));
     }
-    open_external(&pic.file)?;
+    let editor = e.prefs.str("image_editor").unwrap_or_default();
+    open_external(&pic.file, &editor)?;
     Ok(json!({"id": id.0, "file": pic.file}))
 }
 
+/// The words of an editor command line with `%f` replaced by the file (the
+/// file is added as the last word when there is no `%f`), as xfig's Image
+/// editor setting; `None` for xfig's default (the system's own program).
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+fn editor_command(editor: &str, file: &str) -> Option<Vec<String>> {
+    let words: Vec<&str> = editor.split_whitespace().collect();
+    // The system's opener under any system's name means "the default".
+    if words.is_empty()
+        || matches!(editor.trim(), "xdg-open" | "open" | "start")
+        || editor.trim() == crate::prefs::SYSTEM_OPEN
+    {
+        return None;
+    }
+    let mut out: Vec<String> = words.iter().map(|w| w.replace("%f", file)).collect();
+    if !editor.contains("%f") {
+        out.push(file.to_string());
+    }
+    Some(out)
+}
+
 #[cfg(not(target_arch = "wasm32"))]
-fn open_external(file: &str) -> Result<(), EngineError> {
+fn open_external(file: &str, editor: &str) -> Result<(), EngineError> {
     use std::process::Command as Process;
+    if let Some(words) = editor_command(editor, file) {
+        let Some((prog, args)) = words.split_first() else {
+            return Err(EngineError::io("the image editor command is empty"));
+        };
+        return Process::new(prog)
+            .args(args)
+            .spawn()
+            .map(|_| ())
+            .map_err(|err| EngineError::io(format!("can't start the image editor {prog}: {err}")));
+    }
     let mut c = if cfg!(target_os = "macos") {
         let mut c = Process::new("open");
         c.arg(file);
@@ -345,6 +376,26 @@ fn open_external(file: &str) -> Result<(), EngineError> {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn open_external(_file: &str) -> Result<(), EngineError> {
+fn open_external(_file: &str, _editor: &str) -> Result<(), EngineError> {
     Err(EngineError::io("Edit Image is not available in the web app"))
+}
+
+#[cfg(test)]
+mod editor_tests {
+    use super::editor_command;
+
+    #[test]
+    fn image_editor_command_takes_the_file_for_percent_f() {
+        assert_eq!(editor_command("xdg-open", "a.png"), None);
+        assert_eq!(editor_command("  ", "a.png"), None);
+        assert_eq!(
+            editor_command("gimp %f", "a.png"),
+            Some(vec!["gimp".to_string(), "a.png".to_string()])
+        );
+        // Without %f the file is the last word.
+        assert_eq!(
+            editor_command("xv -quit", "a.png"),
+            Some(vec!["xv".to_string(), "-quit".to_string(), "a.png".to_string()])
+        );
+    }
 }

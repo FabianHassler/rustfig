@@ -323,10 +323,16 @@ fn align_to(e: &mut Engine, p: &Value) -> CmdResult {
         .geometry_bbox();
     let h = opt_str(p, "h")?.map_or_else(|| e.indicator.align_h.clone(), str::to_string);
     let v = opt_str(p, "v")?.map_or_else(|| e.indicator.align_v.clone(), str::to_string);
-    if !matches!(h.as_str(), "none" | "" | "left" | "center" | "right") {
+    if !matches!(
+        h.as_str(),
+        "none" | "" | "left" | "center" | "right" | "distribute_centres" | "distribute_edges" | "abut"
+    ) {
         return Err(EngineError::bad_params(format!("unknown horizontal alignment {h:?}")));
     }
-    if !matches!(v.as_str(), "none" | "" | "top" | "center" | "bottom") {
+    if !matches!(
+        v.as_str(),
+        "none" | "" | "top" | "center" | "bottom" | "distribute_centres" | "distribute_edges" | "abut"
+    ) {
         return Err(EngineError::bad_params(format!("unknown vertical alignment {v:?}")));
     }
     if reference.is_empty() {

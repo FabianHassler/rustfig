@@ -39,6 +39,7 @@ pub(super) fn commands() -> Vec<Command> {
                 let bb = e.doc_bounds();
                 if !bb.is_empty() {
                     e.view.fit(&bb);
+                    e.view.apply_integer_zoom(true);
                 }
                 Ok(json!({"zoom": e.view.zoom}))
             },
@@ -62,7 +63,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Zoom to box",
             menu: "",
             shortcut: "",
-            params: "{\"x1\", \"y1\", \"x2\", \"y2\": two opposite corners of the box (Fig units)}  — zoom so that the box fills the canvas, its top-left corner at the canvas's top-left (xfig's zoom box: Ctrl+left click, then drag or click the opposite corner; on macOS Cmd+click). A box with no width or no height is ignored",
+            params: "{\"x1\", \"y1\", \"x2\", \"y2\": two opposite corners of the box (Fig units)}  â zoom so that the box fills the canvas, its top-left corner at the canvas's top-left (xfig's zoom box: Ctrl+left click, then drag or click the opposite corner; on macOS Cmd+click). A box with no width or no height is ignored",
             mutates: false,
             enabled: always,
             run: |e, p| {
@@ -97,8 +98,22 @@ pub(super) fn commands() -> Vec<Command> {
                     num_or(p, "x", e.view.size.0 / 2.0)?,
                     num_or(p, "y", e.view.size.1 / 2.0)?,
                 );
+                let z = if e.view.integer_zoom && z > 1.99 { z.round() } else { z };
                 e.view.zoom_about(z, a);
                 Ok(json!({"zoom": e.view.zoom}))
+            },
+        },
+        Command {
+            id: "view.set_integer_zoom",
+            label: "Integer zoom",
+            menu: "",
+            shortcut: "",
+            params: "{\"on\"?: bool (default: toggle)}  — xfig's Integer zoom check box in the Zoom pop-up: zoom values above 1 are whole numbers (zoom_set rounds, zoom_fit truncates)",
+            mutates: false,
+            enabled: always,
+            run: |e, p| {
+                e.view.integer_zoom = opt_bool(p, "on")?.unwrap_or(!e.view.integer_zoom);
+                Ok(json!({"integer_zoom": e.view.integer_zoom}))
             },
         },
         Command {
@@ -106,7 +121,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Pan",
             menu: "",
             shortcut: "",
-            params: "{\"dx\", \"dy\"}  — screen pixels",
+            params: "{\"dx\", \"dy\"}  â screen pixels",
             mutates: false,
             enabled: always,
             run: |e, p| {
@@ -167,7 +182,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Set canvas size",
             menu: "",
             shortcut: "",
-            params: "{\"width\", \"height\"}  — pixels (set by the UI)",
+            params: "{\"width\", \"height\"}  â pixels (set by the UI)",
             mutates: false,
             enabled: always,
             run: |e, p| {
@@ -229,12 +244,29 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Show Lengths",
             menu: "",
             shortcut: "",
-            params: "{\"on\"?: bool}  — while drawing, show the dx / dy triangle of the segment with its two sides' lengths (xfig's Show Lengths; the message panel always shows length, dx, dy and angle)",
+            params: "{\"on\"?: bool}  â while drawing, show the dx / dy triangle of the segment with its two sides' lengths (xfig's Show Lengths; the message panel always shows length, dx, dy and angle)",
             mutates: false,
             enabled: always,
             run: |e, p| {
                 e.show_lengths = super::opt_bool(p, "on")?.unwrap_or(!e.show_lengths);
                 Ok(json!({"show_lengths": e.show_lengths}))
+            },
+        },
+        Command {
+            id: "view.toggle_vertex_numbers",
+            label: "Show vertex numbers",
+            menu: "",
+            shortcut: "",
+            params: "{\"on\"?: bool}  â number the points of lines, polygons and splines on the canvas (xfig's Show vertex numbers; resource shownums)",
+            mutates: false,
+            enabled: always,
+            run: |e, p| {
+                let on = super::opt_bool(p, "on")?.unwrap_or(!e.show_vertex_numbers());
+                e.prefs
+                    .set("shownums", toml::Value::Boolean(on))
+                    .map_err(EngineError::bad_params)?;
+                e.prefs_dirty = true;
+                Ok(json!({"show_vertex_numbers": on}))
             },
         },
         Command {

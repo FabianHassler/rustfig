@@ -14,6 +14,8 @@ No key (xfig key Ctrl+S). Resizes an object in proportion.
 
 Key `A`. Aligns the parts of a compound with each other, or one object with another. The indicator's Vert Align and Horiz Align choose how the edges or centres line up.
 
+The seven choices (each of the two indicators): **none**; **start**, **centre**, **end** (left, centre, right or top, centre, bottom: the edges or centres line up with those of the whole group); **distribute centres** (the centres of the objects are evenly spaced, the outer two stay); **distribute edges** (equal gaps between the objects, the outer two stay); **abut** (the objects are put edge to edge, starting from the first). Horizontal and vertical are independent. Command `arrange.align` (`h`, `v`: none, left, center, right, distribute_centres, distribute_edges, abut).
+
 - Left, “align compound”: click a compound; its members are aligned with each other.
 - Middle, “align canvas”: every object in the figure is aligned to the page (the paper size, turned for landscape) by the indicator's Vert Align and Horiz Align (command `arrange.align_canvas`). Distribute and abut do not apply to the canvas.
 - Right, “align to first”: click the object that stays, then click each object to align to it.

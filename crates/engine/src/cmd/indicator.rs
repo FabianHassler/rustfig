@@ -83,6 +83,17 @@ fn set(e: &mut Engine, p: &Value) -> CmdResult {
     ind.area_fill = ind.area_fill.clamp(-1, 62);
     ind.sides = ind.sides.clamp(3, 1000);
     ind.dimline.sanitize();
+    // The Arrow Size panel takes 0.1 to 10000 (zero would be 1, as in xfig).
+    let unit = rustfig_geom::FIG_PER_STYLE_UNIT;
+    let fix = |v: f64, default: f64| if v.is_finite() { v.clamp(0.1, 10_000.0) } else { default };
+    ind.arrow_mult = (
+        fix(ind.arrow_mult.0, 1.0),
+        fix(ind.arrow_mult.1, 4.0),
+        fix(ind.arrow_mult.2, 8.0),
+    );
+    ind.arrow.thickness = fix(ind.arrow.thickness, 1.0);
+    ind.arrow.width = fix(ind.arrow.width / unit, 4.0) * unit;
+    ind.arrow.height = fix(ind.arrow.height / unit, 8.0) * unit;
     ind.num_copies = ind.num_copies.clamp(1, 99);
     ind.num_x_copies = ind.num_x_copies.min(99);
     ind.num_y_copies = ind.num_y_copies.min(99);

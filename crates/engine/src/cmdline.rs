@@ -35,6 +35,7 @@ pub const OPTIONS: &[(&str, Action)] = &[
     ("-allownegcoords", Flag("allownegcoords", "true")),
     ("-autorefresh", Flag("autorefresh", "true")),
     ("-balloon_delay", Arg("balloon_delay")),
+    ("-browser", Arg("browser")), ("-pdf_viewer", Arg("pdf_viewer")),
     ("-buttonFont", Arg("buttonFont")),
     ("-but_per_row", Arg("but_per_row")),
     ("-cbg", Arg("canvasbackground")),

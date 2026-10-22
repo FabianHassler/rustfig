@@ -1236,12 +1236,13 @@ impl Engine {
             ToolEvent::Move { pos } => {
                 let p = self.snap(pos);
                 let p = self.angle_constrained(p);
+                let fh_res = self.freehand_resolution();
                 if let ToolState::Points {
                     pts, cursor, freehand, ..
                 } = &mut self.tool_state
                 {
                     *cursor = p;
-                    if *freehand && pts.last().is_none_or(|l| l.dist(p) > tol) && pts.len() < MAX_FREEHAND_POINTS {
+                    if *freehand && pts.last().is_none_or(|l| l.dist(p) > fh_res) && pts.len() < MAX_FREEHAND_POINTS {
                         pts.push(p);
                     }
                 }

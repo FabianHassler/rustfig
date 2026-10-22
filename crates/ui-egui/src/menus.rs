@@ -409,7 +409,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Show depth manager", "app.toggle_depths"),
                 Cmd("Show info balloons", "app.toggle_balloons"),
                 Cmd("Show line lengths", "view.toggle_lengths"),
-                Missing("Show vertex numbers", "", "—"),
+                Cmd("Show vertex numbers", "view.toggle_vertex_numbers"),
                 Cmd("Autorefresh mode", "app.toggle_autorefresh"),
                 Own("view.toggle_grid"),
                 Own("depth.show_all"),
@@ -461,6 +461,7 @@ pub const XFIG_MENU_LETTERS: &[(&str, char, &str)] = &[
     ("View", 'n', "app.toggle_balloons"),
     ("View", 'b', "view.toggle_page_border"),
     ("View", 'l', "view.toggle_lengths"),
+    ("View", 'v', "view.toggle_vertex_numbers"),
     ("View", 'a', "app.toggle_autorefresh"),
     ("Help", 'x', "help.open"),
     ("Help", 'c', "app.commands"),
@@ -582,6 +583,7 @@ const MENU_LABELS: &[(&str, &str)] = &[
     ("app.toggle_depths", "Show depth manager"),
     ("view.toggle_grid", "Show grid"),
     ("view.toggle_lengths", "Show line lengths"),
+    ("view.toggle_vertex_numbers", "Show vertex numbers"),
     ("app.document_settings", "Units and Page…"),
 ];
 
@@ -594,6 +596,7 @@ fn checked(app: &App, id: &str) -> Option<bool> {
         "app.toggle_autorefresh" => Some(app.reload.on),
         "view.toggle_grid" => Some(app.engine.indicator.grid.is_some()),
         "view.toggle_lengths" => Some(app.engine.show_lengths),
+        "view.toggle_vertex_numbers" => Some(app.engine.show_vertex_numbers()),
         "app.toggle_xfig_keys" => Some(app.xfig_keys),
         _ => None,
     }

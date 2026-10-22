@@ -309,7 +309,7 @@ fn ruler(app: &mut App, ui: &mut Ui, tk: &Tokens, canvas: Rect, r: Rect, horizon
         p.line_segment([r.left_top(), r.left_bottom()], Stroke::new(1.0_f32, tk.muted));
     }
     // Marker following the cursor (xfig's ruler arrows).
-    if let Some(c) = app.canvas.cursor {
+    if let Some(c) = app.canvas.cursor.filter(|_| app.engine.track_mouse()) {
         let d = at(if horizontal { c.x } else { c.y });
         let m = tk.selection;
         if horizontal {
@@ -508,65 +508,123 @@ fn units_box(app: &mut App, ui: &mut Ui, tk: &Tokens, r: Rect) {
             .show(ui.ctx(), |ui| unit_panel(app, ui));
         app.unit_panel_open &= open;
     }
+    if !app.unit_panel_open {
+        // Closed without Set (Cancel, Escape, the close box): forget the draft.
+        ui.data_mut(|data| data.remove::<UnitDraft>(egui::Id::new("unit_panel_draft")));
+    }
     resp.on_hover_text("Left: pan to the origin · right: Unit/Scale settings")
         .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, format!("Units: {label}")));
 }
 
-/// xfig's Unit/Scale settings panel.
+/// What the Unit/Scale panel has been set to while it is open; nothing
+/// applies before Set (xfig's `popup_unit_panel`, `w_rulers.c`).
+#[derive(Clone)]
+struct UnitDraft {
+    metric: bool,
+    /// Imperial rulers in fractions of an inch (off: tenths).
+    fractions: bool,
+    user_unit: bool,
+    unit: String,
+    user_scale: bool,
+    factor: f64,
+}
+
+impl UnitDraft {
+    fn of(app: &App) -> UnitDraft {
+        let s = &app.engine.unit_scale;
+        UnitDraft {
+            metric: app.engine.doc().settings.units == Units::Metric,
+            fractions: !s.decimal_inches,
+            user_unit: !s.unit.is_empty(),
+            unit: s.unit.clone(),
+            user_scale: (s.factor - 1.0).abs() > f64::EPSILON,
+            factor: s.factor,
+        }
+    }
+}
+
+/// xfig's Unit/Scale settings panel: Ruler units, Show fractions (inches
+/// only), Figure units (Ruler units or User defined with a name), Figure
+/// scale (Unity or User defined with a factor), Cancel and Set.
 fn unit_panel(app: &mut App, ui: &mut Ui) {
+    let id = egui::Id::new("unit_panel_draft");
+    let mut d: UnitDraft = ui
+        .data(|data| data.get_temp::<UnitDraft>(id))
+        .unwrap_or_else(|| UnitDraft::of(app));
     ui.label(egui::RichText::new("Unit/Scale settings").strong());
-    let units = app.engine.doc().settings.units;
-    let decimal = app.engine.unit_scale.decimal_inches;
     egui::Grid::new("unit_panel")
         .num_columns(2)
         .spacing(vec2(8.0, 4.0))
         .show(ui, |ui| {
             ui.label("Ruler units");
-            ui.vertical(|ui| {
-                for (name, metric, dec) in [
-                    ("Metric (cm)", true, false),
-                    ("Imperial (fraction)", false, false),
-                    ("Imperial (decimal)", false, true),
-                ] {
-                    let selected = (units == Units::Metric) == metric && (metric || decimal == dec);
-                    if ui.radio(selected, name).clicked() && !selected {
-                        let wanted = if metric { "metric" } else { "inches" };
-                        if (units == Units::Metric) != metric {
-                            app.run("doc.set_units", json!({ "units": wanted }));
-                        }
-                        app.run("view.set_scale", json!({ "decimal": dec }));
-                    }
-                }
+            ui.horizontal(|ui| {
+                ui.radio_value(&mut d.metric, false, "Imperial");
+                ui.radio_value(&mut d.metric, true, "Metric");
             });
             ui.end_row();
-            ui.label("Figure units");
-            let mut unit = app.engine.unit_scale.unit.clone();
-            if ui
-                .add(
-                    egui::TextEdit::singleline(&mut unit)
-                        .desired_width(80.0)
-                        .hint_text("ruler units"),
-                )
-                .changed()
-            {
-                app.run("view.set_scale", json!({ "unit": unit }));
-            }
+            ui.label("");
+            ui.add_enabled(!d.metric, egui::Checkbox::new(&mut d.fractions, "Show fractions"));
             ui.end_row();
-            ui.label("Scale factor");
-            let mut f = app.engine.unit_scale.factor;
-            if ui
-                .add(egui::DragValue::new(&mut f).range(0.000_001..=1_000_000.0).speed(0.01))
-                .changed()
-            {
-                app.run("view.set_scale", json!({ "scale": f }));
-            }
+            ui.label("Figure units");
+            ui.horizontal(|ui| {
+                ui.radio_value(&mut d.user_unit, false, "Ruler units");
+                ui.radio_value(&mut d.user_unit, true, "User defined");
+            });
+            ui.end_row();
+            ui.label("  name");
+            ui.add_enabled(
+                d.user_unit,
+                egui::TextEdit::singleline(&mut d.unit)
+                    .desired_width(80.0)
+                    .char_limit(16),
+            );
+            ui.end_row();
+            ui.label("Figure scale");
+            ui.horizontal(|ui| {
+                ui.radio_value(&mut d.user_scale, false, "Unity");
+                ui.radio_value(&mut d.user_scale, true, "User defined");
+            });
+            ui.end_row();
+            ui.label("  factor");
+            ui.add_enabled(
+                d.user_scale,
+                egui::DragValue::new(&mut d.factor)
+                    .range(0.000_001..=1_000_000.0)
+                    .speed(0.01),
+            );
             ui.end_row();
         });
-    // xfig's Return (SetUnits) closes the panel; the settings already
-    // apply as they change. Escape closes it too (`dialogs`).
+    // xfig's Return (SetUnits) sets and closes; Escape cancels (`dialogs`).
     let enter = ui.input(|i| i.key_pressed(egui::Key::Enter)) && ui.ctx().memory(|m| m.focused()).is_none();
-    if ui.button("Close").clicked() || enter {
+    let (mut set, mut cancel) = (enter, false);
+    ui.horizontal(|ui| {
+        cancel = ui.button("Cancel").clicked();
+        set |= ui.button("Set").clicked();
+    });
+    if set {
+        let current = UnitDraft::of(app);
+        if d.metric != current.metric {
+            app.run(
+                "doc.set_units",
+                json!({ "units": if d.metric { "metric" } else { "inches" } }),
+            );
+        }
+        let unit = if d.user_unit {
+            d.unit.trim().to_string()
+        } else {
+            String::new()
+        };
+        let factor = if d.user_scale { d.factor } else { 1.0 };
+        app.run(
+            "view.set_scale",
+            json!({ "decimal": !d.fractions, "unit": unit, "scale": factor }),
+        );
+    }
+    if set || cancel {
+        ui.data_mut(|data| data.remove::<UnitDraft>(id));
         app.unit_panel_open = false;
+    } else {
+        ui.data_mut(|data| data.insert_temp(id, d));
     }
 }
 

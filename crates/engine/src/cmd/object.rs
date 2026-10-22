@@ -324,7 +324,7 @@ fn set_attributes(e: &mut Engine, p: &Value) -> CmdResult {
     let comment = opt_str(p, "comment")?.map(str::to_string);
     let forward_spec = arrow_spec(p, "forward_arrow_spec")?;
     let backward_spec = arrow_spec(p, "backward_arrow_spec")?;
-    let template = e.indicator.arrow;
+    let template = e.indicator.arrow_value();
     let n = for_targets(e, p, &mut |o| {
         if let ObjectKind::Text(t) = &mut o.kind {
             if let Some(v) = pen {
@@ -670,10 +670,7 @@ fn toggle_closed(e: &mut Engine, p: &Value) -> CmdResult {
 }
 
 fn toggle_arrow(e: &mut Engine, p: &Value, forward: bool) -> CmdResult {
-    let template = rustfig_model::Arrow {
-        thickness: f64::from(e.indicator.thickness.max(1)),
-        ..e.indicator.arrow
-    };
+    let template = e.indicator.arrow_value();
     let n = for_targets(e, p, &mut |o| {
         if let Some((f, b)) = o.arrows_mut() {
             let a = if forward { f } else { b };

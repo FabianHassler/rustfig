@@ -53,7 +53,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | File: New window... (xfig's New xfig, native only; S4-9) | ✅ | ✅ |
 | View: Autorefresh mode (reloads a file changed on disk, asks with unsaved edits; native only; S4-9) | ✅ | ✅ |
 | Edit: Undo (multi-level), Paste, Delete All, Search/Replace | ✅ | ✅ |
-| Edit: Spell check, Global settings | — | ❌ |
+| Edit: Spell check, Global settings | Global settings ✅ (W10-23: xfig's rows with Ok/Cancel); Spell check F5 | 🟡 |
 | View: zoom, fit, pan to origin, page border, portrait/landscape | ✅ | ✅ |
 | View: depth manager | right panel | ✅ |
 | View: character map | `app.character_map`, Ctrl+Shift+M | ✅ |
@@ -73,7 +73,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | Mouse-function indicator | ✅ xfig's layout and wording, each button's current function per tool and state, checked against the tools by a test | — |
 | Indicator: Num Copies (rotate), Num X / Num Y Copies (copy), Dimension line (Polyline; settings window as `popup_dimline_panel`); typed-coordinate window (Edit > Enter point…, Ctrl+K); View > Show line lengths | ✅ (D10) | D |
 | Three-button mouse semantics | ✅ xfig's per-mode functions, the only scheme (W16); Alt+click = middle, Ctrl+click = right. Dimension lines (Shift+left), rotate/flip anchor and centre (right button), array copy (middle while placing), align to canvas (middle) work (D10); the indicator buttons and the dimension-line panel too | D |
-| Units box | ✅ "1cm = 1.00cm" in the ruler corner; left: pan to origin, right: Unit menu (ruler units, figure unit, scale) | — |
+| Units box | ✅ "1cm = 1.00cm" in the ruler corner; left: pan to origin, right: Unit/Scale panel with Cancel/Set, Show fractions, User defined unit and scale (W10-24) | — |
 | Top and side rulers | ✅ ported from `w_rulers.c` | — |
 | Depth panel: checkboxes, drag-toggle, All On/Off/Toggle, Gray/Blank | ✅ with object counts; hidden depths can't be picked; export of active layers only | — |
 | Update Control: update box on every attribute button in Update mode, Set/Clear/Toggle all buttons, flags honoured by Update, update region, lasso and update settings (W10-1) | ✅ | — |

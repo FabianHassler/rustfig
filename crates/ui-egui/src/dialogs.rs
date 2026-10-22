@@ -930,51 +930,129 @@ fn save_scope_dialog(app: &mut App, ctx: &egui::Context) {
     }
 }
 
-/// xfig's Global settings panel holds its preferences; RustFig's is the
-/// keyboard choice.
+/// The values of xfig's Global settings panel while it is open: Ok applies
+/// them, Cancel (or closing the window) discards them (`show_global_settings`,
+/// `w_cmdpanel.c`).
+#[derive(Clone, PartialEq)]
+struct GlobalDraft {
+    autorefresh: bool,
+    track_mouse: bool,
+    page_borders: bool,
+    depth_manager: bool,
+    balloons: bool,
+    balloon_delay: i64,
+    lengths: bool,
+    vertex_numbers: bool,
+    negative_coords: bool,
+    axis_lines: bool,
+    freehand: i64,
+    recent: i64,
+    image_colors: i64,
+    image_editor: String,
+    spell: String,
+    browser: String,
+    pdf_viewer: String,
+}
+
+impl GlobalDraft {
+    fn of(app: &App) -> GlobalDraft {
+        let e = &app.engine;
+        let int = |name: &str, default: i64| e.prefs.int(name).unwrap_or(default);
+        let text = |name: &str, default: &str| e.prefs.str(name).unwrap_or_else(|| default.to_string());
+        GlobalDraft {
+            autorefresh: app.reload.on,
+            track_mouse: e.track_mouse(),
+            page_borders: e.show_page_border,
+            depth_manager: app.show_depths,
+            balloons: app.show_balloons,
+            balloon_delay: int("balloon_delay", 500),
+            lengths: e.show_lengths,
+            vertex_numbers: e.show_vertex_numbers(),
+            negative_coords: e.allow_negative_coords(),
+            axis_lines: e.show_axis_lines(),
+            freehand: int("freehand_resolution", 25),
+            recent: i64::try_from(e.prefs.recent_max()).unwrap_or(9),
+            image_colors: int("max_image_colors", 0),
+            image_editor: text("image_editor", rustfig_engine::prefs::SYSTEM_OPEN),
+            spell: text("spellcheckcommand", "spell %s"),
+            browser: text("browser", rustfig_engine::prefs::SYSTEM_OPEN),
+            pdf_viewer: text("pdf_viewer", rustfig_engine::prefs::SYSTEM_OPEN),
+        }
+    }
+}
+
+/// Edit > Global settings as xfig's panel (check boxes and entries, Cancel
+/// and Ok), then RustFig's own settings that apply at once.
 fn global_dialog(app: &mut App, ctx: &egui::Context) {
+    let id = egui::Id::new("global_settings_draft");
     if !app.dialogs.global_open {
+        ctx.data_mut(|d| d.remove::<GlobalDraft>(id));
         return;
     }
+    let current = GlobalDraft::of(app);
+    let mut d: GlobalDraft = ctx
+        .data(|data| data.get_temp::<GlobalDraft>(id))
+        .unwrap_or_else(|| current.clone());
     let mut open = true;
+    let (mut ok, mut cancel) = (false, false);
     egui::Window::new("Global settings")
         .open(&mut open)
         .resizable(false)
         .collapsible(false)
         .show(ctx, |ui| {
-            for (id, label, on) in [
-                ("app.toggle_xfig_keys", "xfig keyboard shortcuts", app.xfig_keys),
-                // xfig's Global Settings panel repeats the View menu's switches.
-                (
-                    "view.toggle_page_border",
-                    "Show page borders",
-                    app.engine.show_page_border,
-                ),
-                ("app.toggle_depths", "Show depth manager", app.show_depths),
-                ("app.toggle_balloons", "Show info balloons", app.show_balloons),
-            ] {
-                let mut v = on;
-                if ui.checkbox(&mut v, label).changed() {
-                    app.run(id, serde_json::json!({}));
-                }
-            }
+            ui.checkbox(&mut d.autorefresh, "Autorefresh figure");
+            ui.checkbox(&mut d.track_mouse, "Track mouse in rulers");
+            ui.checkbox(&mut d.page_borders, "Show page borders");
+            ui.checkbox(&mut d.depth_manager, "Show depth manager");
+            ui.checkbox(&mut d.balloons, "Show info balloons");
             ui.horizontal(|ui| {
-                ui.label("Balloon delay (ms):");
-                let mut ms = app
-                    .engine
-                    .prefs
-                    .xfig
-                    .iter()
-                    .find(|(k, _)| k.eq_ignore_ascii_case("balloon_delay"))
-                    .and_then(|(_, v)| v.as_integer())
-                    .unwrap_or(500);
-                if ui.add(egui::DragValue::new(&mut ms).range(0..=100_000)).changed() {
-                    app.run(
-                        "prefs.set",
-                        serde_json::json!({ "resource": "balloon_delay", "value": ms.to_string() }),
-                    );
+                ui.label("   Delay (ms):");
+                ui.add(egui::DragValue::new(&mut d.balloon_delay).range(0..=100_000));
+            });
+            ui.checkbox(&mut d.lengths, "Show line lengths");
+            ui.checkbox(&mut d.vertex_numbers, "Show vertex numbers");
+            ui.checkbox(&mut d.negative_coords, "Allow negative coords");
+            ui.checkbox(&mut d.axis_lines, "Draw axis lines");
+            ui.horizontal(|ui| {
+                ui.label("Freehand drawing resolution");
+                ui.add(egui::DragValue::new(&mut d.freehand).range(1..=10_000));
+            });
+            ui.horizontal(|ui| {
+                ui.label("Recently used files");
+                ui.add(egui::DragValue::new(&mut d.recent).range(0..=9));
+            });
+            ui.horizontal(|ui| {
+                ui.label("Maximum image colors");
+                ui.add(egui::DragValue::new(&mut d.image_colors).range(0..=256));
+            });
+            egui::Grid::new("global_commands").num_columns(2).show(ui, |ui| {
+                for (label, text) in [
+                    ("Image editor", &mut d.image_editor),
+                    ("Spell checker", &mut d.spell),
+                    ("HTML Browser", &mut d.browser),
+                    ("PDF Viewer", &mut d.pdf_viewer),
+                ] {
+                    ui.label(label);
+                    ui.add(egui::TextEdit::singleline(text).desired_width(260.0))
+                        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, label));
+                    ui.end_row();
                 }
             });
+            ui.label(
+                egui::RichText::new("%f in a command stands for the file.")
+                    .small()
+                    .weak(),
+            );
+            ui.horizontal(|ui| {
+                cancel = ui.button("Cancel").clicked();
+                ok = ui.button("Ok").clicked();
+            });
+            ui.separator();
+            ui.label(egui::RichText::new("RustFig").strong());
+            let mut keys = app.xfig_keys;
+            if ui.checkbox(&mut keys, "xfig keyboard shortcuts").changed() {
+                app.run("app.toggle_xfig_keys", serde_json::json!({}));
+            }
             ui.horizontal(|ui| {
                 ui.label("Button style:");
                 for (style, label) in [("3d", "3D"), ("flat", "Flat")] {
@@ -983,7 +1061,6 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
                     }
                 }
             });
-            ui.separator();
             ui.horizontal(|ui| {
                 if ui.button("Units and page…").clicked() {
                     app.run("app.document_settings", serde_json::json!({}));
@@ -1014,7 +1091,70 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
                     .weak(),
             );
         });
-    app.dialogs.global_open &= open;
+    if ok {
+        apply_global(app, &current, &d);
+    }
+    if ok || cancel || !open {
+        app.dialogs.global_open = false;
+        ctx.data_mut(|data| data.remove::<GlobalDraft>(id));
+    } else {
+        ctx.data_mut(|data| data.insert_temp(id, d));
+    }
+}
+
+/// Ok in Global settings: every value that changed goes through its command.
+fn apply_global(app: &mut App, was: &GlobalDraft, now: &GlobalDraft) {
+    let toggles = [
+        ("app.toggle_autorefresh", was.autorefresh, now.autorefresh),
+        ("view.toggle_page_border", was.page_borders, now.page_borders),
+        ("app.toggle_depths", was.depth_manager, now.depth_manager),
+        ("app.toggle_balloons", was.balloons, now.balloons),
+    ];
+    for (id, a, b) in toggles {
+        if a != b {
+            app.run(id, json!({}));
+        }
+    }
+    for (id, a, b) in [
+        ("view.toggle_lengths", was.lengths, now.lengths),
+        ("view.toggle_vertex_numbers", was.vertex_numbers, now.vertex_numbers),
+    ] {
+        if a != b {
+            app.run(id, json!({ "on": b }));
+        }
+    }
+    let ints = [
+        ("balloon_delay", was.balloon_delay, now.balloon_delay),
+        ("freehand_resolution", was.freehand, now.freehand),
+        ("max_recent_files", was.recent, now.recent),
+        ("max_image_colors", was.image_colors, now.image_colors),
+    ];
+    for (name, a, b) in ints {
+        if a != b {
+            app.run("prefs.set", json!({ "resource": name, "value": b }));
+        }
+    }
+    let bools = [
+        ("trackCursor", was.track_mouse, now.track_mouse),
+        ("allownegcoords", was.negative_coords, now.negative_coords),
+        ("showaxislines", was.axis_lines, now.axis_lines),
+    ];
+    for (name, a, b) in bools {
+        if a != b {
+            app.run("prefs.set", json!({ "resource": name, "value": b }));
+        }
+    }
+    let texts = [
+        ("image_editor", &was.image_editor, &now.image_editor),
+        ("spellcheckcommand", &was.spell, &now.spell),
+        ("browser", &was.browser, &now.browser),
+        ("pdf_viewer", &was.pdf_viewer, &now.pdf_viewer),
+    ];
+    for (name, a, b) in texts {
+        if a != b {
+            app.run("prefs.set", json!({ "resource": name, "value": b.trim() }));
+        }
+    }
 }
 
 /// The colours kept for every drawing (E1): offered in every colour menu.

@@ -172,6 +172,13 @@ pub struct Indicator {
     pub forward_arrow: bool,
     pub backward_arrow: bool,
     pub arrow: Arrow,
+    /// Arrow Size panel: the `arrow` thickness, width and length are used as
+    /// they are (xfig's "Absolute Values"); otherwise the multiples below
+    /// of the line width ("Multiple of Line Width", xfig's start state).
+    pub arrow_absolute: bool,
+    /// The multiples of the line width: thickness, width, length
+    /// (`cur_arrow_multthick`, `_multwidth`, `_multheight`: 1, 4, 8).
+    pub arrow_mult: (f64, f64, f64),
     pub font: i32,
     pub font_size: f64,
     pub postscript: bool,
@@ -195,6 +202,9 @@ pub struct Indicator {
     pub num_x_copies: u32,
     pub num_y_copies: u32,
     pub grid: Option<SnapMode>,
+    /// The grid is xfig's isometric one (`cur_gridtype` GRID_ISO): grid lines and
+    /// point positioning follow a 30 degree triangular lattice.
+    pub grid_iso: bool,
     pub snap: SnapMode,
     /// Align modes for the align command: "none", "left", "center", "right" / "top", "center", "bottom".
     pub align_h: String,
@@ -240,6 +250,8 @@ impl Default for Indicator {
                 style: 0,
                 ..Arrow::default()
             },
+            arrow_absolute: false,
+            arrow_mult: (1.0, 4.0, 8.0),
             font: 0,
             font_size: 12.0,
             postscript: true,
@@ -256,6 +268,7 @@ impl Default for Indicator {
             num_x_copies: 0,
             num_y_copies: 0,
             grid: None,
+            grid_iso: false,
             // xfig's startposnmode 1: magnet (1/16 inch, 1 mm).
             snap: SnapMode::Fine,
             align_h: "none".into(),
@@ -294,9 +307,19 @@ impl Indicator {
     }
 
     /// The arrow the indicator describes (type, style and size).
+    ///
+    /// As xfig's `forward_arrow` (`u_create.c`): the absolute values, or
+    /// multiples of the line width (`use_abs_arrowvals`).
     pub fn arrow_value(&self) -> Arrow {
+        if self.arrow_absolute {
+            return self.arrow;
+        }
+        let line = f64::from(self.thickness.max(1));
+        let unit = rustfig_geom::FIG_PER_STYLE_UNIT;
         Arrow {
-            thickness: f64::from(self.thickness.max(1)),
+            thickness: self.arrow_mult.0 * line,
+            width: self.arrow_mult.1 * line * unit,
+            height: self.arrow_mult.2 * line * unit,
             ..self.arrow
         }
     }
@@ -590,7 +613,42 @@ impl Indicator {
         if step <= 0.0 || !p.is_finite() {
             return p;
         }
+        if self.grid_iso && self.grid.is_some() && step >= 2.0 {
+            return snap_iso(p, step);
+        }
         Point::new((p.x / step).round() * step, (p.y / step).round() * step)
+    }
+}
+
+/// Point positioning on the isometric grid (xfig `round_coords`, `u_draw`/`w_canvas.c`):
+/// columns `step * cos 30` apart, every other column shifted by half a step.
+pub fn snap_iso(p: Point, step: f64) -> Point {
+    let c30 = 0.75_f64.sqrt();
+    let h = (step / 2.0).floor();
+    let near = |v: f64, unit: f64, half: f64| {
+        let t = v % unit;
+        if t.abs() < half {
+            v - t
+        } else {
+            v + if v >= 0.0 { unit } else { -unit } - t
+        }
+    };
+    let x = near(p.x, step * c30, h * c30);
+    let odd = ((x / (step * c30)) % 2.0).abs() > 0.5;
+    let y = if odd {
+        let t = (p.y + h) % step;
+        if t.abs() < h {
+            p.y - t
+        } else {
+            p.y + if p.y >= 0.0 { step } else { -step } - t
+        }
+    } else {
+        near(p.y, step, h)
+    };
+    if x.is_finite() && y.is_finite() {
+        Point::new(x.round(), y.round())
+    } else {
+        p
     }
 }
 

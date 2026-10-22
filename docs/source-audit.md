@@ -226,12 +226,10 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_align.c` | `pos_spline` | 439 | ported | `cmd/arrange.rs` `arrange.align` and the Align tool (`ToolKind::Align`) |  |
 | `e_align.c` | `pos_text` | 476 | ported | `cmd/arrange.rs` `arrange.align` and the Align tool (`ToolKind::Align`) |  |
 | `e_align.c` | `pos_compound` | 512 | ported | `cmd/arrange.rs` `arrange.align` and the Align tool (`ToolKind::Align`) |  |
-| `e_align.c` | `init_distrib_centres` | 563 | ported | `arrange.distribute` (centres, edges); the Align mode does not offer them yet | W10-33 |
-| `e_align.c` | `init_distrib_edges` | 652 | ported | `arrange.distribute` (centres, edges); the Align mode does not offer them yet | W10-33 |
-| `e_align.c` | `adjust_object_pos` | 761 | ported | `arrange.distribute` (centres, edges); the Align mode does not offer them yet | W10-33 |
-| `e_align.c` | `distribute_horizontally` | 809 | ported | `arrange.distribute` (centres, edges); the Align mode does not offer them yet | W10-33 |
-| `e_align.c` | `distribute_vertically` | 886 | ported | `arrange.distribute` (centres, edges); the Align mode does not offer them yet | W10-33 |
-| `e_arrow.c` | `arrow_head_selected` | 50 | ported | tools: `ToolKind::Arrow`, commands `object.toggle_forward_arrow`, `object.toggle_backward_arrow` |  |
+| `e_align.c` | `init_distrib_centres` | 563 | ported | `arrange.align` (`spread`: distribute centres, distribute edges, abut) |  |
+| `e_align.c` | `init_distrib_edges` | 652 | ported | `arrange.align` (`spread`: distribute centres, distribute edges, abut) |  |
+| `e_align.c` | `adjust_object_pos` | 761 | ported | `arrange.align` (`spread`: distribute centres, distribute edges, abut) |  |
+| `e_align.c` | `distribute_horizontally` | 809 | ported | `arrange.align` with `distribute_centres`, `distribute_edges` and `abut` (`spread`), applied by the Align mode |  || `e_align.c` | `distribute_vertically` | 886 | ported | `arrange.align` with `distribute_centres`, `distribute_edges` and `abut` (`spread`), applied by the Align mode |  || `e_arrow.c` | `arrow_head_selected` | 50 | ported | tools: `ToolKind::Arrow`, commands `object.toggle_forward_arrow`, `object.toggle_backward_arrow` |  |
 | `e_arrow.c` | `add_arrow_head` | 66 | ported | tools: `ToolKind::Arrow`, commands `object.toggle_forward_arrow`, `object.toggle_backward_arrow` |  |
 | `e_arrow.c` | `delete_arrow_head` | 89 | ported | tools: `ToolKind::Arrow`, commands `object.toggle_forward_arrow`, `object.toggle_backward_arrow` |  |
 | `e_arrow.c` | `add_linearrow` | 112 | ported | tools: `ToolKind::Arrow`, commands `object.toggle_forward_arrow`, `object.toggle_backward_arrow` |  |
@@ -1410,7 +1408,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_canvas.c` | `popup_mode_panel` | 1034 | ported | Alt+wheel pop-up of the mode panel (`panels::mode_panel`) |  |
 | `w_canvas.c` | `round_square` | 1064 | ported | grid and positioning-magnet rounding of points (`Engine::snap`, `view.set_snap`) |  |
 | `w_canvas.c` | `point_spacing` | 1089 | ported | grid and positioning-magnet rounding of points (`Engine::snap`, `view.set_snap`) |  |
-| `w_canvas.c` | `round_coords` | 1102 | ported | grid and positioning-magnet rounding of points (`Engine::snap`, `view.set_snap`) |  |
+| `w_canvas.c` | `round_coords` | 1102 | ported | grid and positioning-magnet rounding of points, also the isometric grid (`Engine::snap`, `indicator::snap_iso`) |  |
 | `w_canvas.c` | `floor_coords` | 1158 | ported | grid and positioning-magnet rounding of points (`Engine::snap`, `view.set_snap`) |  |
 | `w_canvas.c` | `ceil_coords` | 1189 | ported | grid and positioning-magnet rounding of points (`Engine::snap`, `view.set_snap`) |  |
 | `w_capture.c` | `captureImage` | 71 | missing | Capture: grab a screen area into a picture object | D11 |
@@ -1440,12 +1438,11 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_cmdpanel.c` | `new` | 775 | ported | `file.new`, `edit.delete_all`, `doc.toggle_orientation` |  |
 | `w_cmdpanel.c` | `delete_all_cmd` | 804 | ported | `file.new`, `edit.delete_all`, `doc.toggle_orientation` |  |
 | `w_cmdpanel.c` | `change_orient` | 827 | ported | `file.new`, `edit.delete_all`, `doc.toggle_orientation` |  |
-| `w_cmdpanel.c` | `show_global_settings` | 924 | replaced | Global settings dialog `dialogs::global_dialog` and `resources_dialog` (every resource, E1); rows with effect are W10-23 | W10-23 |
-| `w_cmdpanel.c` | `popup_global_panel` | 945 | replaced | Global settings dialog `dialogs::global_dialog` and `resources_dialog` (every resource, E1); rows with effect are W10-23 | W10-23 |
-| `w_cmdpanel.c` | `create_global_panel` | 968 | replaced | Global settings dialog `dialogs::global_dialog` and `resources_dialog` (every resource, E1); rows with effect are W10-23 | W10-23 |
-| `w_cmdpanel.c` | `CreateLabelledAscii` | 1136 | replaced | Global settings dialog `dialogs::global_dialog` and `resources_dialog` (every resource, E1); rows with effect are W10-23 | W10-23 |
-| `w_cmdpanel.c` | `global_panel_done` | 1174 | replaced | Global settings dialog `dialogs::global_dialog` and `resources_dialog` (every resource, E1); rows with effect are W10-23 | W10-23 |
-| `w_cmdpanel.c` | `global_panel_cancel` | 1290 | replaced | Global settings dialog `dialogs::global_dialog` and `resources_dialog` (every resource, E1); rows with effect are W10-23 | W10-23 |
+| `w_cmdpanel.c` | `show_global_settings` | 924 | ported | Global settings dialog `dialogs::global_dialog` and `resources_dialog` (every resource, E1) with xfig's rows, Ok/Cancel and effects (`globals.rs`) |  || `w_cmdpanel.c` | `popup_global_panel` | 945 | replaced | Global settings dialog `dialogs::global_dialog` and `resources_dialog` (every resource, E1) with xfig's rows, Ok/Cancel and effects (`globals.rs`) |  |
+| `w_cmdpanel.c` | `create_global_panel` | 968 | replaced | Global settings dialog `dialogs::global_dialog` and `resources_dialog` (every resource, E1) with xfig's rows, Ok/Cancel and effects (`globals.rs`) |  |
+| `w_cmdpanel.c` | `CreateLabelledAscii` | 1136 | replaced | Global settings dialog `dialogs::global_dialog` and `resources_dialog` (every resource, E1) with xfig's rows, Ok/Cancel and effects (`globals.rs`) |  |
+| `w_cmdpanel.c` | `global_panel_done` | 1174 | replaced | Global settings dialog `dialogs::global_dialog` and `resources_dialog` (every resource, E1) with xfig's rows, Ok/Cancel and effects (`globals.rs`) |  |
+| `w_cmdpanel.c` | `global_panel_cancel` | 1290 | replaced | Global settings dialog `dialogs::global_dialog` and `resources_dialog` (every resource, E1) with xfig's rows, Ok/Cancel and effects (`globals.rs`) |  |
 | `w_cmdpanel.c` | `update_cur_filename` | 1304 | ported | window title and file name box (`update_cur_filename`) |  |
 | `w_cmdpanel.c` | `popup_menu` | 1321 | replaced | menu bar and menu items from `menus::XFIG_MENUS` and `LAYOUT` (egui menus) |  |
 | `w_cmdpanel.c` | `place_menu` | 1334 | replaced | menu bar and menu items from `menus::XFIG_MENUS` and `LAYOUT` (egui menus) |  |
@@ -1648,7 +1645,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_fontpanel.c` | `fontpane_cancel` | 403 | replaced | font menus: the Text Font attribute pop-up `attributes` (Attr::Font); the font chooser is E11 | E11 |
 | `w_fontpanel.c` | `fontpane_swap` | 409 | replaced | font menus: the Text Font attribute pop-up `attributes` (Attr::Font); the font chooser is E11 | E11 |
 | `w_grid.c` | `init_grid` | 45 | ported | grid drawing in the canvas, `view.toggle_grid`, `view.set_grid` |  |
-| `w_grid.c` | `setup_grid` | 62 | ported | grid drawing in the canvas, `view.toggle_grid`, `view.set_grid` |  |
+| `w_grid.c` | `setup_grid` | 62 | ported | grid drawing in the canvas (square and isometric), `view.toggle_grid`, `view.set_grid` |  |
 | `w_help.c` | `launch_refman` | 48 | missing | Help menu entries that open the reference manual, PDF manuals, how-to and man page, and external viewer launching | W10-2 |
 | `w_help.c` | `launch_refpdf_en` | 65 | missing | Help menu entries that open the reference manual, PDF manuals, how-to and man page, and external viewer launching | W10-2 |
 | `w_help.c` | `launch_refpdf_jp` | 75 | missing | Help menu entries that open the reference manual, PDF manuals, how-to and man page, and external viewer launching | W10-2 |
@@ -1677,11 +1674,11 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_indpanel.c` | `sel_ind_but` | 1074 | replaced | attribute (indicator) panel `ui-egui/attributes` and `engine::Indicator`: construction, update, pixmaps and button selection |  |
 | `w_indpanel.c` | `update_string_pixmap` | 1111 | replaced | attribute (indicator) panel `ui-egui/attributes` and `engine::Indicator`: construction, update, pixmaps and button selection |  |
 | `w_indpanel.c` | `update_choice_pixmap` | 1132 | replaced | attribute (indicator) panel `ui-egui/attributes` and `engine::Indicator`: construction, update, pixmaps and button selection |  |
-| `w_indpanel.c` | `arrowsize_panel_dismiss` | 1170 | partial | Arrow Size panel: width and length only; absolute/multiple-of-width modes and thickness are not there | W10-31 |
-| `w_indpanel.c` | `arrowsize_panel_cancel` | 1177 | partial | Arrow Size panel: width and length only; absolute/multiple-of-width modes and thickness are not there | W10-31 |
-| `w_indpanel.c` | `arrowsize_panel_set` | 1186 | partial | Arrow Size panel: width and length only; absolute/multiple-of-width modes and thickness are not there | W10-31 |
-| `w_indpanel.c` | `set_arrow_size_state` | 1213 | partial | Arrow Size panel: width and length only; absolute/multiple-of-width modes and thickness are not there | W10-31 |
-| `w_indpanel.c` | `popup_arrowsize_panel` | 1281 | partial | Arrow Size panel: width and length only; absolute/multiple-of-width modes and thickness are not there | W10-31 |
+| `w_indpanel.c` | `arrowsize_panel_dismiss` | 1170 | ported | Arrow Size panel with Absolute Values and Multiple of Line Width, Cancel/Set (`Indicator::arrow_value`) |  |
+| `w_indpanel.c` | `arrowsize_panel_cancel` | 1177 | ported | Arrow Size panel with Absolute Values and Multiple of Line Width, Cancel/Set (`Indicator::arrow_value`) |  |
+| `w_indpanel.c` | `arrowsize_panel_set` | 1186 | ported | Arrow Size panel with Absolute Values and Multiple of Line Width, Cancel/Set (`Indicator::arrow_value`) |  |
+| `w_indpanel.c` | `set_arrow_size_state` | 1213 | ported | Arrow Size panel with Absolute Values and Multiple of Line Width, Cancel/Set (`Indicator::arrow_value`) |  |
+| `w_indpanel.c` | `popup_arrowsize_panel` | 1281 | ported | Arrow Size panel with Absolute Values and Multiple of Line Width, Cancel/Set (`Indicator::arrow_value`) |  |
 | `w_indpanel.c` | `choice_panel_dismiss` | 1539 | replaced | choice pop-ups (line style, join, cap, arrow, fill, justification, ...) are egui pop-ups; live values and hover preview are W10-34, W10-35 |  |
 | `w_indpanel.c` | `choice_panel_cancel` | 1546 | replaced | choice pop-ups (line style, join, cap, arrow, fill, justification, ...) are egui pop-ups; live values and hover preview are W10-34, W10-35 |  |
 | `w_indpanel.c` | `choice_panel_set` | 1554 | replaced | choice pop-ups (line style, join, cap, arrow, fill, justification, ...) are egui pop-ups; live values and hover preview are W10-34, W10-35 |  |
@@ -1693,11 +1690,11 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_indpanel.c` | `rigid_text_select` | 1901 | replaced | Text Flags pop-up (hidden, rigid, special, LaTeX) |  |
 | `w_indpanel.c` | `special_text_select` | 1914 | replaced | Text Flags pop-up (hidden, rigid, special, LaTeX) |  |
 | `w_indpanel.c` | `popup_flags_panel` | 1926 | replaced | Text Flags pop-up (hidden, rigid, special, LaTeX) |  |
-| `w_indpanel.c` | `nval_panel_dismiss` | 2106 | partial | number pop-ups (zoom, depth, angle, sides, step, ...) exist; Integer zoom check box and Return-sets are W10-32 | W10-32 |
-| `w_indpanel.c` | `toggle_int_zoom` | 2115 | partial | number pop-ups (zoom, depth, angle, sides, step, ...) exist; Integer zoom check box and Return-sets are W10-32 | W10-32 |
-| `w_indpanel.c` | `nval_panel_cancel` | 2128 | partial | number pop-ups (zoom, depth, angle, sides, step, ...) exist; Integer zoom check box and Return-sets are W10-32 | W10-32 |
-| `w_indpanel.c` | `nval_panel_set` | 2135 | partial | number pop-ups (zoom, depth, angle, sides, step, ...) exist; Integer zoom check box and Return-sets are W10-32 | W10-32 |
-| `w_indpanel.c` | `popup_nval_panel` | 2153 | partial | number pop-ups (zoom, depth, angle, sides, step, ...) exist; Integer zoom check box and Return-sets are W10-32 | W10-32 |
+| `w_indpanel.c` | `nval_panel_dismiss` | 2106 | ported | number pop-ups with Cancel/Set and Return; Integer zoom (`view.set_integer_zoom`) |  |
+| `w_indpanel.c` | `toggle_int_zoom` | 2115 | ported | number pop-ups with Cancel/Set and Return; Integer zoom (`view.set_integer_zoom`) |  |
+| `w_indpanel.c` | `nval_panel_cancel` | 2128 | ported | number pop-ups with Cancel/Set and Return; Integer zoom (`view.set_integer_zoom`) |  |
+| `w_indpanel.c` | `nval_panel_set` | 2135 | ported | number pop-ups with Cancel/Set and Return; Integer zoom (`view.set_integer_zoom`) |  |
+| `w_indpanel.c` | `popup_nval_panel` | 2153 | ported | number pop-ups with Cancel/Set and Return; Integer zoom (`view.set_integer_zoom`) |  |
 | `w_indpanel.c` | `popup_dimline_panel` | 2399 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `line_color_select` | 2878 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `box_color_select` | 2893 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
@@ -1719,9 +1716,9 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_indpanel.c` | `inc_choice` | 3247 | replaced | choice pop-ups (line style, join, cap, arrow, fill, justification, ...) are egui pop-ups; live values and hover preview are W10-34, W10-35 |  |
 | `w_indpanel.c` | `show_arrowmode` | 3257 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `show_arrowtype` | 3286 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
-| `w_indpanel.c` | `inc_arrowsize` | 3302 | partial | Arrow Size panel: width and length only; absolute/multiple-of-width modes and thickness are not there | W10-31 |
-| `w_indpanel.c` | `dec_arrowsize` | 3310 | partial | Arrow Size panel: width and length only; absolute/multiple-of-width modes and thickness are not there | W10-31 |
-| `w_indpanel.c` | `show_arrowsize` | 3318 | partial | Arrow Size panel: width and length only; absolute/multiple-of-width modes and thickness are not there | W10-31 |
+| `w_indpanel.c` | `inc_arrowsize` | 3302 | ported | Arrow Size panel with Absolute Values and Multiple of Line Width, Cancel/Set (`Indicator::arrow_value`) |  |
+| `w_indpanel.c` | `dec_arrowsize` | 3310 | ported | Arrow Size panel with Absolute Values and Multiple of Line Width, Cancel/Set (`Indicator::arrow_value`) |  |
+| `w_indpanel.c` | `show_arrowsize` | 3318 | ported | Arrow Size panel with Absolute Values and Multiple of Line Width, Cancel/Set (`Indicator::arrow_value`) |  |
 | `w_indpanel.c` | `inc_dimline` | 3354 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `dec_dimline` | 3362 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `show_dimline` | 3370 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
@@ -1738,8 +1735,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_indpanel.c` | `show_linestyle` | 3676 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `show_valign` | 3713 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `show_halign` | 3744 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
-| `w_indpanel.c` | `show_gridmode` | 3775 | partial | Grid Mode button with its choices; the four isometric grids are W10-33 | W10-33 |
-| `w_indpanel.c` | `show_pointposn` | 3799 | ported | Point Posn choices act on every point (`Indicator::snap_point`); a mode never hides the button (xfig's forced on/off only greys it) |  |
+| `w_indpanel.c` | `show_gridmode` | 3775 | ported | Grid Mode with nine choices, four isometric (`grid_iso`) |  || `w_indpanel.c` | `show_pointposn` | 3799 | ported | Point Posn choices act on every point (`Indicator::snap_point`); a mode never hides the button (xfig's forced on/off only greys it) |  |
 | `w_indpanel.c` | `show_linkmode` | 3824 | ported | Smart Links indicator button off/move/slide (`ui-egui/attributes.rs`) |  |
 | `w_indpanel.c` | `show_textjust` | 3843 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `dec_boxradius` | 3862 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
@@ -1780,22 +1776,22 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_indpanel.c` | `inc_numycopies` | 4436 | ported | indicator buttons Num Copies (rotate), Num X / Num Y Copies (copy) in `ui-egui/attributes.rs`; `indicator.set` | D10 |
 | `w_indpanel.c` | `dec_numycopies` | 4443 | ported | indicator buttons Num Copies (rotate), Num X / Num Y Copies (copy) in `ui-egui/attributes.rs`; `indicator.set` | D10 |
 | `w_indpanel.c` | `show_numycopies` | 4450 | ported | indicator buttons Num Copies (rotate), Num X / Num Y Copies (copy) in `ui-egui/attributes.rs`; `indicator.set` | D10 |
-| `w_indpanel.c` | `inc_zoom` | 4476 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom is W10-32 |  |
-| `w_indpanel.c` | `dec_zoom` | 4506 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom is W10-32 |  |
-| `w_indpanel.c` | `zoom_focus` | 4523 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom is W10-32 |  |
-| `w_indpanel.c` | `inc_zoom_centered` | 4547 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom is W10-32 |  |
-| `w_indpanel.c` | `dec_zoom_centered` | 4554 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom is W10-32 |  |
-| `w_indpanel.c` | `wheel_inc_zoom` | 4562 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom is W10-32 |  |
-| `w_indpanel.c` | `wheel_dec_zoom` | 4584 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom is W10-32 |  |
-| `w_indpanel.c` | `fit_zoom` | 4606 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom is W10-32 |  |
-| `w_indpanel.c` | `show_zoom` | 4671 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom is W10-32 |  |
+| `w_indpanel.c` | `inc_zoom` | 4476 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
+| `w_indpanel.c` | `dec_zoom` | 4506 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
+| `w_indpanel.c` | `zoom_focus` | 4523 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
+| `w_indpanel.c` | `inc_zoom_centered` | 4547 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
+| `w_indpanel.c` | `dec_zoom_centered` | 4554 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
+| `w_indpanel.c` | `wheel_inc_zoom` | 4562 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
+| `w_indpanel.c` | `wheel_dec_zoom` | 4584 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
+| `w_indpanel.c` | `fit_zoom` | 4606 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
+| `w_indpanel.c` | `show_zoom` | 4671 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
 | `w_indpanel.c` | `inc_depth` | 4720 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `dec_depth` | 4727 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `show_depth` | 4734 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `inc_textstep` | 4752 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `dec_textstep` | 4769 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `show_textstep` | 4787 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
-| `w_indpanel.c` | `zoom_to_fit` | 4805 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom is W10-32 |  |
+| `w_indpanel.c` | `zoom_to_fit` | 4805 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
 | `w_indpanel.c` | `make_pulldown_menu_images` | 4821 | replaced | attribute (indicator) panel `ui-egui/attributes` and `engine::Indicator`: construction, update, pixmaps and button selection |  |
 | `w_indpanel.c` | `tog_selective_update` | 4846 | ported | `cmd/indicator.rs` `indicator.set_update_flag`, `indicator.update_flags`; `ui-egui/attributes.rs` update boxes (Update mode only) |  |
 | `w_intersect.c` | `is_point_on_segment` | 42 | ported | `engine/snap.rs` (W4): intersection of every pair of object kinds, on flattened outlines instead of the analytic ellipse solvers |  |
@@ -2040,16 +2036,16 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_rulers.c` | `reset_rulers` | 323 | ported | `ui-egui/rulers.rs`: top and side rulers with ticks, labels, cursor marker, panning (W6) |  |
 | `w_rulers.c` | `set_rulermark` | 331 | ported | `ui-egui/rulers.rs`: top and side rulers with ticks, labels, cursor marker, panning (W6) |  |
 | `w_rulers.c` | `erase_rulermark` | 340 | ported | `ui-egui/rulers.rs`: top and side rulers with ticks, labels, cursor marker, panning (W6) |  |
-| `w_rulers.c` | `init_unitbox` | 349 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; details W10-24) | W10-24 |
-| `w_rulers.c` | `update_rulerpanel` | 392 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; details W10-24) | W10-24 |
-| `w_rulers.c` | `unit_panel_dismiss` | 418 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; details W10-24) | W10-24 |
-| `w_rulers.c` | `unit_panel_cancel` | 425 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; details W10-24) | W10-24 |
-| `w_rulers.c` | `unit_panel_set` | 434 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; details W10-24) | W10-24 |
-| `w_rulers.c` | `set_unit_indicator` | 494 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; details W10-24) | W10-24 |
-| `w_rulers.c` | `fig_unit_select` | 533 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; details W10-24) | W10-24 |
-| `w_rulers.c` | `fig_scale_select` | 555 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; details W10-24) | W10-24 |
-| `w_rulers.c` | `rul_unit_select` | 577 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; details W10-24) | W10-24 |
-| `w_rulers.c` | `popup_unit_panel` | 616 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; details W10-24) | W10-24 |
+| `w_rulers.c` | `init_unitbox` | 349 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; Cancel/Set, Show fractions, User defined) |  |
+| `w_rulers.c` | `update_rulerpanel` | 392 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; Cancel/Set, Show fractions, User defined) |  |
+| `w_rulers.c` | `unit_panel_dismiss` | 418 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; Cancel/Set, Show fractions, User defined) |  |
+| `w_rulers.c` | `unit_panel_cancel` | 425 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; Cancel/Set, Show fractions, User defined) |  |
+| `w_rulers.c` | `unit_panel_set` | 434 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; Cancel/Set, Show fractions, User defined) |  |
+| `w_rulers.c` | `set_unit_indicator` | 494 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; Cancel/Set, Show fractions, User defined) |  |
+| `w_rulers.c` | `fig_unit_select` | 533 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; Cancel/Set, Show fractions, User defined) |  |
+| `w_rulers.c` | `fig_scale_select` | 555 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; Cancel/Set, Show fractions, User defined) |  |
+| `w_rulers.c` | `rul_unit_select` | 577 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; Cancel/Set, Show fractions, User defined) |  |
+| `w_rulers.c` | `popup_unit_panel` | 616 | ported | units box and Unit/Scale panel (`app.unit_panel`, `view.set_scale`; Cancel/Set, Show fractions, User defined) |  |
 | `w_rulers.c` | `topruler_selected` | 863 | ported | `ui-egui/rulers.rs`: top and side rulers with ticks, labels, cursor marker, panning (W6) |  |
 | `w_rulers.c` | `erase_toprulermark` | 929 | ported | `ui-egui/rulers.rs`: top and side rulers with ticks, labels, cursor marker, panning (W6) |  |
 | `w_rulers.c` | `set_toprulermark` | 936 | ported | `ui-egui/rulers.rs`: top and side rulers with ticks, labels, cursor marker, panning (W6) |  |

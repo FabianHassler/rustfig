@@ -440,8 +440,12 @@ fn rulers_pan_and_units_box() {
     click_button(&mut h, ub, egui::PointerButton::Secondary, egui::Modifiers::NONE);
     // Let the new window settle (egui sizes it in its first frame).
     h.run_steps(3);
-    let metric = h.get_by_label("Metric (cm)").rect().center();
+    let metric = h.get_by_label("Metric").rect().center();
     click_button(&mut h, metric, egui::PointerButton::Primary, egui::Modifiers::NONE);
+    h.run_steps(2);
+    // Nothing applies before Set (xfig's panel has Cancel and Set).
+    assert_eq!(h.state().engine.doc().settings.units, rustfig_model::Units::Inches);
+    h.get_by_label("Set").click();
     h.run_steps(2);
     assert_eq!(h.state().engine.doc().settings.units, rustfig_model::Units::Metric);
     h.get_by_label("Units: 1cm = 1.00cm");
@@ -2274,4 +2278,142 @@ fn keys_sheet_lists_and_filters_commands() {
     h.run_steps(3);
     assert!(h.query_by_label("edit.undo").is_some());
     assert!(h.query_by_label("edit.redo").is_none());
+}
+
+/// W10-24: the Unit/Scale panel has Cancel and Set; the figure unit name and
+/// scale factor are only open for "User defined".
+#[test]
+fn unit_panel_cancel_set_and_user_defined() {
+    let mut h = harness(app());
+    h.state_mut().run("app.unit_panel", json!({}));
+    h.run_steps(3);
+    // Cancel throws away what was chosen.
+    h.get_by_label("Metric").click();
+    h.run_steps(2);
+    h.get_by_label("Cancel").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.doc().settings.units, rustfig_model::Units::Inches);
+    assert!(!h.state().unit_panel_open);
+    // Show fractions is for inches; Figure units and scale have User defined.
+    h.state_mut().run("app.unit_panel", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Show fractions");
+    assert!(h.query_all_by_label("Ruler units").count() >= 1);
+    h.get_by_label("Unity");
+    h.get_by_label("Set").click();
+    h.run_steps(3);
+    let s = h.state().engine.unit_scale.clone();
+    assert!(s.unit.is_empty() && s.factor == 1.0 && !s.decimal_inches);
+    assert!(!h.state().unit_panel_open);
+    // Without fractions the imperial rulers show tenths.
+    h.state_mut().run("app.unit_panel", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Show fractions").click();
+    h.run_steps(2);
+    h.get_by_label("Set").click();
+    h.run_steps(3);
+    assert!(h.state().engine.unit_scale.decimal_inches);
+}
+
+/// W10-23: Global settings applies with Ok and discards with Cancel; rows
+/// have effects and are kept in the preferences.
+#[test]
+fn global_settings_ok_and_cancel() {
+    let mut h = harness(app());
+    assert!(h.state().engine.track_mouse());
+    h.state_mut().run("app.global_settings", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Track mouse in rulers").click();
+    h.get_by_label("Show vertex numbers").click();
+    h.run_steps(2);
+    // Nothing happens before Ok.
+    assert!(h.state().engine.track_mouse());
+    assert!(!h.state().engine.show_vertex_numbers());
+    h.get_by_label("Cancel").click();
+    h.run_steps(3);
+    assert!(h.state().engine.track_mouse() && !h.state().dialogs.global_open);
+    h.state_mut().run("app.global_settings", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Track mouse in rulers").click();
+    h.get_by_label("Show vertex numbers").click();
+    h.get_by_label("Allow negative coords").click();
+    h.get_by_label("Draw axis lines").click();
+    h.run_steps(2);
+    h.get_by_label("Ok").click();
+    h.run_steps(3);
+    let e = &h.state().engine;
+    assert!(!e.track_mouse() && e.show_vertex_numbers());
+    assert!(!e.allow_negative_coords() && !e.show_axis_lines());
+    assert_eq!(e.prefs.bool("trackCursor"), Some(false));
+    assert_eq!(e.prefs.bool("shownums"), Some(true));
+    assert!(!h.state().dialogs.global_open);
+}
+
+/// W10-32: the Zoom pop-up has Integer zoom, Cancel and Set; Return sets and closes.
+#[test]
+fn zoom_popup_integer_zoom_and_return() {
+    let mut h = harness(app());
+    h.get_by_label_contains("Zoom: ").click();
+    h.run_steps(3);
+    h.get_by_label("Integer zoom").click();
+    h.run_steps(2);
+    assert!(h.state().engine.view.integer_zoom);
+    h.get_by_label("Cancel").click();
+    h.run_steps(3);
+    assert_eq!(open_state(&mut h)["popup"], json!(false));
+    assert_eq!(h.state().engine.view.zoom, 1.0);
+    // Return sets the value and closes the pop-up.
+    h.get_by_label_contains("Zoom: ").click();
+    h.run_steps(3);
+    h.key_press(egui::Key::Enter);
+    h.run_steps(3);
+    assert_eq!(open_state(&mut h)["popup"], json!(false));
+}
+
+/// W10-31: the Arrow Size panel sets both modes with Set; Cancel keeps them.
+#[test]
+fn arrow_size_panel_modes() {
+    let mut h = harness(app());
+    h.state_mut().engine.set_tool(ToolKind::Polyline);
+    h.run_steps(2);
+    assert!(!h.state().engine.indicator.arrow_absolute);
+    h.get_by_label_contains("Arrow Size: ").click();
+    h.run_steps(3);
+    h.get_by_label("Absolute Values").click();
+    h.run_steps(2);
+    h.get_by_label("Cancel").click();
+    h.run_steps(3);
+    assert!(!h.state().engine.indicator.arrow_absolute);
+    h.get_by_label_contains("Arrow Size: ").click();
+    h.run_steps(3);
+    h.get_by_label("Absolute Values").click();
+    h.run_steps(2);
+    h.get_by_label("Multiple of Line Width");
+    h.get_by_label("Set").click();
+    h.run_steps(3);
+    assert!(h.state().engine.indicator.arrow_absolute);
+}
+
+/// W10-33: Grid Mode lists nine choices (four isometric), Align seven.
+#[test]
+fn grid_and_align_indicators_list_xfigs_choices() {
+    let mut h = harness(app());
+    h.get_by_label_contains("Grid Mode: ").click();
+    h.run_steps(3);
+    h.get_by_label_contains("1/8 in isometric");
+    h.get_by_label_contains("1 in isometric");
+    h.get_by_label_contains("1/2 in isometric").click();
+    h.run_steps(3);
+    assert!(h.state().engine.indicator.grid_iso);
+    assert!(h.state().engine.indicator.grid.is_some());
+    h.state_mut().engine.set_tool(ToolKind::Align);
+    h.run_steps(2);
+    h.get_by_label_contains("Horiz Align: ").click();
+    h.run_steps(3);
+    for name in ["distribute_centres", "distribute_edges", "abut"] {
+        h.get_by_label(name);
+    }
+    h.get_by_label("abut").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.indicator.align_h, "abut");
 }

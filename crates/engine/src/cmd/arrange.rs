@@ -128,7 +128,7 @@ fn align(e: &mut Engine, p: &Value) -> CmdResult {
             "left" => all.min.x - b.min.x,
             "center" => all.center().x - b.center().x,
             "right" => all.max.x - b.max.x,
-            "none" | "" => 0.0,
+            "none" | "" | "distribute_centres" | "distribute_edges" | "abut" => 0.0,
             other => {
                 return Err(EngineError::bad_params(format!(
                     "unknown horizontal alignment {other:?}"
@@ -139,13 +139,91 @@ fn align(e: &mut Engine, p: &Value) -> CmdResult {
             "top" => all.min.y - b.min.y,
             "center" => all.center().y - b.center().y,
             "bottom" => all.max.y - b.max.y,
-            "none" | "" => 0.0,
+            "none" | "" | "distribute_centres" | "distribute_edges" | "abut" => 0.0,
             other => return Err(EngineError::bad_params(format!("unknown vertical alignment {other:?}"))),
         };
         moves.push((*id, dx, dy));
     }
+    // xfig's distribute_horizontally / _vertically for the last three choices.
+    for (horizontal, mode) in [(true, h.as_str()), (false, v.as_str())] {
+        let Some(mode) = Spread::from_name(mode) else { continue };
+        for (m, d) in moves.iter_mut().zip(spread(&items, horizontal, mode)) {
+            if horizontal {
+                m.1 = d;
+            } else {
+                m.2 = d;
+            }
+        }
+    }
     translate(e, moves);
     Ok(json!({"count": items.len()}))
+}
+
+/// How objects are spread along one axis (xfig's last three align choices).
+#[derive(Clone, Copy)]
+enum Spread {
+    /// Equal distance between the objects' centres.
+    Centres,
+    /// Equal gaps between the objects' edges.
+    Edges,
+    /// Edge to edge, from the first object on.
+    Abut,
+}
+
+impl Spread {
+    fn from_name(s: &str) -> Option<Spread> {
+        match s {
+            "distribute_centres" => Some(Spread::Centres),
+            "distribute_edges" => Some(Spread::Edges),
+            "abut" => Some(Spread::Abut),
+            _ => None,
+        }
+    }
+}
+
+/// The shift of each of `items` (in their order) along one axis.
+fn spread(items: &[(ObjectId, Rect)], horizontal: bool, mode: Spread) -> Vec<f64> {
+    let lo = |r: &Rect| if horizontal { r.min.x } else { r.min.y };
+    let size = |r: &Rect| if horizontal { r.width() } else { r.height() };
+    let mid = |r: &Rect| lo(r) + size(r) / 2.0;
+    let key = |i: usize| match (items.get(i), mode) {
+        (Some((_, r)), Spread::Centres) => mid(r),
+        (Some((_, r)), _) => lo(r),
+        _ => 0.0,
+    };
+    let mut order: Vec<usize> = (0..items.len()).collect();
+    order.sort_by(|a, b| key(*a).total_cmp(&key(*b)));
+    let mut shifts = vec![0.0; items.len()];
+    let (Some(&first), Some(&last)) = (order.first(), order.last()) else {
+        return shifts;
+    };
+    let (Some((_, rf)), Some((_, rl))) = (items.get(first), items.get(last)) else {
+        return shifts;
+    };
+    let n = order.len();
+    let total: f64 = items.iter().map(|(_, r)| size(r)).sum();
+    let gap = match mode {
+        Spread::Edges if n > 1 => (lo(rl) + size(rl) - lo(rf) - total) / (n - 1) as f64,
+        _ => 0.0,
+    };
+    let step = if n > 1 {
+        (mid(rl) - mid(rf)) / (n - 1) as f64
+    } else {
+        0.0
+    };
+    let mut pos = lo(rf);
+    for (k, i) in order.iter().enumerate() {
+        let Some((_, r)) = items.get(*i) else { continue };
+        let d = match mode {
+            Spread::Centres => mid(rf) + step * k as f64 - mid(r),
+            _ => pos - lo(r),
+        };
+        pos += size(r) + gap;
+        if let Some(s) = shifts.get_mut(*i) {
+            *s = if d.is_finite() { d } else { 0.0 };
+        }
+    }
+    shifts
 }
 
 /// Align every object (not each other) to the page: xfig's
@@ -154,10 +232,16 @@ fn align(e: &mut Engine, p: &Value) -> CmdResult {
 fn align_canvas(e: &mut Engine, p: &Value) -> CmdResult {
     let h = opt_str(p, "h")?.map_or_else(|| e.indicator.align_h.clone(), str::to_string);
     let v = opt_str(p, "v")?.map_or_else(|| e.indicator.align_v.clone(), str::to_string);
-    if !matches!(h.as_str(), "none" | "" | "left" | "center" | "right") {
+    if !matches!(
+        h.as_str(),
+        "none" | "" | "left" | "center" | "right" | "distribute_centres" | "distribute_edges" | "abut"
+    ) {
         return Err(EngineError::bad_params(format!("unknown horizontal alignment {h:?}")));
     }
-    if !matches!(v.as_str(), "none" | "" | "top" | "center" | "bottom") {
+    if !matches!(
+        v.as_str(),
+        "none" | "" | "top" | "center" | "bottom" | "distribute_centres" | "distribute_edges" | "abut"
+    ) {
         return Err(EngineError::bad_params(format!("unknown vertical alignment {v:?}")));
     }
     let ids: Vec<ObjectId> = match p.get("ids") {

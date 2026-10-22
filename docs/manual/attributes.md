@@ -26,6 +26,12 @@ Buttons that exist (labels as in xfig):
 | Box Curve | corner radius of rounded boxes |
 | Text Just, Text/Ellipse Angle, Text Flags, Text Size, Text Step, Text Font | text settings |
 
+**Arrow Size** opens xfig's panel: **Absolute Values** or **Multiple of Line Width**, each with Thickness, Width and Length (0.1 to 10000; absolute values are in 1/80 inch). Only the set you chose is used for new arrows; with the multiples (xfig's start state: 1, 4 and 8) an arrow grows with the line width. **Set** (or Return) applies, **Cancel** keeps the old values. "Use current attributes as defaults" keeps the choice for the next start.
+
+Number pop-ups (Line Width, Text Size, Depth, Rotn Angle, Num Sides, copies, Box Curve, Text Step, Zoom and others) work as xfig's: type or drag a value, then **Set** or Return applies it and closes the pop-up; **Cancel** closes it without a change. The Zoom pop-up also has **Integer zoom**: zoom values above 1 become whole numbers when you set them there (rounded) or use Fit (truncated).
+
+**Grid Mode** has nine choices: none, four square grids and four **isometric** grids (vertical lines and lines at plus and minus 30 degrees; points snap to the crossings, [Snap and grid](snap-grid.md)). **Vert Align** and **Horiz Align** have xfig's seven choices: none, start (left or top), centre, end (right or bottom), distribute centres, distribute edges and abut ([Transform](transform.md)).
+
 The Update Control box (in Update mode) says which attributes Update applies. Edit > Global settings has "Use current attributes as defaults" to keep the panel's values as the start values for new drawings ([Preferences](preferences.md)).
 
 ## Colours

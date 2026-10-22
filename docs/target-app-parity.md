@@ -29,9 +29,9 @@ the score.
 | Undo | 4 | 100 % | — | 0 |
 | Libraries | 5 | 0 % | library browser and placement | 40 |
 | Printing | 5 | 10 % | print dialog and printer output | 30 |
-| Settings & styles | 5 | 75 % | Unit/Scale panel details (W10-24), Global settings rows (W10-23) (preferences, recent files, styles with families E6, colours E4 done) | 8 |
+| Settings & styles | 5 | 80 % | — (Global settings rows with effect, Unit/Scale panel, Arrow Size panel and number pop-ups done in W10-23, -24, -31, -32; preferences, recent files, styles with families E6, colours E4 done) | 0 |
 | Platforms | 7 | 50 % | Windows/Linux verification, web build and file I/O on the web | 40 |
-| **Overall** | 100 | **≈73 %** | | **379** |
+| **Overall** | 100 | **≈73 %** | | **371** |
 
 ## Evidence of what ships
 
@@ -46,6 +46,7 @@ the score.
 - Trim, split and extend mode (D16): `ToolKind::Trim` (`tool.trim`, key `w`), `trim_event` in `crates/engine/src/tools/chop.rs`, vector icon `"trim"` in `crates/ui-egui/src/mode_icons.rs`; tests `crates/engine/tests/trim_mode.rs`, `ui_smoke.rs`; manual `docs/manual/trim.md`.
 - Chop extended (D15): `crates/engine/src/cmd/outline.rs`, `cmd/chop_ext.rs` (commands `object.trim`, `object.split_at`, `object.cut_all`, `object.extend`), the buttons moved to the Trim mode (D16); tests `crates/engine/tests/chop_extended.rs`.
 - Drawing tools: `crates/engine/src/tools/mod.rs` (41 tools; tests draw polylines, boxes and text and move objects).
+- Global settings, Unit/Scale, Arrow Size, number pop-ups, align and grid choices (W10-23, -24, -31, -32, -33, W10-3): `crates/engine/src/globals.rs` (rows read from the preferences), `cmd/arrange.rs` (`spread`, the seven align choices), `indicator.rs` (`snap_iso`, `arrow_value`), `view.rs` (`apply_integer_zoom`), `crates/ui-egui/src/{dialogs,rulers,attributes,canvas}.rs`, tests `crates/engine/tests/w10_group4_5.rs` and five in `crates/ui-egui/tests/ui_smoke.rs`.
 - Picture edit panel (W10-16, W10-20): `crates/engine/src/cmd/picture.rs` (`picture.*` commands), `crates/ui-egui/src/dialogs.rs` (`picture_rows`), tests `crates/engine/tests/picture_panel.rs` and `picture_panel_rows_relink_and_drop` in `crates/ui-egui/tests/ui_smoke.rs`.
 - PDF/EPS pictures (B15): `fig2dev:crates/fig2dev/src/util/{pdfpic,pdfps,gs}.rs`, tests `tests/pdf_pictures*.rs` there (against the C fig2dev), canvas in `crates/engine/src/import.rs`, hostile files in `crates/engine/tests/import_fuzz.rs`.
 - Commands: `crates/engine/src/cmd/*`, swept with hostile parameters in `crates/engine/tests/command_sweep.rs`.
@@ -89,6 +90,7 @@ the score.
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-22 | ≈73 % | W10-23, -24, -31, -32, -33, W10-3: Global settings rows with effect, Unit/Scale panel, Arrow Size panel, number pop-ups, seven align and nine grid choices; Settings & styles 75 → 80 %. |
 | 2026-10-22 | ≈73 % | Recount: Text 55 → 65 % (E10), Settings & styles 15 → 75 % (E1 persistence, recent files, E6 styles, E4 colours); the table had lagged behind. |
 | 2026-10-22 | ≈73 % | E5, E8: character map (Symbol and Dingbats stored as the font codes) and shortcut sheet; Text 65 → 70 %, 8 h less; headline not recounted. |
 | 2026-10-22 | ≈65 % | E3, S4-6: zoom box and shape factor on the canvas; View & navigation 96 → 100 % (rounds to the same overall). |

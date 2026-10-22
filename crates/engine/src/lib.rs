@@ -14,6 +14,7 @@ pub mod dimline;
 mod error;
 pub mod export_panel;
 pub mod fig2dev;
+mod globals;
 pub mod guard;
 mod history;
 pub mod import;
@@ -710,7 +711,7 @@ impl Engine {
         if self.exact_points.contains(&p) {
             return p;
         }
-        self.indicator.snap_point(p, self.doc.settings.units)
+        self.limit_point(self.indicator.snap_point(p, self.doc.settings.units))
     }
 
     /// The Snap menu's mode, if one is armed.

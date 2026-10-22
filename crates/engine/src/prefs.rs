@@ -81,7 +81,6 @@ pub const NOT_APPLICABLE: &[&str] = &[
     "installowncmap",
     "internalborderwidth",
     "international",
-    "max_image_colors",
     "monochrome",
     "normalFont",
     "spinner_delay",
@@ -90,6 +89,16 @@ pub const NOT_APPLICABLE: &[&str] = &[
     "tablet",
     "visual",
 ];
+
+/// xfig's default for the helper programs (image editor, browser, PDF
+/// viewer): the system's own opener, named as on this system.
+pub const SYSTEM_OPEN: &str = if cfg!(target_os = "macos") {
+    "open"
+} else if cfg!(windows) {
+    "start"
+} else {
+    "xdg-open"
+};
 
 /// One of xfig's resources.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -119,11 +128,12 @@ use Status::{Applied, Planned};
 /// xfig's resources (`xfig.man.in`'s table and `main.c`), in the man page's order.
 #[rustfmt::skip]
 pub const RESOURCES: &[Resource] = &[
-    r("allownegcoords", Bool, "true", "-allownegcoords, -dontallownegcoords", Planned("D11")),
-    r("autorefresh", Bool, "false", "-autorefresh", Planned("D11")),
+    r("allownegcoords", Bool, "true", "-allownegcoords, -dontallownegcoords", Applied),
+    r("autorefresh", Bool, "false", "-autorefresh", Applied),
     r("axislines", Str, "pink", "-axislines", Planned("E9")),
     r("balloon_delay", Int, "500", "-balloon_delay", Applied),
     r("but_per_row", Int, "2", "-but_per_row", Planned("E9")),
+    r("browser", Str, SYSTEM_OPEN, "-browser", Planned("D11")),
     r("canvasbackground", Str, "white", "-cbg", Planned("E9")),
     r("canvasforeground", Str, "black", "-cfg", Planned("E9")),
     r("correctfontsize", Bool, "false", "-correctfontsize", Applied),
@@ -133,13 +143,13 @@ pub const RESOURCES: &[Resource] = &[
     r("export_margin", Int, "0", "-export_margin", Applied),
     r("flipvisualhints", Bool, "false", "-flipvisualhints", Planned("E9")),
     r("flushleft", Bool, "false", "-flushleft, -center", Applied),
-    r("freehand_resolution", Int, "25", "-freehand_resolution", Planned("D11")),
+    r("freehand_resolution", Int, "25", "-freehand_resolution", Applied),
     r("geometry", Str, "", "-geometry", Applied),
     r("grid_color", Str, "black", "-grid_color", Planned("E9")),
     r("grid_unit", Str, "1/16", "-grid_unit", Planned("E9")),
     r("hiddentext", Bool, "false", "-hiddentext", Applied),
     r("icon_view", Bool, "true", "-icon_view, -list_view", Planned("D6")),
-    r("image_editor", Str, "xdg-open", "-image_editor", Planned("D11")),
+    r("image_editor", Str, SYSTEM_OPEN, "-image_editor", Applied),
     r("inches", Bool, "true", "-inches, -imperial, -metric, -centimeters", Applied),
     r("jpeg_quality", Int, "75", "-jpeg_quality", Planned("B6")),
     r("justify", Bool, "false", "-left, -right", Applied),
@@ -147,8 +157,11 @@ pub const RESOURCES: &[Resource] = &[
     r("landscape", Bool, "true", "-landscape, -portrait", Applied),
     r("latexfonts", Bool, "false", "-latexfonts", Applied),
     r("library_dir", Str, "~/xfiglib", "-library_dir", Planned("D6")),
+    r("max_image_colors", Int, "0", "-max_image_colors", Planned("B6")),
+    r("max_recent_files", Int, "9", "", Applied),
     r("magnification", Float, "100", "-magnification", Applied),
     r("multiple", Bool, "false", "-multiple, -single", Applied),
+    r("pdf_viewer", Str, SYSTEM_OPEN, "-pdf_viewer", Planned("D11")),
     r("overlap", Bool, "true", "-overlap, -nooverlap", Planned("B4")),
     r("pageborder", Str, "lightblue", "-pageborder", Planned("E9")),
     r("paper_size", Str, "Letter", "-paper_size", Applied),
@@ -158,11 +171,11 @@ pub const RESOURCES: &[Resource] = &[
     r("rulerthick", Int, "24", "-rulerthick", Planned("E9")),
     r("scale_factor", Float, "1.0", "-scale_factor", Planned("D11")),
     r("showallbuttons", Bool, "false", "-showallbuttons", Planned("E9")),
-    r("showaxislines", Bool, "true", "-showaxislines, -dontshowaxislines", Planned("E9")),
+    r("showaxislines", Bool, "true", "-showaxislines, -dontshowaxislines", Applied),
     r("showballoons", Bool, "true", "-showballoons, -dontshowballoons", Applied),
     r("showdepthmanager", Bool, "true", "-showdepthmanager, -dontshowdepthmanager", Applied),
     r("showlengths", Bool, "false", "-showlengths, -dontshowlengths", Applied),
-    r("shownums", Bool, "false", "-shownums, -dontshownums", Planned("D11")),
+    r("shownums", Bool, "false", "-shownums, -dontshownums", Applied),
     r("showpageborder", Bool, "true", "-showpageborder, -dontshowpageborder", Applied),
     r("smallicons", Bool, "false", "-smallicons", Planned("E9")),
     r("smooth_factor", Int, "0", "-smooth_factor", Planned("B6")),
@@ -180,7 +193,7 @@ pub const RESOURCES: &[Resource] = &[
     r("startposnmode", Int, "1", "-startposnmode", Applied),
     r("startpsFont", Str, "Times-Roman", "-startpsFont", Applied),
     r("starttextstep", Float, "1.0", "-starttextstep", Applied),
-    r("trackCursor", Bool, "true", "-track, -notrack", Planned("E9")),
+    r("trackCursor", Bool, "true", "-track, -notrack", Applied),
     r("transparent_color", Int, "-2", "-transparent_color", Planned("B6")),
     r("userscale", Float, "1.0", "-userscale", Applied),
     r("userunit", Str, "in", "-userunit", Applied),
@@ -211,6 +224,12 @@ pub struct RustFigPrefs {
     /// "3d" (bevelled buttons, default) or "flat".
     #[serde(skip_serializing_if = "Option::is_none")]
     pub button_style: Option<String>,
+    /// Arrow Size panel (W10-31): absolute values or multiples of the line width,
+    /// and the multiples (thickness, width, length).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub arrow_absolute: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub arrow_mult: Option<[f64; 3]>,
     pub recent_files: Vec<String>,
     pub user_colors: Vec<NamedColor>,
     /// Colours used lately (`#rrggbb`, newest first), offered in the colour pop-ups (E4).
@@ -319,6 +338,12 @@ impl Prefs {
     }
 
     /// Note `rgb` as the most recently used colour.
+    /// How many recently used files are kept (xfig's `max_recent_files`, 0 to 9).
+    pub fn recent_max(&self) -> usize {
+        self.int("max_recent_files")
+            .map_or(MAX_RECENT, |n| usize::try_from(n).unwrap_or(0).min(MAX_RECENT))
+    }
+
     pub fn add_recent_color(&mut self, rgb: &str) {
         let r = &mut self.rustfig.recent_colors;
         r.retain(|c| c != rgb);
@@ -328,10 +353,11 @@ impl Prefs {
 
     /// Note `path` as the most recent file.
     pub fn add_recent(&mut self, path: &str) {
+        let max = self.recent_max();
         let r = &mut self.rustfig.recent_files;
         r.retain(|p| p != path);
         r.insert(0, path.to_string());
-        r.truncate(MAX_RECENT);
+        r.truncate(max);
     }
 
     /// xfig's "start" resources from the current attributes (Edit ›
@@ -356,6 +382,7 @@ impl Prefs {
                 .position(|x| *x == m)
                 .map_or(0, |i| i.saturating_sub(1)),
         };
+        let grid = if ind.grid_iso && grid > 0 { grid + 4 } else { grid };
         set("startgridmode", toml::Value::Integer(grid as i64));
         if ind.postscript {
             set("latexfonts", toml::Value::Boolean(false));
@@ -382,6 +409,8 @@ impl Prefs {
         set("startarrowthick", toml::Value::Float(ind.arrow.thickness));
         set("startarrowwidth", toml::Value::Float(ind.arrow.width / unit));
         set("startarrowlength", toml::Value::Float(ind.arrow.height / unit));
+        self.rustfig.arrow_absolute = Some(ind.arrow_absolute);
+        self.rustfig.arrow_mult = Some([ind.arrow_mult.0, ind.arrow_mult.1, ind.arrow_mult.2]);
     }
 
     /// Apply the drawing-related resources that are set; returns warnings
@@ -457,9 +486,16 @@ impl Prefs {
         }
         if let Some(n) = self.int("startgridmode") {
             match n {
-                0 => ind.grid = None,
-                1..=4 => ind.grid = usize::try_from(n + 1).ok().and_then(|i| SnapMode::ALL.get(i)).copied(),
-                _ => warn.push(format!("startgridmode: {n} is not 0-4")),
+                0 => {
+                    ind.grid = None;
+                    ind.grid_iso = false;
+                }
+                1..=8 => {
+                    ind.grid_iso = n > 4;
+                    let k = if n > 4 { n - 4 } else { n };
+                    ind.grid = usize::try_from(k + 1).ok().and_then(|i| SnapMode::ALL.get(i)).copied();
+                }
+                _ => warn.push(format!("startgridmode: {n} is not 0-8")),
             }
         }
         let latex = self.bool("latexfonts").unwrap_or(!ind.postscript);
@@ -510,6 +546,16 @@ impl Prefs {
         }
         if let Some(h) = self.float("startarrowlength").filter(|h| (0.0..=1000.0).contains(h)) {
             ind.arrow.height = h * unit;
+        }
+        if let Some(b) = self.rustfig.arrow_absolute {
+            ind.arrow_absolute = b;
+        }
+        if let Some([t, w, h]) = self
+            .rustfig
+            .arrow_mult
+            .filter(|m| m.iter().all(|v| (0.1..=10_000.0).contains(v)))
+        {
+            ind.arrow_mult = (t, w, h);
         }
         warn
     }
