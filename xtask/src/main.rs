@@ -39,7 +39,17 @@ const ASSET_EXTS: &[&str] = &[
     "ogg",
 ];
 const FONT_EXTS: &[&str] = &["ttf", "otf", "woff", "woff2", "ttc", "pfb", "afm"];
-const SKIP_DIRS: &[&str] = &["target", ".git", ".cargo-home", "old", "plan", "dist", "node_modules"];
+// `.claude` holds agent worktrees: copies of the repository, not part of it.
+const SKIP_DIRS: &[&str] = &[
+    "target",
+    ".git",
+    ".cargo-home",
+    ".claude",
+    "old",
+    "plan",
+    "dist",
+    "node_modules",
+];
 
 /// The workspace root, found at run time: the nearest directory at or above
 /// the current one whose Cargo.toml declares `[workspace]`. A path fixed at
