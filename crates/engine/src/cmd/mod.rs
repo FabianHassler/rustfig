@@ -4,6 +4,7 @@
 
 mod arrange;
 mod chop;
+mod chop_ext;
 mod compound;
 mod doc;
 mod edit;
@@ -11,6 +12,7 @@ pub(crate) mod file;
 mod indicator;
 mod joinsplit;
 mod object;
+mod outline;
 mod prefs;
 mod region;
 pub(crate) mod shape;

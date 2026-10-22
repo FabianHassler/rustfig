@@ -80,7 +80,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `e_align.c` | 962 | align compound / canvas, distribute | `cmd/arrange`, tools | partial: align to canvas, distribute choices in the mode (S4) | D10, W10-33 |
 | `e_arrow.c` | 293 | add/remove arrowheads | tools, `cmd/object` | ported (S4) | — |
 | `e_break.c` | 92 | break compound (and tag) | tools | ported (S4) | — |
-| `e_chop.c` | 890 | chop objects at intersections | `cmd/chop.rs`, `tools/chop.rs` | ported (S4) | D3 |
+| `e_chop.c` | 890 | chop objects at intersections | `cmd/chop.rs`, `tools/chop.rs`, extended by `cmd/outline.rs`, `cmd/chop_ext.rs` (D15) | ported (S4) | D3, D15 |
 | `e_compound.c` | 294 | open/close compound | `model::Document::open_compound`, `cmd/compound.rs`, `tools/compound.rs`, `panels::close_compound_popup` | ported (dimension-line recomputation on close: D10) | D1 |
 | `e_convert.c` | 420 | line↔spline, box↔arc-box | `cmd/object` | partial: box ↔ arc-box (S4) | S4-5 |
 | `e_copy.c` | 185 | copy, array copy, copy to cut buffer | tools | partial: array copy (S4) | D10 |
@@ -239,4 +239,5 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | 2026-10-21 | S4: every xfig function audited (`source-audit.md`); file statuses of `d_*`, `e_*`, `f_*`, `u_*` and `w_*` rows corrected (f_readpcx/xbm/xpm and f_wrpcx/png, u_ghostscript, u_error are done or replaced, not missing). |
 | 2026-10-21 | DD7: `read.c`'s repairs and checks exposed as functions, used by the bridge's export. |
 | 2026-10-21 | B15: `f_readeps.c`, `readeps.c` (`read_pdf`, `pdftops`, `gsexe`) and the picture part of `genps.c` now covered by `util/{pdfpic,pdfps,gs}.rs`. |
+| 2026-10-22 | D15: `e_chop.c` extended beyond xfig (`cmd/outline.rs`, `cmd/chop_ext.rs`). |
 | 2026-10-22 | D3: `e_chop.c` ported (`cmd/chop.rs`, `tools/chop.rs`); `w_intersect.c`'s intersection math in `geom/intersect.rs`. |

@@ -748,7 +748,12 @@ const INDICATOR_SIZE: egui::Vec2 = vec2(290.0, 46.0);
 pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
     let mut h = app.engine.mouse_hints();
     if let Some((left, middle, right)) = app.hint_shown {
-        h = rustfig_engine::MouseHints { left, middle, right };
+        h = rustfig_engine::MouseHints {
+            left,
+            middle,
+            right,
+            shift: "",
+        };
     }
     let (rect, resp) = ui.allocate_exact_size(INDICATOR_SIZE, Sense::hover());
     let p = ui.painter_at(rect);
@@ -820,8 +825,13 @@ pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
         if h.middle.is_empty() { "—" } else { h.middle },
         if h.right.is_empty() { "—" } else { h.right }
     );
+    let shift_note = if h.shift.is_empty() {
+        String::new()
+    } else {
+        format!("\n{}", h.shift)
+    };
     let resp = resp.on_hover_text(format!(
-        "{summary}\n\nTwo-button mouse or trackpad: Alt/Option+click is the middle button, \
+        "{summary}{shift_note}\n\nTwo-button mouse or trackpad: Alt/Option+click is the middle button, \
          Ctrl+click the right button (macOS); on Linux and Windows left and right together \
          are the middle button."
     ));

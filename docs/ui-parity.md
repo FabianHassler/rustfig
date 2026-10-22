@@ -36,7 +36,7 @@
 | Open/close | `tool.open_close` | ✅ |
 | Add/remove arrows | `tool.arrow` | ✅ |
 | Join/split | `tool.join_split`, `object.join`, `object.split` | ✅ |
-| Chop | `tool.chop`, `object.chop` | ✅ |
+| Chop | `tool.chop`, `object.chop`; Shift+buttons: `object.trim`, `object.split_at`, `object.extend` | ✅ (D3, D15) |
 | Tangent/normal | — | ❌ |
 | Angle / length / area measure | `object.measure` (command only) | 🟡 |
 
@@ -86,6 +86,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 |---|---|
 | 2026-10-22 | D14: the Smart Links button also on Move point, Scale, Flip, Rotate and Align. |
 | 2026-10-22 | D8: Smart Links indicator button (off/move/slide). |
+| 2026-10-22 | D15: Chop mode's Shift+left/middle/right (Trim, Split at point, Extend). |
 | 2026-10-22 | D3: Chop mode added to the editing-modes table (`tool.chop`, `object.chop`). |
 | 2026-10-13 | First checklist. |
 | 2026-10-13 | Added the main-window section (plan phase W). |

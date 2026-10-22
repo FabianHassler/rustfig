@@ -18,7 +18,7 @@
 //! | Rotate (other angles)         | `M_ROTATE_ANGLE`: lines, polygons, splines, arcs, text, compounds, ellipses (no boxes) |
 //! | Break, Open compound, Align   | `M_COMPOUND`                                      |
 //! | Join/Split                    | `M_POLYLINE \| M_SPLINE_O \| M_SPLINE_C`           |
-//! | Chop                          | `M_POLYLINE \| M_ARC \| M_ELLIPSE`                  |
+//! | Chop                          | `M_POLYLINE \| M_ARC \| M_ELLIPSE` (+ splines, compounds: D15) |
 //! | Scale, Move point, Flip (both) | `M_NO_TEXT`: everything but text                 |
 //! | Add point, Delete point       | `M_VARPTS_OBJECT`: lines, polygons, splines       |
 //! | Convert                       | `M_VARPTS_OBJECT \| M_POLYLINE_BOX`                |
@@ -129,7 +129,13 @@ pub fn mode_mask(tool: ToolKind, rotate_angle: f64) -> ObjMask {
         }
         T::Break | T::Align | T::OpenCompound => ObjMask::COMPOUND,
         T::JoinSplit => ObjMask::POLYLINE.union(ObjMask::SPLINE),
-        T::Chop => ObjMask::POLYLINE.union(ObjMask::ARC).union(ObjMask::ELLIPSE),
+        // xfig's mask is polylines, arcs and ellipses; RustFig's Chop also
+        // takes splines and compounds (plan D15).
+        T::Chop => ObjMask::POLYLINE
+            .union(ObjMask::ARC)
+            .union(ObjMask::ELLIPSE)
+            .union(ObjMask::SPLINE)
+            .union(ObjMask::COMPOUND),
         T::Scale | T::MovePoint | T::FlipV | T::FlipH => ObjMask::NO_TEXT,
         T::AddPoint | T::DeletePoint => ObjMask::VARPTS_OBJECT,
         T::Convert => ObjMask::VARPTS_OBJECT.union(ObjMask::POLYLINE_BOX),
@@ -364,7 +370,18 @@ mod tests {
             ),
             (
                 T::Chop,
-                vec!["line", "polygon", "box", "arcbox", "picture", "ellipse", "arc"],
+                vec![
+                    "line",
+                    "polygon",
+                    "box",
+                    "arcbox",
+                    "picture",
+                    "spline_open",
+                    "spline_closed",
+                    "ellipse",
+                    "arc",
+                    "compound",
+                ],
             ),
             (T::Align, vec!["compound"]),
             (T::Scale, no_text.clone()),

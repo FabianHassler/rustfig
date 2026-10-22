@@ -179,33 +179,14 @@ fn a_polygon_needs_two_intersections() {
 fn chop_rejects_bad_log_and_axe_kinds() {
     let mut e = engine();
     let l = line(&mut e, &[(0.0, 0.0), (1000.0, 0.0)]);
-    // A spline, text and compound are neither valid logs nor axes.
-    e.execute(
-        "shape.spline",
-        &json!({"points": [[0, 900], [600, 1500], [1200, 900]], "kind": "x"}),
-    )
-    .unwrap();
-    let sp = e.doc().objects.last().unwrap().id;
+    // A text is neither a valid log nor a valid axe (splines, ellipses and
+    // compounds are, since D15: see chop_extended.rs).
     e.execute("shape.text", &json!({"x": 0, "y": 3000, "text": "hi"}))
         .unwrap();
     let tx = e.doc().objects.last().unwrap().id;
-    // A non-circle ellipse.
-    e.execute("shape.ellipse", &json!({"cx": 500, "cy": 500, "rx": 200, "ry": 100}))
-        .unwrap();
-    let el = e.doc().objects.last().unwrap().id;
     let before = snapshot(&e);
-    // Spline as axe.
-    assert!(chop(&mut e, l, &[sp]).is_err());
-    assert_eq!(snapshot(&e), before);
-    // Spline as log.
-    assert!(chop(&mut e, sp, &[l]).is_err());
-    // Text as log.
     assert!(chop(&mut e, tx, &[l]).is_err());
-    // Text as axe.
     assert!(chop(&mut e, l, &[tx]).is_err());
-    // The ellipse as log.
-    let err = chop(&mut e, el, &[l]).unwrap_err();
-    assert!(err.message.contains("not (yet) supported"), "{}", err.message);
     // Unknown ids.
     assert!(chop(&mut e, ObjectId(99999), &[l]).is_err());
     assert!(chop(&mut e, l, &[ObjectId(99999)]).is_err());

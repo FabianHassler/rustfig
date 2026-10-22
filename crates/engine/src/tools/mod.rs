@@ -485,6 +485,9 @@ pub struct MouseHints {
     pub left: &'static str,
     pub middle: &'static str,
     pub right: &'static str,
+    /// What the buttons do with Shift held, where the mode has such
+    /// variants (Chop's Trim, Split and Extend); empty otherwise.
+    pub shift: &'static str,
 }
 
 /// Pick tolerance in screen pixels.
@@ -2285,7 +2288,20 @@ impl Engine {
     /// checks every tool and state. The wording is xfig's
     /// (`set_mousefun` calls in xfig's `d_*.c` and `e_*.c`).
     pub fn mouse_hints(&self) -> MouseHints {
-        let h = |left, middle, right| MouseHints { left, middle, right };
+        let mut h = self.mouse_hints_plain();
+        if self.tool == ToolKind::Chop {
+            h.shift = "Shift: left trims the clicked piece, middle splits at the point, right extends a line end";
+        }
+        h
+    }
+
+    fn mouse_hints_plain(&self) -> MouseHints {
+        let h = |left, middle, right| MouseHints {
+            left,
+            middle,
+            right,
+            shift: "",
+        };
         // A label on the button that started the operation.
         let on = |button: Button, label, right| match button {
             Button::Middle => h("", label, right),
@@ -2325,6 +2341,7 @@ impl Engine {
                 left: "new text",
                 middle: "finish text",
                 right: "cancel",
+                shift: "",
             },
             ToolState::MoveObjs {
                 dragging, constrain, ..
