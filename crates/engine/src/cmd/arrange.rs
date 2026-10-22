@@ -2,7 +2,7 @@
 
 use super::{has_selection, num, opt_str, CmdResult, Command};
 use crate::{Engine, EngineError};
-use rustfig_geom::{Affine, Rect};
+use rustfig_geom::Rect;
 use rustfig_model::{ObjectId, MAX_DEPTH};
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -99,14 +99,8 @@ fn targets(e: &Engine, p: &Value) -> Result<Vec<(ObjectId, Rect)>, EngineError> 
 }
 
 fn translate(e: &mut Engine, moves: Vec<(ObjectId, f64, f64)>) {
-    for (id, dx, dy) in moves {
-        if dx == 0.0 && dy == 0.0 {
-            continue;
-        }
-        if let Some(o) = e.doc_mut().get_mut(id) {
-            o.transform(&Affine::translate(dx, dy), false);
-        }
-    }
+    // Smart links: the ends attached to each object follow it.
+    crate::links::translate_each(e, &moves);
 }
 
 fn align(e: &mut Engine, p: &Value) -> CmdResult {

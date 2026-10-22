@@ -231,14 +231,17 @@ pub fn attributes_for(tool: ToolKind) -> Vec<Attr> {
         ToolKind::Arc => &[MIN2, LINE1, ARROWS, &[ArcType]],
         ToolKind::Picture => &[MIN2, &[Depth, PenColor]],
         ToolKind::Text => &[MIN2, &[TextStep], TEXT0],
-        ToolKind::Glue | ToolKind::Scale | ToolKind::FlipV | ToolKind::FlipH => &[MIN2],
-        ToolKind::MovePoint | ToolKind::AddPoint => &[MIN2, GEOM],
+        ToolKind::Glue => &[MIN2],
+        // D14: smart links follow every geometric operation, so the button is here too.
+        ToolKind::Scale | ToolKind::FlipV | ToolKind::FlipH => &[MIN2, &[SmartLinks]],
+        ToolKind::MovePoint => &[MIN2, GEOM, &[SmartLinks]],
+        ToolKind::AddPoint => &[MIN2, GEOM],
         ToolKind::Move | ToolKind::Copy => &[MIN2, &[SmartLinks]],
-        ToolKind::Align => &[&[HAlign, VAlign]],
+        ToolKind::Align => &[&[HAlign, VAlign, SmartLinks]],
         ToolKind::Update => &[TEXT0, LINE1, ARROWS, &[BoxRadius, ArcType]],
         // RustFig's own Select tool edits with the same attributes as Update.
         ToolKind::Select => &[MIN2, TEXT0, LINE1, ARROWS, &[BoxRadius, ArcType]],
-        ToolKind::RotateCcw | ToolKind::RotateCw => &[MIN2, &[RotnAngle]],
+        ToolKind::RotateCcw | ToolKind::RotateCw => &[MIN2, &[RotnAngle, SmartLinks]],
         ToolKind::Arrow => &[&[LineWidth, ArrowType, ArrowSize]],
         ToolKind::None
         | ToolKind::Break

@@ -746,6 +746,25 @@ pub(super) fn remove_point(o: &mut Object, idx: usize) -> Result<(), EngineError
 fn point_move(e: &mut Engine, p: &Value) -> CmdResult {
     let (id, idx) = target(e, p)?;
     let pt = xy(p)?;
+    // Smart links: a box corner moved resizes the box, and the line ends
+    // attached to its edges stay on them.
+    let mode = e.indicator.linkmode;
+    let links = crate::links::collect(e, &[id]);
+    let old_rect = match e.doc().get(id).map(|o| &o.kind) {
+        Some(ObjectKind::Polyline(pl)) if pl.kind.is_rect() => Some(Rect::from_points(pl.points.iter().copied())),
+        _ => None,
+    };
+    let r = point_move_object(e, id, idx, pt);
+    if r.is_ok() {
+        if let (Some(old), Some(ObjectKind::Polyline(pl))) = (old_rect, e.doc().get(id).map(|o| &o.kind)) {
+            let new = Rect::from_points(pl.points.iter().copied());
+            crate::links::adjust(e, mode, &links, &crate::links::rect_map(old, new));
+        }
+    }
+    r
+}
+
+fn point_move_object(e: &mut Engine, id: ObjectId, idx: usize, pt: Point) -> CmdResult {
     let o = e
         .doc_mut()
         .get_mut(id)

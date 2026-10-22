@@ -2551,9 +2551,15 @@ impl Engine {
                 }
                 if !copy && d.len() > 0.0 {
                     ov.hide.clone_from(ids);
-                    // Smart links: the attached lines follow while dragging.
+                }
+                if d.len() > 0.0 {
+                    // Smart links: every attached line follows while dragging
+                    // (a copy leaves the original line where it is: xfig
+                    // copies it and stretches the copy's twin).
                     for line in crate::links::preview(self, ids, d.x, d.y) {
-                        ov.hide.push(line.id);
+                        if !copy {
+                            ov.hide.push(line.id);
+                        }
                         ov.preview.push(line);
                     }
                 }
@@ -2587,6 +2593,18 @@ impl Engine {
                     let mut c = o.clone();
                     preview_point(&mut c, *index, *insert, p);
                     ov.handles = edit_points(&c);
+                    // Smart links: a box corner dragged stretches the lines
+                    // attached to its edges.
+                    if let (Some(old), ObjectKind::Polyline(pl)) = (rect_of(o), &c.kind) {
+                        if !*insert && pl.kind.is_rect() {
+                            let new = Rect::from_points(pl.points.iter().copied());
+                            let links = crate::links::collect(self, &[*id]);
+                            for line in crate::links::preview_with(self, &links, &crate::links::rect_map(old, new)) {
+                                ov.hide.push(line.id);
+                                ov.preview.push(line);
+                            }
+                        }
+                    }
                     ov.preview.push(c);
                     ov.hide.push(*id);
                 }
@@ -2603,8 +2621,15 @@ impl Engine {
                     if d0 > 1e-6 {
                         let f = (cursor.dist(*center) / d0).clamp(1e-3, 1e3);
                         let mut c = o.clone();
-                        c.transform(&Affine::about(Affine::scale(f, f), *center), true);
+                        let t = Affine::about(Affine::scale(f, f), *center);
+                        c.transform(&t, true);
                         ov.preview.push(c);
+                        // Smart links: the attached lines follow the scaling.
+                        let links = crate::links::collect(self, &[*id]);
+                        for line in crate::links::preview_with(self, &links, &|q| t.apply(q)) {
+                            ov.hide.push(line.id);
+                            ov.preview.push(line);
+                        }
                         ov.hide.push(*id);
                     }
                     ov.guides.push(vec![*center, *cursor]);
@@ -2625,7 +2650,24 @@ impl Engine {
                 }
             }
         }
+        // Smart links: the selected shapes show the line ends attached to
+        // them (the ends that will follow).
+        if matches!(self.tool_state, ToolState::Idle) && self.tool == ToolKind::Select {
+            let ids = self.selection();
+            if ids.len() <= 2000 {
+                let ends = crate::links::attached_ends(self, ids);
+                ov.handles.extend(ends);
+            }
+        }
         ov
+    }
+}
+
+/// The box of a box-like polyline (box, arc-box, picture).
+fn rect_of(o: &Object) -> Option<Rect> {
+    match &o.kind {
+        ObjectKind::Polyline(pl) if pl.kind.is_rect() => Some(Rect::from_points(pl.points.iter().copied())),
+        _ => None,
     }
 }
 

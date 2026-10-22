@@ -73,7 +73,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Duplicate",
             menu: "Edit",
             shortcut: "Ctrl+D",
-            params: "{\"ids\"?: [id], \"dx\"?: number, \"dy\"?: number}",
+            params: "{\"ids\"?: [id], \"dx\"?: number, \"dy\"?: number}  — with smart links on, the lines attached to the objects are copied too (the original line ends follow the copy)",
             mutates: true,
             enabled: has_selection,
             run: duplicate,
@@ -261,7 +261,13 @@ fn duplicate(e: &mut Engine, p: &Value) -> CmdResult {
     let objs = clone_targets(e, p)?;
     let dx = num_or(p, "dx", 150.0)?;
     let dy = num_or(p, "dy", 150.0)?;
-    insert_copies(e, objs, dx, dy)
+    // Smart links: the lines attached to the originals are copied and the
+    // originals' ends follow the copies (xfig's copy with links).
+    let mode = e.indicator.linkmode;
+    let links = crate::links::collect(e, &e.target_ids(p)?);
+    let r = insert_copies(e, objs, dx, dy);
+    crate::links::copy_adjust(e, mode, &links, &|q| rustfig_geom::Point::new(q.x + dx, q.y + dy));
+    r
 }
 
 fn delete(e: &mut Engine, p: &Value) -> CmdResult {

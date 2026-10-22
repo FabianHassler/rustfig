@@ -1160,6 +1160,10 @@ mod tests {
         ("object.reverse_arrows", "the Arrow tool's right button"),
         ("object.break_all", "the Break tool's right button"),
         ("transform.move", "scripting API; the Move tools"),
+        (
+            "transform.nudge",
+            "scripting API (a small move step); the arrow keys pan the canvas, as xfig",
+        ),
         ("transform.scale", "scripting API; the Scale tool"),
         ("transform.rotate", "scripting API; the Rotate tools"),
         (

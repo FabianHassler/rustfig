@@ -1,7 +1,7 @@
 //! Geometric transforms of objects.
 
 use super::{has_selection, num, num_or, opt_bool, opt_num, CmdResult, Command};
-use crate::{Engine, EngineError, LinkMode};
+use crate::{Engine, EngineError};
 use rustfig_geom::{Affine, Point};
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -13,10 +13,20 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Move by",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id], \"dx\", \"dy\"}  — Fig units",
+            params: "{\"ids\"?: [id], \"dx\", \"dy\", \"copy\"?: bool}  — Fig units; with smart links on (indicator linkmode move|slide), the end points of lines attached to the objects follow, and a copy copies the attached lines (xfig's linked move/copy)",
             mutates: true,
             enabled: has_selection_or_ids,
             run: move_by,
+        },
+        Command {
+            id: "transform.nudge",
+            label: "Nudge",
+            menu: "",
+            shortcut: "",
+            params: "{\"ids\"?: [id], \"dir\": left|right|up|down, \"steps\"?: number (1), \"distance\"?: Fig units per step (15)}  — move the objects a small step; smart links follow as for transform.move",
+            mutates: true,
+            enabled: has_selection,
+            run: nudge,
         },
         Command {
             id: "transform.scale",
@@ -91,12 +101,18 @@ fn has_selection_or_ids(_: &Engine) -> bool {
     true
 }
 
-/// Apply a transform to the target objects.
+/// Apply a transform to the target objects. With smart links on, the end
+/// points of lines attached to the shapes go through the same transform
+/// (`links`); when copying, the attached lines are copied and the originals
+/// follow the copies (xfig's copy with links).
 pub(crate) fn apply(e: &mut Engine, p: &Value, t: Affine, scale_text: bool) -> CmdResult {
     let ids = e.target_ids(p)?;
     if ids.is_empty() {
         return Err(EngineError::bad_params("no objects selected"));
     }
+    let mode = e.indicator.linkmode;
+    let links = crate::links::collect(e, &ids);
+    let follow = |q: Point| t.apply(q);
     if opt_bool(p, "copy")?.unwrap_or(false) {
         let copies: Vec<_> = ids.iter().filter_map(|i| e.doc().get(*i).cloned()).collect();
         let mut new_ids = Vec::new();
@@ -104,6 +120,7 @@ pub(crate) fn apply(e: &mut Engine, p: &Value, t: Affine, scale_text: bool) -> C
             o.transform(&t, scale_text);
             new_ids.push(e.add_object(o));
         }
+        crate::links::copy_adjust(e, mode, &links, &follow);
         e.set_selection(new_ids.clone());
         return Ok(json!({"count": new_ids.len(), "ids": super::ids_value(&new_ids)}));
     }
@@ -112,6 +129,7 @@ pub(crate) fn apply(e: &mut Engine, p: &Value, t: Affine, scale_text: bool) -> C
             Arc::make_mut(o).transform(&t, scale_text);
         }
     }
+    crate::links::adjust(e, mode, &links, &follow);
     Ok(json!({"count": ids.len()}))
 }
 
@@ -127,22 +145,28 @@ fn center(e: &Engine, p: &Value) -> Result<Point, EngineError> {
 
 fn move_by(e: &mut Engine, p: &Value) -> CmdResult {
     let (dx, dy) = (num(p, "dx")?, num(p, "dy")?);
-    let mode = e.indicator.linkmode;
-    let copying = opt_bool(p, "copy")?.unwrap_or(false);
-    // Collect the links before the move; the boxes move first, then the
-    // attached line ends follow (xfig's `adjust_links`). Copying does not
-    // link (xfig copies the linked lines too; not ported).
-    let links = if !copying && mode != LinkMode::Off {
-        let ids = e.target_ids(p)?;
-        crate::links::collect(e, &ids)
-    } else {
-        Vec::new()
-    };
-    let result = apply(e, p, Affine::translate(dx, dy), false);
-    if result.is_ok() {
-        crate::links::adjust(e, mode, &links, dx, dy);
+    apply(e, p, Affine::translate(dx, dy), false)
+}
+
+/// Nudge by `steps` (default 1) times `distance` (default 15 Fig units, one
+/// pixel of xfig's 80 dpi screen) in a direction: what the arrow keys give
+/// with the objects in hand. Linked like any move.
+fn nudge(e: &mut Engine, p: &Value) -> CmdResult {
+    let dir = super::string(p, "dir")?;
+    let steps = num_or(p, "steps", 1.0)?;
+    let distance = num_or(p, "distance", 15.0)?;
+    let d = steps * distance;
+    if !d.is_finite() || d.abs() > 1.0e7 {
+        return Err(EngineError::bad_params("nudge distance out of range"));
     }
-    result
+    let (dx, dy) = match dir.as_str() {
+        "left" => (-d, 0.0),
+        "right" => (d, 0.0),
+        "up" => (0.0, -d),
+        "down" => (0.0, d),
+        other => return Err(EngineError::bad_params(format!("unknown direction {other:?}"))),
+    };
+    apply(e, p, Affine::translate(dx, dy), false)
 }
 
 fn scale(e: &mut Engine, p: &Value) -> CmdResult {

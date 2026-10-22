@@ -506,23 +506,23 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_movept.c` | `cancel_movedellipsepoint` | 246 | ported | tools: `ToolKind::MovePoint` (`point_event`, `commit_point`), command `point.move` |  |
 | `e_movept.c` | `fix_movedellipsepoint` | 272 | ported | tools: `ToolKind::MovePoint` (`point_event`, `commit_point`), command `point.move` |  |
 | `e_movept.c` | `relocate_ellipsepoint` | 303 | ported | tools: `ToolKind::MovePoint` (`point_event`, `commit_point`), command `point.move` |  |
-| `e_movept.c` | `init_arcpointmoving` | 358 | partial | moving a point works; the attached lines' end points do not follow (smart links) | D8 |
-| `e_movept.c` | `cancel_movedarcpoint` | 376 | partial | moving a point works; the attached lines' end points do not follow (smart links) | D8 |
-| `e_movept.c` | `fix_movedarcpoint` | 388 | partial | moving a point works; the attached lines' end points do not follow (smart links) | D8 |
+| `e_movept.c` | `init_arcpointmoving` | 358 | ported | moving a point works; a box corner resizes the attached lines' ends (`point.move`, `engine/links.rs`: D14; xfig does not link here) | |
+| `e_movept.c` | `cancel_movedarcpoint` | 376 | ported | moving a point works; a box corner resizes the attached lines' ends (`point.move`, `engine/links.rs`: D14; xfig does not link here) | |
+| `e_movept.c` | `fix_movedarcpoint` | 388 | ported | moving a point works; a box corner resizes the attached lines' ends (`point.move`, `engine/links.rs`: D14; xfig does not link here) | |
 | `e_movept.c` | `relocate_arcpoint` | 409 | ported | tools: `ToolKind::MovePoint` (`point_event`, `commit_point`), command `point.move` |  |
-| `e_movept.c` | `init_splinepointmoving` | 432 | partial | moving a point works; the attached lines' end points do not follow (smart links) | D8 |
-| `e_movept.c` | `cancel_movedsplinepoint` | 489 | partial | moving a point works; the attached lines' end points do not follow (smart links) | D8 |
-| `e_movept.c` | `fix_movedsplinepoint` | 501 | partial | moving a point works; the attached lines' end points do not follow (smart links) | D8 |
+| `e_movept.c` | `init_splinepointmoving` | 432 | ported | moving a point works; a box corner resizes the attached lines' ends (`point.move`, `engine/links.rs`: D14; xfig does not link here) | |
+| `e_movept.c` | `cancel_movedsplinepoint` | 489 | ported | moving a point works; a box corner resizes the attached lines' ends (`point.move`, `engine/links.rs`: D14; xfig does not link here) | |
+| `e_movept.c` | `fix_movedsplinepoint` | 501 | ported | moving a point works; a box corner resizes the attached lines' ends (`point.move`, `engine/links.rs`: D14; xfig does not link here) | |
 | `e_movept.c` | `relocate_splinepoint` | 524 | ported | tools: `ToolKind::MovePoint` (`point_event`, `commit_point`), command `point.move` |  |
 | `e_movept.c` | `init_compoundpointmoving` | 536 | ported | tools: `ToolKind::MovePoint` (`point_event`, `commit_point`), command `point.move` |  |
 | `e_movept.c` | `cancel_compound` | 582 | ported | tools: `ToolKind::MovePoint` (`point_event`, `commit_point`), command `point.move` |  |
 | `e_movept.c` | `fix_movedcompoundpoint` | 594 | ported | tools: `ToolKind::MovePoint` (`point_event`, `commit_point`), command `point.move` |  |
-| `e_movept.c` | `init_linepointmoving` | 632 | partial | moving a point works; the attached lines' end points do not follow (smart links) | D8 |
+| `e_movept.c` | `init_linepointmoving` | 632 | ported | moving a point works; a box corner resizes the attached lines' ends (`point.move`, `engine/links.rs`: D14; xfig does not link here) | |
 | `e_movept.c` | `cancel_movept_box` | 720 | ported | tools: `ToolKind::MovePoint` (`point_event`, `commit_point`), command `point.move` |  |
 | `e_movept.c` | `fix_box` | 735 | ported | tools: `ToolKind::MovePoint` (`point_event`, `commit_point`), command `point.move` |  |
 | `e_movept.c` | `assign_newboxpoint` | 761 | ported | tools: `ToolKind::MovePoint` (`point_event`, `commit_point`), command `point.move` |  |
-| `e_movept.c` | `cancel_movedlinepoint` | 793 | partial | moving a point works; the attached lines' end points do not follow (smart links) | D8 |
-| `e_movept.c` | `fix_movedlinepoint` | 808 | partial | moving a point works; the attached lines' end points do not follow (smart links) | D8 |
+| `e_movept.c` | `cancel_movedlinepoint` | 793 | ported | moving a point works; a box corner resizes the attached lines' ends (`point.move`, `engine/links.rs`: D14; xfig does not link here) | |
+| `e_movept.c` | `fix_movedlinepoint` | 808 | ported | moving a point works; a box corner resizes the attached lines' ends (`point.move`, `engine/links.rs`: D14; xfig does not link here) | |
 | `e_movept.c` | `relocate_linepoint` | 835 | ported | tools: `ToolKind::MovePoint` (`point_event`, `commit_point`), command `point.move` |  |
 | `e_placelib.c` | `put_selected` | 70 | missing | Place a library object (drawing mode "library") | D6 |
 | `e_placelib.c` | `transform_lib_obj` | 119 | missing | Place a library object (drawing mode "library") | D6 |
@@ -844,7 +844,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `u_create.c` | `backward_arrow` | 88 | ported | default arrows of the indicator (`Indicator`, model `Arrow`) |  |
 | `u_create.c` | `new_arrow` | 112 | ported | default arrows of the indicator (`Indicator`, model `Arrow`) |  |
 | `u_create.c` | `copy_comments` | 149 | not needed | allocation and deep copies (Rust `Clone`, `Vec`, `Arc`) |  |
-| `u_create.c` | `new_link` | 163 | missing | smart-link records between boxes and line ends | D8 |
+| `u_create.c` | `new_link` | 163 | ported | smart-link records between shapes and line ends (`links::Link`; D14: every shape kind) |  |
 | `u_create.c` | `create_point` | 181 | not needed | allocation and deep copies (Rust `Clone`, `Vec`, `Arc`) |  |
 | `u_create.c` | `create_sfactor` | 196 | not needed | allocation and deep copies (Rust `Clone`, `Vec`, `Arc`) |  |
 | `u_create.c` | `copy_points` | 209 | not needed | allocation and deep copies (Rust `Clone`, `Vec`, `Arc`) |  |
@@ -961,11 +961,11 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `u_elastic.c` | `angle45_line` | 281 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
 | `u_elastic.c` | `angle135_line` | 293 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
 | `u_elastic.c` | `reshaping_line` | 305 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
-| `u_elastic.c` | `elastic_linelink` | 322 | missing | smart links: line ends of attached lines follow the moved box/arc/ellipse while dragging | D8 |
+| `u_elastic.c` | `elastic_linelink` | 322 | ported | smart links: every attached line follows while dragging (`links::preview`, `Engine::overlay`; D8, D14) | |
 | `u_elastic.c` | `moving_line` | 335 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
 | `u_elastic.c` | `elastic_movenewline` | 344 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
 | `u_elastic.c` | `elastic_moveline` | 350 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
-| `u_elastic.c` | `elastic_links` | 379 | missing | smart links: line ends of attached lines follow the moved box/arc/ellipse while dragging | D8 |
+| `u_elastic.c` | `elastic_links` | 379 | ported | smart links: every attached line follows while dragging (`links::preview`, `Engine::overlay`; D8, D14) | |
 | `u_elastic.c` | `scaling_line` | 421 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
 | `u_elastic.c` | `elastic_scale_curline` | 433 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
 | `u_elastic.c` | `scaling_spline` | 441 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
@@ -991,7 +991,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `u_elastic.c` | `elastic_scale_curellipse` | 746 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
 | `u_elastic.c` | `arc_point` | 754 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
 | `u_elastic.c` | `reshaping_arc` | 765 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
-| `u_elastic.c` | `elastic_arclink` | 783 | missing | smart links: line ends of attached lines follow the moved box/arc/ellipse while dragging | D8 |
+| `u_elastic.c` | `elastic_arclink` | 783 | ported | smart links: every attached line follows while dragging (`links::preview`, `Engine::overlay`; D8, D14) | |
 | `u_elastic.c` | `moving_arc` | 804 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
 | `u_elastic.c` | `elastic_movenewarc` | 813 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
 | `u_elastic.c` | `elastic_movearc` | 819 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
@@ -1166,7 +1166,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `u_list.c` | `point_on_perim` | 1262 | ported | linked move: whether a point is within `LINK_TOL` of a box's perimeter (`engine/links.rs`) |  |
 | `u_list.c` | `get_interior_links` | 1279 | ported | linked move: collects the line ends inside a moved compound (`engine/links.rs`) |  |
 | `u_list.c` | `point_on_inside` | 1320 | ported | linked move: whether a point is inside a compound's box (`engine/links.rs`) |  |
-| `u_list.c` | `adjust_links` | 1328 | ported | linked move: moves the attached line ends, and slides the adjacent point in slide mode (`engine/links.rs`) |  |
+| `u_list.c` | `adjust_links` | 1328 | ported | linked move: moves the attached line ends, and slides the adjacent point in slide mode, through any transform (`engine/links.rs`; D14) |  |
 | `u_markers.c` | `center_marker` | 43 | ported | `engine/tools/markers.rs` (`mode_mask`, `object_markers`, masks per mode, W12) and the canvas |  |
 | `u_markers.c` | `toggle_csrhighlight` | 55 | missing | highlight of the object found by a Shift-click and of the cursor position when nothing is found | S4-1 |
 | `u_markers.c` | `ellipse_in_mask` | 62 | ported | `engine/tools/markers.rs` (`mode_mask`, `object_markers`, masks per mode, W12) and the canvas |  |

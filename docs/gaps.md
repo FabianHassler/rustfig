@@ -1,6 +1,6 @@
 # Known gaps (ranked work list)
 
-**Status:** 2026-10-22 (D3: #6 dropped Chop; D8: linked move landed, #12 dropped "linked move", #33 dropped the Smart Links button). Earlier: 2026-10-21 (S4: #34 added; B15: #14 shrank to the leftovers; DD9: #25 restated after DD7; #14 restated: EPS/PDF pictures in exports need a PostScript interpreter). 2026-10-18 (B2, G1, B12, pict2e, TikZ, PSTricks, EMF, Tk (B1, B3, B9) landed; B11 added from the fig2dev audit). Ranked by user impact per hour. Pick work from the top.
+**Status:** 2026-10-22 (D14: smart links extended, nothing listed here changed; the leftovers are the file-stored links xfig does not have). 2026-10-22 (D3: #6 dropped Chop; D8: linked move landed, #12 dropped "linked move", #33 dropped the Smart Links button). Earlier: 2026-10-21 (S4: #34 added; B15: #14 shrank to the leftovers; DD9: #25 restated after DD7; #14 restated: EPS/PDF pictures in exports need a PostScript interpreter). 2026-10-18 (B2, G1, B12, pict2e, TikZ, PSTricks, EMF, Tk (B1, B3, B9) landed; B11 added from the fig2dev audit). Ranked by user impact per hour. Pick work from the top.
 
 | # | Gap | Area | Impact | Hours |
 |---|-----|------|--------|------:|

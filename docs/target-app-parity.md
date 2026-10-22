@@ -1,6 +1,6 @@
 # Target-app parity assessment: RustFig vs xfig 3.2.9
 
-**Status:** 2026-10-22 (D7: Angle Geom, Attributes 80 → 83 %; D3: chop, Editing 75 → 78 %; D8: linked move, Attributes 77 → 80 %, 10 h less); 2026-10-21 (W16, W17: one mouse scheme and one layout, scores unchanged; save query for open compounds); 2026-10-21 (D1, D2: open compound and join/split, Editing 70 → 75 %); 2026-10-21 (B15: PDF/EPS pictures, Export 66 → 68 %, overall ≈65 %); 2026-10-21 (DD9: evidence paths after the dedup series; scores unchanged); 2026-10-18, overall **≈65 %** (B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk; G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
+**Status:** 2026-10-22 (D14: smart links extended, Attributes 83 → 84 %; D14 was a new task, so the hours stay); 2026-10-22 (D7: Angle Geom, Attributes 80 → 83 %; D3: chop, Editing 75 → 78 %; D8: linked move, Attributes 77 → 80 %, 10 h less); 2026-10-21 (W16, W17: one mouse scheme and one layout, scores unchanged; save query for open compounds); 2026-10-21 (D1, D2: open compound and join/split, Editing 70 → 75 %); 2026-10-21 (B15: PDF/EPS pictures, Export 66 → 68 %, overall ≈65 %); 2026-10-21 (DD9: evidence paths after the dedup series; scores unchanged); 2026-10-18, overall **≈65 %** (B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk; G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
 
 ## Methodology
 
@@ -21,7 +21,7 @@ the score.
 |------|-------:|------:|---------|------:|
 | Drawing modes | 12 | 88 % | library objects; dimension lines (Shift+left in polyline mode); xfig's click-to-close rules for some shapes | 14 |
 | Editing modes | 12 | 78 % | anchor point for flip/rotate (right button), array copy, align to canvas, figure comments from Edit mode, tangent/normal, angle/length/area measure modes, copy to library | 26 |
-| Attributes / indicator | 10 | 83 % | colour editor UI, copy counts | 20 |
+| Attributes / indicator | 10 | 84 % | colour editor UI, copy counts | 20 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
 | Export | 12 | 68 % | `sld`, texts with `\ooo` octal escapes (raw bytes, B11 pass 5), the audit's hardening passes (B11), arrows on pie-wedge arcs and file arc centres lost on the way through the Fig writer (gap #25), picture frames and GIF transparency (gap #26) | 90 |
 | Text | 10 | 55 % | character map, LaTeX special-text export, exact PostScript font metrics, compose keys, spell check | 60 |
@@ -66,7 +66,7 @@ the score.
 - Rulers and units box: `ui-egui/rulers` (ported from `w_rulers.c`, `u_pan.c`), unit tests for the tick tables, `rulers_pan_and_units_box` in `ui_smoke.rs`, `crates/engine/tests/units.rs`.
 - Attribute panel (W19: xfig's layout, buttons narrowed to their content): `ui-egui/attributes` (ported from `w_indpanel.c`), tests `attribute_panel_shows_the_modes_attributes` and `attribute_buttons_step_and_choose` in `ui_smoke.rs`.
 - Angle Geom (D7): `crates/engine/src/anglegeom.rs` (ports `u_geom.c`'s `latex_endpoint`, `get_slope` and `u_elastic.c`'s `constrainedangle_line`), `Engine::angle_constrained` / `angle_anchor` in `tools/mod.rs`, the Angle Geom button in `ui-egui/attributes`; tests `crates/engine/tests/angle_geom.rs`.
-- Linked move (D8): `crates/engine/src/links.rs` (ports `u_list.c`'s `get_links`, `point_on_perim`, `get_interior_links`, `point_on_inside`, `adjust_links`); the Smart Links indicator button in `ui-egui/attributes`; tests `crates/engine/tests/linked_move.rs`.
+- Linked move (D8): `crates/engine/src/links.rs` (ports `u_list.c`'s `get_links`, `point_on_perim`, `get_interior_links`, `point_on_inside`, `adjust_links`); the Smart Links indicator button in `ui-egui/attributes`; tests `crates/engine/tests/linked_move.rs`. D14 extends it: `links.rs` targets circles, ellipses, arcs, polygons, closed splines, text boxes (distance to the outline) beside boxes and compounds, follows with open polylines and splines, links both ends of a line, and every operation (`transform.apply`, `links::translate_each`, `edit.duplicate` copy with links, `point.move` box resize, `transform.nudge`); previews and end highlights in `tools/mod.rs`; tests `crates/engine/tests/linked_ext.rs`.
 - Mouse buttons: xfig's three-button semantics per mode, the only scheme (W16 removed the modern one); `mouse_hints_match_behaviour` in `crates/engine/src/tools/mod.rs` presses every button in every tool and state and checks the indicator against what happened; Alt/Ctrl+click map to middle/right (`canvas::tool_button`), tested in `ui_smoke.rs`.
 - Verified on macOS by driving the app over the control channel and reviewing screenshots.
 
@@ -75,6 +75,7 @@ the score.
 | Date | Overall | Note |
 |------|--------:|------|
 | 2026-10-22 | ≈65 % | D7: Angle Geom (Attributes 80 → 83 %). |
+| 2026-10-22 | ≈65 % | D14: smart links extended (Attributes 83 → 84 %). |
 | 2026-10-22 | ≈65 % | D8: linked move (Attributes 77 → 80 %, 10 h less). |
 | 2026-10-22 | ≈65 % | D3: Chop mode (cut objects at intersections), Editing 75 → 78 %. |
 | 2026-10-21 | ≈65 % | W16, W17: one mouse scheme and one layout; save query for open compounds; no score moved. |

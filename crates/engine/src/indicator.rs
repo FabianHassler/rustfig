@@ -134,7 +134,7 @@ impl SnapMode {
 pub type GridMode = Option<SnapMode>;
 
 /// Smart links (xfig's `cur_linkmode`): whether the end points of lines
-/// attached to a moved box follow it, and how.
+/// attached to a moved shape follow it, and how.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum LinkMode {
@@ -200,7 +200,8 @@ pub struct Indicator {
     /// Update flags that are switched off (xfig's `cur_updatemask`; all on
     /// at the start, so the set is empty).
     pub update_off: BTreeSet<UpdateFlag>,
-    /// Smart links: line end points attached to a moved box follow it.
+    /// Smart links: line end points attached to a moved shape follow it
+    /// (D14: through every geometric operation).
     pub linkmode: LinkMode,
     /// Angle geometry: constrains the next point of lines and splines
     /// (xfig's `cur_anglegeom`).

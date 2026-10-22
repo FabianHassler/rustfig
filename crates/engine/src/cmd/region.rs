@@ -336,9 +336,9 @@ fn align_to(e: &mut Engine, p: &Value) -> CmdResult {
     if ids.is_empty() {
         return Err(EngineError::bad_params("no objects to align"));
     }
-    let mut moved = 0;
+    let mut moves = Vec::new();
     for id in ids {
-        let Some(o) = e.doc_mut().get_mut(id) else { continue };
+        let Some(o) = e.doc().get(id) else { continue };
         let b = o.geometry_bbox();
         if b.is_empty() {
             continue;
@@ -356,10 +356,12 @@ fn align_to(e: &mut Engine, p: &Value) -> CmdResult {
             _ => 0.0,
         };
         if dx != 0.0 || dy != 0.0 {
-            o.transform(&Affine::translate(dx, dy), false);
-            moved += 1;
+            moves.push((id, dx, dy));
         }
     }
+    let moved = moves.len();
+    // Smart links: the ends attached to each object follow it.
+    crate::links::translate_each(e, &moves);
     Ok(json!({"count": moved}))
 }
 
