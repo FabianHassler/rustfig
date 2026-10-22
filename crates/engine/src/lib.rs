@@ -14,6 +14,7 @@ mod history;
 pub mod import;
 mod indicator;
 mod links;
+pub mod picture;
 pub mod prefs;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod recovery;
@@ -87,6 +88,8 @@ pub struct Engine {
     tool: ToolKind,
     tool_state: tools::ToolState,
     clipboard: Vec<Object>,
+    /// The system clipboard for "Copy as picture" (E14), when the front end has one.
+    picture_clipboard: Option<Box<dyn picture::PictureClipboard>>,
     path: Option<String>,
     modified: bool,
     revision: u64,
@@ -137,6 +140,7 @@ impl Engine {
             tool: ToolKind::None,
             tool_state: tools::ToolState::Idle,
             clipboard: Vec::new(),
+            picture_clipboard: None,
             path: None,
             modified: false,
             revision: 1,
@@ -254,6 +258,12 @@ impl Engine {
 
     pub fn set_clipboard(&mut self, objs: Vec<Object>) {
         self.clipboard = objs;
+    }
+
+    /// Install where "Copy as picture" puts its pictures (the front end's
+    /// system clipboard); without one the command reports "not available".
+    pub fn set_picture_clipboard(&mut self, c: Option<Box<dyn picture::PictureClipboard>>) {
+        self.picture_clipboard = c;
     }
 
     /// Requests for the UI, drained by the caller.

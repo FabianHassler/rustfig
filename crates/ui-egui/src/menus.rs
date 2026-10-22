@@ -318,6 +318,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Own("edit.delete"),
                 Own("edit.cut"),
                 Own("edit.copy"),
+                Own("edit.copy_picture"),
                 Own("edit.duplicate"),
                 Own("edit.select_all"),
                 Own("edit.select_none"),

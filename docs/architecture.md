@@ -92,6 +92,10 @@ bridge (`crates/format/src/bridge/`, L2: `to_model` fig2dev objects → document
 returns for `write_fig`'s text; `export_objects` adds the reader's repairs for the exports). `format`
 depends on the `fig2dev` crate for this (it sits below every layer).
 
+## Copy as picture (E14)
+
+`edit.copy_picture` makes the bytes with fig2dev's drivers (`picture.rs`: macOS PDF + PNG, Linux SVG + PNG, Windows EMF/SVG + PNG) and hands them to a `PictureClipboard` the front end installs (`Engine::set_picture_clipboard`). `rustfig-ui-egui` installs `clipboard::SystemPictureClipboard`, built on the `clipboard-rs` crate (MIT OR Apache-2.0, native only; one clipboard write with several custom types). Without a sink (wasm, MCP, CLI, tests) the command reports that it is not available; tests use a fake.
+
 ## Robustness
 
 No panics in shipped code: the workspace denies `unwrap`, `expect`, `panic!`
@@ -108,3 +112,4 @@ protocols are fuzzed with proptest.
 | 2026-10-16 | B12: `figbase`, fig2dev at L0 and self-contained, render canvas-only, exports through `convert`. |
 | 2026-10-21 | DD9: removed the `engine::fig2dev::to_model` re-export from the text. |
 | 2026-10-21 | DD7: exports from the bridge's objects (`export_objects`), text path as reference and fallback. |
+| 2026-10-22 | E14: Copy as picture; `clipboard-rs` in `rustfig-ui-egui`. |

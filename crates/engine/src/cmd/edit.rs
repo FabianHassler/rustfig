@@ -49,6 +49,16 @@ pub(super) fn commands() -> Vec<Command> {
             run: copy,
         },
         Command {
+            id: "edit.copy_picture",
+            label: "Copy as Picture",
+            menu: "Edit",
+            shortcut: "",
+            params: "{\"ids\"?: [id], \"magnification\"?: percent, \"margin\"?: fig units, \"dpi\"?: number, \"background\"?: \"#rrggbb\", \"options\"?: {key: value} fig2dev's options (for the PNG: e.g. transparent)}  — puts the selection (or the whole figure) on the system clipboard as the platform's vector picture (macOS PDF, Windows EMF, Linux SVG) and a PNG; returns {\"formats\": [...], \"bytes\": n}",
+            mutates: false,
+            enabled: always,
+            run: copy_picture,
+        },
+        Command {
             id: "edit.paste",
             label: "Paste",
             menu: "Edit",
@@ -165,6 +175,64 @@ fn copy(e: &mut Engine, p: &Value) -> CmdResult {
     let n = objs.len();
     e.set_clipboard(objs);
     Ok(json!({"copied": n}))
+}
+
+/// `edit.copy_picture` (E14): the selection, or the whole figure when
+/// nothing is selected, as the platform's vector picture and a PNG on the
+/// system clipboard.
+fn copy_picture(e: &mut Engine, p: &Value) -> CmdResult {
+    use crate::picture::{PictureData, PictureKind};
+    if e.picture_clipboard.is_none() {
+        return Err(EngineError::bad_params(
+            "Copy as picture is not available here (there is no system clipboard)",
+        ));
+    }
+    let ids = e.target_ids(p)?;
+    let mut doc = e.whole_doc().into_owned();
+    if !ids.is_empty() {
+        let chosen: Vec<_> = ids
+            .iter()
+            .filter_map(|id| e.doc().objects.iter().find(|o| o.id == *id).cloned())
+            .collect();
+        doc.open.clear();
+        doc.objects = chosen;
+    }
+    if doc.objects.is_empty() {
+        return Err(EngineError::bad_params("nothing to copy: the figure is empty"));
+    }
+    // The export settings of the figure apply unless given.
+    let mut params = p.clone();
+    if let Some(m) = params.as_object_mut() {
+        m.remove("ids");
+        if !m.contains_key("magnification") {
+            m.insert("magnification".into(), json!(e.doc().settings.magnification));
+        }
+    }
+    let mut items = Vec::new();
+    for kind in PictureKind::platform_set() {
+        // Windows gets SVG when the EMF driver is missing.
+        let kind = if kind == PictureKind::Emf && !crate::fig2dev::driver_available("emf") {
+            PictureKind::Svg
+        } else {
+            kind
+        };
+        let bytes = super::file::export_bytes(e, &doc, kind.language(), &params)?;
+        items.push(PictureData { kind, bytes });
+    }
+    let Some(sink) = e.picture_clipboard.as_mut() else {
+        return Err(EngineError::bad_params(
+            "cannot copy to the clipboard: the clipboard changed while copying",
+        ));
+    };
+    sink.set_pictures(&items)
+        .map_err(|err| EngineError::bad_params(format!("cannot copy to the clipboard: {err}")))?;
+    let formats: Vec<&str> = items.iter().map(|i| i.kind.language()).collect();
+    let bytes: usize = items.iter().map(|i| i.bytes.len()).sum();
+    e.set_status(format!(
+        "Copied the picture ({}) to the clipboard",
+        formats.join(" and ")
+    ));
+    Ok(json!({"formats": formats, "bytes": bytes}))
 }
 
 fn cut(e: &mut Engine, p: &Value) -> CmdResult {

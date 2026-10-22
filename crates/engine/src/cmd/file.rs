@@ -866,11 +866,28 @@ fn driver_args(e: &Engine, drv: &str, half: Half, p: &Value) -> Result<Vec<(char
 /// Write one part of an export through fig2dev; the bytes and fig2dev's
 /// messages.
 fn write_part(e: &Engine, part: &Part, p: &Value) -> Result<(Vec<u8>, Vec<String>), EngineError> {
+    write_part_of(e, &*scope_doc(e, p)?, part, p)
+}
+
+/// [`write_part`] for `doc` instead of the export's scope.
+fn write_part_of(e: &Engine, doc: &Document, part: &Part, p: &Value) -> Result<(Vec<u8>, Vec<String>), EngineError> {
     let mut args = driver_args(e, part.lang, part.half, p)?;
     if let Some(g) = &part.graphics {
         args.push(('p', Some(g.clone())));
     }
-    crate::fig2dev::export(&*scope_doc(e, p)?, part.lang, &args, doc_dir(e).as_deref()).map_err(EngineError::format)
+    crate::fig2dev::export(doc, part.lang, &args, doc_dir(e).as_deref()).map_err(EngineError::format)
+}
+
+/// The export of `doc` in language `id` with the export parameters `p`
+/// (Copy as picture): the bytes only.
+pub(super) fn export_bytes(e: &Engine, doc: &Document, id: &str, p: &Value) -> Result<Vec<u8>, EngineError> {
+    let lang = export_language(&json!({ "format": id }), None)?;
+    let part = Part {
+        lang: lang.id,
+        half: Half::Whole,
+        graphics: None,
+    };
+    Ok(write_part_of(e, doc, &part, p)?.0)
 }
 
 /// Whether `part` writes text (the rest comes back as base64).

@@ -11,6 +11,8 @@ pub mod autosave;
 pub mod bevel;
 pub mod canvas;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod clipboard;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod control;
 pub mod dialogs;
 pub mod inject;
@@ -170,6 +172,10 @@ impl App {
         // Mutated only by the native control server below.
         #[cfg_attr(target_arch = "wasm32", allow(unused_mut))]
         let mut app = App::with_engine(engine);
+        // Copy as picture (E14) uses the system clipboard; tests and wasm have none.
+        #[cfg(not(target_arch = "wasm32"))]
+        app.engine
+            .set_picture_clipboard(Some(Box::new(clipboard::SystemPictureClipboard::default())));
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(port) = control_port {
             app.attach(&cc.egui_ctx);

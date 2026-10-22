@@ -26,6 +26,8 @@ egui_kittest = { version = "0.33", default-features = false }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rfd.workspace = true
+# Copy as picture (E14): custom clipboard formats (PDF, SVG, PNG) on macOS, Windows and Linux/X11.
+clipboard-rs = { version = "0.3.5", default-features = false }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 web-sys = { workspace = true, features = ["Window", "Storage"] }

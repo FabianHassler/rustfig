@@ -18,9 +18,9 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Measure | Value |
 |---------|-------|
 | Overall parity (weighted) | ≈65 % |
-| Commands (all reachable from the control channel and MCP) | 143 engine (incl. 41 tool modes) + 14 UI |
+| Commands (all reachable from the control channel and MCP) | 144 engine (incl. 41 tool modes) + 14 UI |
 | Interactive tools (xfig modes) | 41 |
-| Tests | 570 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
+| Tests | 575 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 1.3–3.2, write 3.2 |
 | Export formats | all through fig2dev's ported drivers (`convert`): PDF, SVG, EPS, PNG, GIF, JPEG, TIFF, PPM, PCX, XBM, XPM, EPS+PDF pair, LaTeX box from its scene writers (PostScript without page layout yet); LaTeX picture, epic/eepic/eepicemu, PiCTeX, TeXtyl, tpic, pic, pstex/pdftex, pict2e, CGM, HPGL, DXF, MetaPost, METAFONT, ge, image map, Gerber, shape, TikZ, PSTricks, EMF, Tk/Perl-Tk from ported fig2dev drivers (every fig2dev language except `sld`); fig2dev's own suite 79 pass / 9 fail / 1 skipped |
 | Perf, 50k paths (render fit / hit test / open / edit + undo) | 260 ms / 0.1 ms / 20 ms / 0.9 ms |
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-22 | E14: Edit › Copy as Picture (`edit.copy_picture`): the selection, or the whole figure, goes to the system clipboard through fig2dev's drivers as the platform's vector picture (macOS PDF, Linux SVG; Windows EMF, SVG until the driver is used) plus PNG, with the figure's magnification and the export parameters; native only (`clipboard-rs`), tested through a fake clipboard. |
 | 2026-10-22 | D8: linked move. Moving a box drags the end points of lines attached to its perimeter (within 45 Fig units), and a compound drags the ends of lines inside it; a Smart Links indicator button (off/move/slide) sets `LinkMode`; `engine/links.rs` ports `u_list.c`'s `get_links`/`point_on_perim`/`get_interior_links`/`point_on_inside`/`adjust_links`; Move moves the end point, Slide also slides the adjacent point. `tests/linked_move.rs` (5). |
 | 2026-10-22 | D3: Chop mode (`e_chop.c`, `w_intersect.c`): command `object.chop` (cut a polyline, polygon, arc or circle at every intersection with the axe objects, pieces keeping the object's attributes, one undo step) and mode `tool.chop` (`x`; left collects axe objects, middle chops the log, right clears the axes); intersections in `crates/geom/src/intersect.rs`; elliptical arcs unsupported as xfig; `tests/chop.rs` (10) and a mouse-hint fixture. 2 engine commands, 1 tool, 15 tests. |
 | 2026-10-22 | W20: platform edit keys next to xfig's: Cmd+X/C/V on macOS (and Ctrl+X/V elsewhere) now reach cut, copy and paste; menus show xfig's accelerator, or the platform shortcut where xfig has none and its keys leave it free (on Linux and Windows xfig's Ctrl keys win). |
