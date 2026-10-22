@@ -139,6 +139,7 @@ tool_runs!(
     OpenCompound,
     JoinSplit,
     Chop,
+    Trim,
     Scale,
     Align,
     Move,

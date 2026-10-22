@@ -2,12 +2,10 @@
 //! button, chop a log object with the middle one, clear the list with the
 //! right one.
 //!
-//! RustFig adds three operations on the same buttons with Shift held (plan
-//! D15; xfig's three buttons keep their meaning without it): Shift+left
-//! trims the clicked piece (between its intersections with the axe objects,
-//! or with every other object when none is selected), Shift+middle splits
-//! the clicked object at the point, Shift+right extends the clicked line's
-//! nearest end to the nearest boundary (the axe objects, or every other
+//! The Trim mode (plan D16, RustFig's own) has its own three buttons: left
+//! trims the clicked piece (between its intersections with every other
+//! object), middle splits the clicked object at the point, right extends
+//! the clicked line's nearest end to the nearest boundary (every other
 //! object).
 //
 // Ported from xfig src/e_chop.c (xfig licence, see LICENSE-xfig).
@@ -102,6 +100,49 @@ impl Engine {
                     Err(err) => self.set_status(err.message),
                 }
             }
+        }
+        Ok(())
+    }
+
+    /// Trim mode: left trims, middle splits, right extends (`object.trim`,
+    /// `object.split_at`, `object.extend`; the other objects are the
+    /// boundaries).
+    pub(super) fn trim_event(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
+        let ToolEvent::Press { pos, button, .. } = ev else {
+            return Ok(());
+        };
+        if self.tool != ToolKind::Trim {
+            return Ok(());
+        }
+        let tol = self.pick_tol();
+        let mask = ObjMask::POLYLINE
+            .union(ObjMask::ARC)
+            .union(ObjMask::ELLIPSE)
+            .union(ObjMask::SPLINE)
+            .union(ObjMask::COMPOUND);
+        let Some(id) = self.hit_test_where(pos, tol, &|o| mask.admits(o)) else {
+            return Ok(());
+        };
+        let (command, done) = match button {
+            Button::Left => ("object.trim", "piece trimmed"),
+            Button::Middle => ("object.split_at", "split"),
+            Button::Right => ("object.extend", "line extended"),
+        };
+        let params = json!({"id": id.0, "x": pos.x, "y": pos.y});
+        self.set_selection(vec![id]);
+        match self.execute(command, &params) {
+            Ok(v) => {
+                let n = v
+                    .get("ids")
+                    .and_then(serde_json::Value::as_array)
+                    .map_or(0, |a| a.len());
+                if command == "object.trim" && n == 0 && v.get("removed") == Some(&json!(false)) {
+                    self.set_status("Nothing to trim: the object has no piece between two intersections.");
+                } else {
+                    self.set_status(format!("Object {done}."));
+                }
+            }
+            Err(err) => self.set_status(err.message),
         }
         Ok(())
     }

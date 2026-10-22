@@ -426,6 +426,16 @@ pub const JOIN_SPLIT: Xbm = Xbm {
     ],
 };
 
+/// Trim, split and extend: RustFig's own mode, so no xfig bitmap; the
+/// icon is the vector drawing in `mode_icons` (original work). Blank here,
+/// the size of xfig's other mode icons.
+pub const TRIM: Xbm = Xbm {
+    name: "trim",
+    width: 36,
+    height: 32,
+    bits: &[0; 128],
+};
+
 pub const CHOP: Xbm = Xbm {
     name: "chop",
     width: 36,

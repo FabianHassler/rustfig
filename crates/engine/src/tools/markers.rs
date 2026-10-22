@@ -18,7 +18,7 @@
 //! | Rotate (other angles)         | `M_ROTATE_ANGLE`: lines, polygons, splines, arcs, text, compounds, ellipses (no boxes) |
 //! | Break, Open compound, Align   | `M_COMPOUND`                                      |
 //! | Join/Split                    | `M_POLYLINE \| M_SPLINE_O \| M_SPLINE_C`           |
-//! | Chop                          | `M_POLYLINE \| M_ARC \| M_ELLIPSE` (+ splines, compounds: D15) |
+//! | Chop, Trim                    | `M_POLYLINE \| M_ARC \| M_ELLIPSE` (+ splines, compounds: D15) |
 //! | Scale, Move point, Flip (both) | `M_NO_TEXT`: everything but text                 |
 //! | Add point, Delete point       | `M_VARPTS_OBJECT`: lines, polygons, splines       |
 //! | Convert                       | `M_VARPTS_OBJECT \| M_POLYLINE_BOX`                |
@@ -131,7 +131,7 @@ pub fn mode_mask(tool: ToolKind, rotate_angle: f64) -> ObjMask {
         T::JoinSplit => ObjMask::POLYLINE.union(ObjMask::SPLINE),
         // xfig's mask is polylines, arcs and ellipses; RustFig's Chop also
         // takes splines and compounds (plan D15).
-        T::Chop => ObjMask::POLYLINE
+        T::Chop | T::Trim => ObjMask::POLYLINE
             .union(ObjMask::ARC)
             .union(ObjMask::ELLIPSE)
             .union(ObjMask::SPLINE)
@@ -423,6 +423,7 @@ mod tests {
         for (tool, want) in cases {
             assert_eq!(marked(tool, 90.0), want, "{tool:?}");
         }
+        assert_eq!(marked(T::Trim, 90.0), marked(T::Chop, 90.0));
         // Rotate: every object at 90/180 degrees, no boxes otherwise.
         for t in [T::RotateCw, T::RotateCcw] {
             assert_eq!(marked(t, 90.0), ALL.to_vec());

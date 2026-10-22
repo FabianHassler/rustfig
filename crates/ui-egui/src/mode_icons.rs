@@ -289,9 +289,13 @@ pub const TRACED: &[&Xbm] = &[
     &xi::HALIGNR,
 ];
 
+/// Mode icons RustFig draws itself: no xfig bitmap to trace, so a blank
+/// bitmap carries the name and size.
+pub const ORIGINAL: &[&Xbm] = &[&xi::TRIM];
+
 /// The traced bitmap called `name`.
 pub fn bitmap(name: &str) -> Option<&'static Xbm> {
-    TRACED.iter().find(|b| b.name == name).copied()
+    TRACED.iter().chain(ORIGINAL).find(|b| b.name == name).copied()
 }
 
 /// Whether `name` has a vector drawing.
@@ -861,6 +865,16 @@ pub fn drawing(name: &str) -> Option<Vec<Object>> {
         // library.
         "deletept" => Ic::new(&xi::DELETEPT).pixels(0, 0, 35, 31).done(),
         "chop" => Ic::new(&xi::CHOP).pixels(0, 0, 35, 31).done(),
+        // Trim, split and extend (RustFig's own): a solid line that ends at
+        // a cutting edge (the short cross-stroke) and goes on dotted, as
+        // the extension does.
+        "trim" => Ic::new(&xi::TRIM)
+            .wide(&[(3.0, 16.0), (17.0, 16.0)])
+            .wide(&[(19.0, 8.0), (19.0, 24.0)])
+            .marker(23.0, 15.5, 2.0)
+            .marker(27.0, 15.5, 2.0)
+            .marker(31.0, 15.5, 2.0)
+            .done(),
         "areameas" => Ic::new(&xi::AREAMEAS).pixels(0, 0, 35, 31).done(),
         "library" => Ic::new(&xi::LIBRARY).pixels(0, 0, 72, 31).done(),
         // Pixel art in xfig: the camera and the serif T stay as pixels.

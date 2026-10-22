@@ -12,7 +12,7 @@ Where both sets want the same key (Ctrl+S, Ctrl+C and so on), xfig's meaning win
 
 ## Mode keys
 
-The keys that choose a mode are shown in the mode sections: for example `C` Circle, `B` Box, `L` Polyline, `M` Move, `D` Delete. Shift selects the variant: `Shift+C` Circle by diameter, `Shift+B` Arc-box. The Ctrl keys xfig uses for modes are:
+The keys that choose a mode are shown in the mode sections: for example `C` Circle, `B` Box, `L` Polyline, `M` Move, `D` Delete. `W` Trim, split and extend (RustFig's own). Shift selects the variant: `Shift+C` Circle by diameter, `Shift+B` Arc-box. The Ctrl keys xfig uses for modes are:
 
 | Key | Mode |
 |---|---|

@@ -55,6 +55,8 @@ pub enum ToolKind {
     OpenCompound,
     JoinSplit,
     Chop,
+    /// Trim, split and extend (plan D16).
+    Trim,
     Scale,
     Align,
     Move,
@@ -94,6 +96,7 @@ impl ToolKind {
                 | OpenCompound
                 | JoinSplit
                 | Chop
+                | Trim
                 | Scale
                 | Align
                 | Move
@@ -115,7 +118,7 @@ impl ToolKind {
         )
     }
 
-    pub const ALL: [ToolKind; 45] = [
+    pub const ALL: [ToolKind; 46] = [
         ToolKind::Select,
         ToolKind::CircleRadius,
         ToolKind::CircleDiameter,
@@ -140,6 +143,7 @@ impl ToolKind {
         ToolKind::OpenCompound,
         ToolKind::JoinSplit,
         ToolKind::Chop,
+        ToolKind::Trim,
         ToolKind::Scale,
         ToolKind::Align,
         ToolKind::Move,
@@ -190,6 +194,7 @@ impl ToolKind {
             ToolKind::OpenCompound => "tool.open_compound",
             ToolKind::JoinSplit => "tool.join_split",
             ToolKind::Chop => "tool.chop",
+            ToolKind::Trim => "tool.trim",
             ToolKind::Scale => "tool.scale",
             ToolKind::Align => "tool.align",
             ToolKind::Move => "tool.move",
@@ -245,6 +250,7 @@ impl ToolKind {
             ToolKind::OpenCompound => "Open compound",
             ToolKind::JoinSplit => "Join/split lines and splines",
             ToolKind::Chop => "Chop",
+            ToolKind::Trim => "Trim, split and extend",
             ToolKind::Scale => "Scale",
             ToolKind::Align => "Align",
             ToolKind::Move => "Move",
@@ -303,6 +309,7 @@ impl ToolKind {
             ToolKind::OpenCompound => "O",
             ToolKind::JoinSplit => "J",
             ToolKind::Chop => "x",
+            ToolKind::Trim => "w",
             ToolKind::Align => "A",
             ToolKind::Move => "M",
             ToolKind::MovePoint => "Shift+M",
@@ -956,6 +963,7 @@ impl Engine {
             ToolKind::OpenCompound => self.open_compound_event(ev),
             ToolKind::JoinSplit => self.join_split_event(ev),
             ToolKind::Chop => self.chop_event(ev),
+            ToolKind::Trim => self.trim_event(ev),
             ToolKind::Tangent => self.tangent_event(ev),
             ToolKind::AngleMeasure | ToolKind::LengthMeasure | ToolKind::AreaMeasure => self.measure_event(ev),
             _ => self.click_event(ev),
@@ -2808,6 +2816,7 @@ impl Engine {
                     ToolKind::OpenCompound => ("open compound", "open, keep visible", ""),
                     ToolKind::JoinSplit => ("Join Lines/Splines", "Split Line/Spline", ""),
                     ToolKind::Chop => ("Select axe object", "Select log object", "Clear axe list"),
+                    ToolKind::Trim => ("trim piece", "split at point", "extend nearest end"),
                     ToolKind::Scale => ("scale box", "scale about center", ""),
                     ToolKind::Align => ("align compound", "align canvas", ""),
                     ToolKind::Move => ("move object", "horiz/vert move", ""),

@@ -40,6 +40,7 @@ pub const TOPICS: &[Topic] = &[
     topic!("compounds.md"),
     topic!("join-split.md"),
     topic!("chop.md"),
+    topic!("trim.md"),
     topic!("tangent-normal.md"),
     topic!("measure.md"),
     topic!("attribute-modes.md"),

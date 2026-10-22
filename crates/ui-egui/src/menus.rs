@@ -1189,9 +1189,9 @@ mod tests {
         ("object.join", "the Join/Split tool"),
         ("object.split", "the Join/Split tool"),
         ("object.chop", "the Chop tool"),
-        ("object.trim", "the Chop tool's Shift+left button"),
-        ("object.split_at", "the Chop tool's Shift+middle button"),
-        ("object.extend", "the Chop tool's Shift+right button"),
+        ("object.trim", "the Trim tool's left button"),
+        ("object.split_at", "the Trim tool's middle button"),
+        ("object.extend", "the Trim tool's right button"),
         (
             "object.tangent_line",
             "the Tangent tool (left button; middle button for the normal)",

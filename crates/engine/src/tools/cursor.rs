@@ -44,7 +44,7 @@ impl Engine {
             Move | Copy | Align | Break | OpenCompound | Convert | FlipH | FlipV | RotateCcw | RotateCw | Scale => {
                 CursorKind::PickObject
             }
-            Glue | JoinSplit | Chop | MovePoint | AddPoint | DeletePoint | Update | Edit | Arrow | OpenClose
+            Glue | JoinSplit | Chop | Trim | MovePoint | AddPoint | DeletePoint | Update | Edit | Arrow | OpenClose
             | Tangent | AngleMeasure | LengthMeasure | AreaMeasure => CursorKind::Pick,
             _ => CursorKind::Crosshair,
         }

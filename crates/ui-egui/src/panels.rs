@@ -45,7 +45,7 @@ const DRAWING: [Slot; 15] = [
 ];
 
 /// xfig's editing modes in its order.
-const EDITING: [Slot; 25] = [
+const EDITING: [Slot; 26] = [
     Slot::Tool(ToolKind::Glue, &xfig_icons::GLUE),
     Slot::Tool(ToolKind::Break, &xfig_icons::BREAK),
     Slot::Tool(ToolKind::OpenCompound, &xfig_icons::OPEN_COMP),
@@ -71,6 +71,8 @@ const EDITING: [Slot; 25] = [
     Slot::Tool(ToolKind::AngleMeasure, &xfig_icons::ANGLEMEAS),
     Slot::Tool(ToolKind::LengthMeasure, &xfig_icons::LENMEAS),
     Slot::Tool(ToolKind::AreaMeasure, &xfig_icons::AREAMEAS),
+    // RustFig's own mode (D16) after xfig's, so xfig's layout stays.
+    Slot::Tool(ToolKind::Trim, &xfig_icons::TRIM),
 ];
 
 /// Width of the mode panel: two columns of buttons, the frame's margin and
@@ -245,6 +247,7 @@ fn xfig_tip(t: ToolKind) -> Option<&'static str> {
         ToolKind::OpenCompound => "OPEN COMPOUND object   (o)",
         ToolKind::JoinSplit => "Join or Split lines/splines   (j)",
         ToolKind::Chop => "Chop objects   (x)",
+        ToolKind::Trim => "TRIM, split and extend lines   (w)",
         ToolKind::Tangent => "Add TANGENT/NORMAL to curve   (n)",
         ToolKind::AngleMeasure => "MEASURE angle (specify three points or select object)   (Ctrl-g)",
         ToolKind::LengthMeasure => "Measure LENGTH of polylines, arcs and ellipses   (Ctrl-n)",

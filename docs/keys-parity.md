@@ -43,6 +43,7 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside: on mac
 | o | Open compound mode (`ModeOpenCompound`) | `tool.open_compound` | ✅ (D1) |
 | j | Join/Split mode (`ModeJoinSplit`) | `tool.join_split` | ✅ (D2) |
 | x | Chop mode (`ModeChopObject`) | `tool.chop` | ✅ (D3) |
+| w | (RustFig's own) Trim, split and extend mode | `tool.trim` | ✅ (D16) |
 | n | Tangent/normal mode (`ModeTangent`) | `tool.tangent` | ✅ (D4) |
 | Ctrl-g / Ctrl-n / Ctrl-m | Measure angle / length / area (`ModeAnglemeas`, `ModeLenmeas`, `ModeAreameas`) | `tool.angle_measure`, `tool.length_measure`, `tool.area_measure` | ✅ (D5) |
 
@@ -106,6 +107,7 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside: on mac
 | Date | Note |
 |---|---|
 | 2026-10-22 | D3: Chop mode key `x` (`ModeChopObject`) added. |
+| 2026-10-22 | D16: Trim, split and extend mode key `w` (RustFig's own; xfig has none). |
 | 2026-10-22 | D4: Tangent mode key `n` (`ModeTangent`) added. |
 | 2026-10-15 | Balloons toggle, Alt+wheel mode menus, compose key, Unit panel and spinner keys; Ctrl-U and Ctrl-X decided. |
 | 2026-10-15 | Edit popup Return/Ctrl+Return/Escape; depth panel right click. |

@@ -37,7 +37,8 @@
 | Open/close | `tool.open_close` | ✅ |
 | Add/remove arrows | `tool.arrow` | ✅ |
 | Join/split | `tool.join_split`, `object.join`, `object.split` | ✅ |
-| Chop | `tool.chop`, `object.chop`; commands `object.trim`, `object.split_at`, `object.extend` (no longer on Shift: Shift locates, S4-1) | ✅ (D3, D15) |
+| Chop | `tool.chop`, `object.chop` | ✅ (D3, D15) |
+| Trim, split and extend (RustFig's own, the last button of the editing column; original vector icon) | `tool.trim` (`w`), commands `object.trim`, `object.split_at`, `object.extend`; left trims, middle splits, right extends; Shift locates | ✅ (D16) |
 | Tangent/normal | `tool.tangent` (`n`), `object.tangent_line`; Tangent/Norm Length button | ✅ (D4) |
 | Angle / length / area measure | `tool.angle_measure` (Ctrl+G), `tool.length_measure` (Ctrl+N), `tool.area_measure` (Ctrl+M); `object.measure_*` | ✅ (D5) |
 
@@ -117,6 +118,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | 2026-10-22 | W10-28, W10-2: Help > RustFig Manual opens the bundled manual window (topic list, search, rendered page); Help letter `x` opens it, `c` the command list. |
 | 2026-10-22 | D14: the Smart Links button also on Move point, Scale, Flip, Rotate and Align. |
 | 2026-10-22 | D8: Smart Links indicator button (off/move/slide). |
+| 2026-10-22 | D16: Trim, split and extend mode (`tool.trim`, last button of the editing column). |
 | 2026-10-22 | D15: Chop mode's Shift+left/middle/right (Trim, Split at point, Extend). |
 | 2026-10-22 | D3: Chop mode added to the editing-modes table (`tool.chop`, `object.chop`). |
 | 2026-10-13 | First checklist. |
