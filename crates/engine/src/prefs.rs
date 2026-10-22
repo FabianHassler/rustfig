@@ -37,6 +37,9 @@ pub fn config_path() -> Option<std::path::PathBuf> {
     dir.map(|d| d.join("settings.toml"))
 }
 
+/// Recently used colours kept (E4).
+pub const MAX_RECENT_COLORS: usize = 12;
+
 /// Most recent files kept (xfig's `MAX_RECENT_FILES`).
 pub const MAX_RECENT: usize = 9;
 /// Most user colours kept.
@@ -206,6 +209,8 @@ pub struct RustFigPrefs {
     pub button_style: Option<String>,
     pub recent_files: Vec<String>,
     pub user_colors: Vec<NamedColor>,
+    /// Colours used lately (`#rrggbb`, newest first), offered in the colour pop-ups (E4).
+    pub recent_colors: Vec<String>,
     /// The Export panel's values per language id (W10-11), kept across
     /// sessions; never in the drawing file.
     #[serde(skip_serializing_if = "std::collections::BTreeMap::is_empty")]
@@ -259,6 +264,7 @@ impl Prefs {
         p.rustfig.other.retain(|k, _| !RETIRED.contains(&k));
         p.rustfig.recent_files.truncate(MAX_RECENT);
         p.rustfig.user_colors.truncate(MAX_USER_COLORS);
+        p.rustfig.recent_colors.truncate(MAX_RECENT_COLORS);
         Ok((p, warnings))
     }
 
@@ -303,6 +309,14 @@ impl Prefs {
 
     pub fn str(&self, name: &str) -> Option<String> {
         self.get(name).and_then(|v| v.as_str().map(str::to_string))
+    }
+
+    /// Note `rgb` as the most recently used colour.
+    pub fn add_recent_color(&mut self, rgb: &str) {
+        let r = &mut self.rustfig.recent_colors;
+        r.retain(|c| c != rgb);
+        r.insert(0, rgb.to_string());
+        r.truncate(MAX_RECENT_COLORS);
     }
 
     /// Note `path` as the most recent file.

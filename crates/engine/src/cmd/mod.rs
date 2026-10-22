@@ -5,6 +5,7 @@
 mod arrange;
 mod chop;
 mod chop_ext;
+pub mod color;
 mod compound;
 mod digitize;
 mod dimline;
@@ -93,6 +94,7 @@ pub fn all() -> &'static [Command] {
         v.extend(joinsplit::commands());
         v.extend(region::commands());
         v.extend(doc::commands());
+        v.extend(color::commands());
         v.extend(indicator::commands());
         v.extend(tool::commands());
         v.extend(prefs::commands());

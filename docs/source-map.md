@@ -161,7 +161,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_grid.c` | 238 | grid drawing | canvas | ported (S4) | — |
 | `w_canvas.c` | 1218 | canvas input, key bindings, compose key | `ui-egui/canvas`, `menus::pan_keys`, `menus::Compose`, `rustfig_text::compose` (CompKeyDB) | own; partial: Ctrl+click zoom, shape factor on the canvas, crosshair (S4) | E3, S4-6, E9 |
 | `w_cursor.c` | 144 | cursors per mode | canvas | partial: one cursor (S4) | S4-4 |
-| `w_color.c` | 2592 | colour panel and editor | indicator combo | partial: colour editor (35 functions, S4) | E4 |
+| `w_color.c` | 2592 | colour panel and editor | indicator combo | replaced: the Colours window (`color_dialog.rs`) and `color.*` commands (E4, W10-36); mix memory and lock not built | E4 |
 | `w_export.c` | 2054 | export panel | `dialogs::export` (language menu in xfig's order), default suffixes in `fig2dev:crates/fig2dev/src/languages.rs` | ported: Export panel options (rows per language, preview, fit to page, kept per language; HPGL rows B9) (26 functions, S4) | W10-4, W10-10, W10-11 |
 | `w_print.c` | 1542 | print panel | — | missing; modern: PDF to the system print dialog (decided) | B5 |
 | `w_file.c`, `w_dir.c`, `w_browse.c`, `w_listwidget.c` | 3.5 k | file panel and browser with preview | native dialogs (`rfd`) | modern; Open of a missing name starts a new figure; preview and offset fields missing (S4) | W10-12 |

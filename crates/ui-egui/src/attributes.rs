@@ -1484,7 +1484,45 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                         }
                     });
             }
+            // Colours used lately (E4, W10-36), kept in the preferences.
+            let recent: Vec<rustfig_model::Rgb> = app
+                .engine
+                .prefs
+                .rustfig
+                .recent_colors
+                .iter()
+                .filter_map(|h| rustfig_model::Rgb::from_hex(h))
+                .collect();
+            if !recent.is_empty() {
+                ui.label(egui::RichText::new("Recent").small());
+                ui.horizontal(|ui| {
+                    for rgb in recent {
+                        let hex = rgb.to_hex();
+                        let col = Color32::from_rgb(rgb.r, rgb.g, rgb.b);
+                        if cell(ui, vec2(22.0, 20.0), false, &format!("Recent {hex}"), |p, r| {
+                            p.rect_filled(r, 1.0, col);
+                        }) {
+                            if let Some(r) = app.run("color.add", json!({ "rgb": hex })) {
+                                chosen = r
+                                    .get("color")
+                                    .and_then(Value::as_i64)
+                                    .and_then(|c| i32::try_from(c).ok());
+                            }
+                        }
+                    }
+                });
+            }
+            ui.horizontal(|ui| {
+                if ui.button("More…").clicked() {
+                    crate::color_dialog::open(app, cur);
+                }
+                if ui.button("Eyedropper").clicked() {
+                    let target = if a == Attr::PenColor { "pen" } else { "fill" };
+                    app.run("color.eyedropper", json!({ "target": target }));
+                }
+            });
             if let Some(c) = chosen {
+                app.run("color.use", json!({ "color": c }));
                 let mut m = serde_json::Map::new();
                 m.insert(field.into(), json!(c));
                 set(app, Value::Object(m));

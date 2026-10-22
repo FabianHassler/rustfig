@@ -2,7 +2,7 @@
 
 use super::{always, num, opt_bool, opt_num, string, CmdResult, Command};
 use crate::{Engine, EngineError};
-use rustfig_model::{Orientation, PaperSize, Rgb, Units};
+use rustfig_model::{Orientation, PaperSize, Units};
 use serde_json::{json, Value};
 
 /// Depths 0–999: the most a depth list can sensibly name.
@@ -107,12 +107,15 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Add user colour",
             menu: "",
             shortcut: "",
-            params: "{\"rgb\": \"#rrggbb\"}  — returns the colour number",
+            params: "{\"rgb\": \"#rrggbb\" | X11 colour name}  — the colour's number (a standard or user colour with that value, else a new user colour)",
             mutates: true,
             enabled: always,
             run: |e, p| {
                 let s = string(p, "rgb")?;
-                let rgb = Rgb::from_hex(&s).ok_or_else(|| EngineError::bad_params("rgb must be #rrggbb"))?;
+                let rgb = rustfig_model::x_color(s.trim())
+                    .ok_or_else(|| EngineError::bad_params("rgb must be #rrggbb, #rgb or an X11 colour name"))?;
+                e.prefs.add_recent_color(&rgb.to_hex());
+                e.prefs_dirty = true;
                 let c = e
                     .doc_mut()
                     .color_for_rgb(rgb)

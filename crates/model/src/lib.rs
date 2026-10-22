@@ -450,6 +450,12 @@ impl Document {
 
     /// Drop user colours no object refers to.
     pub fn remove_unused_colors(&mut self) {
+        let used = self.used_colors();
+        self.colors.retain(|c| used.contains(&c.number));
+    }
+
+    /// Colour numbers that some object uses (pen, fill, text).
+    pub fn used_colors(&self) -> std::collections::BTreeSet<i32> {
         let mut used = std::collections::BTreeSet::new();
         self.for_each_leaf(&mut |o| {
             if let Some(s) = o.style() {
@@ -460,7 +466,17 @@ impl Document {
                 used.insert(t.color.0);
             }
         });
-        self.colors.retain(|c| used.contains(&c.number));
+        used
+    }
+
+    /// Add a user colour in the lowest free slot, even when another slot
+    /// holds the same RGB (xfig's colour editor "Add"). `None` when all
+    /// 512 slots are taken.
+    pub fn new_user_color(&mut self, rgb: Rgb) -> Option<ColorRef> {
+        let number = (FIRST_USER_COLOR..=LAST_USER_COLOR).find(|n| !self.colors.iter().any(|u| u.number == *n))?;
+        self.colors.push(UserColor { number, rgb });
+        self.colors.sort_by_key(|u| u.number);
+        Some(ColorRef(number))
     }
 
     /// Translate a point from Fig units to the given units (inches or cm).

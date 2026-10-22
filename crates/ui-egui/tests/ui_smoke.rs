@@ -2110,3 +2110,68 @@ fn edit_panel_has_pictorial_menus() {
         rustfig_engine::arrow_choice_of(2, 1)
     );
 }
+
+#[test]
+fn colour_picker_hex_input_sets_the_pen_colour() {
+    let mut h = harness(app());
+    h.state_mut().run("app.colors", json!({}));
+    h.run_steps(3);
+    let hex = h.get_by_label("Colour hex or X11 name");
+    hex.click();
+    h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
+    hex.type_text("#336699");
+    h.key_press(egui::Key::Enter);
+    h.run_steps(3);
+    h.get_by_label("Use as pen colour").click();
+    h.run_steps(3);
+    let e = &h.state().engine;
+    assert_eq!(
+        e.doc().rgb(rustfig_model::ColorRef(e.indicator.pen_color)).to_hex(),
+        "#336699"
+    );
+    // The colour is now a user colour of the drawing and the most recent one.
+    assert_eq!(e.doc().colors.len(), 1);
+    assert_eq!(
+        e.prefs.rustfig.recent_colors.first().map(String::as_str),
+        Some("#336699")
+    );
+}
+
+#[test]
+fn colour_editor_creates_edits_and_deletes_user_colours() {
+    let mut h = harness(app());
+    h.state_mut().run("app.colors", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Add as new colour").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.doc().colors.len(), 1);
+    let hex = h.get_by_label("Colour hex or X11 name");
+    hex.click();
+    h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
+    hex.type_text("Dark Orange");
+    h.key_press(egui::Key::Enter);
+    h.run_steps(3);
+    h.get_by_label("Change colour 32").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.doc().colors[0].rgb.to_hex(), "#ff8c00");
+    // Keep it under a name for every drawing.
+    let name = h.get_by_label("Colour name");
+    name.click();
+    name.type_text("Sunset");
+    h.run_steps(2);
+    h.get_by_label("Keep for all drawings").click();
+    h.run_steps(3);
+    assert_eq!(
+        h.state()
+            .engine
+            .prefs
+            .rustfig
+            .user_colors
+            .first()
+            .map(|c| c.name.as_str()),
+        Some("Sunset")
+    );
+    h.get_by_label("Delete colour 32").click();
+    h.run_steps(3);
+    assert!(h.state().engine.doc().colors.is_empty());
+}

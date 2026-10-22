@@ -771,6 +771,10 @@ impl Engine {
     /// the rotate/flip centre, the selection), (3) leave the mode. Returns
     /// what was done.
     pub fn escape(&mut self) -> Result<&'static str, EngineError> {
+        if self.eyedropper.take().is_some() {
+            self.set_status("Eyedropper cancelled.");
+            return Ok("cancelled");
+        }
         match &self.tool_state {
             ToolState::Idle => {}
             ToolState::Text { .. } => {
@@ -890,6 +894,21 @@ impl Engine {
     /// locates (highlights) instead of acting, and a plain click acts on the
     /// object located.
     fn dispatch(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
+        // The colour eyedropper (E4) takes the next press, whatever the mode.
+        if let Some(target) = self.eyedropper {
+            match ev {
+                ToolEvent::Press { pos, button, .. } | ToolEvent::Ctrl { pos, button, .. } => {
+                    self.eyedropper_press(target, pos, button);
+                    return Ok(());
+                }
+                ToolEvent::Key(_) => {
+                    self.eyedropper = None;
+                    self.set_status("Eyedropper cancelled.");
+                    return Ok(());
+                }
+                _ => {}
+            }
+        }
         if let ToolState::Paste { cursor, nw } = self.tool_state {
             return self.paste_event(ev, cursor, nw);
         }

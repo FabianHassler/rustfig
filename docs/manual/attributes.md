@@ -15,7 +15,7 @@ Buttons that exist (labels as in xfig):
 | Vert Align, Horiz Align | alignment of the align mode |
 | Angle Geom | constrains line directions ([Angle Geom](angle-geom.md)) |
 | Smart Links | attached lines follow ([Smart links](smart-links.md)) |
-| PenColor, FillColor | line (or text) colour and fill colour; the menu has xfig's standard colours and your own colours |
+| PenColor, FillColor | line (or text) colour and fill colour; the menu has xfig's standard colours, your own colours, the colours used lately, **More…** and **Eyedropper** (see Colours below) |
 | Fill Style | none, solid, tints and the pattern fills |
 | Arc Type | open or pie-wedge arcs |
 | Line Width | in 1/80 inch; thickness 0 draws no line |
@@ -27,3 +27,17 @@ Buttons that exist (labels as in xfig):
 | Text Just, Text/Ellipse Angle, Text Flags, Text Size, Text Step, Text Font | text settings |
 
 The Update Control box (in Update mode) says which attributes Update applies. Edit > Global settings has "Use current attributes as defaults" to keep the panel's values as the start values for new drawings ([Preferences](preferences.md)).
+
+## Colours
+
+Click PenColor or FillColor for the colour menu: Default, the 32 standard colours, the colours of the drawing and your own colours. Under them are the **recent colours** (the last twelve you used, kept in your settings, not in the drawing) and two buttons.
+
+- **Eyedropper**: the next click on the canvas takes the pen colour (from PenColor) or the fill colour (from FillColor) of the object under the pointer and makes it the current colour. One click only; Escape, a key or another mouse button cancels.
+- **More…** (also Edit > Colours…) opens the Colours window:
+  - Pick in the hue/saturation square and the hue strip, or type Red, Green, Blue and Hue, Saturation, Value.
+  - Type a hex value (`#rrggbb` or `#rgb`) or an X11 colour name such as `Dark Orange` (case and blanks do not matter; matching names are offered while you type) into **Hex or name**.
+  - **Use as pen colour** and **Use as fill colour** make the colour current; a colour that is not one of the 32 standard colours becomes a user colour of the drawing.
+  - **Colours in this drawing** lists the user colours (numbers 32 to 543), saved in the Fig file. Click one to edit it, then **Change colour N** (every object that uses it changes), **Delete colour N** (refused while an object uses it) or **Add as new colour**. **Remove unused colours** drops those no object uses.
+  - **Keep for all drawings** stores the colour under a name in your settings, so it is offered in every drawing.
+
+Scripts and MCP use the `color.*` commands (`color.parse`, `color.new`, `color.edit`, `color.delete`, `color.recent`, `color.eyedropper`, …).

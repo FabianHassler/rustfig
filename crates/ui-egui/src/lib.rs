@@ -12,6 +12,7 @@ pub mod bevel;
 pub mod canvas;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod clipboard;
+pub mod color_dialog;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod control;
 pub mod dialogs;

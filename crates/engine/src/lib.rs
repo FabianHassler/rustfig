@@ -13,6 +13,7 @@ pub mod coords;
 pub mod dimline;
 mod error;
 pub mod export_panel;
+mod eyedropper;
 pub mod fig2dev;
 pub mod guard;
 mod history;
@@ -120,6 +121,8 @@ pub struct Engine {
     pub prefs: prefs::Prefs,
     /// Set when `prefs` changed and should be written.
     pub prefs_dirty: bool,
+    /// The colour eyedropper waits for a canvas click (E4).
+    pub(crate) eyedropper: Option<eyedropper::Eyedropper>,
     /// Draw objects on hidden depths in gray (xfig's "Gray"); otherwise
     /// they aren't drawn ("Blank").
     pub gray_hidden_depths: bool,
@@ -173,6 +176,7 @@ impl Engine {
             recovery_dir: None,
             prefs: prefs::Prefs::default(),
             prefs_dirty: false,
+            eyedropper: None,
             gray_hidden_depths: true,
             show_page_border: true,
             show_lengths: false,

@@ -1463,18 +1463,18 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_cmdpanel.c` | `refresh_view_menu` | 1828 | replaced | menu bar and menu items from `menus::XFIG_MENUS` and `LAYOUT` (egui menus) |  |
 | `w_color.c` | `alloc_or_store_color` | 264 | not needed | X colormap cell allocation and private colormaps |  |
 | `w_color.c` | `alloc_or_store_colors` | 306 | not needed | X colormap cell allocation and private colormaps |  |
-| `w_color.c` | `create_color_panel` | 314 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `pen_fill_activate` | 872 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
+| `w_color.c` | `create_color_panel` | 314 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `pen_fill_activate` | 872 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
 | `w_color.c` | `xftcolor_fromcolor` | 884 | not needed | X colormap cell allocation and private colormaps |  |
-| `w_color.c` | `restore_mixed_colors` | 893 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `set_mixed_color` | 943 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `set_user_color` | 957 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `pick_contrast` | 973 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `set_mixed_name` | 989 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `cancel_color_popup` | 1014 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
+| `w_color.c` | `restore_mixed_colors` | 893 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
+| `w_color.c` | `set_mixed_color` | 943 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
+| `w_color.c` | `set_user_color` | 957 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `pick_contrast` | 973 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
+| `w_color.c` | `set_mixed_name` | 989 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
+| `w_color.c` | `cancel_color_popup` | 1014 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
 | `w_color.c` | `add_color` | 1026 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colours created, listed, counted and pruned when unused |  |
-| `w_color.c` | `del_color` | 1047 | partial | delete a user colour exists only as remove-unused and `prefs.remove_color`; the editor's delete/undelete is E4 | E4 |
-| `w_color.c` | `undel_color` | 1089 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
+| `w_color.c` | `del_color` | 1047 | ported | `color.delete` (refused while an object uses the colour; undo restores it) | |
+| `w_color.c` | `undel_color` | 1089 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
 | `w_color.c` | `count_user_colors` | 1112 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colours created, listed, counted and pruned when unused |  |
 | `w_color.c` | `c_user_colors` | 1139 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colours created, listed, counted and pruned when unused |  |
 | `w_color.c` | `count_one` | 1174 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colours created, listed, counted and pruned when unused |  |
@@ -1486,28 +1486,28 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_color.c` | `switch_colormap` | 1424 | not needed | X colormap cell allocation and private colormaps |  |
 | `w_color.c` | `del_color_cell` | 1449 | not needed | X colormap cell allocation and private colormaps |  |
 | `w_color.c` | `color_used` | 1474 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colours created, listed, counted and pruned when unused |  |
-| `w_color.c` | `switch_edit` | 1506 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `set_slider_sensitivity` | 1539 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `set_color_ok` | 1550 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `_set_std_color` | 1569 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `set_std_color` | 1577 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `_pick_memory` | 1631 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `pick_memory` | 1646 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `lock_toggle` | 1697 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `draw_boxed` | 1739 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `erase_boxed` | 1751 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `color_borders` | 1765 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `WhichButton` | 1776 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `update_from_triple` | 1789 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `update_scrl_triple` | 1834 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `update_triple` | 1842 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `move_scroll` | 1868 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `StoreMix_and_Mem` | 1940 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `Scrolled` | 1965 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `Update_HSV` | 2017 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `ThumbHSV` | 2037 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `Thumbed` | 2060 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `move_lock` | 2106 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
+| `w_color.c` | `switch_edit` | 1506 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `set_slider_sensitivity` | 1539 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `set_color_ok` | 1550 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `_set_std_color` | 1569 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `set_std_color` | 1577 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `_pick_memory` | 1631 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
+| `w_color.c` | `pick_memory` | 1646 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
+| `w_color.c` | `lock_toggle` | 1697 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
+| `w_color.c` | `draw_boxed` | 1739 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `erase_boxed` | 1751 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `color_borders` | 1765 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `WhichButton` | 1776 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `update_from_triple` | 1789 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `update_scrl_triple` | 1834 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `update_triple` | 1842 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `move_scroll` | 1868 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `StoreMix_and_Mem` | 1940 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
+| `w_color.c` | `Scrolled` | 1965 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `Update_HSV` | 2017 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `ThumbHSV` | 2037 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `Thumbed` | 2060 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `move_lock` | 2106 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
 | `w_color.c` | `next_pencolor` | 2119 | ported | stepping the pen/fill colour with the wheel on the indicator button (`attributes`) |  |
 | `w_color.c` | `prev_pencolor` | 2131 | ported | stepping the pen/fill colour with the wheel on the indicator button (`attributes`) |  |
 | `w_color.c` | `show_pencolor` | 2144 | ported | stepping the pen/fill colour with the wheel on the indicator button (`attributes`) |  |
@@ -1515,11 +1515,11 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_color.c` | `prev_fillcolor` | 2205 | ported | stepping the pen/fill colour with the wheel on the indicator button (`attributes`) |  |
 | `w_color.c` | `show_fillcolor` | 2218 | ported | stepping the pen/fill colour with the wheel on the indicator button (`attributes`) |  |
 | `w_color.c` | `set_cmap` | 2268 | not needed | X colormap cell allocation and private colormaps |  |
-| `w_color.c` | `HSVToRGB` | 2319 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `RGBToHSV` | 2363 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `PctToRGB` | 2406 | missing | colour editor: pen/fill panel, sliders (RGB, HSV), mix memory, lock, boxed std colours, undelete, contrast pick | E4 |
-| `w_color.c` | `DoGrabPixel` | 2451 | missing | pick a colour from the screen (eyedropper) | E4, W10-36 |
-| `w_color.c` | `doGrab` | 2496 | missing | pick a colour from the screen (eyedropper) | E4, W10-36 |
+| `w_color.c` | `HSVToRGB` | 2319 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `RGBToHSV` | 2363 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `PctToRGB` | 2406 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `DoGrabPixel` | 2451 | replaced | the eyedropper: `color.eyedropper`, the next canvas click takes an object's colour (engine `eyedropper.rs`) | W10-36 |
+| `w_color.c` | `doGrab` | 2496 | replaced | the eyedropper: `color.eyedropper`, the next canvas click takes an object's colour (engine `eyedropper.rs`) | W10-36 |
 | `w_color.c` | `xyToWindowCmap` | 2558 | not needed | X colormap cell allocation and private colormaps |  |
 | `w_cursor.c` | `init_cursor` | 44 | partial | egui cursor icons: default and crosshair only; xfig uses a cursor per mode | S4-4 |
 | `w_cursor.c` | `recolor_cursors` | 90 | partial | egui cursor icons: default and crosshair only; xfig uses a cursor per mode | S4-4 |

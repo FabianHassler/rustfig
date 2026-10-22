@@ -503,15 +503,13 @@ fn rebase_fn(old: &Path, new: &Path) -> Option<Rebase> {
                 other => target.push(other.as_os_str().to_os_string()),
             }
         }
+        // Joined with `/` on every system, as xfig writes it, so the
+        // figure opens the same on Linux, macOS and Windows.
         let common = o_common(&target, &n);
-        let mut rel = std::path::PathBuf::new();
-        for _ in common..n.len() {
-            rel.push("..");
-        }
-        for c in target.iter().skip(common) {
-            rel.push(c);
-        }
-        rel.to_string_lossy().into_owned()
+        let parts: Vec<String> = std::iter::repeat_n("..".to_string(), n.len().saturating_sub(common))
+            .chain(target.iter().skip(common).map(|c| c.to_string_lossy().into_owned()))
+            .collect();
+        parts.join("/")
     }))
 }
 

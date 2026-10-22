@@ -21,7 +21,7 @@ the score.
 |------|-------:|------:|---------|------:|
 | Drawing modes | 12 | 90 % | library objects; fractions of an inch in dimension-line lengths; xfig's click-to-close rules for some shapes | 14 |
 | Editing modes | 12 | 83 % | figure comments from Edit mode, copy to library | 18 |
-| Attributes / indicator | 10 | 84 % | colour editor UI, copy counts | 20 |
+| Attributes / indicator | 10 | 87 % | copy counts; mix memory and lock of xfig's colour panel (not built, recent colours instead) | 6 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
 | Export | 12 | 68 % | `sld`, texts with `\ooo` octal escapes (raw bytes, B11 pass 5), the audit's hardening passes (B11), arrows on pie-wedge arcs and file arc centres lost on the way through the Fig writer (gap #25), picture frames and GIF transparency (gap #26) | 90 |
 | Text | 10 | 55 % | character map, LaTeX special-text export, exact PostScript font metrics, compose keys, spell check | 60 |
@@ -66,6 +66,7 @@ the score.
 - Export languages: `fig2dev:crates/fig2dev/src/languages.rs` (xfig's list and suffixes), `drivers/latex_box.rs`, `file.export_formats`; tests in `crates/engine/tests/export_languages.rs` and `export_dialog_lists_xfigs_languages` in `ui_smoke.rs`.
 - Corpus comparison with fig2dev's EPS and PDF on xfig's ≈2,550 sample figures: `crates/engine/tests/fig2dev_corpus.rs` (opt-in), baseline `fixtures/corpus-scores.json`, report `target/fig2dev-reference/corpus/`.
 - Reference comparison with fig2dev: `crates/engine/tests/fig2dev_reference.rs`, 11 fixtures with recorded scores (`fixtures/scores.json`); arrowheads, arcs and dashes ported from fig2dev (D9): `geom/arrow.rs`, `model` `dash_pattern`.
+- Colour picker and editor (E4, W10-36): `crates/engine/src/cmd/color.rs` (`color.parse`, `color.from_hsv`, `color.names`, `color.new`, `color.edit`, `color.delete`, `color.recent`, `color.use`, `color.eyedropper`), `crates/engine/src/eyedropper.rs`, `crates/ui-egui/src/color_dialog.rs` (Edit > Colours…, the pop-up's recent colours, More… and Eyedropper), `crates/engine/tests/colors.rs`, `colour_picker_hex_input_sets_the_pen_colour` and `colour_editor_creates_edits_and_deletes_user_colours` in `ui_smoke.rs`.
 - Update Control (W10-1): `UpdateFlag`, `Indicator::update_object` / `take_from`, commands `indicator.set_update_flag` and `indicator.update_flags`, `crates/engine/tests/update_control.rs`, `update_control_flags_in_update_mode` in `ui_smoke.rs`.
 - UI: `crates/ui-egui/` (mode panel, attribute panel, depth manager, edit/export/search/settings dialogs, menus with shortcuts).
 - Automation: control channel `crates/ui-egui/src/control.rs`, MCP `crates/mcp/`, CLI `apps/cli/`.

@@ -277,6 +277,8 @@ pub struct Dialogs {
     pub messages_open: bool,
     /// Edit › Global settings (RustFig's preferences).
     pub global_open: bool,
+    /// The colour picker and editor (E4).
+    pub color: crate::color_dialog::ColorDialog,
     /// The xfig resources window (E1).
     pub resources_open: bool,
     /// A new file name that another file already has: asking before replacing.
@@ -738,6 +740,7 @@ pub(crate) fn escape_closes_panels(app: &mut App, ctx: &egui::Context) {
         || d.about_open
         || d.help.open
         || d.global_open
+        || d.color.open
         || d.edit.is_some()
         || d.figure_comments.is_some()
         || d.spline_point.is_some()
@@ -757,6 +760,7 @@ pub(crate) fn escape_closes_panels(app: &mut App, ctx: &egui::Context) {
         d.about_open = false;
         d.help.open = false;
         d.global_open = false;
+        d.color.open = false;
         d.messages_open = false;
         app.unit_panel_open = false;
     }
@@ -829,6 +833,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     crate::help::help_dialog(app, ctx);
     messages_dialog(app, ctx);
     global_dialog(app, ctx);
+    crate::color_dialog::dialog(app, ctx);
     unsaved_dialog(app, ctx);
     rename_dialog(app, ctx);
     save_scope_dialog(app, ctx);

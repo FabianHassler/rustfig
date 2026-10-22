@@ -24,6 +24,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}",
     },
     UiCommand {
+        id: "app.colors",
+        label: "Colours…",
+        shortcut: "",
+        params: "{\"color\"?: colour number}  — the colour picker and editor (hue/saturation square, RGB/HSV, hex and X11 names, recent and user colours)",
+    },
+    UiCommand {
         id: "app.global_settings",
         label: "Global settings…",
         shortcut: "",
@@ -256,6 +262,14 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.unit_panel" => app.unit_panel_open = true,
         "app.keyboard_entry" => app.point_entry.open(),
         "app.global_settings" => app.dialogs.global_open = true,
+        "app.colors" => {
+            let current = p
+                .get("color")
+                .and_then(Value::as_i64)
+                .and_then(|c| i32::try_from(c).ok())
+                .unwrap_or(app.engine.indicator.pen_color);
+            crate::color_dialog::open(app, current);
+        }
         "app.toggle_xfig_keys" => {
             app.xfig_keys = p.get("on").and_then(Value::as_bool).unwrap_or(!app.xfig_keys);
         }
@@ -358,6 +372,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Delete All", "edit.delete_all"),
                 Sep,
                 Cmd("Global settings...", "app.global_settings"),
+                Cmd("Colours...", "app.colors"),
                 Cmd("Set units...", "app.unit_panel"),
                 Own("app.document_settings"),
                 Own("app.keyboard_entry"),
