@@ -442,23 +442,71 @@ fn draw_caret(
 ) {
     let ObjectKind::Text(t) = &ot.object.kind else { return };
     let req = rustfig_text::FontRequest::for_fig(t.font, t.is_postscript());
-    let before: String = t.text.chars().take(ot.cursor).collect();
-    let line_idx = before.matches('\n').count();
-    let prefix = before.rsplit('\n').next().unwrap_or("");
-    let line = t.text.split('\n').nth(line_idx).unwrap_or("");
-    let pw = rustfig_text::measure(&req, t.size, prefix).width;
-    let lw = rustfig_text::measure(&req, t.size, line).width;
-    let x0 = match t.justify {
-        rustfig_model::Justify::Left => 0.0,
-        rustfig_model::Justify::Center => -lw / 2.0,
-        rustfig_model::Justify::Right => -lw,
-    };
     let em = t.size * rustfig_geom::FIG_PER_POINT;
-    let y = line_idx as f64 * em * rustfig_text::LINE_SPACING;
     let rot = Affine::rotate(t.angle);
-    let a = t.origin + rot.apply_vec(Point::new(x0 + pw, y + em * 0.2));
-    let b = t.origin + rot.apply_vec(Point::new(x0 + pw, y - em * 0.8));
-    painter.line_segment([to_screen(a), to_screen(b)], Stroke::new(1.5_f32, tk.caret));
+    let lines: Vec<&str> = t.text.split('\n').collect();
+    // Top and bottom of the caret at character `idx` (screen points).
+    let at = |idx: usize| -> (Pos2, Pos2) {
+        let mut rest = idx;
+        let mut li = 0;
+        for (i, l) in lines.iter().enumerate() {
+            li = i;
+            let n = l.chars().count();
+            if rest <= n || i + 1 == lines.len() {
+                rest = rest.min(n);
+                break;
+            }
+            rest -= n + 1;
+        }
+        let line = lines.get(li).copied().unwrap_or("");
+        let prefix: String = line.chars().take(rest).collect();
+        let pw = rustfig_text::measure(&req, t.size, &prefix).width;
+        let lw = rustfig_text::measure(&req, t.size, line).width;
+        let x0 = match t.justify {
+            rustfig_model::Justify::Left => 0.0,
+            rustfig_model::Justify::Center => -lw / 2.0,
+            rustfig_model::Justify::Right => -lw,
+        };
+        let y = li as f64 * em * rustfig_text::LINE_SPACING;
+        let a = t.origin + rot.apply_vec(Point::new(x0 + pw, y + em * 0.2));
+        let b = t.origin + rot.apply_vec(Point::new(x0 + pw, y - em * 0.8));
+        (to_screen(a), to_screen(b))
+    };
+    // E10: the selection, one quad per line it touches.
+    if let Some((s0, s1)) = ot.selection {
+        let mut start = 0;
+        for l in &lines {
+            let n = l.chars().count();
+            let (a, b) = (s0.max(start), s1.min(start + n));
+            if a < b {
+                let (a0, a1) = at(a);
+                let (b0, b1) = at(b);
+                painter.add(egui::Shape::convex_polygon(
+                    vec![a0, b0, b1, a1],
+                    tk.caret.gamma_multiply(0.3),
+                    Stroke::NONE,
+                ));
+            }
+            start += n + 1;
+        }
+    }
+    // The IME composition, underlined.
+    let (ps, pl) = ot.preedit;
+    if pl > 0 {
+        let (a0, _) = at(ps);
+        let (b0, _) = at(ps + pl);
+        painter.line_segment([a0, b0], Stroke::new(1.5_f32, tk.caret));
+    }
+    let (a, b) = at(ot.cursor);
+    painter.line_segment([a, b], Stroke::new(1.5_f32, tk.caret));
+    // Tell the system where the caret is, for the IME's candidate window.
+    let r = Rect::from_two_pos(a, b);
+    painter.ctx().output_mut(|o| {
+        o.ime = Some(egui::output::IMEOutput {
+            rect: r.expand(40.0),
+            cursor_rect: r,
+        });
+    });
 }
 
 fn web_time_now() -> f64 {
@@ -514,7 +562,7 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
         egui::PointerButton::Middle,
         egui::PointerButton::Secondary,
     ];
-    let (hover, pressed, released, any_down, double, scroll, zoom, space) = ui.input(|i| {
+    let (hover, pressed, released, any_down, double, triple, scroll, zoom, space) = ui.input(|i| {
         (
             i.pointer.hover_pos(),
             // Presses with the modifiers held at that moment.
@@ -533,6 +581,7 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
             BUTTONS.map(|b| i.pointer.button_released(b)),
             i.pointer.any_down(),
             i.pointer.button_double_clicked(egui::PointerButton::Primary),
+            i.pointer.button_triple_clicked(egui::PointerButton::Primary),
             i.smooth_scroll_delta,
             i.zoom_delta(),
             i.key_down(egui::Key::Space),
@@ -619,7 +668,9 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
                 send(app, ToolEvent::Release { pos: fp, button });
             }
         }
-        if over && double {
+        if over && triple {
+            send(app, ToolEvent::TripleClick { pos: fp });
+        } else if over && double {
             send(app, ToolEvent::DoubleClick { pos: fp });
         }
     }

@@ -11,6 +11,7 @@
 mod chop;
 mod ctrl;
 mod cursor;
+mod textedit;
 pub use cursor::CursorKind;
 mod compound;
 mod markers;
@@ -396,6 +397,8 @@ pub enum Key {
     Home,
     /// End of the text being typed.
     End,
+    /// Select the whole text being typed (E10).
+    SelectAll,
 }
 
 /// A mouse button as the tools see it. The UI maps two-button mice and
@@ -445,7 +448,21 @@ pub enum ToolEvent {
         pos: Point,
     },
     Key(Key),
+    /// Text mode: a key with Shift (select) and the word modifier (Alt on
+    /// macOS, Ctrl elsewhere): Left, Right, Home, End, Backspace, Delete,
+    /// SelectAll (E10).
+    Nav {
+        key: Key,
+        shift: bool,
+        word: bool,
+    },
     Text(String),
+    /// Text mode: an IME composition not yet committed (E10).
+    Preedit(String),
+    /// Three clicks: select the line in Text mode.
+    TripleClick {
+        pos: Point,
+    },
 }
 
 /// The text being typed, for the UI to draw with a cursor.
@@ -454,6 +471,10 @@ pub struct OverlayText {
     pub object: Object,
     /// Cursor position in characters.
     pub cursor: usize,
+    /// The selected characters, if any (E10).
+    pub selection: Option<(usize, usize)>,
+    /// Start and length (characters) of the IME composition in the text.
+    pub preedit: (usize, usize),
 }
 
 /// What Shift+click marked (xfig's `show_objecthighlight`).
@@ -564,6 +585,14 @@ pub(crate) enum ToolState {
         text: String,
         cursor: usize,
         editing: Option<ObjectId>,
+        /// The other end of the selection (E10); equal to `cursor` when
+        /// nothing is selected.
+        anchor: usize,
+        /// An IME composition in progress, shown at the caret, not yet text.
+        preedit: String,
+        /// The left button is down inside the text: moving extends the
+        /// selection.
+        drag: bool,
     },
     /// Edit > Paste: the cut buffer follows the pointer (xfig's `paste`);
     /// `nw` is the top-left corner of the buffer's objects.
@@ -1559,7 +1588,7 @@ impl Engine {
 
     fn text_event(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
         match ev {
-            ToolEvent::Press { pos, button, .. } => {
+            ToolEvent::Press { pos, button, shift } => {
                 let typing = matches!(self.tool_state, ToolState::Text { .. });
                 match button {
                     // xfig: the middle button finishes the text (`d_text.c`).
@@ -1580,9 +1609,41 @@ impl Engine {
                         self.tool_state = ToolState::Idle;
                         return Ok(());
                     }
-                    Button::Left => self.finish_text()?,
+                    Button::Left => {
+                        // E10: a click inside the text being typed places the
+                        // caret there (Shift extends the selection) and a
+                        // drag selects; anywhere else it finishes the text
+                        // as in xfig.
+                        if typing {
+                            let tol = self.pick_tol();
+                            let hit = self
+                                .typing_text()
+                                .and_then(|t| textedit::caret_in_text(&t, pos, tol, true));
+                            if let (
+                                Some(c),
+                                ToolState::Text {
+                                    cursor,
+                                    anchor,
+                                    drag,
+                                    preedit,
+                                    ..
+                                },
+                            ) = (hit, &mut self.tool_state)
+                            {
+                                *cursor = c;
+                                if !shift {
+                                    *anchor = c;
+                                }
+                                *drag = true;
+                                preedit.clear();
+                                return Ok(());
+                            }
+                        }
+                        self.finish_text()?
+                    }
                 }
-                // Clicking an existing text edits it.
+                // Clicking an existing text edits it, with the caret at the
+                // clicked character.
                 let tol = self.pick_tol();
                 if let Some(id) = self.pick(pos, tol) {
                     if let Some(Object {
@@ -1590,11 +1651,16 @@ impl Engine {
                         ..
                     }) = self.doc().get(id)
                     {
+                        let n = t.text.chars().count();
+                        let c = textedit::caret_in_text(t, pos, tol, false).unwrap_or(n).min(n);
                         self.tool_state = ToolState::Text {
                             origin: t.origin,
                             text: t.text.clone(),
-                            cursor: t.text.chars().count(),
+                            cursor: c,
                             editing: Some(id),
+                            anchor: c,
+                            preedit: String::new(),
+                            drag: false,
                         };
                         return Ok(());
                     }
@@ -1604,49 +1670,112 @@ impl Engine {
                     text: String::new(),
                     cursor: 0,
                     editing: None,
+                    anchor: 0,
+                    preedit: String::new(),
+                    drag: false,
                 };
                 Ok(())
             }
-            ToolEvent::Text(s) => {
-                if let ToolState::Text { text, cursor, .. } = &mut self.tool_state {
-                    let clean: String = s.chars().filter(|c| !c.is_control() || *c == '\t').collect();
-                    if text.len() + clean.len() > rustfig_format::MAX_TEXT_BYTES {
-                        return Err(EngineError::bad_params("text is too long"));
+            ToolEvent::Move { pos } => {
+                let tol = self.pick_tol();
+                if matches!(self.tool_state, ToolState::Text { drag: true, .. }) {
+                    let hit = self
+                        .typing_text()
+                        .and_then(|t| textedit::caret_in_text(&t, pos, tol, false));
+                    if let (Some(c), ToolState::Text { cursor, .. }) = (hit, &mut self.tool_state) {
+                        *cursor = c;
                     }
-                    let byte = char_to_byte(text, *cursor);
-                    text.insert_str(byte, &clean);
-                    *cursor += clean.chars().count();
                 }
                 Ok(())
             }
-            ToolEvent::Key(k) => {
+            ToolEvent::Release { .. } => {
+                if let ToolState::Text { drag, .. } = &mut self.tool_state {
+                    *drag = false;
+                }
+                Ok(())
+            }
+            // Double-click selects the word under the caret, triple-click
+            // the line.
+            ToolEvent::DoubleClick { .. } | ToolEvent::TripleClick { .. } => {
+                let triple = matches!(ev, ToolEvent::TripleClick { .. });
+                if let ToolState::Text {
+                    text,
+                    cursor,
+                    anchor,
+                    drag,
+                    ..
+                } = &mut self.tool_state
+                {
+                    let (a, b) = if triple {
+                        textedit::line_range(text, *cursor)
+                    } else {
+                        textedit::word_range(text, *cursor)
+                    };
+                    *anchor = a;
+                    *cursor = b;
+                    *drag = false;
+                }
+                Ok(())
+            }
+            ToolEvent::Text(s) => {
+                if let ToolState::Text {
+                    text,
+                    cursor,
+                    anchor,
+                    preedit,
+                    ..
+                } = &mut self.tool_state
+                {
+                    preedit.clear();
+                    let clean: String = s.chars().filter(|c| !c.is_control() || *c == '\t').collect();
+                    let mut buf = textedit::Buf { text, cursor, anchor };
+                    let removed = buf.selected().map_or(0, |x| x.len());
+                    if buf.text.len() + clean.len() > rustfig_format::MAX_TEXT_BYTES + removed {
+                        return Err(EngineError::bad_params("text is too long"));
+                    }
+                    buf.insert(&clean);
+                }
+                Ok(())
+            }
+            // An IME composition in progress: shown at the caret, committed
+            // later as `Text`.
+            ToolEvent::Preedit(s) => {
+                if let ToolState::Text { preedit, .. } = &mut self.tool_state {
+                    *preedit = s.chars().filter(|c| !c.is_control()).take(256).collect();
+                }
+                Ok(())
+            }
+            ToolEvent::Nav { key, shift, word } => {
                 let ToolState::Text {
-                    text, cursor, origin, ..
+                    text, cursor, anchor, ..
                 } = &mut self.tool_state
                 else {
                     return Ok(());
                 };
+                let mut buf = textedit::Buf { text, cursor, anchor };
+                match key {
+                    Key::Backspace => buf.backspace(word),
+                    Key::Delete => buf.delete(word),
+                    Key::Left => buf.left(shift, word),
+                    Key::Right => buf.right(shift, word),
+                    Key::Home => buf.move_to(0, shift),
+                    Key::End => {
+                        let n = buf.text.chars().count();
+                        buf.move_to(n, shift)
+                    }
+                    Key::SelectAll => buf.select_all(),
+                    Key::Enter | Key::Escape => return self.text_event(ToolEvent::Key(key)),
+                }
+                Ok(())
+            }
+            ToolEvent::Key(k) => {
+                let ToolState::Text { origin, .. } = &self.tool_state else {
+                    return Ok(());
+                };
+                let origin = *origin;
                 match k {
-                    Key::Backspace => {
-                        if *cursor > 0 {
-                            let b = char_to_byte(text, *cursor - 1);
-                            text.remove(b);
-                            *cursor -= 1;
-                        }
-                    }
-                    Key::Delete => {
-                        if *cursor < text.chars().count() {
-                            let b = char_to_byte(text, *cursor);
-                            text.remove(b);
-                        }
-                    }
-                    Key::Left => *cursor = cursor.saturating_sub(1),
-                    Key::Right => *cursor = (*cursor + 1).min(text.chars().count()),
-                    Key::Home => *cursor = 0,
-                    Key::End => *cursor = text.chars().count(),
                     Key::Enter => {
                         // Finish this line and start a new text object below it.
-                        let origin = *origin;
                         self.finish_text()?;
                         let step = if self.indicator.text_step.is_finite() {
                             self.indicator.text_step.clamp(0.0, 100.0)
@@ -1662,14 +1791,75 @@ impl Engine {
                             text: String::new(),
                             cursor: 0,
                             editing: None,
+                            anchor: 0,
+                            preedit: String::new(),
+                            drag: false,
                         };
+                        Ok(())
                     }
-                    Key::Escape => {}
+                    Key::Escape => Ok(()),
+                    other => self.text_event(ToolEvent::Nav {
+                        key: other,
+                        shift: false,
+                        word: false,
+                    }),
                 }
-                Ok(())
             }
             _ => Ok(()),
         }
+    }
+
+    /// The text object being typed (new or edited), as drawn.
+    fn typing_text(&self) -> Option<rustfig_model::Text> {
+        let ToolState::Text {
+            origin, text, editing, ..
+        } = &self.tool_state
+        else {
+            return None;
+        };
+        let mut t = crate::cmd::shape::make_text(self, *origin, text.clone());
+        if let Some(Object {
+            kind: ObjectKind::Text(orig),
+            ..
+        }) = editing.and_then(|id| self.doc().get(id))
+        {
+            t = orig.clone();
+            t.text = text.clone();
+        }
+        crate::fix_text_metrics(&mut t);
+        Some(t)
+    }
+
+    /// The selected part of the text being typed (for Copy).
+    pub fn text_selection(&self) -> Option<String> {
+        let ToolState::Text {
+            text, cursor, anchor, ..
+        } = &self.tool_state
+        else {
+            return None;
+        };
+        let (a, b) = ((*anchor).min(*cursor), (*anchor).max(*cursor));
+        (a != b).then(|| text.chars().skip(a).take(b - a).collect())
+    }
+
+    /// Cut: the selected text, removed from the text being typed.
+    pub fn text_cut(&mut self) -> Option<String> {
+        let s = self.text_selection()?;
+        if let ToolState::Text {
+            text, cursor, anchor, ..
+        } = &mut self.tool_state
+        {
+            textedit::Buf { text, cursor, anchor }.delete_selection();
+        }
+        Some(s)
+    }
+
+    /// The selection of the text being typed, in characters.
+    pub fn text_selection_range(&self) -> Option<(usize, usize)> {
+        let ToolState::Text { cursor, anchor, .. } = &self.tool_state else {
+            return None;
+        };
+        (anchor != cursor).then(|| ((*anchor).min(*cursor), (*anchor).max(*cursor)))
     }
 
     /// Commit the text being typed, if any.
@@ -3090,26 +3280,29 @@ impl Engine {
                     ov.guides.push(c);
                 }
             }
-            ToolState::Text {
-                origin, text, cursor, ..
-            } => {
-                let mut t = crate::cmd::shape::make_text(self, *origin, text.clone());
-                if let ToolState::Text { editing: Some(id), .. } = &self.tool_state {
-                    if let Some(Object {
-                        kind: ObjectKind::Text(orig),
-                        ..
-                    }) = self.doc().get(*id)
-                    {
-                        t = orig.clone();
-                        t.text = text.clone();
+            ToolState::Text { cursor, preedit, .. } => {
+                let cursor = *cursor;
+                let preedit = preedit.clone();
+                let sel = self.text_selection_range();
+                if let (Some(mut t), ToolState::Text { editing, .. }) = (self.typing_text(), &self.tool_state) {
+                    if let Some(id) = editing {
+                        ov.hide.push(*id);
                     }
-                    ov.hide.push(*id);
+                    // An IME composition is shown at the caret (underlined
+                    // by the UI through `preedit`).
+                    let pre = preedit.chars().count();
+                    if pre > 0 {
+                        let b = textedit::byte_of(&t.text, cursor);
+                        t.text.insert_str(b, &preedit);
+                        crate::fix_text_metrics(&mut t);
+                    }
+                    ov.text = Some(OverlayText {
+                        object: Object::new(ObjectKind::Text(t)),
+                        cursor: cursor + pre,
+                        selection: sel,
+                        preedit: (cursor, pre),
+                    });
                 }
-                crate::fix_text_metrics(&mut t);
-                ov.text = Some(OverlayText {
-                    object: Object::new(ObjectKind::Text(t)),
-                    cursor: *cursor,
-                });
             }
             ToolState::MoveObjs {
                 ids,
@@ -3322,10 +3515,6 @@ fn nearest_vertex(pts: &[Point], p: Point, tol: f64) -> Option<usize> {
     best.map(|(_, i)| i)
 }
 
-fn char_to_byte(s: &str, chars: usize) -> usize {
-    s.char_indices().nth(chars).map(|(b, _)| b).unwrap_or(s.len())
-}
-
 /// Text justification name.
 pub fn justify_name(j: Justify) -> &'static str {
     match j {
@@ -3454,7 +3643,9 @@ mod tests {
         assert_eq!(t.text, "Hello");
         assert!(t.length > 0.0);
         // Click it again to edit.
+        // (E10: the caret lands at the clicked character; End goes to the end.)
         press(&mut e, 650.0, 590.0);
+        e.tool_event(ToolEvent::Key(Key::End)).unwrap();
         e.tool_event(ToolEvent::Text("!".into())).unwrap();
         e.set_tool(ToolKind::Select);
         let ObjectKind::Text(t) = &e.doc().objects[0].kind else {
@@ -4103,5 +4294,181 @@ mod tests {
                 let _ = e.overlay();
             }
         }
+    }
+    // ---- E10: text editing --------------------------------------------
+
+    fn typing(e: &mut Engine, s: &str) {
+        e.set_tool(ToolKind::Text);
+        click(e, 6000.0, 6000.0, Button::Left);
+        e.tool_event(ToolEvent::Text(s.into())).unwrap();
+    }
+
+    fn nav(e: &mut Engine, key: Key, shift: bool, word: bool) {
+        e.tool_event(ToolEvent::Nav { key, shift, word }).unwrap();
+    }
+
+    fn state(e: &Engine) -> (String, usize, usize) {
+        let ToolState::Text {
+            text, cursor, anchor, ..
+        } = &e.tool_state
+        else {
+            panic!("not typing")
+        };
+        (text.clone(), *cursor, *anchor)
+    }
+
+    #[test]
+    fn text_shift_arrows_select_and_typing_replaces() {
+        let mut e = Engine::new();
+        typing(&mut e, "h\u{e9}llo w\u{f6}rld");
+        nav(&mut e, Key::Left, true, false);
+        nav(&mut e, Key::Left, true, false);
+        assert_eq!(e.text_selection().as_deref(), Some("ld"));
+        e.tool_event(ToolEvent::Text("\u{4e16}".into())).unwrap();
+        assert_eq!(state(&e).0, "h\u{e9}llo w\u{f6}r\u{4e16}");
+        nav(&mut e, Key::Home, true, false);
+        assert_eq!(e.text_selection_range(), Some((0, 10)));
+        // Left collapses to the start of the selection.
+        nav(&mut e, Key::Left, false, false);
+        assert_eq!(state(&e).1, 0);
+    }
+
+    #[test]
+    fn text_word_jumps_and_word_delete() {
+        let mut e = Engine::new();
+        typing(&mut e, "foo bar, baz");
+        nav(&mut e, Key::Left, false, true);
+        assert_eq!(state(&e).1, 9);
+        nav(&mut e, Key::Left, false, true);
+        assert_eq!(state(&e).1, 7);
+        nav(&mut e, Key::Left, false, true);
+        assert_eq!(state(&e).1, 4);
+        nav(&mut e, Key::Right, false, true);
+        assert_eq!(state(&e).1, 7);
+        nav(&mut e, Key::End, false, false);
+        nav(&mut e, Key::Backspace, false, true);
+        assert_eq!(state(&e).0, "foo bar, ");
+        nav(&mut e, Key::Home, false, false);
+        nav(&mut e, Key::Delete, false, true);
+        assert_eq!(state(&e).0, " bar, ");
+    }
+
+    #[test]
+    fn text_cut_copy_paste_and_select_all() {
+        let mut e = Engine::new();
+        typing(&mut e, "one two");
+        nav(&mut e, Key::SelectAll, false, false);
+        assert_eq!(e.text_selection().as_deref(), Some("one two"));
+        assert_eq!(e.text_cut().as_deref(), Some("one two"));
+        assert_eq!(state(&e).0, "");
+        assert_eq!(e.text_cut(), None);
+        // Paste is a Text event and replaces a selection.
+        e.tool_event(ToolEvent::Text("a\u{1F600}b".into())).unwrap();
+        nav(&mut e, Key::Left, true, false);
+        e.tool_event(ToolEvent::Text("XY".into())).unwrap();
+        assert_eq!(state(&e).0, "a\u{1F600}XY");
+        nav(&mut e, Key::Backspace, false, false);
+        nav(&mut e, Key::Backspace, false, false);
+        nav(&mut e, Key::Backspace, false, false);
+        assert_eq!(state(&e).0, "a");
+    }
+
+    #[test]
+    fn text_double_and_triple_click_select() {
+        let mut e = Engine::new();
+        typing(&mut e, "alpha beta");
+        nav(&mut e, Key::Left, false, false);
+        nav(&mut e, Key::Left, false, false);
+        e.tool_event(ToolEvent::DoubleClick {
+            pos: Point::new(0.0, 0.0),
+        })
+        .unwrap();
+        assert_eq!(e.text_selection().as_deref(), Some("beta"));
+        e.tool_event(ToolEvent::TripleClick {
+            pos: Point::new(0.0, 0.0),
+        })
+        .unwrap();
+        assert_eq!(e.text_selection().as_deref(), Some("alpha beta"));
+    }
+
+    #[test]
+    fn text_mouse_places_caret_and_drags_a_selection() {
+        let mut e = Engine::new();
+        typing(&mut e, "abcdef");
+        // Click at the left edge of the text: caret 0 (no new text).
+        click(&mut e, 6001.0, 5950.0, Button::Left);
+        assert_eq!(state(&e), ("abcdef".to_string(), 0, 0));
+        // Drag to the right end.
+        e.tool_event(ToolEvent::Press {
+            pos: Point::new(6001.0, 5950.0),
+            button: Button::Left,
+            shift: false,
+        })
+        .unwrap();
+        e.tool_event(ToolEvent::Move {
+            pos: Point::new(60000.0, 5950.0),
+        })
+        .unwrap();
+        e.tool_event(ToolEvent::Release {
+            pos: Point::new(60000.0, 5950.0),
+            button: Button::Left,
+        })
+        .unwrap();
+        assert_eq!(e.text_selection().as_deref(), Some("abcdef"));
+        // Shift+click extends from the anchor.
+        click(&mut e, 6001.0, 5950.0, Button::Left);
+        e.tool_event(ToolEvent::Press {
+            pos: Point::new(60000.0, 5950.0),
+            button: Button::Left,
+            shift: true,
+        })
+        .unwrap();
+        // far right is outside the text: finishes it like xfig.
+        assert!(matches!(e.tool_state, ToolState::Text { editing: None, .. }));
+    }
+
+    #[test]
+    fn text_click_on_existing_text_places_caret_at_character() {
+        let mut e = Engine::new();
+        typing(&mut e, "abcdef");
+        e.tool_event(ToolEvent::Key(Key::Escape)).unwrap();
+        assert!(matches!(e.tool_state, ToolState::Idle));
+        e.set_tool(ToolKind::Text);
+        click(&mut e, 6001.0, 5950.0, Button::Left);
+        let (t, c, a) = state(&e);
+        assert_eq!((t.as_str(), c, a), ("abcdef", 0, 0));
+        assert!(matches!(e.tool_state, ToolState::Text { editing: Some(_), .. }));
+    }
+
+    #[test]
+    fn text_preedit_is_shown_not_stored() {
+        let mut e = Engine::new();
+        typing(&mut e, "ab");
+        e.tool_event(ToolEvent::Preedit("\u{3042}\u{3044}".into())).unwrap();
+        let ov = e.overlay();
+        let ot = ov.text.unwrap();
+        assert_eq!(ot.preedit, (2, 2));
+        let ObjectKind::Text(t) = &ot.object.kind else { panic!() };
+        assert_eq!(t.text, "ab\u{3042}\u{3044}");
+        assert_eq!(state(&e).0, "ab");
+        e.tool_event(ToolEvent::Text("\u{3042}".into())).unwrap();
+        assert_eq!(state(&e).0, "ab\u{3042}");
+        assert_eq!(e.overlay().text.unwrap().preedit.1, 0);
+    }
+
+    #[test]
+    fn text_unicode_edit_helpers_never_split_chars() {
+        use super::textedit::*;
+        let s = "\u{1F600}x \u{e9}\u{e9}";
+        for i in 0..12 {
+            let _ = (
+                word_left(s, i),
+                word_right(s, i),
+                word_range(s, i),
+                line_range(s, i),
+                byte_of(s, i),
+            );
+        }
+        assert_eq!(word_range(s, 0), (0, 1));
     }
 }

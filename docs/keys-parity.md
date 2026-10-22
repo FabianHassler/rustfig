@@ -1,6 +1,6 @@
 # xfig key and mouse bindings checklist (W8)
 
-**Status:** 2026-10-22 (D5: measure keys Ctrl-g, Ctrl-n, Ctrl-m). 2026-10-22 (D4: Tangent mode key `n`). 2026-10-22 (D3: Chop mode key `x`). 2026-10-15: audit complete: every binding works, is replaced by a modern equivalent, or waits for the feature it needs (task named). Every binding xfig defines, from
+**Status:** 2026-10-22 (E10: selection, word jumps, clipboard keys while typing). 2026-10-22 (D5: measure keys Ctrl-g, Ctrl-n, Ctrl-m). 2026-10-22 (D4: Tangent mode key `n`). 2026-10-22 (D3: Chop mode key `x`). 2026-10-15: audit complete: every binding works, is replaced by a modern equivalent, or waits for the feature it needs (task named). Every binding xfig defines, from
 `app-defaults/Fig` and the 78 translation tables (210 bindings) in xfig's
 `src/*.c`, with what RustFig does. X plumbing (window-manager close
 messages, expose and resize events, highlight on enter/leave) is left out:
@@ -63,6 +63,7 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside: on mac
 | Left/Right/Up/Down | pan by a ruler step (Shift: five) | ✅ |
 | Home | pan to the origin | ✅ (`view.pan_origin`) |
 | Left/Right/Home/End while typing | move the caret | ✅ |
+| Shift+arrows, word jumps (Option on macOS, Ctrl elsewhere), select all, copy/cut/paste while typing (E10, RustFig's own) | selection and system clipboard | ✅ |
 | Wheel / Shift+wheel | pan vertically / horizontally | ✅ |
 | Ctrl+wheel | zoom | ✅ |
 | Ctrl+left/middle/right | zoom area / pan to origin / unzoom | ✅ E3 (Cmd on macOS); Ctrl+Shift+click shape factor ✅ S4-6 |

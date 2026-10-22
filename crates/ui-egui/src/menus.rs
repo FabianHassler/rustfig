@@ -1025,6 +1025,30 @@ fn pan_keys(app: &mut App, ctx: &egui::Context, typing: bool) {
     }
 }
 
+/// A key while text is typed (E10): Shift extends the selection, Alt (macOS)
+/// or Ctrl (Linux, Windows) jumps by words, Cmd+Left/Right is Home/End on
+/// macOS, Cmd/Ctrl+A selects all.
+fn text_key(os: crate::platform::Os, key: egui::Key, m: egui::Modifiers) -> Option<ToolEvent> {
+    let mac = os == crate::platform::Os::Mac;
+    let word = if mac { m.alt } else { m.ctrl };
+    let line = mac && m.mac_cmd;
+    let nav = |key, shift, word| Some(ToolEvent::Nav { key, shift, word });
+    match key {
+        egui::Key::Enter => Some(ToolEvent::Key(Key::Enter)),
+        egui::Key::Escape => Some(ToolEvent::Key(Key::Escape)),
+        egui::Key::Backspace => nav(Key::Backspace, false, word),
+        egui::Key::Delete => nav(Key::Delete, false, word),
+        egui::Key::ArrowLeft if line => nav(Key::Home, m.shift, false),
+        egui::Key::ArrowRight if line => nav(Key::End, m.shift, false),
+        egui::Key::ArrowLeft => nav(Key::Left, m.shift, word),
+        egui::Key::ArrowRight => nav(Key::Right, m.shift, word),
+        egui::Key::Home => nav(Key::Home, m.shift, false),
+        egui::Key::End => nav(Key::End, m.shift, false),
+        egui::Key::A if m.command => nav(Key::SelectAll, false, false),
+        _ => None,
+    }
+}
+
 /// Keyboard handling: typing goes to the text tool; otherwise shortcuts run commands.
 pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
     if ctx.wants_keyboard_input() {
@@ -1036,23 +1060,37 @@ pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
     }
     if app.engine.is_typing() {
         let events = ctx.input(|i| i.events.clone());
+        let os = crate::platform::Os::current(ctx);
         let alt = ctx.input(|i| i.modifiers.alt);
         app.compose.watch_alt(alt, &events);
         for ev in events {
             let tev = match ev {
                 egui::Event::Text(t) => compose_text(app, t).map(ToolEvent::Text),
                 egui::Event::Paste(t) => Some(ToolEvent::Text(t)),
-                egui::Event::Key { key, pressed: true, .. } => match key {
-                    egui::Key::Enter => Some(ToolEvent::Key(Key::Enter)),
-                    egui::Key::Escape => Some(ToolEvent::Key(Key::Escape)),
-                    egui::Key::Backspace => Some(ToolEvent::Key(Key::Backspace)),
-                    egui::Key::Delete => Some(ToolEvent::Key(Key::Delete)),
-                    egui::Key::ArrowLeft => Some(ToolEvent::Key(Key::Left)),
-                    egui::Key::ArrowRight => Some(ToolEvent::Key(Key::Right)),
-                    egui::Key::Home => Some(ToolEvent::Key(Key::Home)),
-                    egui::Key::End => Some(ToolEvent::Key(Key::End)),
-                    _ => None,
-                },
+                // E10: the selection goes to the system clipboard.
+                egui::Event::Copy => {
+                    if let Some(sel) = app.engine.text_selection() {
+                        ctx.copy_text(sel);
+                    }
+                    None
+                }
+                egui::Event::Cut => {
+                    if let Some(sel) = app.engine.text_cut() {
+                        ctx.copy_text(sel);
+                    }
+                    None
+                }
+                // IME: the composition is shown at the caret, the commit is
+                // typed text.
+                egui::Event::Ime(egui::ImeEvent::Preedit(t)) => Some(ToolEvent::Preedit(t)),
+                egui::Event::Ime(egui::ImeEvent::Commit(t)) => compose_text(app, t).map(ToolEvent::Text),
+                egui::Event::Ime(egui::ImeEvent::Disabled) => Some(ToolEvent::Preedit(String::new())),
+                egui::Event::Key {
+                    key,
+                    pressed: true,
+                    modifiers,
+                    ..
+                } => text_key(os, key, modifiers),
                 _ => None,
             };
             if let Some(t) = tev {
