@@ -5,6 +5,18 @@ An open-source, Rust-native reimplementation of the vector drawing program
 behaviour. It runs natively on macOS, Windows
 and Linux, with a web (WASM) build on the way.
 
+## Aim
+
+RustFig keeps what makes xfig good: its **simplicity** and its **full
+functionality**. Every xfig mode, button and option stays, and works the way
+xfig users expect.
+
+Additions must respect xfig. They fit into xfig's way of working (its modes,
+its three mouse buttons, its panels) and don't change what an existing xfig
+action does. Departing from xfig needs a good reason, for example printing,
+which no longer works the old way on today's systems. A modern look is fine;
+a different program is not.
+
 ## Status
 
 **Alpha. Overall xfig parity ≈65 %** (see [ROADMAP.md](ROADMAP.md) and the
