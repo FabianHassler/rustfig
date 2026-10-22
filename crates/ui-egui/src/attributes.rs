@@ -562,12 +562,7 @@ fn value_text(app: &App, a: Attr) -> String {
             f => format!("pattern {f}"),
         },
         Attr::ArcType => if ind.pie_arc { "pie wedge" } else { "open" }.into(),
-        Attr::SmartLinks => match ind.linkmode {
-            LinkMode::Off => "off",
-            LinkMode::Move => "move",
-            LinkMode::Slide => "slide",
-        }
-        .into(),
+        Attr::SmartLinks => link_name(ind.linkmode).into(),
         Attr::LineWidth => ind.thickness.to_string(),
         Attr::LineStyle => ind.line.name().into(),
         Attr::JoinStyle => format!("{:?}", ind.join).to_lowercase(),
@@ -876,6 +871,23 @@ fn line_icon(k: LineKind) -> &'static Xbm {
     }
 }
 
+/// xfig's Smart Links pictures (`smartoff`, `smartmove`, `smartslide`).
+fn link_icon(m: LinkMode) -> &'static Xbm {
+    match m {
+        LinkMode::Off => &xi::SMARTOFF,
+        LinkMode::Move => &xi::SMARTMOVE,
+        LinkMode::Slide => &xi::SMARTSLIDE,
+    }
+}
+
+fn link_name(m: LinkMode) -> &'static str {
+    match m {
+        LinkMode::Off => "off",
+        LinkMode::Move => "move",
+        LinkMode::Slide => "slide",
+    }
+}
+
 fn join_icon(j: JoinStyle) -> &'static Xbm {
     match j {
         JoinStyle::Miter => &xi::JOINMITER,
@@ -965,6 +977,7 @@ fn value_icon(app: &App, a: Attr) -> Option<Pic> {
         Attr::ArcType => arc_pic(ind.pie_arc),
         Attr::LineStyle => Pic::of(line_icon(ind.line), VIcon::Line(ind.line)),
         Attr::JoinStyle => Pic::of(join_icon(ind.join), VIcon::Join(ind.join)),
+        Attr::SmartLinks => Pic::traced(link_icon(ind.linkmode)),
         Attr::CapStyle => Pic::of(cap_icon(ind.cap), VIcon::Cap(ind.cap)),
         Attr::ArrowMode => arrow_mode_pic(arrow_mode(ind)),
         Attr::ArrowType => arrow_type_pic(arrow_choice_of(ind.arrow.kind, ind.arrow.style)),
@@ -1347,14 +1360,19 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             }
         }
         Attr::SmartLinks => {
-            for (m, name) in [
-                (LinkMode::Off, "off"),
-                (LinkMode::Move, "move"),
-                (LinkMode::Slide, "slide"),
-            ] {
-                if ui.selectable_label(ind.linkmode == m, name).clicked() {
-                    set(app, json!({ "linkmode": m }));
-                }
+            let modes = [LinkMode::Off, LinkMode::Move, LinkMode::Slide];
+            let items: Vec<_> = modes
+                .iter()
+                .map(|m| {
+                    (
+                        ind.linkmode == *m,
+                        link_name(*m).to_string(),
+                        Pic::traced(link_icon(*m)),
+                    )
+                })
+                .collect();
+            if let Some(m) = icon_choices(ui, "smart_links", &items, 3).and_then(|i| modes.get(i)) {
+                set(app, json!({ "linkmode": m }));
             }
         }
         Attr::LineStyle => {

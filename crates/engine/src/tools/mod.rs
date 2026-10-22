@@ -2480,6 +2480,11 @@ impl Engine {
                 }
                 if !copy && d.len() > 0.0 {
                     ov.hide.clone_from(ids);
+                    // Smart links: the attached lines follow while dragging.
+                    for line in crate::links::preview(self, ids, d.x, d.y) {
+                        ov.hide.push(line.id);
+                        ov.preview.push(line);
+                    }
                 }
             }
             ToolState::RubberBand { held: true, lasso, .. } if lasso.len() >= 2 => {

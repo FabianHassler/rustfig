@@ -5,7 +5,7 @@
 
 use crate::{Engine, LinkMode};
 use rustfig_geom::{Point, Rect};
-use rustfig_model::{ObjectId, ObjectKind, PolyKind};
+use rustfig_model::{Object, ObjectId, ObjectKind, PolyKind};
 
 /// How close a line end must be to a box's perimeter to count as attached:
 /// xfig's `LINK_TOL = 3 * PIX_PER_INCH / DISPLAY_PIX_PER_INCH`
@@ -131,32 +131,58 @@ pub(crate) fn adjust(e: &mut Engine, mode: LinkMode, links: &[Link], dx: f64, dy
     }
     let doc = e.doc_mut();
     for link in links {
-        let Some(o) = doc.get_mut(link.line_id) else {
-            continue;
+        if let Some(ObjectKind::Polyline(p)) = doc.get_mut(link.line_id).map(|o| &mut o.kind) {
+            shift(&mut p.points, link, mode, dx, dy);
+        }
+    }
+}
+
+/// The attached lines as they will be after moving the objects `ids` by
+/// (dx, dy), for drawing while the objects are dragged (xfig rubber-bands
+/// them, `u_elastic.c`); empty when smart links are off.
+pub(crate) fn preview(e: &Engine, ids: &[ObjectId], dx: f64, dy: f64) -> Vec<Object> {
+    let mode = e.indicator.linkmode;
+    if mode == LinkMode::Off {
+        return Vec::new();
+    }
+    let mut out: Vec<Object> = Vec::new();
+    for link in collect(e, ids) {
+        let pos = match out.iter().position(|o| o.id == link.line_id) {
+            Some(i) => i,
+            None => {
+                let Some(o) = e.doc().get(link.line_id) else { continue };
+                out.push(o.clone());
+                out.len() - 1
+            }
         };
-        let ObjectKind::Polyline(p) = &mut o.kind else {
-            continue;
-        };
-        if mode == LinkMode::Slide {
-            if let Some(prev) = link.prev {
-                // xfig: a vertical last segment keeps its x, any other keeps
-                // its y (`endpt->x == prevpt->x`).
-                let vertical = match (p.points.get(link.end), p.points.get(prev)) {
-                    (Some(endpt), Some(prevpt)) => (endpt.x - prevpt.x).abs() < 1e-9,
-                    _ => false,
-                };
-                if let Some(prevpt) = p.points.get_mut(prev) {
-                    if vertical {
-                        prevpt.x += dx;
-                    } else {
-                        prevpt.y += dy;
-                    }
+        if let Some(ObjectKind::Polyline(p)) = out.get_mut(pos).map(|o| &mut o.kind) {
+            shift(&mut p.points, &link, mode, dx, dy);
+        }
+    }
+    out
+}
+
+/// Move one linked end point (and in slide mode its neighbour).
+fn shift(points: &mut [Point], link: &Link, mode: LinkMode, dx: f64, dy: f64) {
+    if mode == LinkMode::Slide {
+        if let Some(prev) = link.prev {
+            // xfig: a vertical last segment keeps its x, any other keeps
+            // its y (`endpt->x == prevpt->x`).
+            let vertical = match (points.get(link.end), points.get(prev)) {
+                (Some(endpt), Some(prevpt)) => (endpt.x - prevpt.x).abs() < 1e-9,
+                _ => false,
+            };
+            if let Some(prevpt) = points.get_mut(prev) {
+                if vertical {
+                    prevpt.x += dx;
+                } else {
+                    prevpt.y += dy;
                 }
             }
         }
-        if let Some(endpt) = p.points.get_mut(link.end) {
-            endpt.x += dx;
-            endpt.y += dy;
-        }
+    }
+    if let Some(endpt) = points.get_mut(link.end) {
+        endpt.x += dx;
+        endpt.y += dy;
     }
 }

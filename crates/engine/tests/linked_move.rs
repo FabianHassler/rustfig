@@ -125,3 +125,41 @@ fn moving_a_line_alone_does_not_link() {
     // A polyline is not a box, so its points move as one object, once.
     assert_eq!(points(&e, top), [Point::new(650.0, 60.0), Point::new(650.0, -240.0)]);
 }
+
+#[test]
+fn attached_lines_follow_while_the_box_is_dragged() {
+    use rustfig_engine::tools::{Button, ToolEvent};
+    let (mut e, _box_id, top, _right) = box_and_lines();
+    e.indicator.snap = rustfig_engine::SnapMode::Any;
+    set_linkmode(&mut e, LinkMode::Move);
+    e.execute("tool.move", &json!({})).unwrap();
+    // xfig's Move: click the box's edge, move, (click to place).
+    let at = Point::new(0.0, 300.0);
+    e.tool_event(ToolEvent::Press {
+        pos: at,
+        button: Button::Left,
+        shift: false,
+    })
+    .unwrap();
+    e.tool_event(ToolEvent::Release {
+        pos: at,
+        button: Button::Left,
+    })
+    .unwrap();
+    e.tool_event(ToolEvent::Move {
+        pos: Point::new(100.0, 500.0),
+    })
+    .unwrap();
+    let ov = e.overlay();
+    let line = ov
+        .preview
+        .iter()
+        .find(|o| o.id.0 == top)
+        .expect("the attached line is drawn while dragging");
+    let ObjectKind::Polyline(p) = &line.kind else { panic!() };
+    assert_eq!(p.points, [Point::new(700.0, 200.0), Point::new(600.0, -300.0)]);
+    assert!(ov.hide.iter().any(|id| id.0 == top), "and its old position hidden");
+    // Off: nothing follows.
+    set_linkmode(&mut e, LinkMode::Off);
+    assert!(!e.overlay().preview.iter().any(|o| o.id.0 == top));
+}
