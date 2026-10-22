@@ -13,7 +13,7 @@
 | 5 | ✅ closed 2026-10-21 (D1): open compound; the dimension-line recomputation on close landed 2026-10-22 (D10); the save query landed 2026-10-21 | Editing | Low | 0 |
 | 6 | ✅ closed 2026-10-22 (D5): measure modes (join/split D2, chop D3, tangent/normal D4) | Editing | Low | 0 |
 | 7 | Settings persistence (units, grid, recent files) and a style manager | Settings | Medium | 30 |
-| 8 | The zoom box (rulers landed with W6) | View | Medium | 4 |
+| 8 | ~~The zoom box~~ (done 2026-10-22, E3; rulers landed with W6) | View | Medium | 4 |
 | 9 | Character map, compose-key input, LaTeX special-text handling | Text | Medium | 30 |
 | 10 | Bitmap exports GIF/JPEG/TIFF/PPM (with transparent colour) | Export | Medium | 12 |
 | 11 | Colour editor (create and edit user colours in the UI) | Attributes | Medium | 12 |
@@ -33,7 +33,7 @@
 | 31 | ✅ closed 2026-10-22: edit-panel leftovers found by W10 group 3 ([window-parity.md](window-parity.md)): the picture panel W10-16/W10-20, the compound panel W10-15, the live panel with Done as one undo step W10-17/W10-18, the point table W10-19 and the pictorial menus W10-21 are done; the position rows, arrow rows, text flags, arc type, figure comments and Cancel-restores were fixed in the same pass | UI | Medium | 0 |
 | 32 | Settings and tool windows found by W10 group 4 ([window-parity.md](window-parity.md)): Global settings rows with effect (W10-23), Unit/Scale panel details (W10-24); the colour panel, character map, Manage Styles, font menus, spell check, libraries and zoom box are E4, E5, E6, E11, F5, D6, E3; Search and Replace results list, Update settings, empty search, About copyrights, Messages Dismiss/Clear and Global settings view rows were fixed in the same pass | UI | Medium | 11 |
 | 33 | Attribute pop-ups and mode panel found by W10 group 5 ([window-parity.md](window-parity.md)): Arrow Size panel with absolute / multiple-of-line-width values and thickness (W10-31), Integer zoom and Return-sets for number pop-ups (W10-32), Align distribute/abut and isometric grid choices (W10-33), indicator buttons without their feature yet (Num Copies / X / Y D10, Tangent/Norm Length D4, Dimension line D10) | Unchanged function otherwise; stepping, ranges and tooltips fixed in W10 |
-| 34 | Functions the xfig function audit found missing with no task ([source-audit.md](source-audit.md), S4): Shift-click cycling and highlight (S4-1 ✅), paste with the mouse (S4-2 ✅), relative picture paths on Save As (S4-3), a cursor per mode (S4-4 ✅), box ↔ arc-box convert (S4-5 ✅), shape factor on the canvas (S4-6), Shift/Ctrl variants in the mouse indicator (S4-7); 447 missing and 66 partial functions in all, each under its task | UI/Editing | Medium | 20 |
+| 34 | Functions the xfig function audit found missing with no task ([source-audit.md](source-audit.md), S4): Shift-click cycling and highlight (S4-1 ✅), paste with the mouse (S4-2 ✅), relative picture paths on Save As (S4-3), a cursor per mode (S4-4 ✅), box ↔ arc-box convert (S4-5 ✅), shape factor on the canvas (S4-6 ✅), Shift/Ctrl variants in the mouse indicator (S4-7); 447 missing and 66 partial functions in all, each under its task | UI/Editing | Medium | 20 |
 
 ## Revision history
 

@@ -487,6 +487,27 @@ pub fn tool_button(b: egui::PointerButton, m: egui::Modifiers) -> Option<Button>
     }
 }
 
+/// Whether the modifiers hold xfig's Ctrl key: Ctrl itself on Windows and
+/// Linux, Cmd on macOS (Ctrl+click is the right button there).
+pub fn ctrl_modifier(os: crate::platform::Os, m: &egui::Modifiers) -> bool {
+    match os {
+        crate::platform::Os::Mac => m.mac_cmd,
+        _ => m.ctrl,
+    }
+}
+
+/// The button of a press with xfig's Ctrl key held: Alt+left is the middle
+/// button as ever, Ctrl itself no longer turns left into right.
+fn physical_button(b: egui::PointerButton, m: &egui::Modifiers) -> Option<Button> {
+    match b {
+        egui::PointerButton::Primary if m.alt => Some(Button::Middle),
+        egui::PointerButton::Primary => Some(Button::Left),
+        egui::PointerButton::Secondary => Some(Button::Right),
+        egui::PointerButton::Middle => Some(Button::Middle),
+        _ => None,
+    }
+}
+
 fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect) {
     const BUTTONS: [egui::PointerButton; 3] = [
         egui::PointerButton::Primary,
@@ -518,6 +539,7 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
         )
     });
     let over = hover.is_some_and(|p| rect.contains(p)) && resp.hovered();
+    let os = crate::platform::Os::current(ui.ctx());
     let view0 = app.engine.view;
     let to_fig = |p: Pos2| view0.to_fig(Point::new(f64::from(p.x - rect.min.x), f64::from(p.y - rect.min.y)));
     app.canvas.cursor = if over { hover.map(to_fig) } else { None };
@@ -558,18 +580,33 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
     if let Some(p) = hover {
         let fp = to_fig(p);
         for (phys, m) in pressed.iter().filter(|_| over) {
-            let Some(button) = tool_button(*phys, *m) else { continue };
+            // xfig's Ctrl key (zoom box, shape factor); Cmd on macOS, where
+            // Ctrl+click is the right button.
+            let ctrl = ctrl_modifier(os, m);
+            let Some(button) = (if ctrl {
+                physical_button(*phys, m)
+            } else {
+                tool_button(*phys, *m)
+            }) else {
+                continue;
+            };
             if button != Button::Right {
                 app.canvas.pressing = Some((*phys, button));
             }
-            send(
-                app,
+            let ev = if ctrl {
+                ToolEvent::Ctrl {
+                    pos: fp,
+                    button,
+                    shift: m.shift,
+                }
+            } else {
                 ToolEvent::Press {
                     pos: fp,
                     button,
                     shift: m.shift,
-                },
-            );
+                }
+            };
+            send(app, ev);
         }
         if (over || app.canvas.pressing.is_some()) && app.canvas.last_sent != Some(fp) {
             app.canvas.last_sent = Some(fp);

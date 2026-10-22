@@ -51,6 +51,7 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/engine/src/cmd/measure.rs: xfig src/e_measure.c, src/u_geom.c, src/w_msgpanel.c
 - crates/engine/src/cmd/picture.rs: xfig src/e_edit.c (picture panel)
 - crates/engine/src/cmd/tangent.rs: xfig src/e_tangent.c, src/u_smartsearch.c, src/u_geom.c
+- crates/engine/src/cmd/sfactor.rs: xfig src/e_edit.c
 - crates/engine/src/coords.rs: xfig src/w_keyboard.c
 - crates/engine/src/dimline.rs: xfig src/d_line.c, src/u_create.c, src/e_scale.c, src/f_util.c, src/w_msgpanel.c
 - crates/engine/src/links.rs: xfig src/u_list.c, src/u_elastic.c
@@ -65,6 +66,7 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/engine/src/tools/mod.rs: xfig src/w_modepanel.c, src/d_*.c, src/e_*.c, src/w_canvas.c
 - crates/engine/src/tools/measure.rs: xfig src/e_measure.c, src/u_search.c
 - crates/engine/src/tools/tangent.rs: xfig src/e_tangent.c, src/u_smartsearch.c
+- crates/engine/src/tools/ctrl.rs: xfig src/w_zoom.c, src/w_canvas.c, src/e_edit.c, src/u_search.c
 - crates/format/src/fig_write.rs: xfig src/f_save.c
 - crates/geom/src/intersect.rs: xfig src/w_intersect.c
 - crates/model/src/object.rs: xfig src/u_redraw.c, src/f_save.c

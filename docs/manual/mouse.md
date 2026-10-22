@@ -15,7 +15,7 @@ xfig is drawn with three mouse buttons, and almost every mode gives each button 
 |---|---|---|---|
 | Three-button mouse | left button | middle button (wheel click) | right button |
 | Two-button mouse | left button | left and right buttons together (a chord) | right button |
-| Keyboard substitute | click | Alt+click | Ctrl+click |
+| Keyboard substitute | click | Alt+click | (none: Ctrl+click is xfig's zoom, see [Zoom and view](view.md)) |
 
 The chord works like xfig on a two-button mouse: press both buttons within a moment of each other.
 <!-- os: end -->
@@ -37,6 +37,10 @@ Holding Shift changes a button's job in some modes. While Shift is held, the mou
 - Box, Arc-box, Picture: Shift+middle draws a square from its centre.
 - Edit attributes: Shift+middle shows the object's comments in the message panel.
 - Locate object: in every mode that picks an object (Move, Copy, Delete, Edit, Flip, Rotate, Scale, Convert, Align, Break, Open compound, Join/Split, Chop, Add/Move/Delete point, Update, Arrow, Open/close, Tangent), Shift+left click highlights the object under the pointer (its markers turn filled) without acting on it. Shift+left again highlights the next object under the pointer, front to back; after the last one the pointer position itself is marked, and the next Shift+left starts over. A click without Shift then acts on the highlighted object, not on the front-most one. This is how you reach an object hidden under another one. Changing the mode forgets the highlight. Shift+middle and Shift+right do nothing in these modes (xfig locates with every button; RustFig keeps them free for later use), except that in Edit Shift+middle keeps xfig's own meaning, showing the object's comments.
+
+## Ctrl
+
+Holding Ctrl (Cmd on macOS) shows xfig's zoom functions: left starts a zoom box, middle pans to the origin, right unzooms ([Zoom and view](view.md)). With Ctrl and Shift in the editing modes, a click on a spline point changes its shape factor ([Splines](draw-splines.md)).
 
 ## Markers and tags
 

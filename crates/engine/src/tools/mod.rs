@@ -9,6 +9,7 @@
 // wording) and src/w_canvas.c (snapping) (xfig licence, see LICENSE-xfig).
 
 mod chop;
+mod ctrl;
 mod cursor;
 pub use cursor::CursorKind;
 mod compound;
@@ -421,10 +422,28 @@ impl Button {
 /// A pointer or key event in Fig coordinates.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ToolEvent {
-    Press { pos: Point, button: Button, shift: bool },
-    Move { pos: Point },
-    Release { pos: Point, button: Button },
-    DoubleClick { pos: Point },
+    Press {
+        pos: Point,
+        button: Button,
+        shift: bool,
+    },
+    /// Ctrl (Cmd on macOS) held with a press: xfig's zoom box, pan to origin
+    /// and unzoom, and with Shift the shape factor of a spline point.
+    Ctrl {
+        pos: Point,
+        button: Button,
+        shift: bool,
+    },
+    Move {
+        pos: Point,
+    },
+    Release {
+        pos: Point,
+        button: Button,
+    },
+    DoubleClick {
+        pos: Point,
+    },
     Key(Key),
     Text(String),
 }
@@ -549,6 +568,8 @@ pub(crate) enum ToolState {
     /// Edit > Paste: the cut buffer follows the pointer (xfig's `paste`);
     /// `nw` is the top-left corner of the buffer's objects.
     Paste { cursor: Point, nw: Point },
+    /// Ctrl+left: the zoom box (xfig's `init_zoombox_drawing`).
+    ZoomBox { start: Point, cursor: Point },
     MoveObjs {
         ids: Vec<ObjectId>,
         start: Point,
@@ -803,6 +824,12 @@ impl Engine {
     fn dispatch(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
         if let ToolState::Paste { cursor, nw } = self.tool_state {
             return self.paste_event(ev, cursor, nw);
+        }
+        if let ToolState::ZoomBox { start, .. } = self.tool_state {
+            return self.zoom_box_event(ev, start);
+        }
+        if let ToolEvent::Ctrl { pos, button, shift } = ev {
+            return self.ctrl_press(pos, button, shift);
         }
         if let ToolEvent::Press { pos, button, shift } = ev {
             if self.locate_mode() && pos.is_finite() {
@@ -2646,7 +2673,32 @@ impl Engine {
     /// `draw_shift_mousefun_canvas`). xfig's other Shift label belongs to a
     /// function not ported yet: "Locate Object" (S4-1).
     pub fn mouse_hints_with(&self, shift: bool) -> MouseHints {
+        self.mouse_hints_for(shift, false)
+    }
+
+    /// [`Engine::mouse_hints_with`] with Ctrl (Cmd on macOS) too: Ctrl alone
+    /// shows the zoom functions, Ctrl+Shift in the editing modes the shape
+    /// factor ones (xfig's `canvas_selected` key cases).
+    pub fn mouse_hints_for(&self, shift: bool, ctrl: bool) -> MouseHints {
         let mut h = self.mouse_hints_plain();
+        if matches!(self.tool_state, ToolState::ZoomBox { .. }) {
+            return h;
+        }
+        if ctrl {
+            let edit = !self.tool.is_drawing() && self.tool != ToolKind::Select;
+            if !shift {
+                h.left = "Zoom area";
+                h.middle = "Pan to origin";
+                h.right = "Unzoom";
+                return h;
+            }
+            if edit {
+                h.left = "More approx";
+                h.middle = "Cycle shapes";
+                h.right = "More interp";
+                return h;
+            }
+        }
         if shift {
             let (l, m, r) = self.shift_hints();
             for (slot, s) in [(&mut h.left, l), (&mut h.middle, m), (&mut h.right, r)] {
@@ -2697,6 +2749,7 @@ impl Engine {
         };
         let tool = self.tool;
         match &self.tool_state {
+            ToolState::ZoomBox { .. } => h("final point", "", "cancel"),
             ToolState::Paste { .. } => h("place object", "place at orig posn", "cancel paste"),
             ToolState::Points {
                 pts,
@@ -2878,6 +2931,13 @@ impl Engine {
                 all.push(*cursor);
                 ov.guides.push(all);
                 ov.handles = pts.clone();
+            }
+            ToolState::ZoomBox { start, cursor } => {
+                let mut c = Rect::new(*start, *cursor).corners().to_vec();
+                if let Some(f) = c.first().copied() {
+                    c.push(f);
+                }
+                ov.guides.push(c);
             }
             ToolState::Paste { cursor, nw } => {
                 for o in self.clipboard() {

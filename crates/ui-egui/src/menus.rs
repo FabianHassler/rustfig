@@ -1219,6 +1219,10 @@ mod tests {
             "scripting API; the Depth box of the attribute panel",
         ),
         ("arrange.align_to", "the Align tool's right button"),
+        (
+            "spline.shape_factor",
+            "Ctrl+Shift+click on a spline point (Cmd+Shift on macOS) in the editing modes",
+        ),
         ("picture.", "the picture edit panel's buttons; scripting API"),
         (
             "export.",

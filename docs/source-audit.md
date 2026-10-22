@@ -403,7 +403,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_edit.c` | `paste_panel_key` | 5649 | replaced | key bindings and clipboard paste in edit panel text fields: egui text fields (platform keys) |  |
 | `e_edit.c` | `get_clipboard` | 5659 | replaced | key bindings and clipboard paste in edit panel text fields: egui text fields (platform keys) |  |
 | `e_edit.c` | `text_transl` | 5688 | replaced | key bindings and clipboard paste in edit panel text fields: egui text fields (platform keys) |  |
-| `e_edit.c` | `change_sfactor` | 5701 | missing | Ctrl+Shift+click on a spline point in an edit mode changes its shape factor on the canvas (left: more approximating, middle: cycle shapes, right: more interpolating) | S4-6 |
+| `e_edit.c` | `change_sfactor` | 5701 | ported | `tools/ctrl.rs` `change_sfactor` + command `spline.shape_factor` (Ctrl+Shift+click; Cmd+Shift on macOS) | |
 | `e_edit.c` | `check_depth` | 5757 | ported | compound panel (`dialogs.rs` edit panel: corner, size, depth range and Collapse Depths, per-text fields; `object.set_geometry` for the compound, `object.set_attributes` `texts`) | W10-15 |
 | `e_edit.c` | `check_thick` | 5771 | replaced | Xt panel helpers: egui widgets (`xy_row`, `coord`, `arrow_rows`, drag values) |  |
 | `e_edit.c` | `push_apply_button` | 5792 | replaced | Xt panel helpers: egui widgets (`xy_row`, `coord`, `arrow_rows`, drag values) |  |
@@ -1391,7 +1391,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_canvas.c` | `setup_canvas` | 220 | replaced | canvas events (`canvas.rs`, `input.rs`): expose, init, actions, input dispatch and keystrokes feed `Engine::tool_event` |  |
 | `w_canvas.c` | `get_input` | 231 | replaced | canvas events (`canvas.rs`, `input.rs`): expose, init, actions, input dispatch and keystrokes feed `Engine::tool_event` |  |
 | `w_canvas.c` | `process_keystroke` | 270 | replaced | canvas events (`canvas.rs`, `input.rs`): expose, init, actions, input dispatch and keystrokes feed `Engine::tool_event` |  |
-| `w_canvas.c` | `canvas_selected` | 327 | partial | button and motion handling ported (snap, Alt+right = middle, wheel pans, arrows pan); missing: Ctrl+click zoom (E3), Ctrl+Shift+click changes a spline point's shape factor in edit modes (S4-6), the full-window crosshair (resource `crosshair`, E9), coordinates typed on the keyboard panel (D10) | S4-6, E3, E9, D10 |
+| `w_canvas.c` | `canvas_selected` | 327 | partial | button and motion handling ported (snap, Alt+right = middle, wheel pans, arrows pan, Ctrl+click zoom, Ctrl+Shift+click shape factor); missing: the full-window crosshair (resource `crosshair`, E9), coordinates typed on the keyboard panel (D10) | E9, D10 |
 | `w_canvas.c` | `clear_canvas` | 662 | not needed | clearing the X window |  |
 | `w_canvas.c` | `clear_region` | 678 | not needed | clearing the X window |  |
 | `w_canvas.c` | `get_canvas_clipboard` | 685 | partial | text paste: the system clipboard pastes into the text tool through egui text events; middle-button paste of the primary selection is not | E10 |
@@ -2213,13 +2213,13 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_util.c` | `InstallScroll` | 1979 | not needed | X scroll-wheel handlers on widgets |  |
 | `w_util.c` | `InstallScrollParent` | 1996 | not needed | X scroll-wheel handlers on widgets |  |
 | `w_util.c` | `_installscroll` | 2002 | not needed | X scroll-wheel handlers on widgets |  |
-| `w_zoom.c` | `zoom_selected` | 66 | missing | zoom box: drag a rectangle to zoom into it | E3 |
+| `w_zoom.c` | `zoom_selected` | 66 | ported | `tools/ctrl.rs` zoom box (Ctrl+left, Cmd on macOS), command `view.zoom_box`, rubber box in the overlay | |
 | `w_zoom.c` | `unzoom` | 101 | partial | Unzoom (back to the previous view) exists as zoom out only; the previous-view semantics are D11 | D11 |
-| `w_zoom.c` | `my_box` | 108 | missing | zoom box: drag a rectangle to zoom into it | E3 |
-| `w_zoom.c` | `elastic_mybox` | 117 | missing | zoom box: drag a rectangle to zoom into it | E3 |
-| `w_zoom.c` | `init_zoombox_drawing` | 123 | missing | zoom box: drag a rectangle to zoom into it | E3 |
-| `w_zoom.c` | `do_zoom` | 150 | missing | zoom box: drag a rectangle to zoom into it | E3 |
-| `w_zoom.c` | `cancel_zoom` | 188 | missing | zoom box: drag a rectangle to zoom into it | E3 |
+| `w_zoom.c` | `my_box` | 108 | ported | `tools/ctrl.rs` zoom box (Ctrl+left, Cmd on macOS), command `view.zoom_box`, rubber box in the overlay | |
+| `w_zoom.c` | `elastic_mybox` | 117 | ported | `tools/ctrl.rs` zoom box (Ctrl+left, Cmd on macOS), command `view.zoom_box`, rubber box in the overlay | |
+| `w_zoom.c` | `init_zoombox_drawing` | 123 | ported | `tools/ctrl.rs` zoom box (Ctrl+left, Cmd on macOS), command `view.zoom_box`, rubber box in the overlay | |
+| `w_zoom.c` | `do_zoom` | 150 | ported | `tools/ctrl.rs` zoom box (Ctrl+left, Cmd on macOS), command `view.zoom_box`, rubber box in the overlay | |
+| `w_zoom.c` | `cancel_zoom` | 188 | ported | `tools/ctrl.rs` zoom box (Ctrl+left, Cmd on macOS), command `view.zoom_box`, rubber box in the overlay | |
 | `xfigmain.c` | `xfigmain` | 624 | ported | as main.c: `engine::cmdline` | S3 |
 | `xfigmain.c` | `setup_visual` | 1626 | not needed | as main.c: X visual and colormap set-up |  |
 | `xfigmain.c` | `make_cut_buf_name` | 1744 | not needed | as main.c: X cut-buffer property name (the clipboard is in memory, E7 for the system clipboard) |  |

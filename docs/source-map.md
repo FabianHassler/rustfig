@@ -157,7 +157,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_rulers.c` | 1479 | rulers and units box | `ui-egui/rulers`, `view.set_scale` | ported: tick tables, labels, marker, ruler buttons, units box, Unit menu | — |
 | `w_snap.c`, `w_intersect.c` | 2.8 k | Snap menu (object snaps); intersections for Chop | `engine/snap.rs`, `snap.*` commands, `geom/intersect.rs` | ported (curves on flattened outlines instead of the quartic solver) | — |
 | `w_keyboard.c` | 518 | type coordinates for the next point | — | partial: `tool.point` and `coords.rs` ported (D10); the entry box and history missing | D10 |
-| `w_zoom.c` | 202 | zoom panel | `cmd/view` | missing: zoom box, unzoom semantics (S4) | E3, D11 |
+| `w_zoom.c` | 202 | zoom panel | `cmd/view`, `tools/ctrl.rs` | zoom box (E3) done; unzoom is 100 % (previous-view semantics D11) | D11 |
 | `w_grid.c` | 238 | grid drawing | canvas | ported (S4) | — |
 | `w_canvas.c` | 1218 | canvas input, key bindings, compose key | `ui-egui/canvas`, `menus::pan_keys`, `menus::Compose`, `rustfig_text::compose` (CompKeyDB) | own; partial: Ctrl+click zoom, shape factor on the canvas, crosshair (S4) | E3, S4-6, E9 |
 | `w_cursor.c` | 144 | cursors per mode | canvas | partial: one cursor (S4) | S4-4 |

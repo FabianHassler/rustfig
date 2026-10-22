@@ -65,7 +65,7 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside: on mac
 | Left/Right/Home/End while typing | move the caret | ✅ |
 | Wheel / Shift+wheel | pan vertically / horizontally | ✅ |
 | Ctrl+wheel | zoom | ✅ |
-| Ctrl+left/middle/right | zoom area / pan to origin / unzoom | ❌ E3 (zoom box) |
+| Ctrl+left/middle/right | zoom area / pan to origin / unzoom | ✅ E3 (Cmd on macOS); Ctrl+Shift+click shape factor ✅ S4-6 |
 | Alt+wheel up/down | pop up the drawing/editing mode menus | ✅ (`panels::mode_popup`; closes on a mode, Escape, a click elsewhere or the wheel the other way) |
 | Ctrl-K | keyboard coordinate entry panel (`w_keyboard.c`) | ✅ Edit > Enter point… (Ctrl+K; PhysCtrl+K with xfig's keys), D10 |
 | Meta (Compose) alone, then two keys | compose characters (`CompKeyDB`, 97 sequences) | ✅ (`rustfig_text::compose`); on macOS Option's own dead keys work too |

@@ -58,6 +58,29 @@ pub(super) fn commands() -> Vec<Command> {
             },
         },
         Command {
+            id: "view.zoom_box",
+            label: "Zoom to box",
+            menu: "",
+            shortcut: "",
+            params: "{\"x1\", \"y1\", \"x2\", \"y2\": two opposite corners of the box (Fig units)}  — zoom so that the box fills the canvas, its top-left corner at the canvas's top-left (xfig's zoom box: Ctrl+left click, then drag or click the opposite corner; on macOS Cmd+click). A box with no width or no height is ignored",
+            mutates: false,
+            enabled: always,
+            run: |e, p| {
+                let a = Point::new(num(p, "x1")?, num(p, "y1")?);
+                let b = Point::new(num(p, "x2")?, num(p, "y2")?);
+                if !(a.is_finite() && b.is_finite()) {
+                    return Err(EngineError::bad_params("box corners must be finite"));
+                }
+                let (w, h) = ((a.x - b.x).abs(), (a.y - b.y).abs());
+                if w >= 1.0 && h >= 1.0 {
+                    let px = (e.view.size.0.max(10.0) / w).min(e.view.size.1.max(10.0) / h);
+                    e.view.zoom = (px / crate::view::BASE_PX_PER_FIG).clamp(crate::view::MIN_ZOOM, crate::view::MAX_ZOOM);
+                    e.view.origin = Point::new(a.x.min(b.x), a.y.min(b.y));
+                }
+                Ok(json!({"zoom": e.view.zoom}))
+            },
+        },
+        Command {
             id: "view.zoom_set",
             label: "Set zoom",
             menu: "",

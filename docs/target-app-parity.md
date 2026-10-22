@@ -25,7 +25,7 @@ the score.
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
 | Export | 12 | 68 % | `sld`, texts with `\ooo` octal escapes (raw bytes, B11 pass 5), the audit's hardening passes (B11), arrows on pie-wedge arcs and file arc centres lost on the way through the Fig writer (gap #25), picture frames and GIF transparency (gap #26) | 90 |
 | Text | 10 | 55 % | character map, LaTeX special-text export, exact PostScript font metrics, compose keys, spell check | 60 |
-| View & navigation | 8 | 96 % | zoom box (Ctrl+left), pan to origin with Ctrl+middle | 4 |
+| View & navigation | 8 | 100 % | — (zoom box, pan to origin and unzoom with Ctrl+click done 2026-10-22, E3) | 0 |
 | Undo | 4 | 100 % | — | 0 |
 | Libraries | 5 | 0 % | library browser and placement | 40 |
 | Printing | 5 | 10 % | print dialog and printer output | 30 |
@@ -35,6 +35,7 @@ the score.
 
 ## Evidence of what ships
 
+- Zoom box and shape factor (E3, S4-6; View & navigation 96 → 100 %): `crates/engine/src/tools/ctrl.rs` (`ToolEvent::Ctrl`, `ToolState::ZoomBox`), commands `view.zoom_box` (`cmd/view.rs`) and `spline.shape_factor` (`cmd/sfactor.rs`), `Engine::mouse_hints_for`, canvas `ctrl_modifier` (`crates/ui-egui/src/canvas.rs`); tests `crates/engine/tests/ctrl_click.rs`, `ui_smoke.rs` `xfig_ctrl_key_is_cmd_on_macos`.
 - Open compound and join/split (D1, D2): `crates/model/src/lib.rs` (`Document::open`), `crates/engine/src/cmd/{compound,joinsplit}.rs`, `tools/compound.rs`; tests `crates/engine/tests/{open_compound,join_split}.rs`.
 - Chop (D3): `crates/engine/src/cmd/chop.rs` (command `object.chop`), `crates/engine/src/tools/chop.rs` (mode `tool.chop`), intersection math in `crates/geom/src/intersect.rs`; tests `crates/engine/tests/chop.rs`.
 - S4-1, S4-2, S4-4, S4-5 (scores unchanged): `Engine::locate_press` and `ToolKind::locates` (Shift+click Locate Object, `crates/engine/src/tools/mod.rs`), `ToolState::Paste` (paste follows the pointer), `crates/engine/src/tools/cursor.rs` (cursor per mode), `object.convert` box/arc-box and spline-kind memory; tests `crates/engine/tests/s4_locate_paste_convert.rs`.
@@ -83,6 +84,7 @@ the score.
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-22 | ≈65 % | E3, S4-6: zoom box and shape factor on the canvas; View & navigation 96 → 100 % (rounds to the same overall). |
 | 2026-10-22 | ≈65 % | W10-28, W10-2: bundled manual (27 topics, search, Help > RustFig Manual, `help.open`); evidence only, score unchanged. |
 | 2026-10-22 | ≈65 % | D7: Angle Geom (Attributes 80 → 83 %). |
 | 2026-10-22 | ≈65 % | D14: smart links extended (Attributes 83 → 84 %). |

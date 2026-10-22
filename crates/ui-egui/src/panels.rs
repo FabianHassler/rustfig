@@ -815,8 +815,9 @@ const INDICATOR_SIZE: egui::Vec2 = vec2(290.0, 46.0);
 /// right labels sit next to the ticks (xfig centres them in the free space).
 pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
     // xfig shows the Shift meanings while Shift is held (S4-7).
-    let shift = ui.input(|i| i.modifiers.shift);
-    let mut h = app.engine.mouse_hints_with(shift);
+    let os = crate::platform::Os::current(ui.ctx());
+    let (shift, ctrl) = ui.input(|i| (i.modifiers.shift, crate::canvas::ctrl_modifier(os, &i.modifiers)));
+    let mut h = app.engine.mouse_hints_for(shift, ctrl);
     if let Some((left, middle, right)) = app.hint_shown {
         h = rustfig_engine::MouseHints {
             left,

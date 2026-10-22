@@ -206,6 +206,22 @@ fn global_settings_switch_the_xfig_shortcuts() {
 }
 
 #[test]
+fn xfig_ctrl_key_is_cmd_on_macos() {
+    use egui::Modifiers;
+    use rustfig_ui_egui::canvas::ctrl_modifier;
+    use rustfig_ui_egui::platform::Os;
+    let cmd = Modifiers::COMMAND | Modifiers::MAC_CMD;
+    assert!(ctrl_modifier(Os::Mac, &cmd));
+    assert!(
+        !ctrl_modifier(Os::Mac, &Modifiers::CTRL),
+        "Ctrl+click is the right button on a Mac"
+    );
+    assert!(ctrl_modifier(Os::Linux, &Modifiers::CTRL));
+    assert!(ctrl_modifier(Os::Windows, &Modifiers::CTRL));
+    assert!(!ctrl_modifier(Os::Linux, &Modifiers::NONE));
+}
+
+#[test]
 fn two_button_mapping() {
     use egui::{Modifiers, PointerButton};
     use rustfig_engine::Button;

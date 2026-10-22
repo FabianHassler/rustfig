@@ -19,6 +19,7 @@ mod outline;
 pub mod picture;
 mod prefs;
 mod region;
+mod sfactor;
 pub(crate) mod shape;
 pub(crate) mod tangent;
 
@@ -84,6 +85,7 @@ pub fn all() -> &'static [Command] {
         v.extend(compound::commands());
         v.extend(chop::commands());
         v.extend(tangent::commands());
+        v.extend(sfactor::commands());
         v.extend(measure::commands());
         v.extend(dimline::commands());
         v.extend(joinsplit::commands());
