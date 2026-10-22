@@ -22,6 +22,9 @@ pub enum Attr {
     Depth,
     RotnAngle,
     NumSides,
+    NumCopies,
+    NumXCopies,
+    NumYCopies,
     VAlign,
     HAlign,
     AngleGeom,
@@ -39,6 +42,7 @@ pub enum Attr {
     ArrowType,
     ArrowSize,
     BoxRadius,
+    DimLine,
     TextJust,
     TextAngle,
     TextFlags,
@@ -48,13 +52,16 @@ pub enum Attr {
 }
 
 impl Attr {
-    pub const ORDER: [Attr; 29] = [
+    pub const ORDER: [Attr; 33] = [
         Attr::Zoom,
         Attr::Grid,
         Attr::PointPosn,
         Attr::Depth,
         Attr::RotnAngle,
         Attr::NumSides,
+        Attr::NumCopies,
+        Attr::NumXCopies,
+        Attr::NumYCopies,
         Attr::VAlign,
         Attr::HAlign,
         Attr::AngleGeom,
@@ -72,6 +79,7 @@ impl Attr {
         Attr::ArrowType,
         Attr::ArrowSize,
         Attr::BoxRadius,
+        Attr::DimLine,
         Attr::TextJust,
         Attr::TextAngle,
         Attr::TextFlags,
@@ -89,6 +97,10 @@ impl Attr {
             Attr::Depth => ("Depth", ""),
             Attr::RotnAngle => ("Rotn", "Angle"),
             Attr::NumSides => ("Num", "Sides"),
+            Attr::NumCopies => ("Num", "Copies"),
+            Attr::NumXCopies => ("Num X", "Copies"),
+            Attr::NumYCopies => ("Num Y", "Copies"),
+            Attr::DimLine => ("Dimension line", ""),
             Attr::VAlign => ("Vert", "Align"),
             Attr::HAlign => ("Horiz", "Align"),
             Attr::AngleGeom => ("Angle", "Geom"),
@@ -153,7 +165,14 @@ impl Attr {
     /// 104, 170), narrowed where the label and the value need less (W19).
     fn width(self) -> f32 {
         match self {
-            Attr::Zoom | Attr::Depth | Attr::NumSides | Attr::TextStep => 58.0,
+            Attr::Zoom
+            | Attr::Depth
+            | Attr::NumSides
+            | Attr::NumCopies
+            | Attr::NumXCopies
+            | Attr::NumYCopies
+            | Attr::TextStep => 58.0,
+            Attr::DimLine => 104.0,
             // A two-line label beside a 32-point picture.
             Attr::Grid
             | Attr::PointPosn
@@ -191,6 +210,9 @@ impl Attr {
                 | Attr::Depth
                 | Attr::RotnAngle
                 | Attr::NumSides
+                | Attr::NumCopies
+                | Attr::NumXCopies
+                | Attr::NumYCopies
                 | Attr::LineWidth
                 | Attr::LineStyle
                 | Attr::ArrowSize
@@ -227,7 +249,7 @@ pub fn attributes_for(tool: ToolKind) -> Vec<Attr> {
             &[MIN2, GEOM, LINE1]
         }
         ToolKind::SplineApprox | ToolKind::SplineInterp | ToolKind::XSpline => &[MIN2, GEOM, LINE1, ARROWS],
-        ToolKind::Polyline => &[MIN2, GEOM, LINE1, ARROWS],
+        ToolKind::Polyline => &[MIN2, GEOM, LINE1, ARROWS, &[DimLine]],
         ToolKind::Box => &[MIN2, LINE1],
         ToolKind::ArcBox => &[MIN2, LINE1, &[BoxRadius]],
         ToolKind::RegularPolygon => &[MIN2, LINE1, &[NumSides]],
@@ -239,12 +261,14 @@ pub fn attributes_for(tool: ToolKind) -> Vec<Attr> {
         ToolKind::Scale | ToolKind::FlipV | ToolKind::FlipH => &[MIN2, &[SmartLinks]],
         ToolKind::MovePoint => &[MIN2, GEOM, &[SmartLinks]],
         ToolKind::AddPoint => &[MIN2, GEOM],
-        ToolKind::Move | ToolKind::Copy => &[MIN2, &[SmartLinks]],
+        ToolKind::Move => &[MIN2, &[SmartLinks]],
+        // `I_COPY`: array copies (Copy middle button).
+        ToolKind::Copy => &[MIN2, &[NumXCopies, NumYCopies, SmartLinks]],
         ToolKind::Align => &[&[HAlign, VAlign, SmartLinks]],
         ToolKind::Update => &[TEXT0, LINE1, ARROWS, &[BoxRadius, ArcType]],
         // RustFig's own Select tool edits with the same attributes as Update.
         ToolKind::Select => &[MIN2, TEXT0, LINE1, ARROWS, &[BoxRadius, ArcType]],
-        ToolKind::RotateCcw | ToolKind::RotateCw => &[MIN2, &[RotnAngle, SmartLinks]],
+        ToolKind::RotateCcw | ToolKind::RotateCw => &[MIN2, &[RotnAngle, NumCopies, SmartLinks]],
         ToolKind::Arrow => &[&[LineWidth, ArrowType, ArrowSize]],
         // xfig's `I_TANGENT`: the line attributes, the arrows and the length.
         ToolKind::Tangent => &[MIN2, LINE1, ARROWS, &[TangentLength]],
@@ -288,6 +312,8 @@ pub fn attribute_panel(app: &mut App, ui: &mut Ui, tk: &Tokens) {
         }
     });
     ui.add_space(2.0);
+    crate::dimline_panel::show(app, ui.ctx());
+    crate::point_entry::show(app, ui.ctx());
     app.hint_override = hovered.then_some(BUTTON_HINTS);
 }
 
@@ -460,10 +486,17 @@ fn button(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) -> bool {
         } else {
             egui::PopupCloseBehavior::CloseOnClickOutside
         };
-        egui::Popup::from_toggle_button_response(&resp)
-            .align(egui::RectAlign::TOP_START)
-            .close_behavior(close)
-            .show(|ui| choice_panel(app, ui, tk, a));
+        if a == Attr::DimLine {
+            // xfig's `popup_dimline_panel`: a window of its own.
+            if resp.clicked() {
+                crate::dimline_panel::open(ui.ctx());
+            }
+        } else {
+            egui::Popup::from_toggle_button_response(&resp)
+                .align(egui::RectAlign::TOP_START)
+                .close_behavior(close)
+                .show(|ui| choice_panel(app, ui, tk, a));
+        }
     }
     let hovered = resp.hovered();
     resp.on_hover_text(format!(
@@ -482,13 +515,13 @@ fn units(app: &App) -> rustfig_model::Units {
 }
 
 /// Colours offered: Default, the 32 standard colours, then user colours.
-fn colors(doc: &Document) -> Vec<i32> {
+pub(crate) fn colors(doc: &Document) -> Vec<i32> {
     let mut v: Vec<i32> = (-1..32).collect();
     v.extend(doc.colors.iter().map(|c| c.number));
     v
 }
 
-fn color_name(c: i32) -> String {
+pub(crate) fn color_name(c: i32) -> String {
     if c < 0 {
         "Default".to_string()
     } else if let Some(n) = usize::try_from(c)
@@ -501,7 +534,7 @@ fn color_name(c: i32) -> String {
     }
 }
 
-fn color32(doc: &Document, c: i32) -> Color32 {
+pub(crate) fn color32(doc: &Document, c: i32) -> Color32 {
     let rgb = doc.rgb(ColorRef(c));
     Color32::from_rgb(rgb.r, rgb.g, rgb.b)
 }
@@ -563,6 +596,10 @@ fn value_text(app: &App, a: Attr) -> String {
         Attr::Depth => ind.depth.to_string(),
         Attr::RotnAngle => format!("{:.1}", ind.rotate_angle),
         Attr::NumSides => ind.sides.to_string(),
+        Attr::NumCopies => ind.num_copies.to_string(),
+        Attr::NumXCopies => ind.num_x_copies.to_string(),
+        Attr::NumYCopies => ind.num_y_copies.to_string(),
+        Attr::DimLine => "settings".to_string(),
         Attr::VAlign => ind.align_v.clone(),
         Attr::HAlign => ind.align_h.clone(),
         Attr::PenColor => color_name(ind.pen_color),
@@ -625,7 +662,7 @@ fn value_text(app: &App, a: Attr) -> String {
     }
 }
 
-fn font_name(font: i32, postscript: bool) -> String {
+pub(crate) fn font_name(font: i32, postscript: bool) -> String {
     if postscript {
         rustfig_text::ps_font_display_name(font).to_string()
     } else {
@@ -656,6 +693,19 @@ fn step(app: &mut App, a: Attr, dir: i32) {
         ),
         Attr::RotnAngle => set(app, json!({"rotate_angle": step_rotn(ind.rotate_angle, dir)})),
         Attr::NumSides => set(app, json!({"sides": (ind.sides as i64 + i64::from(dir)).clamp(3, 200)})),
+        Attr::NumCopies => set(
+            app,
+            json!({"num_copies": (i64::from(ind.num_copies) + i64::from(dir)).clamp(1, 99)}),
+        ),
+        Attr::NumXCopies => set(
+            app,
+            json!({"num_x_copies": (i64::from(ind.num_x_copies) + i64::from(dir)).clamp(0, 99)}),
+        ),
+        Attr::NumYCopies => set(
+            app,
+            json!({"num_y_copies": (i64::from(ind.num_y_copies) + i64::from(dir)).clamp(0, 99)}),
+        ),
+        Attr::DimLine => {}
         Attr::VAlign => {
             if let Some(v) = cycle(&V_ALIGN, ind.align_v.as_str(), dir) {
                 set(app, json!({ "align_v": v }));
@@ -1621,12 +1671,17 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
         Attr::Depth
         | Attr::RotnAngle
         | Attr::NumSides
+        | Attr::NumCopies
+        | Attr::NumXCopies
+        | Attr::NumYCopies
         | Attr::LineWidth
         | Attr::BoxRadius
         | Attr::TextAngle
         | Attr::FontSize
         | Attr::TangentLength
         | Attr::TextStep => value_entry(app, ui, &ind, a),
+        // Opens its own window instead of a pop-up (`dimline_panel`).
+        Attr::DimLine => {}
     }
 }
 
@@ -1642,6 +1697,9 @@ fn value_entry(app: &mut App, ui: &mut Ui, ind: &Indicator, a: Attr) {
         ),
         Attr::RotnAngle => ("rotate_angle", ind.rotate_angle, -360.0, 360.0, 1.0),
         Attr::NumSides => ("sides", ind.sides as f64, 3.0, 200.0, 1.0),
+        Attr::NumCopies => ("num_copies", f64::from(ind.num_copies), 1.0, 99.0, 1.0),
+        Attr::NumXCopies => ("num_x_copies", f64::from(ind.num_x_copies), 0.0, 99.0, 1.0),
+        Attr::NumYCopies => ("num_y_copies", f64::from(ind.num_y_copies), 0.0, 99.0, 1.0),
         Attr::LineWidth => ("thickness", f64::from(ind.thickness), 0.0, 500.0, 1.0),
         Attr::BoxRadius => ("box_radius", f64::from(ind.box_radius), 0.0, 1000.0, 1.0),
         Attr::TextAngle => ("text_angle", ind.text_angle, -360.0, 360.0, 1.0),
@@ -1650,7 +1708,16 @@ fn value_entry(app: &mut App, ui: &mut Ui, ind: &Indicator, a: Attr) {
         Attr::TangentLength => ("tangent_length", ind.tangent_length, 0.0, 20.0, 0.05),
         _ => return,
     };
-    let integer = matches!(a, Attr::Depth | Attr::NumSides | Attr::LineWidth | Attr::BoxRadius);
+    let integer = matches!(
+        a,
+        Attr::Depth
+            | Attr::NumSides
+            | Attr::NumCopies
+            | Attr::NumXCopies
+            | Attr::NumYCopies
+            | Attr::LineWidth
+            | Attr::BoxRadius
+    );
     let mut dv = egui::DragValue::new(&mut v).range(lo..=hi).speed(speed);
     if integer {
         dv = dv.fixed_decimals(0);

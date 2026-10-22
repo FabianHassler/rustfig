@@ -52,7 +52,7 @@ Key `L`. An open line of straight segments (the same buttons as Polygon).
 - Middle, “freehand” to start a freehand line; “final point” ends the line.
 - Right, “single point”: before a line is started, enters a single dot; while drawing, cancels.
 - Shift+left, “del point”: removes the last point. Shift+middle, “finish here”: ends the line at the last point placed, without adding the clicked point.
-- Shift+left before the first point, “dimension line”: starts a dimension line (xfig's trigger, `d_line.c`). Click its second point (“final point”; Shift+left removes the first). The result is a compound of the line with arrows at both ends, a box in the middle with the length in the figure's units and scale, and a tick at each end; the compound's comment reads “Dimension line: 2.0 in”. The settings are the indicator's `dimline` group (thickness, arrows, ticks, box and text colours, font, decimals, fixed text). When the line is scaled, or an open dimension line is closed again after its main line was edited, the length, box and ticks are recomputed (`object.recompute_dimension`). Command `shape.dimension_line`.
+- Shift+left before the first point, “dimension line”: starts a dimension line (xfig's trigger, `d_line.c`). Click its second point (“final point”; Shift+left removes the first). The result is a compound of the line with arrows at both ends, a box in the middle with the length in the figure's units and scale, and a tick at each end; the compound's comment reads “Dimension line: 2.0 in”. The settings are the indicator's `dimline` group, edited in the “Dimension line” button's window (shown in Polyline mode; xfig's “Dimension Line Settings”: line thickness, style and colour; box thickness and colour; the two arrow types, length and width; ticks and their thickness; text font, size and colour; actual length or fixed text; decimals; OK stores, Cancel drops) — (thickness, arrows, ticks, box and text colours, font, decimals, fixed text). When the line is scaled, or an open dimension line is closed again after its main line was edited, the length, box and ticks are recomputed (`object.recompute_dimension`). Command `shape.dimension_line`.
 
 ### Lengths while drawing
 
@@ -61,6 +61,8 @@ While a line, box, circle or ellipse is being drawn, or an object moved or copie
 ### Typed coordinates
 
 Command `tool.point` (xfig's keyboard point entry) gives the next point as text instead of a click: `1.5, 2` (ruler units; fractions as `1-1/2`), `r1, r-0.5` or `r1 0.5` (relative to the current point: the last point of the line, or where the operation started), `a` for absolute, or polar `2<30` (length and angle in degrees, `2<0.5p` in multiples of pi, `2<1r` in radians; from the current point). The point is used exactly, without snapping.
+
+In the app, **Edit > Enter point…** (Ctrl+K; physical Ctrl+K with xfig's keys) opens a small window with a text field: type a point and press Enter for the left button (the Left, Middle and Right buttons act as that mouse button), and the point goes to the current mode. A bad entry shows its error and stays in the field; the last ten entries are listed under History, click one to type it again.
 
 ## Box
 

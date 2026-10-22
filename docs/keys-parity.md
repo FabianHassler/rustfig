@@ -38,7 +38,7 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside: on mac
 | Ctrl-Y | Named styles | — | ❌ E6 (style manager) |
 | Meta-B | Show page borders | `view.toggle_page_border` | ✅ |
 | Meta-Y | Show balloons (tooltips) | `app.toggle_balloons` | ✅ |
-| Meta-L | Show line lengths while drawing | — | ❌ D10 (the length display) |
+| Meta-L | Show line lengths while drawing | Alt+L (xfig keys) | ✅ View > Show line lengths (D10) |
 | Meta-F/E/V/H | Pop up the File/Edit/View/Help menu | `menus::XFIG_MENU_KEYS` | ✅ |
 | o | Open compound mode (`ModeOpenCompound`) | `tool.open_compound` | ✅ (D1) |
 | j | Join/Split mode (`ModeJoinSplit`) | `tool.join_split` | ✅ (D2) |
@@ -66,7 +66,7 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside: on mac
 | Ctrl+wheel | zoom | ✅ |
 | Ctrl+left/middle/right | zoom area / pan to origin / unzoom | ❌ E3 (zoom box) |
 | Alt+wheel up/down | pop up the drawing/editing mode menus | ✅ (`panels::mode_popup`; closes on a mode, Escape, a click elsewhere or the wheel the other way) |
-| Ctrl-K | keyboard coordinate entry panel (`w_keyboard.c`) | ❌ D11 |
+| Ctrl-K | keyboard coordinate entry panel (`w_keyboard.c`) | ✅ Edit > Enter point… (Ctrl+K; PhysCtrl+K with xfig's keys), D10 |
 | Meta (Compose) alone, then two keys | compose characters (`CompKeyDB`, 97 sequences) | ✅ (`rustfig_text::compose`); on macOS Option's own dead keys work too |
 | F18, F20 (Sun Paste keys) | paste | ↻ Ctrl/Cmd+V |
 

@@ -19,8 +19,8 @@ the score.
 
 | Area | Weight | Score | Missing | Hours |
 |------|-------:|------:|---------|------:|
-| Drawing modes | 12 | 88 % | library objects; dimension-line settings panel (the line itself is done, D10); typed-coordinate entry box (command `tool.point` works); xfig's click-to-close rules for some shapes | 14 |
-| Editing modes | 12 | 81 % | buttons for Num Copies / Num X / Num Y Copies in the indicator (the options work, D10), figure comments from Edit mode, copy to library | 18 |
+| Drawing modes | 12 | 90 % | library objects; fractions of an inch in dimension-line lengths; xfig's click-to-close rules for some shapes | 14 |
+| Editing modes | 12 | 83 % | figure comments from Edit mode, copy to library | 18 |
 | Attributes / indicator | 10 | 84 % | colour editor UI, copy counts | 20 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
 | Export | 12 | 68 % | `sld`, texts with `\ooo` octal escapes (raw bytes, B11 pass 5), the audit's hardening passes (B11), arrows on pie-wedge arcs and file arc centres lost on the way through the Fig writer (gap #25), picture frames and GIF transparency (gap #26) | 90 |

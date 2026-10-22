@@ -39,7 +39,7 @@ Key `Shift+F`. As above but mirrors about a vertical line.
 Key `Shift+R`. Rotates the clicked object by the indicator's Rotn Angle (set in the indicator panel).
 
 - Left, “rotate object”.
-- Middle, “copy & rotate”: rotates a copy. The indicator's Num Copies (`num_copies`, 1 to 99) makes that many copies, the first turned by the angle, the second by twice the angle and so on, all about the same centre.
+- Middle, “copy & rotate”: rotates a copy. The indicator's Num Copies (`num_copies`, 1 to 99) makes that many copies, the first turned by the angle, the second by twice the angle and so on, all about the same centre. The Num Copies button appears in the rotate modes (xfig's `I_ROTATE`): click it for a number field, right button increases, middle button decreases.
 - Right, “set center”: marks the point to rotate about; right again, “unset center”, removes it. Without a centre the object turns about its own middle.
 - Shift reverses the direction.
 
@@ -52,3 +52,7 @@ No key (xfig key Ctrl+R). As above, the other way.
 - Right, “set center” / “unset center”.
 
 The Object menu has the same operations for the selection (Transform and Arrange): rotate, flip, align, distribute, and the depth order (bring to front, send to back).
+
+## Array copies
+
+In Copy mode the indicator shows **Num X Copies** and **Num Y Copies** (0 to 99; right button increases, middle decreases). With the middle button (“copy array”) the copy is placed in that many columns and rows, spaced by the distance between the two clicked points.

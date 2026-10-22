@@ -65,7 +65,8 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | Current file name | ✅ next to the menus, marks unsaved changes | — |
 | Message panel | ✅ under the menus; click for the history | — |
 | Mouse-function indicator | ✅ xfig's layout and wording, each button's current function per tool and state, checked against the tools by a test | — |
-| Three-button mouse semantics | ✅ xfig's per-mode functions, the only scheme (W16); Alt+click = middle, Ctrl+click = right. Dimension lines (Shift+left), rotate/flip anchor and centre (right button), array copy (middle while placing), align to canvas (middle) work (D10); missing: the indicator buttons for Num Copies / Num X / Num Y Copies and the dimension-line panel | D |
+| Indicator: Num Copies (rotate), Num X / Num Y Copies (copy), Dimension line (Polyline; settings window as `popup_dimline_panel`); typed-coordinate window (Edit > Enter point…, Ctrl+K); View > Show line lengths | ✅ (D10) | D |
+| Three-button mouse semantics | ✅ xfig's per-mode functions, the only scheme (W16); Alt+click = middle, Ctrl+click = right. Dimension lines (Shift+left), rotate/flip anchor and centre (right button), array copy (middle while placing), align to canvas (middle) work (D10); the indicator buttons and the dimension-line panel too | D |
 | Units box | ✅ "1cm = 1.00cm" in the ruler corner; left: pan to origin, right: Unit menu (ruler units, figure unit, scale) | — |
 | Top and side rulers | ✅ ported from `w_rulers.c` | — |
 | Depth panel: checkboxes, drag-toggle, All On/Off/Toggle, Gray/Blank | ✅ with object counts; hidden depths can't be picked; export of active layers only | — |

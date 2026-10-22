@@ -132,6 +132,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}  — xfig's tooltips (Alt+Y, macOS Option+Y)",
     },
     UiCommand {
+        id: "app.keyboard_entry",
+        label: "Enter point…",
+        shortcut: "Ctrl+K",
+        params: "{}  — xfig's keyboard panel: type the next point's coordinates (opens the window; tool.point does the work)",
+    },
+    UiCommand {
         id: "app.commands",
         label: "Command List",
         shortcut: "",
@@ -230,6 +236,7 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.search" => app.dialogs.search.open = true,
         "app.document_settings" => app.dialogs.settings_open = true,
         "app.unit_panel" => app.unit_panel_open = true,
+        "app.keyboard_entry" => app.point_entry.open(),
         "app.global_settings" => app.dialogs.global_open = true,
         "app.toggle_xfig_keys" => {
             app.xfig_keys = p.get("on").and_then(Value::as_bool).unwrap_or(!app.xfig_keys);
@@ -320,6 +327,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Global settings...", "app.global_settings"),
                 Cmd("Set units...", "app.unit_panel"),
                 Own("app.document_settings"),
+                Own("app.keyboard_entry"),
                 Sep,
                 Own("edit.redo"),
                 Own("edit.delete"),
@@ -347,7 +355,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Show page borders", "view.toggle_page_border"),
                 Cmd("Show depth manager", "app.toggle_depths"),
                 Cmd("Show info balloons", "app.toggle_balloons"),
-                Missing("Show line lengths", "Alt+L", "D10"),
+                Cmd("Show line lengths", "view.toggle_lengths"),
                 Missing("Show vertex numbers", "", "—"),
                 Missing("Autorefresh mode", "", "—"),
                 Own("view.toggle_grid"),
@@ -437,7 +445,7 @@ pub const XFIG_MENU_LETTERS: &[(&str, char, &str)] = &[
     ("View", 'd', "app.toggle_depths"),
     ("View", 'n', "app.toggle_balloons"),
     ("View", 'b', "view.toggle_page_border"),
-    ("View", 'l', "Show line lengths"),
+    ("View", 'l', "view.toggle_lengths"),
     ("View", 'a', "Autorefresh mode"),
     ("Help", 'x', "help.open"),
     ("Help", 'c', "app.commands"),
@@ -557,6 +565,7 @@ const MENU_LABELS: &[(&str, &str)] = &[
     ("view.toggle_page_border", "Show page borders"),
     ("app.toggle_depths", "Show depth manager"),
     ("view.toggle_grid", "Show grid"),
+    ("view.toggle_lengths", "Show line lengths"),
     ("app.document_settings", "Units and Page…"),
 ];
 
@@ -567,6 +576,7 @@ fn checked(app: &App, id: &str) -> Option<bool> {
         "app.toggle_depths" => Some(app.show_depths),
         "app.toggle_balloons" => Some(app.show_balloons),
         "view.toggle_grid" => Some(app.engine.indicator.grid.is_some()),
+        "view.toggle_lengths" => Some(app.engine.show_lengths),
         "app.toggle_xfig_keys" => Some(app.xfig_keys),
         _ => None,
     }
@@ -805,6 +815,8 @@ pub const XFIG_KEYS: &[(&str, &str)] = &[
     ("PhysCtrl+Z", "view.zoom_fit"),
     ("Alt+B", "view.toggle_page_border"),
     ("Alt+Y", "app.toggle_balloons"),
+    ("Alt+L", "view.toggle_lengths"),
+    ("PhysCtrl+K", "app.keyboard_entry"),
     ("Alt+G", "app.global_settings"),
     ("Shift+U", "app.unit_panel"),
     ("Shift+Z", "view.zoom_in"),

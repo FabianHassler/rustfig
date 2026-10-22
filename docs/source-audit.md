@@ -1698,22 +1698,22 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_indpanel.c` | `nval_panel_cancel` | 2128 | partial | number pop-ups (zoom, depth, angle, sides, step, ...) exist; Integer zoom check box and Return-sets are W10-32 | W10-32 |
 | `w_indpanel.c` | `nval_panel_set` | 2135 | partial | number pop-ups (zoom, depth, angle, sides, step, ...) exist; Integer zoom check box and Return-sets are W10-32 | W10-32 |
 | `w_indpanel.c` | `popup_nval_panel` | 2153 | partial | number pop-ups (zoom, depth, angle, sides, step, ...) exist; Integer zoom check box and Return-sets are W10-32 | W10-32 |
-| `w_indpanel.c` | `popup_dimline_panel` | 2399 | missing | dimension-line attribute panel and indicator button (style, arrows, font, colours, preview) | D10 |
-| `w_indpanel.c` | `line_color_select` | 2878 | missing | dimension-line attribute panel and indicator button (style, arrows, font, colours, preview) | D10 |
-| `w_indpanel.c` | `box_color_select` | 2893 | missing | dimension-line attribute panel and indicator button (style, arrows, font, colours, preview) | D10 |
-| `w_indpanel.c` | `text_color_select` | 2908 | missing | dimension-line attribute panel and indicator button (style, arrows, font, colours, preview) | D10 |
-| `w_indpanel.c` | `set_fixed_text` | 2923 | missing | dimension-line attribute panel and indicator button (style, arrows, font, colours, preview) | D10 |
-| `w_indpanel.c` | `set_actual_text` | 2939 | missing | dimension-line attribute panel and indicator button (style, arrows, font, colours, preview) | D10 |
-| `w_indpanel.c` | `draw_cur_dimline` | 2955 | missing | dimension-line attribute panel and indicator button (style, arrows, font, colours, preview) | D10 |
-| `w_indpanel.c` | `dimline_style_select` | 3060 | missing | dimension-line attribute panel and indicator button (style, arrows, font, colours, preview) | D10 |
-| `w_indpanel.c` | `left_arrow_type_select` | 3075 | missing | dimension-line attribute panel and indicator button (style, arrows, font, colours, preview) | D10 |
-| `w_indpanel.c` | `right_arrow_type_select` | 3089 | missing | dimension-line attribute panel and indicator button (style, arrows, font, colours, preview) | D10 |
-| `w_indpanel.c` | `dimline_font_popup` | 3105 | missing | dimension-line attribute panel and indicator button (style, arrows, font, colours, preview) | D10 |
-| `w_indpanel.c` | `dimline_set_font_image` | 3113 | missing | dimension-line attribute panel and indicator button (style, arrows, font, colours, preview) | D10 |
-| `w_indpanel.c` | `dimline_panel_preview` | 3126 | missing | dimension-line attribute panel and indicator button (style, arrows, font, colours, preview) | D10 |
-| `w_indpanel.c` | `dimline_panel_ok` | 3177 | missing | dimension-line attribute panel and indicator button (style, arrows, font, colours, preview) | D10 |
-| `w_indpanel.c` | `dimline_panel_cancel` | 3187 | missing | dimension-line attribute panel and indicator button (style, arrows, font, colours, preview) | D10 |
-| `w_indpanel.c` | `get_dimline_values` | 3200 | missing | dimension-line attribute panel and indicator button (style, arrows, font, colours, preview) | D10 |
+| `w_indpanel.c` | `popup_dimline_panel` | 2399 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
+| `w_indpanel.c` | `line_color_select` | 2878 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
+| `w_indpanel.c` | `box_color_select` | 2893 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
+| `w_indpanel.c` | `text_color_select` | 2908 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
+| `w_indpanel.c` | `set_fixed_text` | 2923 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
+| `w_indpanel.c` | `set_actual_text` | 2939 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
+| `w_indpanel.c` | `draw_cur_dimline` | 2955 | partial | `ui-egui/dimline_panel.rs` has no example-line preview yet | D10 |
+| `w_indpanel.c` | `dimline_style_select` | 3060 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
+| `w_indpanel.c` | `left_arrow_type_select` | 3075 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
+| `w_indpanel.c` | `right_arrow_type_select` | 3089 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
+| `w_indpanel.c` | `dimline_font_popup` | 3105 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
+| `w_indpanel.c` | `dimline_set_font_image` | 3113 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
+| `w_indpanel.c` | `dimline_panel_preview` | 3126 | partial | `ui-egui/dimline_panel.rs` has no example-line preview yet | D10 |
+| `w_indpanel.c` | `dimline_panel_ok` | 3177 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
+| `w_indpanel.c` | `dimline_panel_cancel` | 3187 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
+| `w_indpanel.c` | `get_dimline_values` | 3200 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `update_current_settings` | 3227 | replaced | attribute (indicator) panel `ui-egui/attributes` and `engine::Indicator`: construction, update, pixmaps and button selection |  |
 | `w_indpanel.c` | `dec_choice` | 3239 | replaced | choice pop-ups (line style, join, cap, arrow, fill, justification, ...) are egui pop-ups; live values and hover preview are W10-34, W10-35 |  |
 | `w_indpanel.c` | `inc_choice` | 3247 | replaced | choice pop-ups (line style, join, cap, arrow, fill, justification, ...) are egui pop-ups; live values and hover preview are W10-34, W10-35 |  |
@@ -1722,9 +1722,9 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_indpanel.c` | `inc_arrowsize` | 3302 | partial | Arrow Size panel: width and length only; absolute/multiple-of-width modes and thickness are not there | W10-31 |
 | `w_indpanel.c` | `dec_arrowsize` | 3310 | partial | Arrow Size panel: width and length only; absolute/multiple-of-width modes and thickness are not there | W10-31 |
 | `w_indpanel.c` | `show_arrowsize` | 3318 | partial | Arrow Size panel: width and length only; absolute/multiple-of-width modes and thickness are not there | W10-31 |
-| `w_indpanel.c` | `inc_dimline` | 3354 | missing | dimension-line attribute panel and indicator button (style, arrows, font, colours, preview) | D10 |
-| `w_indpanel.c` | `dec_dimline` | 3362 | missing | dimension-line attribute panel and indicator button (style, arrows, font, colours, preview) | D10 |
-| `w_indpanel.c` | `show_dimline` | 3370 | missing | dimension-line attribute panel and indicator button (style, arrows, font, colours, preview) | D10 |
+| `w_indpanel.c` | `inc_dimline` | 3354 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
+| `w_indpanel.c` | `dec_dimline` | 3362 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
+| `w_indpanel.c` | `show_dimline` | 3370 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `dec_linewidth` | 3449 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `inc_linewidth` | 3456 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `show_linewidth` | 3463 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
@@ -1774,12 +1774,12 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_indpanel.c` | `inc_numcopies` | 4373 | ported | indicator `num_copies` (field; panel button open) | D10 |
 | `w_indpanel.c` | `dec_numcopies` | 4380 | ported | indicator `num_copies` (field; panel button open) | D10 |
 | `w_indpanel.c` | `show_numcopies` | 4387 | ported | indicator `num_copies` (field; panel button open) | D10 |
-| `w_indpanel.c` | `inc_numxcopies` | 4404 | missing | Number of copies, and X and Y copies for array copy | D10 |
-| `w_indpanel.c` | `dec_numxcopies` | 4411 | missing | Number of copies, and X and Y copies for array copy | D10 |
-| `w_indpanel.c` | `show_numxcopies` | 4418 | missing | Number of copies, and X and Y copies for array copy | D10 |
-| `w_indpanel.c` | `inc_numycopies` | 4436 | missing | Number of copies, and X and Y copies for array copy | D10 |
-| `w_indpanel.c` | `dec_numycopies` | 4443 | missing | Number of copies, and X and Y copies for array copy | D10 |
-| `w_indpanel.c` | `show_numycopies` | 4450 | missing | Number of copies, and X and Y copies for array copy | D10 |
+| `w_indpanel.c` | `inc_numxcopies` | 4404 | ported | indicator buttons Num Copies (rotate), Num X / Num Y Copies (copy) in `ui-egui/attributes.rs`; `indicator.set` | D10 |
+| `w_indpanel.c` | `dec_numxcopies` | 4411 | ported | indicator buttons Num Copies (rotate), Num X / Num Y Copies (copy) in `ui-egui/attributes.rs`; `indicator.set` | D10 |
+| `w_indpanel.c` | `show_numxcopies` | 4418 | ported | indicator buttons Num Copies (rotate), Num X / Num Y Copies (copy) in `ui-egui/attributes.rs`; `indicator.set` | D10 |
+| `w_indpanel.c` | `inc_numycopies` | 4436 | ported | indicator buttons Num Copies (rotate), Num X / Num Y Copies (copy) in `ui-egui/attributes.rs`; `indicator.set` | D10 |
+| `w_indpanel.c` | `dec_numycopies` | 4443 | ported | indicator buttons Num Copies (rotate), Num X / Num Y Copies (copy) in `ui-egui/attributes.rs`; `indicator.set` | D10 |
+| `w_indpanel.c` | `show_numycopies` | 4450 | ported | indicator buttons Num Copies (rotate), Num X / Num Y Copies (copy) in `ui-egui/attributes.rs`; `indicator.set` | D10 |
 | `w_indpanel.c` | `inc_zoom` | 4476 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom is W10-32 |  |
 | `w_indpanel.c` | `dec_zoom` | 4506 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom is W10-32 |  |
 | `w_indpanel.c` | `zoom_focus` | 4523 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom is W10-32 |  |
@@ -1832,13 +1832,13 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_intersect.c` | `intersect_text_handler` | 1338 | ported | `engine/snap.rs` (W4): intersection of every pair of object kinds, on flattened outlines instead of the analytic ellipse solvers |  |
 | `w_intersect.c` | `intersect_arc_handler` | 1364 | ported | `engine/snap.rs` (W4): intersection of every pair of object kinds, on flattened outlines instead of the analytic ellipse solvers |  |
 | `w_intersect.c` | `snap_intersect_handler` | 1390 | ported | `engine/snap.rs` (W4): intersection of every pair of object kinds, on flattened outlines instead of the analytic ellipse solvers |  |
-| `w_keyboard.c` | `next_keyboard_history` | 62 | missing | type coordinates of the next point in a keyboard panel (with history) | D10 |
-| `w_keyboard.c` | `prior_keyboard_history` | 74 | missing | type coordinates of the next point in a keyboard panel (with history) | D10 |
-| `w_keyboard.c` | `ignore_keyboard_input` | 87 | missing | type coordinates of the next point in a keyboard panel (with history) | D10 |
+| `w_keyboard.c` | `next_keyboard_history` | 62 | ported | `ui-egui/point_entry.rs`: window on Ctrl+K (Edit > Enter point) running `tool.point`, with history | D10 |
+| `w_keyboard.c` | `prior_keyboard_history` | 74 | ported | `ui-egui/point_entry.rs`: window on Ctrl+K (Edit > Enter point) running `tool.point`, with history | D10 |
+| `w_keyboard.c` | `ignore_keyboard_input` | 87 | ported | `ui-egui/point_entry.rs`: window on Ctrl+K (Edit > Enter point) running `tool.point`, with history | D10 |
 | `w_keyboard.c` | `handle_keyboard_input` | 94 | ported | `tool.point` and `coords::parse_coordinate` | D10 |
-| `w_keyboard.c` | `create_keyboard_panel` | 417 | missing | type coordinates of the next point in a keyboard panel (with history) | D10 |
-| `w_keyboard.c` | `popup_keyboard_panel` | 487 | missing | type coordinates of the next point in a keyboard panel (with history) | D10 |
-| `w_keyboard.c` | `popdown_keyboard_panel` | 512 | missing | type coordinates of the next point in a keyboard panel (with history) | D10 |
+| `w_keyboard.c` | `create_keyboard_panel` | 417 | ported | `ui-egui/point_entry.rs`: window on Ctrl+K (Edit > Enter point) running `tool.point`, with history | D10 |
+| `w_keyboard.c` | `popup_keyboard_panel` | 487 | ported | `ui-egui/point_entry.rs`: window on Ctrl+K (Edit > Enter point) running `tool.point`, with history | D10 |
+| `w_keyboard.c` | `popdown_keyboard_panel` | 512 | ported | `ui-egui/point_entry.rs`: window on Ctrl+K (Edit > Enter point) running `tool.point`, with history | D10 |
 | `w_layers.c` | `reset_layers` | 102 | ported | depth panel `panels::depth_panel`, `depth.*` commands: layers, counts, toggle, sweep, all on/off, show depths |  |
 | `w_layers.c` | `reset_depths` | 111 | ported | depth panel `panels::depth_panel`, `depth.*` commands: layers, counts, toggle, sweep, all on/off, show depths |  |
 | `w_layers.c` | `init_depth_panel` | 120 | ported | depth panel `panels::depth_panel`, `depth.*` commands: layers, counts, toggle, sweep, all on/off, show depths |  |

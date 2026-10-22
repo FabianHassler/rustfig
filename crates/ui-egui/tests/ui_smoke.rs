@@ -1644,3 +1644,80 @@ fn picture_panel_rows_relink_and_drop() {
     assert_eq!(info["exists"], true);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// D10: Num Copies in the rotate modes, Num X/Y Copies in Copy mode (xfig's
+/// `I_ROTATE` / `I_COPY`); the right button increases.
+#[test]
+fn copy_count_buttons_follow_xfigs_modes() {
+    let mut h = harness(app());
+    h.state_mut().engine.set_tool(ToolKind::RotateCcw);
+    h.run_steps(2);
+    assert!(h.query_by_label_contains("Num X Copies").is_none());
+    h.get_by_label("Num Copies: 1").click_secondary();
+    h.run_steps(2);
+    assert_eq!(h.state().engine.indicator.num_copies, 2);
+    h.state_mut().engine.set_tool(ToolKind::Copy);
+    h.run_steps(2);
+    assert!(h.query_by_label_contains("Num Copies").is_none());
+    h.get_by_label("Num X Copies: 0").click_secondary();
+    h.get_by_label("Num Y Copies: 0").click_secondary();
+    h.run_steps(2);
+    assert_eq!(h.state().engine.indicator.num_x_copies, 1);
+    assert_eq!(h.state().engine.indicator.num_y_copies, 1);
+}
+
+/// D10: the Dimension line button (Polyline mode) opens xfig's settings
+/// panel; OK stores the edited settings in the indicator, Cancel drops them.
+#[test]
+fn dimension_line_panel_edits_the_indicator() {
+    let mut h = harness(app());
+    assert!(h.query_by_label_contains("Dimension line").is_none());
+    h.state_mut().engine.set_tool(ToolKind::Polyline);
+    h.run_steps(2);
+    assert!(h.state().engine.indicator.dimline.ticks);
+    for (button, expect) in [("Cancel", true), ("OK", false)] {
+        h.get_by_label("Dimension line: settings").click();
+        h.run_steps(3);
+        h.get_by_label("Show ticks").click();
+        h.run_steps(2);
+        h.get_by_label(button).click();
+        h.run_steps(3);
+        assert_eq!(h.state().engine.indicator.dimline.ticks, expect, "{button}");
+        assert!(h.query_by_label("Show ticks").is_none());
+    }
+}
+
+/// D10: the typed-coordinates window (Ctrl+K) runs `tool.point` and keeps a
+/// history; a bad entry shows its error and stays in the field.
+#[test]
+fn typed_coordinates_window_enters_points() {
+    let mut h = harness(app());
+    h.state_mut().engine.set_tool(ToolKind::Polyline);
+    h.state_mut().run("app.keyboard_entry", json!({}));
+    h.run_steps(3);
+    let field = h.get_by_label("Point entry");
+    field.type_text("1,1");
+    h.run_steps(2);
+    h.key_press(egui::Key::Enter);
+    h.run_steps(3);
+    assert_eq!(h.state().point_entry.history, vec!["1,1".to_string()]);
+    assert!(h.state().point_entry.text.is_empty());
+    let field = h.get_by_label("Point entry");
+    field.type_text("nonsense");
+    h.run_steps(2);
+    h.key_press(egui::Key::Enter);
+    h.run_steps(3);
+    assert!(!h.state().point_entry.error.is_empty());
+    assert_eq!(h.state().point_entry.history.len(), 1);
+}
+
+/// D10: View > Show line lengths toggles the lengths shown while drawing.
+#[test]
+fn show_line_lengths_is_a_view_entry() {
+    let mut h = harness(app());
+    h.get_by_label("View").click();
+    h.run_steps(8);
+    h.get_by_label_contains("Show line lengths").click();
+    h.run_steps(3);
+    assert!(h.state().engine.show_lengths);
+}

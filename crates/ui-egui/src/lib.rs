@@ -15,12 +15,14 @@ pub mod clipboard;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod control;
 pub mod dialogs;
+pub mod dimline_panel;
 pub mod help;
 pub mod inject;
 pub mod input;
 pub mod menus;
 pub mod mode_icons;
 pub mod panels;
+pub mod point_entry;
 pub mod rulers;
 pub mod settings;
 pub mod theme;
@@ -105,6 +107,8 @@ pub struct App {
     pub open_menu: Option<&'static str>,
     /// The Unit/Scale settings window (right click on the units box).
     pub unit_panel_open: bool,
+    /// The typed-coordinates window (xfig's keyboard panel, Ctrl+K).
+    pub point_entry: point_entry::PointEntry,
     /// The override set during the previous frame, shown in this one.
     pub hint_shown: Option<(&'static str, &'static str, &'static str)>,
     pub pending: Option<Pending>,
@@ -153,6 +157,7 @@ impl App {
             input_waiters: Vec::new(),
             hint_shown: None,
             unit_panel_open: false,
+            point_entry: point_entry::PointEntry::default(),
             xfig_keys: true,
             open_menu: None,
             pending: None,
