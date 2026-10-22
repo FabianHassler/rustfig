@@ -799,10 +799,14 @@ impl Engine {
         }
         if let ToolEvent::Press { pos, button, shift } = ev {
             if self.locate_mode() && pos.is_finite() {
-                // xfig's own Shift meaning in Edit: the middle button shows
-                // an object's comments.
+                // Shift+left locates (xfig: any button). Shift+middle and
+                // Shift+right are left free for later use (decided
+                // 2026-10-22), except xfig's own Shift+middle in Edit, which
+                // shows an object's comments.
                 if shift && !(self.tool == ToolKind::Edit && button == Button::Middle) {
-                    self.locate_press(pos);
+                    if button == Button::Left {
+                        self.locate_press(pos);
+                    }
                     return Ok(());
                 }
                 if let Some(Locate::Object(id)) = self.locate.take() {
@@ -2642,6 +2646,14 @@ impl Engine {
                     *slot = s;
                 }
             }
+            // In the locating modes Shift+middle and Shift+right do nothing
+            // (Edit's Shift+middle aside): their labels are blank.
+            if self.locate_mode() {
+                if self.tool != ToolKind::Edit {
+                    h.middle = "";
+                }
+                h.right = "";
+            }
         }
         h
     }
@@ -2657,10 +2669,8 @@ impl Engine {
             (ToolState::Idle, ToolKind::Select) => ("add/remove", "", ""),
             (ToolState::Idle, ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture) => ("", "square at center", ""),
             (ToolState::Idle, ToolKind::AreaMeasure) => ("", "", "reset to +-0"),
-            (ToolState::Idle, ToolKind::Edit) => ("locate object", "show comments", "locate object"),
-            (ToolState::Idle | ToolState::Chop { .. }, t) if t.locates() => {
-                ("locate object", "locate object", "locate object")
-            }
+            (ToolState::Idle, ToolKind::Edit) => ("locate object", "show comments", ""),
+            (ToolState::Idle | ToolState::Chop { .. }, t) if t.locates() => ("locate object", "", ""),
             _ => ("", "", ""),
         }
     }
@@ -3437,10 +3447,7 @@ mod tests {
         let mut e = Engine::new();
         e.set_tool(ToolKind::Chop);
         let h = e.mouse_hints_with(true);
-        assert_eq!(
-            (h.left, h.middle, h.right),
-            ("locate object", "locate object", "locate object")
-        );
+        assert_eq!((h.left, h.middle, h.right), ("locate object", "", ""));
         assert_eq!(e.mouse_hints_with(false).left, "Select axe object");
         // Shift+left removes the last point of a line being drawn.
         e.set_tool(ToolKind::Polyline);

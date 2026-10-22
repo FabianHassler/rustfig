@@ -14,7 +14,7 @@ Lines, polygons, boxes, rounded boxes, arcs, circles, ellipses, splines and comp
 
 ## Trim, split and extend
 
-Shift+click in Chop mode locates an object, as in every picking mode ([Mouse](mouse.md)), so Chop keeps xfig's three buttons only. RustFig's additions are commands:
+Shift+left in Chop mode locates an object, as in every picking mode ([Mouse](mouse.md)), so Chop keeps xfig's three buttons only. RustFig's additions are commands:
 
 - `object.trim` removes the piece you click, the part of the object between its crossings with the axe objects (or with every other object when no axe is chosen). The rest stays as separate pieces.
 - `object.split_at` cuts a line, polygon, arc or spline in two at a point; a closed figure is opened there.

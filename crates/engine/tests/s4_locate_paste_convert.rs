@@ -48,8 +48,12 @@ fn shift_click_cycles_through_overlapping_objects_and_a_plain_click_acts_on_the_
     assert_eq!(e.doc().objects.len(), before);
     let first = e.overlay().tagged.len();
     assert!(first > 0, "the located object's markers are filled");
-    // The hint says what Shift does.
-    assert_eq!(e.mouse_hints_with(true).left, "locate object");
+    // The hint says what Shift does; Shift+middle and Shift+right are free.
+    let h = e.mouse_hints_with(true);
+    assert_eq!((h.left, h.middle, h.right), ("locate object", "", ""));
+    press(&mut e, 0.0, 1500.0, Button::Middle, true);
+    press(&mut e, 0.0, 1500.0, Button::Right, true);
+    assert_eq!(e.doc().objects.len(), before, "Shift+middle/right do nothing");
     // Shift+click again: the next object; a third time: nothing found, the
     // cursor is marked.
     press(&mut e, 0.0, 1500.0, Button::Left, true);

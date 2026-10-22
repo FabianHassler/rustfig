@@ -41,7 +41,7 @@ Key `Shift+R`. Rotates the clicked object by the indicator's Rotn Angle (set in 
 - Left, “rotate object”.
 - Middle, “copy & rotate”: rotates a copy. The indicator's Num Copies (`num_copies`, 1 to 99) makes that many copies, the first turned by the angle, the second by twice the angle and so on, all about the same centre. The Num Copies button appears in the rotate modes (xfig's `I_ROTATE`): click it for a number field, right button increases, middle button decreases.
 - Right, “set center”: marks the point to rotate about; right again, “unset center”, removes it. Without a centre the object turns about its own middle.
-- Shift+click locates an object ([Mouse](mouse.md)); to turn the other way use Rotate clockwise.
+- Shift+left locates an object ([Mouse](mouse.md)); to turn the other way use Rotate clockwise.
 
 ## Rotate clockwise
 
