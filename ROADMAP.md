@@ -1,6 +1,6 @@
 # RustFig roadmap
 
-**Status (2026-10-22):** Stage **Alpha**. Overall xfig parity **≈65 %**
+**Status (2026-10-22):** Stage **Alpha**. Overall xfig parity **≈73 %**
 ([assessment](docs/target-app-parity.md)). The native app draws, edits,
 saves and exports. The web build compiles; it is not yet packaged or tested in a browser.
 
@@ -17,10 +17,10 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 
 | Measure | Value |
 |---------|-------|
-| Overall parity (weighted) | ≈65 % |
-| Commands (all reachable from the control channel and MCP) | 146 engine (incl. 42 tool modes) + 14 UI |
-| Interactive tools (xfig modes) | 42 |
-| Tests | 575 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
+| Overall parity (weighted) | ≈73 % |
+| Commands (all reachable from the control channel and MCP) | 214 engine (incl. 44 tool modes and "no mode") + 29 UI |
+| Interactive tools (xfig modes) | 44 (xfig's 43 + Trim/Split/Extend) |
+| Tests | 589 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 1.3–3.2, write 3.2 |
 | Export formats | all through fig2dev's ported drivers (`convert`): PDF, SVG, EPS, PNG, GIF, JPEG, TIFF, PPM, PCX, XBM, XPM, EPS+PDF pair, LaTeX box from its scene writers (PostScript without page layout yet); LaTeX picture, epic/eepic/eepicemu, PiCTeX, TeXtyl, tpic, pic, pstex/pdftex, pict2e, CGM, HPGL, DXF, MetaPost, METAFONT, ge, image map, Gerber, shape, TikZ, PSTricks, EMF, Tk/Perl-Tk from ported fig2dev drivers (every fig2dev language except `sld`); fig2dev's own suite 79 pass / 9 fail / 1 skipped |
 | Perf, 50k paths (render fit / hit test / open / edit + undo) | 260 ms / 0.1 ms / 20 ms / 0.9 ms |
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-22 | Recount: parity ≈65 → ≈73 % (Text 55 → 65 %, Settings & styles 15 → 75 %). Since the last entry: D5 measure modes, S3 command line, W10 panels (picture, compound, edit panel live, point table, export panel), D10 mode options, S4 (locate, paste, cursors, convert, shape factor, relative pictures, Digitize, Autorefresh, New window), E3 zoom box, D16 Trim mode, D17 Escape levels, E10 text editing, E4/E4b colours and pick from screen, E6 styles, D18 no selection layer (xfig's mode-first way). 214 engine commands, 589 tests. |
 | 2026-10-22 | W10-28, W10-2: the bundled, searchable, offline manual: 27 Markdown topics in `docs/manual/` compiled into the app (`crates/ui-egui/src/help.rs`: topic list, search, a small Markdown renderer, links between topics), opened by Help > RustFig Manual (xfig's Help `x`) and by the UI command `help.open` with `topic`; every mode has a section quoting the mouse indicator's words, tests fail when a mode is undocumented, a quote drifts or a link breaks. Help menu: RustFig Manual, command reference, About. |
 | 2026-10-22 | P1 (workflow ready, first run pending): `ci.yml` runs the gates on Linux, Windows and macOS (wasm check and perf budgets on Linux only, `RUSTFIG_SKIP_WASM` for the others, rust-cache per OS); `.gitattributes` forces LF. |
 | 2026-10-22 | D7: Angle Geom. The indicator button with xfig's six pictures (polyline, polygon, spline, move point and add point modes) and `indicator.set angle_geom`; unconstrained, latex line and arrow slopes, manhattan, mountain, mount-hattan constrain the next point on click and in the rubber band (ported from `u_elastic.c`, `u_geom.c`). Attributes 80 → 83 %. |

@@ -1,6 +1,6 @@
 # Target-app parity assessment: RustFig vs xfig 3.2.9
 
-**Status:** 2026-10-22 (E10: text editing on the canvas; Text score unchanged, evidence added); 2026-10-22 (W10-4, W10-8, W10-9, W10-10, W10-11: Export panel rows per language with preview, kept per language; new file on Open; `.bak` on save; Export 68 %, scores otherwise unchanged); 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: edit panel live, compound rows, point table, pictorial menus; Attributes evidence); 2026-10-22 (W10-16, W10-20: picture edit panel; scores unchanged); 2026-10-22 (D5: measure modes, Editing 80 → 81 %, 18 → 12 h); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: tangent/normal, Editing 79 → 80 %, 26 → 18 h); 2026-10-22 (D15: Chop extended, Editing 78 → 79 %; D15 was a new task, so the hours stay); 2026-10-22 (D14: smart links extended, Attributes 83 → 84 %; D14 was a new task, so the hours stay); 2026-10-22 (D7: Angle Geom, Attributes 80 → 83 %; D3: chop, Editing 75 → 78 %; D8: linked move, Attributes 77 → 80 %, 10 h less); 2026-10-21 (W16, W17: one mouse scheme and one layout, scores unchanged; save query for open compounds); 2026-10-21 (D1, D2: open compound and join/split, Editing 70 → 75 %); 2026-10-21 (B15: PDF/EPS pictures, Export 66 → 68 %, overall ≈65 %); 2026-10-21 (DD9: evidence paths after the dedup series; scores unchanged); 2026-10-18, overall **≈65 %** (B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk; G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
+**Status:** 2026-10-22 (recount after E4, E4b, E6, E10, D16–D18: Text 55 → 65 %, Settings & styles 15 → 75 %, overall ≈65 → ≈73 %, 413 → 379 h); 2026-10-22 (E10: text editing on the canvas; Text score unchanged, evidence added); 2026-10-22 (W10-4, W10-8, W10-9, W10-10, W10-11: Export panel rows per language with preview, kept per language; new file on Open; `.bak` on save; Export 68 %, scores otherwise unchanged); 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: edit panel live, compound rows, point table, pictorial menus; Attributes evidence); 2026-10-22 (W10-16, W10-20: picture edit panel; scores unchanged); 2026-10-22 (D5: measure modes, Editing 80 → 81 %, 18 → 12 h); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: tangent/normal, Editing 79 → 80 %, 26 → 18 h); 2026-10-22 (D15: Chop extended, Editing 78 → 79 %; D15 was a new task, so the hours stay); 2026-10-22 (D14: smart links extended, Attributes 83 → 84 %; D14 was a new task, so the hours stay); 2026-10-22 (D7: Angle Geom, Attributes 80 → 83 %; D3: chop, Editing 75 → 78 %; D8: linked move, Attributes 77 → 80 %, 10 h less); 2026-10-21 (W16, W17: one mouse scheme and one layout, scores unchanged; save query for open compounds); 2026-10-21 (D1, D2: open compound and join/split, Editing 70 → 75 %); 2026-10-21 (B15: PDF/EPS pictures, Export 66 → 68 %, overall ≈65 %); 2026-10-21 (DD9: evidence paths after the dedup series; scores unchanged); 2026-10-18, overall **≈65 %** (B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk; G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
 
 ## Methodology
 
@@ -24,14 +24,14 @@ the score.
 | Attributes / indicator | 10 | 87 % | copy counts; mix memory and lock of xfig's colour panel (not built, recent colours instead) | 6 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
 | Export | 12 | 68 % | `sld`, texts with `\ooo` octal escapes (raw bytes, B11 pass 5), the audit's hardening passes (B11), arrows on pie-wedge arcs and file arc centres lost on the way through the Fig writer (gap #25), picture frames and GIF transparency (gap #26) | 90 |
-| Text | 10 | 55 % | character map, LaTeX special-text export, exact PostScript font metrics, compose keys, spell check | 60 |
+| Text | 10 | 65 % | character map, LaTeX special-text export, exact PostScript font metrics, spell check (text editing on the canvas done 2026-10-22, E10) | 48 |
 | View & navigation | 8 | 100 % | — (zoom box, pan to origin and unzoom with Ctrl+click done 2026-10-22, E3) | 0 |
 | Undo | 4 | 100 % | — | 0 |
 | Libraries | 5 | 0 % | library browser and placement | 40 |
 | Printing | 5 | 10 % | print dialog and printer output | 30 |
-| Settings & styles | 5 | 15 % | settings persistence, recent files, style manager (E6: style families, `style.*` commands, Manage Styles window; evidence `cmd/styles.rs` tests, `manage_styles_window_*` smoke test), units dialog | 30 |
+| Settings & styles | 5 | 75 % | Unit/Scale panel details (W10-24), Global settings rows (W10-23) (preferences, recent files, styles with families E6, colours E4 done) | 8 |
 | Platforms | 7 | 50 % | Windows/Linux verification, web build and file I/O on the web | 40 |
-| **Overall** | 100 | **≈65 %** | | **413** |
+| **Overall** | 100 | **≈73 %** | | **379** |
 
 ## Evidence of what ships
 
@@ -87,6 +87,7 @@ the score.
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-22 | ≈73 % | Recount: Text 55 → 65 % (E10), Settings & styles 15 → 75 % (E1 persistence, recent files, E6 styles, E4 colours); the table had lagged behind. |
 | 2026-10-22 | ≈65 % | E3, S4-6: zoom box and shape factor on the canvas; View & navigation 96 → 100 % (rounds to the same overall). |
 | 2026-10-22 | ≈65 % | S4-3, S4-8, S4-9: Digitize (export line as data), relative picture names on Save As, Autorefresh mode, New window; evidence only, score unchanged. |
 | 2026-10-22 | ≈65 % | W10-28, W10-2: bundled manual (27 topics, search, Help > RustFig Manual, `help.open`); evidence only, score unchanged. |
