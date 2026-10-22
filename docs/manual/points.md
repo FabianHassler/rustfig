@@ -10,7 +10,7 @@ Key `Shift+M`.
 - Middle, “horiz/vert move”: the point moves only horizontally or vertically from where it was.
 - Right: cancels.
 
-The ends of an open line can be constrained with [Angle Geom](angle-geom.md). Moving a corner of a box stretches the lines attached to its edges ([Smart links](smart-links.md)). The Select mode's handles do the same.
+The ends of an open line can be constrained with [Angle Geom](angle-geom.md). Moving a corner of a box stretches the lines attached to its edges ([Smart links](smart-links.md)).
 
 ## Add point
 

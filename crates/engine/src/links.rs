@@ -184,20 +184,6 @@ fn collect_for(e: &Engine, moved: &[ObjectId], targets: &[Target]) -> Vec<Link> 
     links
 }
 
-/// The attached end points of the shapes in `ids` (for highlighting them);
-/// empty when smart links are off.
-pub(crate) fn attached_ends(e: &Engine, ids: &[ObjectId]) -> Vec<Point> {
-    collect(e, ids)
-        .iter()
-        .filter_map(|l| {
-            e.doc()
-                .get(l.line_id)
-                .and_then(|o| follower_points(o))
-                .and_then(|p| p.get(l.end).copied())
-        })
-        .collect()
-}
-
 /// Move the linked end points through `f` (xfig's `adjust_links`). In slide
 /// mode the point next to each end point also moves, along the axis the last
 /// segment keeps, by the end point's displacement, so the segment stays

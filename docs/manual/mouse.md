@@ -22,7 +22,7 @@ The chord works like xfig on a two-button mouse: press both buttons within a mom
 
 ## What the buttons do
 
-The three functions of each mode are listed in the mode's section ([shapes](draw-shapes.md), [splines](draw-splines.md), [select and move](select-move.md) and the other editing topics). Typical patterns:
+The three functions of each mode are listed in the mode's section ([shapes](draw-shapes.md), [splines](draw-splines.md), [move, copy, delete](select-move.md) and the other editing topics). Typical patterns:
 
 - Drawing: left adds the next point or starts the shape, middle is a variation (freehand, from the centre) or the final point, right cancels.
 - Editing: left acts on the object clicked, middle often acts on a copy or restricts a move to horizontal or vertical, right is a variation or region action.
@@ -32,7 +32,6 @@ The three functions of each mode are listed in the mode's section ([shapes](draw
 
 Holding Shift changes a button's job in some modes. While Shift is held, the mouse indicator shows the Shift meanings:
 
-- Select: Shift+left adds an object to the selection or removes it.
 - While drawing a polyline, polygon, spline or arc: Shift+left removes the last point ("del point"). Shift+middle (not for arcs) finishes the object at the last point placed, without adding the clicked point ("finish here", a RustFig addition).
 - Box, Arc-box, Picture: Shift+middle draws a square from its centre.
 - Edit attributes: Shift+middle shows the object's comments in the message panel.

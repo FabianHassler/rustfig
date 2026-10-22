@@ -38,7 +38,7 @@ impl Engine {
             _ => {}
         }
         match self.tool {
-            None | Select => CursorKind::Arrow,
+            None => CursorKind::Arrow,
             Text => CursorKind::Text,
             Delete => CursorKind::Delete,
             Move | Copy | Align | Break | OpenCompound | Convert | FlipH | FlipV | RotateCcw | RotateCw | Scale => {
@@ -64,7 +64,6 @@ mod tests {
             e.cursor_kind()
         };
         assert_eq!(of(&mut e, ToolKind::None), CursorKind::Arrow);
-        assert_eq!(of(&mut e, ToolKind::Select), CursorKind::Arrow);
         assert_eq!(of(&mut e, ToolKind::Box), CursorKind::Crosshair);
         assert_eq!(of(&mut e, ToolKind::Polyline), CursorKind::Crosshair);
         assert_eq!(of(&mut e, ToolKind::Text), CursorKind::Text);
@@ -81,7 +80,7 @@ mod tests {
             e.set_tool(t);
             let _ = e.cursor_kind();
         }
-        e.set_tool(ToolKind::Select);
+        e.set_tool(ToolKind::None);
         let _ = e.execute(
             "shape.rectangle",
             &serde_json::json!({"x": 0, "y": 0, "width": 600, "height": 600}),

@@ -15,8 +15,8 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "object.group",
             label: "Group (Compound)",
-            menu: "Object",
-            shortcut: "Ctrl+G",
+            menu: "",
+            shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
             enabled: |e| e.selection().len() >= 2,
@@ -25,8 +25,8 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "object.ungroup",
             label: "Break Compound",
-            menu: "Object",
-            shortcut: "Ctrl+Shift+G",
+            menu: "",
+            shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
             enabled: has_selection,
@@ -35,8 +35,8 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "object.update",
             label: "Update from Current Attributes",
-            menu: "Object",
-            shortcut: "Ctrl+U",
+            menu: "",
+            shortcut: "",
             params: "{\"ids\"?: [id]}  — apply the indicator's attributes",
             mutates: true,
             enabled: has_selection,
@@ -85,8 +85,8 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "object.measure",
             label: "Measure",
-            menu: "Object",
-            shortcut: "Ctrl+M",
+            menu: "",
+            shortcut: "",
             params: "{\"ids\"?: [id]}  — length, area and size",
             mutates: false,
             enabled: has_selection,
@@ -95,7 +95,7 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "object.convert",
             label: "Convert Line ↔ Spline",
-            menu: "Object",
+            menu: "",
             shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
@@ -105,7 +105,7 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "object.toggle_closed",
             label: "Open/Close",
-            menu: "Object",
+            menu: "",
             shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
@@ -115,7 +115,7 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "object.toggle_forward_arrow",
             label: "Toggle Forward Arrow",
-            menu: "Object/Arrows",
+            menu: "",
             shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
@@ -125,7 +125,7 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "object.toggle_backward_arrow",
             label: "Toggle Backward Arrow",
-            menu: "Object/Arrows",
+            menu: "",
             shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,

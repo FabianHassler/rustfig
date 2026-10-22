@@ -130,3 +130,48 @@ fn hostile_params_fail_and_leave_the_document_alone() {
         assert!(fake.got.lock().unwrap().is_empty());
     }
 }
+
+/// Edit > Copy as Picture waits for its objects (xfig has no selection):
+/// left an object, middle a region, right the whole figure; Escape cancels.
+#[test]
+fn copy_as_picture_picks_after_the_command() {
+    use rustfig_engine::geom::Point;
+    use rustfig_engine::{Button, ToolEvent};
+    let fake = Fake::default();
+    let mut e = engine_with(&fake);
+    draw(&mut e);
+    let press = |e: &mut Engine, x: f64, y: f64, button| {
+        let pos = Point::new(x, y);
+        e.tool_event(ToolEvent::Press {
+            pos,
+            button,
+            shift: false,
+        })
+        .unwrap();
+        e.tool_event(ToolEvent::Release { pos, button }).unwrap();
+    };
+    let copied = |fake: &Fake| fake.got.lock().unwrap().last().map(|d| d.bytes.len());
+    // Right: the whole figure.
+    e.execute("edit.copy_picture_pick", &json!({})).unwrap();
+    assert_eq!(e.mouse_hints().right, "whole figure");
+    press(&mut e, 0.0, 0.0, Button::Right);
+    let whole = copied(&fake).unwrap();
+    // Left: the object under the pointer (the box's edge).
+    fake.got.lock().unwrap().clear();
+    e.execute("edit.copy_picture_pick", &json!({})).unwrap();
+    press(&mut e, 0.0, 300.0, Button::Left);
+    let one = copied(&fake).unwrap();
+    assert_ne!(whole, one);
+    // Middle: a region by two clicks around the circle.
+    fake.got.lock().unwrap().clear();
+    e.execute("edit.copy_picture_pick", &json!({})).unwrap();
+    press(&mut e, 2500.0, -200.0, Button::Middle);
+    press(&mut e, 3500.0, 800.0, Button::Middle);
+    assert!(copied(&fake).is_some(), "the circle was copied");
+    // Escape cancels; the next click does nothing special.
+    fake.got.lock().unwrap().clear();
+    e.execute("edit.copy_picture_pick", &json!({})).unwrap();
+    e.execute("tool.escape", &json!({})).unwrap();
+    assert_ne!(e.mouse_hints().right, "whole figure");
+    assert!(copied(&fake).is_none());
+}

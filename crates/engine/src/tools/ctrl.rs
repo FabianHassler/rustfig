@@ -25,7 +25,7 @@ impl Engine {
         }
         if shift {
             // Only the editing modes (`cur_mode >= FIRST_EDIT_MODE`).
-            if self.tool.is_drawing() || self.tool == super::ToolKind::Select {
+            if self.tool.is_drawing() {
                 return Ok(());
             }
             return self.change_sfactor(pos, button);

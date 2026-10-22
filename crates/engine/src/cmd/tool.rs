@@ -125,7 +125,6 @@ macro_rules! tool_runs {
 
 tool_runs!(
     None,
-    Select,
     CircleRadius,
     CircleDiameter,
     EllipseRadii,

@@ -17,6 +17,15 @@ fn harness(app: App) -> Harness<'static, App> {
     h
 }
 
+/// Open the edit panel on the first selected object (as Edit mode does on
+/// a click).
+fn open_edit(h: &mut Harness<'static, App>) {
+    let app = h.state_mut();
+    if let Some(id) = app.engine.selection().first().copied() {
+        app.dialogs.open_edit(&app.engine, id);
+    }
+}
+
 fn app() -> App {
     let mut a = App::with_engine(Engine::new());
     a.file_dialogs = Box::new(ScriptedDialogs::default());
@@ -47,7 +56,6 @@ fn every_tool_button_selects_its_tool() {
     // The mode panel has xfig's modes; RustFig's other tools are in the
     // Tools menu.
     let menu_only = [
-        ToolKind::Select,
         ToolKind::OpenClose,
         ToolKind::XSpline,
         ToolKind::XSplineClosed,
@@ -507,7 +515,7 @@ fn xfig_keys_select_modes_and_run_menu_entries() {
     h.get_by_label_contains(&rustfig_ui_egui::menus::xfig_key_label("Alt+U"));
     // Turned off, Ctrl-s no longer picks Scale.
     h.state_mut().run("app.toggle_xfig_keys", json!({"on": false}));
-    h.state_mut().engine.set_tool(ToolKind::Select);
+    h.state_mut().engine.set_tool(ToolKind::None);
     press_key(&mut h, egui::Key::S, ctrl);
     assert_ne!(h.state().engine.tool(), ToolKind::Scale);
 }
@@ -515,9 +523,9 @@ fn xfig_keys_select_modes_and_run_menu_entries() {
 #[test]
 fn classic_menus_are_xfigs() {
     let mut h = harness(app());
-    // RustFig's own Object menu sits between Snap and Help.
+    // xfig's menu bar: no Object menu (RustFig has no selection).
     h.get_by_label("Snap");
-    h.get_by_label("Object");
+    assert!(h.query_by_label("Object").is_none());
     h.get_by_label("File").click();
     h.run_steps(2);
     // (Labels include xfig's accelerator, e.g. "Open... Meta-O".)
@@ -595,7 +603,7 @@ fn edit_attributes_dialog_opens_for_the_selection() {
         .execute("shape.rectangle", &json!({"x": 0, "y": 0, "width": 600, "height": 300}))
         .unwrap();
     h.state_mut().engine.execute("edit.select_all", &json!({})).unwrap();
-    h.state_mut().run("app.edit_selected", json!({}));
+    open_edit(&mut h);
     h.run_steps(2);
     assert!(h.query_all_by_label("POLYLINE: Box").count() >= 1);
 }
@@ -747,13 +755,13 @@ fn edit_popup_keys() {
         .execute("shape.rectangle", &json!({"x": 0, "y": 0, "width": 600, "height": 300}))
         .unwrap();
     h.state_mut().engine.execute("edit.select_all", &json!({})).unwrap();
-    h.state_mut().run("app.edit_selected", json!({}));
+    open_edit(&mut h);
     h.run_steps(2);
     assert!(h.state().dialogs.edit.is_some());
     press_key(&mut h, egui::Key::Escape, egui::Modifiers::NONE);
     assert!(h.state().dialogs.edit.is_none(), "Escape cancels");
     assert!(!h.state().engine.selection().is_empty(), "and doesn't deselect");
-    h.state_mut().run("app.edit_selected", json!({}));
+    open_edit(&mut h);
     h.run_steps(2);
     press_key(&mut h, egui::Key::Enter, egui::Modifiers::NONE);
     assert!(h.state().dialogs.edit.is_some(), "Return applies and stays");
@@ -1082,7 +1090,7 @@ fn edit_panel_cancel_restores_after_apply_and_geometry_rows_apply() {
         .execute("shape.rectangle", &json!({"x": 0, "y": 0, "width": 600, "height": 300}))
         .unwrap();
     h.state_mut().engine.execute("edit.select_all", &json!({})).unwrap();
-    h.state_mut().run("app.edit_selected", json!({}));
+    open_edit(&mut h);
     h.run_steps(2);
     let before = h.state().engine.doc().objects[0].clone();
     // Change a corner and the width in the panel's state, then Apply.
@@ -1402,7 +1410,7 @@ fn open_state(h: &mut Harness<'static, App>) -> serde_json::Value {
 }
 
 #[test]
-fn injected_clicks_open_menu_submenu_and_dialog_by_label() {
+fn injected_clicks_open_menu_and_dialog_by_label() {
     let mut h = attached();
     assert!(!h.state().widgets.lock().unwrap().is_empty());
     // A menu by its label, then a dialog from its entry.
@@ -1417,18 +1425,6 @@ fn injected_clicks_open_menu_submenu_and_dialog_by_label() {
     inject(&mut h, "ui.click_label", json!({"label": "About"}));
     let open = open_state(&mut h);
     assert!(open["dialogs"].as_array().unwrap().contains(&json!("about")), "{open}");
-    // A submenu: Object > Arrange lists the arrange commands.
-    inject(&mut h, "ui.click_label", json!({"label": "Object"}));
-    inject(&mut h, "ui.click_label", json!({"label": "Arrange"}));
-    let labels: Vec<String> = h
-        .state()
-        .widgets
-        .lock()
-        .unwrap()
-        .iter()
-        .map(|w| w.label.clone())
-        .collect();
-    assert!(labels.iter().any(|l| l.contains("Align")), "{labels:?}");
 }
 
 #[test]
@@ -1576,8 +1572,10 @@ fn saving_inside_an_open_compound_asks_all_or_part() {
 }
 
 #[test]
-fn the_platforms_cut_and_paste_keys_reach_the_clipboard_commands() {
-    // Cmd+X/V (macOS) and Ctrl+X/V arrive as clipboard events, not keys.
+fn the_platforms_paste_key_pastes_the_cut_buffer_and_cut_does_nothing() {
+    // xfig has no selection: Cmd+X/Ctrl+X does nothing; Cmd+V/Ctrl+V is
+    // Edit > Paste Objects (the cut buffer, filled by Copy mode's right
+    // button).
     let mut h = harness(app());
     h.state_mut()
         .engine
@@ -1589,11 +1587,12 @@ fn the_platforms_cut_and_paste_keys_reach_the_clipboard_commands() {
     h.state_mut().engine.execute("edit.select_all", &json!({})).unwrap();
     h.event(egui::Event::Cut);
     h.run_steps(2);
-    assert!(h.state().engine.doc().objects.is_empty(), "cut");
+    assert_eq!(h.state().engine.doc().objects.len(), 1, "cut does nothing");
+    h.state_mut().engine.execute("edit.copy", &json!({})).unwrap();
     h.event(egui::Event::Paste(String::new()));
     h.run_steps(2);
     // The objects follow the pointer until a click places them (S4-2).
-    assert!(h.state().engine.doc().objects.is_empty(), "attached to the pointer");
+    assert_eq!(h.state().engine.doc().objects.len(), 1, "attached to the pointer");
     h.state_mut()
         .engine
         .tool_event(rustfig_engine::ToolEvent::Press {
@@ -1602,7 +1601,7 @@ fn the_platforms_cut_and_paste_keys_reach_the_clipboard_commands() {
             shift: false,
         })
         .unwrap();
-    assert_eq!(h.state().engine.doc().objects.len(), 1, "pasted once");
+    assert_eq!(h.state().engine.doc().objects.len(), 2, "pasted once");
 }
 
 /// W10-28: Help > RustFig Manual opens the bundled manual; the search finds
@@ -1665,7 +1664,7 @@ fn picture_panel_rows_relink_and_drop() {
         .unwrap();
     let id = r["id"].as_u64().unwrap();
     h.state_mut().engine.execute("edit.select_all", &json!({})).unwrap();
-    h.state_mut().run("app.edit_selected", json!({}));
+    open_edit(&mut h);
     h.run_steps(3);
     for label in [
         "Picture filename",
@@ -1703,7 +1702,7 @@ fn picture_panel_rows_relink_and_drop() {
     assert_eq!(info["width"], 8);
     // The file goes missing: the button becomes Relink and takes the picked file.
     std::fs::remove_file(&third).unwrap();
-    h.state_mut().run("app.edit_selected", json!({}));
+    open_edit(&mut h);
     h.run_steps(3);
     assert!(h.query_all_by_label("Browse").next().is_none());
     h.get_by_label("Relink").click();

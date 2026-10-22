@@ -33,7 +33,6 @@ pub enum ToolKind {
     /// No mode chosen yet: xfig starts like this ("READY. Select a mode or
     /// load a file"); canvas clicks do nothing. Not a command or a button.
     None,
-    Select,
     CircleRadius,
     CircleDiameter,
     EllipseRadii,
@@ -127,8 +126,7 @@ impl ToolKind {
         )
     }
 
-    pub const ALL: [ToolKind; 46] = [
-        ToolKind::Select,
+    pub const ALL: [ToolKind; 45] = [
         ToolKind::CircleRadius,
         ToolKind::CircleDiameter,
         ToolKind::EllipseRadii,
@@ -179,7 +177,6 @@ impl ToolKind {
     pub fn id(self) -> &'static str {
         match self {
             ToolKind::None => "tool.none",
-            ToolKind::Select => "tool.select",
             ToolKind::CircleRadius => "tool.circle_radius",
             ToolKind::CircleDiameter => "tool.circle_diameter",
             ToolKind::EllipseRadii => "tool.ellipse_radii",
@@ -235,7 +232,6 @@ impl ToolKind {
     pub fn label(self) -> &'static str {
         match self {
             ToolKind::None => "No mode",
-            ToolKind::Select => "Select",
             ToolKind::CircleRadius => "Circle (radius)",
             ToolKind::CircleDiameter => "Circle (diameter)",
             ToolKind::EllipseRadii => "Ellipse (radii)",
@@ -534,8 +530,6 @@ pub struct Highlight {
 /// What a rubber band does when it closes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Band {
-    Select,
-    SelectAdd,
     /// Tag the objects inside for gluing (they join the selection).
     Tag,
     Delete,
@@ -545,6 +539,8 @@ pub(crate) enum Band {
     MoveRegion,
     /// Delete point mode, middle button (W14): delete the points inside.
     DeletePoints,
+    /// Copy as Picture, middle button: copy the objects inside.
+    CopyPicture,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -778,6 +774,10 @@ impl Engine {
     /// the rotate/flip centre, the selection), (3) leave the mode. Returns
     /// what was done.
     pub fn escape(&mut self) -> Result<&'static str, EngineError> {
+        if std::mem::take(&mut self.copy_pick) {
+            self.set_status("Copy as picture cancelled.");
+            return Ok("cancelled");
+        }
         if self.eyedropper.take().is_some() {
             self.set_status("Eyedropper cancelled.");
             return Ok("cancelled");
@@ -874,7 +874,7 @@ impl Engine {
         // in Glue, and Break's "break and tag", nowhere else). The other
         // modes act on the clicked object and leave the selection as it
         // was, so nothing they touched shows up tagged later.
-        let keep = !matches!(self.tool, ToolKind::Select | ToolKind::Glue | ToolKind::Break);
+        let keep = !matches!(self.tool, ToolKind::Glue | ToolKind::Break);
         let before = keep.then(|| self.selection().to_vec());
         let r = crate::guard::catch(|| self.dispatch(ev));
         if let Some(before) = before {
@@ -901,6 +901,35 @@ impl Engine {
     /// locates (highlights) instead of acting, and a plain click acts on the
     /// object located.
     fn dispatch(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
+        // Copy as Picture's region belongs to no mode: its band gets the
+        // events, whatever the mode.
+        if matches!(
+            self.tool_state,
+            ToolState::RubberBand {
+                purpose: Band::CopyPicture,
+                ..
+            }
+        ) {
+            return match ev {
+                ToolEvent::Press { pos, button, .. } => self.region_click(pos, Band::CopyPicture, button),
+                other => self.drag_common(other),
+            };
+        }
+        // Copy as Picture waits for its objects, whatever the mode.
+        if self.copy_pick && matches!(self.tool_state, ToolState::Idle) {
+            match ev {
+                ToolEvent::Press { pos, button, .. } => {
+                    self.copy_pick = false;
+                    return self.copy_pick_press(pos, button);
+                }
+                ToolEvent::Key(_) => {
+                    self.copy_pick = false;
+                    self.set_status("Copy as picture cancelled.");
+                    return Ok(());
+                }
+                _ => {}
+            }
+        }
         // The colour eyedropper (E4) takes the next press, whatever the mode.
         if let Some(target) = self.eyedropper {
             match ev {
@@ -1090,7 +1119,6 @@ impl Engine {
             return self.drag_event(ev);
         }
         match tool {
-            ToolKind::Select => self.select_event(ev),
             ToolKind::Glue => self.glue_event(ev),
             ToolKind::Move | ToolKind::Copy => self.move_event(ev, tool == ToolKind::Copy),
             ToolKind::MovePoint | ToolKind::AddPoint => self.point_event(ev),
@@ -1932,94 +1960,6 @@ impl Engine {
 
     // ---- selection -------------------------------------------------------
 
-    fn select_event(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
-        let tol = self.pick_tol();
-        match ev {
-            ToolEvent::Press { pos, button, shift } => {
-                if button != Button::Left {
-                    if button == Button::Right {
-                        self.tool_state = ToolState::Idle;
-                    }
-                    return Ok(());
-                }
-                // Vertex handles of a single selected object.
-                if let [id] = self.selection() {
-                    let id = *id;
-                    if let Some(o) = self.doc().get(id) {
-                        if !matches!(o.kind, ObjectKind::Text(_) | ObjectKind::Compound(_)) {
-                            if let Some(index) = nearest_vertex(&edit_points(o), pos, tol) {
-                                self.tool_state = ToolState::PointDrag {
-                                    id,
-                                    index,
-                                    insert: false,
-                                    start: pos,
-                                    cursor: pos,
-                                    dragging: true,
-                                    constrain: false,
-                                };
-                                return Ok(());
-                            }
-                        }
-                    }
-                }
-                match self.pick(pos, tol) {
-                    Some(id) => {
-                        let mut sel = self.selection().to_vec();
-                        if shift {
-                            if let Some(i) = sel.iter().position(|s| *s == id) {
-                                sel.remove(i);
-                                self.set_selection(sel);
-                                return Ok(());
-                            }
-                            sel.push(id);
-                        } else if !sel.contains(&id) {
-                            sel = vec![id];
-                        }
-                        self.set_selection(sel.clone());
-                        self.tool_state = ToolState::MoveObjs {
-                            ids: sel,
-                            start: pos,
-                            cursor: pos,
-                            copy: false,
-                            dragging: true,
-                            constrain: false,
-                        };
-                    }
-                    None => {
-                        if !shift {
-                            self.set_selection(Vec::new());
-                        }
-                        self.tool_state = ToolState::RubberBand {
-                            start: pos,
-                            cursor: pos,
-                            purpose: if shift { Band::SelectAdd } else { Band::Select },
-                            click: false,
-                            button: Button::Left,
-                            held: false,
-                            lasso: Vec::new(),
-                        };
-                    }
-                }
-                Ok(())
-            }
-            ToolEvent::DoubleClick { pos } => {
-                if let Some(id) = self.pick(pos, tol) {
-                    self.tool_state = ToolState::Idle;
-                    self.set_selection(vec![id]);
-                    self.request(UiRequest::EditObject { id });
-                }
-                Ok(())
-            }
-            ToolEvent::Key(Key::Delete) | ToolEvent::Key(Key::Backspace) => {
-                if !self.selection().is_empty() {
-                    self.execute("edit.delete", &json!({}))?;
-                }
-                Ok(())
-            }
-            other => self.drag_common(other),
-        }
-    }
-
     /// Move, release and rubber-band handling shared by several tools.
     fn drag_common(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
         let tol = self.pick_tol();
@@ -2065,9 +2005,6 @@ impl Engine {
                     if start.dist(pos) > tol {
                         self.tool_state = ToolState::Idle;
                         self.commit_move(&ids, start, pos, copy, constrain, false)
-                    } else if self.tool == ToolKind::Select {
-                        self.tool_state = ToolState::Idle;
-                        Ok(())
                     } else {
                         // A click: keep following the pointer until the next click.
                         self.tool_state = ToolState::MoveObjs {
@@ -2123,9 +2060,6 @@ impl Engine {
                     if start.dist(pos) > tol {
                         self.tool_state = ToolState::Idle;
                         self.commit_point(id, index, insert, start, pos, constrain)
-                    } else if self.tool == ToolKind::Select {
-                        self.tool_state = ToolState::Idle;
-                        Ok(())
                     } else {
                         self.tool_state = ToolState::PointDrag {
                             id,
@@ -2162,14 +2096,14 @@ impl Engine {
     fn finish_band(&mut self, purpose: Band, region: Region, end: Point) -> Result<(), EngineError> {
         let inside: Vec<ObjectId> = self.objects_within_region(&region);
         match purpose {
-            Band::Select | Band::SelectAdd => {
-                let mut sel = if purpose == Band::SelectAdd {
-                    self.selection().to_vec()
+            Band::CopyPicture => {
+                if inside.is_empty() {
+                    self.set_status("No objects in the region: nothing copied.");
                 } else {
-                    Vec::new()
-                };
-                sel.extend(inside);
-                self.set_selection(sel);
+                    let ids = crate::cmd::ids_value(&inside);
+                    self.execute("edit.copy_picture", &json!({ "ids": ids }))?;
+                    self.set_status(format!("{} object(s) copied as a picture.", inside.len()));
+                }
             }
             Band::Tag => {
                 let mut sel = self.selection().to_vec();
@@ -2662,6 +2596,29 @@ impl Engine {
         self.drag_common(ev)
     }
 
+    /// Copy as Picture's click: left copies the object under the pointer,
+    /// middle starts a region (two corners or a loop), right copies the
+    /// whole figure.
+    fn copy_pick_press(&mut self, pos: Point, button: Button) -> Result<(), EngineError> {
+        match button {
+            Button::Left => {
+                let tol = self.pick_tol();
+                let Some(id) = self.pick(pos, tol) else {
+                    self.set_status("No object there: nothing copied.");
+                    return Ok(());
+                };
+                self.execute("edit.copy_picture", &json!({ "ids": [id.0] }))?;
+                self.set_status("Object copied as a picture.");
+            }
+            Button::Middle => self.region_click(pos, Band::CopyPicture, Button::Middle)?,
+            Button::Right => {
+                self.execute("edit.copy_picture", &json!({ "whole": true }))?;
+                self.set_status("Whole figure copied as a picture.");
+            }
+        }
+        Ok(())
+    }
+
     /// xfig's region by two clicks: the first opens a band, the second
     /// (with the same button) closes it.
     fn region_click(&mut self, pos: Point, purpose: Band, button: Button) -> Result<(), EngineError> {
@@ -2972,7 +2929,7 @@ impl Engine {
             return h;
         }
         if ctrl {
-            let edit = !self.tool.is_drawing() && self.tool != ToolKind::Select;
+            let edit = !self.tool.is_drawing();
             if !shift {
                 h.left = "Zoom area";
                 h.middle = "Pan to origin";
@@ -3016,7 +2973,6 @@ impl Engine {
             (ToolState::Idle, ToolKind::Polyline) => ("dimension line", "", ""),
             (ToolState::Text { .. }, _) => ("", "paste text", ""),
             (ToolState::Points { freehand: false, .. }, _) => ("del point", "finish here", ""),
-            (ToolState::Idle, ToolKind::Select) => ("add/remove", "", ""),
             (ToolState::Idle, ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture) => ("", "square at center", ""),
             (ToolState::Idle, ToolKind::AreaMeasure) => ("locate object", "", "reset to +-0"),
             (ToolState::Idle, ToolKind::Edit) => ("locate object", "show comments", ""),
@@ -3037,6 +2993,9 @@ impl Engine {
             Button::Middle => h("", label, right),
             _ => h(label, "", right),
         };
+        if self.copy_pick && matches!(self.tool_state, ToolState::Idle) {
+            return h("copy object", "copy region", "whole figure");
+        }
         let tool = self.tool;
         match &self.tool_state {
             ToolState::ZoomBox { .. } => h("final point", "", "cancel"),
@@ -3145,7 +3104,6 @@ impl Engine {
                     ""
                 };
                 let (l, m, r) = match tool {
-                    ToolKind::Select => ("select / drag", "", ""),
                     ToolKind::Polyline => ("first point", "freehand", "single point"),
                     ToolKind::Polygon => ("first point", "freehand", ""),
                     t if t.spline_kind().is_some() => ("first point", "freehand", ""),
@@ -3456,27 +3414,6 @@ impl Engine {
             }
             _ => {}
         }
-        if ov.handles.is_empty() && matches!(self.tool_state, ToolState::Idle) && self.tool == ToolKind::Select {
-            let ids = self.selection().to_vec();
-            if ids.len() <= 2000 {
-                for id in ids {
-                    if let Some(o) = self.doc().get(id) {
-                        if !matches!(o.kind, ObjectKind::Compound(_) | ObjectKind::Text(_)) {
-                            ov.handles.extend(edit_points(o));
-                        }
-                    }
-                }
-            }
-        }
-        // Smart links: the selected shapes show the line ends attached to
-        // them (the ends that will follow).
-        if matches!(self.tool_state, ToolState::Idle) && self.tool == ToolKind::Select {
-            let ids = self.selection();
-            if ids.len() <= 2000 {
-                let ends = crate::links::attached_ends(self, ids);
-                ov.handles.extend(ends);
-            }
-        }
         self.length_overlay(&mut ov);
         // The set centre/anchor of Rotate/Flip (xfig's `center_marker`).
         if let Some(c) = self.set_point.filter(|_| self.tool.uses_set_point()) {
@@ -3686,7 +3623,7 @@ mod tests {
         press(&mut e, 650.0, 590.0);
         e.tool_event(ToolEvent::Key(Key::End)).unwrap();
         e.tool_event(ToolEvent::Text("!".into())).unwrap();
-        e.set_tool(ToolKind::Select);
+        e.set_tool(ToolKind::None);
         let ObjectKind::Text(t) = &e.doc().objects[0].kind else {
             panic!()
         };
@@ -3709,64 +3646,6 @@ mod tests {
             panic!()
         };
         assert_eq!(t.text, "Hello");
-    }
-
-    #[test]
-    fn select_and_drag_moves() {
-        let mut e = Engine::new();
-        e.execute(
-            "shape.rectangle",
-            &json!({"x": 0, "y": 0, "width": 1200, "height": 1200, "area_fill": 20}),
-        )
-        .unwrap();
-        e.set_tool(ToolKind::Select);
-        e.set_selection(vec![]);
-        e.tool_event(ToolEvent::Press {
-            pos: Point::new(600.0, 600.0),
-            button: Button::Left,
-            shift: false,
-        })
-        .unwrap();
-        e.tool_event(ToolEvent::Move {
-            pos: Point::new(900.0, 600.0),
-        })
-        .unwrap();
-        e.tool_event(ToolEvent::Release {
-            pos: Point::new(900.0, 600.0),
-            button: Button::Left,
-        })
-        .unwrap();
-        let bb = e.doc().objects[0].geometry_bbox();
-        assert_eq!(bb.min.x, 300.0);
-        assert!(e.undo());
-        assert_eq!(e.doc().objects[0].geometry_bbox().min.x, 0.0);
-    }
-
-    #[test]
-    fn rubber_band_selects() {
-        let mut e = Engine::new();
-        e.execute("shape.circle", &json!({"cx": 300, "cy": 300, "r": 100}))
-            .unwrap();
-        e.execute("shape.circle", &json!({"cx": 3000, "cy": 3000, "r": 100}))
-            .unwrap();
-        e.set_tool(ToolKind::Select);
-        e.set_selection(vec![]);
-        e.tool_event(ToolEvent::Press {
-            pos: Point::new(0.0, 0.0),
-            button: Button::Left,
-            shift: false,
-        })
-        .unwrap();
-        e.tool_event(ToolEvent::Move {
-            pos: Point::new(1000.0, 1000.0),
-        })
-        .unwrap();
-        e.tool_event(ToolEvent::Release {
-            pos: Point::new(1000.0, 1000.0),
-            button: Button::Left,
-        })
-        .unwrap();
-        assert_eq!(e.selection().len(), 1);
     }
 
     fn click(e: &mut Engine, x: f64, y: f64, button: Button) {

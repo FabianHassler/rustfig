@@ -11,7 +11,6 @@ Key `G`. Collects objects into a compound.
 - Right: with two or more objects tagged ("compound tagged"), makes the compound. While a region is being marked, cancels.
 - Shift+left, “locate object”: picks an object under another one; the next left click tags the located object ([Mouse](mouse.md)).
 
-Object > Group (Ctrl+G) does the same for the current selection.
 
 ## Break compound
 

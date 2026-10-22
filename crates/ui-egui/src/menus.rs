@@ -96,12 +96,6 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}",
     },
     UiCommand {
-        id: "app.edit_selected",
-        label: "Edit Attributes…",
-        shortcut: "Ctrl+Shift+E",
-        params: "{}",
-    },
-    UiCommand {
         id: "app.search",
         label: "Search/Replace…",
         shortcut: "Ctrl+F",
@@ -253,10 +247,6 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.export" => app.dialogs.export.open = true,
         "app.export_now" => dialogs::export_now(app),
         "app.quit" => app.guard_unsaved(Pending::Quit),
-        "app.edit_selected" => match app.engine.selection().first().copied() {
-            Some(id) => app.dialogs.open_edit(&app.engine, id),
-            None => return Err("select an object first".into()),
-        },
         "app.search" => app.dialogs.search.open = true,
         "app.document_settings" => app.dialogs.settings_open = true,
         "app.unit_panel" => app.unit_panel_open = true,
@@ -343,7 +333,7 @@ pub enum XfigItem {
 /// menu is [`snap_menu`] and sits before Help; preferences are under
 /// Edit › Global settings.
 pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
-    use XfigItem::{Cmd, Missing, Own, Sep, Sub};
+    use XfigItem::{Cmd, Missing, Own, Sep};
     &[
         (
             "File",
@@ -378,13 +368,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Own("app.keyboard_entry"),
                 Sep,
                 Own("edit.redo"),
-                Own("edit.delete"),
-                Own("edit.cut"),
-                Own("edit.copy"),
-                Own("edit.copy_picture"),
-                Own("edit.duplicate"),
-                Own("edit.select_all"),
-                Own("edit.select_none"),
+                Own("edit.copy_picture_pick"),
             ],
         ),
         (
@@ -408,45 +392,6 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Autorefresh mode", "app.toggle_autorefresh"),
                 Own("view.toggle_grid"),
                 Own("depth.show_all"),
-            ],
-        ),
-        (
-            "Object",
-            &[
-                Own("object.group"),
-                Own("object.ungroup"),
-                Sep,
-                Own("object.update"),
-                Own("object.convert"),
-                Own("object.toggle_closed"),
-                Sub(
-                    "Arrows",
-                    &[Own("object.toggle_forward_arrow"), Own("object.toggle_backward_arrow")],
-                ),
-                Sub(
-                    "Transform",
-                    &[
-                        Own("transform.rotate_ccw"),
-                        Own("transform.rotate_cw"),
-                        Own("transform.flip_horizontal"),
-                        Own("transform.flip_vertical"),
-                    ],
-                ),
-                Sub(
-                    "Arrange",
-                    &[
-                        Own("arrange.align"),
-                        Own("arrange.distribute"),
-                        Sep,
-                        Own("arrange.to_front"),
-                        Own("arrange.forward"),
-                        Own("arrange.backward"),
-                        Own("arrange.to_back"),
-                    ],
-                ),
-                Sep,
-                Own("object.measure"),
-                Own("app.edit_selected"),
             ],
         ),
         (
@@ -676,10 +621,10 @@ fn bar_button(
 
 /// The menu buttons alone, laid out in the current row.
 pub fn menu_buttons(app: &mut App, ui: &mut egui::Ui) {
-    // xfig's menus: File, Edit, View, Snap, then RustFig's Object, Help.
+    // xfig's menus: File, Edit, View, Snap, Help.
     let tk = crate::theme::Tokens::new(ui.visuals().dark_mode, app.button_3d);
     for (name, items) in XFIG_MENUS {
-        if *name == "Object" {
+        if *name == "Help" {
             bar_button(app, ui, &tk, "Snap", snap_menu);
         }
         let resp = bar_button(app, ui, &tk, name, |app, ui| xfig_menu(app, ui, name, items));
@@ -1164,11 +1109,6 @@ pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
     all.sort_by_key(|(_, k)| {
         std::cmp::Reverse(k.modifiers.command as u8 + k.modifiers.shift as u8 + k.modifiers.alt as u8)
     });
-    let backspace_deletes = !app.engine.selection().is_empty()
-        && ctx.input(|i| i.key_pressed(egui::Key::Backspace) && i.modifiers.is_none());
-    if backspace_deletes {
-        app.run("edit.delete", json!({}));
-    }
     let mut ran = Vec::new();
     for (id, k) in all {
         if ctx.input_mut(|i| i.consume_shortcut(&k)) && app.enabled(id) {
@@ -1176,17 +1116,14 @@ pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
             ran.push(id);
         }
     }
-    // The platform's cut, copy and paste keys (Cmd+X/C/V on macOS, Ctrl+X/C/V
-    // elsewhere) reach egui as clipboard events, not as key presses. On Linux
-    // and Windows xfig's Ctrl-C (Copy mode) keeps the key while xfig's keys
-    // are on.
-    let mac = cfg!(target_os = "macos");
+    // The platform's paste key (Cmd+V on macOS, Ctrl+V elsewhere) reaches
+    // egui as a clipboard event, not as a key press.
     let clip: Vec<&'static str> = ctx.input(|i| {
         i.events
             .iter()
             .filter_map(|e| match e {
-                egui::Event::Cut => Some("edit.cut"),
-                egui::Event::Copy if mac || !app.xfig_keys => Some("edit.copy"),
+                // xfig has no selection to cut or copy; the platform's
+                // paste key pastes the cut buffer (Edit > Paste Objects).
                 egui::Event::Paste(_) => Some("edit.paste"),
                 _ => None,
             })
@@ -1229,6 +1166,26 @@ mod tests {
     const MENU_LESS: &[(&str, &str)] = &[
         // A prefix ending in "." covers every command that starts with it.
         ("tool.", "the mode panel's buttons and the mode keys choose tools"),
+        // xfig has no selection (decided 2026-10-22): these work on the
+        // given ids for scripts and MCP; the modes do the same by mouse.
+        (
+            "edit.cut",
+            "selection-based; scripting API (Delete mode's right button fills the cut buffer)",
+        ),
+        (
+            "edit.copy",
+            "selection-based; scripting API (Copy mode's right button; Copy as Picture picks after the command)",
+        ),
+        ("edit.duplicate", "selection-based; scripting API (Copy mode)"),
+        ("edit.delete", "selection-based; scripting API (Delete mode)"),
+        ("transform.flip_", "Flip modes; scripting API"),
+        ("arrange.", "Align mode and the edit panel's depth; scripting API"),
+        ("object.group", "Glue mode; scripting API"),
+        ("object.ungroup", "Break mode; scripting API"),
+        ("object.update", "Update mode; scripting API"),
+        ("object.measure", "the measure modes; scripting API"),
+        ("object.convert", "Convert mode; scripting API"),
+        ("object.toggle_", "Open/close and Arrow modes; scripting API"),
         (
             "file.",
             "the File menu's app.* entries wrap them (dialogs, unsaved-changes guard)",
@@ -1252,7 +1209,7 @@ mod tests {
         ("app.button_style", "a choice in Global settings"),
         ("app.theme", "set by the system; for screenshots and tests"),
         ("app.export_now", "the Export panel's Export button and the E key"),
-        ("edit.select", "scripting API; the Select tool picks objects"),
+        ("edit.select", "scripting API (xfig has no selection)"),
         ("edit.search_replace", "scripting API; Search/Replace... runs it"),
         ("edit.paste_text", "the middle button of the Text tool"),
         (
@@ -1368,12 +1325,9 @@ mod tests {
     fn menus_show_the_platform_keys_xfig_leaves_free() {
         // macOS: Cmd never clashes with xfig's Ctrl and Option keys.
         assert_eq!(entry_keys("edit.undo", true, true), "Option+U");
-        assert_eq!(entry_keys("edit.copy", true, true), "⌘C");
-        // Linux and Windows: xfig's Ctrl-Z (zoom fit) and Ctrl-C (Copy mode)
-        // take the keys; Ctrl+X and Ctrl+V stay free.
+        assert_eq!(entry_keys("edit.paste", true, true), "Option+T");
+        // Linux and Windows: xfig's Ctrl-Z (zoom fit) takes the key.
         assert_eq!(entry_keys("edit.undo", true, false), "Alt+U");
-        assert_eq!(entry_keys("edit.copy", true, false), "");
-        assert_eq!(entry_keys("edit.cut", true, false), "Ctrl+X");
         assert_eq!(entry_keys("edit.paste", true, false), "Alt+T");
         assert_eq!(entry_keys("view.zoom_fit", true, false), "Ctrl+Z");
         // Without xfig's keys, the platform's shortcuts.

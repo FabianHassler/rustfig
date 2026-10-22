@@ -63,7 +63,7 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "object.reverse_arrows",
             label: "Reverse Arrows",
-            menu: "Object/Arrows",
+            menu: "",
             shortcut: "",
             params: "{\"ids\"?: [id]}  — swap the forward and backward arrow of lines, open splines and arcs; Arrow mode, right button",
             mutates: true,
@@ -73,7 +73,7 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "object.break_all",
             label: "Break All Levels",
-            menu: "Object",
+            menu: "",
             shortcut: "",
             params: "{\"ids\"?: [id]}  — break compounds and the compounds inside them down to single objects; Break mode, right button",
             mutates: true,

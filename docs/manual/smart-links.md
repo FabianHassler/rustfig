@@ -22,6 +22,6 @@ Open polylines and open splines. A line attached to two shapes that move togethe
 
 ## Operations that carry the links
 
-Move, Copy (the attached lines are copied with the shape; the original line's end follows the copy as in xfig), Select-mode drag, rotate, flip, scale, align, the arrow-key nudge command, and Move point on a box corner (resizing the box stretches the attached lines with its edges; this last one is a RustFig extension). The ends that will follow are highlighted while shapes are selected, and the Move, Copy, Move point and Scale previews show every follower.
+Move, Copy (the attached lines are copied with the shape; the original line's end follows the copy as in xfig), rotate, flip, scale, align, the arrow-key nudge command, and Move point on a box corner (resizing the box stretches the attached lines with its edges; this last one is a RustFig extension). The Move, Copy, Move point and Scale previews show every follower.
 
 Undo reverts the shape and its lines in one step.

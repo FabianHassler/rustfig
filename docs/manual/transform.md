@@ -51,7 +51,6 @@ No key (xfig key Ctrl+R). As above, the other way.
 - Middle, “copy & rotate” (Num Copies as above).
 - Right, “set center” / “unset center”.
 
-The Object menu has the same operations for the selection (Transform and Arrange): rotate, flip, align, distribute, and the depth order (bring to front, send to back).
 
 ## Array copies
 

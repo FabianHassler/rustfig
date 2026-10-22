@@ -10,7 +10,6 @@ Key `U`. Gives an object the current attributes of the [indicator panel](attribu
 - Middle, “update settings”: the reverse: the clicked object's attributes become the indicator's current ones.
 - Right, “update region”: update every object completely inside a region.
 
-Object > Update from Current Attributes (Ctrl+U) updates the selection.
 
 ## Edit attributes
 
@@ -25,7 +24,6 @@ No key (xfig key Ctrl+E). Opens the edit panel for an object with all of its att
 - Middle, “edit Main comment”: edits the figure's own comment. Shift+middle on an object shows its comments in the message panel.
 - Right, “edit point”: on a point of a spline, edits that point's shape factor (end points of an open spline cannot be edited).
 
-Double-clicking an object in Select mode opens the same panel.
 
 ## Convert line ↔ spline
 

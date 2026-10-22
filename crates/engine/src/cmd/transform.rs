@@ -51,8 +51,8 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "transform.rotate_ccw",
             label: "Rotate Counter-clockwise",
-            menu: "Object/Transform",
-            shortcut: "Ctrl+L",
+            menu: "",
+            shortcut: "",
             params: "{\"ids\"?: [id]}  — by the indicator's rotation angle",
             mutates: true,
             enabled: has_selection,
@@ -64,8 +64,8 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "transform.rotate_cw",
             label: "Rotate Clockwise",
-            menu: "Object/Transform",
-            shortcut: "Ctrl+R",
+            menu: "",
+            shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
             enabled: has_selection,
@@ -77,8 +77,8 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "transform.flip_horizontal",
             label: "Flip Left/Right",
-            menu: "Object/Transform",
-            shortcut: "Ctrl+Shift+H",
+            menu: "",
+            shortcut: "",
             params: "{\"ids\"?: [id], \"cx\"?, \"copy\"?: bool}  — copy: flip copies, keep the originals",
             mutates: true,
             enabled: has_selection,
@@ -87,8 +87,8 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "transform.flip_vertical",
             label: "Flip Up/Down",
-            menu: "Object/Transform",
-            shortcut: "Ctrl+Shift+V",
+            menu: "",
+            shortcut: "",
             params: "{\"ids\"?: [id], \"cy\"?, \"copy\"?: bool}",
             mutates: true,
             enabled: has_selection,

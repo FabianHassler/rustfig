@@ -12,7 +12,7 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "arrange.align",
             label: "Align",
-            menu: "Object/Arrange",
+            menu: "",
             shortcut: "",
             params: "{\"ids\"?: [id], \"h\"?: none|left|center|right, \"v\"?: none|top|center|bottom}  — defaults from the indicator",
             mutates: true,
@@ -22,7 +22,7 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "arrange.align_canvas",
             label: "Align to Canvas",
-            menu: "Object/Arrange",
+            menu: "",
             shortcut: "",
             params: "{\"ids\"?: [id] (all objects), \"h\"?: none|left|center|right, \"v\"?: none|top|center|bottom}  — each object is aligned to the page (xfig's Align mode, middle button; init_align_canvas), by the indicator's align modes",
             mutates: true,
@@ -32,7 +32,7 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "arrange.distribute",
             label: "Distribute",
-            menu: "Object/Arrange",
+            menu: "",
             shortcut: "",
             params: "{\"ids\"?: [id], \"axis\": horizontal|vertical}  — equal gaps between objects",
             mutates: true,
@@ -42,8 +42,8 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "arrange.to_front",
             label: "Bring to Front",
-            menu: "Object/Arrange",
-            shortcut: "Ctrl+Shift+Up",
+            menu: "",
+            shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
             enabled: has_selection,
@@ -52,8 +52,8 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "arrange.forward",
             label: "Bring Forward",
-            menu: "Object/Arrange",
-            shortcut: "Ctrl+Up",
+            menu: "",
+            shortcut: "",
             params: "{\"ids\"?: [id]}  — depth - 1",
             mutates: true,
             enabled: has_selection,
@@ -62,8 +62,8 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "arrange.backward",
             label: "Send Backward",
-            menu: "Object/Arrange",
-            shortcut: "Ctrl+Down",
+            menu: "",
+            shortcut: "",
             params: "{\"ids\"?: [id]}  — depth + 1",
             mutates: true,
             enabled: has_selection,
@@ -72,8 +72,8 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "arrange.to_back",
             label: "Send to Back",
-            menu: "Object/Arrange",
-            shortcut: "Ctrl+Shift+Down",
+            menu: "",
+            shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
             enabled: has_selection,

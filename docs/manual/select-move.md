@@ -1,13 +1,6 @@
-# Select, move, copy, delete
+# Move, copy, delete
 
-## Select
-
-No key. RustFig's modern selection tool; xfig has no such mode. It selects objects to act on with Edit and Object menu commands, and moves them.
-
-- Left, “select / drag”: click an object to select it; drag an object to move it; drag on empty canvas to draw a selection rectangle. Double-click an object to open its edit panel.
-- Shift+left adds an object to the selection or removes it (Shift with a rectangle adds to the selection).
-- A single selected line shows its points as handles: drag a handle to move that point. The ends of lines attached to selected shapes are marked ([Smart links](smart-links.md)).
-- Delete or Backspace deletes the selection; Escape selects nothing (a second Escape leaves the mode, see [Keys](keys.md)).
+xfig has no selection: you choose a mode first (Move, Copy, Delete, …) and then click the object it acts on. RustFig works the same way. To act on an object hidden under another one, Shift+left locates it first ([Mouse](mouse.md)). The cut buffer is filled by Copy mode's right button (“copy to cut buf”) or Delete mode's right button (“del to cut buf”), and emptied with Edit > Paste objects.
 
 ## Move
 

@@ -31,8 +31,8 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "edit.cut",
             label: "Cut",
-            menu: "Edit",
-            shortcut: "Ctrl+X",
+            menu: "",
+            shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
             enabled: has_selection,
@@ -41,19 +41,34 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "edit.copy",
             label: "Copy",
-            menu: "Edit",
-            shortcut: "Ctrl+C",
+            menu: "",
+            shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: false,
             enabled: has_selection,
             run: copy,
         },
         Command {
-            id: "edit.copy_picture",
+            id: "edit.copy_picture_pick",
             label: "Copy as Picture",
             menu: "Edit",
             shortcut: "",
-            params: "{\"ids\"?: [id], \"magnification\"?: percent, \"margin\"?: fig units, \"dpi\"?: number, \"background\"?: \"#rrggbb\", \"options\"?: {key: value} fig2dev's options (for the PNG: e.g. transparent)}  — puts the selection (or the whole figure) on the system clipboard as the platform's vector picture (macOS PDF, Windows EMF, Linux SVG) and a PNG; returns {\"formats\": [...], \"bytes\": n}",
+            params: "{}  — the next click chooses what is copied as a picture: left the object under the pointer, middle a region (two corners or a loop), right the whole figure; Escape cancels",
+            mutates: false,
+            enabled: |e| e.picture_clipboard.is_some(),
+            run: |e, _| {
+                e.copy_pick = true;
+                e.eyedropper = None;
+                e.set_status("Copy as picture: click an object (left), a region (middle) or the whole figure (right); Escape cancels.");
+                Ok(json!({}))
+            },
+        },
+        Command {
+            id: "edit.copy_picture",
+            label: "Copy as Picture (ids)",
+            menu: "",
+            shortcut: "",
+            params: "{\"ids\"?: [id], \"whole\"?: bool, \"magnification\"?: percent, \"margin\"?: fig units, \"dpi\"?: number, \"background\"?: \"#rrggbb\", \"options\"?: {key: value} fig2dev's options (for the PNG: e.g. transparent)}  — puts the selection (or the whole figure) on the system clipboard as the platform's vector picture (macOS PDF, Windows EMF, Linux SVG) and a PNG; returns {\"formats\": [...], \"bytes\": n}",
             mutates: false,
             enabled: always,
             run: copy_picture,
@@ -71,8 +86,8 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "edit.duplicate",
             label: "Duplicate",
-            menu: "Edit",
-            shortcut: "Ctrl+D",
+            menu: "",
+            shortcut: "",
             params: "{\"ids\"?: [id], \"dx\"?: number, \"dy\"?: number}  — with smart links on, the lines attached to the objects are copied too (the original line ends follow the copy)",
             mutates: true,
             enabled: has_selection,
@@ -91,8 +106,8 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "edit.delete",
             label: "Delete",
-            menu: "Edit",
-            shortcut: "Delete",
+            menu: "",
+            shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
             enabled: has_selection,
@@ -117,8 +132,8 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "edit.select_all",
             label: "Select All",
-            menu: "Edit",
-            shortcut: "Ctrl+A",
+            menu: "",
+            shortcut: "",
             params: "{}",
             mutates: false,
             enabled: always,
@@ -137,7 +152,7 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "edit.select_none",
             label: "Select None",
-            menu: "Edit",
+            menu: "",
             shortcut: "",
             params: "{}",
             mutates: false,
@@ -197,7 +212,9 @@ fn copy_picture(e: &mut Engine, p: &Value) -> CmdResult {
             "Copy as picture is not available here (there is no system clipboard)",
         ));
     }
-    let ids = e.target_ids(p)?;
+    // `whole`: the whole figure (Copy as Picture's right button).
+    let whole = p.get("whole").and_then(Value::as_bool).unwrap_or(false);
+    let ids = if whole { Vec::new() } else { e.target_ids(p)? };
     let mut doc = e.whole_doc().into_owned();
     if !ids.is_empty() {
         let chosen: Vec<_> = ids

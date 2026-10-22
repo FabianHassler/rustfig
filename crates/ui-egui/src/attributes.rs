@@ -267,7 +267,6 @@ pub fn attributes_for(tool: ToolKind) -> Vec<Attr> {
         ToolKind::Align => &[&[HAlign, VAlign, SmartLinks]],
         ToolKind::Update => &[TEXT0, LINE1, ARROWS, &[BoxRadius, ArcType]],
         // RustFig's own Select tool edits with the same attributes as Update.
-        ToolKind::Select => &[MIN2, TEXT0, LINE1, ARROWS, &[BoxRadius, ArcType]],
         ToolKind::RotateCcw | ToolKind::RotateCw => &[MIN2, &[RotnAngle, NumCopies, SmartLinks]],
         ToolKind::Arrow => &[&[LineWidth, ArrowType, ArrowSize]],
         // xfig's `I_TANGENT`: the line attributes, the arrows and the length.

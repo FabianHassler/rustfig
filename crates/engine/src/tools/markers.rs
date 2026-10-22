@@ -365,7 +365,6 @@ mod tests {
         let boxes = ["box", "arcbox", "picture"];
         let cases: Vec<(ToolKind, Vec<&str>)> = vec![
             (T::None, vec![]),
-            (T::Select, vec![]),
             (T::Box, vec![]),
             (T::Polyline, vec![]),
             (T::Text, vec!["text"]),

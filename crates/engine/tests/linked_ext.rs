@@ -361,10 +361,10 @@ fn move_point_on_a_box_corner_resizes_with_the_lines() {
 }
 
 #[test]
-fn the_drag_preview_shows_every_follower_and_the_ends_are_highlighted() {
+fn the_drag_preview_shows_every_follower() {
     let mut e = engine(LinkMode::Move);
-    let a = id_of(&run(&mut e, "shape.circle", json!({"cx": 0, "cy": 0, "r": 500})));
-    let b = id_of(&run(
+    run(&mut e, "shape.circle", json!({"cx": 0, "cy": 0, "r": 500}));
+    id_of(&run(
         &mut e,
         "shape.rectangle",
         json!({"x": 3000, "y": -300, "width": 600, "height": 600}),
@@ -375,13 +375,6 @@ fn the_drag_preview_shows_every_follower_and_the_ends_are_highlighted() {
         json!({"points": [[500, 0], [1500, -800], [3000, 0]], "kind": "interpolated"}),
     ));
     let l = line(&mut e, json!([[3600, 0], [5000, 0]]));
-    // Highlight: select both shapes with the Select tool; three ends are attached.
-    run(&mut e, "tool.select", json!({}));
-    run(&mut e, "edit.select", json!({"ids": [a, b]}));
-    let ends = e.overlay().handles;
-    for q in [Point::new(500.0, 0.0), Point::new(3000.0, 0.0), Point::new(3600.0, 0.0)] {
-        assert!(ends.iter().any(|h| h.dist(q) < 1e-6), "{q:?} highlighted");
-    }
     // Drag with the Move tool: pick the circle's outline, move.
     e.indicator.snap = rustfig_engine::SnapMode::Any;
     run(&mut e, "edit.select", json!({"ids": []}));

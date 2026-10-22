@@ -63,10 +63,10 @@ fn hidden_objects_cannot_be_picked() {
         assert!(!e.tool_busy(), "{} picked a hidden object", tool.id());
         assert_eq!(e.doc().objects[1].points().unwrap().len(), 3, "{} edited it", tool.id());
     }
-    // Select all and the rubber band skip it.
+    // Select all and Glue's tag band skip it.
     e.execute("edit.select_all", &json!({})).unwrap();
     assert_eq!(e.selection().len(), 1);
-    e.set_tool(ToolKind::Select);
+    e.set_tool(ToolKind::Glue);
     e.set_selection(vec![]);
     e.tool_event(ToolEvent::Press {
         pos: Point::new(-100.0, -100.0),

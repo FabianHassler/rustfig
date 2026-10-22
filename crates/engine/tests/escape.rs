@@ -74,9 +74,7 @@ fn escape_clears_the_chop_axes_before_leaving() {
 }
 
 #[test]
-fn escape_is_the_key_and_select_none_keeps_its_menu_entry() {
+fn escape_is_the_key() {
     let esc = rustfig_engine::cmd::find("tool.escape").unwrap();
     assert_eq!(esc.shortcut, "Escape");
-    let none = rustfig_engine::cmd::find("edit.select_none").unwrap();
-    assert_eq!(none.menu, "Edit");
 }

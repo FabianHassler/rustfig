@@ -17,7 +17,7 @@ RustFig is a Rust reimplementation of xfig, the classic vector drawing program f
 
 ## Editing
 
-- [Select, move, copy, delete](select-move.md), [Scale, align, flip, rotate](transform.md).
+- [Move, copy, delete](select-move.md), [Scale, align, flip, rotate](transform.md).
 - [Points](points.md): move, add and delete the points of a line.
 - [Compounds](compounds.md), [Join and split](join-split.md), [Chop](chop.md), [Trim, split and extend](trim.md), [Tangent and normal](tangent-normal.md), [Measuring](measure.md).
 - [Attribute modes](attribute-modes.md): update, edit, convert, open/close, arrows.

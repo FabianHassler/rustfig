@@ -367,20 +367,6 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
             Color32::from_rgb(255, 0, 0),
         );
     }
-    if app.engine.tool() == rustfig_engine::ToolKind::Select && !app.engine.tool_busy() {
-        let bb = app.engine.selection_bbox();
-        if !bb.is_empty() {
-            let r = Rect::from_two_pos(to_screen(bb.min), to_screen(bb.max)).expand(3.0);
-            let c = [
-                r.left_top(),
-                r.right_top(),
-                r.right_bottom(),
-                r.left_bottom(),
-                r.left_top(),
-            ];
-            painter.extend(Shape::dashed_line(&c, Stroke::new(1.0_f32, tk.selection), 5.0, 3.0));
-        }
-    }
     for h in &overlay.handles {
         let p = to_screen(*h);
         let r = Rect::from_center_size(p, vec2(6.0, 6.0));

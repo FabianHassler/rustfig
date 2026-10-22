@@ -317,7 +317,7 @@ fn bad_requests_fail_and_change_nothing() {
     assert!(e.execute("compound.open", &json!({"id": comp.0})).is_err());
     assert_eq!(e.open_compounds(), 0);
     // The same object cannot be opened twice.
-    e.set_tool(ToolKind::Select);
+    e.set_tool(ToolKind::None);
     e.execute("compound.open", &json!({"id": comp.0})).unwrap();
     assert!(e.execute("compound.open", &json!({"id": comp.0})).is_err());
 }

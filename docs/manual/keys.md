@@ -58,18 +58,10 @@ Meta+F, E, V and H open the File, Edit, View and Help menus; while a menu is ope
 | Ctrl+N, O, S, Shift+S, Q | New, Open, Save, Save As, Quit |
 | Ctrl+E, Ctrl+Shift+E | Export |
 | Ctrl+Z, Ctrl+Shift+Z | Undo, Redo |
-| Ctrl+X, C, V, D | Cut, Copy, Paste, Duplicate |
-| Delete or Backspace | Delete the selection |
-| Ctrl+A | Select all |
-| Ctrl+G, Ctrl+Shift+G | Group, break compound |
-| Ctrl+U | Update from current attributes |
-| Ctrl+L, Ctrl+R | Rotate counter-clockwise, clockwise |
-| Ctrl+Shift+H, Ctrl+Shift+V | Flip left/right, up/down |
-| Ctrl+Shift+Up and Down, Ctrl+Up and Down | Bring to front, to back, forward, backward |
+| Ctrl+V | Paste objects (the cut buffer) |
 | Ctrl+=, Ctrl+-, Ctrl+0, Ctrl+1 | Zoom in, out, to fit, actual size |
 | Ctrl+' , Ctrl+B | Show grid, show page border |
 | Ctrl+F | Search/Replace |
-| Ctrl+M | Measure |
 
 ## Other keys
 

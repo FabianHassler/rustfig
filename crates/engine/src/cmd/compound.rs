@@ -20,7 +20,7 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "compound.open",
             label: "Open Compound",
-            menu: "Object",
+            menu: "",
             shortcut: "",
             params: "{\"id\"?: top-level compound (default: the selected one), \"keep_visible\"?: bool (xfig's middle button: the rest of the figure stays visible, gray)}  — edit the compound's members in place; opens nest",
             mutates: true,
@@ -30,7 +30,7 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "compound.close",
             label: "Close This Compound",
-            menu: "Object",
+            menu: "",
             shortcut: "",
             params: "{}  — close the innermost open compound; one that lost all its members is removed",
             mutates: true,
@@ -40,7 +40,7 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "compound.close_all",
             label: "Close All Compounds",
-            menu: "Object",
+            menu: "",
             shortcut: "",
             params: "{}  — close every open compound",
             mutates: true,
