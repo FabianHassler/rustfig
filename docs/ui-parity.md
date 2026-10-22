@@ -1,6 +1,6 @@
 # UI parity checklist
 
-**Status:** 2026-10-22 (W10-16, W10-20: picture edit panel); 2026-10-22 (D5: measure modes); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: Tangent mode and its length button). ✅ done · 🟡 partial · ❌ missing
+**Status:** 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: live edit panel, compound panel, point table, pictorial menus); 2026-10-22 (W10-16, W10-20: picture edit panel); 2026-10-22 (D5: measure modes); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: Tangent mode and its length button). ✅ done · 🟡 partial · ❌ missing
 
 ## Drawing modes
 | xfig mode | RustFig | |
@@ -30,7 +30,7 @@
 | Move / add / delete point | `tool.move_point`, `tool.add_point`, `tool.delete_point` | ✅ |
 | Delete | `tool.delete` | ✅ |
 | Update | `tool.update` | ✅ |
-| Edit | `tool.edit` + edit dialog | ✅ |
+| Edit | `tool.edit` + edit dialog: live (every change shows at once; Done is one undo step, Cancel undoes all), compound rows (corners, size, depth range, Collapse Depths, texts), point table (insert, delete, add, paste, X-spline shape factors), pictorial menus for line style, cap, join and arrow type, no tints for black/white fills | ✅ |
 | Flip up/down, left/right | `tool.flip_vertical`, `tool.flip_horizontal` | ✅ |
 | Rotate | `tool.rotate_ccw`, `tool.rotate_cw` | ✅ |
 | Convert | `tool.convert` | ✅ |

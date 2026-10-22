@@ -518,6 +518,15 @@ impl Engine {
             .fold(Rect::EMPTY, |r, (_, _, b)| r.union(&b.get().unwrap_or(Rect::EMPTY)))
     }
 
+    /// The fig2dev bounds of one top-level object (a compound's corners in
+    /// xfig's edit panel).
+    pub fn object_fig_bounds(&self, id: ObjectId) -> Option<Rect> {
+        self.fig_bounds()
+            .iter()
+            .find(|(o, _, _)| o.id == id)
+            .and_then(|(_, _, b)| b.get())
+    }
+
     /// Top-level objects (visible ones) whose fig2dev bounds lie inside `r`.
     pub fn objects_within(&self, r: &Rect) -> Vec<ObjectId> {
         self.objects_within_region(&Region::Rect(*r))

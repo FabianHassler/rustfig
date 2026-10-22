@@ -2,7 +2,7 @@
 
 use super::{has_selection, ids_value, num, opt_bool, opt_num, opt_str, point_value, CmdResult, Command};
 use crate::{Engine, EngineError};
-use rustfig_geom::{polygon_area, polyline_length, Point, Rect};
+use rustfig_geom::{polygon_area, polyline_length, Affine, Point, Rect};
 use rustfig_model::{
     flatten_object, Arrow, CapStyle, ColorRef, Compound, JoinStyle, LineKind, Object, ObjectId, ObjectKind, PolyKind,
     Polyline, Spline, SplineKind, MAX_DEPTH,
@@ -47,7 +47,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Set attributes",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id], \"line\"?, \"thickness\"?, \"pen_color\"?, \"fill_color\"?, \"area_fill\"?, \"depth\"?, \"style_val\"?, \"cap\"?: butt|round|projecting, \"join\"?: miter|round|bevel, \"forward_arrow\"?: bool, \"backward_arrow\"?: bool, \"arrow_kind\"?, \"arrow_style\"?, \"arrow_width\"?, \"arrow_height\"?, \"radius\"?, \"font\"?, \"font_size\"?, \"justify\"?, \"angle\"?: degrees, \"text\"?, \"postscript\"?: bool, \"hidden\"?: bool, \"rigid\"?: bool, \"special\"?: bool, \"pie\"?: bool, \"flipped\"?: bool (pictures), \"arrow_thickness\"?, \"comment\"?: string, \"forward_arrow_spec\"?, \"backward_arrow_spec\"?: {kind, style, thickness, width, height}, \"geometry\"?: as object.set_geometry without id}",
+            params: "{\"ids\"?: [id], \"line\"?, \"thickness\"?, \"pen_color\"?, \"fill_color\"?, \"area_fill\"?, \"depth\"?, \"style_val\"?, \"cap\"?: butt|round|projecting, \"join\"?: miter|round|bevel, \"forward_arrow\"?: bool, \"backward_arrow\"?: bool, \"arrow_kind\"?, \"arrow_style\"?, \"arrow_width\"?, \"arrow_height\"?, \"radius\"?, \"font\"?, \"font_size\"?, \"justify\"?, \"angle\"?: degrees, \"text\"?, \"postscript\"?: bool, \"hidden\"?: bool, \"rigid\"?: bool, \"special\"?: bool, \"pie\"?: bool, \"flipped\"?: bool (pictures), \"arrow_thickness\"?, \"comment\"?: string, \"texts\"?: [string] (compound: the texts directly in it, in order), \"forward_arrow_spec\"?, \"backward_arrow_spec\"?: {kind, style, thickness, width, height}, \"geometry\"?: as object.set_geometry without id}",
             mutates: true,
             enabled: |_| true,
             run: set_attributes,
@@ -57,7 +57,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Set geometry",
             menu: "",
             shortcut: "",
-            params: "{\"id\", \"points\"?: [[x, y]...] (box/arc-box/picture: two opposite corners; polyline/polygon/spline: all points, same count; arc: three points; ellipse/circle: [centre]; text: [origin]), \"radii\"?: [rx, ry], \"angle\"?: degrees (ellipse), \"shapes\"?: [factor per spline point]}  — xfig's edit panel rows, Fig units",
+            params: "{\"id\", \"points\"?: [[x, y]...] (box/arc-box/picture: two opposite corners; polyline/polygon/spline: all points, same count; arc: three points; ellipse/circle: [centre]; text: [origin]), \"radii\"?: [rx, ry], \"angle\"?: degrees (ellipse), \"shapes\"?: [factor per spline point], \"resize\"?: bool (polyline/polygon/spline: the number of points may change; a spline then takes one shape factor per point or none), compound: points [top-left, bottom-right] repositions and rescales it}  — xfig's edit panel rows, Fig units",
             mutates: true,
             enabled: |_| true,
             run: set_geometry,
@@ -441,6 +441,35 @@ fn set_attributes(e: &mut Engine, p: &Value) -> CmdResult {
             }
         }
     })?;
+    // A compound's panel lists the texts directly in it (`e_edit.c`).
+    if let Some(v) = p.get("texts") {
+        let bad_texts = || EngineError::bad_params("texts must be an array of strings");
+        let list: Vec<String> = v
+            .as_array()
+            .ok_or_else(bad_texts)?
+            .iter()
+            .map(|x| x.as_str().map(str::to_string))
+            .collect::<Option<_>>()
+            .ok_or_else(bad_texts)?;
+        if list.iter().any(|t| t.len() > rustfig_format::MAX_TEXT_BYTES) {
+            return Err(EngineError::bad_params("text is too long"));
+        }
+        let ids = e.target_ids(p)?;
+        for o in e.doc_mut().objects.iter_mut() {
+            if !ids.contains(&o.id) {
+                continue;
+            }
+            if let ObjectKind::Compound(c) = &mut Arc::make_mut(o).kind {
+                let texts = c.objects.iter_mut().filter_map(|m| match &mut m.kind {
+                    ObjectKind::Text(t) => Some(t),
+                    _ => None,
+                });
+                for (t, new) in texts.zip(list.iter()) {
+                    t.text = new.clone();
+                }
+            }
+        }
+    }
     // A comment belongs to the edited object itself (a compound's own
     // comment, not its members').
     if let Some(c) = &comment {
@@ -880,7 +909,17 @@ fn set_geometry(e: &mut Engine, p: &Value) -> CmdResult {
                 .ok_or_else(|| EngineError::bad_params("shapes must be an array of numbers"))?,
         ),
     };
+    let resize = opt_bool(p, "resize")?.unwrap_or(false);
     let bad = |m: &str| EngineError::bad_params(m.to_string());
+    // A compound's corners are its fig2dev bounds (xfig's `nwcorner` and
+    // `secorner`).
+    let old_bounds = match e.doc().get(id) {
+        Some(o) if matches!(o.kind, ObjectKind::Compound(_)) => {
+            let mut ctx = rustfig_format::bridge::from_model::context(e.doc());
+            Some(rustfig_format::bridge::object_bounds(o, &mut ctx))
+        }
+        _ => None,
+    };
     let o = e
         .doc_mut()
         .get_mut(id)
@@ -902,7 +941,12 @@ fn set_geometry(e: &mut Engine, p: &Value) -> CmdResult {
         ObjectKind::Polyline(pl) => {
             if let Some(pts) = points {
                 if pts.len() != pl.points.len() {
-                    return Err(bad("the number of points cannot change"));
+                    if !resize || !matches!(pl.kind, PolyKind::Polyline | PolyKind::Polygon) {
+                        return Err(bad("the number of points cannot change"));
+                    }
+                    if pts.is_empty() {
+                        return Err(bad("a line needs at least one point"));
+                    }
                 }
                 // xfig deletes a polygon with fewer than 3 distinct points.
                 if pl.kind == PolyKind::Polygon && distinct_run(&pts) < 3 {
@@ -914,7 +958,16 @@ fn set_geometry(e: &mut Engine, p: &Value) -> CmdResult {
         ObjectKind::Spline(s) => {
             if let Some(pts) = points {
                 if pts.len() != s.points.len() {
-                    return Err(bad("the number of points cannot change"));
+                    if !resize {
+                        return Err(bad("the number of points cannot change"));
+                    }
+                    if pts.len() < if s.closed { 3 } else { 2 } {
+                        return Err(bad("the spline would have too few points"));
+                    }
+                    // New points get the kind's own shape factor; `shapes`
+                    // below overrides them.
+                    let shape = s.kind.default_shape();
+                    s.shapes.resize(pts.len(), shape);
                 }
                 if pts.iter().all(|q| Some(q) == pts.first()) {
                     return Err(bad("a spline needs at least two different points"));
@@ -991,9 +1044,26 @@ fn set_geometry(e: &mut Engine, p: &Value) -> CmdResult {
             }
         }
         ObjectKind::Compound(_) => {
-            return Err(bad(
-                "compounds are moved and scaled with transform.move and transform.scale",
-            ))
+            // xfig's `get_new_compound_values`: translate to the new
+            // top-left corner, then scale about it to the bottom-right one.
+            let corners = || bad("a compound needs its top-left and bottom-right corners");
+            let Some(pts) = &points else { return Err(corners()) };
+            let (Some(nw), Some(se)) = (pts.first(), pts.get(1)) else {
+                return Err(corners());
+            };
+            let Some(b) = old_bounds.filter(|b| !b.is_empty()) else {
+                return Err(bad("the compound has no extent"));
+            };
+            let ratio = |new: f64, old: f64| if old.abs() < 1e-9 { 1.0 } else { new / old };
+            let sx = ratio(se.x - nw.x, b.max.x - b.min.x);
+            let sy = ratio(se.y - nw.y, b.max.y - b.min.y);
+            if sx.abs() < 1e-6 || sy.abs() < 1e-6 || sx.abs() > 1e6 || sy.abs() > 1e6 {
+                return Err(bad("the compound's size must not be zero"));
+            }
+            new.translate(nw.x - b.min.x, nw.y - b.min.y);
+            if (sx - 1.0).abs() > 1e-12 || (sy - 1.0).abs() > 1e-12 {
+                new.transform(&Affine::about(Affine::scale(sx, sy), *nw), true);
+            }
         }
     }
     *o = new;

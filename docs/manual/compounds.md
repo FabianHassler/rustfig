@@ -28,3 +28,14 @@ Key `O`. Edits the inside of a compound without breaking it. After opening, ever
 - Middle, “open, keep visible”: the same, and the rest of the drawing stays visible in gray as a reference.
 
 A "Close Compound" button appears while one is open; opening several in turn goes deeper. Saving asks whether to save only the visible part or everything. Undo steps through opening and closing too.
+
+## Edit a compound
+
+The edit panel of a compound (Edit mode, or Edit attributes, Ctrl+E) has, as in xfig:
+
+- Top left corner and Bottom right corner of the compound's bounds. Changing a corner moves the compound; its size stays.
+- Dimensions (width and height). Changing them rescales the compound about its top left corner; the bottom right corner follows.
+- Depths: the smallest and largest depth inside, and the Collapse Depths button, which gives every object inside (also in compounds inside it) the smallest depth. Without that button the depths stay as they are.
+- Number of objects, and one text field for each text directly inside the compound.
+
+Changes show on the canvas as you make them; Done is one undo step, Cancel restores the compound. The corners are the compound's bounds as the export gives them, so they include the width of the lines and the text.

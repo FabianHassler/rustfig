@@ -357,9 +357,34 @@ pub fn fill_choices() -> Vec<(i32, String)> {
     v
 }
 
+/// xfig shows no tints for the fill colours black, white and default
+/// (`w_indpanel.c`: tints of them are shades or white again).
+pub fn plain_fill_color(fill_color: i32) -> bool {
+    matches!(fill_color, -1 | 0 | 7)
+}
+
+/// The fill value a plain fill colour allows (tints become the full colour,
+/// shade 20).
+pub fn limit_fill(area: i32, fill_color: i32) -> i32 {
+    if plain_fill_color(fill_color) && (21..=40).contains(&area) {
+        20
+    } else {
+        area
+    }
+}
+
 pub fn fill_combo(ui: &mut egui::Ui, id: &str, current: i32) -> Option<i32> {
+    fill_combo_for(ui, id, current, false)
+}
+
+/// The fill menu; with `plain` (fill colour black, white or default) the
+/// tints are left out.
+pub fn fill_combo_for(ui: &mut egui::Ui, id: &str, current: i32, plain: bool) -> Option<i32> {
     let mut chosen = None;
-    let choices = fill_choices();
+    let choices: Vec<_> = fill_choices()
+        .into_iter()
+        .filter(|(v, _)| !(plain && (21..=40).contains(v)))
+        .collect();
     let text = choices
         .iter()
         .find(|(v, _)| *v == current)

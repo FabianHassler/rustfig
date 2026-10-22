@@ -1721,3 +1721,319 @@ fn show_line_lengths_is_a_view_entry() {
     h.run_steps(3);
     assert!(h.state().engine.show_lengths);
 }
+
+// ---- W10-15, W10-17..19, W10-21: live edit panel, compound rows, point table ----
+
+const EDIT_FIG: &str = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 3\n\t 0 0 600 600 1200 0\n\
+3 4 0 1 0 7 50 -1 -1 0.000 0 0 0 4\n\t 0 2400 600 3000 1200 2400 1800 3000\n\t 0.0 1.0 1.0 0.0\n\
+6 3000 3000 4200 4200\n4 0 0 40 -1 0 12 0.0000 4 150 600 3000 3300 One\\001\n\
+2 2 0 1 0 7 70 -1 -1 0.000 0 0 -1 0 0 5\n\t 3000 3600 4200 3600 4200 4200 3000 4200 3000 3600\n-6\n";
+
+fn edit_harness() -> Harness<'static, App> {
+    let mut h = harness(app());
+    h.state_mut()
+        .engine
+        .execute("file.open_data", &json!({"data": EDIT_FIG}))
+        .unwrap();
+    h.run_steps(2);
+    h
+}
+
+fn open_panel(h: &mut Harness<'static, App>, ty: &str) {
+    let id = h
+        .state()
+        .engine
+        .doc()
+        .objects
+        .iter()
+        .find(|o| o.type_name() == ty)
+        .map(|o| o.id)
+        .unwrap();
+    let a = h.state_mut();
+    a.dialogs.open_edit(&a.engine, id);
+    h.run_steps(2);
+    assert!(h.state().dialogs.edit.is_some());
+}
+
+fn first_of(h: &Harness<'static, App>, ty: &str) -> rustfig_model::Object {
+    h.state()
+        .engine
+        .doc()
+        .objects
+        .iter()
+        .find(|o| o.type_name() == ty)
+        .map(|o| (**o).clone())
+        .unwrap()
+}
+
+/// W10-17/W10-18: changes show at once; Done is one undo step for all of
+/// them; Cancel undoes everything since the panel opened.
+#[test]
+fn live_edit_panel_is_one_undo_step_and_cancel_restores() {
+    use rustfig_model::ObjectKind;
+    let mut h = edit_harness();
+    let before = first_of(&h, "polyline");
+    let undo_before = h.state().engine.undo_bytes();
+    open_panel(&mut h, "polyline");
+    // Three changes, as made one after the other; each shows on the canvas
+    // without Apply.
+    for t in [3, 6, 9] {
+        h.state_mut().dialogs.edit.as_mut().unwrap().thickness = t;
+        h.run_steps(2);
+        let ObjectKind::Polyline(p) = &first_of(&h, "polyline").kind else {
+            panic!()
+        };
+        assert_eq!(p.style.thickness, t, "live");
+    }
+    h.state_mut().dialogs.edit.as_mut().unwrap().depth = 77;
+    h.run_steps(2);
+    h.get_by_label("Done").click();
+    h.run_steps(2);
+    assert!(h.state().dialogs.edit.is_none());
+    let ObjectKind::Polyline(p) = &first_of(&h, "polyline").kind else {
+        panic!()
+    };
+    assert_eq!((p.style.thickness, p.style.depth), (9, 77));
+    // One undo brings the original back (not an intermediate state).
+    assert!(h.state_mut().engine.undo());
+    assert_eq!(first_of(&h, "polyline"), before);
+    assert!(h.state_mut().engine.redo());
+    let ObjectKind::Polyline(p) = &first_of(&h, "polyline").kind else {
+        panic!()
+    };
+    assert_eq!(p.style.thickness, 9);
+    assert!(h.state().engine.undo_bytes() >= undo_before);
+    // Cancel: nothing of the edit remains, and the history has no extra step.
+    h.state_mut().engine.undo();
+    let doc_before = h.state().engine.doc().clone();
+    open_panel(&mut h, "polyline");
+    h.state_mut().dialogs.edit.as_mut().unwrap().thickness = 5;
+    h.run_steps(2);
+    h.state_mut().dialogs.edit.as_mut().unwrap().comment = "x".into();
+    h.run_steps(2);
+    assert_ne!(*h.state().engine.doc(), doc_before);
+    h.get_by_label("Cancel").click();
+    h.run_steps(2);
+    assert_eq!(*h.state().engine.doc(), doc_before);
+}
+
+/// W10-17: xfig offers no tints for a black, white or default fill colour.
+#[test]
+fn black_and_white_fill_has_no_tints() {
+    use rustfig_model::ObjectKind;
+    let mut h = edit_harness();
+    open_panel(&mut h, "polyline");
+    {
+        let st = h.state_mut().dialogs.edit.as_mut().unwrap();
+        st.fill = 7;
+        st.area = 30;
+    }
+    h.run_steps(3);
+    let st = h.state().dialogs.edit.as_ref().unwrap();
+    assert_eq!(st.area, 20, "a tint of white is limited to the valid range");
+    let ObjectKind::Polyline(p) = &first_of(&h, "polyline").kind else {
+        panic!()
+    };
+    assert_eq!(p.style.area_fill, 20);
+    {
+        let st = h.state_mut().dialogs.edit.as_mut().unwrap();
+        st.fill = 4;
+        st.area = 30;
+    }
+    h.run_steps(3);
+    assert_eq!(
+        h.state().dialogs.edit.as_ref().unwrap().area,
+        30,
+        "a colour keeps its tints"
+    );
+    use rustfig_ui_egui::panels::{limit_fill, plain_fill_color};
+    assert!(plain_fill_color(0) && plain_fill_color(-1) && !plain_fill_color(4));
+    assert_eq!(limit_fill(50, 0), 50, "patterns are not limited");
+}
+
+/// W10-15: the compound panel: corners, size, depths, texts.
+#[test]
+fn compound_panel_repositions_rescales_collapses_and_edits_texts() {
+    use rustfig_model::ObjectKind;
+    let mut h = edit_harness();
+    open_panel(&mut h, "compound");
+    let (nw, se) = match &h.state().dialogs.edit.as_ref().unwrap().geo {
+        rustfig_ui_egui::dialogs::Geo::Compound { nw, se } => (*nw, *se),
+        g => panic!("{g:?}"),
+    };
+    let st = h.state().dialogs.edit.as_ref().unwrap();
+    assert_eq!((st.min_depth, st.max_depth), (40, 70));
+    assert_eq!(st.texts, ["One"]);
+    h.get_by_label("Collapse Depths").click();
+    h.run_steps(2);
+    let c = first_of(&h, "compound");
+    assert!(
+        matches!(&c.kind, ObjectKind::Compound(c) if c.objects.iter().all(|o| o.depth() == 40)),
+        "Collapse Depths gives every object the smallest depth"
+    );
+    // Text field.
+    h.state_mut().dialogs.edit.as_mut().unwrap().texts[0] = "Uno".to_string();
+    h.run_steps(2);
+    let c = first_of(&h, "compound");
+    let ObjectKind::Compound(c) = &c.kind else { panic!() };
+    assert!(c
+        .objects
+        .iter()
+        .any(|o| matches!(&o.kind, ObjectKind::Text(t) if t.text == "Uno")));
+    // Move the top-left corner: the size stays.
+    {
+        let st = h.state_mut().dialogs.edit.as_mut().unwrap();
+        if let rustfig_ui_egui::dialogs::Geo::Compound { nw: n, .. } = &mut st.geo {
+            n[0] += 600.0;
+            n[1] += 300.0;
+        }
+        if let rustfig_ui_egui::dialogs::Geo::Compound { se: s, .. } = &mut st.geo {
+            s[0] += 600.0;
+            s[1] += 300.0;
+        }
+    }
+    h.run_steps(3);
+    let b = h.state().engine.object_fig_bounds(first_of(&h, "compound").id).unwrap();
+    assert!(
+        (b.min.x - (nw[0] + 600.0)).abs() < 30.0 && (b.min.y - (nw[1] + 300.0)).abs() < 30.0,
+        "{b:?} {nw:?}"
+    );
+    assert!(((b.max.x - b.min.x) - (se[0] - nw[0])).abs() < 30.0, "size stays");
+    // Rescale by the dimensions: the bottom-right corner follows.
+    {
+        let st = h.state_mut().dialogs.edit.as_mut().unwrap();
+        if let rustfig_ui_egui::dialogs::Geo::Compound { nw: n, se: s } = &mut st.geo {
+            s[0] = n[0] + 2400.0;
+            s[1] = n[1] + 1200.0;
+        }
+    }
+    h.run_steps(3);
+    let b = h.state().engine.object_fig_bounds(first_of(&h, "compound").id).unwrap();
+    assert!(((b.max.x - b.min.x) - 2400.0).abs() < 60.0, "{:?}", b);
+    h.get_by_label("Done").click();
+    h.run_steps(2);
+    // The whole edit is one undo step.
+    h.state_mut().engine.undo();
+    let c = first_of(&h, "compound");
+    let ObjectKind::Compound(c) = &c.kind else { panic!() };
+    assert!(c.objects.iter().any(|o| o.depth() == 70), "original depths back");
+}
+
+/// W10-19: the point table adds, inserts, deletes, pastes and edits shape
+/// factors.
+#[test]
+fn point_table_edits_points() {
+    use rustfig_model::ObjectKind;
+    let mut h = edit_harness();
+    open_panel(&mut h, "polyline");
+    let npts = |h: &Harness<'static, App>| match &first_of(h, "polyline").kind {
+        ObjectKind::Polyline(p) => p.points.len(),
+        _ => 0,
+    };
+    assert_eq!(npts(&h), 3);
+    h.get_all_by_label("Add point").last().unwrap().click();
+    h.run_steps(3);
+    assert_eq!(npts(&h), 4, "a row was added and applied live");
+    h.get_all_by_label("Delete").last().unwrap().click();
+    h.run_steps(3);
+    assert_eq!(npts(&h), 3);
+    h.get_all_by_label("Insert").last().unwrap().click();
+    h.run_steps(3);
+    assert_eq!(npts(&h), 4);
+    // Paste a list, in the panel's units (inches here: 1 inch = 1200).
+    h.get_by_label("Paste points").click();
+    h.run_steps(2);
+    h.state_mut().dialogs.edit.as_mut().unwrap().paste = "0 0\n(1, 1)\n2;0.5".to_string();
+    h.run_steps(2);
+    h.get_by_label("Replace points").click();
+    h.run_steps(3);
+    let ObjectKind::Polyline(p) = &first_of(&h, "polyline").kind else {
+        panic!()
+    };
+    let v: Vec<(f64, f64)> = p.points.iter().map(|q| (q.x, q.y)).collect();
+    assert_eq!(v, [(0.0, 0.0), (1200.0, 1200.0), (2400.0, 600.0)]);
+    // A bad list is refused with a message and changes nothing.
+    h.state_mut().dialogs.edit.as_mut().unwrap().paste = "1 2 3".to_string();
+    h.run_steps(2);
+    h.get_by_label("Append points").click();
+    h.run_steps(3);
+    assert_eq!(npts(&h), 3);
+    assert!(!h.state().dialogs.edit.as_ref().unwrap().paste_error.is_empty());
+    assert!(rustfig_ui_egui::dialogs::parse_points("1,2 x", 1.0).is_err());
+    // Cancel restores.
+    h.get_by_label("Cancel").click();
+    h.run_steps(2);
+    assert_eq!(npts(&h), 3);
+    let ObjectKind::Polyline(p) = &first_of(&h, "polyline").kind else {
+        panic!()
+    };
+    assert_eq!(p.points[2].x, 1200.0);
+}
+
+#[test]
+fn point_table_shape_factors_of_an_xspline() {
+    use rustfig_model::ObjectKind;
+    let mut h = edit_harness();
+    open_panel(&mut h, "spline");
+    assert!(h.state().dialogs.edit.as_ref().unwrap().xspline);
+    h.state_mut().dialogs.edit.as_mut().unwrap().shapes[1] = -0.5;
+    h.run_steps(3);
+    let ObjectKind::Spline(s) = &first_of(&h, "spline").kind else {
+        panic!()
+    };
+    assert_eq!(s.shapes[1], -0.5);
+    h.get_all_by_label("Add point").last().unwrap().click();
+    h.run_steps(3);
+    let ObjectKind::Spline(s) = &first_of(&h, "spline").kind else {
+        panic!()
+    };
+    assert_eq!((s.points.len(), s.shapes.len()), (5, 5));
+    assert_eq!(s.shapes[1], -0.5);
+}
+
+/// W10-21: line style, cap, join and arrow type are pictorial menus: the
+/// pop-up lists pictures (named for tests and screen readers), choosing one
+/// sets the value.
+#[test]
+fn edit_panel_has_pictorial_menus() {
+    use rustfig_model::{CapStyle, JoinStyle, LineKind, ObjectKind};
+    let mut h = edit_harness();
+    open_panel(&mut h, "polyline");
+    let style = |h: &Harness<'static, App>| match &first_of(h, "polyline").kind {
+        ObjectKind::Polyline(p) => p.style,
+        _ => panic!(),
+    };
+    // Line style: the combo shows the current value, the pop-up has one
+    // picture per style.
+    h.get_by_label(LineKind::Solid.name()).click();
+    h.run_steps(3);
+    h.get_by_label(LineKind::DashDotted.name()).click();
+    h.run_steps(3);
+    assert_eq!(style(&h).line, LineKind::DashDotted);
+    assert_eq!(h.state().dialogs.edit.as_ref().unwrap().line, LineKind::DashDotted);
+    // Cap and join.
+    h.get_by_label("butt").click();
+    h.run_steps(3);
+    h.get_by_label("round").click();
+    h.run_steps(3);
+    assert_eq!(style(&h).cap, CapStyle::Round);
+    h.get_by_label("miter").click();
+    h.run_steps(3);
+    h.get_by_label("bevel").click();
+    h.run_steps(3);
+    assert_eq!(style(&h).join, JoinStyle::Bevel);
+    // Arrow type: 29 pictures.
+    h.get_all_by_label_contains("type").next().unwrap().click();
+    h.run_steps(3);
+    assert!(
+        h.get_all_by_label_contains("hollow").count() >= 14,
+        "the pop-up lists the pictures"
+    );
+    h.get_all_by_label("type 2 filled").next().unwrap().click();
+    h.run_steps(3);
+    assert_eq!(
+        h.state().dialogs.edit.as_ref().unwrap().fwd.choice,
+        rustfig_engine::arrow_choice_of(2, 1)
+    );
+}

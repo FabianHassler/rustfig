@@ -14,7 +14,12 @@ Object > Update from Current Attributes (Ctrl+U) updates the selection.
 
 ## Edit attributes
 
-No key (xfig key Ctrl+E). Opens the edit panel for an object with all of its attributes, text, points and comments. Done or Apply keeps the changes, Cancel (Escape) restores the object.
+No key (xfig key Ctrl+E). Opens the edit panel for an object with all of its attributes, text, points and comments. The panel is live: every change you make shows on the canvas at once, and Done (Ctrl+Return) keeps the whole edit as one undo step however many changes you made. Cancel (Escape) undoes everything since the panel opened. Apply is there as in xfig; as changes are applied as you make them, it has nothing left to do.
+
+- Line style, cap style, join style and the arrow types are pictorial menus: the button shows the picture of the current value, its pop-up lists every value as a picture (the same pictures as the attribute panel).
+- Fill style: for the fill colours black, white and default the menu has no tints, as in xfig (a tint set earlier becomes the full colour).
+- Points of a polyline, polygon or spline are a table: edit the X and Y of a row, Insert adds a point before that row, Delete removes it (the object keeps its minimum number of points), Add point appends one. Open Paste points, type or paste a list (one point per pair of numbers: `x y`, `x, y` or `(x, y)`, in the units shown in the panel) and choose Replace points or Append points. X-splines have a Shape column with each point's shape factor (-1 interpolated, 0 angular, 1 approximated).
+- A compound has its own panel, see [Compounds](compounds.md).
 
 - Left, “edit object”: click an object.
 - Middle, “edit Main comment”: edits the figure's own comment. Shift+middle on an object shows its comments in the message panel.

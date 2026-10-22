@@ -1,7 +1,11 @@
 //! Dialog windows: edit object, export, search/replace, document settings,
 //! command list, about, unsaved changes.
+//
+// Ported from xfig src/e_edit.c (edit panel: compound, picture and point
+// rows, live apply) (xfig licence, see LICENSE-xfig).
 
-use crate::panels::{color_combo, fill_combo, font_combo, line_combo};
+use crate::attributes::{arrow_menu, cap_menu, join_menu, line_menu};
+use crate::panels::{color_combo, fill_combo_for, font_combo, limit_fill, plain_fill_color};
 use crate::{menus, App};
 use rustfig_engine::fig2dev::languages::{language, Kind, LANGUAGES};
 use rustfig_engine::Engine;
@@ -29,6 +33,12 @@ pub enum Geo {
     },
     /// Text: origin.
     Origin([f64; 2]),
+    /// Compound: top-left and bottom-right corner of its bounds (xfig's
+    /// `nwcorner`, `secorner`).
+    Compound {
+        nw: [f64; 2],
+        se: [f64; 2],
+    },
 }
 
 /// One arrow's rows: type choice, thickness, width, length (xfig shows
@@ -134,8 +144,31 @@ pub struct EditState {
     pub picture_percent: f64,
     /// Compound rows: member count.
     pub members: usize,
-    /// How many times Apply was pressed; Cancel undoes them.
-    pub applies: u32,
+    /// The panel is live (W10-18): every change is applied at once as one
+    /// undo step (`live`: that step is on the history, made at engine
+    /// revision `rev`); the next change replaces it, Cancel undoes it.
+    pub live: bool,
+    pub rev: u64,
+    /// The parameters last applied (or the object's own at the start).
+    pub last: Option<Value>,
+    /// The last application succeeded (Done keeps the panel open if not).
+    pub valid: bool,
+    /// Picture files loaded (Reread, Relink, a typed or dropped name): each
+    /// is an undo step of its own below the live one, undone by Cancel.
+    pub file_steps: u32,
+    /// Compound rows: Collapse Depths was pressed; smallest and largest
+    /// depth inside; the texts directly in it.
+    pub collapse: bool,
+    pub min_depth: i32,
+    pub max_depth: i32,
+    pub texts: Vec<String>,
+    /// Point table: X-spline shape factors (one per point), the fewest
+    /// points the object may keep, and the paste box.
+    pub xspline: bool,
+    pub shapes: Vec<f64>,
+    pub min_points: usize,
+    pub paste: String,
+    pub paste_error: String,
 }
 
 /// The figure's comments (xfig's "Whole Figure" panel, middle button in
@@ -301,7 +334,20 @@ impl Dialogs {
             picture_thumb: None,
             picture_percent: 100.0,
             members: 0,
-            applies: 0,
+            live: false,
+            rev: 0,
+            last: None,
+            valid: true,
+            file_steps: 0,
+            collapse: false,
+            min_depth: 0,
+            max_depth: 0,
+            texts: Vec::new(),
+            xspline: false,
+            shapes: Vec::new(),
+            min_points: 1,
+            paste: String::new(),
+            paste_error: String::new(),
         };
         if let Some(s) = o.style() {
             st.has_style = true;
@@ -343,6 +389,7 @@ impl Dialogs {
                     }
                 } else {
                     st.geo = Geo::Points(p.points.iter().map(xy).collect());
+                    st.min_points = if p.kind == PolyKind::Polygon { 3 } else { 1 };
                 }
                 if p.kind == PolyKind::ArcBox {
                     st.is_arcbox = true;
@@ -389,6 +436,11 @@ impl Dialogs {
             }
             ObjectKind::Spline(s) => {
                 st.geo = Geo::Points(s.points.iter().map(xy).collect());
+                st.min_points = if s.closed { 3 } else { 2 };
+                st.xspline = s.kind == SplineKind::X;
+                st.shapes = (0..s.points.len())
+                    .map(|i| s.shapes.get(i).copied().unwrap_or_else(|| s.kind.default_shape()))
+                    .collect();
                 let name = match (s.kind, s.closed) {
                     (SplineKind::Approximated, false) => "Open approximated spline",
                     (SplineKind::Approximated, true) => "Closed approximated spline",
@@ -402,6 +454,24 @@ impl Dialogs {
             ObjectKind::Compound(c) => {
                 st.is_compound = true;
                 st.members = c.objects.len();
+                let mut depths = Vec::new();
+                leaf_depths(&o.kind, &mut depths);
+                st.min_depth = depths.iter().copied().min().unwrap_or(0);
+                st.max_depth = depths.iter().copied().max().unwrap_or(0);
+                st.texts = c
+                    .objects
+                    .iter()
+                    .filter_map(|m| match &m.kind {
+                        ObjectKind::Text(t) => Some(t.text.clone()),
+                        _ => None,
+                    })
+                    .collect();
+                if let Some(b) = engine.object_fig_bounds(id).filter(|b| !b.is_empty()) {
+                    st.geo = Geo::Compound {
+                        nw: [b.min.x, b.min.y],
+                        se: [b.max.x, b.max.y],
+                    };
+                }
                 "COMPOUND".to_string()
             }
         };
@@ -413,6 +483,7 @@ impl Dialogs {
                 st.has_arrows = false;
             }
         }
+        st.last = Some(Self::edit_params(&st));
         self.edit = Some(st);
     }
 
@@ -420,9 +491,15 @@ impl Dialogs {
     pub fn edit_params(st: &EditState) -> Value {
         let mut p = json!({
             "ids": [st.id.0],
-            "depth": st.depth,
             "comment": st.comment,
         });
+        // A compound's depths change only with Collapse Depths.
+        if !st.is_compound || st.collapse {
+            p["depth"] = json!(st.depth);
+        }
+        if st.is_compound && !st.texts.is_empty() {
+            p["texts"] = json!(st.texts);
+        }
         if st.is_text {
             p["text"] = json!(st.text);
             p["font"] = json!(st.font);
@@ -445,7 +522,7 @@ impl Dialogs {
             p["style_val"] = json!(st.style_val);
             p["pen_color"] = json!(st.pen);
             p["fill_color"] = json!(st.fill);
-            p["area_fill"] = json!(st.area);
+            p["area_fill"] = json!(limit_fill(st.area, st.fill));
             p["cap"] = json!(format!("{:?}", st.cap).to_lowercase());
             p["join"] = json!(format!("{:?}", st.join).to_lowercase());
         }
@@ -470,7 +547,14 @@ impl Dialogs {
         match &st.geo {
             Geo::None => {}
             Geo::Corners(c) => p["geometry"] = json!({"points": c}),
-            Geo::Points(v) => p["geometry"] = json!({"points": v}),
+            Geo::Points(v) => {
+                let mut g = json!({"points": v, "resize": true});
+                if st.xspline {
+                    g["shapes"] = json!(st.shapes);
+                }
+                p["geometry"] = g;
+            }
+            Geo::Compound { nw, se } => p["geometry"] = json!({"points": [nw, se]}),
             Geo::Arc(a) => p["geometry"] = json!({"points": a}),
             Geo::Ellipse {
                 center,
@@ -489,6 +573,48 @@ impl Dialogs {
         p
     }
 }
+
+/// Depths of the leaves of an object (a compound's depths, recursively).
+fn leaf_depths(kind: &ObjectKind, out: &mut Vec<i32>) {
+    if let ObjectKind::Compound(c) = kind {
+        for m in &c.objects {
+            match &m.kind {
+                ObjectKind::Compound(_) => leaf_depths(&m.kind, out),
+                _ => out.push(m.depth()),
+            }
+        }
+    }
+}
+
+/// Points typed or pasted as text: pairs of numbers separated by spaces,
+/// commas, semicolons or brackets, one point per pair (W10-19). The values
+/// are in the panel's units; `scale` Fig units each.
+pub fn parse_points(text: &str, scale: f64) -> Result<Vec<[f64; 2]>, String> {
+    let mut nums = Vec::new();
+    for tok in text.split(|c: char| c.is_whitespace() || ",;()[]".contains(c)) {
+        if tok.is_empty() {
+            continue;
+        }
+        let v: f64 = tok.parse().map_err(|_| format!("\"{tok}\" is not a number"))?;
+        if !v.is_finite() || (v * scale).abs() > 1.0e7 {
+            return Err(format!("{tok} is out of range"));
+        }
+        nums.push(v * scale);
+        if nums.len() > 2 * MAX_TABLE_POINTS {
+            return Err("too many points".to_string());
+        }
+    }
+    if nums.is_empty() {
+        return Err("no points".to_string());
+    }
+    if nums.len() % 2 != 0 {
+        return Err("a point needs an x and a y".to_string());
+    }
+    Ok(nums.as_chunks::<2>().0.to_vec())
+}
+
+/// Most points the table takes (a pasted list longer than this is refused).
+pub const MAX_TABLE_POINTS: usize = 100_000;
 
 /// What a line's one style value v means (1/80 inch; the Fig format keeps
 /// one number per object, fig2dev derives the rest, `genps.c` `set_style`).
@@ -1073,11 +1199,176 @@ fn spline_point_dialog(app: &mut App, ctx: &egui::Context) {
 /// Cancel in xfig's edit panel restores the object as it was, also after
 /// Apply (`done_*` with `CANCEL` in `e_edit.c`): undo the Applies.
 pub(crate) fn cancel_edit(app: &mut App) {
-    if let Some(st) = app.dialogs.edit.take() {
-        for _ in 0..st.applies {
-            app.run("edit.undo", json!({}));
-        }
+    if let Some(mut st) = app.dialogs.edit.take() {
+        cancel_all(app, &mut st);
     }
+}
+
+/// Undo everything the panel did: the live step, then the picture files.
+fn cancel_all(app: &mut App, st: &mut EditState) {
+    revert_live(app, st);
+    for _ in 0..st.file_steps {
+        app.run("edit.undo", json!({}));
+    }
+    st.file_steps = 0;
+}
+
+/// Undo the step the live panel made, if it is still the last one.
+fn revert_live(app: &mut App, st: &mut EditState) {
+    if st.live && app.engine.revision() == st.rev {
+        app.run("edit.undo", json!({}));
+    }
+    st.live = false;
+}
+
+/// Apply the panel's parameters as the one step of this edit: the
+/// previous step is undone first, so the history gets one entry however
+/// many changes were made.
+fn live_apply(app: &mut App, st: &mut EditState, params: Value) {
+    revert_live(app, st);
+    let before = app.engine.revision();
+    st.valid = app.run("object.set_attributes", params.clone()).is_some();
+    st.last = Some(params);
+    // A step on the history exists only if the document changed.
+    st.live = st.valid && app.engine.revision() != before;
+    st.rev = app.engine.revision();
+}
+
+/// The point table (W10-19): one row per point with its coordinates (and
+/// the X-spline shape factor), insert and delete per row, add at the end,
+/// and a box to paste a list of points.
+fn point_table(ui: &mut egui::Ui, st: &mut EditState, scale: f64) {
+    let EditState {
+        geo,
+        shapes,
+        xspline,
+        min_points,
+        paste,
+        paste_error,
+        ..
+    } = st;
+    let Geo::Points(pts) = geo else { return };
+    ui.label("Points");
+    ui.vertical(|ui| {
+        #[derive(Clone, Copy)]
+        enum Act {
+            Insert(usize),
+            Delete(usize),
+        }
+        let mut act = None;
+        let n = pts.len();
+        egui::ScrollArea::vertical()
+            .id_salt("edit_points")
+            .max_height(200.0)
+            .auto_shrink([true, true])
+            .show_rows(ui, 24.0, n, |ui, range| {
+                for i in range {
+                    ui.horizontal(|ui| {
+                        ui.label(egui::RichText::new(format!("{i:>3}")).monospace());
+                        if let Some(p) = pts.get_mut(i) {
+                            ui.label("X =");
+                            coord(ui, &mut p[0], scale);
+                            ui.label("Y =");
+                            coord(ui, &mut p[1], scale);
+                        }
+                        if *xspline {
+                            if let Some(v) = shapes.get_mut(i) {
+                                ui.label("Shape");
+                                ui.add(egui::DragValue::new(v).range(-1.0..=1.0).speed(0.05).max_decimals(2))
+                                    .on_hover_text("X-spline shape factor: -1 interpolated, 0 angular, 1 approximated");
+                            }
+                        }
+                        if ui
+                            .small_button("Insert")
+                            .on_hover_text("Insert a point before this one")
+                            .clicked()
+                        {
+                            act = Some(Act::Insert(i));
+                        }
+                        let can_delete = n > *min_points;
+                        if ui
+                            .add_enabled(can_delete, egui::Button::new("Delete").small())
+                            .on_hover_text("Delete this point")
+                            .on_disabled_hover_text("The object needs these points")
+                            .clicked()
+                        {
+                            act = Some(Act::Delete(i));
+                        }
+                    });
+                }
+            });
+        let room = n < MAX_TABLE_POINTS;
+        let mut add = false;
+        ui.horizontal(|ui| {
+            add = ui
+                .add_enabled(room, egui::Button::new("Add point"))
+                .on_hover_text("Add a point after the last one")
+                .clicked();
+        });
+        let new_shape = 1.0;
+        match act {
+            Some(Act::Insert(i)) if room => {
+                let at = pts.get(i).copied().unwrap_or([0.0, 0.0]);
+                let p = match i.checked_sub(1).and_then(|j| pts.get(j)) {
+                    Some(q) => [(q[0] + at[0]) / 2.0, (q[1] + at[1]) / 2.0],
+                    None => [at[0] - 100.0, at[1] - 100.0],
+                };
+                pts.insert(i, p);
+                shapes.insert(i.min(shapes.len()), new_shape);
+            }
+            Some(Act::Delete(i)) if i < pts.len() && pts.len() > *min_points => {
+                pts.remove(i);
+                if i < shapes.len() {
+                    shapes.remove(i);
+                }
+            }
+            _ => {}
+        }
+        if add {
+            let last = pts.last().copied().unwrap_or([0.0, 0.0]);
+            pts.push([last[0] + 100.0, last[1] + 100.0]);
+            shapes.push(new_shape);
+        }
+        ui.collapsing("Paste points", |ui| {
+            ui.label("One point per pair of numbers: x y, x, y or (x, y), in the panel's units.");
+            ui.add(
+                egui::TextEdit::multiline(paste)
+                    .desired_rows(3)
+                    .desired_width(260.0)
+                    .hint_text("0 0\n600 300\n1200 0"),
+            )
+            .widget_info(|| egui::WidgetInfo::text_edit(true, "Pasted points", paste.as_str(), ""));
+            ui.horizontal(|ui| {
+                let replace = ui.button("Replace points").clicked();
+                let append = ui.button("Append points").clicked();
+                if replace || append {
+                    match parse_points(paste, scale) {
+                        Ok(v) if replace && v.len() < *min_points => {
+                            *paste_error = format!("the object needs at least {} points", min_points);
+                        }
+                        Ok(v) if pts.len() * usize::from(append) + v.len() > MAX_TABLE_POINTS => {
+                            *paste_error = "too many points".to_string();
+                        }
+                        Ok(v) => {
+                            if replace {
+                                pts.clear();
+                                shapes.clear();
+                            }
+                            shapes.extend(std::iter::repeat_n(new_shape, v.len()));
+                            pts.extend(v);
+                            paste_error.clear();
+                            paste.clear();
+                        }
+                        Err(e) => *paste_error = e,
+                    }
+                }
+            });
+            if !paste_error.is_empty() {
+                ui.colored_label(ui.visuals().error_fg_color, paste_error.as_str());
+            }
+        });
+    });
+    ui.end_row();
 }
 
 /// A coordinate field: shown in the panel's units (`scale` Fig units each).
@@ -1107,13 +1398,9 @@ fn arrow_rows(ui: &mut egui::Ui, id: &str, label: &str, a: &mut ArrowRows) {
     ui.label(label);
     ui.horizontal(|ui| {
         ui.checkbox(&mut a.on, "on");
-        egui::ComboBox::from_id_salt(id)
-            .selected_text(arrow_choice_label(a.choice))
-            .show_ui(ui, |ui| {
-                for n in 0..29 {
-                    ui.selectable_value(&mut a.choice, n, arrow_choice_label(n));
-                }
-            });
+        if let Some(n) = arrow_menu(ui, id, a.choice) {
+            a.choice = n;
+        }
         ui.label("Thick");
         ui.add(
             egui::DragValue::new(&mut a.thick)
@@ -1140,7 +1427,7 @@ fn arrow_rows(ui: &mut egui::Ui, id: &str, label: &str, a: &mut ArrowRows) {
 }
 
 /// xfig's arrow type menu: type 0, then types 1 to 14 hollow and filled.
-fn arrow_choice_label(n: i32) -> String {
+pub(crate) fn arrow_choice_label(n: i32) -> String {
     let (kind, style) = rustfig_engine::arrow_choice(n);
     if kind == 0 {
         "type 0".to_string()
@@ -1152,7 +1439,6 @@ fn arrow_choice_label(n: i32) -> String {
 fn edit_dialog(app: &mut App, ctx: &egui::Context) {
     let Some(mut st) = app.dialogs.edit.take() else { return };
     let mut open = true;
-    let mut apply = false;
     let mut close = false;
     let mut cancel = false;
     let doc_unit = app.engine.doc().unit_name();
@@ -1240,7 +1526,7 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                         ui.end_row();
                         ui.label("Line style");
                         ui.horizontal(|ui| {
-                            if let Some(k) = line_combo(ui, "edit_line", st.line) {
+                            if let Some(k) = line_menu(ui, "edit_line", st.line) {
                                 st.line = k;
                             }
                             if st.line != LineKind::Solid {
@@ -1265,7 +1551,9 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                         }
                         ui.end_row();
                         ui.label("Fill style");
-                        if let Some(f) = fill_combo(ui, "edit_area", st.area) {
+                        // xfig offers no tints for black, white and default.
+                        st.area = limit_fill(st.area, st.fill);
+                        if let Some(f) = fill_combo_for(ui, "edit_area", st.area, plain_fill_color(st.fill)) {
                             st.area = f;
                         }
                         ui.end_row();
@@ -1281,22 +1569,14 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             });
                             ui.horizontal(|ui| {
                                 if cap_ok {
-                                    egui::ComboBox::from_id_salt("edit_cap")
-                                        .selected_text(format!("{:?}", st.cap))
-                                        .show_ui(ui, |ui| {
-                                            for c in [CapStyle::Butt, CapStyle::Round, CapStyle::Projecting] {
-                                                ui.selectable_value(&mut st.cap, c, format!("{c:?}"));
-                                            }
-                                        });
+                                    if let Some(c) = cap_menu(ui, "edit_cap", st.cap) {
+                                        st.cap = c;
+                                    }
                                 }
                                 if join_ok {
-                                    egui::ComboBox::from_id_salt("edit_join")
-                                        .selected_text(format!("{:?}", st.join))
-                                        .show_ui(ui, |ui| {
-                                            for j in [JoinStyle::Miter, JoinStyle::Round, JoinStyle::Bevel] {
-                                                ui.selectable_value(&mut st.join, j, format!("{j:?}"));
-                                            }
-                                        });
+                                    if let Some(j) = join_menu(ui, "edit_join", st.join) {
+                                        st.join = j;
+                                    }
                                 }
                             });
                             ui.end_row();
@@ -1314,12 +1594,43 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                     if st.is_picture {
                         picture_rows(ui, ctx, app, &mut st, scale);
                     }
-                    ui.label(if st.is_compound { "Collapse depths to" } else { "Depth" });
-                    ui.add(egui::DragValue::new(&mut st.depth).range(0..=999));
-                    ui.end_row();
                     if st.is_compound {
+                        // xfig: the smallest and largest depth inside, and a
+                        // button that gives every object the smallest.
+                        ui.label("Depths");
+                        ui.horizontal(|ui| {
+                            ui.label(format!("Minimum: {}", st.min_depth));
+                            ui.label(format!("Maximum: {}", st.max_depth));
+                            if ui.button("Collapse Depths").clicked() {
+                                st.collapse = true;
+                                st.depth = st.min_depth;
+                                st.max_depth = st.min_depth;
+                            }
+                        });
+                        ui.end_row();
                         ui.label("Number of objects");
                         ui.label(st.members.to_string());
+                        ui.end_row();
+                        if !st.texts.is_empty() {
+                            ui.label("Text objects in this compound");
+                            ui.end_row();
+                        }
+                        for (i, t) in st.texts.iter_mut().enumerate() {
+                            ui.label("Text");
+                            ui.add(egui::TextEdit::singleline(t).desired_width(240.0))
+                                .widget_info(|| {
+                                    egui::WidgetInfo::text_edit(
+                                        true,
+                                        format!("Compound text {}", i + 1),
+                                        t.as_str(),
+                                        "",
+                                    )
+                                });
+                            ui.end_row();
+                        }
+                    } else {
+                        ui.label("Depth");
+                        ui.add(egui::DragValue::new(&mut st.depth).range(0..=999));
                         ui.end_row();
                     }
                     if !matches!(st.geo, Geo::None) {
@@ -1332,6 +1643,9 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             });
                         ui.end_row();
                     }
+                    if matches!(st.geo, Geo::Points(_)) {
+                        point_table(ui, &mut st, scale);
+                    }
                     match &mut st.geo {
                         Geo::None => {}
                         Geo::Corners(c) => {
@@ -1339,11 +1653,7 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             xy_row(ui, "First corner", a, scale);
                             xy_row(ui, "Opposite corner", b, scale);
                         }
-                        Geo::Points(v) => {
-                            for (i, p) in v.iter_mut().enumerate() {
-                                xy_row(ui, &format!("Point {i}"), p, scale);
-                            }
-                        }
+                        Geo::Points(_) => {}
                         Geo::Arc(a) => {
                             for (i, p) in a.iter_mut().enumerate() {
                                 xy_row(ui, ["First point", "Second point", "Third point"][i], p, scale);
@@ -1370,6 +1680,31 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             }
                         }
                         Geo::Origin(o) => xy_row(ui, "Origin", o, scale),
+                        Geo::Compound { nw, se } => {
+                            // xfig: Return in a corner repositions (the size
+                            // stays), in the dimensions it rescales about the
+                            // top-left corner; changes apply as they are made.
+                            let (nw0, se0) = (*nw, *se);
+                            let mut size = [se0[0] - nw0[0], se0[1] - nw0[1]];
+                            let size0 = size;
+                            xy_row(ui, "Top left corner", nw, scale);
+                            xy_row(ui, "Bottom right corner", se, scale);
+                            ui.label("Dimensions");
+                            ui.horizontal(|ui| {
+                                ui.label("Width =");
+                                coord(ui, &mut size[0], scale);
+                                ui.label("Height =");
+                                coord(ui, &mut size[1], scale);
+                            });
+                            ui.end_row();
+                            if *nw != nw0 {
+                                *se = [se0[0] + nw[0] - nw0[0], se0[1] + nw[1] - nw0[1]];
+                            } else if *se != se0 {
+                                *nw = [nw0[0] + se[0] - se0[0], nw0[1] + se[1] - se0[1]];
+                            } else if size != size0 {
+                                *se = [nw[0] + size[0], nw[1] + size[1]];
+                            }
+                        }
                     }
                     ui.label("Comments");
                     ui.add(
@@ -1382,12 +1717,13 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
             ui.separator();
             ui.horizontal(|ui| {
                 if ui.button("Done").clicked() {
-                    apply = true;
                     close = true;
                 }
-                if ui.button("Apply").clicked() {
-                    apply = true;
-                }
+                // The panel is live: Apply has nothing left to apply, it is
+                // here as in xfig.
+                ui.button("Apply").on_hover_text(
+                    "Changes are applied as you make them; Done keeps them as one undo step, Cancel undoes them.",
+                );
                 if ui.button("Cancel").clicked() {
                     cancel = true;
                 }
@@ -1411,7 +1747,6 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
             .unwrap_or((false, false))
     });
     if enter && ctx.memory(|m| m.focused()).is_none() && !app.engine.is_typing() {
-        apply = true;
         close |= command;
     }
     if !open {
@@ -1419,19 +1754,21 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
     }
     if cancel {
         // The window was taken out of the state: restore the object.
-        for _ in 0..st.applies {
-            app.run("edit.undo", json!({}));
-        }
+        cancel_all(app, &mut st);
         return;
     }
-    if apply {
-        if st.is_picture && st.picture_file != st.picture_saved_file {
-            picture_set_file(app, &mut st);
-        }
-        let p = Dialogs::edit_params(&st);
-        if app.run("object.set_attributes", p).is_some() {
-            st.applies += 1;
-        }
+    // A typed picture file name is loaded on Done (Reread loads it at once).
+    if close && st.is_picture && st.picture_file != st.picture_saved_file {
+        picture_set_file(app, &mut st);
+    }
+    // Live panel (W10-18): a change is applied at once, replacing the
+    // step the previous change made, so Done is one undo step.
+    let params = Dialogs::edit_params(&st);
+    if st.last.as_ref() != Some(&params) {
+        live_apply(app, &mut st, params);
+    }
+    if close && !st.valid {
+        close = false;
     }
     if !close && app.engine.doc().get(st.id).is_some() {
         app.dialogs.edit = Some(st);
@@ -1977,11 +2314,15 @@ fn unsaved_dialog(app: &mut App, ctx: &egui::Context) {
 // ---- picture panel (W10-16, W10-20) -------------------------------------
 
 /// Load the typed (or dropped, or browsed) file into the picture: undoable
-/// by Cancel like Apply.
+/// by Cancel like the live changes.
 fn picture_set_file(app: &mut App, st: &mut EditState) {
+    // The live step is taken back first, so the file step lies below it;
+    // the next frame applies the panel's values again on top.
+    revert_live(app, st);
+    st.last = None;
     let p = json!({"id": st.id.0, "path": st.picture_file});
     if app.run("picture.set_file", p).is_some() {
-        st.applies += 1;
+        st.file_steps += 1;
         let pic = match app.engine.doc().get(st.id).map(|o| &o.kind) {
             Some(ObjectKind::Polyline(pl)) => pl.picture.clone(),
             _ => None,

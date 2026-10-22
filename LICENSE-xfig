@@ -70,6 +70,7 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/render/src/lib.rs: xfig src/u_redraw.c; fig2dev/dev/genps.c
 - crates/text/src/compose.rs: xfig CompKeyDB, src/w_canvas.c
 - crates/ui-egui/src/attributes.rs: xfig src/w_indpanel.c, src/w_indpanel.h, src/w_modepanel.c, src/w_icons.c
+- crates/ui-egui/src/dialogs.rs: xfig src/e_edit.c (edit panel)
 - crates/ui-egui/src/dimline_panel.rs: xfig src/w_indpanel.c (popup_dimline_panel)
 - crates/ui-egui/src/menus.rs: xfig src/w_cmdpanel.c, src/w_modepanel.c, app-defaults/Fig
 - crates/ui-egui/src/mode_icons.rs: xfig src/w_icons.c (traced mode icons)

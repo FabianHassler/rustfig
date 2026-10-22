@@ -230,3 +230,130 @@ fn degenerate_geometry_survives_save_and_open() {
     e2.execute("file.open_data", &json!({"data": data})).unwrap();
     assert_eq!(e2.doc().objects.len(), n);
 }
+
+fn first_poly_points(e: &Engine) -> Vec<(f64, f64)> {
+    let ObjectKind::Compound(c) = &obj(e, "compound").kind else {
+        panic!()
+    };
+    let ObjectKind::Polyline(p) = &c.objects[0].kind else {
+        panic!()
+    };
+    p.points.iter().map(|q| (q.x, q.y)).collect()
+}
+
+#[test]
+fn compound_corners_reposition_and_rescale_like_xfig() {
+    let mut e = engine();
+    let id = id_of(&e, "compound");
+    // Move the top-left corner: the compound keeps its size.
+    e.execute(
+        "object.set_geometry",
+        &json!({"id": id, "points": [[1000, 2000], [1600, 2600]]}),
+    )
+    .unwrap();
+    let v = first_poly_points(&e);
+    // (the corners are fig2dev's bounds, which include the line width)
+    assert!((v.iter().map(|q| q.0).fold(f64::MAX, f64::min) - 1000.0).abs() < 20.0);
+    assert!((v.iter().map(|q| q.1).fold(f64::MAX, f64::min) - 2000.0).abs() < 20.0);
+    // Rescale about the top-left corner (width and height, Return).
+    e.execute(
+        "object.set_geometry",
+        &json!({"id": id, "points": [[1000, 2000], [2200, 2600]]}),
+    )
+    .unwrap();
+    let v = first_poly_points(&e);
+    let max_x = v.iter().map(|q| q.0).fold(f64::MIN, f64::max);
+    let max_y = v.iter().map(|q| q.1).fold(f64::MIN, f64::max);
+    assert!((max_x - 2200.0).abs() < 40.0, "{max_x}");
+    assert!((max_y - 2600.0).abs() < 40.0, "{max_y}");
+    // A zero size is refused and leaves the document alone.
+    assert!(e
+        .execute(
+            "object.set_geometry",
+            &json!({"id": id, "points": [[1000, 2000], [1000, 2600]]})
+        )
+        .is_err());
+    assert!(e.execute("object.set_geometry", &json!({"id": id})).is_err());
+    assert_eq!(first_poly_points(&e), v);
+}
+
+#[test]
+fn compound_texts_and_collapsed_depths() {
+    let mut e = Engine::new();
+    e.execute(
+        "file.open_data",
+        &json!({"data": "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+6 0 0 3000 3000\n4 0 0 40 -1 0 12 0.0000 4 150 600 100 500 One\\001\n\
+4 0 0 60 -1 0 12 0.0000 4 150 600 100 900 Two\\001\n\
+2 2 0 1 0 7 70 -1 -1 0.000 0 0 -1 0 0 5\n\t 0 0 600 0 600 600 0 600 0 0\n-6\n"}),
+    )
+    .unwrap();
+    let id = id_of(&e, "compound");
+    e.execute(
+        "object.set_attributes",
+        &json!({"ids": [id], "texts": ["Uno", "Dos"], "depth": 40}),
+    )
+    .unwrap();
+    let ObjectKind::Compound(c) = &obj(&e, "compound").kind else {
+        panic!()
+    };
+    let texts: Vec<&str> = c
+        .objects
+        .iter()
+        .filter_map(|o| match &o.kind {
+            ObjectKind::Text(t) => Some(t.text.as_str()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(texts, ["Uno", "Dos"]);
+    assert!(c.objects.iter().all(|o| o.depth() == 40));
+    assert!(e
+        .execute("object.set_attributes", &json!({"ids": [id], "texts": [1]}))
+        .is_err());
+}
+
+#[test]
+fn point_table_resizes_lines_and_splines() {
+    let mut e = engine();
+    let id = id_of(&e, "polyline");
+    // The count may only change with `resize`.
+    let pts = json!([[0, 0], [100, 100], [150, 50], [200, 0]]);
+    assert!(e
+        .execute("object.set_geometry", &json!({"id": id, "points": pts}))
+        .is_err());
+    e.execute("object.set_geometry", &json!({"id": id, "points": pts, "resize": true}))
+        .unwrap();
+    let ObjectKind::Polyline(p) = &obj(&e, "polyline").kind else {
+        panic!()
+    };
+    assert_eq!(p.points.len(), 4);
+    let sid = id_of(&e, "spline");
+    e.execute(
+        "object.set_geometry",
+        &json!({"id": sid, "points": [[0, 400], [100, 500], [250, 450], [200, 400], [300, 500]],
+                "shapes": [0.0, -1.0, 1.0, -1.0, 0.0], "resize": true}),
+    )
+    .unwrap();
+    let ObjectKind::Spline(s) = &obj(&e, "spline").kind else {
+        panic!()
+    };
+    assert_eq!((s.points.len(), s.shapes.len()), (5, 5));
+    assert_eq!(s.shapes[2], 1.0);
+    // Without shapes the new points get the kind's own factor.
+    e.execute(
+        "object.set_geometry",
+        &json!({"id": sid, "points": [[0, 400], [100, 500], [300, 500]], "resize": true}),
+    )
+    .unwrap();
+    let ObjectKind::Spline(s) = &obj(&e, "spline").kind else {
+        panic!()
+    };
+    assert_eq!((s.points.len(), s.shapes.len()), (3, 3));
+    // Too few points are refused.
+    assert!(e
+        .execute(
+            "object.set_geometry",
+            &json!({"id": sid, "points": [[0, 400]], "resize": true})
+        )
+        .is_err());
+}

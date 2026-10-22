@@ -1139,6 +1139,92 @@ fn icon_choices(ui: &mut Ui, id: &str, items: &[(bool, String, Pic)], per_row: u
     chosen
 }
 
+/// A pictorial menu (W10-21): a button showing the picture of the current
+/// value; its pop-up lists every value as a picture (the same pictures and
+/// grid as the indicator panel's choice panel). Returns the index chosen.
+fn pic_menu(
+    ui: &mut Ui,
+    id: &str,
+    name: &str,
+    current: Pic,
+    items: &[(bool, String, Pic)],
+    per_row: usize,
+) -> Option<usize> {
+    let mut chosen = None;
+    ui.horizontal(|ui| {
+        let (r, _) = ui.allocate_exact_size(vec2(32.0, 32.0), Sense::hover());
+        current.paint(ui, r, ui.visuals().text_color());
+        let combo = egui::ComboBox::from_id_salt(id)
+            .selected_text(name)
+            .width(90.0)
+            .show_ui(ui, |ui| {
+                chosen = icon_choices(ui, id, items, per_row);
+            });
+        combo
+            .response
+            .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, name));
+    });
+    chosen
+}
+
+/// Line style menu with pictures (edit panel).
+pub(crate) fn line_menu(ui: &mut Ui, id: &str, cur: LineKind) -> Option<LineKind> {
+    let items: Vec<_> = LineKind::ALL
+        .iter()
+        .map(|k| (cur == *k, k.name().to_string(), Pic::of(line_icon(*k), VIcon::Line(*k))))
+        .collect();
+    let pic = Pic::of(line_icon(cur), VIcon::Line(cur));
+    pic_menu(ui, id, cur.name(), pic, &items, 6).and_then(|i| LineKind::ALL.get(i).copied())
+}
+
+/// Cap style menu with pictures (edit panel).
+pub(crate) fn cap_menu(ui: &mut Ui, id: &str, cur: CapStyle) -> Option<CapStyle> {
+    let items: Vec<_> = CAPS
+        .iter()
+        .map(|c| {
+            (
+                cur == *c,
+                format!("{c:?}").to_lowercase(),
+                Pic::of(cap_icon(*c), VIcon::Cap(*c)),
+            )
+        })
+        .collect();
+    let pic = Pic::of(cap_icon(cur), VIcon::Cap(cur));
+    pic_menu(ui, id, &format!("{cur:?}").to_lowercase(), pic, &items, 3).and_then(|i| CAPS.get(i).copied())
+}
+
+/// Join style menu with pictures (edit panel).
+pub(crate) fn join_menu(ui: &mut Ui, id: &str, cur: JoinStyle) -> Option<JoinStyle> {
+    let items: Vec<_> = JOINS
+        .iter()
+        .map(|j| {
+            (
+                cur == *j,
+                format!("{j:?}").to_lowercase(),
+                Pic::of(join_icon(*j), VIcon::Join(*j)),
+            )
+        })
+        .collect();
+    let pic = Pic::of(join_icon(cur), VIcon::Join(cur));
+    pic_menu(ui, id, &format!("{cur:?}").to_lowercase(), pic, &items, 3).and_then(|i| JOINS.get(i).copied())
+}
+
+/// Arrow type menu with pictures (edit panel): xfig's 29 choices.
+pub(crate) fn arrow_menu(ui: &mut Ui, id: &str, cur: i32) -> Option<i32> {
+    let items: Vec<_> = (0..ARROW_CHOICES)
+        .map(|n| (n == cur, crate::dialogs::arrow_choice_label(n), arrow_type_pic(n)))
+        .collect();
+    pic_menu(
+        ui,
+        id,
+        &crate::dialogs::arrow_choice_label(cur),
+        arrow_type_pic(cur),
+        &items,
+        9,
+    )
+    .map(|i| i as i32)
+}
+
 // ---- value pictures ------------------------------------------------------
 
 fn draw_value(app: &App, ui: &Ui, p: &Painter, r: Rect, button: Rect, tk: &Tokens, a: Attr) {

@@ -306,15 +306,15 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_edit.c` | `scale_percent_pic` | 1132 | ported | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
 | `e_edit.c` | `make_window_figure` | 1178 | replaced | figure comments in `dialogs::figure_comments_dialog` and `doc.set_comments`; clicking empty canvas in Edit mode to open them is D11 | D11 |
 | `e_edit.c` | `done_figure_comments` | 1185 | replaced | figure comments in `dialogs::figure_comments_dialog` and `doc.set_comments`; clicking empty canvas in Edit mode to open them is D11 | D11 |
-| `e_edit.c` | `make_window_compound` | 1209 | partial | compound panel: corner and size fields, depth range, per-text fields | W10-15 |
-| `e_edit.c` | `modify_compound` | 1377 | partial | compound panel: corner and size fields, depth range, per-text fields | W10-15 |
+| `e_edit.c` | `make_window_compound` | 1209 | ported | compound panel (`dialogs.rs` edit panel: corner, size, depth range and Collapse Depths, per-text fields; `object.set_geometry` for the compound, `object.set_attributes` `texts`) | W10-15 |
+| `e_edit.c` | `modify_compound` | 1377 | ported | compound panel (`dialogs.rs` edit panel: corner, size, depth range and Collapse Depths, per-text fields; `object.set_geometry` for the compound, `object.set_attributes` `texts`) | W10-15 |
 | `e_edit.c` | `reposition_picture` | 1390 | ported | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
 | `e_edit.c` | `resize_picture` | 1433 | ported | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
-| `e_edit.c` | `reposition_top` | 1478 | partial | compound panel: corner and size fields, depth range, per-text fields | W10-15 |
-| `e_edit.c` | `reposition_bottom` | 1506 | partial | compound panel: corner and size fields, depth range, per-text fields | W10-15 |
-| `e_edit.c` | `rescale_compound` | 1535 | partial | compound panel: corner and size fields, depth range, per-text fields | W10-15 |
-| `e_edit.c` | `get_new_compound_values` | 1557 | partial | compound panel: corner and size fields, depth range, per-text fields | W10-15 |
-| `e_edit.c` | `done_compound` | 1597 | partial | compound panel: corner and size fields, depth range, per-text fields | W10-15 |
+| `e_edit.c` | `reposition_top` | 1478 | ported | compound panel (`dialogs.rs` edit panel: corner, size, depth range and Collapse Depths, per-text fields; `object.set_geometry` for the compound, `object.set_attributes` `texts`) | W10-15 |
+| `e_edit.c` | `reposition_bottom` | 1506 | ported | compound panel (`dialogs.rs` edit panel: corner, size, depth range and Collapse Depths, per-text fields; `object.set_geometry` for the compound, `object.set_attributes` `texts`) | W10-15 |
+| `e_edit.c` | `rescale_compound` | 1535 | ported | compound panel (`dialogs.rs` edit panel: corner, size, depth range and Collapse Depths, per-text fields; `object.set_geometry` for the compound, `object.set_attributes` `texts`) | W10-15 |
+| `e_edit.c` | `get_new_compound_values` | 1557 | ported | compound panel (`dialogs.rs` edit panel: corner, size, depth range and Collapse Depths, per-text fields; `object.set_geometry` for the compound, `object.set_attributes` `texts`) | W10-15 |
+| `e_edit.c` | `done_compound` | 1597 | ported | compound panel (`dialogs.rs` edit panel: corner, size, depth range and Collapse Depths, per-text fields; `object.set_geometry` for the compound, `object.set_attributes` `texts`) | W10-15 |
 | `e_edit.c` | `make_window_line` | 1685 | replaced | edit dialog `dialogs::edit_dialog` (egui) per object kind; Done/Apply/Cancel as one undo step (W10-17/18 for the live version) |  |
 | `e_edit.c` | `get_new_line_values` | 2158 | replaced | edit dialog `dialogs::edit_dialog` (egui) per object kind; Done/Apply/Cancel as one undo step (W10-17/18 for the live version) |  |
 | `e_edit.c` | `done_line` | 2383 | replaced | edit dialog `dialogs::edit_dialog` (egui) per object kind; Done/Apply/Cancel as one undo step (W10-17/18 for the live version) |  |
@@ -404,14 +404,14 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_edit.c` | `get_clipboard` | 5659 | replaced | key bindings and clipboard paste in edit panel text fields: egui text fields (platform keys) |  |
 | `e_edit.c` | `text_transl` | 5688 | replaced | key bindings and clipboard paste in edit panel text fields: egui text fields (platform keys) |  |
 | `e_edit.c` | `change_sfactor` | 5701 | missing | Ctrl+Shift+click on a spline point in an edit mode changes its shape factor on the canvas (left: more approximating, middle: cycle shapes, right: more interpolating) | S4-6 |
-| `e_edit.c` | `check_depth` | 5757 | partial | compound panel: corner and size fields, depth range, per-text fields | W10-15 |
+| `e_edit.c` | `check_depth` | 5757 | ported | compound panel (`dialogs.rs` edit panel: corner, size, depth range and Collapse Depths, per-text fields; `object.set_geometry` for the compound, `object.set_attributes` `texts`) | W10-15 |
 | `e_edit.c` | `check_thick` | 5771 | replaced | Xt panel helpers: egui widgets (`xy_row`, `coord`, `arrow_rows`, drag values) |  |
 | `e_edit.c` | `push_apply_button` | 5792 | replaced | Xt panel helpers: egui widgets (`xy_row`, `coord`, `arrow_rows`, drag values) |  |
 | `e_edit.c` | `grab_button` | 5803 | replaced | Xt panel helpers: egui widgets (`xy_row`, `coord`, `arrow_rows`, drag values) |  |
 | `e_edit.c` | `image_edit_button` | 5846 | ported | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
 | `e_edit.c` | `browse_button` | 5915 | ported | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
-| `e_edit.c` | `collapse_depth` | 5927 | partial | compound panel: corner and size fields, depth range, per-text fields | W10-15 |
-| `e_edit.c` | `collapse_depths` | 5941 | partial | compound panel: corner and size fields, depth range, per-text fields | W10-15 |
+| `e_edit.c` | `collapse_depth` | 5927 | ported | compound panel (`dialogs.rs` edit panel: corner, size, depth range and Collapse Depths, per-text fields; `object.set_geometry` for the compound, `object.set_attributes` `texts`) | W10-15 |
+| `e_edit.c` | `collapse_depths` | 5941 | ported | compound panel (`dialogs.rs` edit panel: corner, size, depth range and Collapse Depths, per-text fields; `object.set_geometry` for the compound, `object.set_attributes` `texts`) | W10-15 |
 | `e_edit.c` | `what_rotation` | 5984 | ported | picture panel rows: file name with Reread, Browse, resize/reposition, rotation, flip, expand/shrink to original, scale by percent, Edit Image | W10-16 |
 | `e_flip.c` | `flip_ud_selected` | 69 | ported | commands `transform.flip_horizontal`, `transform.flip_vertical`; tools `FlipV`, `FlipH` (also copy and flip) |  |
 | `e_flip.c` | `flip_lr_selected` | 85 | ported | commands `transform.flip_horizontal`, `transform.flip_vertical`; tools `FlipV`, `FlipH` (also copy and flip) |  |
