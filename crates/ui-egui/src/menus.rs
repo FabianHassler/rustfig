@@ -30,6 +30,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{\"color\"?: colour number}  — the colour picker and editor (hue/saturation square, RGB/HSV, hex and X11 names, recent and user colours)",
     },
     UiCommand {
+        id: "app.styles",
+        label: "Manage Styles…",
+        shortcut: "",
+        params: "{}  — the Styles window: xfig's style manager: families of named attribute sets (Family and Style lists with Add/Delete, Set applies to the indicator; see style.*)",
+    },
+    UiCommand {
         id: "app.global_settings",
         label: "Global settings…",
         shortcut: "",
@@ -252,6 +258,7 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.unit_panel" => app.unit_panel_open = true,
         "app.keyboard_entry" => app.point_entry.open(),
         "app.global_settings" => app.dialogs.global_open = true,
+        "app.styles" => app.styles.open = true,
         "app.colors" => {
             let current = p
                 .get("color")
@@ -374,7 +381,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
         (
             "View",
             &[
-                Missing("Manage Styles...", "Ctrl-Y", "E6"),
+                Cmd("Manage Styles...", "app.styles"),
                 Cmd("Redraw", "app.redraw"),
                 Cmd("Portrait/Landscape", "doc.toggle_orientation"),
                 Cmd("Zoom In", "view.zoom_in"),
@@ -426,7 +433,7 @@ pub const XFIG_MENU_LETTERS: &[(&str, char, &str)] = &[
     ("Edit", 'd', "edit.delete_all"),
     ("Edit", 'g', "app.global_settings"),
     ("Edit", 'n', "app.unit_panel"),
-    ("View", 's', "Manage Styles..."),
+    ("View", 's', "app.styles"),
     ("View", 'r', "app.redraw"),
     ("View", 't', "doc.toggle_orientation"),
     ("View", 'i', "view.zoom_in"),
@@ -812,6 +819,7 @@ pub const XFIG_KEYS: &[(&str, &str)] = &[
     ("Alt+Y", "app.toggle_balloons"),
     ("Alt+L", "view.toggle_lengths"),
     ("PhysCtrl+K", "app.keyboard_entry"),
+    ("PhysCtrl+Y", "app.styles"),
     ("Alt+G", "app.global_settings"),
     ("Shift+U", "app.unit_panel"),
     ("Shift+Z", "view.zoom_in"),
@@ -1186,6 +1194,7 @@ mod tests {
         ("object.measure", "the measure modes; scripting API"),
         ("object.convert", "Convert mode; scripting API"),
         ("object.toggle_", "Open/close and Arrow modes; scripting API"),
+        ("style.", "View > Manage Styles... (app.styles) is their window"),
         (
             "file.",
             "the File menu's app.* entries wrap them (dialogs, unsaved-changes guard)",

@@ -26,6 +26,7 @@ pub mod prefs;
 pub mod recovery;
 mod region;
 pub mod snap;
+pub mod styles;
 pub mod tools;
 mod view;
 

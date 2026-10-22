@@ -167,7 +167,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_file.c`, `w_dir.c`, `w_browse.c`, `w_listwidget.c` | 3.5 k | file panel and browser with preview | native dialogs (`rfd`) | modern; Open of a missing name starts a new figure; preview and offset fields missing (S4) | W10-12 |
 | `w_library.c` | 1831 | library panel | — | missing | D6 |
 | `w_srchrepl.c` | 966 | search/replace, spell check | `dialogs::search` | partial: spell check | F5 |
-| `w_style.c` | 1026 | style manager | — | missing | E6 |
+| `w_style.c` | 1026 | style manager | `ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs` | replaced | E6 |
 | `w_fontpanel.c` | 424 | font menus | `attributes` Text Font panel | replaced by the Text Font pop-up (S4) | E11 |
 | `w_help.c` | 219 | Help menu | menus | partial: reference/how-to entries (S4) | W10-2 |
 | `w_capture.c` | 676 | screen capture into a picture | — | missing (through the OS screenshot facilities) | D11 |

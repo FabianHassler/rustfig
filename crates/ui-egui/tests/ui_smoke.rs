@@ -2174,3 +2174,54 @@ fn colour_editor_creates_edits_and_deletes_user_colours() {
     h.run_steps(3);
     assert!(h.state().engine.doc().colors.is_empty());
 }
+
+/// E6: the Manage Styles window, xfig's Family and Style lists. Add keeps the
+/// indicator's attributes, Set applies them to the indicator only.
+#[test]
+fn manage_styles_window_families_and_set() {
+    let path = settings_file("styles");
+    {
+        let mut h = harness(app_with_settings(&path));
+        h.state_mut().run("app.styles", json!({}));
+        h.run_steps(3);
+        h.get_by_label("Family name").click();
+        h.get_by_label("Family name").type_text("Report");
+        h.run_steps(2);
+        h.get_by_label("Add family").click();
+        h.run_steps(3);
+        assert_eq!(
+            h.state().engine.prefs.rustfig.style_families.len(),
+            1,
+            "{:?}",
+            h.state().styles.family_name
+        );
+        h.get_by_label("Family Report");
+        h.state_mut().engine.indicator.thickness = 7;
+        h.get_by_label("Style name").click();
+        h.get_by_label("Style name").type_text("Thick");
+        h.run_steps(2);
+        h.get_by_label("Add style").click();
+        h.run_steps(3);
+        h.get_by_label("Style Thick");
+        h.state_mut().engine.indicator.thickness = 1;
+        h.get_by_label("Set style").click();
+        h.run_steps(3);
+        assert_eq!(h.state().engine.indicator.thickness, 7);
+        h.get_by_label("Delete style").click();
+        h.run_steps(3);
+        assert!(h.query_by_label("Style Thick").is_none());
+        h.get_by_label("Delete family").click();
+        h.run_steps(3);
+        assert!(h.query_by_label("Family Report").is_none());
+        h.get_by_label("Family name").click();
+        h.get_by_label("Family name").type_text("Keep");
+        h.run_steps(2);
+        h.get_by_label("Add family").click();
+        h.run_steps(3);
+        h.get_by_label("Close styles").click();
+        h.run_steps(3);
+        assert!(!h.state().styles.open);
+    }
+    let text = std::fs::read_to_string(&path).unwrap();
+    assert!(text.contains("Keep"), "{text}");
+}

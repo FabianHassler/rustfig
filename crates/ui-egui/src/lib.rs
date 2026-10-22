@@ -29,6 +29,7 @@ pub mod point_entry;
 pub mod reload;
 pub mod rulers;
 pub mod settings;
+pub mod styles;
 pub mod theme;
 pub mod vector_icons;
 pub mod xfig_icons;
@@ -111,6 +112,8 @@ pub struct App {
     pub open_menu: Option<&'static str>,
     /// The Unit/Scale settings window (right click on the units box).
     pub unit_panel_open: bool,
+    /// The Styles window (E6).
+    pub styles: styles::StylesWindow,
     /// The typed-coordinates window (xfig's keyboard panel, Ctrl+K).
     pub point_entry: point_entry::PointEntry,
     /// The override set during the previous frame, shown in this one.
@@ -165,6 +168,7 @@ impl App {
             input_waiters: Vec::new(),
             hint_shown: None,
             unit_panel_open: false,
+            styles: styles::StylesWindow::default(),
             point_entry: point_entry::PointEntry::default(),
             xfig_keys: true,
             open_menu: None,

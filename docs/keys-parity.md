@@ -35,7 +35,7 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside: on mac
 | Ctrl-L, Meta-R | Redraw | `app.redraw` | ✅ |
 | Meta-C | Change orientation | `doc.toggle_orientation` | ✅ |
 | Shift-Z / Z / Ctrl-Z | Zoom in / out / fit | `view.zoom_in`, `view.zoom_out`, `view.zoom_fit` | ✅ |
-| Ctrl-Y | Named styles | — | ❌ E6 (style manager) |
+| Ctrl-Y | Style families | `app.styles` | ✅ E6 |
 | Meta-B | Show page borders | `view.toggle_page_border` | ✅ |
 | Meta-Y | Show balloons (tooltips) | `app.toggle_balloons` | ✅ |
 | Meta-L | Show line lengths while drawing | Alt+L (xfig keys) | ✅ View > Show line lengths (D10) |

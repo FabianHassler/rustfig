@@ -23,6 +23,7 @@ mod prefs;
 mod region;
 mod sfactor;
 pub(crate) mod shape;
+mod styles;
 pub(crate) mod tangent;
 
 pub(crate) use dimline::formatter as dimension_formatter;
@@ -98,6 +99,7 @@ pub fn all() -> &'static [Command] {
         v.extend(indicator::commands());
         v.extend(tool::commands());
         v.extend(prefs::commands());
+        v.extend(styles::commands());
         v
     })
 }

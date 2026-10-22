@@ -2125,40 +2125,40 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_srchrepl.c` | `spell_select_word` | 919 | missing | spell check panel | F5 |
 | `w_srchrepl.c` | `spell_correct_word` | 940 | missing | spell check panel | F5 |
 | `w_srchrepl.c` | `show_spell_msg` | 955 | missing | spell check panel | F5 |
-| `w_style.c` | `construct_style` | 103 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `set_style` | 139 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `print_indent` | 165 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `print_style` | 174 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `print_style_family` | 203 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `print_family_set` | 220 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `get_nstyle_line` | 234 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `trim` | 252 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `parse_style` | 273 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `parse_family_style` | 326 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `parse_family_set` | 353 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `load_family_set` | 366 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `save_family_set` | 385 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `add_family_to_family_set` | 401 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `add_style_to_family` | 423 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `delete_family_from_family_set` | 458 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `delete_style_from_family` | 501 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `build_family_text` | 543 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `build_style_text` | 555 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `style_update` | 571 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `family_select` | 589 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `style_select` | 603 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `add_family` | 619 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `delete_family` | 634 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `add_style` | 650 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `delete_style` | 673 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `save_style` | 690 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `load_style` | 698 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `confirm_close_style` | 708 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `close_style` | 722 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `init_manage_style_panel` | 766 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `add_style_actions` | 992 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `setup_manage_style_panel` | 1001 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
-| `w_style.c` | `popup_manage_style_panel` | 1019 | missing | Manage Styles: named attribute sets stored in a file (families, styles, load/save) | E6 |
+| `w_style.c` | `construct_style` | 103 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
+| `w_style.c` | `set_style` | 139 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
+| `w_style.c` | `print_indent` | 165 | replaced | styles kept in settings.toml through prefs (serde), no `.xfigrcstyle` file | E6 |
+| `w_style.c` | `print_style` | 174 | replaced | styles kept in settings.toml through prefs (serde), no `.xfigrcstyle` file | E6 |
+| `w_style.c` | `print_style_family` | 203 | replaced | styles kept in settings.toml through prefs (serde), no `.xfigrcstyle` file | E6 |
+| `w_style.c` | `print_family_set` | 220 | replaced | styles kept in settings.toml through prefs (serde), no `.xfigrcstyle` file | E6 |
+| `w_style.c` | `get_nstyle_line` | 234 | replaced | styles kept in settings.toml through prefs (serde), no `.xfigrcstyle` file | E6 |
+| `w_style.c` | `trim` | 252 | replaced | styles kept in settings.toml through prefs (serde), no `.xfigrcstyle` file | E6 |
+| `w_style.c` | `parse_style` | 273 | replaced | styles kept in settings.toml through prefs (serde), no `.xfigrcstyle` file | E6 |
+| `w_style.c` | `parse_family_style` | 326 | replaced | styles kept in settings.toml through prefs (serde), no `.xfigrcstyle` file | E6 |
+| `w_style.c` | `parse_family_set` | 353 | replaced | styles kept in settings.toml through prefs (serde), no `.xfigrcstyle` file | E6 |
+| `w_style.c` | `load_family_set` | 366 | replaced | styles kept in settings.toml through prefs (serde), no `.xfigrcstyle` file | E6 |
+| `w_style.c` | `save_family_set` | 385 | replaced | styles kept in settings.toml through prefs (serde), no `.xfigrcstyle` file | E6 |
+| `w_style.c` | `add_family_to_family_set` | 401 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
+| `w_style.c` | `add_style_to_family` | 423 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
+| `w_style.c` | `delete_family_from_family_set` | 458 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
+| `w_style.c` | `delete_style_from_family` | 501 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
+| `w_style.c` | `build_family_text` | 543 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
+| `w_style.c` | `build_style_text` | 555 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
+| `w_style.c` | `style_update` | 571 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
+| `w_style.c` | `family_select` | 589 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
+| `w_style.c` | `style_select` | 603 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
+| `w_style.c` | `add_family` | 619 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
+| `w_style.c` | `delete_family` | 634 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
+| `w_style.c` | `add_style` | 650 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
+| `w_style.c` | `delete_style` | 673 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
+| `w_style.c` | `save_style` | 690 | replaced | styles kept in settings.toml through prefs (serde), no `.xfigrcstyle` file | E6 |
+| `w_style.c` | `load_style` | 698 | replaced | styles kept in settings.toml through prefs (serde), no `.xfigrcstyle` file | E6 |
+| `w_style.c` | `confirm_close_style` | 708 | replaced | styles kept in settings.toml through prefs (serde), no `.xfigrcstyle` file | E6 |
+| `w_style.c` | `close_style` | 722 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
+| `w_style.c` | `init_manage_style_panel` | 766 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
+| `w_style.c` | `add_style_actions` | 992 | replaced | styles kept in settings.toml through prefs (serde), no `.xfigrcstyle` file | E6 |
+| `w_style.c` | `setup_manage_style_panel` | 1001 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
+| `w_style.c` | `popup_manage_style_panel` | 1019 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
 | `w_util.c` | `app_flush` | 191 | replaced | yes/no/cancel queries: `dialogs::unsaved_dialog` and egui dialogs |  |
 | `w_util.c` | `accept_yes` | 199 | replaced | yes/no/cancel queries: `dialogs::unsaved_dialog` and egui dialogs |  |
 | `w_util.c` | `accept_no` | 207 | replaced | yes/no/cancel queries: `dialogs::unsaved_dialog` and egui dialogs |  |

@@ -29,7 +29,7 @@ the score.
 | Undo | 4 | 100 % | — | 0 |
 | Libraries | 5 | 0 % | library browser and placement | 40 |
 | Printing | 5 | 10 % | print dialog and printer output | 30 |
-| Settings & styles | 5 | 15 % | settings persistence, recent files, style manager, units dialog | 30 |
+| Settings & styles | 5 | 15 % | settings persistence, recent files, style manager (E6: style families, `style.*` commands, Manage Styles window; evidence `cmd/styles.rs` tests, `manage_styles_window_*` smoke test), units dialog | 30 |
 | Platforms | 7 | 50 % | Windows/Linux verification, web build and file I/O on the web | 40 |
 | **Overall** | 100 | **≈65 %** | | **413** |
 

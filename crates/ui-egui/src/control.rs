@@ -180,6 +180,7 @@ pub fn open_state(app: &App, ctx: &egui::Context) -> Value {
         ("rename_confirm", d.rename_confirm.is_some()),
         ("save_scope", d.save_scope.is_some()),
         ("units", app.unit_panel_open),
+        ("styles", app.styles.open),
         ("unsaved_changes", app.pending.is_some()),
     ];
     let windows: Vec<String> = app

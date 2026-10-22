@@ -41,3 +41,16 @@ Click PenColor or FillColor for the colour menu: Default, the 32 standard colour
   - **Keep for all drawings** stores the colour under a name in your settings, so it is offered in every drawing.
 
 Scripts and MCP use the `color.*` commands (`color.parse`, `color.new`, `color.edit`, `color.delete`, `color.recent`, `color.eyedropper`, …).
+
+## Styles
+
+**View › Manage Styles…** (Ctrl+Y with xfig's keys on) keeps named sets of attributes in families, as xfig's style manager does, so a look you use again and again is one click away.
+
+  - The window shows two lists side by side: **Family** (a name field, **Add**, **Delete**) and **Style** (a name field, **Add**, **Delete**, **Set**). Pick a family to see its styles.
+  - A style holds the indicator's drawing attributes: depth, line width, style, join, cap, dash length and dot gap, pen and fill colour, fill style, box radius, arrows, the text font, size, angle, justification and flags, and the arc type.
+  - Set the indicator panel as you want it, pick a family, type a name and press **Add** under Style (a style of the same name is replaced).
+  - **Set** sets the indicator, so what you draw next looks like the style; objects already drawn are not changed (as in xfig). **Delete** removes the selected family or style. **Close** (or Escape) closes the window.
+  - Limits: 32 families, 64 styles per family (xfig: 16 and 16), names of 1 to 64 characters.
+  - Styles are kept in your settings file, for all drawings. They are never written to the .fig file, which stays as xfig reads it.
+
+Scripts and MCP use `style.family_add`, `style.family_delete`, `style.family_rename`, `style.save`, `style.apply`, `style.rename`, `style.delete` and `style.list`, each with a `family` parameter.

@@ -215,6 +215,9 @@ pub struct RustFigPrefs {
     pub user_colors: Vec<NamedColor>,
     /// Colours used lately (`#rrggbb`, newest first), offered in the colour pop-ups (E4).
     pub recent_colors: Vec<String>,
+    /// Style families of named attribute sets (E6), kept for all drawings.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub style_families: Vec<crate::styles::StyleFamily>,
     /// The Export panel's values per language id (W10-11), kept across
     /// sessions; never in the drawing file.
     #[serde(skip_serializing_if = "std::collections::BTreeMap::is_empty")]

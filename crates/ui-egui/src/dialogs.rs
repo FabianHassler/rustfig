@@ -745,6 +745,7 @@ pub(crate) fn escape_closes_panels(app: &mut App, ctx: &egui::Context) {
         || d.figure_comments.is_some()
         || d.spline_point.is_some()
         || d.messages_open
+        || app.styles.open
         || app.unit_panel_open;
     if any && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
         // The edit popup's Escape is Cancel (`e_edit.c`): the object is
@@ -763,6 +764,7 @@ pub(crate) fn escape_closes_panels(app: &mut App, ctx: &egui::Context) {
         d.color.open = false;
         d.messages_open = false;
         app.unit_panel_open = false;
+        app.styles.open = false;
     }
 }
 
@@ -834,6 +836,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     messages_dialog(app, ctx);
     global_dialog(app, ctx);
     crate::color_dialog::dialog(app, ctx);
+    crate::styles::show(app, ctx);
     unsaved_dialog(app, ctx);
     rename_dialog(app, ctx);
     save_scope_dialog(app, ctx);
