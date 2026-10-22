@@ -1220,6 +1220,10 @@ mod tests {
         ),
         ("arrange.align_to", "the Align tool's right button"),
         ("picture.", "the picture edit panel's buttons; scripting API"),
+        (
+            "export.",
+            "the Export panel's rows and Fit to Page button; scripting API",
+        ),
     ];
 
     /// Every command is in a menu or listed above with a reason.

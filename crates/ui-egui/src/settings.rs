@@ -173,10 +173,6 @@ pub fn apply_ui(app: &mut App) {
             )),
         }
     }
-    if let Some(m) = p.int("export_margin") {
-        // xfig's margin is in points.
-        app.dialogs.export.margin = (m.clamp(0, 10_000) as f64) * 1200.0 / 72.0;
-    }
     let r = &p.rustfig;
     if let Some(b) = r.xfig_keys {
         app.xfig_keys = b;

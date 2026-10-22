@@ -177,7 +177,7 @@ pub const RESOURCES: &[Resource] = &[
     r("transparent_color", Int, "-2", "-transparent_color", Planned("B6")),
     r("userscale", Float, "1.0", "-userscale", Applied),
     r("userunit", Str, "in", "-userunit", Applied),
-    r("write_bak", Bool, "true", "-write_bak", Planned("D11")),
+    r("write_bak", Bool, "true", "-write_bak", Applied),
     r("zoom", Float, "1.0", "-zoom", Applied),
 ];
 
@@ -206,6 +206,10 @@ pub struct RustFigPrefs {
     pub button_style: Option<String>,
     pub recent_files: Vec<String>,
     pub user_colors: Vec<NamedColor>,
+    /// The Export panel's values per language id (W10-11), kept across
+    /// sessions; never in the drawing file.
+    #[serde(skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub export: std::collections::BTreeMap<String, crate::export_panel::PanelSettings>,
     /// Keys this version doesn't know, kept as they are.
     #[serde(flatten)]
     pub other: toml::Table,

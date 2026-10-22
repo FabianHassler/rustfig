@@ -12,6 +12,7 @@ pub mod cmdline;
 pub mod coords;
 pub mod dimline;
 mod error;
+pub mod export_panel;
 pub mod fig2dev;
 pub mod guard;
 mod history;

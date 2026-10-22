@@ -32,7 +32,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Open…",
             menu: "",
             shortcut: "",
-            params: "{\"path\": string, \"offset_x\"?: number, \"offset_y\"?: number}  — open a .fig or .rustfig file; the optional offset (Fig units) moves the figure, as xfig's Figure Offset",
+            params: "{\"path\": string, \"offset_x\"?: number, \"offset_y\"?: number}  — open a .fig or .rustfig file; the optional offset (Fig units) moves the figure, as xfig's Figure Offset. A name that does not exist yet opens an empty figure of that name (xfig's \"(new file)\"; result new_file: true); the first Save creates the file",
             mutates: false,
             enabled: always,
             run: open,
@@ -132,7 +132,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Export…",
             menu: "",
             shortcut: "",
-            params: "{\"path\": string, \"part\"?: bool (only the visible part while a compound is open), \"format\"?: language id (see file.export_formats; default from the file name), \"magnification\"?: percent, \"margin\"?: fig units, \"dpi\"?: number, \"background\"?: \"#rrggbb\", \"active_layers_only\"?: bool, \"whole_figure_bounds\"?: bool, \"options\"?: {key: value} fig2dev's options for the language, by key or letter (see file.export_formats)}  — active_layers_only leaves out depths that are off; whole_figure_bounds then still sizes the page by the whole figure; pspdf writes NAME.eps and NAME.pdf",
+            params: "{\"path\": string, \"part\"?: bool (only the visible part while a compound is open), \"format\"?: language id (see file.export_formats; default from the file name), \"magnification\"?: percent, \"margin\"?: fig units, \"dpi\"?: number, \"background\"?: \"#rrggbb\", \"active_layers_only\"?: bool, \"whole_figure_bounds\"?: bool, \"options\"?: {key: value} fig2dev's options for the language, by key or letter (see file.export_formats), \"panel\"?: true | {…} the Export panel's settings kept for the language (export.settings) turned into options}  — active_layers_only leaves out depths that are off; whole_figure_bounds then still sizes the page by the whole figure; pspdf writes NAME.eps and NAME.pdf",
             mutates: false,
             enabled: has_objects,
             run: export_file,
@@ -197,6 +197,21 @@ fn parse(bytes: &[u8]) -> Result<(Document, Vec<String>), EngineError> {
 
 fn open(e: &mut Engine, p: &Value) -> CmdResult {
     let path = string(p, "path")?;
+    // xfig opens a name that doesn't exist yet as an empty figure of that
+    // name ("(new file)", f_load.c): the first Save creates it.
+    if matches!(std::fs::metadata(&path), Err(err) if err.kind() == std::io::ErrorKind::NotFound) {
+        if path.is_empty() || path.contains('\0') || path.chars().any(char::is_control) {
+            return Err(EngineError::bad_params("the file name is not valid"));
+        }
+        let settings = e.doc().settings.clone();
+        let doc = Document {
+            settings,
+            ..Document::new()
+        };
+        e.replace_document(doc, Some(path.clone()));
+        e.set_status(format!("{path} (new file)"));
+        return Ok(json!({"objects": 0, "warnings": [], "new_file": true}));
+    }
     let (mut doc, mut warnings) = parse(&read_file(&path)?)?;
     let (dx, dy) = offset(p)?;
     if dx != 0.0 || dy != 0.0 {
@@ -387,6 +402,13 @@ fn save(e: &mut Engine, p: &Value) -> CmdResult {
     };
     let format = FileFormat::from_path(&path).unwrap_or(FileFormat::Fig);
     let text = rustfig_format::write(&*scope_doc(e, p)?, format).map_err(|err| EngineError::format(err.to_string()))?;
+    // xfig's write_bak (w_file.c renamefile): the file saved over is kept
+    // as NAME.bak. A copy, so a failing write leaves the original in place.
+    let backup_error = if e.prefs.bool("write_bak").unwrap_or(true) {
+        backup_file(&path)
+    } else {
+        None
+    };
     write_atomic(&path, text.as_bytes())?;
     e.set_path(Some(path.clone()));
     e.set_modified(false);
@@ -402,7 +424,22 @@ fn save(e: &mut Engine, p: &Value) -> CmdResult {
     if let Some(error) = export_error {
         result["export_on_save_error"] = json!(error);
     }
+    if let Some(error) = backup_error {
+        result["backup_error"] = json!(error);
+    }
     Ok(result)
+}
+
+/// Keep the file at `path`, if there is one, as `path.bak` (xfig's
+/// `write_bak`). Returns the failure message: the save goes on, as xfig's
+/// does when its rename fails.
+fn backup_file(path: &str) -> Option<String> {
+    let meta = std::fs::metadata(path).ok()?; // no file yet: nothing to keep
+    if !meta.is_file() {
+        return None;
+    }
+    let bak = format!("{path}.bak");
+    std::fs::copy(path, &bak).err().map(|err| format!("{bak}: {err}"))
 }
 
 /// The keys of `file.export` kept in [`rustfig_model::ExportOnSave`];
@@ -941,6 +978,7 @@ fn uses_picture_file(objects: &[rustfig_model::Object], dir: Option<&Path>, path
 
 fn export_file(e: &mut Engine, p: &Value) -> CmdResult {
     let path = string(p, "path")?;
+    let p = &with_panel(e, p, Some(&path))?;
     let objs: Vec<rustfig_model::Object> = scope_doc(e, p)?.objects.iter().map(|o| (**o).clone()).collect();
     if uses_picture_file(&objs, doc_dir(e).as_deref(), Path::new(&path)) {
         return Err(EngineError::bad_params(format!(
@@ -968,6 +1006,16 @@ fn export_file(e: &mut Engine, p: &Value) -> CmdResult {
     Ok(json!({"path": path, "paths": written, "bytes": total, "format": lang.id, "warnings": warnings}))
 }
 
+/// `p` with the Export panel's settings for its language when it has
+/// `"panel"` ([`crate::export_panel::apply`]).
+fn with_panel(e: &Engine, p: &Value, path: Option<&str>) -> Result<Value, EngineError> {
+    if p.get("panel").is_none_or(|v| v.is_null() || *v == Value::Bool(false)) {
+        return Ok(p.clone());
+    }
+    let lang = export_language(p, path)?;
+    crate::export_panel::apply(e, p, lang.id)
+}
+
 /// `path` with its extension replaced (or added).
 fn with_extension(path: &str, ext: &str) -> String {
     let name_start = path.rfind(['/', '\\']).map_or(0, |i| i + 1);
@@ -978,6 +1026,7 @@ fn with_extension(path: &str, ext: &str) -> String {
 }
 
 fn export_data(e: &mut Engine, p: &Value) -> CmdResult {
+    let p = &with_panel(e, p, None)?;
     let lang = export_language(p, None)?;
     let virtual_path = format!("figure.{}", lang.extension);
     let parts = parts(lang, &virtual_path);

@@ -345,6 +345,42 @@ pub fn color_combo(ui: &mut egui::Ui, id: &str, doc: &Document, current: i32) ->
     chosen
 }
 
+/// [`color_combo`] with its own choices ahead of the colours (the export
+/// panel's "None" and "Background"): `extras` are (value, label), negative
+/// values.
+pub fn color_menu(ui: &mut egui::Ui, id: &str, doc: &Document, current: i32, extras: &[(i32, &str)]) -> Option<i32> {
+    let mut chosen = None;
+    let label = |c: i32| match extras.iter().find(|(v, _)| *v == c) {
+        Some((_, name)) => (Color32::TRANSPARENT, (*name).to_string()),
+        None => color_label(doc, c),
+    };
+    let (col, name) = label(current);
+    ui.horizontal(|ui| {
+        swatch(ui, col);
+        let combo = egui::ComboBox::from_id_salt(id)
+            .selected_text(name.clone())
+            .width(110.0)
+            .show_ui(ui, |ui| {
+                let mut all: Vec<i32> = extras.iter().map(|(v, _)| *v).collect();
+                all.extend(0..32);
+                all.extend(doc.colors.iter().map(|c| c.number));
+                for c in all {
+                    let (col, name) = label(c);
+                    ui.horizontal(|ui| {
+                        swatch(ui, col);
+                        if ui.selectable_label(c == current, name).clicked() {
+                            chosen = Some(c);
+                        }
+                    });
+                }
+            });
+        combo
+            .response
+            .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, name.clone()));
+    });
+    chosen
+}
+
 /// Area fill choices: (value, label).
 pub fn fill_choices() -> Vec<(i32, String)> {
     let mut v = vec![(-1, "None".to_string())];

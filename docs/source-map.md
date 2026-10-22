@@ -105,7 +105,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 |---|---:|---|---|---|---|
 | `f_read.c` | 2034 | Fig 3.x reader (all quirks) | fig2dev's `read.c` through `format/bridge/to_model` (`format/fig_read`, 83 lines; DD3) | via fig2dev | DD3 ✅ |
 | `f_readold.c` | 537 | Fig 1.x/2.x reader | fig2dev's `read/read1_3` and `read.c` through the bridge (`format/fig_read`) | via fig2dev | G1, DD3 ✅ |
-| `f_save.c` | 665 | Fig 3.2 writer (type order) | `format/fig_write` | ported: type order, header, arrows, comments; `.bak` missing (S4) | W10-9 |
+| `f_save.c` | 665 | Fig 3.2 writer (type order) | `format/fig_write` | ported: type order, header, arrows, comments; `.bak` on save (`write_bak`) | — |
 | `f_load.c` | 384 | load, merge | `cmd/file` | ported (S4) | — |
 | `f_util.c` | 1291 | directories, image colours, `~/.xfigrc` | — | partial: `~/.xfigrc` replaced by TOML (E1); `xfig -update`, dimension-line parts missing; image colormap code not needed (S4) | S3, D10 |
 | `f_picobj.c` | 970 | picture loading and caching | `engine/import` | replaced by fig2dev `readpics`; relative picture names not rewritten on Save As (S4) | S4-3 |
@@ -162,9 +162,9 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_canvas.c` | 1218 | canvas input, key bindings, compose key | `ui-egui/canvas`, `menus::pan_keys`, `menus::Compose`, `rustfig_text::compose` (CompKeyDB) | own; partial: Ctrl+click zoom, shape factor on the canvas, crosshair (S4) | E3, S4-6, E9 |
 | `w_cursor.c` | 144 | cursors per mode | canvas | partial: one cursor (S4) | S4-4 |
 | `w_color.c` | 2592 | colour panel and editor | indicator combo | partial: colour editor (35 functions, S4) | E4 |
-| `w_export.c` | 2054 | export panel | `dialogs::export` (language menu in xfig's order), default suffixes in `fig2dev:crates/fig2dev/src/languages.rs` | partial: Export panel options (26 functions, S4) | W10-4, W10-10 |
+| `w_export.c` | 2054 | export panel | `dialogs::export` (language menu in xfig's order), default suffixes in `fig2dev:crates/fig2dev/src/languages.rs` | ported: Export panel options (rows per language, preview, fit to page, kept per language; HPGL rows B9) (26 functions, S4) | W10-4, W10-10, W10-11 |
 | `w_print.c` | 1542 | print panel | — | missing; modern: PDF to the system print dialog (decided) | B5 |
-| `w_file.c`, `w_dir.c`, `w_browse.c`, `w_listwidget.c` | 3.5 k | file panel and browser with preview | native dialogs (`rfd`) | modern; preview, offset fields and Open of a missing name missing (S4) | W10-12, W10-8 |
+| `w_file.c`, `w_dir.c`, `w_browse.c`, `w_listwidget.c` | 3.5 k | file panel and browser with preview | native dialogs (`rfd`) | modern; Open of a missing name starts a new figure; preview and offset fields missing (S4) | W10-12 |
 | `w_library.c` | 1831 | library panel | — | missing | D6 |
 | `w_srchrepl.c` | 966 | search/replace, spell check | `dialogs::search` | partial: spell check | F5 |
 | `w_style.c` | 1026 | style manager | — | missing | E6 |

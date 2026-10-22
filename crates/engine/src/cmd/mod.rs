@@ -9,6 +9,7 @@ mod compound;
 mod dimline;
 mod doc;
 mod edit;
+mod export_panel;
 pub(crate) mod file;
 mod indicator;
 mod joinsplit;
@@ -72,6 +73,7 @@ pub fn all() -> &'static [Command] {
     ALL.get_or_init(|| {
         let mut v = Vec::new();
         v.extend(file::commands());
+        v.extend(export_panel::commands());
         v.extend(edit::commands());
         v.extend(view::commands());
         v.extend(shape::commands());

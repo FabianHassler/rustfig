@@ -7,7 +7,8 @@
 use crate::attributes::{arrow_menu, cap_menu, join_menu, line_menu};
 use crate::panels::{color_combo, fill_combo_for, font_combo, limit_fill, plain_fill_color};
 use crate::{menus, App};
-use rustfig_engine::fig2dev::languages::{language, Kind, LANGUAGES};
+use rustfig_engine::export_panel::{figure_size, PanelSettings, TRANSP_BACKGROUND, TRANSP_NONE};
+use rustfig_engine::fig2dev::languages::{language, LANGUAGES};
 use rustfig_engine::Engine;
 use rustfig_model::{CapStyle, JoinStyle, Justify, LineKind, ObjectId, ObjectKind, PaperSize, PolyKind, SplineKind};
 use serde_json::{json, Value};
@@ -188,14 +189,34 @@ pub struct SplinePointEdit {
     pub shapes: Vec<f64>,
 }
 
+/// The picture the Export panel shows of the result (W10-10).
+#[derive(Clone, Default)]
+pub struct ExportPreview {
+    /// What the picture was made from (figure revision, language, options);
+    /// it is made again when this changes, not every frame.
+    pub key: String,
+    pub texture: Option<egui::TextureHandle>,
+    pub error: Option<String>,
+}
+
+impl std::fmt::Debug for ExportPreview {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ExportPreview({})", self.key)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ExportState {
     pub open: bool,
     pub format: &'static str,
+    /// The figure's magnification shown in the panel (percent); stored in
+    /// the .fig file when the figure is exported.
     pub magnification: f64,
-    pub margin: f64,
-    pub dpi: f64,
-    pub white_background: bool,
+    /// The panel's values for the language `loaded`, kept in the settings
+    /// file per language; `stored` is what the file has.
+    pub settings: PanelSettings,
+    pub stored: PanelSettings,
+    pub loaded: &'static str,
     /// Keep this export up to date on every save (plan E15).
     pub export_on_save: bool,
     /// Set once from the document when the panel opens, so typing in the
@@ -205,11 +226,7 @@ pub struct ExportState {
     pub active_layers_only: bool,
     /// With active layers only: size the page by the whole figure.
     pub whole_figure_bounds: bool,
-    /// Bitmap smoothing (fig2dev's `-S`: 1 none, 2 some, 4 more); RustFig
-    /// starts with 4, the closest to the antialiased canvas (xfig: none).
-    pub smoothing: Option<u32>,
-    /// JPEG quality (fig2dev's `-q`).
-    pub jpeg_quality: u32,
+    pub preview: ExportPreview,
 }
 
 impl Default for ExportState {
@@ -218,15 +235,14 @@ impl Default for ExportState {
             open: false,
             format: "pdf",
             magnification: 100.0,
-            margin: 0.0,
-            dpi: 150.0,
-            white_background: false,
+            settings: PanelSettings::default(),
+            stored: PanelSettings::default(),
+            loaded: "",
             export_on_save: false,
             export_on_save_synced: false,
             active_layers_only: false,
             whole_figure_bounds: false,
-            smoothing: Some(4),
-            jpeg_quality: 75,
+            preview: ExportPreview::default(),
         }
     }
 }
@@ -1775,6 +1791,42 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
     }
 }
 
+/// xfig's grid menus (`grid_inch_choices`, `grid_cm_choices` of w_util.c).
+const GRID_INCH: [&str; 9] = ["None", "1/16", "1/8", "1/4", "1/2", "1", "2", "5", "10"];
+const GRID_MM: [&str; 8] = ["None", "1", "2", "5", "10", "20", "50", "100"];
+
+/// What a click in the Export panel asks for, done after the panel is drawn.
+#[derive(Default)]
+struct ExportActions {
+    go: bool,
+    fit: bool,
+    reset: bool,
+    page: Vec<(&'static str, &'static str)>,
+    paper: Option<PaperSize>,
+}
+
+/// A combo box of text choices that reports its choice.
+fn text_combo(ui: &mut egui::Ui, id: &str, current: &str, choices: &[&str]) -> Option<String> {
+    let mut chosen = None;
+    let combo = egui::ComboBox::from_id_salt(id)
+        .selected_text(current)
+        .width(70.0)
+        .show_ui(ui, |ui| {
+            for c in choices {
+                if ui.selectable_label(*c == current, *c).clicked() {
+                    chosen = Some((*c).to_string());
+                }
+            }
+        });
+    combo
+        .response
+        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, current));
+    chosen
+}
+
+/// xfig's offset units (`offset_unit_conv`): inches, cm, fig units.
+const OFFSET_UNITS: [&str; 3] = ["in", "cm", "fig"];
+
 fn export_dialog(app: &mut App, ctx: &egui::Context) {
     if !app.dialogs.export.open {
         app.dialogs.export.export_on_save_synced = false;
@@ -1782,12 +1834,37 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
     }
     if !app.dialogs.export.export_on_save_synced {
         app.dialogs.export.export_on_save = app.engine.doc().export_on_save.is_some();
+        app.dialogs.export.magnification = app.engine.doc().settings.magnification;
+        app.dialogs.export.loaded = "";
         app.dialogs.export.export_on_save_synced = true;
     }
+    // The language's values, as kept in the settings file.
+    if app.dialogs.export.loaded != app.dialogs.export.format {
+        let format = app.dialogs.export.format;
+        let s = rustfig_engine::export_panel::settings_for(&app.engine, format);
+        let st = &mut app.dialogs.export;
+        st.settings = s.clone();
+        st.stored = s;
+        st.loaded = format;
+    }
     let mut open = true;
-    let mut go = false;
+    let mut act = ExportActions::default();
     let some_hidden = !app.engine.hidden_depths.is_empty();
+    let doc = app.engine.doc().settings.clone();
+    let (units, paper, landscape, center, multiple) = (
+        doc.units,
+        doc.paper,
+        doc.orientation == rustfig_model::Orientation::Landscape,
+        doc.center,
+        doc.multiple_pages,
+    );
+    let (bw, bh, unit) = {
+        let st = &app.dialogs.export;
+        figure_size(&app.engine.doc_bounds(), units, st.magnification)
+    };
+    let rows = rustfig_engine::export_panel::rows(app.dialogs.export.format);
     let st = &mut app.dialogs.export;
+    let doc = app.engine.doc();
     egui::Window::new("Export")
         .open(&mut open)
         .resizable(false)
@@ -1822,23 +1899,195 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
                         .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, current));
                     ui.end_row();
                     ui.label("Magnification");
-                    ui.add(
-                        egui::DragValue::new(&mut st.magnification)
-                            .range(1.0..=10000.0)
-                            .suffix(" %"),
-                    );
+                    ui.horizontal(|ui| {
+                        ui.add(
+                            egui::DragValue::new(&mut st.magnification)
+                                .range(1.0..=10000.0)
+                                .suffix(" %"),
+                        );
+                        if ui.button("Fit to Page").clicked() {
+                            act.fit = true;
+                        }
+                    });
                     ui.end_row();
-                    ui.label("Border");
-                    ui.add(
-                        egui::DragValue::new(&mut st.margin)
-                            .range(0.0..=12000.0)
-                            .suffix(" fig units"),
-                    );
+                    ui.label("Figure size");
+                    ui.label(format!("{bw:.1}{unit} x {bh:.1}{unit}"));
                     ui.end_row();
-                    let bitmap = language(st.format).is_some_and(|l| l.kind == Kind::Bitmap);
-                    if bitmap {
+                    // The rows xfig shows for the language (manage_optional).
+                    if rows.transparent {
+                        ui.label("GIF transparent color");
+                        if let Some(c) = crate::panels::color_menu(
+                            ui,
+                            "export_transparent",
+                            doc,
+                            st.settings.transparent,
+                            &[(TRANSP_NONE, "None"), (TRANSP_BACKGROUND, "Background")],
+                        ) {
+                            st.settings.transparent = c;
+                        }
+                        ui.end_row();
+                    }
+                    if rows.quality {
+                        ui.label("Image quality");
+                        ui.add(
+                            egui::DragValue::new(&mut st.settings.quality)
+                                .range(1..=100)
+                                .suffix(" %"),
+                        );
+                        ui.end_row();
+                    }
+                    if rows.border {
+                        ui.label(if rows.border_pixels {
+                            "Border (pixels)"
+                        } else {
+                            "Border (points)"
+                        });
+                        ui.add(egui::DragValue::new(&mut st.settings.border).range(0.0..=10000.0));
+                        ui.end_row();
+                    }
+                    if rows.background {
+                        ui.label("Background");
+                        if let Some(c) = crate::panels::color_menu(
+                            ui,
+                            "export_background",
+                            doc,
+                            st.settings.background,
+                            &[(rustfig_engine::export_panel::COLOR_NONE, "Default")],
+                        ) {
+                            st.settings.background = c;
+                        }
+                        ui.end_row();
+                    }
+                    if rows.grid {
+                        ui.label("Grid");
+                        ui.horizontal(|ui| {
+                            let choices: &[&str] = if units == rustfig_model::Units::Metric {
+                                &GRID_MM
+                            } else {
+                                &GRID_INCH
+                            };
+                            ui.label("Minor");
+                            if let Some(c) = text_combo(ui, "export_grid_minor", &st.settings.grid_minor, choices) {
+                                st.settings.grid_minor = c;
+                            }
+                            ui.label("Major");
+                            if let Some(c) = text_combo(ui, "export_grid_major", &st.settings.grid_major, choices) {
+                                st.settings.grid_major = c;
+                            }
+                            ui.label(if units == rustfig_model::Units::Metric {
+                                "mm"
+                            } else {
+                                "in"
+                            });
+                        });
+                        ui.end_row();
+                    }
+                    if rows.preview {
+                        ui.label("EPS/PS preview");
+                        let names = ["None", "ASCII (EPSI)", "Color TIFF", "Monochrome TIFF"];
+                        let cur = names.get(usize::from(st.settings.preview)).copied().unwrap_or("None");
+                        if let Some(c) = text_combo(ui, "export_preview_kind", cur, &names) {
+                            st.settings.preview = names.iter().position(|n| *n == c).map_or(0, |i| i as u8);
+                        }
+                        ui.end_row();
+                    }
+                    if rows.pdf_page_mode {
+                        ui.label("PDF");
+                        ui.checkbox(
+                            &mut st.settings.pdf_page_mode,
+                            "Page mode (the paper size, not the figure's)",
+                        );
+                        ui.end_row();
+                    }
+                    if rows.page {
+                        let page_on = st.format != "pdf" || st.settings.pdf_page_mode;
+                        ui.label("Paper size");
+                        ui.add_enabled_ui(page_on, |ui| {
+                            let combo = egui::ComboBox::from_id_salt("export_paper")
+                                .selected_text(paper.name())
+                                .show_ui(ui, |ui| {
+                                    for p in PaperSize::ALL {
+                                        if ui.selectable_label(p == paper, p.name()).clicked() {
+                                            act.paper = Some(p);
+                                        }
+                                    }
+                                });
+                            combo.response.widget_info(|| {
+                                egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, paper.name())
+                            });
+                        });
+                        ui.end_row();
+                        ui.label("Orientation");
+                        ui.add_enabled_ui(page_on, |ui| {
+                            ui.horizontal(|ui| {
+                                if ui.radio(landscape, "Landscape").clicked() {
+                                    act.page.push(("orientation", "landscape"));
+                                }
+                                if ui.radio(!landscape, "Portrait").clicked() {
+                                    act.page.push(("orientation", "portrait"));
+                                }
+                            });
+                        });
+                        ui.end_row();
+                        ui.label("Justification");
+                        ui.add_enabled_ui(page_on, |ui| {
+                            ui.horizontal(|ui| {
+                                if ui.radio(center, "Center").clicked() {
+                                    act.page.push(("justify", "center"));
+                                }
+                                if ui.radio(!center, "Flush left").clicked() {
+                                    act.page.push(("justify", "flush_left"));
+                                }
+                            });
+                        });
+                        ui.end_row();
+                        ui.label("Pages");
+                        ui.add_enabled_ui(page_on, |ui| {
+                            ui.horizontal(|ui| {
+                                if ui.radio(!multiple, "Single").clicked() {
+                                    act.page.push(("pages", "single"));
+                                }
+                                if ui.radio(multiple, "Multiple").clicked() {
+                                    act.page.push(("pages", "multiple"));
+                                }
+                                ui.add_enabled(multiple, egui::Checkbox::new(&mut st.settings.overlap, "Overlap"));
+                            });
+                        });
+                        ui.end_row();
+                        ui.label("Offset");
+                        ui.add_enabled_ui(page_on, |ui| {
+                            ui.horizontal(|ui| {
+                                ui.label("X");
+                                ui.add(egui::DragValue::new(&mut st.settings.x_offset).speed(0.05));
+                                let cur = OFFSET_UNITS
+                                    .get(usize::from(st.settings.x_unit))
+                                    .copied()
+                                    .unwrap_or("in");
+                                if let Some(c) = text_combo(ui, "export_x_unit", cur, &OFFSET_UNITS) {
+                                    st.settings.x_unit =
+                                        OFFSET_UNITS.iter().position(|n| *n == c).map_or(0, |i| i as u8);
+                                }
+                                ui.label("Y");
+                                ui.add(egui::DragValue::new(&mut st.settings.y_offset).speed(0.05));
+                                let cur = OFFSET_UNITS
+                                    .get(usize::from(st.settings.y_unit))
+                                    .copied()
+                                    .unwrap_or("in");
+                                if let Some(c) = text_combo(ui, "export_y_unit", cur, &OFFSET_UNITS) {
+                                    st.settings.y_unit =
+                                        OFFSET_UNITS.iter().position(|n| *n == c).map_or(0, |i| i as u8);
+                                }
+                            });
+                        });
+                        ui.end_row();
+                    }
+                    if rows.bitmap {
                         ui.label("Resolution");
-                        ui.add(egui::DragValue::new(&mut st.dpi).range(10.0..=2400.0).suffix(" dpi"));
+                        ui.add(
+                            egui::DragValue::new(&mut st.settings.dpi)
+                                .range(10.0..=2400.0)
+                                .suffix(" dpi"),
+                        );
                         ui.end_row();
                         // xfig's smoothing menu (fig2dev's -S).
                         let choices: [(Option<u32>, &str); 3] = [
@@ -1848,14 +2097,14 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
                         ];
                         let current = choices
                             .iter()
-                            .find(|(v, _)| *v == st.smoothing)
+                            .find(|(v, _)| *v == st.settings.smoothing)
                             .map_or("No smoothing", |(_, t)| *t);
                         ui.label("Smoothing");
                         let combo = egui::ComboBox::from_id_salt("export_smoothing")
                             .selected_text(current)
                             .show_ui(ui, |ui| {
                                 for (v, t) in choices {
-                                    ui.selectable_value(&mut st.smoothing, v, t);
+                                    ui.selectable_value(&mut st.settings.smoothing, v, t);
                                 }
                             });
                         combo
@@ -1863,14 +2112,6 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
                             .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, current));
                         ui.end_row();
                     }
-                    if st.format == "jpeg" {
-                        ui.label("Image quality");
-                        ui.add(egui::DragValue::new(&mut st.jpeg_quality).range(1..=100).suffix(" %"));
-                        ui.end_row();
-                    }
-                    ui.label("Background");
-                    ui.checkbox(&mut st.white_background, "white (otherwise transparent)");
-                    ui.end_row();
                     ui.label("Depths");
                     ui.vertical(|ui| {
                         ui.add_enabled_ui(some_hidden, |ui| {
@@ -1894,9 +2135,35 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
                     ui.end_row();
                 });
             ui.separator();
-            if ui.button("Export…").clicked() {
-                go = true;
+            // The result, made again when an option changes (W10-10).
+            ui.label("Preview");
+            match (&st.preview.texture, &st.preview.error) {
+                (Some(t), _) => {
+                    let s = t.size_vec2();
+                    let k = (260.0 / s.x.max(1.0)).min(180.0 / s.y.max(1.0)).min(1.0);
+                    let r = ui.add(egui::Image::new((t.id(), s * k)));
+                    r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Image, true, "Export preview"));
+                }
+                (None, Some(e)) => {
+                    ui.weak(e.as_str());
+                }
+                (None, None) => {
+                    ui.weak("(nothing to show)");
+                }
             }
+            ui.separator();
+            ui.horizontal(|ui| {
+                if ui.button("Export…").clicked() {
+                    act.go = true;
+                }
+                if ui
+                    .button("Reset to xfig defaults")
+                    .on_hover_text("Put this language's options back to xfig's own values")
+                    .clicked()
+                {
+                    act.reset = true;
+                }
+            });
         });
     app.dialogs.export.open = open;
     // xfig's Return in the export panel exports (`ExportFile`).
@@ -1905,9 +2172,46 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
         && ctx.memory(|m| m.focused()).is_none()
         && !app.engine.is_typing()
     {
-        go = true;
+        act.go = true;
     }
-    if go {
+    export_apply(app, ctx, act, open);
+}
+
+/// Do what the panel asked for, keep its values, and refresh the preview.
+fn export_apply(app: &mut App, ctx: &egui::Context, act: ExportActions, open: bool) {
+    if let Some(p) = act.paper {
+        app.run("doc.set_paper", json!({ "paper": p.name() }));
+    }
+    for (k, v) in act.page {
+        app.run("doc.set_page", json!({ k: v }));
+    }
+    if act.fit {
+        if let Some(r) = app.run("export.fit_page", json!({})) {
+            if let Some(m) = r["magnification"].as_f64() {
+                app.dialogs.export.magnification = m;
+            }
+        }
+    }
+    let format = app.dialogs.export.format;
+    if act.reset {
+        app.run("export.settings", json!({ "format": format, "reset": true }));
+        let s = rustfig_engine::export_panel::settings_for(&app.engine, format);
+        app.dialogs.export.settings = s.clone();
+        app.dialogs.export.stored = s;
+    }
+    // Kept across sessions as soon as it changes.
+    if app.dialogs.export.settings != app.dialogs.export.stored && app.dialogs.export.loaded == format {
+        if let Ok(v) = serde_json::to_value(&app.dialogs.export.settings) {
+            app.run("export.settings", json!({ "format": format, "settings": v }));
+        }
+        let s = rustfig_engine::export_panel::settings_for(&app.engine, format);
+        app.dialogs.export.settings = s.clone();
+        app.dialogs.export.stored = s;
+    }
+    if open {
+        export_preview(app, ctx);
+    }
+    if act.go {
         let st = app.dialogs.export.clone();
         let stem = app
             .engine
@@ -1918,6 +2222,10 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
             .to_string();
         let ext = language(st.format).map_or(st.format, |l| l.extension);
         if let Some(path) = app.file_dialogs.save_file(&format!("{stem}.{ext}"), ext, &[ext]) {
+            // The magnification is the figure's own setting (in the .fig file).
+            if (st.magnification - app.engine.doc().settings.magnification).abs() > 1e-9 {
+                app.run("doc.set_magnification", json!({ "magnification": st.magnification }));
+            }
             let p = export_params(app, &st, &path);
             if app.run("file.export", p.clone()).is_some() {
                 if st.export_on_save {
@@ -1931,40 +2239,150 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
     }
 }
 
-/// `file.export` parameters for the export panel's settings.
+/// `file.export` parameters for the export panel's settings: the figure's
+/// own page settings go with it; the rest are fig2dev's options (W10-4).
 fn export_params(app: &App, st: &ExportState, path: &str) -> serde_json::Value {
     let mut p = json!({
         "path": path,
         "format": st.format,
         "magnification": st.magnification,
-        "margin": st.margin,
-        "dpi": st.dpi,
         "active_layers_only": st.active_layers_only && !app.engine.hidden_depths.is_empty(),
         "whole_figure_bounds": st.whole_figure_bounds,
     });
-    if st.white_background {
-        p["background"] = json!("#ffffff");
-    }
-    let mut options = serde_json::Map::new();
-    if language(st.format).is_some_and(|l| l.kind == Kind::Bitmap) {
-        if let Some(s) = st.smoothing {
-            options.insert("smoothing".into(), json!(s));
-        }
-    }
-    if st.format == "jpeg" {
-        options.insert("quality".into(), json!(st.jpeg_quality));
-    }
-    if !options.is_empty() {
-        p["options"] = Value::Object(options);
+    for (k, v) in rustfig_engine::export_panel::params(&app.engine, st.format, &st.settings) {
+        p[k] = v;
     }
     p
+}
+
+/// A small picture of the export (the PPM bitmap export at a low
+/// resolution), made again only when the figure or an option changes.
+fn export_preview(app: &mut App, ctx: &egui::Context) {
+    // Not for huge figures: it would stall the panel.
+    if app.engine.doc().leaf_count() > 20_000 {
+        app.dialogs.export.preview.error = Some("(figure too large for a preview)".into());
+        app.dialogs.export.preview.texture = None;
+        return;
+    }
+    let st = app.dialogs.export.clone();
+    let key = format!(
+        "{}|{}|{}|{}|{:?}",
+        app.engine.revision(),
+        st.format,
+        st.magnification,
+        st.active_layers_only && st.whole_figure_bounds,
+        st.settings
+    );
+    if st.preview.key == key {
+        return;
+    }
+    app.dialogs.export.preview.key = key;
+    let units = app.engine.doc().settings.units;
+    let (w, h, unit) = figure_size(&app.engine.doc_bounds(), units, st.magnification);
+    let inches = w.max(h) / if unit == "cm" { 2.54 } else { 1.0 };
+    let dpi = if inches > 0.0 {
+        (240.0 / inches).clamp(5.0, 300.0)
+    } else {
+        50.0
+    };
+    let mut p = json!({
+        "format": "ppm",
+        "magnification": st.magnification,
+        "active_layers_only": st.active_layers_only && !app.engine.hidden_depths.is_empty(),
+        "whole_figure_bounds": st.whole_figure_bounds,
+    });
+    for (k, v) in rustfig_engine::export_panel::params(&app.engine, "ppm", &st.settings) {
+        p[k] = v;
+    }
+    p["dpi"] = json!(dpi);
+    let result = app
+        .engine
+        .execute("file.export_data", &p)
+        .map_err(|e| e.message)
+        .and_then(|v| {
+            let b64 = v["base64"].as_str().ok_or("no picture")?.to_string();
+            decode_ppm(&base64_decode(&b64)).ok_or_else(|| "no picture".to_string())
+        });
+    let preview = &mut app.dialogs.export.preview;
+    match result {
+        Ok(img) => {
+            preview.texture = Some(ctx.load_texture("export_preview", img, egui::TextureOptions::LINEAR));
+            preview.error = None;
+        }
+        Err(e) => {
+            preview.texture = None;
+            preview.error = Some(e);
+        }
+    }
+}
+
+fn base64_decode(s: &str) -> Vec<u8> {
+    let mut out = Vec::with_capacity(s.len() / 4 * 3);
+    let (mut acc, mut bits) = (0u32, 0u32);
+    for c in s.bytes() {
+        let v = match c {
+            b'A'..=b'Z' => c - b'A',
+            b'a'..=b'z' => c - b'a' + 26,
+            b'0'..=b'9' => c - b'0' + 52,
+            b'+' => 62,
+            b'/' => 63,
+            _ => continue,
+        };
+        acc = (acc << 6) | u32::from(v);
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((acc >> bits) as u8);
+            acc &= (1 << bits) - 1;
+        }
+    }
+    out
+}
+
+/// A binary PPM (P6) as an image; `None` for anything else.
+fn decode_ppm(data: &[u8]) -> Option<egui::ColorImage> {
+    let mut pos = 0;
+    let mut token = |data: &[u8]| -> Option<String> {
+        loop {
+            while data.get(pos)?.is_ascii_whitespace() {
+                pos += 1;
+            }
+            if *data.get(pos)? == b'#' {
+                while *data.get(pos)? != b'\n' {
+                    pos += 1;
+                }
+            } else {
+                break;
+            }
+        }
+        let start = pos;
+        while !data.get(pos)?.is_ascii_whitespace() {
+            pos += 1;
+        }
+        Some(String::from_utf8_lossy(data.get(start..pos)?).into_owned())
+    };
+    if token(data)? != "P6" {
+        return None;
+    }
+    let w: usize = token(data)?.parse().ok()?;
+    let h: usize = token(data)?.parse().ok()?;
+    let max: usize = token(data)?.parse().ok()?;
+    if w == 0 || h == 0 || w > 4096 || h > 4096 || max != 255 {
+        return None;
+    }
+    let pixels = data.get(pos + 1..pos + 1 + w * h * 3)?;
+    Some(egui::ColorImage::from_rgb([w, h], pixels))
 }
 
 /// xfig's ExportFile (Shift-Meta-X): export with the panel's current
 /// settings to the figure's name with the language's suffix, without the
 /// panel; a figure not saved yet opens the panel instead.
 pub fn export_now(app: &mut App) {
-    let st = app.dialogs.export.clone();
+    let mut st = app.dialogs.export.clone();
+    st.magnification = app.engine.doc().settings.magnification;
+    if st.loaded != st.format {
+        st.settings = rustfig_engine::export_panel::settings_for(&app.engine, st.format);
+    }
     let ext = language(st.format).map_or(st.format, |l| l.extension);
     let Some(fig) = app.engine.path().map(str::to_string) else {
         app.dialogs.export.open = true;
