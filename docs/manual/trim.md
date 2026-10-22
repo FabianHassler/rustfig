@@ -2,7 +2,7 @@
 
 ## Trim, split and extend
 
-RustFig's own mode (xfig has none), the last button of the editing column (after xfig's, so their layout stays), key `w`, also in the Tools menu. It acts on the object you click, using every other object in the drawing as the cutting edges.
+RustFig's own mode (xfig has none), the button next to Chop in the editing column, key `w`, also in the Tools menu. It acts on the object you click, using every other object in the drawing as the cutting edges. The indicator panel shows Point Posn (the split point snaps to the grid as set there) and Arc Type (a cut arc becomes open or pie pieces).
 
 - Left, “trim piece”: removes the piece you click, the part of the object between its crossings with the other objects. The rest stays as separate pieces. If the object has no piece between two crossings, nothing happens and the message line says so.
 - Middle, “split at point”: cuts a line, polygon, arc or spline in two at the point you click; a closed figure is opened there.

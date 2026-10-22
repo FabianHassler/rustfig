@@ -1,6 +1,6 @@
 # Chop
 
-Chop cuts objects where other objects cross them, like a knife along a ruler. xfig has the basic mode; RustFig adds trimming, splitting and extending as commands.
+Chop cuts objects where other objects cross them, like a knife along a ruler. xfig has the basic mode; RustFig adds trimming, splitting and extending as commands. The indicator panel shows Arc Type: a chopped arc becomes open or pie-wedge pieces.
 
 ## Chop
 

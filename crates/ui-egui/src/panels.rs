@@ -51,6 +51,9 @@ const EDITING: [Slot; 26] = [
     Slot::Tool(ToolKind::OpenCompound, &xfig_icons::OPEN_COMP),
     Slot::Tool(ToolKind::JoinSplit, &xfig_icons::JOIN_SPLIT),
     Slot::Tool(ToolKind::Chop, &xfig_icons::CHOP),
+    // RustFig's own mode (D16), next to Chop: both cut lines (decided
+    // 2026-10-22, though the later buttons move one slot).
+    Slot::Tool(ToolKind::Trim, &xfig_icons::TRIM),
     Slot::Tool(ToolKind::Scale, &xfig_icons::SCALE),
     Slot::Tool(ToolKind::Align, &xfig_icons::ALIGN),
     Slot::Tool(ToolKind::MovePoint, &xfig_icons::MOVEPT),
@@ -71,8 +74,6 @@ const EDITING: [Slot; 26] = [
     Slot::Tool(ToolKind::AngleMeasure, &xfig_icons::ANGLEMEAS),
     Slot::Tool(ToolKind::LengthMeasure, &xfig_icons::LENMEAS),
     Slot::Tool(ToolKind::AreaMeasure, &xfig_icons::AREAMEAS),
-    // RustFig's own mode (D16) after xfig's, so xfig's layout stays.
-    Slot::Tool(ToolKind::Trim, &xfig_icons::TRIM),
 ];
 
 /// Width of the mode panel: two columns of buttons, the frame's margin and
