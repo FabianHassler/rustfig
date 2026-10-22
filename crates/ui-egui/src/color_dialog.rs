@@ -28,6 +28,8 @@ pub struct ColorDialog {
     selected: Option<i32>,
     /// A name for keeping the colour in the preferences.
     name: String,
+    /// The eyedropper last started takes the fill colour (else the pen's).
+    dropper_fill: bool,
 }
 
 impl Default for ColorDialog {
@@ -39,6 +41,7 @@ impl Default for ColorDialog {
             hex: Rgb::BLACK.to_hex(),
             selected: None,
             name: String::new(),
+            dropper_fill: false,
         }
     }
 }
@@ -98,6 +101,18 @@ fn field_name(f: ColorField) -> &'static str {
         ColorField::Pen => "pen_color",
         ColorField::Fill => "fill_color",
     }
+}
+
+/// After an eyedropper pick: the picker shows the colour taken (the pen or
+/// fill colour, whichever the pick changed).
+pub fn follow_eyedropper(app: &mut App) {
+    if !app.dialogs.color.open {
+        return;
+    }
+    let (pen, fill) = (app.engine.indicator.pen_color, app.engine.indicator.fill_color);
+    let c = if app.dialogs.color.dropper_fill { fill } else { pen };
+    let rgb = app.engine.doc().rgb(ColorRef(c.max(0)));
+    app.dialogs.color.set_rgb(rgb);
 }
 
 /// Make the picker's colour the current pen or fill colour.
@@ -317,9 +332,11 @@ fn body(app: &mut App, ui: &mut egui::Ui) {
             use_for(app, ColorField::Fill);
         }
         if ui.button("Eyedropper (pen)").clicked() {
+            app.dialogs.color.dropper_fill = false;
             app.run("color.eyedropper", json!({"target": "pen"}));
         }
         if ui.button("Eyedropper (fill)").clicked() {
+            app.dialogs.color.dropper_fill = true;
             app.run("color.eyedropper", json!({"target": "fill"}));
         }
     });

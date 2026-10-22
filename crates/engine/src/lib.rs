@@ -274,6 +274,11 @@ impl Engine {
         self.tool
     }
 
+    /// Whether the colour eyedropper waits for a click (E4).
+    pub fn eyedropper_waiting(&self) -> bool {
+        self.eyedropper.is_some()
+    }
+
     pub fn status(&self) -> &str {
         &self.status
     }

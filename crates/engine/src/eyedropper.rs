@@ -14,16 +14,32 @@ pub enum Eyedropper {
     Fill,
 }
 
-/// (pen, fill) colour numbers of an object; a compound gives its first
-/// member that has them. Text has a pen colour only.
-fn colors_of(o: &Object) -> Option<(i32, Option<i32>)> {
-    if let Some(s) = o.style() {
-        return Some((s.pen_color.0, Some(s.fill_color.0)));
-    }
+/// The colour number seen at `p` on `o` (within `tol`): the fill colour
+/// inside a filled area, else the line (pen) colour; text gives its colour.
+/// A compound gives the member under the point.
+fn color_at(o: &Object, p: Point, tol: f64) -> Option<i32> {
     match &o.kind {
-        ObjectKind::Text(t) => Some((t.color.0, None)),
-        ObjectKind::Compound(c) => c.objects.iter().find_map(colors_of),
-        _ => None,
+        ObjectKind::Text(t) => Some(t.color.0),
+        ObjectKind::Compound(c) => c
+            .objects
+            .iter()
+            .rev()
+            .find(|m| m.distance(p) <= tol)
+            .and_then(|m| color_at(m, p, tol)),
+        _ => {
+            let s = o.style()?;
+            if s.is_filled() {
+                // On the outline: the pen colour; inside it: the fill.
+                let mut line = o.clone();
+                if let Some(ls) = line.style_mut() {
+                    ls.area_fill = -1;
+                }
+                if line.distance(p) > tol {
+                    return Some(s.fill_color.0);
+                }
+            }
+            Some(s.pen_color.0)
+        }
     }
 }
 
@@ -37,22 +53,17 @@ impl Engine {
             return;
         }
         let tol = self.pick_tolerance();
+        // The colour under the pointer, whichever part of the object it
+        // is; the eyedropper's target only says where it goes.
         let found = self
             .hit_test(pos, tol)
             .and_then(|id| self.doc().get(id))
-            .and_then(colors_of);
-        let Some((pen, fill)) = found else {
+            .and_then(|o| color_at(o, pos, tol));
+        let Some(c) = found else {
             self.set_status("No object there to take a colour from.");
             return;
         };
-        let (is_pen, c) = match (target, fill) {
-            (Eyedropper::Fill, Some(f)) => (false, f),
-            (Eyedropper::Fill, None) => {
-                self.set_status("That object has no fill colour.");
-                return;
-            }
-            (Eyedropper::Pen, _) => (true, pen),
-        };
+        let is_pen = target == Eyedropper::Pen;
         if is_pen {
             self.indicator.pen_color = c;
         } else {

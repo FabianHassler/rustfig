@@ -98,9 +98,28 @@ fn eyedropper_takes_the_next_click() {
     e.indicator.pen_color = 0;
     e.tool_event(press(Button::Left)).unwrap();
     assert_eq!(e.indicator.pen_color, 0);
+    // The colour under the pointer counts, whatever the target: inside
+    // the filled box it is the fill colour (here into the fill), and on
+    // the outline the line colour (here into the fill as well).
+    run(&mut e, "color.eyedropper", json!({"target": "fill"}));
+    e.tool_event(ToolEvent::Press {
+        pos: Point::new(600.0, 600.0),
+        button: Button::Left,
+        shift: false,
+    })
+    .unwrap();
+    assert_eq!(e.indicator.fill_color, 4);
     run(&mut e, "color.eyedropper", json!({"target": "fill"}));
     e.tool_event(press(Button::Left)).unwrap();
-    assert_eq!(e.indicator.fill_color, 4);
+    assert_eq!(i64::from(e.indicator.fill_color), c);
+    run(&mut e, "color.eyedropper", json!({"target": "pen"}));
+    e.tool_event(ToolEvent::Press {
+        pos: Point::new(600.0, 600.0),
+        button: Button::Left,
+        shift: false,
+    })
+    .unwrap();
+    assert_eq!(e.indicator.pen_color, 4, "green fill into the pen colour");
     // Other buttons and Escape cancel; a click on nothing picks nothing.
     run(&mut e, "color.eyedropper", json!({"target": "pen"}));
     e.tool_event(press(Button::Right)).unwrap();

@@ -25,6 +25,10 @@ pub use toml::Value as TomlValue;
 pub fn config_path() -> Option<std::path::PathBuf> {
     use std::path::PathBuf;
     let env = |k: &str| std::env::var_os(k).filter(|v| !v.is_empty()).map(PathBuf::from);
+    // Scripts, tests and agents keep their settings apart from the user's.
+    if let Some(d) = env("RUSTFIG_SETTINGS_DIR") {
+        return Some(d.join("settings.toml"));
+    }
     let dir = if cfg!(target_os = "macos") {
         env("HOME").map(|h| h.join("Library/Application Support/RustFig"))
     } else if cfg!(windows) {

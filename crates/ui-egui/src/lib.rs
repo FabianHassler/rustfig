@@ -250,6 +250,22 @@ impl App {
         self.message = Some(m);
     }
 
+    /// Show what a mouse event made the engine say (`Engine::status`) on
+    /// the message line; pointer moves (lengths while drawing) replace the
+    /// line without filling the message history.
+    pub fn show_tool_status(&mut self, transient: bool) {
+        let s = self.engine.status().to_string();
+        if s.is_empty() {
+            return;
+        }
+        self.engine.set_status("");
+        if transient {
+            self.message = Some(Message { text: s, error: false });
+        } else {
+            self.info(s);
+        }
+    }
+
     pub fn info(&mut self, text: impl Into<String>) {
         self.push_message(Message {
             text: text.into(),

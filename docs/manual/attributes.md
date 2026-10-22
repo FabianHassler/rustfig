@@ -32,7 +32,7 @@ The Update Control box (in Update mode) says which attributes Update applies. Ed
 
 Click PenColor or FillColor for the colour menu: Default, the 32 standard colours, the colours of the drawing and your own colours. Under them are the **recent colours** (the last twelve you used, kept in your settings, not in the drawing) and two buttons.
 
-- **Eyedropper**: the next click on the canvas takes the pen colour (from PenColor) or the fill colour (from FillColor) of the object under the pointer and makes it the current colour. One click only; Escape, a key or another mouse button cancels.
+- **Eyedropper**: the next click on the canvas takes the colour you click on — inside a filled area its fill colour, on a line the line colour, on text the text colour — and makes it the current pen colour (Eyedropper from PenColor, or "Eyedropper (pen)") or fill colour (from FillColor, or "Eyedropper (fill)"). The message line says which colour was taken, and the Colours window shows it. One click only; Escape, a key or another mouse button cancels. It picks from the drawing only, not from other windows.
 - **More…** (also Edit > Colours…) opens the Colours window:
   - Pick in the hue/saturation square and the hue strip, or type Red, Green, Blue and Hue, Saturation, Value.
   - Type a hex value (`#rrggbb` or `#rgb`) or an X11 colour name such as `Dark Orange` (case and blanks do not matter; matching names are offered while you type) into **Hex or name**.
