@@ -1,0 +1,14 @@
+# Text files are checked out with LF on every platform, so tests and golden
+# files that compare text byte for byte behave the same on Windows (P1).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.pdf binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary

@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-22 | P1 (workflow ready, first run pending): `ci.yml` runs the gates on Linux, Windows and macOS (wasm check and perf budgets on Linux only, `RUSTFIG_SKIP_WASM` for the others, rust-cache per OS); `.gitattributes` forces LF. |
 | 2026-10-22 | D7: Angle Geom. The indicator button with xfig's six pictures (polyline, polygon, spline, move point and add point modes) and `indicator.set angle_geom`; unconstrained, latex line and arrow slopes, manhattan, mountain, mount-hattan constrain the next point on click and in the rubber band (ported from `u_elastic.c`, `u_geom.c`). Attributes 80 → 83 %. |
 | 2026-10-22 | E14: Edit › Copy as Picture (`edit.copy_picture`): the selection, or the whole figure, goes to the system clipboard through fig2dev's drivers as the platform's vector picture (macOS PDF, Linux SVG; Windows EMF, SVG until the driver is used) plus PNG, with the figure's magnification and the export parameters; native only (`clipboard-rs`), tested through a fake clipboard. |
 | 2026-10-22 | D8: linked move. Moving a box drags the end points of lines attached to its perimeter (within 45 Fig units), and a compound drags the ends of lines inside it; a Smart Links indicator button (off/move/slide) sets `LinkMode`; `engine/links.rs` ports `u_list.c`'s `get_links`/`point_on_perim`/`get_interior_links`/`point_on_inside`/`adjust_links`; Move moves the end point, Slide also slides the adjacent point. `tests/linked_move.rs` (5). |

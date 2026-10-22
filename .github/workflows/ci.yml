@@ -1,4 +1,6 @@
-# Plan task A2: the quality gates on every push and pull request (Linux).
+# Plan tasks A2 and P1: the quality gates on every push and pull request, on
+# Linux, Windows and macOS. The wasm check, the performance budgets and the
+# fig2dev reference tools (system packages) run on Linux only.
 name: CI
 
 on:
@@ -12,17 +14,28 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  # A missing wasm target must fail, not skip (CLAUDE.md).
-  RUSTFIG_REQUIRE_WASM: "1"
 
 jobs:
-  linux:
-    name: cargo xtask ci (Linux)
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
+  gates:
+    name: cargo xtask ci (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Linux, os: ubuntu-24.04 }
+          - { name: Windows, os: windows-latest }
+          - { name: macOS, os: macos-latest }
+    env:
+      # The wasm check runs once, on Linux, where a missing target must fail
+      # (CLAUDE.md); the other desktops skip it explicitly (xtask documents both).
+      RUSTFIG_REQUIRE_WASM: ${{ matrix.os == 'ubuntu-24.04' && '1' || '' }}
+      RUSTFIG_SKIP_WASM: ${{ matrix.os != 'ubuntu-24.04' && '1' || '' }}
     steps:
       - uses: actions/checkout@v4
       - name: System packages (eframe, rfd's GTK dialogs, fig2dev and the PostScript fonts' URW clones for the A8 reference tests)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -33,16 +46,19 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
-          targets: wasm32-unknown-unknown
+          targets: ${{ runner.os == 'Linux' && 'wasm32-unknown-unknown' || '' }}
       - uses: Swatinem/rust-cache@v2
-      - name: Quality gates (fmt, clippy, tests, layers, assets, wasm)
+        with:
+          key: ${{ matrix.os }}
+      - name: Quality gates (fmt, clippy, tests, layers, assets, licences, wasm on Linux)
         run: cargo xtask ci
-      - name: Performance budgets
+      - name: Performance budgets (tuned on Linux)
+        if: runner.os == 'Linux'
         run: cargo run --release -p rustfig-cli -- perf
       - name: fig2dev comparison images
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: fig2dev-reference
+          name: fig2dev-reference-${{ matrix.name }}
           path: target/fig2dev-reference
           if-no-files-found: ignore

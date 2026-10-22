@@ -269,6 +269,11 @@ fn wasm_target_installed() -> bool {
 }
 
 fn wasm() -> Result<(), String> {
+    // CI runs the wasm check once (on Linux); the other desktops opt out explicitly.
+    if std::env::var_os("RUSTFIG_SKIP_WASM").is_some_and(|v| !v.is_empty() && v != "0") {
+        eprintln!("wasm check skipped (RUSTFIG_SKIP_WASM is set)");
+        return Ok(());
+    }
     if !wasm_target_installed() {
         if std::env::var_os("RUSTFIG_REQUIRE_WASM").is_some() {
             return Err("wasm32-unknown-unknown is not installed (rustup target add wasm32-unknown-unknown)".into());

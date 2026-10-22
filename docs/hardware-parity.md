@@ -1,11 +1,11 @@
 # Hardware and platform parity checklist
 
-**Status:** 2026-10-13.
+**Status:** 2026-10-22 (Windows, Linux, macOS rows: P1 CI matrix).
 
 | Item | State |
 |---|---|
 | macOS (Apple Silicon) | ✅ built and driven via the control channel |
-| Windows | 🟡 should build (eframe/glow, rfd); unverified |
+| Windows | 🟡 should build (eframe/glow, rfd); CI job added (P1), first run pending |
 | Linux (X11, Wayland) | 🟡 should build; unverified |
 | Web (wasm32) | 🟡 code is cfg-gated; build unverified (gap #2) |
 | HiDPI / Retina | ✅ canvas renders at physical pixels |
