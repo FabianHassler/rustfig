@@ -113,6 +113,9 @@ pub struct Engine {
     clipboard: Vec<Object>,
     /// The system clipboard for "Copy as picture" (E14), when the front end has one.
     picture_clipboard: Option<Box<dyn picture::PictureClipboard>>,
+    /// The Fig text this engine last put on the system clipboard (E7): a
+    /// clipboard holding the same text is the cut buffer itself.
+    pub(crate) last_fig: Option<String>,
     path: Option<String>,
     modified: bool,
     revision: u64,
@@ -174,6 +177,7 @@ impl Engine {
             set_point: None,
             clipboard: Vec::new(),
             picture_clipboard: None,
+            last_fig: None,
             path: None,
             modified: false,
             revision: 1,

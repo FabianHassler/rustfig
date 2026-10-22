@@ -318,7 +318,9 @@ fn offset(p: &Value) -> Result<(f64, f64), EngineError> {
     Ok((num_or(p, "offset_x", 0.0)?, num_or(p, "offset_y", 0.0)?))
 }
 
-fn merge_doc(e: &mut Engine, other: Document, (dx, dy): (f64, f64)) -> CmdResult {
+/// The objects of `other` with its user colours mapped into the document
+/// (shared by Merge and the clipboard's Paste).
+pub(crate) fn mapped_objects(e: &mut Engine, other: Document) -> Vec<rustfig_model::Object> {
     // Map user colours of the merged document into this one.
     let mut map = std::collections::BTreeMap::new();
     for c in &other.colors {
@@ -350,6 +352,11 @@ fn merge_doc(e: &mut Engine, other: Document, (dx, dy): (f64, f64)) -> CmdResult
     }
     let mut objects: Vec<rustfig_model::Object> = other.objects.into_iter().map(Arc::unwrap_or_clone).collect();
     remap(&mut objects, &map);
+    objects
+}
+
+fn merge_doc(e: &mut Engine, other: Document, (dx, dy): (f64, f64)) -> CmdResult {
+    let mut objects = mapped_objects(e, other);
     for o in &mut objects {
         o.translate(dx, dy);
     }

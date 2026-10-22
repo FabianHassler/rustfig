@@ -79,7 +79,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "Ctrl+V",
             params: "{\"dx\"?: number, \"dy\"?: number}  — without an offset the objects follow the pointer: left places them there, middle at their original position, right or Escape cancels; with dx/dy (Fig units) they are placed at once, moved by that offset",
             mutates: true,
-            enabled: |e| !e.clipboard().is_empty(),
+            enabled: |e| !e.clipboard().is_empty() || e.picture_clipboard.is_some(),
             run: paste,
         },
         Command {
@@ -197,8 +197,158 @@ fn clone_targets(e: &Engine, p: &Value) -> Result<Vec<Object>, EngineError> {
 fn copy(e: &mut Engine, p: &Value) -> CmdResult {
     let objs = clone_targets(e, p)?;
     let n = objs.len();
-    e.set_clipboard(objs);
+    e.set_clipboard(objs.clone());
+    publish_cut_buffer(e, objs);
     Ok(json!({"copied": n}))
+}
+
+/// Biggest Fig text taken from the system clipboard (untrusted data).
+const MAX_CLIP_FIG: usize = 64 * 1024 * 1024;
+/// Biggest image taken from the system clipboard.
+const MAX_CLIP_IMAGE: usize = 64 * 1024 * 1024;
+/// Longest edge of a pasted image in Fig units (6 inches).
+const MAX_PASTE_EDGE: f64 = 7200.0;
+
+/// E7: the cut buffer also goes onto the system clipboard, as Fig text and
+/// the platform's pictures. Best effort: the internal cut buffer works
+/// without a clipboard, and a busy clipboard must not fail Copy or Delete.
+fn publish_cut_buffer(e: &mut Engine, objs: Vec<Object>) {
+    use crate::picture::{PictureData, PictureKind};
+    if e.picture_clipboard.is_none() || objs.is_empty() {
+        return;
+    }
+    let mut doc = e.whole_doc().into_owned();
+    doc.open.clear();
+    doc.objects = objs.into_iter().map(Arc::new).collect();
+    let fig = rustfig_format::write_fig(&doc);
+    let params = json!({"magnification": e.doc().settings.magnification});
+    let mut items = Vec::new();
+    for kind in PictureKind::platform_set() {
+        let kind = if kind == PictureKind::Emf && !crate::fig2dev::driver_available("emf") {
+            PictureKind::Svg
+        } else {
+            kind
+        };
+        // A picture that cannot be made is left out; the Fig text still goes.
+        if let Ok(bytes) = super::file::export_bytes(e, &doc, kind.language(), &params) {
+            items.push(PictureData { kind, bytes });
+        }
+    }
+    let Some(sink) = e.picture_clipboard.as_mut() else {
+        return;
+    };
+    if sink.set_objects(&fig, &items).is_ok() {
+        e.last_fig = Some(fig);
+    } else {
+        // The clipboard is busy or gone: Paste uses the cut buffer.
+        e.last_fig = None;
+    }
+}
+
+/// E7: before Paste, take what the system clipboard holds. Fig text from
+/// another RustFig window (or a later copy) becomes the cut buffer; an image
+/// becomes a picture object in it; the cut buffer's own text, nothing or
+/// unreadable data leave the cut buffer as it is.
+fn sync_from_system_clipboard(e: &mut Engine) {
+    let (fig, image) = {
+        let Some(sink) = e.picture_clipboard.as_mut() else {
+            return;
+        };
+        let fig = sink.get_fig();
+        let image = if fig.is_none() { sink.get_image() } else { None };
+        (fig, image)
+    };
+    if let Some(fig) = fig {
+        if e.last_fig.as_deref() == Some(fig.as_str()) {
+            return;
+        }
+        match paste_fig_text(e, &fig) {
+            Ok(objs) => {
+                e.set_clipboard(objs);
+                e.last_fig = Some(fig);
+            }
+            Err(msg) => e.set_status(format!("The clipboard's figure was ignored: {msg}")),
+        }
+    } else if let Some(img) = image {
+        match picture_from_image(e, &img) {
+            Ok(obj) => {
+                e.set_clipboard(vec![obj]);
+                // The image replaced whatever was copied before.
+                e.last_fig = None;
+            }
+            Err(msg) => e.set_status(format!("The clipboard's image was ignored: {msg}")),
+        }
+    }
+}
+
+fn paste_fig_text(e: &mut Engine, fig: &str) -> Result<Vec<Object>, String> {
+    if fig.len() > MAX_CLIP_FIG {
+        return Err("too large".into());
+    }
+    let (mut doc, _) = rustfig_format::read_any_messages(fig.as_bytes()).map_err(|err| err.to_string())?;
+    let base = e
+        .path()
+        .and_then(|p| std::path::Path::new(p).parent().map(std::path::Path::to_path_buf));
+    let _ = crate::import::load_all_pictures(&mut doc, base.as_deref());
+    let objs = super::file::mapped_objects(e, doc);
+    if objs.is_empty() {
+        return Err("it holds no objects".into());
+    }
+    Ok(objs)
+}
+
+/// A picture object (at the origin, at xfig's 80 pixels per inch, at most
+/// six inches wide or high) for image bytes from the clipboard. The picture
+/// file is written next to the figure (`clipboard-<hash>.png`), or into the
+/// temporary folder while the figure has no file name, and the object
+/// references it by path, like any picture in a .fig file.
+fn picture_from_image(e: &Engine, bytes: &[u8]) -> Result<Object, String> {
+    use rustfig_model::{Picture, PolyKind, Polyline};
+    if bytes.is_empty() || bytes.len() > MAX_CLIP_IMAGE {
+        return Err("not a usable size".into());
+    }
+    let img = crate::import::decode_picture(bytes)?;
+    if img.width == 0 || img.height == 0 {
+        return Err("empty image".into());
+    }
+    let hash = bytes.iter().fold(0xcbf2_9ce4_8422_2325_u64, |h, b| {
+        (h ^ u64::from(*b)).wrapping_mul(0x100_0000_01b3)
+    });
+    let name = format!("clipboard-{hash:016x}.png");
+    let dir = match e.path().and_then(|p| std::path::Path::new(p).parent()) {
+        Some(d) if !d.as_os_str().is_empty() => d.to_path_buf(),
+        _ => std::env::temp_dir().join("rustfig-clipboard"),
+    };
+    let file = write_clip_picture(&dir, &name, bytes)?;
+    let (w, h) = (f64::from(img.width) * 15.0, f64::from(img.height) * 15.0);
+    let k = (MAX_PASTE_EDGE / w.max(h)).min(1.0);
+    let r = rustfig_geom::Rect::new(
+        rustfig_geom::Point::new(0.0, 0.0),
+        rustfig_geom::Point::new(w * k, h * k),
+    );
+    let mut pl = Polyline::new(PolyKind::Picture, e.indicator.style(), r.corners().to_vec());
+    pl.style.thickness = 0;
+    pl.picture = Some(Picture {
+        flipped: false,
+        file,
+        image: Some(Arc::new(img)),
+    });
+    Ok(Object::new(ObjectKind::Polyline(pl)))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn write_clip_picture(dir: &std::path::Path, name: &str, bytes: &[u8]) -> Result<String, String> {
+    std::fs::create_dir_all(dir).map_err(|err| format!("{}: {err}", dir.display()))?;
+    let path = dir.join(name);
+    if !path.exists() {
+        std::fs::write(&path, bytes).map_err(|err| format!("{}: {err}", path.display()))?;
+    }
+    Ok(path.to_string_lossy().into_owned())
+}
+
+#[cfg(target_arch = "wasm32")]
+fn write_clip_picture(_dir: &std::path::Path, _name: &str, _bytes: &[u8]) -> Result<String, String> {
+    Err("pictures cannot be saved here".into())
 }
 
 /// `edit.copy_picture` (E14): the selection, or the whole figure when
@@ -277,6 +427,7 @@ fn insert_copies(e: &mut Engine, objs: Vec<Object>, dx: f64, dy: f64) -> CmdResu
 }
 
 fn paste(e: &mut Engine, p: &Value) -> CmdResult {
+    sync_from_system_clipboard(e);
     // Without an offset the objects follow the pointer until a click places
     // them (xfig's paste); scripts give `dx`/`dy`.
     if p.get("dx").is_none() && p.get("dy").is_none() {
@@ -284,6 +435,9 @@ fn paste(e: &mut Engine, p: &Value) -> CmdResult {
         return Ok(json!({"attached": e.clipboard().len()}));
     }
     let objs = e.clipboard().to_vec();
+    if objs.is_empty() {
+        return Err(EngineError::bad_params("the cut buffer is empty"));
+    }
     let dx = num_or(p, "dx", 150.0)?;
     let dy = num_or(p, "dy", 150.0)?;
     insert_copies(e, objs, dx, dy)

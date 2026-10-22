@@ -52,4 +52,21 @@ pub struct PictureData {
 pub trait PictureClipboard: Send {
     /// Replace the clipboard's content with all of `items` at once.
     fn set_pictures(&mut self, items: &[PictureData]) -> Result<(), String>;
+
+    /// E7: the cut buffer's objects as Fig text (a custom type another
+    /// RustFig window can paste) together with their pictures, replacing the
+    /// clipboard's content at once. Default: only the pictures.
+    fn set_objects(&mut self, _fig: &str, items: &[PictureData]) -> Result<(), String> {
+        self.set_pictures(items)
+    }
+
+    /// E7: the Fig text of the custom type, when the clipboard holds one.
+    fn get_fig(&mut self) -> Option<String> {
+        None
+    }
+
+    /// E7: an image (PNG bytes) on the clipboard, if any.
+    fn get_image(&mut self) -> Option<Vec<u8>> {
+        None
+    }
 }

@@ -59,7 +59,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | View: character map | `app.character_map`, Ctrl+Shift+M | ✅ |
 | View: Manage Styles… (Ctrl+Y): style families as in xfig's panel (Family and Style lists, Add, Delete, Set), kept in the settings | ✅ E6 (`crates/ui-egui/src/styles.rs`); xfig's `~/.xfigrcstyle` file is replaced by settings.toml |
 | Indicator panel (line, colours, fill, depth, arrows, caps, joins, fonts, justification, angle, radius, sides, rotation, grid, positioning, arc type, text step, text flags, smart links) | xfig's buttons, per mode | 🟡 Angle Geom done (D7); no copy counts |
-| S4 editing functions | Ctrl+click zoom box, pan to origin and unzoom (E3), Ctrl+Shift+click shape factor (S4-6), `Engine::mouse_hints_for(shift, ctrl)`; Shift+click locate object (S4-1), Paste attached to the pointer (S4-2), a cursor per mode (S4-4), Convert box/arc-box (S4-5) | ✅ |
+| S4 editing functions | Ctrl+click zoom box, pan to origin and unzoom (E3), Ctrl+Shift+click shape factor (S4-6), `Engine::mouse_hints_for(shift, ctrl)`; Shift+click locate object (S4-1), Paste attached to the pointer (S4-2), system clipboard for the cut buffer and images (E7), a cursor per mode (S4-4), Convert box/arc-box (S4-5) | ✅ |
 | Object markers in editing modes | per-mode masks as xfig (`u_markers.c`, `w_modepanel.c`) | ✅ |
 | Rulers | top and side, xfig's ticks and labels, cursor marker, pan buttons | ✅ |
 | Mouse-function panel | top strip, one column per button | ✅ |
@@ -119,6 +119,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 ## Revision history
 | Date | Note |
 |---|---|
+| 2026-10-22 | E7 done: the cut buffer on the system clipboard (Fig text + pictures), Paste takes a figure from another window or an image. |
 | 2026-10-22 | E4, W10-36 done: colour picker and editor (Edit > Colours…), recent colours, eyedropper, `color.*` commands. |
 | 2026-10-22 | E4b done: Pick from screen in the Colours window (macOS, Windows, Linux portal; web greyed out). |
 | 2026-10-22 | S4-3, S4-8, S4-9: Digitize window, New window, Autorefresh mode; relative picture names follow Save As. |

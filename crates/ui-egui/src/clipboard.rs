@@ -26,6 +26,18 @@ pub fn type_name(kind: PictureKind) -> &'static str {
     }
 }
 
+/// The clipboard type of the cut buffer's Fig text (E7), which another
+/// RustFig window reads back.
+pub fn fig_type_name() -> &'static str {
+    if cfg!(target_os = "macos") {
+        "org.rustfig.fig"
+    } else if cfg!(target_os = "windows") {
+        "RustFig Fig"
+    } else {
+        "application/x-rustfig-fig"
+    }
+}
+
 /// The real clipboard, opened on first use and kept (on X11 the process
 /// serves the data until something else is copied).
 #[derive(Default)]
@@ -33,7 +45,44 @@ pub struct SystemPictureClipboard {
     ctx: Option<ClipboardContext>,
 }
 
+impl SystemPictureClipboard {
+    fn context(&mut self) -> Result<&ClipboardContext, String> {
+        if self.ctx.is_none() {
+            self.ctx = Some(ClipboardContext::new().map_err(|e| e.to_string())?);
+        }
+        self.ctx.as_ref().ok_or_else(|| "no clipboard".to_string())
+    }
+}
+
 impl PictureClipboard for SystemPictureClipboard {
+    fn set_objects(&mut self, fig: &str, items: &[PictureData]) -> Result<(), String> {
+        let ctx = self.context()?;
+        let mut contents = vec![ClipboardContent::Other(
+            fig_type_name().to_string(),
+            fig.as_bytes().to_vec(),
+        )];
+        contents.extend(
+            items
+                .iter()
+                .map(|i| ClipboardContent::Other(type_name(i.kind).to_string(), i.bytes.clone())),
+        );
+        ctx.set(contents).map_err(|e| e.to_string())
+    }
+
+    fn get_fig(&mut self) -> Option<String> {
+        let ctx = self.context().ok()?;
+        let bytes = ctx.get_buffer(fig_type_name()).ok()?;
+        String::from_utf8(bytes).ok()
+    }
+
+    fn get_image(&mut self) -> Option<Vec<u8>> {
+        let ctx = self.context().ok()?;
+        // PNG only: every platform's screenshot and image copy offers it.
+        ctx.get_buffer(type_name(PictureKind::Png))
+            .ok()
+            .filter(|b| !b.is_empty())
+    }
+
     fn set_pictures(&mut self, items: &[PictureData]) -> Result<(), String> {
         if self.ctx.is_none() {
             self.ctx = Some(ClipboardContext::new().map_err(|e| e.to_string())?);
