@@ -59,15 +59,25 @@ with Rust's own tools.
    cargo install --locked --path apps/cli
    ```
 
-   The repository is private for now, so `git clone` needs your GitHub login
-   (`gh auth login`, or an SSH key). Cargo fetches fig2dev, the converter RustFig
-   exports through, from its own public repository
-   ([FabianHassler/fig2dev](https://github.com/FabianHassler/fig2dev)) by
-   itself.
+   Or install straight from GitHub, without a clone:
+
+   ```sh
+   cargo install --locked --git https://github.com/FabianHassler/rustfig rustfig rustfig-cli
+   ```
+
+   (add `--branch`, `--tag` or `--rev` to pick a version; the default is the
+   latest `main`).
+
+   The repository is private for now, so both ways need your GitHub login
+   (`gh auth login`, or an SSH key; for `cargo install --git` also set
+   `CARGO_NET_GIT_FETCH_WITH_CLI=true` so Cargo uses git's login). Cargo
+   fetches fig2dev, the converter RustFig exports through, from its own public
+   repository ([FabianHassler/fig2dev](https://github.com/FabianHassler/fig2dev))
+   by itself.
 
 The programs go into `~/.cargo/bin` (Windows: `%USERPROFILE%\.cargo\bin`),
 which rustup puts on your `PATH`. Update later with `git pull` and the same
-two `cargo install` lines; remove with `cargo uninstall rustfig rustfig-cli`.
+two `cargo install` lines (or rerun the `--git` line with `--force`); remove with `cargo uninstall rustfig rustfig-cli`.
 
 Optional: `CRAFT_FONTS_DIR=/abs/path/to/craft-fonts cargo install …` embeds the
 [craft-fonts](https://github.com/storytold/craft-fonts) collection for closer
