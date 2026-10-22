@@ -1529,6 +1529,16 @@ fn the_platforms_cut_and_paste_keys_reach_the_clipboard_commands() {
     assert!(h.state().engine.doc().objects.is_empty(), "cut");
     h.event(egui::Event::Paste(String::new()));
     h.run_steps(2);
+    // The objects follow the pointer until a click places them (S4-2).
+    assert!(h.state().engine.doc().objects.is_empty(), "attached to the pointer");
+    h.state_mut()
+        .engine
+        .tool_event(rustfig_engine::ToolEvent::Press {
+            pos: rustfig_engine::geom::Point::new(1200.0, 1200.0),
+            button: rustfig_engine::Button::Middle,
+            shift: false,
+        })
+        .unwrap();
     assert_eq!(h.state().engine.doc().objects.len(), 1, "pasted once");
 }
 
@@ -1554,7 +1564,7 @@ fn manual_opens_from_the_help_menu_and_searches() {
     h.query_all_by_label("Chop").last().unwrap().click();
     h.run_steps(3);
     assert!(h.state().dialogs.help.query.is_empty());
-    assert!(h.query_all_by_label("Shift variants").count() >= 1);
+    assert!(h.query_all_by_label("Trim, split and extend").count() >= 1);
     // A link inside a topic goes to another topic.
     h.state_mut().run("help.open", json!({"topic": "index.md"}));
     h.run_steps(3);

@@ -590,12 +590,22 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
         ui.ctx().request_repaint();
     }
     if over {
-        ui.ctx()
-            .set_cursor_icon(if app.engine.tool() == rustfig_engine::ToolKind::Select {
-                egui::CursorIcon::Default
-            } else {
-                egui::CursorIcon::Crosshair
-            });
+        ui.ctx().set_cursor_icon(cursor_icon(app.engine.cursor_kind()));
+    }
+}
+
+/// egui's cursor for xfig's per-mode cursors (`w_cursor.c`).
+pub(crate) fn cursor_icon(kind: rustfig_engine::CursorKind) -> egui::CursorIcon {
+    use rustfig_engine::CursorKind as K;
+    match kind {
+        K::Arrow => egui::CursorIcon::Default,
+        K::Crosshair => egui::CursorIcon::Crosshair,
+        K::Pick => egui::CursorIcon::PointingHand,
+        K::PickObject => egui::CursorIcon::Cell,
+        K::Delete => egui::CursorIcon::NotAllowed,
+        K::Text => egui::CursorIcon::Text,
+        K::Move => egui::CursorIcon::Move,
+        K::Grabbing => egui::CursorIcon::Grabbing,
     }
 }
 

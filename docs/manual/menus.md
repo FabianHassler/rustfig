@@ -11,6 +11,7 @@ New, Open, Merge, Save, Save As, Export, Import picture (RustFig), Exit, then th
 Undo, Paste objects, Search/Replace, Delete all, Global settings, Set units, Document settings (RustFig), then Redo, Delete, Cut, Copy, Copy as picture, Duplicate, Select all, Select none.
 
 - Undo and Redo have many levels.
+- Paste objects attaches the cut buffer to the pointer as an outline, its top-left corner at the pointer. Left places the objects there (“place object”), middle at the position they were cut or copied from (“place at orig posn”), right or Escape cancels (“cancel paste”). One placement is one undo step. Scripts and MCP give `dx` and `dy` to `edit.paste` to place the objects at once, moved by that offset.
 - Search/Replace finds text objects by their text and can replace it.
 
 ## View

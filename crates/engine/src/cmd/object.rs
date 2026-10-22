@@ -568,23 +568,40 @@ fn collect_leaves<'a>(o: &'a Object, out: &mut Vec<&'a Object>) {
 }
 
 fn convert(e: &mut Engine, p: &Value) -> CmdResult {
+    // xfig's `init_convert_line_spline`: lines and splines turn into each
+    // other, a spline coming back as the kind it was; a box becomes a
+    // rounded box (radius of the indicator's Box Curve) and the other way
+    // round (`box_2_box`).
+    let radius = e.indicator.box_radius.max(1);
+    let mut remembered = e.convert_kind;
     let n = for_targets(e, p, &mut |o| {
         let new = match &o.kind {
+            ObjectKind::Polyline(pl) if pl.kind == PolyKind::Box || pl.kind == PolyKind::ArcBox => {
+                let mut pl = pl.clone();
+                if pl.kind == PolyKind::Box {
+                    pl.kind = PolyKind::ArcBox;
+                    // xfig keeps a radius the box already has only when
+                    // it is neither default nor 0; RustFig's plain boxes
+                    // carry the Box Curve they were drawn with, so the
+                    // indicator's value always applies.
+                    pl.radius = radius;
+                } else {
+                    pl.kind = PolyKind::Box;
+                }
+                ObjectKind::Polyline(pl)
+            }
             ObjectKind::Polyline(pl) if pl.kind != PolyKind::Picture && pl.points.len() >= 2 => {
                 let closed = pl.kind.is_closed();
                 if closed && pl.points.len() < 3 {
                     return;
                 }
-                let mut s = Spline::new(SplineKind::Interpolated, closed, pl.style, pl.points.clone());
-                if pl.kind == PolyKind::ArcBox {
-                    s.points = Rect::from_points(pl.points.iter().copied()).corners().to_vec();
-                    s.shapes = vec![-1.0; 4];
-                }
+                let mut s = Spline::new(remembered, closed, pl.style, pl.points.clone());
                 s.forward_arrow = pl.forward_arrow;
                 s.backward_arrow = pl.backward_arrow;
                 ObjectKind::Spline(s)
             }
             ObjectKind::Spline(s) => {
+                remembered = s.kind;
                 let kind = if s.closed {
                     PolyKind::Polygon
                 } else {
@@ -599,6 +616,7 @@ fn convert(e: &mut Engine, p: &Value) -> CmdResult {
         };
         o.kind = new;
     })?;
+    e.convert_kind = remembered;
     Ok(json!({"count": n}))
 }
 

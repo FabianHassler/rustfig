@@ -29,10 +29,10 @@ Double-clicking an object in Select mode opens the same panel.
 
 ## Convert line ↔ spline
 
-Key `V`. Turns a polyline into a spline through its points, or a spline into a polyline. Polygons and closed splines go with it.
+Key `V`. Turns a polyline into a spline through its points, or a spline into a polyline. Polygons and closed splines go with it. A spline that was turned into a line comes back as the same kind (approximated, interpolated or X-spline) when the next line is turned into a spline; the first conversion makes an interpolated spline. A box becomes a rounded box (arc-box) with the radius of the indicator's Box Curve, and a rounded box becomes a plain box.
 
-- Left, “spline<->line”: click the object.
-- Right, “open<->closed”: opens a closed object or closes an open one.
+- Left, “line/spline, box/arc-box”: click the object.
+- Right, “open/closed”: opens a closed object or closes an open one.
 
 ## Open/close
 

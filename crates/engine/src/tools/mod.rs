@@ -9,6 +9,8 @@
 // wording) and src/w_canvas.c (snapping) (xfig licence, see LICENSE-xfig).
 
 mod chop;
+mod cursor;
+pub use cursor::CursorKind;
 mod compound;
 mod markers;
 mod measure;
@@ -82,6 +84,37 @@ pub enum ToolKind {
 }
 
 impl ToolKind {
+    /// Modes that pick an object with xfig's `object_search_*` /
+    /// `point_search_*`: Shift+click locates the object instead of acting.
+    pub fn locates(self) -> bool {
+        use ToolKind::*;
+        matches!(
+            self,
+            Break
+                | OpenCompound
+                | JoinSplit
+                | Chop
+                | Scale
+                | Align
+                | Move
+                | Copy
+                | MovePoint
+                | AddPoint
+                | DeletePoint
+                | Delete
+                | Update
+                | Edit
+                | FlipV
+                | FlipH
+                | RotateCcw
+                | RotateCw
+                | Convert
+                | Arrow
+                | OpenClose
+                | Tangent
+        )
+    }
+
     pub const ALL: [ToolKind; 45] = [
         ToolKind::Select,
         ToolKind::CircleRadius,
@@ -397,6 +430,14 @@ pub struct OverlayText {
     pub cursor: usize,
 }
 
+/// What Shift+click marked (xfig's `show_objecthighlight`).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) enum Locate {
+    Object(ObjectId),
+    /// Nothing found: the cursor position is marked.
+    Cursor(Point),
+}
+
 /// What the UI draws on top of the document while a tool is busy.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Overlay {
@@ -498,6 +539,9 @@ pub(crate) enum ToolState {
         cursor: usize,
         editing: Option<ObjectId>,
     },
+    /// Edit > Paste: the cut buffer follows the pointer (xfig's `paste`);
+    /// `nw` is the top-left corner of the buffer's objects.
+    Paste { cursor: Point, nw: Point },
     MoveObjs {
         ids: Vec<ObjectId>,
         start: Point,
@@ -656,6 +700,7 @@ impl Engine {
             self.set_status(e.message);
         }
         self.tool_state = ToolState::Idle;
+        self.locate = None;
         // Choosing Rotate or Flip erases any centre / anchor (`rotate_cw_selected`).
         self.set_point = None;
         self.tool = kind;
@@ -745,7 +790,115 @@ impl Engine {
         }
     }
 
+    /// xfig's `do_object_search` for the modes that pick an object: Shift
+    /// locates (highlights) instead of acting, and a plain click acts on the
+    /// object located.
     fn dispatch(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
+        if let ToolState::Paste { cursor, nw } = self.tool_state {
+            return self.paste_event(ev, cursor, nw);
+        }
+        if let ToolEvent::Press { pos, button, shift } = ev {
+            if self.locate_mode() && pos.is_finite() {
+                // xfig's own Shift meaning in Edit: the middle button shows
+                // an object's comments.
+                if shift && !(self.tool == ToolKind::Edit && button == Button::Middle) {
+                    self.locate_press(pos);
+                    return Ok(());
+                }
+                if let Some(Locate::Object(id)) = self.locate.take() {
+                    self.locate_pick = Some(id);
+                    let r = self.dispatch_tool(ev);
+                    self.locate_pick = None;
+                    return r;
+                }
+                self.locate = None;
+            }
+        }
+        self.dispatch_tool(ev)
+    }
+
+    /// Start Edit > Paste: the cut buffer is attached to the pointer, its
+    /// top-left corner there (`paste` in `w_cmdpanel.c`).
+    pub(crate) fn begin_paste(&mut self) -> Result<(), EngineError> {
+        let Some(nw) = self.clipboard_nw() else {
+            return Err(EngineError::bad_params("the cut buffer is empty"));
+        };
+        let v = self.view.visible();
+        let cursor = if v.is_empty() {
+            nw
+        } else {
+            Point::new(v.min.x + 600.0, v.min.y + 600.0)
+        };
+        self.locate = None;
+        self.tool_state = ToolState::Paste { cursor, nw };
+        self.set_status(
+            "Paste: left places the objects at the pointer, middle at their original position, right cancels.",
+        );
+        Ok(())
+    }
+
+    /// The top-left corner of the cut buffer's objects.
+    fn clipboard_nw(&self) -> Option<Point> {
+        let mut it = self.clipboard().iter().map(|o| o.geometry_bbox());
+        let first = it.next()?;
+        let (x, y) = it.fold((first.min.x, first.min.y), |(x, y), b| (x.min(b.min.x), y.min(b.min.y)));
+        (x.is_finite() && y.is_finite()).then(|| Point::new(x, y))
+    }
+
+    fn paste_event(&mut self, ev: ToolEvent, _cursor: Point, nw: Point) -> Result<(), EngineError> {
+        match ev {
+            ToolEvent::Move { pos } if pos.is_finite() => {
+                let p = self.snap(pos);
+                self.tool_state = ToolState::Paste { cursor: p, nw };
+            }
+            ToolEvent::Press { pos, button, .. } if pos.is_finite() => {
+                self.tool_state = ToolState::Idle;
+                let (dx, dy) = match button {
+                    Button::Left => {
+                        let p = self.snap(pos);
+                        (p.x - nw.x, p.y - nw.y)
+                    }
+                    Button::Middle => (0.0, 0.0),
+                    Button::Right => {
+                        self.set_status("Paste cancelled.");
+                        return Ok(());
+                    }
+                };
+                self.execute("edit.paste", &json!({"dx": dx, "dy": dy}))?;
+            }
+            ToolEvent::Key(Key::Escape) => {
+                self.tool_state = ToolState::Idle;
+                self.set_status("Paste cancelled.");
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    /// Whether the mode picks objects with xfig's object search and no
+    /// operation is under way.
+    fn locate_mode(&self) -> bool {
+        let idle = matches!(self.tool_state, ToolState::Idle | ToolState::Chop { .. });
+        idle && self.tool.locates()
+    }
+
+    /// Shift+click: highlight the next overlapping object under the pointer
+    /// (front-most first); after the last, or on nothing, mark the cursor.
+    fn locate_press(&mut self, pos: Point) {
+        let tol = self.pick_tol();
+        let mask = self.marker_mask();
+        let hits = self.hits_where(pos, tol, &|o| mask.admits(o));
+        let at = match self.locate {
+            Some(Locate::Object(cur)) => hits.iter().position(|h| *h == cur).map_or(0, |i| i + 1),
+            _ => 0,
+        };
+        self.locate = Some(match hits.get(at) {
+            Some(id) => Locate::Object(*id),
+            None => Locate::Cursor(pos),
+        });
+    }
+
+    fn dispatch_tool(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
         if let ToolEvent::Key(Key::Escape) = ev {
             if matches!(self.tool_state, ToolState::Text { .. }) {
                 return self.finish_text();
@@ -2412,7 +2565,7 @@ impl Engine {
             }
             (ToolKind::RotateCcw | ToolKind::RotateCw, Button::Left | Button::Middle) => {
                 let mut a = self.indicator.rotate_angle;
-                if (tool == ToolKind::RotateCw) != shift {
+                if tool == ToolKind::RotateCw {
                     a = -a;
                 }
                 self.set_selection(vec![id]);
@@ -2482,9 +2635,6 @@ impl Engine {
     /// function not ported yet: "Locate Object" (S4-1).
     pub fn mouse_hints_with(&self, shift: bool) -> MouseHints {
         let mut h = self.mouse_hints_plain();
-        if self.tool == ToolKind::Chop {
-            h.shift = "Shift: left trims the clicked piece, middle splits at the point, right extends a line end";
-        }
         if shift {
             let (l, m, r) = self.shift_hints();
             for (slot, s) in [(&mut h.left, l), (&mut h.middle, m), (&mut h.right, r)] {
@@ -2504,12 +2654,13 @@ impl Engine {
             (ToolState::Points { dimension: true, .. }, _) => ("del point", "", ""),
             (ToolState::Idle, ToolKind::Polyline) => ("dimension line", "", ""),
             (ToolState::Points { freehand: false, .. }, _) => ("del point", "finish here", ""),
-            (ToolState::Idle | ToolState::Chop { .. }, ToolKind::Chop) => ("trim piece", "split here", "extend line"),
             (ToolState::Idle, ToolKind::Select) => ("add/remove", "", ""),
             (ToolState::Idle, ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture) => ("", "square at center", ""),
-            (ToolState::Idle, ToolKind::Edit) => ("", "show comments", ""),
             (ToolState::Idle, ToolKind::AreaMeasure) => ("", "", "reset to +-0"),
-            (ToolState::Idle, ToolKind::RotateCcw | ToolKind::RotateCw) => ("rotate other way", "copy, other way", ""),
+            (ToolState::Idle, ToolKind::Edit) => ("locate object", "show comments", "locate object"),
+            (ToolState::Idle | ToolState::Chop { .. }, t) if t.locates() => {
+                ("locate object", "locate object", "locate object")
+            }
             _ => ("", "", ""),
         }
     }
@@ -2528,6 +2679,7 @@ impl Engine {
         };
         let tool = self.tool;
         match &self.tool_state {
+            ToolState::Paste { .. } => h("place object", "place at orig posn", "cancel paste"),
             ToolState::Points {
                 pts,
                 freehand,
@@ -2664,7 +2816,7 @@ impl Engine {
                         ("rotate object", "copy & rotate", "unset center")
                     }
                     ToolKind::RotateCcw | ToolKind::RotateCw => ("rotate object", "copy & rotate", "set center"),
-                    ToolKind::Convert => ("spline<->line", "", "open<->closed"),
+                    ToolKind::Convert => ("line/spline, box/arc-box", "", "open/closed"),
                     ToolKind::OpenClose => ("open/close", "", ""),
                     ToolKind::Arrow => ("add arrow", "delete arrow", ""),
                     ToolKind::Tangent => ("add tangent", "add normal", ""),
@@ -2707,6 +2859,13 @@ impl Engine {
                 all.push(*cursor);
                 ov.guides.push(all);
                 ov.handles = pts.clone();
+            }
+            ToolState::Paste { cursor, nw } => {
+                for o in self.clipboard() {
+                    let mut c = o.clone();
+                    c.translate(cursor.x - nw.x, cursor.y - nw.y);
+                    ov.preview.push(c);
+                }
             }
             ToolState::Chop { axes, hover } => {
                 let highlight = |o: &Object| {
@@ -2915,6 +3074,15 @@ impl Engine {
         }
         ov.join_marker = self.join_marker();
         (ov.markers, ov.tagged) = self.mode_markers_tagged();
+        match self.locate {
+            Some(Locate::Cursor(p)) if self.locate_mode() => ov.tagged.push(p),
+            Some(Locate::Object(id)) if self.locate_mode() => {
+                if let Some(o) = self.doc().get(id) {
+                    object_markers(o, &o.geometry_bbox(), &mut ov.tagged);
+                }
+            }
+            _ => {}
+        }
         if ov.handles.is_empty() && matches!(self.tool_state, ToolState::Idle) && self.tool == ToolKind::Select {
             let ids = self.selection().to_vec();
             if ids.len() <= 2000 {
@@ -3269,7 +3437,10 @@ mod tests {
         let mut e = Engine::new();
         e.set_tool(ToolKind::Chop);
         let h = e.mouse_hints_with(true);
-        assert_eq!((h.left, h.middle, h.right), ("trim piece", "split here", "extend line"));
+        assert_eq!(
+            (h.left, h.middle, h.right),
+            ("locate object", "locate object", "locate object")
+        );
         assert_eq!(e.mouse_hints_with(false).left, "Select axe object");
         // Shift+left removes the last point of a line being drawn.
         e.set_tool(ToolKind::Polyline);
@@ -3301,7 +3472,7 @@ mod tests {
         let pts = e.doc().objects[0].points().unwrap().to_vec();
         assert_eq!(pts, vec![Point::new(0.0, 0.0), Point::new(600.0, 600.0)]);
         // Modes without Shift meanings keep their labels.
-        e.set_tool(ToolKind::Delete);
+        e.set_tool(ToolKind::Text);
         assert_eq!(e.mouse_hints_with(true), e.mouse_hints());
     }
 

@@ -37,7 +37,7 @@
 | Open/close | `tool.open_close` | ✅ |
 | Add/remove arrows | `tool.arrow` | ✅ |
 | Join/split | `tool.join_split`, `object.join`, `object.split` | ✅ |
-| Chop | `tool.chop`, `object.chop`; Shift+buttons: `object.trim`, `object.split_at`, `object.extend` | ✅ (D3, D15) |
+| Chop | `tool.chop`, `object.chop`; commands `object.trim`, `object.split_at`, `object.extend` (no longer on Shift: Shift locates, S4-1) | ✅ (D3, D15) |
 | Tangent/normal | `tool.tangent` (`n`), `object.tangent_line`; Tangent/Norm Length button | ✅ (D4) |
 | Angle / length / area measure | `tool.angle_measure` (Ctrl+G), `tool.length_measure` (Ctrl+N), `tool.area_measure` (Ctrl+M); `object.measure_*` | ✅ (D5) |
 
@@ -54,6 +54,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | View: depth manager | right panel | ✅ |
 | View: character map, style manager | — | ❌ |
 | Indicator panel (line, colours, fill, depth, arrows, caps, joins, fonts, justification, angle, radius, sides, rotation, grid, positioning, arc type, text step, text flags, smart links) | xfig's buttons, per mode | 🟡 Angle Geom done (D7); no copy counts |
+| S4 editing functions | Shift+click locate object (S4-1), Paste attached to the pointer (S4-2), a cursor per mode (S4-4), Convert box/arc-box (S4-5) | ✅ |
 | Object markers in editing modes | per-mode masks as xfig (`u_markers.c`, `w_modepanel.c`) | ✅ |
 | Rulers | top and side, xfig's ticks and labels, cursor marker, pan buttons | ✅ |
 | Mouse-function panel | top strip, one column per button | ✅ |

@@ -32,7 +32,7 @@ pub use error::EngineError;
 pub use indicator::{arrow_choice, arrow_choice_of, GridMode, Indicator, LinkMode, SnapMode, UpdateFlag};
 pub use region::Region;
 pub use snap::ObjectSnap;
-pub use tools::{Button, Key, MouseHints, Overlay, ToolEvent, ToolKind};
+pub use tools::{Button, CursorKind, Key, MouseHints, Overlay, ToolEvent, ToolKind};
 pub use view::{UnitScale, View};
 
 pub use rustfig_format as format;
@@ -92,6 +92,13 @@ pub struct Engine {
     /// Where the user clicked when the press was snapped: tools pick the
     /// object there and measure from the snapped point.
     snap_click: Option<Point>,
+    /// Shift+click's "Locate Object" mark (xfig's `do_object_search`).
+    locate: Option<tools::Locate>,
+    /// Convert: the kind of the last spline made into a line, restored when
+    /// a line becomes a spline (xfig's static `flag`).
+    convert_kind: rustfig_model::SplineKind,
+    /// While a plain click acts on a located object, the one it must pick.
+    locate_pick: Option<ObjectId>,
     tool: ToolKind,
     tool_state: tools::ToolState,
     /// Rotate's centre or Flip's anchor set with the right button (xfig's
@@ -150,6 +157,9 @@ impl Engine {
             exact_points: Vec::new(),
             release_at: None,
             snap_click: None,
+            locate: None,
+            convert_kind: rustfig_model::SplineKind::Interpolated,
+            locate_pick: None,
             tool: ToolKind::None,
             tool_state: tools::ToolState::Idle,
             set_point: None,
@@ -573,6 +583,14 @@ impl Engine {
     /// Topmost top-level object within `tol` of `p` that `accept` lets
     /// through (xfig's searches skip what the mode's mask excludes).
     pub fn hit_test_where(&self, p: Point, tol: f64, accept: &dyn Fn(&Object) -> bool) -> Option<ObjectId> {
+        // A plain click on a located object (Shift+click) acts on it.
+        if let Some(o) = self
+            .locate_pick
+            .and_then(|id| self.doc.get(id))
+            .filter(|o| self.is_visible(o) && accept(o) && o.distance(p) <= tol)
+        {
+            return Some(o.id);
+        }
         let boxes = self.object_bboxes();
         // (depth, xfig type rank, index): the front-most is the one drawn last.
         let mut best: Option<(i32, u8, usize)> = None;
@@ -595,6 +613,22 @@ impl Engine {
             }
         }
         best.and_then(|(_, _, i)| self.doc.objects.get(i)).map(|o| o.id)
+    }
+
+    /// Every top-level object within `tol` of `p` that `accept` lets
+    /// through, front-most first (xfig's `do_object_search` walks them).
+    pub fn hits_where(&self, p: Point, tol: f64, accept: &dyn Fn(&Object) -> bool) -> Vec<ObjectId> {
+        let boxes = self.object_bboxes();
+        let mut found: Vec<(i32, u8, usize, ObjectId)> = Vec::new();
+        for (i, o) in self.doc.objects.iter().enumerate() {
+            let Some((_, bb, _)) = boxes.get(i) else { break };
+            if !bb.expand(tol).contains(p) || !self.is_visible(o) || !accept(o) || o.distance(p) > tol {
+                continue;
+            }
+            found.push((o.depth(), o.xfig_type_rank(), i, o.id));
+        }
+        found.sort_by(|a, b| a.0.cmp(&b.0).then((b.1, b.2).cmp(&(a.1, a.2))));
+        found.into_iter().map(|f| f.3).collect()
     }
 
     /// After depths were switched on or off: objects that became hidden

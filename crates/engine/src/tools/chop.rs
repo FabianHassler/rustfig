@@ -14,7 +14,6 @@
 
 use super::{markers::ObjMask, Button, ToolEvent, ToolKind, ToolState};
 use crate::{Engine, EngineError};
-use rustfig_geom::Point;
 use serde_json::json;
 
 impl Engine {
@@ -29,7 +28,7 @@ impl Engine {
             }
             return Ok(());
         }
-        let ToolEvent::Press { pos, button, shift } = ev else {
+        let ToolEvent::Press { pos, button, .. } = ev else {
             return Ok(());
         };
         if self.tool != ToolKind::Chop {
@@ -41,9 +40,6 @@ impl Engine {
             .union(ObjMask::ELLIPSE)
             .union(ObjMask::SPLINE)
             .union(ObjMask::COMPOUND);
-        if shift {
-            return self.chop_shift_press(pos, button, tol, mask);
-        }
         match button {
             Button::Left => {
                 let Some(id) = self.hit_test_where(pos, tol, &|o| mask.admits(o)) else {
@@ -106,57 +102,6 @@ impl Engine {
                     Err(err) => self.set_status(err.message),
                 }
             }
-        }
-        Ok(())
-    }
-
-    /// The axe list as command parameters (`None` when empty).
-    fn chop_axe_ids(&self) -> Option<Vec<u64>> {
-        match &self.tool_state {
-            ToolState::Chop { axes, .. } if !axes.is_empty() => Some(axes.iter().map(|a| a.0).collect()),
-            _ => None,
-        }
-    }
-
-    /// Shift+left: Trim; Shift+middle: Split at point; Shift+right: Extend.
-    fn chop_shift_press(&mut self, pos: Point, button: Button, tol: f64, mask: ObjMask) -> Result<(), EngineError> {
-        let Some(id) = self.hit_test_where(pos, tol, &|o| mask.admits(o)) else {
-            return Ok(());
-        };
-        let axes = self.chop_axe_ids();
-        let (command, mut params, done) = match button {
-            Button::Left => (
-                "object.trim",
-                json!({"id": id.0, "x": pos.x, "y": pos.y}),
-                "piece trimmed",
-            ),
-            Button::Middle => ("object.split_at", json!({"id": id.0, "x": pos.x, "y": pos.y}), "split"),
-            Button::Right => (
-                "object.extend",
-                json!({"id": id.0, "x": pos.x, "y": pos.y}),
-                "line extended",
-            ),
-        };
-        if let (Some(a), Some(map)) = (axes, params.as_object_mut()) {
-            let key = if button == Button::Right { "boundaries" } else { "axes" };
-            if button != Button::Middle {
-                map.insert(key.to_string(), json!(a));
-            }
-        }
-        self.set_selection(vec![id]);
-        match self.execute(command, &params) {
-            Ok(v) => {
-                let n = v
-                    .get("ids")
-                    .and_then(serde_json::Value::as_array)
-                    .map_or(0, |a| a.len());
-                if command == "object.trim" && n == 0 && v.get("removed") == Some(&json!(false)) {
-                    self.set_status("Nothing to trim: the object has no piece between two intersections.");
-                } else {
-                    self.set_status(format!("Object {done}."));
-                }
-            }
-            Err(err) => self.set_status(err.message),
         }
         Ok(())
     }

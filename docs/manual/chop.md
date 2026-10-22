@@ -1,6 +1,6 @@
 # Chop
 
-Chop cuts objects where other objects cross them, like a knife along a ruler. xfig has the basic mode; RustFig adds trimming, splitting and extending on the Shift key.
+Chop cuts objects where other objects cross them, like a knife along a ruler. xfig has the basic mode; RustFig adds trimming, splitting and extending as commands.
 
 ## Chop
 
@@ -12,12 +12,12 @@ Key `x`. xfig's chop: you choose **axe** objects (the knives) and a **log** obje
 
 Lines, polygons, boxes, rounded boxes, arcs, circles, ellipses, splines and compounds can be logs (a compound chops every member). Lines, polygons, boxes, arcs, circles, ellipses, splines and compounds can be axes. A closed shape needs two crossings to be cut. Circles chop into pie wedges, ellipses into pieces drawn as X-splines, since the Fig format has no elliptical arcs; arrowheads stay only at the original ends. One chop is one undo step.
 
-## Shift variants
+## Trim, split and extend
 
-With Shift held, the same buttons do these RustFig additions (the indicator shows them while Shift is down):
+Shift+click in Chop mode locates an object, as in every picking mode ([Mouse](mouse.md)), so Chop keeps xfig's three buttons only. RustFig's additions are commands:
 
-- Shift+left, “trim piece”: removes the piece you click, the part of the object between its crossings with the axe objects (or with every other object when no axe is chosen). The rest stays as separate pieces.
-- Shift+middle, “split here”: cuts the clicked line, polygon, arc or spline in two at the point you click. No axe is needed; a closed figure is opened there.
-- Shift+right, “extend line”: lengthens the nearest end of the clicked line to the nearest boundary (the axe objects, or every other object).
+- `object.trim` removes the piece you click, the part of the object between its crossings with the axe objects (or with every other object when no axe is chosen). The rest stays as separate pieces.
+- `object.split_at` cuts a line, polygon, arc or spline in two at a point; a closed figure is opened there.
+- `object.extend` lengthens the nearest end of a line to the nearest boundary (the axe objects, or every other object).
 
-Each is also a command (`object.trim`, `object.split_at`, `object.extend`; `object.cut_all` cuts all selected objects against each other), so they can be scripted ([Automation](automation.md)).
+They can be scripted (`object.trim`, `object.split_at`, `object.extend`; `object.cut_all` cuts all selected objects against each other), so they can be scripted ([Automation](automation.md)).

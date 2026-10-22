@@ -4,7 +4,7 @@
 
 use rustfig_engine::geom::Point;
 use rustfig_engine::model::{flatten_object, ObjectId, ObjectKind, PolyKind};
-use rustfig_engine::{Button, Engine, SnapMode, ToolEvent, ToolKind};
+use rustfig_engine::{Engine, SnapMode};
 use serde_json::{json, Value};
 
 fn engine() -> Engine {
@@ -445,50 +445,6 @@ fn extend_lengthens_a_line_to_the_nearest_boundary() {
         .execute("object.extend", &json!({"id": l.0, "x": 2000, "y": 0}))
         .is_err());
     assert_eq!(snapshot(&e), before);
-}
-
-// ---- the mode --------------------------------------------------------------
-
-fn press(e: &mut Engine, x: f64, y: f64, button: Button, shift: bool) {
-    e.tool_event(ToolEvent::Press {
-        pos: p(x, y),
-        button,
-        shift,
-    })
-    .unwrap();
-    e.tool_event(ToolEvent::Release { pos: p(x, y), button }).unwrap();
-}
-
-#[test]
-fn shift_buttons_trim_split_and_extend_in_chop_mode() {
-    let mut e = engine();
-    e.set_tool(ToolKind::Chop);
-    assert!(e.mouse_hints().shift.contains("trims"));
-    let log = line(&mut e, &[(0.0, 0.0), (3000.0, 0.0)]);
-    line(&mut e, &[(1000.0, -500.0), (1000.0, 500.0)]);
-    line(&mut e, &[(2000.0, -500.0), (2000.0, 500.0)]);
-    // Shift+left: trim the middle piece (no axe selected: every other object).
-    let before = snapshot(&e);
-    press(&mut e, 1500.0, 0.0, Button::Left, true);
-    assert_eq!(e.doc().objects.len(), 4);
-    assert!(e.doc().get(log).is_none());
-    assert!(e.undo());
-    assert_eq!(snapshot(&e), before);
-    // Shift+middle: split at the point.
-    press(&mut e, 500.0, 0.0, Button::Middle, true);
-    assert_eq!(e.doc().objects.len(), 4);
-    assert!(e.undo());
-    // Shift+right: extend the end nearest the click to the next boundary.
-    let l2 = line(&mut e, &[(0.0, 1500.0), (500.0, 1500.0)]);
-    line(&mut e, &[(800.0, 1000.0), (800.0, 2000.0)]);
-    press(&mut e, 450.0, 1500.0, Button::Right, true);
-    let ObjectKind::Polyline(pl) = kind(&e, l2) else {
-        panic!()
-    };
-    assert_eq!(pl.points.last(), Some(&p(800.0, 1500.0)));
-    // Plain buttons keep xfig's meaning.
-    press(&mut e, 1000.0, 500.0, Button::Left, false);
-    assert!(e.status().contains("Axe object 1"), "{}", e.status());
 }
 
 #[test]

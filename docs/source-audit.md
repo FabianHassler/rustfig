@@ -267,8 +267,8 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_compound.c` | `popup_close_compound` | 233 | ported | ui-egui: `panels::close_compound_popup` (Close This Compound, Close All Compounds) | D1 |
 | `e_convert.c` | `convert_selected` | 52 | ported | tools: `ToolKind::Convert` (left: `object.convert`, right: `object.toggle_closed`) |  |
 | `e_convert.c` | `init_convert_open_closed` | 68 | ported | tools: `ToolKind::Convert` (left: `object.convert`, right: `object.toggle_closed`) |  |
-| `e_convert.c` | `init_convert_line_spline` | 89 | partial | box <-> arc-box conversion with the left button on a box (RustFig turns a box into a spline instead); the spline kind (approximated or interpolated) is not remembered across the round trip | S4-5 |
-| `e_convert.c` | `box_2_box` | 120 | partial | box <-> arc-box conversion with the left button on a box (RustFig turns a box into a spline instead); the spline kind (approximated or interpolated) is not remembered across the round trip | S4-5 |
+| `e_convert.c` | `init_convert_line_spline` | 89 | ported | box <-> arc-box conversion with the left button on a box (RustFig turns a box into a spline instead); the spline kind (approximated or interpolated) is not remembered across the round trip | S4-5 |
+| `e_convert.c` | `box_2_box` | 120 | ported | box <-> arc-box conversion with the left button on a box (RustFig turns a box into a spline instead); the spline kind (approximated or interpolated) is not remembered across the round trip | S4-5 |
 | `e_convert.c` | `line_spline` | 149 | ported | tools: `ToolKind::Convert` (left: `object.convert`, right: `object.toggle_closed`) |  |
 | `e_convert.c` | `spline_line` | 218 | ported | tools: `ToolKind::Convert` (left: `object.convert`, right: `object.toggle_closed`) |  |
 | `e_convert.c` | `toggle_polyline_polygon` | 285 | ported | tools: `ToolKind::Convert` (left: `object.convert`, right: `object.toggle_closed`) |  |
@@ -1167,7 +1167,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `u_list.c` | `point_on_inside` | 1320 | ported | linked move: whether a point is inside a compound's box (`engine/links.rs`) |  |
 | `u_list.c` | `adjust_links` | 1328 | ported | linked move: moves the attached line ends, and slides the adjacent point in slide mode, through any transform (`engine/links.rs`; D14) |  |
 | `u_markers.c` | `center_marker` | 43 | ported | `engine/tools/markers.rs` (`mode_mask`, `object_markers`, masks per mode, W12) and the canvas |  |
-| `u_markers.c` | `toggle_csrhighlight` | 55 | missing | highlight of the object found by a Shift-click and of the cursor position when nothing is found | S4-1 |
+| `u_markers.c` | `toggle_csrhighlight` | 55 | ported | highlight of the object found by a Shift-click and of the cursor position when nothing is found | S4-1 |
 | `u_markers.c` | `ellipse_in_mask` | 62 | ported | `engine/tools/markers.rs` (`mode_mask`, `object_markers`, masks per mode, W12) and the canvas |  |
 | `u_markers.c` | `arc_in_mask` | 67 | ported | `engine/tools/markers.rs` (`mode_mask`, `object_markers`, masks per mode, W12) and the canvas |  |
 | `u_markers.c` | `compound_in_mask` | 72 | ported | `engine/tools/markers.rs` (`mode_mask`, `object_markers`, masks per mode, W12) and the canvas |  |
@@ -1273,7 +1273,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `u_search.c` | `next_spline_found` | 273 | ported | `Engine::pick` / `hit_test` with `geom::hit` per object kind; nearest object under the cursor in the mode's mask |  |
 | `u_search.c` | `next_text_found` | 316 | ported | `Engine::pick` / `hit_test` with `geom::hit` per object kind; nearest object under the cursor in the mode's mask |  |
 | `u_search.c` | `next_compound_found` | 348 | ported | `Engine::pick` / `hit_test` with `geom::hit` per object kind; nearest object under the cursor in the mode's mask |  |
-| `u_search.c` | `show_objecthighlight` | 383 | missing | Shift-click: highlight the object found and, with Shift held, the next overlapping one, before acting | S4-1 |
+| `u_search.c` | `show_objecthighlight` | 383 | ported | Shift-click: highlight the object found and, with Shift held, the next overlapping one, before acting | S4-1 |
 | `u_search.c` | `erase_objecthighlight` | 391 | missing | Shift-click: highlight the object found and, with Shift held, the next overlapping one, before acting | S4-1 |
 | `u_search.c` | `toggle_objecthighlight` | 403 | missing | Shift-click: highlight the object found and, with Shift held, the next overlapping one, before acting | S4-1 |
 | `u_search.c` | `init_search` | 430 | ported | `Engine::pick` / `hit_test` with `geom::hit` per object kind; nearest object under the cursor in the mode's mask |  |
@@ -1430,13 +1430,13 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_cmdpanel.c` | `enter_cmd_but` | 491 | replaced | menu bar and menu items from `menus::XFIG_MENUS` and `LAYOUT` (egui menus) |  |
 | `w_cmdpanel.c` | `quit` | 505 | ported | Quit with the unsaved-changes dialog (`app.quit`, `dialogs::unsaved_dialog`) |  |
 | `w_cmdpanel.c` | `goodbye` | 532 | ported | Quit with the unsaved-changes dialog (`app.quit`, `dialogs::unsaved_dialog`) |  |
-| `w_cmdpanel.c` | `paste` | 578 | partial | Paste: `edit.paste` pastes at a fixed offset; xfig attaches the objects to the mouse (left places, middle at the original position) | S4-2 |
-| `w_cmdpanel.c` | `cancel_paste` | 676 | missing | placing pasted objects with the mouse | S4-2 |
-| `w_cmdpanel.c` | `paste_draw` | 695 | missing | placing pasted objects with the mouse | S4-2 |
-| `w_cmdpanel.c` | `move_paste_object` | 704 | missing | placing pasted objects with the mouse | S4-2 |
-| `w_cmdpanel.c` | `init_move_paste_object` | 727 | missing | placing pasted objects with the mouse | S4-2 |
-| `w_cmdpanel.c` | `place_object` | 741 | missing | placing pasted objects with the mouse | S4-2 |
-| `w_cmdpanel.c` | `place_object_orig_posn` | 756 | missing | placing pasted objects with the mouse | S4-2 |
+| `w_cmdpanel.c` | `paste` | 578 | ported | Paste: `edit.paste` pastes at a fixed offset; xfig attaches the objects to the mouse (left places, middle at the original position) | S4-2 |
+| `w_cmdpanel.c` | `cancel_paste` | 676 | ported | placing pasted objects with the mouse | S4-2 |
+| `w_cmdpanel.c` | `paste_draw` | 695 | ported | placing pasted objects with the mouse | S4-2 |
+| `w_cmdpanel.c` | `move_paste_object` | 704 | ported | placing pasted objects with the mouse | S4-2 |
+| `w_cmdpanel.c` | `init_move_paste_object` | 727 | ported | placing pasted objects with the mouse | S4-2 |
+| `w_cmdpanel.c` | `place_object` | 741 | ported | placing pasted objects with the mouse | S4-2 |
+| `w_cmdpanel.c` | `place_object_orig_posn` | 756 | ported | placing pasted objects with the mouse | S4-2 |
 | `w_cmdpanel.c` | `new` | 775 | ported | `file.new`, `edit.delete_all`, `doc.toggle_orientation` |  |
 | `w_cmdpanel.c` | `delete_all_cmd` | 804 | ported | `file.new`, `edit.delete_all`, `doc.toggle_orientation` |  |
 | `w_cmdpanel.c` | `change_orient` | 827 | ported | `file.new`, `edit.delete_all`, `doc.toggle_orientation` |  |

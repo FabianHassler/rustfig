@@ -29,8 +29,7 @@ Holding Shift changes a button's job in some modes. While Shift is held, the mou
 - While drawing a polyline, polygon, spline or arc: Shift+left removes the last point ("del point"). Shift+middle (not for arcs) finishes the object at the last point placed, without adding the clicked point ("finish here", a RustFig addition).
 - Box, Arc-box, Picture: Shift+middle draws a square from its centre.
 - Edit attributes: Shift+middle shows the object's comments in the message panel.
-- Rotate modes: Shift reverses the direction (the rotate buttons turn the other way and copy the other way).
-- Chop: Shift+left trims the clicked piece, Shift+middle splits at the point, Shift+right extends a line end ([Chop](chop.md)).
+- Locate object: in every mode that picks an object (Move, Copy, Delete, Edit, Flip, Rotate, Scale, Convert, Align, Break, Open compound, Join/Split, Chop, Add/Move/Delete point, Update, Arrow, Open/close, Tangent), Shift+click highlights the object under the pointer (its markers turn filled) without acting on it. Shift+click again highlights the next object under the pointer, front to back; after the last one the pointer position itself is marked, and the next Shift+click starts over. A click without Shift then acts on the highlighted object, not on the front-most one. This is how you reach an object hidden under another one. Changing the mode forgets the highlight. In Edit, Shift+middle keeps xfig's own meaning, showing the object's comments.
 
 ## Markers and tags
 

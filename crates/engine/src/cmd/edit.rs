@@ -63,7 +63,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Paste",
             menu: "Edit",
             shortcut: "Ctrl+V",
-            params: "{\"dx\"?: number, \"dy\"?: number}  — offset in Fig units (default 150)",
+            params: "{\"dx\"?: number, \"dy\"?: number}  — without an offset the objects follow the pointer: left places them there, middle at their original position, right or Escape cancels; with dx/dy (Fig units) they are placed at once, moved by that offset",
             mutates: true,
             enabled: |e| !e.clipboard().is_empty(),
             run: paste,
@@ -261,6 +261,12 @@ fn insert_copies(e: &mut Engine, objs: Vec<Object>, dx: f64, dy: f64) -> CmdResu
 }
 
 fn paste(e: &mut Engine, p: &Value) -> CmdResult {
+    // Without an offset the objects follow the pointer until a click places
+    // them (xfig's paste); scripts give `dx`/`dy`.
+    if p.get("dx").is_none() && p.get("dy").is_none() {
+        e.begin_paste()?;
+        return Ok(json!({"attached": e.clipboard().len()}));
+    }
     let objs = e.clipboard().to_vec();
     let dx = num_or(p, "dx", 150.0)?;
     let dy = num_or(p, "dy", 150.0)?;
