@@ -28,6 +28,7 @@ pub mod platform;
 pub mod point_entry;
 pub mod reload;
 pub mod rulers;
+pub mod screen_pick;
 pub mod settings;
 pub mod styles;
 pub mod theme;

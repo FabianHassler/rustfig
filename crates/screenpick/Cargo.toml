@@ -1,0 +1,37 @@
+[package]
+name = "rustfig-screenpick"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+# The workspace lints, except `unsafe_code`: `deny` here (the workspace says `forbid`),
+# allowed only on the few functions that make OS calls to read a pixel off the screen (E4b).
+# Keep in step with [workspace.lints] in the root Cargo.toml.
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+unreachable = "deny"
+todo = "deny"
+unimplemented = "deny"
+field_reassign_with_default = "allow"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# NSColorSampler, the system colour sampler (versions already in the lock through winit and rfd).
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSColor", "NSColorSampler", "NSColorSpace", "block2"] }
+block2 = "0.6"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
+
+[target.'cfg(any(target_os = "linux", target_os = "freebsd", target_os = "dragonfly", target_os = "netbsd", target_os = "openbsd"))'.dependencies]
+# The portal's PickColor (the same ashpd and pollster rfd already uses); no unsafe.
+ashpd = { version = "0.11", default-features = false, features = ["async-std"] }
+pollster = "0.4"

@@ -79,7 +79,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | Update Control: update box on every attribute button in Update mode, Set/Clear/Toggle all buttons, flags honoured by Update, update region, lasso and update settings (W10-1) | ✅ | — |
 | Attribute panel: graphical buttons, per-mode attributes | ✅ xfig's buttons and order, per-mode masks, choice panels; middle/right buttons step values; W19: xfig's labels and layout, each button narrowed to what its label and value need, wraps to a second row | — |
 | xfig accelerators (Meta-key) | ✅ xfig keymap (on by default): Meta = Alt/Option menu keys, physical Ctrl mode keys, xfig's mode letters; menus show "Meta-N"; platform shortcuts stay | — |
-| Colour picker and editor (xfig's colour panel `w_color.c`) | ✅ Edit › Colours…, the colour pop-up's recent colours, More… and Eyedropper (E4, W10-36): hue/saturation square, RGB/HSV, hex and X11 names, user colours (add, change, delete, remove unused, keep under a name); mix memory and lock not built | — |
+| Colour picker and editor (xfig's colour panel `w_color.c`) | ✅ (E4b adds Pick from screen: macOS NSColorSampler, Windows live pick, Linux portal PickColor, greyed out on the web) Edit › Colours…, the colour pop-up's recent colours, More… and Eyedropper (E4, W10-36): hue/saturation square, RGB/HSV, hex and X11 names, user colours (add, change, delete, remove unused, keep under a name); mix memory and lock not built | — |
 | Preferences (xfig's resources, recent files, user colours) | ✅ `settings.toml`; Edit › Global settings › xfig resources… | — |
 | Icons at HiDPI | ✅ every icon and picture is drawn as a vector at the screen's density (xfig's bitmaps optional); application icon | — |
 | 3D (bevelled) buttons, Global setting "Button style: 3D / Flat" | ✅ raised light/dark edges and soft shading, sunken when pressed or selected; mode, depth, snap, attribute and top-strip buttons; `app.button_style`, saved in the preferences (W11) | — |
@@ -120,6 +120,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | Date | Note |
 |---|---|
 | 2026-10-22 | E4, W10-36 done: colour picker and editor (Edit > Colours…), recent colours, eyedropper, `color.*` commands. |
+| 2026-10-22 | E4b done: Pick from screen in the Colours window (macOS, Windows, Linux portal; web greyed out). |
 | 2026-10-22 | S4-3, S4-8, S4-9: Digitize window, New window, Autorefresh mode; relative picture names follow Save As. |
 | 2026-10-22 | S3: every option of `xfig.man.in` accepted (table above): per-run overrides of the preferences, abbreviations as in Xt, X toolkit options mapped or ignored with a note, `-update`, `-geometry`, `~/.Xdefaults` resources. |
 | 2026-10-22 | W10-28, W10-2: Help > RustFig Manual opens the bundled manual window (topic list, search, rendered page); Help letter `x` opens it, `c` the command list. |

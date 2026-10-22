@@ -30,6 +30,8 @@ pub struct ColorDialog {
     name: String,
     /// The eyedropper last started takes the fill colour (else the pen's).
     dropper_fill: bool,
+    /// A pick from the screen in progress (E4b).
+    pub pick: crate::screen_pick::ScreenPicker,
 }
 
 impl Default for ColorDialog {
@@ -42,6 +44,7 @@ impl Default for ColorDialog {
             selected: None,
             name: String::new(),
             dropper_fill: false,
+            pick: Default::default(),
         }
     }
 }
@@ -113,6 +116,22 @@ pub fn follow_eyedropper(app: &mut App) {
     let c = if app.dialogs.color.dropper_fill { fill } else { pen };
     let rgb = app.engine.doc().rgb(ColorRef(c.max(0)));
     app.dialogs.color.set_rgb(rgb);
+}
+
+/// Take the result of a pick from the screen: the picker shows the colour
+/// (the user applies it with "Use as pen/fill colour").
+pub(crate) fn poll_pick(app: &mut App, ctx: &egui::Context) {
+    use crate::screen_pick::Outcome;
+    match app.dialogs.color.pick.poll(ctx) {
+        Some(Outcome::Picked([r, g, b])) => {
+            app.dialogs.color.set_rgb(Rgb::new(r, g, b));
+            let hex = app.dialogs.color.rgb.to_hex();
+            app.info(format!("Picked {hex} from the screen"));
+        }
+        Some(Outcome::Cancelled) => app.info("Picking from the screen cancelled"),
+        Some(Outcome::Failed(e)) => app.error(e),
+        None => {}
+    }
 }
 
 /// Make the picker's colour the current pen or fill colour.
@@ -197,6 +216,7 @@ fn picker(ui: &mut egui::Ui, d: &mut ColorDialog) -> bool {
 
 /// The window; called every frame.
 pub fn dialog(app: &mut App, ctx: &egui::Context) {
+    poll_pick(app, ctx);
     if !app.dialogs.color.open {
         return;
     }
@@ -338,6 +358,31 @@ fn body(app: &mut App, ui: &mut egui::Ui) {
         if ui.button("Eyedropper (fill)").clicked() {
             app.dialogs.color.dropper_fill = true;
             app.run("color.eyedropper", json!({"target": "fill"}));
+        }
+    });
+    ui.horizontal(|ui| {
+        let can = crate::screen_pick::available();
+        let picking = app.dialogs.color.pick.active();
+        let b = ui
+            .add_enabled(can && !picking, egui::Button::new("Pick from screen"))
+            .on_hover_text("Take the colour of any pixel on the screen, also in other programs")
+            .on_disabled_hover_text(if picking {
+                "Click a pixel to take its colour; Escape cancels"
+            } else {
+                crate::screen_pick::unavailable_reason()
+            });
+        if b.clicked() {
+            let ctx = ui.ctx().clone();
+            if let Err(e) = app.dialogs.color.pick.start(&ctx) {
+                app.error(e);
+            } else if app.dialogs.color.pick.active() {
+                app.info("Click a pixel anywhere on the screen to take its colour; Escape cancels");
+            }
+        }
+        if let Some([r, g, b]) = app.dialogs.color.pick.live() {
+            let (sw, _) = ui.allocate_exact_size(vec2(28.0, 18.0), Sense::hover());
+            ui.painter().rect_filled(sw, 2.0, Color32::from_rgb(r, g, b));
+            ui.label(Rgb::new(r, g, b).to_hex());
         }
     });
     // Recent colours.

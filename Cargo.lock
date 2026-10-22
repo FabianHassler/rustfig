@@ -3321,6 +3321,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustfig-screenpick"
+version = "0.1.0"
+dependencies = [
+ "ashpd",
+ "block2 0.6.2",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "pollster",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "rustfig-text"
 version = "0.1.0"
 dependencies = [
@@ -3341,6 +3353,7 @@ dependencies = [
  "rustfig-geom",
  "rustfig-model",
  "rustfig-render",
+ "rustfig-screenpick",
  "rustfig-text",
  "serde_json",
  "web-sys",

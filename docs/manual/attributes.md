@@ -38,6 +38,15 @@ Click PenColor or FillColor for the colour menu: Default, the 32 standard colour
   - Type a hex value (`#rrggbb` or `#rgb`) or an X11 colour name such as `Dark Orange` (case and blanks do not matter; matching names are offered while you type) into **Hex or name**.
   - **Use as pen colour** and **Use as fill colour** make the colour current; a colour that is not one of the 32 standard colours becomes a user colour of the drawing.
   - **Colours in this drawing** lists the user colours (numbers 32 to 543), saved in the Fig file. Click one to edit it, then **Change colour N** (every object that uses it changes), **Delete colour N** (refused while an object uses it) or **Add as new colour**. **Remove unused colours** drops those no object uses.
+  - **Pick from screen** takes the colour of any pixel on the screen, also in other programs' windows, and shows it in the window; apply it with **Use as pen colour** or **Use as fill colour** (only then does it become a user colour of the drawing). It is an addition: xfig has nothing like it.
+<!-- os: mac -->
+    On macOS the system's colour sampler (a magnifier) opens: click a pixel to take it, Escape cancels. It needs no permission.
+<!-- os: windows -->
+    On Windows the colour under the pointer is shown live next to the button; click to take it (the click also reaches the window you click on), Escape cancels.
+<!-- os: linux -->
+    On Linux the desktop's colour picker opens through xdg-desktop-portal (Wayland and X11, GNOME and KDE provide it); where no portal runs, the message line says so.
+<!-- os: end -->
+    In the web app the button is greyed out: the browser's EyeDropper needs JavaScript.
   - **Keep for all drawings** stores the colour under a name in your settings, so it is offered in every drawing.
 
 Scripts and MCP use the `color.*` commands (`color.parse`, `color.new`, `color.edit`, `color.delete`, `color.recent`, `color.eyedropper`, …).

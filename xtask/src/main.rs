@@ -16,6 +16,7 @@ const LAYERS: &[(&str, &str, i32)] = &[
     ("rustfig-render", "crates/render", 3),
     ("rustfig-engine", "crates/engine", 4),
     ("rustfig-mcp", "crates/mcp", 5),
+    ("rustfig-screenpick", "crates/screenpick", 5),
     ("rustfig-ui-egui", "crates/ui-egui", 6),
     ("rustfig", "apps/rustfig", 7),
     ("rustfig-cli", "apps/cli", 7),
