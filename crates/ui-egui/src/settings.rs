@@ -6,7 +6,7 @@
 //! file whenever a setting changes.
 
 use crate::App;
-use rustfig_engine::prefs::Prefs;
+use rustfig_engine::prefs::{Prefs, TomlTable, TomlValue};
 
 /// The browser storage key (web).
 #[cfg(target_arch = "wasm32")]
@@ -25,6 +25,10 @@ enum Store {
 pub struct Settings {
     store: Store,
     saved: Option<String>,
+    /// Values set for this run only (command line, `~/.Xdefaults`): key, the
+    /// run's value and what the stored settings had (S3). Not written back
+    /// while the setting still has the run's value.
+    session: Vec<(String, TomlValue, Option<TomlValue>)>,
 }
 
 impl Default for Settings {
@@ -32,6 +36,7 @@ impl Default for Settings {
         Settings {
             store: Store::None,
             saved: None,
+            session: Vec::new(),
         }
     }
 }
@@ -43,7 +48,11 @@ impl Settings {
         let store = rustfig_engine::prefs::config_path().map_or(Store::None, Store::File);
         #[cfg(target_arch = "wasm32")]
         let store = Store::Browser;
-        Settings { store, saved: None }
+        Settings {
+            store,
+            saved: None,
+            session: Vec::new(),
+        }
     }
 
     /// Settings kept in `path` (native).
@@ -52,6 +61,7 @@ impl Settings {
         Settings {
             store: Store::File(path),
             saved: None,
+            session: Vec::new(),
         }
     }
 
@@ -114,12 +124,26 @@ impl Settings {
         }
     }
 
+    /// `prefs` with this run's values replaced by the stored ones.
+    fn without_session(&self, prefs: &Prefs) -> Prefs {
+        let mut p = prefs.clone();
+        for (k, v, stored) in &self.session {
+            if p.xfig.get(k) == Some(v) {
+                match stored {
+                    Some(o) => p.xfig.insert(k.clone(), o.clone()),
+                    None => p.xfig.remove(k),
+                };
+            }
+        }
+        p
+    }
+
     /// Write `prefs` unless they are what was last written.
     pub fn save(&mut self, prefs: &Prefs) -> Result<(), String> {
         if matches!(self.store, Store::None) {
             return Ok(());
         }
-        let text = prefs.to_toml();
+        let text = self.without_session(prefs).to_toml();
         if self.saved.as_deref() == Some(text.as_str()) {
             return Ok(());
         }
@@ -228,4 +252,34 @@ pub fn load_and_apply(app: &mut App) {
     }
     apply_ui(app);
     app.engine.prefs_dirty = false;
+}
+
+/// Values for this run only (S3): `defaults` (X resource files) fill in
+/// resources the stored settings don't have; `overrides` (the command
+/// line) win over everything. Neither is written to the settings file.
+pub fn start_session(app: &mut App, defaults: &TomlTable, overrides: &TomlTable) {
+    let mut entries = Vec::new();
+    for (k, v) in defaults {
+        if !app.engine.prefs.xfig.contains_key(k) {
+            entries.push((k.clone(), v.clone()));
+        }
+    }
+    entries.extend(overrides.iter().map(|(k, v)| (k.clone(), v.clone())));
+    for (k, v) in entries {
+        let stored = app.engine.prefs.xfig.get(&k).cloned();
+        let stored = app
+            .settings
+            .session
+            .iter()
+            .find(|s| s.0 == k)
+            .map_or(stored, |s| s.2.clone());
+        app.settings.session.retain(|s| s.0 != k);
+        app.engine.prefs.xfig.insert(k.clone(), v.clone());
+        app.settings.session.push((k, v, stored));
+    }
+    let prefs = app.engine.prefs.clone();
+    for w in prefs.apply(&mut app.engine) {
+        app.error(format!("options: {w}"));
+    }
+    apply_ui(app);
 }

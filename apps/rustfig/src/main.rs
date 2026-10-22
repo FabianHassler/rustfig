@@ -16,27 +16,34 @@ fn main() -> eframe::Result<()> {
         args.drain(..1.min(args.len()));
         std::process::exit(i32::from(rustfig_engine::fig2dev::run_cli(args)));
     }
-    let mut args = std::env::args().skip(1);
-    let mut control = None;
-    let mut file = None;
-    let mut background = false;
-    while let Some(a) = args.next() {
-        match a.as_str() {
-            "--control" => control = args.next().and_then(|p| p.parse::<u16>().ok()),
-            // For agents and scripts: open behind other windows, without
-            // taking the focus (macOS: no Dock icon either).
-            "--background" => background = true,
-            "--help" | "-h" => {
-                println!("usage: rustfig [--control PORT] [--background] [FILE.fig|FILE.rustfig]\n       rustfig fig2dev ARGS...   (fig2dev's command line; also when started as `fig2dev`)");
-                return Ok(());
-            }
-            "--version" | "-V" => {
-                println!("rustfig {}", env!("CARGO_PKG_VERSION"));
-                return Ok(());
-            }
-            other => file = Some(other.to_string()),
+    // xfig's command line (S3), plus RustFig's --control and --background.
+    let opts = match rustfig_engine::cmdline::parse(std::env::args().skip(1)) {
+        Ok(o) => o,
+        Err(e) => {
+            eprintln!("{e}");
+            eprintln!("Try `rustfig -help`.");
+            std::process::exit(2);
         }
+    };
+    if opts.help {
+        eprintln!("rustfig {} (xfig's command line)", env!("CARGO_PKG_VERSION"));
+        eprint!("{}", rustfig_engine::cmdline::usage());
+        eprintln!("       rustfig fig2dev ARGS...   (fig2dev's command line; also when started as `fig2dev`)");
+        return Ok(());
     }
+    if opts.version {
+        println!("rustfig {}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
+    for n in &opts.notes {
+        eprintln!("rustfig: {n}");
+    }
+    if let Some(files) = &opts.update {
+        std::process::exit(update_files(files));
+    }
+    let control = opts.control;
+    let background = opts.background;
+    let file = opts.file.clone();
     let mut engine = rustfig_engine::Engine::new();
     let mut startup_error = None;
     if let Some(f) = &file {
@@ -44,12 +51,21 @@ fn main() -> eframe::Result<()> {
             startup_error = Some(e.message);
         }
     }
+    let overrides = opts.override_table();
+    let xdefaults = xdefaults_table();
+    let (size, position) = overrides
+        .get("geometry")
+        .and_then(|g| g.as_str())
+        .map_or((None, None), parse_geometry);
     let mut viewport = egui::ViewportBuilder::default()
-        .with_inner_size([1280.0, 860.0])
+        .with_inner_size(size.unwrap_or([1280.0, 860.0]))
         .with_min_inner_size([640.0, 480.0])
         .with_title("RustFig");
     if let Some(icon) = rustfig_ui_egui::app_icon::icon_data() {
         viewport = viewport.with_icon(icon);
+    }
+    if let Some(p) = position {
+        viewport = viewport.with_position(p);
     }
     if background && std::env::var_os("RUSTFIG_RECOVERY_DIR").is_none() {
         // A background instance (an agent's or a script's) that gets killed
@@ -82,12 +98,81 @@ fn main() -> eframe::Result<()> {
         options,
         Box::new(move |cc| {
             let mut app = rustfig_ui_egui::App::new(cc, engine, control);
+            // xfig's options and X resources apply to this run only.
+            rustfig_ui_egui::settings::start_session(&mut app, &xdefaults, &overrides);
             if let Some(e) = startup_error {
                 app.error(e);
             }
             Ok(Box::new(app))
         }),
     )
+}
+
+/// `Fig.*` resources of `~/.Xdefaults` and `~/.Xresources` (lowest priority).
+#[cfg(not(target_arch = "wasm32"))]
+fn xdefaults_table() -> rustfig_engine::prefs::TomlTable {
+    let Some(home) = std::env::var_os("HOME") else {
+        return Default::default();
+    };
+    let mut pairs = Vec::new();
+    for name in [".Xresources", ".Xdefaults"] {
+        if let Ok(text) = std::fs::read_to_string(std::path::Path::new(&home).join(name)) {
+            pairs.extend(rustfig_engine::cmdline::parse_resources(&text));
+        }
+    }
+    rustfig_engine::cmdline::resource_table(&pairs)
+}
+
+/// `-geometry [WxH][+X+Y]`: the window size and position, when given.
+#[cfg(not(target_arch = "wasm32"))]
+fn parse_geometry(g: &str) -> (Option<[f32; 2]>, Option<[f32; 2]>) {
+    let (size, pos) = match g.find(['+', '-']) {
+        Some(i) => g.split_at(i),
+        None => (g, ""),
+    };
+    let size = size.split_once(['x', 'X']).and_then(|(w, h)| {
+        let (w, h) = (w.parse::<f32>().ok()?, h.parse::<f32>().ok()?);
+        ((100.0..=20_000.0).contains(&w) && (100.0..=20_000.0).contains(&h)).then_some([w, h])
+    });
+    let position = pos.strip_prefix('+').and_then(|p| {
+        let (x, y) = p.split_once('+')?;
+        Some([x.parse::<f32>().ok()?, y.parse::<f32>().ok()?])
+    });
+    (size, position)
+}
+
+/// `xfig -update FILE...`: read each file and write it back in the current
+/// Fig format, keeping the original as `FILE.bak`. Returns the exit status.
+#[cfg(not(target_arch = "wasm32"))]
+fn update_files(files: &[String]) -> i32 {
+    if files.is_empty() {
+        eprintln!("xfig: -update needs file names");
+        return 2;
+    }
+    let mut failed = 0;
+    for f in files {
+        let mut engine = rustfig_engine::Engine::new();
+        let r = std::fs::copy(f, format!("{f}.bak"))
+            .map_err(|e| format!("{f}.bak: {e}"))
+            .and_then(|_| {
+                engine
+                    .execute("file.open", &serde_json::json!({ "path": f }))
+                    .map_err(|e| e.message)
+            })
+            .and_then(|_| {
+                engine
+                    .execute("file.save", &serde_json::json!({ "path": f }))
+                    .map_err(|e| e.message)
+            });
+        match r {
+            Ok(_) => eprintln!("{f}: updated (original kept as {f}.bak)"),
+            Err(e) => {
+                eprintln!("{f}: {e}");
+                failed += 1;
+            }
+        }
+    }
+    i32::from(failed > 0)
 }
 
 #[cfg(target_arch = "wasm32")]

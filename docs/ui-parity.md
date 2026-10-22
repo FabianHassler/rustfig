@@ -81,9 +81,35 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | Rulers | ✅ left up/left, right down/right on release (Shift x5), middle and Alt+right drag, wheel = buttons 4/5, left-drag added; pan limit at 0 not copied (decided 2026-10-21) | — |
 | xfig's other key and mouse bindings (menu letters, panel keys, wheel bindings, compose keys) | ✅ audited in [keys-parity.md](keys-parity.md): each works, is replaced, or waits for a named task | — |
 
+## Command-line options (S3)
+
+`rustfig [options] [file]` takes every option of xfig's `xfig.man.in` (`crates/engine/src/cmdline.rs`, table `OPTIONS`; tests in the same file). Options with an equivalent set an xfig resource for **that run only** (the preferences file is not changed); a value follows the option and is consumed whatever it looks like. Options may be abbreviated to a prefix as in Xt: an exact name wins, otherwise the first option of xfig's table that starts with the argument (`-me` is `-metric`, `-spec` is `-specialtext`). An unknown option, a missing value or a second file name stops with a message, as in xfig. Resources are also read from `~/.Xresources` and `~/.Xdefaults` (`Fig.name: value`, `xfig*name: value`) and fill in what the settings file lacks; `-xrm 'Fig.name: value'` works. Not done: `~/.xfigrc` import, an `xfig` launcher name, `-scale_factor` for `-update`.
+
+| Option | Effect in RustFig |
+|---|---|
+| `-metric`, `-centimeters`; `-inches`, `-imperial` | `inches` resource: units of a new drawing |
+| `-landscape`, `-Landscape`; `-portrait`, `-Portrait` | `landscape`: orientation of a new drawing |
+| `-paper_size SIZE`, `-magnification PCT`, `-flushleft`/`-center`, `-multiple`/`-single` | paper, export magnification, justification and page mode of a new drawing |
+| `-specialtext`, `-hiddentext`, `-rigidtext`, `-latexfonts`, `-left`/`-right` | start text attributes of the indicator |
+| `-startfontsize` (`-startFontSize`), `-startlinewidth`, `-startfillstyle`, `-starttextstep`, `-startpsFont`, `-startlatexFont` | start attributes |
+| `-startgridmode N`, `-startposnmode N` | grid and point-positioning mode |
+| `-startarrowtype`, `-startarrowthick`, `-startarrowwidth`, `-startarrowlength` | arrow defaults |
+| `-zoom`, `-userscale`, `-userunit`, `-showpageborder`/`-dontshowpageborder` | view and unit box |
+| `-showballoons`/`-dontshowballoons`, `-balloon_delay`, `-showdepthmanager`/`-dontshowdepthmanager` | UI panels |
+| `-exportLanguage`, `-export_margin`, `-correct_font_size` | export panel defaults |
+| `-geometry WxH+X+Y` | window size and position |
+| `-update FILE...` | read each file, write it back in the current Fig format, keep `FILE.bak`, quit (no window) |
+| `-help`, `-h`, `-v`, `-V` | usage / version, then quit |
+| `--control PORT`, `--background` | RustFig's own (control channel; open behind other windows) |
+| `-allownegcoords`, `-autorefresh`, `-axislines`, `-but_per_row`, `-cbg`, `-cfg`, `-crosshair`, `-encoding`, `-flipvisualhints`, `-freehand_resolution`, `-grid_color`, `-grid_unit`, `-icon_view`/`-list_view`, `-image_editor`, `-jpeg_quality`, `-keyFile`, `-library_dir`, `-nooverlap`/`-overlap`, `-pageborder`, `-pheight`, `-pwidth`, `-rulerthick`, `-scale_factor`, `-showallbuttons`, `-showaxislines`, `-showlengths`, `-shownums`, `-smallicons`, `-smooth_factor`, `-spellcheckcommand`, `-track`/`-notrack`, `-transparent_color`, `-write_bak`/`-nowrite_bak` | accepted and kept as the resource of that name; takes effect when its feature lands (the plan task is in the resource's status) |
+| `-library_icon_size`, `-startgridtype`, `-write_v40`, `-inputStyle`, `-gslib` | accepted; note "not supported yet" |
+| `-visual`, `-depth`, `-dontswitchcmap`, `-installowncmap`, `-monochrome`, `-buttonFont`, `-normalFont`, `-internalBW`, `-debug`, `-ghostscript`, `-iconGeometry`, `-nosplash`/`-splash`, `-tablet`, `-spinner_delay`, `-spinner_rate`, `-max_image_colors`, `-international`/`-nointernational` | X11 specifics: accepted, ignored with a note on stderr |
+| `-display`, `-iconic`, `-name`, `-title`, `-bg`/`-background`, `-fg`/`-foreground`, `-bd`/`-bordercolor`, `-bw`/`-borderwidth`, `-fn`/`-font`, `-rv`/`-reverse`/`+rv`, `-synchronous`/`+synchronous`, `-selectionTimeout`, `-xnllanguage`, `-xtsessionID` | X toolkit options: accepted, ignored with a note |
+
 ## Revision history
 | Date | Note |
 |---|---|
+| 2026-10-22 | S3: every option of `xfig.man.in` accepted (table above): per-run overrides of the preferences, abbreviations as in Xt, X toolkit options mapped or ignored with a note, `-update`, `-geometry`, `~/.Xdefaults` resources. |
 | 2026-10-22 | W10-28, W10-2: Help > RustFig Manual opens the bundled manual window (topic list, search, rendered page); Help letter `x` opens it, `c` the command list. |
 | 2026-10-22 | D14: the Smart Links button also on Move point, Scale, Flip, Rotate and Align. |
 | 2026-10-22 | D8: Smart Links indicator button (off/move/slide). |

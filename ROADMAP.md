@@ -63,7 +63,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 [docs/gaps.md](docs/gaps.md). Next up:
 1. The rest of the fig2dev port: the audit's hardening passes (B11; text bytes done), PostScript page layout and previews (B4a/B4b), `sld`; then fig2dev moves to its own repository `FabianHassler/fig2dev` (see plan decisions).
 2. ✅ Phase A, hardening (done 2026-10-15): shared undo snapshots, per-command cost, CI (Linux on every push, all OSes for releases), the web build check, UI tests, export curves, crash recovery, stall-free panning on large drawings.
-3. Preferences that survive restarts (E1) and xfig's command-line options (S3).
+3. ✅ Preferences that survive restarts (E1) and xfig's command-line options (S3, 2026-10-22: `~/.xfigrc` import and an `xfig` launcher name left).
 4. Phase B: fig2dev's drivers ported (LaTeX exports, bitmaps, PostScript, the rest), modern printing (PDF to the system print dialog).
 5. Phase C, web: trunk packaging and browser file I/O.
 6. Every remaining xfig function, including xfig's bundled figure libraries (D6) and D11.

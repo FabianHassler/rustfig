@@ -779,7 +779,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `f_util.c` | `strain_out` | 789 | replaced | `~/.xfigrc` and `init_settings` become `settings.toml` (`engine::prefs`, E1); import of an old `~/.xfigrc` is S3 | E1, S3 |
 | `f_util.c` | `finish_update_xfigrc` | 838 | replaced | `~/.xfigrc` and `init_settings` become `settings.toml` (`engine::prefs`, E1); import of an old `~/.xfigrc` is S3 | E1, S3 |
 | `f_util.c` | `init_settings` | 856 | replaced | `~/.xfigrc` and `init_settings` become `settings.toml` (`engine::prefs`, E1); import of an old `~/.xfigrc` is S3 | E1, S3 |
-| `f_util.c` | `update_fig_files` | 975 | missing | `xfig -update file.fig...`: rewrite the files in the current Fig version, keeping `.bak` | S3 |
+| `f_util.c` | `update_fig_files` | 975 | ported | `rustfig -update file.fig...` (`apps/rustfig`): rewrite the files in the current Fig version, keeping `.bak` | S3 |
 | `f_util.c` | `build_command` | 1048 | replaced | no external programs are spawned for exports (fig2dev is ported, B0); the image editor is W10-16 | W10-16 |
 | `f_util.c` | `strerror` | 1079 | not needed | path helper (`Path::file_name`) |  |
 | `f_util.c` | `map_to_palette` | 1090 | not needed | X colormap and image colour reduction (pixel allocation, palette mapping) |  |
@@ -794,7 +794,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `f_wrpcx.c` | `write_pcx_head` | 119 | replaced | PCX writer in fig2dev `scene/bitmaps.rs` (B6) |  |
 | `f_wrpcx.c` | `pcx_enc_scan` | 151 | replaced | PCX writer in fig2dev `scene/bitmaps.rs` (B6) |  |
 | `f_wrpng.c` | `write_png` | 41 | replaced | PNG writer in fig2dev `scene/raster.rs` (B6) |  |
-| `main.c` | `main` | 624 | partial | command-line options and resources: resources are `engine::prefs::RESOURCES` (E1); the xfig option parser (`-metric`, `-startgridmode`, ...) is S3 | S3 |
+| `main.c` | `main` | 624 | ported | command line: `engine::cmdline` (option table, Xt abbreviations, `-help`, `-update`, `-geometry`); resources are `engine::prefs::RESOURCES` (E1); `~/.xfigrc` import left | S3 |
 | `main.c` | `setup_visual` | 1626 | not needed | X visual and colormap set-up |  |
 | `main.c` | `make_cut_buf_name` | 1744 | not needed | X cut-buffer property name (the clipboard is in memory, E7 for the system clipboard) |  |
 | `main.c` | `check_resource_ranges` | 1769 | replaced | resource values are range-checked when set (`engine::prefs`) |  |
@@ -2220,7 +2220,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_zoom.c` | `init_zoombox_drawing` | 123 | missing | zoom box: drag a rectangle to zoom into it | E3 |
 | `w_zoom.c` | `do_zoom` | 150 | missing | zoom box: drag a rectangle to zoom into it | E3 |
 | `w_zoom.c` | `cancel_zoom` | 188 | missing | zoom box: drag a rectangle to zoom into it | E3 |
-| `xfigmain.c` | `xfigmain` | 624 | partial | as main.c: command-line options and resources: resources are `engine::prefs::RESOURCES` (E1); the xfig option parser (`-metric`, `-startgridmode`, ...) is S3 | S3 |
+| `xfigmain.c` | `xfigmain` | 624 | ported | as main.c: `engine::cmdline` | S3 |
 | `xfigmain.c` | `setup_visual` | 1626 | not needed | as main.c: X visual and colormap set-up |  |
 | `xfigmain.c` | `make_cut_buf_name` | 1744 | not needed | as main.c: X cut-buffer property name (the clipboard is in memory, E7 for the system clipboard) |  |
 | `xfigmain.c` | `check_resource_ranges` | 1769 | replaced | as main.c: resource values are range-checked when set (`engine::prefs`) |  |

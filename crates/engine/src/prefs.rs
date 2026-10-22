@@ -15,6 +15,8 @@ use crate::{Engine, SnapMode};
 use rustfig_model::{Justify, Orientation, PaperSize, Units};
 use serde::{Deserialize, Serialize};
 
+/// A table of preference values (TOML).
+pub use toml::Table as TomlTable;
 /// A preference value (TOML).
 pub use toml::Value as TomlValue;
 
@@ -110,7 +112,7 @@ use Status::{Applied, Planned};
 /// xfig's resources (`xfig.man.in`'s table and `main.c`), in the man page's order.
 #[rustfmt::skip]
 pub const RESOURCES: &[Resource] = &[
-    r("allownegcoords", Bool, "true", "-allownegcoords, -dontallownegcoords", Planned("S3")),
+    r("allownegcoords", Bool, "true", "-allownegcoords, -dontallownegcoords", Planned("D11")),
     r("autorefresh", Bool, "false", "-autorefresh", Planned("D11")),
     r("axislines", Str, "pink", "-axislines", Planned("E9")),
     r("balloon_delay", Int, "500", "-balloon_delay", Applied),
@@ -119,13 +121,13 @@ pub const RESOURCES: &[Resource] = &[
     r("canvasforeground", Str, "black", "-cfg", Planned("E9")),
     r("correctfontsize", Bool, "false", "-correctfontsize", Applied),
     r("crosshair", Bool, "false", "-crosshair", Planned("E9")),
-    r("encoding", Int, "1", "-encoding", Planned("S3")),
+    r("encoding", Int, "1", "-encoding", Planned("D11")),
     r("exportLanguage", Str, "eps", "-exportLanguage", Applied),
     r("export_margin", Int, "0", "-export_margin", Applied),
     r("flipvisualhints", Bool, "false", "-flipvisualhints", Planned("E9")),
     r("flushleft", Bool, "false", "-flushleft, -center", Applied),
     r("freehand_resolution", Int, "25", "-freehand_resolution", Planned("D11")),
-    r("geometry", Str, "", "-geometry", Planned("S3")),
+    r("geometry", Str, "", "-geometry", Applied),
     r("grid_color", Str, "black", "-grid_color", Planned("E9")),
     r("grid_unit", Str, "1/16", "-grid_unit", Planned("E9")),
     r("hiddentext", Bool, "false", "-hiddentext", Applied),
@@ -134,7 +136,7 @@ pub const RESOURCES: &[Resource] = &[
     r("inches", Bool, "true", "-inches, -imperial, -metric, -centimeters", Applied),
     r("jpeg_quality", Int, "75", "-jpeg_quality", Planned("B6")),
     r("justify", Bool, "false", "-left, -right", Applied),
-    r("keyFile", Str, "CompKeyDB", "-keyFile", Planned("S3")),
+    r("keyFile", Str, "CompKeyDB", "-keyFile", Planned("D11")),
     r("landscape", Bool, "true", "-landscape, -portrait", Applied),
     r("latexfonts", Bool, "false", "-latexfonts", Applied),
     r("library_dir", Str, "~/xfiglib", "-library_dir", Planned("D6")),
@@ -147,7 +149,7 @@ pub const RESOURCES: &[Resource] = &[
     r("pwidth", Float, "11", "-pwidth", Planned("B4")),
     r("rigidtext", Bool, "false", "-rigidtext", Applied),
     r("rulerthick", Int, "24", "-rulerthick", Planned("E9")),
-    r("scale_factor", Float, "1.0", "-scale_factor", Planned("S3")),
+    r("scale_factor", Float, "1.0", "-scale_factor", Planned("D11")),
     r("showallbuttons", Bool, "false", "-showallbuttons", Planned("E9")),
     r("showaxislines", Bool, "true", "-showaxislines, -dontshowaxislines", Planned("E9")),
     r("showballoons", Bool, "true", "-showballoons, -dontshowballoons", Applied),
@@ -175,7 +177,7 @@ pub const RESOURCES: &[Resource] = &[
     r("transparent_color", Int, "-2", "-transparent_color", Planned("B6")),
     r("userscale", Float, "1.0", "-userscale", Applied),
     r("userunit", Str, "in", "-userunit", Applied),
-    r("write_bak", Bool, "true", "-write_bak", Planned("S3")),
+    r("write_bak", Bool, "true", "-write_bak", Planned("D11")),
     r("zoom", Float, "1.0", "-zoom", Applied),
 ];
 

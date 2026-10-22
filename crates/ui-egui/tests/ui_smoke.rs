@@ -926,6 +926,31 @@ fn settings_survive_a_restart() {
     let _ = std::fs::remove_dir_all(path.parent().unwrap());
 }
 
+/// S3: xfig's command-line options apply to one run and are not saved.
+#[test]
+fn command_line_options_are_not_saved() {
+    let path = settings_file("session");
+    {
+        let mut a = app_with_settings(&path);
+        let o = rustfig_engine::cmdline::parse(["-startfontsize", "20", "-metric", "-zoom", "2"]).unwrap();
+        let x = rustfig_engine::cmdline::resource_table(&[("startlinewidth".into(), "3".into())]);
+        rustfig_ui_egui::settings::start_session(&mut a, &x, &o.override_table());
+        assert_eq!(a.engine.indicator.font_size, 20.0);
+        assert_eq!(a.engine.indicator.thickness, 3);
+        assert_eq!(a.engine.view.zoom, 2.0);
+        let mut h = harness(a);
+        h.state_mut()
+            .run("prefs.set", json!({ "resource": "startgridmode", "value": "2" }));
+        h.run_steps(2);
+    }
+    let text = std::fs::read_to_string(&path).unwrap();
+    assert!(text.contains("startgridmode"), "{text}");
+    for k in ["startfontsize", "zoom", "inches", "startlinewidth"] {
+        assert!(!text.contains(k), "{k} was saved: {text}");
+    }
+    let _ = std::fs::remove_dir_all(path.parent().unwrap());
+}
+
 /// W16/W17: settings files from before (layout, mouse scheme, attribute
 /// panel switch, icon choice) still load, and the keys are dropped on save.
 #[test]

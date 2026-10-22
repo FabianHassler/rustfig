@@ -8,6 +8,7 @@
 
 mod anglegeom;
 pub mod cmd;
+pub mod cmdline;
 mod error;
 pub mod fig2dev;
 pub mod guard;
