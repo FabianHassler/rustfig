@@ -137,6 +137,11 @@ pub(super) fn added(e: &mut Engine, o: Object) -> CmdResult {
 
 fn rectangle(e: &mut Engine, p: &Value) -> CmdResult {
     let (x, y, w, h) = (num(p, "x")?, num(p, "y")?, num(p, "width")?, num(p, "height")?);
+    // xfig's `create_boxobject`: a box without area is refused (the Fig
+    // reader drops it, so it would vanish on save). Fig stores whole units.
+    if x.round() == (x + w).round() || y.round() == (y + h).round() {
+        return Err(EngineError::bad_params("Box must have area"));
+    }
     let style = style_from(e, p)?;
     let mut pl = Polyline::rect(style, Point::new(x, y), Point::new(x + w, y + h));
     if let Some(r) = opt_num(p, "radius")? {

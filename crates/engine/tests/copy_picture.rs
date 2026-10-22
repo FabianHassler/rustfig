@@ -47,10 +47,17 @@ fn clipboard_gets_the_platform_vector_type_and_png() {
     let r = e.execute("edit.copy_picture", &json!({})).unwrap();
     let got = fake.got.lock().unwrap().clone();
     let kinds: Vec<_> = got.iter().map(|i| i.kind).collect();
-    // Windows gets SVG for EMF until fig2dev's EMF driver is ported.
+    // Windows gets SVG for EMF only when fig2dev lacks the EMF driver.
+    let emf = rustfig_engine::fig2dev::driver_available("emf");
     let want: Vec<_> = PictureKind::platform_set()
         .into_iter()
-        .map(|k| if k == PictureKind::Emf { PictureKind::Svg } else { k })
+        .map(|k| {
+            if k == PictureKind::Emf && !emf {
+                PictureKind::Svg
+            } else {
+                k
+            }
+        })
         .collect();
     assert_eq!(kinds, want);
     for i in &got {
@@ -59,7 +66,8 @@ fn clipboard_gets_the_platform_vector_type_and_png() {
             PictureKind::Pdf => assert!(i.bytes.starts_with(b"%PDF")),
             PictureKind::Png => assert!(i.bytes.starts_with(b"\x89PNG")),
             PictureKind::Svg => assert!(String::from_utf8_lossy(&i.bytes).contains("<svg")),
-            PictureKind::Emf => {}
+            // EMF files start with the EMR_HEADER record type 1.
+            PictureKind::Emf => assert!(i.bytes.starts_with(&[1, 0, 0, 0])),
         }
     }
     assert!(r["formats"].as_array().unwrap().len() == 2);
