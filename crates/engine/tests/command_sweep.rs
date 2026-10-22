@@ -95,7 +95,7 @@ fn hostile_values() -> Vec<Value> {
 #[test]
 fn every_command_with_hostile_params() {
     for c in cmd::all() {
-        if c.id == "file.save" || c.id == "file.export" {
+        if c.id == "file.save" || c.id == "file.export" || c.id == "file.digitize" {
             continue; // would write files
         }
         for p in hostile_values() {
@@ -111,9 +111,44 @@ fn every_command_with_hostile_params() {
 }
 
 #[test]
+fn digitize_with_hostile_params() {
+    // Skipped by the sweeps (it writes files): its own hostile run, into a
+    // scratch folder, must fail cleanly and leave the document alone.
+    let dir = std::env::temp_dir().join(format!("rustfig-digitize-sweep-{}", std::process::id()));
+    let _ = std::fs::create_dir_all(&dir);
+    let prefix = dir.join("d").to_string_lossy().into_owned();
+    let cases = vec![
+        json!({}),
+        json!({"prefix": ""}),
+        json!({"prefix": prefix, "start": -1}),
+        json!({"prefix": prefix, "start": 1e300}),
+        json!({"prefix": prefix, "start": "x"}),
+        json!({"prefix": prefix, "suffix": ""}),
+        json!({"prefix": prefix, "suffix": "../x"}),
+        json!({"prefix": prefix, "ids": [987654321]}),
+        json!({"prefix": prefix, "ids": "all"}),
+        json!({"prefix": prefix, "append": 3}),
+        json!({"prefix": prefix, "calibration": 5}),
+        json!({"prefix": prefix, "calibration": {"points": []}}),
+        json!({"prefix": prefix, "calibration": {"points": [{"x": 0}, {"x": 1}]}}),
+        json!({"prefix": prefix, "calibration": {"points": [
+            {"x": 5, "y": 1, "vx": 0, "vy": 0}, {"x": 5, "y": 9, "vx": 1, "vy": 1}]}}),
+        json!({"prefix": prefix, "calibration": {"log_x": true, "points": [
+            {"x": 0, "y": 1, "vx": -1, "vy": 0}, {"x": 5, "y": 9, "vx": 1, "vy": 1}]}}),
+    ];
+    for p in cases {
+        let mut e = populated();
+        let before = e.doc().clone();
+        let _ = e.execute("file.digitize", &p);
+        assert_eq!(e.doc(), &before, "{p}");
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn every_command_on_empty_document() {
     for c in cmd::all() {
-        if c.id == "file.save" || c.id == "file.export" {
+        if c.id == "file.save" || c.id == "file.export" || c.id == "file.digitize" {
             continue;
         }
         let mut e = Engine::new();
@@ -142,7 +177,7 @@ proptest! {
         let mut e = populated();
         for (i, a, b) in seq {
             let c = &all[i % all.len()];
-            if c.id == "file.save" || c.id == "file.export" || c.id.starts_with("file.open") {
+            if c.id == "file.save" || c.id == "file.export" || c.id == "file.digitize" || c.id.starts_with("file.open") {
                 continue;
             }
             let p = json!({"dx": a, "dy": b, "x": a, "y": b, "width": b, "height": a, "angle": a,

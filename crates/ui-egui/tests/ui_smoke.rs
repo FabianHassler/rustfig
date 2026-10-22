@@ -847,6 +847,53 @@ fn return_exports_from_the_panel() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// S4-8: File > Digitize... writes numbered files of the selected line;
+/// Browse goes through the file dialogs.
+#[test]
+fn digitize_window_writes_selected_line() {
+    let dir = std::env::temp_dir().join(format!("rustfig-digitize-ui-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let browsed = dir.join("trace_0003.csv").to_string_lossy().into_owned();
+    let mut a = app();
+    a.file_dialogs = Box::new(ScriptedDialogs::new([Some(browsed)]));
+    let mut h = harness(a);
+    let id = h
+        .state_mut()
+        .run("shape.polyline", json!({"points": [[0, 0], [100, 50], [200, 0]]}))
+        .unwrap()["id"]
+        .as_u64()
+        .unwrap();
+    h.state_mut().run("edit.select", json!({"ids": [id]}));
+    h.state_mut().run("app.digitize", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Browse...").click();
+    h.run_steps(3);
+    assert_eq!(
+        h.state().digitize.example(),
+        format!("{}_0003.csv", dir.join("trace").to_string_lossy())
+    );
+    h.get_by_label("Export").click();
+    h.run_steps(3);
+    let text = std::fs::read_to_string(dir.join("trace_0003.csv")).unwrap();
+    assert_eq!(text, "x_fig,y_fig\n0,0\n100,50\n200,0\n");
+    assert_eq!(h.state().digitize.start, "4", "the next number follows");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// S4-9: Autorefresh is a View menu entry; the New window command is in File.
+#[test]
+fn autorefresh_toggle_and_new_window_entries() {
+    let mut h = harness(app());
+    assert!(!h.state().reload.on);
+    h.state_mut().run("app.toggle_autorefresh", json!({}));
+    assert!(h.state().reload.on);
+    h.state_mut().run("app.toggle_autorefresh", json!({"on": false}));
+    assert!(!h.state().reload.on);
+    h.get_by_label("File").click();
+    h.run_steps(3);
+    h.get_by_label_contains("New window");
+}
+
 /// W9: all of xfig's 29 arrow choices (types 0–14).
 #[test]
 fn arrow_types_up_to_14() {

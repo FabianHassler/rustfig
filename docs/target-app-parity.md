@@ -78,6 +78,7 @@ the score.
 - Angle Geom (D7): `crates/engine/src/anglegeom.rs` (ports `u_geom.c`'s `latex_endpoint`, `get_slope` and `u_elastic.c`'s `constrainedangle_line`), `Engine::angle_constrained` / `angle_anchor` in `tools/mod.rs`, the Angle Geom button in `ui-egui/attributes`; tests `crates/engine/tests/angle_geom.rs`.
 - Linked move (D8): `crates/engine/src/links.rs` (ports `u_list.c`'s `get_links`, `point_on_perim`, `get_interior_links`, `point_on_inside`, `adjust_links`); the Smart Links indicator button in `ui-egui/attributes`; tests `crates/engine/tests/linked_move.rs`. D14 extends it: `links.rs` targets circles, ellipses, arcs, polygons, closed splines, text boxes (distance to the outline) beside boxes and compounds, follows with open polylines and splines, links both ends of a line, and every operation (`transform.apply`, `links::translate_each`, `edit.duplicate` copy with links, `point.move` box resize, `transform.nudge`); previews and end highlights in `tools/mod.rs`; tests `crates/engine/tests/linked_ext.rs`.
 - Mouse buttons: xfig's three-button semantics per mode, the only scheme (W16 removed the modern one); `mouse_hints_match_behaviour` in `crates/engine/src/tools/mod.rs` presses every button in every tool and state and checks the indicator against what happened; Alt/Ctrl+click map to middle/right (`canvas::tool_button`), tested in `ui_smoke.rs`.
+- Digitize, relative picture names, Autorefresh, New window (S4-3, S4-8, S4-9): `crates/engine/src/cmd/digitize.rs` (`file.digitize`), `file.save` picture rebasing in `cmd/file.rs`, `crates/ui-egui/src/digitize.rs` and `reload.rs`; tests `relative_pictures.rs`, `digitize.rs`, `digitize_with_hostile_params` (`command_sweep.rs`), `digitize_window_writes_selected_line` and `autorefresh_toggle_and_new_window_entries` (`ui_smoke.rs`), unit tests in `reload.rs`.
 - Verified on macOS by driving the app over the control channel and reviewing screenshots.
 
 ## Revision history
@@ -85,6 +86,7 @@ the score.
 | Date | Overall | Note |
 |------|--------:|------|
 | 2026-10-22 | ≈65 % | E3, S4-6: zoom box and shape factor on the canvas; View & navigation 96 → 100 % (rounds to the same overall). |
+| 2026-10-22 | ≈65 % | S4-3, S4-8, S4-9: Digitize (export line as data), relative picture names on Save As, Autorefresh mode, New window; evidence only, score unchanged. |
 | 2026-10-22 | ≈65 % | W10-28, W10-2: bundled manual (27 topics, search, Help > RustFig Manual, `help.open`); evidence only, score unchanged. |
 | 2026-10-22 | ≈65 % | D7: Angle Geom (Attributes 80 → 83 %). |
 | 2026-10-22 | ≈65 % | D14: smart links extended (Attributes 83 → 84 %). |

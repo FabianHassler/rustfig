@@ -6,6 +6,7 @@ mod arrange;
 mod chop;
 mod chop_ext;
 mod compound;
+mod digitize;
 mod dimline;
 mod doc;
 mod edit;
@@ -74,6 +75,7 @@ pub fn all() -> &'static [Command] {
     ALL.get_or_init(|| {
         let mut v = Vec::new();
         v.extend(file::commands());
+        v.extend(digitize::commands());
         v.extend(export_panel::commands());
         v.extend(edit::commands());
         v.extend(view::commands());

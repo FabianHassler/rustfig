@@ -658,11 +658,11 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `f_picobj.c` | `rewind_stream` | 519 | replaced | picture files are read through fig2dev `util/readpics` (streams, `.gz`/`.Z` decompression) in `engine::import::load_picture` (DD5) |  |
 | `f_picobj.c` | `uncompressed_content` | 558 | replaced | picture files are read through fig2dev `util/readpics` (streams, `.gz`/`.Z` decompression) in `engine::import::load_picture` (DD5) |  |
 | `f_picobj.c` | `image_size` | 615 | replaced | `engine::import::load_picture` / `readpics` (type detection, size, status, picture cache per object) |  |
-| `f_picobj.c` | `internal_path` | 683 | partial | relative picture names are resolved against the figure directory (`engine::import`); rewriting the names when the figure is saved in another folder is not | S4-3 |
-| `f_picobj.c` | `xf_relpath` | 780 | partial | relative picture names are resolved against the figure directory (`engine::import`); rewriting the names when the figure is saved in another folder is not | S4-3 |
-| `f_picobj.c` | `relative_path` | 843 | partial | relative picture names are resolved against the figure directory (`engine::import`); rewriting the names when the figure is saved in another folder is not | S4-3 |
-| `f_picobj.c` | `xf_external_path` | 874 | partial | relative picture names are resolved against the figure directory (`engine::import`); rewriting the names when the figure is saved in another folder is not | S4-3 |
-| `f_picobj.c` | `external_path` | 959 | partial | relative picture names are resolved against the figure directory (`engine::import`); rewriting the names when the figure is saved in another folder is not | S4-3 |
+| `f_picobj.c` | `internal_path` | 683 | replaced | saving into another folder rewrites relative picture names so they keep pointing at the same files (`cmd/file.rs` `rebase_fn`, S4-3) | S4-3 |
+| `f_picobj.c` | `xf_relpath` | 780 | replaced | saving into another folder rewrites relative picture names so they keep pointing at the same files (`cmd/file.rs` `rebase_fn`, S4-3) | S4-3 |
+| `f_picobj.c` | `relative_path` | 843 | replaced | saving into another folder rewrites relative picture names so they keep pointing at the same files (`cmd/file.rs` `rebase_fn`, S4-3) | S4-3 |
+| `f_picobj.c` | `xf_external_path` | 874 | replaced | saving into another folder rewrites relative picture names so they keep pointing at the same files (`cmd/file.rs` `rebase_fn`, S4-3) | S4-3 |
+| `f_picobj.c` | `external_path` | 959 | replaced | saving into another folder rewrites relative picture names so they keep pointing at the same files (`cmd/file.rs` `rebase_fn`, S4-3) | S4-3 |
 | `f_read.c` | `read_figc` | 135 | ported | fig2dev `read.rs` (port of `read.c`) through `format/fig_read` and `bridge/to_model` (DD3) |  |
 | `f_read.c` | `contains_picture` | 170 | not needed | asks whether a figure contains pictures (for relative-path handling at save) |  |
 | `f_read.c` | `read_fig` | 215 | ported | fig2dev `read.rs` (port of `read.c`) through `format/fig_read` and `bridge/to_model` (DD3) |  |
@@ -804,10 +804,10 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `main.c` | `set_xpm_icon` | 1901 | replaced | window icon from `app_icon.rs` |  |
 | `main.c` | `resize_canvas` | 1959 | not needed | canvas size follows the egui layout |  |
 | `main.c` | `get_pointer_mapping` | 2012 | replaced | mouse button mapping: `MouseScheme` and the left+right = middle chord (`input.rs`, W11-1) |  |
-| `main.c` | `set_autorefresh` | 2037 | not needed | PROPOSAL: Autorefresh mode (View menu in xfig) redraws the canvas at an interval to clean up X11 drawing leftovers; egui redraws every frame. Task W10-3 records the decision | W10-3 |
-| `main.c` | `cancel_autorefresh` | 2075 | not needed | PROPOSAL: Autorefresh mode (View menu in xfig) redraws the canvas at an interval to clean up X11 drawing leftovers; egui redraws every frame. Task W10-3 records the decision | W10-3 |
-| `main.c` | `toggle_refresh_mode` | 2092 | not needed | PROPOSAL: Autorefresh mode (View menu in xfig) redraws the canvas at an interval to clean up X11 drawing leftovers; egui redraws every frame. Task W10-3 records the decision | W10-3 |
-| `main.c` | `check_refresh` | 2109 | not needed | PROPOSAL: Autorefresh mode (View menu in xfig) redraws the canvas at an interval to clean up X11 drawing leftovers; egui redraws every frame. Task W10-3 records the decision | W10-3 |
+| `main.c` | `set_autorefresh` | 2037 | replaced | Autorefresh mode reloads a figure changed on disk, once a second, asking first with unsaved edits (`ui-egui/src/reload.rs`, S4-9) | S4-9 |
+| `main.c` | `cancel_autorefresh` | 2075 | replaced | Autorefresh mode reloads a figure changed on disk, once a second, asking first with unsaved edits (`ui-egui/src/reload.rs`, S4-9) | S4-9 |
+| `main.c` | `toggle_refresh_mode` | 2092 | replaced | Autorefresh mode entry of the View menu (S4-9) | S4-9 |
+| `main.c` | `check_refresh` | 2109 | replaced | Autorefresh mode reloads a figure changed on disk, once a second, asking first with unsaved edits (`ui-egui/src/reload.rs`, S4-9) | S4-9 |
 | `mode.c` | `reset_modifiedflag` | 268 | ported | `Engine` modified flag (`is_modified`, set by every mutating command) |  |
 | `mode.c` | `set_modifiedflag` | 274 | ported | `Engine` modified flag (`is_modified`, set by every mutating command) |  |
 | `mode.c` | `set_action_on` | 280 | ported | `Engine::tool_busy` (a tool has an action in progress) |  |
@@ -1526,12 +1526,12 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_cursor.c` | `reset_cursor` | 116 | partial | egui cursor icons: default and crosshair only; xfig uses a cursor per mode | S4-4 |
 | `w_cursor.c` | `set_temp_cursor` | 126 | partial | egui cursor icons: default and crosshair only; xfig uses a cursor per mode | S4-4 |
 | `w_cursor.c` | `set_cursor` | 136 | partial | egui cursor icons: default and crosshair only; xfig uses a cursor per mode | S4-4 |
-| `w_digitize.c` | `popup_digitize_panel` | 76 | missing | Digitize panel: tablet input against a scanned figure | D11 |
-| `w_digitize.c` | `create_digitize_panel` | 100 | missing | Digitize panel: tablet input against a scanned figure | D11 |
-| `w_digitize.c` | `digitize_panel_done` | 372 | missing | Digitize panel: tablet input against a scanned figure | D11 |
-| `w_digitize.c` | `digitize_panel_cancel` | 382 | missing | Digitize panel: tablet input against a scanned figure | D11 |
-| `w_digitize.c` | `update_example` | 412 | missing | Digitize panel: tablet input against a scanned figure | D11 |
-| `w_digitize.c` | `switch_file_mode` | 433 | missing | Digitize panel: tablet input against a scanned figure | D11 |
+| `w_digitize.c` | `popup_digitize_panel` | 76 | replaced | Digitize window (`ui-egui/src/digitize.rs`) and `file.digitize`: the points of selected lines saved as numbered files, S4-8 | S4-8 |
+| `w_digitize.c` | `create_digitize_panel` | 100 | replaced | Digitize window (`ui-egui/src/digitize.rs`) and `file.digitize`: the points of selected lines saved as numbered files, S4-8 | S4-8 |
+| `w_digitize.c` | `digitize_panel_done` | 372 | replaced | Digitize window (`ui-egui/src/digitize.rs`) and `file.digitize`: the points of selected lines saved as numbered files, S4-8 | S4-8 |
+| `w_digitize.c` | `digitize_panel_cancel` | 382 | replaced | Digitize window (`ui-egui/src/digitize.rs`) and `file.digitize`: the points of selected lines saved as numbered files, S4-8 | S4-8 |
+| `w_digitize.c` | `update_example` | 412 | replaced | Digitize window (`ui-egui/src/digitize.rs`) and `file.digitize`: the points of selected lines saved as numbered files, S4-8 | S4-8 |
+| `w_digitize.c` | `switch_file_mode` | 433 | replaced | Digitize window (`ui-egui/src/digitize.rs`) and `file.digitize`: the points of selected lines saved as numbered files, S4-8 | S4-8 |
 | `w_dir.c` | `FileSelected` | 144 | replaced | directory and file lists of xfig's own file panel are the native dialogs (`rfd`; decided 2026-10-14); in-app Open panel with preview is W10-12 | W10-12 |
 | `w_dir.c` | `DirSelected` | 178 | replaced | directory and file lists of xfig's own file panel are the native dialogs (`rfd`; decided 2026-10-14); in-app Open panel with preview is W10-12 | W10-12 |
 | `w_dir.c` | `ShowHidden` | 190 | replaced | directory and file lists of xfig's own file panel are the native dialogs (`rfd`; decided 2026-10-14); in-app Open panel with preview is W10-12 | W10-12 |
@@ -1618,7 +1618,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_file.c` | `do_merge` | 260 | replaced | Open, Save As and Merge use the native dialogs; commands `file.open`, `file.save`, `file.merge`, `file.rename` |  |
 | `w_file.c` | `load_request` | 317 | replaced | Open, Save As and Merge use the native dialogs; commands `file.open`, `file.save`, `file.merge`, `file.rename` |  |
 | `w_file.c` | `do_load` | 331 | replaced | Open, Save As and Merge use the native dialogs; commands `file.open`, `file.save`, `file.merge`, `file.rename` |  |
-| `w_file.c` | `new_xfig_request` | 402 | not needed | PROPOSAL: "New xfig..." starts a second xfig process on a chosen file; RustFig has one window per process (window-parity.md records it as low value) |  |
+| `w_file.c` | `new_xfig_request` | 402 | replaced | File > New window starts a second RustFig (`reload::new_window`, S4-9) | S4-9 |
 | `w_file.c` | `save_request` | 454 | replaced | Open, Save As and Merge use the native dialogs; commands `file.open`, `file.save`, `file.merge`, `file.rename` |  |
 | `w_file.c` | `set_curfiledir_from_savepath` | 477 | replaced | Open, Save As and Merge use the native dialogs; commands `file.open`, `file.save`, `file.merge`, `file.rename` |  |
 | `w_file.c` | `do_save` | 525 | replaced | Open, Save As and Merge use the native dialogs; commands `file.open`, `file.save`, `file.merge`, `file.rename` |  |
@@ -2230,7 +2230,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `xfigmain.c` | `set_xpm_icon` | 1901 | replaced | as main.c: window icon from `app_icon.rs` |  |
 | `xfigmain.c` | `resize_canvas` | 1959 | not needed | as main.c: canvas size follows the egui layout |  |
 | `xfigmain.c` | `get_pointer_mapping` | 2012 | replaced | as main.c: mouse button mapping: `MouseScheme` and the left+right = middle chord (`input.rs`, W11-1) |  |
-| `xfigmain.c` | `set_autorefresh` | 2037 | not needed | as main.c: PROPOSAL: Autorefresh mode (View menu in xfig) redraws the canvas at an interval to clean up X11 drawing leftovers; egui redraws every frame. Task W10-3 records the decision | W10-3 |
-| `xfigmain.c` | `cancel_autorefresh` | 2075 | not needed | as main.c: PROPOSAL: Autorefresh mode (View menu in xfig) redraws the canvas at an interval to clean up X11 drawing leftovers; egui redraws every frame. Task W10-3 records the decision | W10-3 |
-| `xfigmain.c` | `toggle_refresh_mode` | 2092 | not needed | as main.c: PROPOSAL: Autorefresh mode (View menu in xfig) redraws the canvas at an interval to clean up X11 drawing leftovers; egui redraws every frame. Task W10-3 records the decision | W10-3 |
-| `xfigmain.c` | `check_refresh` | 2109 | not needed | as main.c: PROPOSAL: Autorefresh mode (View menu in xfig) redraws the canvas at an interval to clean up X11 drawing leftovers; egui redraws every frame. Task W10-3 records the decision | W10-3 |
+| `xfigmain.c` | `set_autorefresh` | 2037 | replaced | Autorefresh mode reloads a figure changed on disk, once a second, asking first with unsaved edits (`ui-egui/src/reload.rs`, S4-9) | S4-9 |
+| `xfigmain.c` | `cancel_autorefresh` | 2075 | replaced | Autorefresh mode reloads a figure changed on disk, once a second, asking first with unsaved edits (`ui-egui/src/reload.rs`, S4-9) | S4-9 |
+| `xfigmain.c` | `toggle_refresh_mode` | 2092 | replaced | Autorefresh mode entry of the View menu (S4-9) | S4-9 |
+| `xfigmain.c` | `check_refresh` | 2109 | replaced | Autorefresh mode reloads a figure changed on disk, once a second, asking first with unsaved edits (`ui-egui/src/reload.rs`, S4-9) | S4-9 |

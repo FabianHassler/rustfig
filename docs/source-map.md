@@ -108,7 +108,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `f_save.c` | 665 | Fig 3.2 writer (type order) | `format/fig_write` | ported: type order, header, arrows, comments; `.bak` on save (`write_bak`) | — |
 | `f_load.c` | 384 | load, merge | `cmd/file` | ported (S4) | — |
 | `f_util.c` | 1291 | directories, image colours, `~/.xfigrc` | — | partial: `~/.xfigrc` replaced by TOML (E1); `xfig -update`, dimension-line parts missing; image colormap code not needed (S4) | S3, D10 |
-| `f_picobj.c` | 970 | picture loading and caching | `engine/import` | replaced by fig2dev `readpics`; relative picture names not rewritten on Save As (S4) | S4-3 |
+| `f_picobj.c` | 970 | picture loading and caching | `engine/import` | replaced by fig2dev `readpics`; relative picture names rewritten on Save As (S4-3 done) | S4-3 |
 | `f_readeps.c` | 343 | EPS/PDF pictures (bounding box, ghostscript preview) | `fig2dev:crates/fig2dev/src/scene/eps.rs` (EPS pictures embedded in EPS output), `util/{pdfpic,pdfps,gs}.rs` (PDF pictures through hayro; ghostscript for EPS in PDF/bitmaps, optional); canvas: `engine/src/import.rs` renders PDF pages and EPS through gs or the preview | ported (B15) | B15 |
 | `f_readgif.c`, `f_readjpg.c`, `f_readpng.c`, `f_readppm.c`, `f_readtif.c` | 1.6 k | bitmap pictures | `image` crate | modern | — |
 | `f_readpcx.c`, `f_readxbm.c`, `f_readxpm.c` | 790 | PCX, XBM, XPM pictures | fig2dev `util/readpics` (DD5) | replaced (S4) | — |
@@ -171,7 +171,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_fontpanel.c` | 424 | font menus | `attributes` Text Font panel | replaced by the Text Font pop-up (S4) | E11 |
 | `w_help.c` | 219 | Help menu | menus | partial: reference/how-to entries (S4) | W10-2 |
 | `w_capture.c` | 676 | screen capture into a picture | — | missing (through the OS screenshot facilities) | D11 |
-| `w_digitize.c` | 471 | digitising tablet | — | missing | D11 |
+| `w_digitize.c` | 471 | digitising tablet | `ui-egui/src/digitize.rs`, `engine/cmd/digitize.rs` | replaced: exports the points of lines as numbered files (S4-8); tablet input not planned | S4-8 |
 | `w_drawprim.c`, `w_fontbits.c`, `w_rottext.c`, `w_i18n.c` | 4.6 k | X drawing primitives, bitmap fonts, rotated X text, X input methods | renderer, `figbase/text` (via `text`) | n/a | — |
 | `w_setup.c`, `w_util.c` | 2.1 k | X widget plumbing | — | n/a | — |
 | `main.c`, `xfigmain.c`, `resources.c`, `mode.c`, `object.c` | 5.1 k | command-line options, resources, mode state | `apps/rustfig`, `Indicator` | partial: options and resources | S3 |

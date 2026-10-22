@@ -1,6 +1,6 @@
 # UI parity checklist
 
-**Status:** 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: live edit panel, compound panel, point table, pictorial menus); 2026-10-22 (W10-16, W10-20: picture edit panel); 2026-10-22 (D5: measure modes); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: Tangent mode and its length button). ✅ done · 🟡 partial · ❌ missing
+**Status:** 2026-10-22 (S4-3, S4-8, S4-9: Digitize, New window, Autorefresh); 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: live edit panel, compound panel, point table, pictorial menus); 2026-10-22 (W10-16, W10-20: picture edit panel); 2026-10-22 (D5: measure modes); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: Tangent mode and its length button). ✅ done · 🟡 partial · ❌ missing
 
 ## Drawing modes
 | xfig mode | RustFig | |
@@ -49,6 +49,9 @@ The window-by-window comparison with the real xfig (what each window offers and 
 |---|---|---|
 | File: New/Open/Merge/Save/Save As/Export/Exit | ✅ | ✅ |
 | File: Print | — | ❌ |
+| File: Digitize... (Alt+Z): prefix, starting number, suffix, new file or append; RustFig saves the points of the selected lines, optionally calibrated (S4-8) | ✅ | ✅ |
+| File: New window... (xfig's New xfig, native only; S4-9) | ✅ | ✅ |
+| View: Autorefresh mode (reloads a file changed on disk, asks with unsaved edits; native only; S4-9) | ✅ | ✅ |
 | Edit: Undo (multi-level), Paste, Delete All, Search/Replace | ✅ | ✅ |
 | Edit: Spell check, Global settings | — | ❌ |
 | View: zoom, fit, pan to origin, page border, portrait/landscape | ✅ | ✅ |
@@ -114,6 +117,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 ## Revision history
 | Date | Note |
 |---|---|
+| 2026-10-22 | S4-3, S4-8, S4-9: Digitize window, New window, Autorefresh mode; relative picture names follow Save As. |
 | 2026-10-22 | S3: every option of `xfig.man.in` accepted (table above): per-run overrides of the preferences, abbreviations as in Xt, X toolkit options mapped or ignored with a note, `-update`, `-geometry`, `~/.Xdefaults` resources. |
 | 2026-10-22 | W10-28, W10-2: Help > RustFig Manual opens the bundled manual window (topic list, search, rendered page); Help letter `x` opens it, `c` the command list. |
 | 2026-10-22 | D14: the Smart Links button also on Move point, Scale, Flip, Rotate and Align. |

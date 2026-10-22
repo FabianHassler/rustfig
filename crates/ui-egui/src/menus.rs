@@ -4,7 +4,7 @@
 // app-defaults/Fig (`Fig*accelerators`) and src/w_modepanel.c (mode keys)
 // (xfig licence, see LICENSE-xfig).
 
-use crate::{dialogs, App, Pending};
+use crate::{dialogs, reload, App, Pending};
 use rustfig_engine::{cmd, Key, ToolEvent};
 use serde_json::{json, Value};
 
@@ -132,6 +132,24 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}  — xfig's tooltips (Alt+Y, macOS Option+Y)",
     },
     UiCommand {
+        id: "app.digitize",
+        label: "Digitize...",
+        shortcut: "",
+        params: "{}  - xfig's Digitize (Alt+Z): save the points of the selected polylines and splines as numbered files (file.digitize)",
+    },
+    UiCommand {
+        id: "app.toggle_autorefresh",
+        label: "Autorefresh mode",
+        shortcut: "",
+        params: "{\"on\"?: bool}  - reload the figure when its file changes on disk (asks first with unsaved edits); native only",
+    },
+    UiCommand {
+        id: "app.new_window",
+        label: "New window...",
+        shortcut: "",
+        params: "{\"path\"?: string}  - xfig's New xfig: start a second RustFig (with the file); native only",
+    },
+    UiCommand {
         id: "app.keyboard_entry",
         label: "Enter point…",
         shortcut: "Ctrl+K",
@@ -243,6 +261,20 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         }
         "app.toggle_depths" => app.show_depths = !app.show_depths,
         "app.toggle_balloons" => app.show_balloons = !app.show_balloons,
+        "app.digitize" => app.digitize.open = true,
+        "app.toggle_autorefresh" => {
+            let on = p.get("on").and_then(Value::as_bool).unwrap_or(!app.reload.on);
+            app.reload.set(on);
+            app.info(if on {
+                "Autorefresh mode ON"
+            } else {
+                "Autorefresh mode OFF"
+            });
+        }
+        "app.new_window" => {
+            let file = p.get("path").and_then(Value::as_str);
+            reload::new_window(file)?;
+        }
         "app.button_style" => {
             app.button_3d = match p.get("style").and_then(Value::as_str) {
                 Some("3d") => true,
@@ -305,11 +337,12 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("New", "app.new"),
                 Cmd("Open...", "app.open"),
                 Cmd("Merge...", "app.merge"),
-                Missing("Digitize...", "Alt+Z", "—"),
+                Cmd("Digitize...", "app.digitize"),
                 Cmd("Save", "app.save"),
                 Cmd("Save As...", "app.save_as"),
                 Cmd("Export...", "app.export"),
                 Own("app.import_picture"),
+                Own("app.new_window"),
                 Missing("Print...", "Alt+P", "B5"),
                 Cmd("Exit", "app.quit"),
             ],
@@ -357,7 +390,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Show info balloons", "app.toggle_balloons"),
                 Cmd("Show line lengths", "view.toggle_lengths"),
                 Missing("Show vertex numbers", "", "—"),
-                Missing("Autorefresh mode", "", "—"),
+                Cmd("Autorefresh mode", "app.toggle_autorefresh"),
                 Own("view.toggle_grid"),
                 Own("depth.show_all"),
             ],
@@ -419,7 +452,7 @@ pub const XFIG_MENU_LETTERS: &[(&str, char, &str)] = &[
     ("File", 'n', "app.new"),
     ("File", 'o', "app.open"),
     ("File", 'm', "app.merge"),
-    ("File", 'd', "Digitize..."),
+    ("File", 'd', "app.digitize"),
     ("File", 's', "app.save"),
     ("File", 'a', "app.save_as"),
     ("File", 'e', "app.export"),
@@ -446,7 +479,7 @@ pub const XFIG_MENU_LETTERS: &[(&str, char, &str)] = &[
     ("View", 'n', "app.toggle_balloons"),
     ("View", 'b', "view.toggle_page_border"),
     ("View", 'l', "view.toggle_lengths"),
-    ("View", 'a', "Autorefresh mode"),
+    ("View", 'a', "app.toggle_autorefresh"),
     ("Help", 'x', "help.open"),
     ("Help", 'c', "app.commands"),
     ("Help", 'a', "app.about"),
@@ -575,6 +608,7 @@ fn checked(app: &App, id: &str) -> Option<bool> {
         "view.toggle_page_border" => Some(app.engine.show_page_border),
         "app.toggle_depths" => Some(app.show_depths),
         "app.toggle_balloons" => Some(app.show_balloons),
+        "app.toggle_autorefresh" => Some(app.reload.on),
         "view.toggle_grid" => Some(app.engine.indicator.grid.is_some()),
         "view.toggle_lengths" => Some(app.engine.show_lengths),
         "app.toggle_xfig_keys" => Some(app.xfig_keys),
@@ -800,6 +834,7 @@ pub const XFIG_KEYS: &[(&str, &str)] = &[
     ("Alt+N", "app.new"),
     ("Alt+O", "app.open"),
     ("Alt+M", "app.merge"),
+    ("Alt+Z", "app.digitize"),
     ("Alt+S", "app.save"),
     ("Alt+A", "app.save_as"),
     ("Alt+X", "app.export"),

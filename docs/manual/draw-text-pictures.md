@@ -19,6 +19,8 @@ No key (xfig key Ctrl+P). Places an image file in a box.
 - Middle, “center point”: draw the box from its centre (Shift+middle: a square).
 - Right, “keep aspect”: draw the box with the right button (click and click again, or drag); the picture then keeps its proportions.
 
+The file name is stored as typed. A relative name is read from the figure's folder, and **Save As** into another folder rewrites relative names so the pictures are still found ([Files](files.md)).
+
 ### The picture panel
 
 After the box is drawn and the file chosen, xfig's Edit panel for a picture opens; Edit mode (or Edit attributes) on a picture opens the same panel. Its rows:

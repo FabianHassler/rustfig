@@ -162,6 +162,9 @@ pub fn apply_ui(app: &mut App) {
     if let Some(b) = p.bool("showdepthmanager") {
         app.show_depths = b;
     }
+    if let Some(b) = p.bool("autorefresh") {
+        app.reload.set(b);
+    }
     if let Some(l) = p.str("exportLanguage") {
         match rustfig_engine::fig2dev::languages::language(&l)
             .filter(|l| rustfig_engine::fig2dev::language_available(l))
@@ -207,6 +210,7 @@ pub fn collect_ui(app: &mut App) {
         ("showballoons", balloons),
         ("showdepthmanager", depths),
         ("showpageborder", border),
+        ("autorefresh", app.reload.on),
     ] {
         if p.bool(name) != Some(v) && p.set(name, toml_bool(v)).is_ok() {
             changed = true;

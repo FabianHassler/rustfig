@@ -46,7 +46,7 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/engine/src/cmd/chop.rs: xfig src/e_chop.c, src/w_intersect.c
 - crates/engine/src/cmd/compound.rs: xfig src/e_compound.c
 - crates/engine/src/cmd/dimline.rs: xfig src/d_line.c, src/e_scale.c
-- crates/engine/src/cmd/file.rs: xfig src/u_print.c
+- crates/engine/src/cmd/file.rs: xfig src/u_print.c, src/f_picobj.c (relative picture names)
 - crates/engine/src/cmd/joinsplit.rs: xfig src/e_joinsplit.c
 - crates/engine/src/cmd/measure.rs: xfig src/e_measure.c, src/u_geom.c, src/w_msgpanel.c
 - crates/engine/src/cmd/picture.rs: xfig src/e_edit.c (picture panel)
@@ -79,6 +79,9 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/ui-egui/src/mode_icons.rs: xfig src/w_icons.c (traced mode icons)
 - crates/ui-egui/src/panels.rs: xfig src/w_modepanel.c, src/w_mousefun.c, src/w_layers.c, src/w_snap.c, src/w_icons.c
 - crates/ui-egui/src/point_entry.rs: xfig src/w_keyboard.c
+- crates/ui-egui/src/digitize.rs: xfig src/w_digitize.c
+- crates/ui-egui/src/reload.rs: xfig src/main.c (autorefresh), src/w_file.c (new_xfig_request)
+- crates/engine/src/cmd/digitize.rs: xfig src/w_digitize.c
 - crates/ui-egui/src/rulers.rs: xfig src/w_rulers.c, src/u_pan.c
 - crates/ui-egui/src/vector_icons.rs: xfig src/w_icons.c (compositions of the attribute pictures)
 - crates/ui-egui/src/xfig_icons.rs: xfig src/w_icons.c, src/w_indpanel.c (bitmaps copied verbatim)

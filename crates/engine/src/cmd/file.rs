@@ -1,6 +1,7 @@
 //! File commands: new, open, merge, save, export.
 //
-// Ported from xfig src/u_print.c (the fig2dev options an export passes)
+// Ported from xfig src/u_print.c (the fig2dev options an export passes) and
+// src/f_picobj.c (relative picture names)
 // (xfig licence, see LICENSE-xfig).
 
 use super::{always, has_objects, num_or, opt_bool, opt_num, opt_str, string, CmdResult, Command};
@@ -401,7 +402,23 @@ fn save(e: &mut Engine, p: &Value) -> CmdResult {
             .ok_or_else(|| EngineError::bad_params("no file name: give a \"path\""))?,
     };
     let format = FileFormat::from_path(&path).unwrap_or(FileFormat::Fig);
-    let text = rustfig_format::write(&*scope_doc(e, p)?, format).map_err(|err| EngineError::format(err.to_string()))?;
+    // xfig's relative_path: saving into another folder keeps relative
+    // picture names pointing at the same files.
+    let old_dir = doc_dir(e);
+    let new_dir = Path::new(&path).parent().map(Path::to_path_buf);
+    let rebase = match (&old_dir, &new_dir) {
+        (Some(o), Some(n)) => rebase_fn(o, n),
+        _ => None,
+    };
+    let text = match &rebase {
+        Some(f) => {
+            let mut doc = scope_doc(e, p)?.into_owned();
+            rebase_pictures_doc(&mut doc, f);
+            rustfig_format::write(&doc, format)
+        }
+        None => rustfig_format::write(&*scope_doc(e, p)?, format),
+    }
+    .map_err(|err| EngineError::format(err.to_string()))?;
     // xfig's write_bak (w_file.c renamefile): the file saved over is kept
     // as NAME.bak. A copy, so a failing write leaves the original in place.
     let backup_error = if e.prefs.bool("write_bak").unwrap_or(true) {
@@ -410,6 +427,11 @@ fn save(e: &mut Engine, p: &Value) -> CmdResult {
         None
     };
     write_atomic(&path, text.as_bytes())?;
+    if let Some(f) = &rebase {
+        if !part {
+            rebase_pictures_doc(e.doc_mut(), f);
+        }
+    }
     e.set_path(Some(path.clone()));
     e.set_modified(false);
     e.prefs.add_recent(&path);
@@ -428,6 +450,97 @@ fn save(e: &mut Engine, p: &Value) -> CmdResult {
         result["backup_error"] = json!(error);
     }
     Ok(result)
+}
+
+type Rebase = Box<dyn Fn(&str) -> String>;
+
+/// A function giving the picture name to write for a relative `name` when
+/// the figure moves from folder `old` to folder `new`; `None` when the
+/// folders are the same or cannot be made absolute (xfig `relative_path`,
+/// `xf_relpath`; absolute names stay).
+fn rebase_fn(old: &Path, new: &Path) -> Option<Rebase> {
+    use std::ffi::OsString;
+    use std::path::Component;
+    let cwd = std::env::current_dir().ok();
+    let abs = |p: &Path| -> Option<Vec<OsString>> {
+        let full = if p.is_absolute() {
+            p.to_path_buf()
+        } else {
+            cwd.as_ref()?.join(p)
+        };
+        let mut out: Vec<OsString> = Vec::new();
+        for c in full.components() {
+            match c {
+                Component::ParentDir => {
+                    if out.len() > 1 {
+                        out.pop();
+                    }
+                }
+                Component::CurDir => {}
+                other => out.push(other.as_os_str().to_os_string()),
+            }
+        }
+        Some(out)
+    };
+    let (o, n) = (abs(old)?, abs(new)?);
+    if o == n {
+        return None;
+    }
+    Some(Box::new(move |name: &str| {
+        let f = Path::new(name);
+        if f.is_absolute() || name.is_empty() {
+            return name.to_string();
+        }
+        let mut target: Vec<OsString> = o.clone();
+        for c in f.components() {
+            match c {
+                Component::ParentDir => {
+                    if target.len() > 1 {
+                        target.pop();
+                    }
+                }
+                Component::CurDir => {}
+                other => target.push(other.as_os_str().to_os_string()),
+            }
+        }
+        let common = o_common(&target, &n);
+        let mut rel = std::path::PathBuf::new();
+        for _ in common..n.len() {
+            rel.push("..");
+        }
+        for c in target.iter().skip(common) {
+            rel.push(c);
+        }
+        rel.to_string_lossy().into_owned()
+    }))
+}
+
+fn o_common(a: &[std::ffi::OsString], b: &[std::ffi::OsString]) -> usize {
+    a.iter().zip(b).take_while(|(x, y)| x == y).count()
+}
+
+fn rebase_pictures(objects: &mut [rustfig_model::Object], f: &dyn Fn(&str) -> String) {
+    for o in objects {
+        match &mut o.kind {
+            ObjectKind::Polyline(l) => {
+                if let Some(pic) = l.picture.as_mut() {
+                    pic.file = f(&pic.file);
+                }
+            }
+            ObjectKind::Compound(c) => rebase_pictures(&mut c.objects, f),
+            _ => {}
+        }
+    }
+}
+
+fn rebase_pictures_doc(doc: &mut rustfig_model::Document, f: &dyn Fn(&str) -> String) {
+    for arc in &mut doc.objects {
+        let mut probe = (**arc).clone();
+        rebase_pictures(std::slice::from_mut(&mut probe), f);
+        if probe != **arc {
+            *arc = std::sync::Arc::new(probe);
+        }
+    }
 }
 
 /// Keep the file at `path`, if there is one, as `path.bak` (xfig's

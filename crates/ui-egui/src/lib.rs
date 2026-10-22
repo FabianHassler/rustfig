@@ -15,6 +15,7 @@ pub mod clipboard;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod control;
 pub mod dialogs;
+pub mod digitize;
 pub mod dimline_panel;
 pub mod help;
 pub mod inject;
@@ -24,6 +25,7 @@ pub mod mode_icons;
 pub mod panels;
 pub mod platform;
 pub mod point_entry;
+pub mod reload;
 pub mod rulers;
 pub mod settings;
 pub mod theme;
@@ -113,6 +115,10 @@ pub struct App {
     /// The override set during the previous frame, shown in this one.
     pub hint_shown: Option<(&'static str, &'static str, &'static str)>,
     pub pending: Option<Pending>,
+    /// The Digitize window (S4-8).
+    pub digitize: digitize::Digitize,
+    /// Autorefresh mode and the changed-on-disk question (S4-9).
+    pub reload: reload::Reload,
     /// The action (quit, new, open) that resumes once the Save All / Save
     /// Part query of an open compound has saved the figure.
     pub after_save: Option<Pending>,
@@ -162,6 +168,8 @@ impl App {
             xfig_keys: true,
             open_menu: None,
             pending: None,
+            digitize: digitize::Digitize::default(),
+            reload: reload::Reload::default(),
             after_save: None,
             file_dialogs: Box::new(dialogs::NativeDialogs),
             quit_confirmed: false,
@@ -446,6 +454,9 @@ impl App {
             .frame(egui::Frame::NONE)
             .show(ctx, |ui| canvas::show(self, ui, &tokens));
         dialogs::show(self, ctx);
+        digitize::show(self, ctx);
+        reload::tick(self, ctx);
+        reload::ask(self, ctx);
         panels::mode_popup(self, ctx, &tokens);
         panels::close_compound_popup(self, ctx);
         self.handle_requests();
