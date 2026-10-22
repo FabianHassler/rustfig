@@ -9,6 +9,8 @@
 mod anglegeom;
 pub mod cmd;
 pub mod cmdline;
+pub mod coords;
+pub mod dimline;
 mod error;
 pub mod fig2dev;
 pub mod guard;
@@ -92,6 +94,9 @@ pub struct Engine {
     snap_click: Option<Point>,
     tool: ToolKind,
     tool_state: tools::ToolState,
+    /// Rotate's centre or Flip's anchor set with the right button (xfig's
+    /// `setcenter` / `setanchor`).
+    set_point: Option<Point>,
     clipboard: Vec<Object>,
     /// The system clipboard for "Copy as picture" (E14), when the front end has one.
     picture_clipboard: Option<Box<dyn picture::PictureClipboard>>,
@@ -111,6 +116,8 @@ pub struct Engine {
     /// they aren't drawn ("Blank").
     pub gray_hidden_depths: bool,
     pub show_page_border: bool,
+    /// Show Lengths: the dx / dy triangle of the segment being drawn.
+    pub show_lengths: bool,
     requests: Vec<UiRequest>,
     status: String,
     /// Set by [`Engine::doc_mut`] while a command runs.
@@ -145,6 +152,7 @@ impl Engine {
             snap_click: None,
             tool: ToolKind::None,
             tool_state: tools::ToolState::Idle,
+            set_point: None,
             clipboard: Vec::new(),
             picture_clipboard: None,
             path: None,
@@ -156,6 +164,7 @@ impl Engine {
             prefs_dirty: false,
             gray_hidden_depths: true,
             show_page_border: true,
+            show_lengths: false,
             requests: Vec::new(),
             status: "READY. Select a mode or load a file".to_string(),
             changed: false,
@@ -634,6 +643,14 @@ impl Engine {
             .iter()
             .filter(|(o, ..)| sel.contains(&o.id))
             .fold(Rect::EMPTY, |r, (_, _, b)| r.union(&b.get().unwrap_or(Rect::EMPTY)))
+    }
+
+    /// A point typed exactly (`tool.point`): the next press there is not
+    /// snapped or constrained.
+    pub(crate) fn add_exact_point(&mut self, p: Point) {
+        if self.exact_points.len() < 256 {
+            self.exact_points.push(p);
+        }
     }
 
     /// Snap a point according to the positioning mode.

@@ -45,17 +45,21 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/engine/src/anglegeom.rs: xfig src/u_elastic.c, src/u_geom.c, src/w_indpanel.c
 - crates/engine/src/cmd/chop.rs: xfig src/e_chop.c, src/w_intersect.c
 - crates/engine/src/cmd/compound.rs: xfig src/e_compound.c
+- crates/engine/src/cmd/dimline.rs: xfig src/d_line.c, src/e_scale.c
 - crates/engine/src/cmd/file.rs: xfig src/u_print.c
 - crates/engine/src/cmd/joinsplit.rs: xfig src/e_joinsplit.c
 - crates/engine/src/cmd/measure.rs: xfig src/e_measure.c, src/u_geom.c, src/w_msgpanel.c
 - crates/engine/src/cmd/picture.rs: xfig src/e_edit.c (picture panel)
 - crates/engine/src/cmd/tangent.rs: xfig src/e_tangent.c, src/u_smartsearch.c, src/u_geom.c
+- crates/engine/src/coords.rs: xfig src/w_keyboard.c
+- crates/engine/src/dimline.rs: xfig src/d_line.c, src/u_create.c, src/e_scale.c, src/f_util.c, src/w_msgpanel.c
 - crates/engine/src/links.rs: xfig src/u_list.c, src/u_elastic.c
 - crates/engine/src/cmdline.rs: xfig src/main.c (option table, help list, option parsing), doc/xfig.man.in (options)
 - crates/engine/src/prefs.rs:xfig src/main.c (resources, options), doc/xfig.man.in (resource table)
 - crates/engine/src/snap.rs: xfig src/w_snap.c, src/w_intersect.c
 - crates/engine/src/tools/chop.rs: xfig src/e_chop.c
 - crates/engine/src/tools/compound.rs: xfig src/e_compound.c, src/e_joinsplit.c
+- crates/engine/src/tools/lengths.rs: xfig src/w_msgpanel.c
 - crates/engine/src/tools/markers.rs: xfig src/u_markers.c, src/w_modepanel.c, src/object.h
 - crates/engine/src/tools/mod.rs: xfig src/w_modepanel.c, src/d_*.c, src/e_*.c, src/w_canvas.c
 - crates/engine/src/tools/measure.rs: xfig src/e_measure.c, src/u_search.c

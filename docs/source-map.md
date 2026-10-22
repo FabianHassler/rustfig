@@ -65,7 +65,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `d_arcbox.c` | 132 | rounded box | `engine/tools` (ArcBox) | ported (S4) | — |
 | `d_box.c` | 133 | box | `engine/tools` (Box) | ported (S4) | — |
 | `d_ellipse.c` | 345 | circles/ellipses by radius or diameter | `engine/tools` | ported (S4) | — |
-| `d_line.c` | 318 | polylines, polygons, freehand, dimension lines | `engine/tools` | partial: dimension lines missing; latex/manhattan/mountain constraints ported (D7) | D10 |
+| `d_line.c` | 318 | polylines, polygons, freehand, dimension lines | `engine/tools` | partial: dimension lines ported (D10, `dimline.rs`); latex/manhattan/mountain constraints ported (D7) | D10 |
 | `d_picobj.c` | 136 | picture box | `engine/tools` (Picture) | ported (S4) | — |
 | `d_regpoly.c` | 149 | regular polygon | `engine/tools` | ported (S4) | — |
 | `d_spline.c` | 195 | splines | `engine/tools` | ported (S4) | — |
@@ -77,25 +77,25 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | File | Lines | What it does | RustFig | Status | Task |
 |---|---:|---|---|---|---|
 | `e_addpt.c` | 368 | add point | `engine/tools` | ported (S4) | — |
-| `e_align.c` | 962 | align compound / canvas, distribute | `cmd/arrange`, tools | partial: align to canvas, distribute choices in the mode (S4) | D10, W10-33 |
+| `e_align.c` | 962 | align compound / canvas, distribute | `cmd/arrange`, tools | partial: align to canvas ported (D10); distribute choices in the mode (S4) | D10, W10-33 |
 | `e_arrow.c` | 293 | add/remove arrowheads | tools, `cmd/object` | ported (S4) | — |
 | `e_break.c` | 92 | break compound (and tag) | tools | ported (S4) | — |
 | `e_chop.c` | 890 | chop objects at intersections | `cmd/chop.rs`, `tools/chop.rs`, extended by `cmd/outline.rs`, `cmd/chop_ext.rs` (D15) | ported (S4) | D3, D15 |
 | `e_compound.c` | 294 | open/close compound | `model::Document::open_compound`, `cmd/compound.rs`, `tools/compound.rs`, `panels::close_compound_popup` | ported (dimension-line recomputation on close: D10) | D1 |
 | `e_convert.c` | 420 | line↔spline, box↔arc-box | `cmd/object` | partial: box ↔ arc-box (S4) | S4-5 |
-| `e_copy.c` | 185 | copy, array copy, copy to cut buffer | tools | partial: array copy (S4) | D10 |
+| `e_copy.c` | 185 | copy, array copy, copy to cut buffer | tools | ported: array copy (D10) | D10 |
 | `e_delete.c` | 307 | delete object/region, cut buffer | tools | ported (S4) | — |
 | `e_deletept.c` | 214 | delete point | tools | ported (S4) | — |
 | `e_edit.c` | 5996 | the Edit panel for every object type, figure comments, spline point shapes | `ui-egui/dialogs` | partial: compound and picture rows, point table, shape factor on the canvas, live panel (S4) | W10-15, W10-16 (done), W10-19, S4-6 |
-| `e_flip.c` | 452 | flip, copy & flip, anchor | tools, `cmd/transform` | partial: anchor (S4) | D10 |
+| `e_flip.c` | 452 | flip, copy & flip, anchor | tools, `cmd/transform` | ported: anchor (D10) | D10 |
 | `e_glue.c` | 521 | tag and glue compounds | tools | ported (S4) | — |
 | `e_joinsplit.c` | 714 | join/split lines and splines | `cmd/joinsplit.rs`, `tools/compound.rs` | ported | D2 |
 | `e_measure.c` | 514 | measure angle, length, area | `cmd/measure.rs`, `tools/measure.rs` | ported (S4) | D5 |
 | `e_move.c` | 135 | move (constrained) | tools | ported (S4) | — |
 | `e_movept.c` | 845 | move point (constrained, linked) | tools | ported; xfig does not link here, a box corner resizes the attached ends in RustFig (D14) | D14 |
 | `e_placelib.c` | 337 | place library object | — | missing (11 functions, S4) | D6 |
-| `e_rotate.c` | 575 | rotate, copy & rotate, anchor, copies count | tools | partial: anchor, number of copies (S4) | D10 |
-| `e_scale.c` | 1444 | scale box/edge/centre | tools | partial: edge scaling in one dimension, dimension lines (S4) | D10 |
+| `e_rotate.c` | 575 | rotate, copy & rotate, anchor, copies count | tools | ported: centre, number of copies (D10); the Num Copies button missing | D10 |
+| `e_scale.c` | 1444 | scale box/edge/centre | tools | ported: edge scaling in one dimension, dimension lines (D10) | D10 |
 | `e_tangent.c` | 159 | tangent/normal lines | `cmd/tangent.rs`, `tools/tangent.rs`; curve search from `u_smartsearch.c`, `u_geom.c` | ported (S4) | D4 |
 | `e_update.c` | 827 | update object / settings, update mask | tools, `indicator.take_from` | ported: update flags (`UpdateFlag`, `Indicator::update_object`, `take_from`) | W10-1 |
 
@@ -126,7 +126,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `u_geom.c` | 1072 | normals, slopes, latex/manhattan endpoints, closeness | `geom` | partial: lengths, areas and angles ported to `cmd/measure.rs`; `get_slope`, `latex_endpoint` and the slope tables ported to `engine/anglegeom.rs` (D7) | D5 |
 | `u_quartic.c` | 298 | quartic solver (intersections) | `snap.rs` (flattened outlines) | modern | — |
 | `u_elastic.c` | 1004 | rubber-band feedback while drawing | `Engine::overlay` | replaced by `Engine::overlay`; latex/manhattan/mountain constraints ported to `engine/anglegeom.rs` (D7); smart-link rubber bands done (D8; every follower, box-corner and scale previews D14) | |
-| `u_drag.c` | 861 | dragging objects | tools, overlay | ported; array placement missing (S4) | D10 |
+| `u_drag.c` | 861 | dragging objects | tools, overlay | ported, with array placement (D10) | D10 |
 | `u_markers.c` | 462 | object markers, tag highlight | `engine/tools/markers.rs` (masks, markers), `ui-egui/canvas` | ported (W12); highlight of the found object missing (S4) | S4-1 |
 | `u_list.c` | 1358 | object lists, depth bookkeeping, linked move | `model::Document`, `engine/links.rs` | replaced by `model::Document`; smart-link bookkeeping (`get_links`, `adjust_links`) ported to `engine/links.rs` (S4); extended to every shape and operation, copy with links (D14) | — |
 | `u_create.c`, `u_free.c` | 1.4 k | allocation | — | n/a | — |
@@ -152,11 +152,11 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_icons.c` | 3270 | mode and attribute icon bitmaps | `ui-egui/xfig_icons.rs` (verbatim), used by `panels::mode_panel` and `attributes` | ported: mode icons and the attribute pictures (line, join, cap, arrow mode and type, arc type, justification, grid, positioning, alignment) | — |
 | `w_indpanel.c` | 4865 | attribute (indicator) panel, choice panels | `ui-egui/attributes` | ported: buttons, order, per-mode masks, choice panels, Update Control, Smart Links; Angle Geom; missing: copy counts, dimension line, tangent length, colour editor, Arrow Size panel (function by function in `source-audit.md`) | D10, D4, E4, W10-31 |
 | `w_mousefun.c` | 432 | mouse-function indicator | `panels::mouse_indicator`, `Engine::mouse_hints` | ported; Shift/Ctrl variants missing (S4) | S4-7 |
-| `w_msgpanel.c` | 881 | message panel, lengths while drawing | `panels::message_panel` | partial: lengths and measure results while drawing (S4) | D10, D5 |
+| `w_msgpanel.c` | 881 | message panel, lengths while drawing | `panels::message_panel` | partial: lengths while drawing (D10, `tools/lengths.rs`); measure results (S4) | D10, D5 |
 | `w_layers.c` | 903 | depth panel | `panels::depth_panel` | ported (S4) | — |
 | `w_rulers.c` | 1479 | rulers and units box | `ui-egui/rulers`, `view.set_scale` | ported: tick tables, labels, marker, ruler buttons, units box, Unit menu | — |
 | `w_snap.c`, `w_intersect.c` | 2.8 k | Snap menu (object snaps); intersections for Chop | `engine/snap.rs`, `snap.*` commands, `geom/intersect.rs` | ported (curves on flattened outlines instead of the quartic solver) | — |
-| `w_keyboard.c` | 518 | type coordinates for the next point | — | missing (7 functions, S4) | D10 |
+| `w_keyboard.c` | 518 | type coordinates for the next point | — | partial: `tool.point` and `coords.rs` ported (D10); the entry box and history missing | D10 |
 | `w_zoom.c` | 202 | zoom panel | `cmd/view` | missing: zoom box, unzoom semantics (S4) | E3, D11 |
 | `w_grid.c` | 238 | grid drawing | canvas | ported (S4) | — |
 | `w_canvas.c` | 1218 | canvas input, key bindings, compose key | `ui-egui/canvas`, `menus::pan_keys`, `menus::Compose`, `rustfig_text::compose` (CompKeyDB) | own; partial: Ctrl+click zoom, shape factor on the canvas, crosshair (S4) | E3, S4-6, E9 |

@@ -18,6 +18,7 @@ pub use markers::{mode_mask, object_markers, ObjMask};
 
 use crate::cmd::shape::make_ellipse;
 use crate::{Engine, EngineError, UiRequest};
+mod lengths;
 use rustfig_geom::{dist_to_segment, regular_polygon, Affine, Point, Rect};
 use rustfig_model::{Arc, EllipseKind, Justify, Object, ObjectId, ObjectKind, PolyKind, Polyline, Spline, SplineKind};
 use serde_json::json;
@@ -235,6 +236,14 @@ impl ToolKind {
         }
     }
 
+    /// Whether the right button sets a centre (Rotate) or anchor (Flip).
+    pub fn uses_set_point(self) -> bool {
+        matches!(
+            self,
+            ToolKind::FlipV | ToolKind::FlipH | ToolKind::RotateCcw | ToolKind::RotateCw
+        )
+    }
+
     /// Single-key accelerators: xfig's mode keys (the tooltips in xfig's
     /// `w_modepanel.c`). xfig's Ctrl-key modes (Scale, Copy, Add point,
     /// Edit, Rotate clockwise, Picture) are in the UI's xfig keymap, since
@@ -412,6 +421,9 @@ pub struct Overlay {
     /// Join/Split: the end point picked first, drawn as a magenta square of
     /// 20 screen pixels (`draw_join_marker`).
     pub join_marker: Option<Point>,
+    /// Show Lengths: the two sides' lengths (ruler units) with the position
+    /// of their text, in red.
+    pub lengths: Vec<(Point, String)>,
     pub text: Option<OverlayText>,
 }
 
@@ -451,6 +463,9 @@ pub(crate) enum ToolState {
         freehand: bool,
         /// Arc by centre (xfig: middle button first).
         center: Option<Point>,
+        /// A dimension line: Shift+left first, then the second point
+        /// (`dimension_line` in `d_line.c`).
+        dimension: bool,
     },
     Drag {
         start: Point,
@@ -522,7 +537,39 @@ pub(crate) enum ToolState {
         start: Point,
         cursor: Point,
         button: Button,
+        /// Which sizes change: both, or one for a click on an edge's middle
+        /// (xfig's `BOX_HSTRETCH` / `BOX_VSTRETCH`).
+        axis: ScaleAxis,
     },
+}
+
+/// The dimensions a Scale drag changes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScaleAxis {
+    Both,
+    /// Width only (a click on the middle of the left or right edge).
+    X,
+    /// Height only (the top or bottom edge).
+    Y,
+}
+
+/// The scale factors of a drag from `start` to `cursor` about `center`.
+fn scale_factors(center: Point, start: Point, cursor: Point, axis: ScaleAxis) -> Option<(f64, f64)> {
+    let ratio = |a: f64, b: f64, c: f64| {
+        let d = b - a;
+        (d.abs() > 1e-6).then(|| ((c - a) / d).clamp(1e-3, 1e3))
+    };
+    match axis {
+        ScaleAxis::Both => {
+            let d0 = start.dist(center);
+            (d0 > 1e-6).then(|| {
+                let f = (cursor.dist(center) / d0).clamp(1e-3, 1e3);
+                (f, f)
+            })
+        }
+        ScaleAxis::X => Some((ratio(center.x, start.x, cursor.x)?, 1.0)),
+        ScaleAxis::Y => Some((1.0, ratio(center.y, start.y, cursor.y)?)),
+    }
 }
 
 /// What each mouse button does right now (xfig's mouse-function indicator).
@@ -609,6 +656,8 @@ impl Engine {
             self.set_status(e.message);
         }
         self.tool_state = ToolState::Idle;
+        // Choosing Rotate or Flip erases any centre / anchor (`rotate_cw_selected`).
+        self.set_point = None;
         self.tool = kind;
         self.set_status(kind.label());
     }
@@ -616,7 +665,7 @@ impl Engine {
     /// The point being drawn from (xfig's `cur_point`): the last point of a
     /// line being entered, the first corner of a drag shape, or where a move
     /// started.
-    fn current_point(&self) -> Option<Point> {
+    pub(crate) fn current_point(&self) -> Option<Point> {
         match &self.tool_state {
             ToolState::Points { pts, center, .. } => pts.last().copied().or(*center),
             ToolState::Angle { pts, .. } => pts.last().copied(),
@@ -656,10 +705,14 @@ impl Engine {
 
     /// Feed an event to the active tool.
     pub fn tool_event(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
+        let moving = matches!(ev, ToolEvent::Move { .. });
         let r = self.tool_event_inner(ev);
         // Snapped points belong to the operation in progress.
         if !self.tool_busy() {
             self.exact_points.clear();
+        } else if moving {
+            // xfig reports the lengths as the pointer moves (`length_msg`).
+            self.update_length_message();
         }
         r
     }
@@ -784,7 +837,9 @@ impl Engine {
                     }
                     Button::Middle => {
                         if busy {
-                            if tool == ToolKind::Arc {
+                            if tool == ToolKind::Arc
+                                || matches!(self.tool_state, ToolState::Points { dimension: true, .. })
+                            {
                                 return Ok(());
                             }
                             // Final point; with Shift, finish at the last
@@ -802,6 +857,7 @@ impl Engine {
                                 cursor: p,
                                 freehand: false,
                                 center: Some(p),
+                                dimension: false,
                             }
                         } else {
                             ToolState::Points {
@@ -809,6 +865,7 @@ impl Engine {
                                 cursor: p,
                                 freehand: true,
                                 center: None,
+                                dimension: false,
                             }
                         };
                         Ok(())
@@ -826,6 +883,33 @@ impl Engine {
                                 }
                                 return Ok(());
                             }
+                        }
+                        if !busy && tool == ToolKind::Polyline && shift {
+                            // xfig: Shift+left starts a dimension line.
+                            self.tool_state = ToolState::Points {
+                                pts: vec![p],
+                                cursor: p,
+                                freehand: false,
+                                center: None,
+                                dimension: true,
+                            };
+                            return Ok(());
+                        }
+                        if let ToolState::Points {
+                            pts, dimension: true, ..
+                        } = &self.tool_state
+                        {
+                            // The second point ends it; two different points.
+                            let Some(a) = pts.first().copied() else { return Ok(()) };
+                            if a.dist(p) < 1e-6 {
+                                return Ok(());
+                            }
+                            self.tool_state = ToolState::Idle;
+                            self.execute(
+                                "shape.dimension_line",
+                                &json!({"x1": a.x, "y1": a.y, "x2": p.x, "y2": p.y}),
+                            )?;
+                            return Ok(());
                         }
                         self.push_point(p, tol);
                         if tool == ToolKind::Arc {
@@ -906,6 +990,7 @@ impl Engine {
                     cursor: p,
                     freehand: false,
                     center: None,
+                    dimension: false,
                 };
             }
         }
@@ -1507,7 +1592,7 @@ impl Engine {
                 } => {
                     if start.dist(pos) > tol {
                         self.tool_state = ToolState::Idle;
-                        self.commit_move(&ids, start, pos, copy, constrain)
+                        self.commit_move(&ids, start, pos, copy, constrain, false)
                     } else if self.tool == ToolKind::Select {
                         self.tool_state = ToolState::Idle;
                         Ok(())
@@ -1579,10 +1664,16 @@ impl Engine {
                         Ok(())
                     }
                 }
-                ToolState::Scale { id, center, start, .. } => {
+                ToolState::Scale {
+                    id,
+                    center,
+                    start,
+                    axis,
+                    ..
+                } => {
                     if start.dist(pos) > tol {
                         self.tool_state = ToolState::Idle;
-                        return self.commit_scale(id, center, start, pos);
+                        return self.commit_scale(id, center, start, pos, axis);
                     }
                     Ok(())
                 }
@@ -1689,13 +1780,17 @@ impl Engine {
         end: Point,
         copy: bool,
         constrain: bool,
+        array: bool,
     ) -> Result<(), EngineError> {
         let d = self.move_delta(start, end, constrain);
         if d.len() < 1e-9 && !copy {
             return Ok(());
         }
         let ids = crate::cmd::ids_value(ids);
-        if copy {
+        if copy && array {
+            // Array placement (xfig's Num X / Num Y Copies).
+            self.execute("edit.copy_array", &json!({"ids": ids, "dx": d.x, "dy": d.y}))?;
+        } else if copy {
             self.execute("edit.duplicate", &json!({"ids": ids, "dx": d.x, "dy": d.y}))?;
         } else {
             self.execute("transform.move", &json!({"ids": ids, "dx": d.x, "dy": d.y}))?;
@@ -1783,18 +1878,20 @@ impl Engine {
         Ok(())
     }
 
-    fn commit_scale(&mut self, id: ObjectId, center: Point, start: Point, end: Point) -> Result<(), EngineError> {
-        let d0 = start.dist(center);
-        if d0 < 1e-6 {
+    fn commit_scale(
+        &mut self,
+        id: ObjectId,
+        center: Point,
+        start: Point,
+        end: Point,
+        axis: ScaleAxis,
+    ) -> Result<(), EngineError> {
+        let Some((sx, sy)) = scale_factors(center, start, end, axis) else {
             return Ok(());
-        }
-        let f = end.dist(center) / d0;
-        if !(1e-3..=1e3).contains(&f) {
-            return Err(EngineError::bad_params("scale factor out of range"));
-        }
+        };
         self.execute(
             "transform.scale",
-            &json!({"ids": [id.0], "sx": f, "sy": f, "cx": center.x, "cy": center.y}),
+            &json!({"ids": [id.0], "sx": sx, "sy": sy, "cx": center.x, "cy": center.y}),
         )?;
         Ok(())
     }
@@ -1835,11 +1932,14 @@ impl Engine {
                 ..
             } = self.tool_state.clone()
             {
-                if c != constrain {
+                // Copy: left places one copy, middle places the array of
+                // Num X / Num Y Copies (xfig's `array_place_*`).
+                let array = copy && constrain;
+                if c != constrain && !copy {
                     return Ok(());
                 }
                 self.tool_state = ToolState::Idle;
-                return self.commit_move(&ids, start, pos, copy, c);
+                return self.commit_move(&ids, start, pos, copy, c, array);
             }
             if let Some(id) = self.pick(pos, tol) {
                 self.set_selection(vec![id]);
@@ -1996,6 +2096,7 @@ impl Engine {
                 center,
                 start,
                 button: b,
+                axis,
                 ..
             } = self.tool_state.clone()
             {
@@ -2003,7 +2104,7 @@ impl Engine {
                     return Ok(());
                 }
                 self.tool_state = ToolState::Idle;
-                return self.commit_scale(id, center, start, pos);
+                return self.commit_scale(id, center, start, pos, axis);
             }
             let tol = self.pick_tol();
             if let Some(id) = self.pick(pos, tol) {
@@ -2011,18 +2112,10 @@ impl Engine {
                     let bb = o.geometry_bbox();
                     // Left: about the corner opposite the one nearest the
                     // click; middle: about the centre (xfig's scale modes).
-                    let center = if button == Button::Middle {
-                        bb.center()
+                    let (center, axis) = if button == Button::Middle {
+                        (bb.center(), ScaleAxis::Both)
                     } else {
-                        let corners = bb.corners();
-                        let nearest = (0..4)
-                            .min_by(|a, b| {
-                                let da = corners.get(*a).map_or(f64::MAX, |c| c.dist(pos));
-                                let db = corners.get(*b).map_or(f64::MAX, |c| c.dist(pos));
-                                da.total_cmp(&db)
-                            })
-                            .unwrap_or(0);
-                        corners.get((nearest + 2) % 4).copied().unwrap_or(bb.center())
+                        scale_handle(&bb, pos)
                     };
                     self.set_selection(vec![id]);
                     self.tool_state = ToolState::Scale {
@@ -2031,6 +2124,7 @@ impl Engine {
                         start: pos,
                         cursor: pos,
                         button,
+                        axis,
                     };
                 }
             }
@@ -2187,6 +2281,16 @@ impl Engine {
             match (tool, button) {
                 (ToolKind::Update, Button::Right) => return self.region_click(pos, Band::UpdateRegion, button),
                 (ToolKind::DeletePoint, Button::Middle) => return self.region_click(pos, Band::DeletePoints, button),
+                (t, Button::Right) if t.uses_set_point() => {
+                    // xfig's set_unset_center / set_unset_anchor.
+                    self.set_point = if self.set_point.is_some() { None } else { Some(pos) };
+                    return Ok(());
+                }
+                (ToolKind::Align, Button::Middle) => {
+                    // xfig's init_align_canvas: everything to the page.
+                    self.execute("arrange.align_canvas", &json!({}))?;
+                    return Ok(());
+                }
                 (ToolKind::Align, Button::Right) => {
                     if let Some(id) = self.pick(pos, tol) {
                         self.set_selection(vec![id]);
@@ -2301,8 +2405,10 @@ impl Engine {
                 } else {
                     "transform.flip_horizontal"
                 };
+                // The anchor, when set, is the axis instead of the click.
+                let at = self.set_point.unwrap_or(pos);
                 self.set_selection(vec![id]);
-                self.execute(cmd, &json!({ "ids": ids, "cx": pos.x, "cy": pos.y, "copy": copy }))?;
+                self.execute(cmd, &json!({ "ids": ids, "cx": at.x, "cy": at.y, "copy": copy }))?;
             }
             (ToolKind::RotateCcw | ToolKind::RotateCw, Button::Left | Button::Middle) => {
                 let mut a = self.indicator.rotate_angle;
@@ -2310,7 +2416,16 @@ impl Engine {
                     a = -a;
                 }
                 self.set_selection(vec![id]);
-                self.execute("transform.rotate", &json!({ "ids": ids, "angle": a, "copy": copy }))?;
+                let mut params = json!({ "ids": ids, "angle": a, "copy": copy });
+                if copy {
+                    params["copies"] = json!(self.indicator.num_copies);
+                }
+                // The centre set with the right button replaces the object's own.
+                if let (Some(c), Some(m)) = (self.set_point, params.as_object_mut()) {
+                    m.insert("cx".into(), json!(c.x));
+                    m.insert("cy".into(), json!(c.y));
+                }
+                self.execute("transform.rotate", &params)?;
             }
             (ToolKind::Convert, Button::Left) => {
                 self.set_selection(vec![id]);
@@ -2363,9 +2478,8 @@ impl Engine {
 
     /// [`Engine::mouse_hints`] while Shift is (or is not) held: the buttons
     /// that do something else with Shift show that instead (xfig's
-    /// `draw_shift_mousefun_canvas`). xfig's other Shift labels belong to
-    /// functions not ported yet: "Locate Object" (S4-1) and "dimension
-    /// line" (D10).
+    /// `draw_shift_mousefun_canvas`). xfig's other Shift label belongs to a
+    /// function not ported yet: "Locate Object" (S4-1).
     pub fn mouse_hints_with(&self, shift: bool) -> MouseHints {
         let mut h = self.mouse_hints_plain();
         if self.tool == ToolKind::Chop {
@@ -2387,6 +2501,8 @@ impl Engine {
     fn shift_hints(&self) -> (&'static str, &'static str, &'static str) {
         match (&self.tool_state, self.tool) {
             (ToolState::Points { freehand: false, .. }, ToolKind::Arc) => ("del point", "", ""),
+            (ToolState::Points { dimension: true, .. }, _) => ("del point", "", ""),
+            (ToolState::Idle, ToolKind::Polyline) => ("dimension line", "", ""),
             (ToolState::Points { freehand: false, .. }, _) => ("del point", "finish here", ""),
             (ToolState::Idle | ToolState::Chop { .. }, ToolKind::Chop) => ("trim piece", "split here", "extend line"),
             (ToolState::Idle, ToolKind::Select) => ("add/remove", "", ""),
@@ -2413,7 +2529,11 @@ impl Engine {
         let tool = self.tool;
         match &self.tool_state {
             ToolState::Points {
-                pts, freehand, center, ..
+                pts,
+                freehand,
+                center,
+                dimension,
+                ..
             } => {
                 if *freehand {
                     h("", "final point", "cancel")
@@ -2426,6 +2546,8 @@ impl Engine {
                         (false, _) => "final point",
                     };
                     h(left, "", "cancel")
+                } else if *dimension {
+                    h("final point", "", "cancel")
                 } else {
                     h("next point", "final point", "cancel")
                 }
@@ -2446,6 +2568,12 @@ impl Engine {
                 right: "cancel",
                 shift: "",
             },
+            // Copy: xfig's "place object" / "array placement" (the Num X/Y Copies).
+            ToolState::MoveObjs {
+                copy: true,
+                dragging: false,
+                ..
+            } => h("place object", "array placement", "cancel"),
             ToolState::MoveObjs {
                 dragging, constrain, ..
             } => {
@@ -2519,7 +2647,7 @@ impl Engine {
                     ToolKind::JoinSplit => ("Join Lines/Splines", "Split Line/Spline", ""),
                     ToolKind::Chop => ("Select axe object", "Select log object", "Clear axe list"),
                     ToolKind::Scale => ("scale box", "scale about center", ""),
-                    ToolKind::Align => ("align compound", "", ""),
+                    ToolKind::Align => ("align compound", "align canvas", ""),
                     ToolKind::Move => ("move object", "horiz/vert move", ""),
                     ToolKind::Copy => ("copy object", "horiz/vert copy", "copy to cut buf"),
                     ToolKind::MovePoint => ("move point", "horiz/vert move", ""),
@@ -2528,8 +2656,14 @@ impl Engine {
                     ToolKind::Delete => ("delete object", "delete region", "del to cut buf"),
                     ToolKind::Update => ("update object", "update settings", ""),
                     ToolKind::Edit => ("edit object", "edit Main comment", "edit point"),
-                    ToolKind::FlipV | ToolKind::FlipH => ("flip", "copy & flip", ""),
-                    ToolKind::RotateCcw | ToolKind::RotateCw => ("rotate object", "copy & rotate", ""),
+                    ToolKind::FlipV | ToolKind::FlipH if self.set_point.is_some() => {
+                        ("flip", "copy & flip", "unset anchor")
+                    }
+                    ToolKind::FlipV | ToolKind::FlipH => ("flip", "copy & flip", "set anchor"),
+                    ToolKind::RotateCcw | ToolKind::RotateCw if self.set_point.is_some() => {
+                        ("rotate object", "copy & rotate", "unset center")
+                    }
+                    ToolKind::RotateCcw | ToolKind::RotateCw => ("rotate object", "copy & rotate", "set center"),
                     ToolKind::Convert => ("spline<->line", "", "open<->closed"),
                     ToolKind::OpenClose => ("open/close", "", ""),
                     ToolKind::Arrow => ("add arrow", "delete arrow", ""),
@@ -2758,14 +2892,13 @@ impl Engine {
                 center,
                 start,
                 cursor,
+                axis,
                 ..
             } => {
                 if let Some(o) = self.doc().get(*id) {
-                    let d0 = start.dist(*center);
-                    if d0 > 1e-6 {
-                        let f = (cursor.dist(*center) / d0).clamp(1e-3, 1e3);
+                    if let Some((fx, fy)) = scale_factors(*center, *start, *cursor, *axis) {
                         let mut c = o.clone();
-                        let t = Affine::about(Affine::scale(f, f), *center);
+                        let t = Affine::about(Affine::scale(fx, fy), *center);
                         c.transform(&t, true);
                         ov.preview.push(c);
                         // Smart links: the attached lines follow the scaling.
@@ -2802,6 +2935,11 @@ impl Engine {
                 let ends = crate::links::attached_ends(self, ids);
                 ov.handles.extend(ends);
             }
+        }
+        self.length_overlay(&mut ov);
+        // The set centre/anchor of Rotate/Flip (xfig's `center_marker`).
+        if let Some(c) = self.set_point.filter(|_| self.tool.uses_set_point()) {
+            ov.handles.push(c);
         }
         ov
     }
@@ -2886,6 +3024,49 @@ pub fn justify_name(j: Justify) -> &'static str {
         Justify::Center => "center",
         Justify::Right => "right",
     }
+}
+
+/// The fixed point and axis of a Scale click (xfig's `init_boxscale_*`): the
+/// click picks the nearest of the box's eight handles; a corner scales both
+/// sizes about the opposite corner, the middle of an edge changes only the
+/// size across it, about the opposite edge.
+fn scale_handle(bb: &Rect, pos: Point) -> (Point, ScaleAxis) {
+    let (cx, cy) = (bb.center().x, bb.center().y);
+    let xs = [bb.min.x, cx, bb.max.x];
+    let ys = [bb.min.y, cy, bb.max.y];
+    let mut best = (f64::MAX, 0usize, 0usize);
+    for (i, x) in xs.iter().enumerate() {
+        for (j, y) in ys.iter().enumerate() {
+            if i == 1 && j == 1 {
+                continue;
+            }
+            let d = Point::new(*x, *y).dist(pos);
+            if d < best.0 {
+                best = (d, i, j);
+            }
+        }
+    }
+    let (_, i, j) = best;
+    let fx = if i == 1 {
+        cx
+    } else if i == 0 {
+        bb.max.x
+    } else {
+        bb.min.x
+    };
+    let fy = if j == 1 {
+        cy
+    } else if j == 0 {
+        bb.max.y
+    } else {
+        bb.min.y
+    };
+    let axis = match (i, j) {
+        (1, _) => ScaleAxis::Y,
+        (_, 1) => ScaleAxis::X,
+        _ => ScaleAxis::Both,
+    };
+    (Point::new(fx, fy), axis)
 }
 
 #[cfg(test)]
@@ -3146,11 +3327,12 @@ mod tests {
     /// What a button press can change.
     fn snapshot(e: &Engine) -> String {
         format!(
-            "{} {:?} {:?} {:?} {} {} {}",
+            "{} {:?} {:?} {:?} {:?} {} {} {}",
             e.revision(),
             e.status(),
             e.selection(),
             e.tool_state,
+            e.set_point,
             serde_json::to_string(&e.indicator).unwrap(),
             e.clipboard().len(),
             e.requests.len()
@@ -3254,6 +3436,11 @@ mod tests {
                     let setup = |prefix: Option<Button>| {
                         let mut e = fixture(n);
                         e.set_tool(tool);
+                        if tool == ToolKind::Align {
+                            // Align to the page's far corner, so something moves.
+                            e.execute("indicator.set", &json!({"align_h": "right", "align_v": "bottom"}))
+                                .unwrap();
+                        }
                         if let Some(b) = prefix {
                             click(&mut e, p.0, p.1, b);
                         }

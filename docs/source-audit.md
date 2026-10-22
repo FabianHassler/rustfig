@@ -142,7 +142,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `d_line.c` | `init_line_freehand_drawing` | 76 | ported | tools: polyline, polygon, freehand (`points_event`, `push_point`, `finish_points`) |  |
 | `d_line.c` | `init_line_drawing` | 85 | ported | tools: polyline, polygon, freehand (`points_event`, `push_point`, `finish_points`) |  |
 | `d_line.c` | `cancel_line_drawing` | 98 | ported | tools: polyline, polygon, freehand (`points_event`, `push_point`, `finish_points`) |  |
-| `d_line.c` | `init_trace_drawing` | 114 | partial | polyline, freehand and the latex/manhattan/mountain constraints ported (D7); dimension-line branch (two-point line with ticks) is not | D10 |
+| `d_line.c` | `init_trace_drawing` | 114 | ported | tools: Shift+left first point starts a dimension line (`Points.dimension`), the second point makes it (`shape.dimension_line`, `dimline.rs`) | D10 |
 | `d_line.c` | `freehand_get_intermediatepoint` | 163 | ported | tools: polyline, polygon, freehand (`points_event`, `push_point`, `finish_points`) |  |
 | `d_line.c` | `get_intermediatepoint` | 175 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
 | `d_line.c` | `create_lineobject` | 236 | ported | tools: polyline, polygon, freehand (`points_event`, `push_point`, `finish_points`) |  |
@@ -211,7 +211,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_addpt.c` | `linepoint_adding` | 309 | ported | tools: `ToolKind::AddPoint` (`point_event`, `find_segment`, `preview_point`), command `point.add` |  |
 | `e_addpt.c` | `find_endpoints` | 344 | ported | tools: `ToolKind::AddPoint` (`point_event`, `find_segment`, `preview_point`), command `point.add` |  |
 | `e_align.c` | `align_selected` | 69 | ported | `cmd/arrange.rs` `arrange.align` and the Align tool (`ToolKind::Align`) |  |
-| `e_align.c` | `init_align_canvas` | 86 | missing | Align to canvas (alignment of the objects to the page, Align mode with the canvas button) | D10 |
+| `e_align.c` | `init_align_canvas` | 86 | ported | `arrange.align_canvas`; Align mode middle button | D10 |
 | `e_align.c` | `init_align` | 142 | ported | `cmd/arrange.rs` `arrange.align` and the Align tool (`ToolKind::Align`) |  |
 | `e_align.c` | `align_ellipse` | 190 | ported | `cmd/arrange.rs` `arrange.align` and the Align tool (`ToolKind::Align`) |  |
 | `e_align.c` | `align_arc` | 204 | ported | `cmd/arrange.rs` `arrange.align` and the Align tool (`ToolKind::Align`) |  |
@@ -262,7 +262,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_compound.c` | `init_open_compound_vis` | 82 | ported | tools: `open_compound_event` (middle button), `compound.open` with `keep_visible` | D1 |
 | `e_compound.c` | `open_this_compound` | 97 | ported | model: `Document::open_compound` (the members become the drawing, the rest waits in `Document::open`); command `compound.open`; undo is the history, as xfig's `F_ENTER_COMP` | D1 |
 | `e_compound.c` | `open_compound_selected` | 122 | ported | tools: `ToolKind::OpenCompound` (mask `M_COMPOUND`, hints `open compound` / `open, keep visible`) | D1 |
-| `e_compound.c` | `close_compound` | 142 | partial | model: `Document::close_compound`; command `compound.close` (refused while drawing, selects the mode again, drops an emptied compound); the dimension-line recomputation of `rescale_dimension_line` waits for D10 | D10 |
+| `e_compound.c` | `close_compound` | 142 | ported | model: `Document::close_compound`; `compound.close` recomputes a dimension line (`object.recompute_dimension`); command refused while drawing, selects the mode again, drops an empty compound | D10 |
 | `e_compound.c` | `close_all_compounds` | 190 | ported | command `compound.close_all`; save, export, new and delete-all close in a copy or first (`Engine::whole_doc`) | D1 |
 | `e_compound.c` | `popup_close_compound` | 233 | ported | ui-egui: `panels::close_compound_popup` (Close This Compound, Close All Compounds) | D1 |
 | `e_convert.c` | `convert_selected` | 52 | ported | tools: `ToolKind::Convert` (left: `object.convert`, right: `object.toggle_closed`) |  |
@@ -416,7 +416,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_flip.c` | `flip_ud_selected` | 69 | ported | commands `transform.flip_horizontal`, `transform.flip_vertical`; tools `FlipV`, `FlipH` (also copy and flip) |  |
 | `e_flip.c` | `flip_lr_selected` | 85 | ported | commands `transform.flip_horizontal`, `transform.flip_vertical`; tools `FlipV`, `FlipH` (also copy and flip) |  |
 | `e_flip.c` | `flip_selected` | 101 | ported | commands `transform.flip_horizontal`, `transform.flip_vertical`; tools `FlipV`, `FlipH` (also copy and flip) |  |
-| `e_flip.c` | `set_unset_anchor` | 117 | missing | anchor point for flipping (set/unset with the right button) | D10 |
+| `e_flip.c` | `set_unset_anchor` | 117 | ported | tools: right button in Flip modes (`Engine.set_point`, overlay marker) | D10 |
 | `e_flip.c` | `init_flip` | 140 | ported | commands `transform.flip_horizontal`, `transform.flip_vertical`; tools `FlipV`, `FlipH` (also copy and flip) |  |
 | `e_flip.c` | `init_copynflip` | 151 | ported | commands `transform.flip_horizontal`, `transform.flip_vertical`; tools `FlipV`, `FlipH` (also copy and flip) |  |
 | `e_flip.c` | `flip_search` | 162 | ported | commands `transform.flip_horizontal`, `transform.flip_vertical`; tools `FlipV`, `FlipH` (also copy and flip) |  |
@@ -537,7 +537,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_rotate.c` | `rotate_cw_selected` | 78 | ported | commands `transform.rotate`, `transform.rotate_cw/ccw`; tools `RotateCw`, `RotateCcw` (also copy and rotate) |  |
 | `e_rotate.c` | `rotate_ccw_selected` | 93 | ported | commands `transform.rotate`, `transform.rotate_cw/ccw`; tools `RotateCw`, `RotateCcw` (also copy and rotate) |  |
 | `e_rotate.c` | `rotate_selected` | 108 | ported | commands `transform.rotate`, `transform.rotate_cw/ccw`; tools `RotateCw`, `RotateCcw` (also copy and rotate) |  |
-| `e_rotate.c` | `set_unset_center` | 125 | missing | rotation centre (anchor) chosen with the right button, and the number of copies | D10 |
+| `e_rotate.c` | `set_unset_center` | 125 | ported | tools: right button in Rotate modes (`Engine.set_point`, overlay marker) | D10 |
 | `e_rotate.c` | `init_rotate` | 148 | ported | commands `transform.rotate`, `transform.rotate_cw/ccw`; tools `RotateCw`, `RotateCcw` (also copy and rotate) |  |
 | `e_rotate.c` | `init_copynrotate` | 160 | ported | commands `transform.rotate`, `transform.rotate_cw/ccw`; tools `RotateCw`, `RotateCcw` (also copy and rotate) |  |
 | `e_rotate.c` | `rotate_search` | 176 | ported | commands `transform.rotate`, `transform.rotate_cw/ccw`; tools `RotateCw`, `RotateCcw` (also copy and rotate) |  |
@@ -584,7 +584,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_scale.c` | `fix_scale_compound` | 740 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
 | `e_scale.c` | `prescale_compound` | 762 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
 | `e_scale.c` | `scale_compound` | 778 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `rescale_dimension_line` | 831 | missing | scaling dimension lines (ticks and text follow) | D10 |
+| `e_scale.c` | `rescale_dimension_line` | 831 | ported | `dimline::recompute` (after `transform.scale`, on close, `object.recompute_dimension`) | D10 |
 | `e_scale.c` | `scale_line` | 1030 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
 | `e_scale.c` | `scale_spline` | 1058 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
 | `e_scale.c` | `scale_arc` | 1071 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
@@ -783,7 +783,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `f_util.c` | `build_command` | 1048 | replaced | no external programs are spawned for exports (fig2dev is ported, B0); the image editor is W10-16 | W10-16 |
 | `f_util.c` | `strerror` | 1079 | not needed | path helper (`Path::file_name`) |  |
 | `f_util.c` | `map_to_palette` | 1090 | not needed | X colormap and image colour reduction (pixel allocation, palette mapping) |  |
-| `f_util.c` | `dimline_components` | 1156 | missing | dimension line parts (line, ticks, text of a dimension-line compound) | D10 |
+| `f_util.c` | `dimline_components` | 1156 | ported | `dimline::is_dimline`, `recompute` (by the comments) | D10 |
 | `f_util.c` | `find_smallest_depth` | 1182 | ported | depth range of a compound (`model` object depth queries; used by the compound edit panel) |  |
 | `f_util.c` | `find_largest_depth` | 1217 | ported | depth range of a compound (`model` object depth queries; used by the compound edit panel) |  |
 | `f_util.c` | `get_grid_spec` | 1253 | replaced | export/print grid fields use egui text fields; grid spec parsing in `fig2dev` options (`-G`) | W10-4 |
@@ -865,39 +865,39 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `u_create.c` | `copy_text` | 654 | not needed | allocation and deep copies (Rust `Clone`, `Vec`, `Arc`) |  |
 | `u_create.c` | `create_compound` | 681 | not needed | allocation and deep copies (Rust `Clone`, `Vec`, `Arc`) |  |
 | `u_create.c` | `copy_compound` | 710 | not needed | allocation and deep copies (Rust `Clone`, `Vec`, `Arc`) |  |
-| `u_create.c` | `create_dimension_line` | 795 | missing | dimension line construction (line, ticks, arrows, text) | D10 |
-| `u_create.c` | `create_tick` | 952 | missing | dimension line construction (line, ticks, arrows, text) | D10 |
-| `u_create.c` | `create_dimline_ticks` | 987 | missing | dimension line construction (line, ticks, arrows, text) | D10 |
-| `u_create.c` | `backward_dim_arrow` | 999 | missing | dimension line construction (line, ticks, arrows, text) | D10 |
-| `u_create.c` | `forward_dim_arrow` | 1023 | missing | dimension line construction (line, ticks, arrows, text) | D10 |
+| `u_create.c` | `create_dimension_line` | 795 | ported | `dimline::create` | D10 |
+| `u_create.c` | `create_tick` | 952 | ported | `dimline::create` | D10 |
+| `u_create.c` | `create_dimline_ticks` | 987 | ported | `dimline::create` | D10 |
+| `u_create.c` | `backward_dim_arrow` | 999 | ported | `DimlineSettings::arrow` | D10 |
+| `u_create.c` | `forward_dim_arrow` | 1023 | ported | `DimlineSettings::arrow` | D10 |
 | `u_drag.c` | `init_ellipsedragging` | 52 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
 | `u_drag.c` | `cancel_ellipse` | 72 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
-| `u_drag.c` | `array_place_ellipse` | 91 | missing | array copy: place a grid of copies with Number of Copies X/Y | D10 |
+| `u_drag.c` | `array_place_ellipse` | 91 | ported | `edit.copy_array` (`array_offsets`), middle button while placing a copy | D10 |
 | `u_drag.c` | `place_ellipse` | 146 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
 | `u_drag.c` | `place_ellipse_x` | 155 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
 | `u_drag.c` | `init_arcdragging` | 185 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
 | `u_drag.c` | `cancel_drag_arc` | 200 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
-| `u_drag.c` | `array_place_arc` | 219 | missing | array copy: place a grid of copies with Number of Copies X/Y | D10 |
+| `u_drag.c` | `array_place_arc` | 219 | ported | `edit.copy_array` | D10 |
 | `u_drag.c` | `place_arc` | 273 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
 | `u_drag.c` | `place_arc_x` | 282 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
 | `u_drag.c` | `init_linedragging` | 312 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
 | `u_drag.c` | `cancel_line` | 333 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
-| `u_drag.c` | `array_place_line` | 353 | missing | array copy: place a grid of copies with Number of Copies X/Y | D10 |
+| `u_drag.c` | `array_place_line` | 353 | ported | `edit.copy_array` | D10 |
 | `u_drag.c` | `place_line` | 405 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
 | `u_drag.c` | `place_line_x` | 414 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
 | `u_drag.c` | `init_textdragging` | 452 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
-| `u_drag.c` | `array_place_text` | 482 | missing | array copy: place a grid of copies with Number of Copies X/Y | D10 |
+| `u_drag.c` | `array_place_text` | 482 | ported | `edit.copy_array` | D10 |
 | `u_drag.c` | `cancel_text` | 536 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
 | `u_drag.c` | `place_text` | 557 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
 | `u_drag.c` | `place_text_x` | 566 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
 | `u_drag.c` | `init_splinedragging` | 596 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
 | `u_drag.c` | `cancel_spline` | 611 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
-| `u_drag.c` | `array_place_spline` | 630 | missing | array copy: place a grid of copies with Number of Copies X/Y | D10 |
+| `u_drag.c` | `array_place_spline` | 630 | ported | `edit.copy_array` | D10 |
 | `u_drag.c` | `place_spline` | 684 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
 | `u_drag.c` | `place_spline_x` | 693 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
 | `u_drag.c` | `init_compounddragging` | 723 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
 | `u_drag.c` | `cancel_drag_compound` | 743 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
-| `u_drag.c` | `array_place_compound` | 763 | missing | array copy: place a grid of copies with Number of Copies X/Y | D10 |
+| `u_drag.c` | `array_place_compound` | 763 | ported | `edit.copy_array` | D10 |
 | `u_drag.c` | `place_compound` | 817 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
 | `u_drag.c` | `place_compound_x` | 827 | ported | Move and Copy dragging: `move_event`, `commit_move`, preview from `Engine::overlay` |  |
 | `u_draw.c` | `init_point_array` | 225 | not needed | X point arrays, X error handler, debug aids, X-specific helpers |  |
@@ -1400,7 +1400,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_canvas.c` | `getComposeKey` | 751 | ported | compose key: `menus::Compose`, `rustfig_text::compose` (CompKeyDB; W8) |  |
 | `w_canvas.c` | `readComposeKey` | 769 | ported | compose key: `menus::Compose`, `rustfig_text::compose` (CompKeyDB; W8) |  |
 | `w_canvas.c` | `setCompLED` | 878 | not needed | compose-key LED in the X window (RustFig has none) |  |
-| `w_canvas.c` | `toggle_show_lengths` | 890 | missing | View > Show lengths (lengths and angles while drawing) | D10 |
+| `w_canvas.c` | `toggle_show_lengths` | 890 | ported | `view.toggle_lengths`, resource `showlengths` | D10 |
 | `w_canvas.c` | `toggle_show_vertexnums` | 900 | missing | View > Show vertex numbers | W10-3 |
 | `w_canvas.c` | `toggle_show_borders` | 919 | ported | View > Show page borders (`view.toggle_page_border`) |  |
 | `w_canvas.c` | `toggle_show_balloons` | 938 | ported | View > Show info balloons (`app.toggle_balloons`) |  |
@@ -1771,9 +1771,9 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_indpanel.c` | `inc_numsides` | 4342 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `dec_numsides` | 4349 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `show_numsides` | 4356 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
-| `w_indpanel.c` | `inc_numcopies` | 4373 | missing | Number of copies, and X and Y copies for array copy | D10 |
-| `w_indpanel.c` | `dec_numcopies` | 4380 | missing | Number of copies, and X and Y copies for array copy | D10 |
-| `w_indpanel.c` | `show_numcopies` | 4387 | missing | Number of copies, and X and Y copies for array copy | D10 |
+| `w_indpanel.c` | `inc_numcopies` | 4373 | ported | indicator `num_copies` (field; panel button open) | D10 |
+| `w_indpanel.c` | `dec_numcopies` | 4380 | ported | indicator `num_copies` (field; panel button open) | D10 |
+| `w_indpanel.c` | `show_numcopies` | 4387 | ported | indicator `num_copies` (field; panel button open) | D10 |
 | `w_indpanel.c` | `inc_numxcopies` | 4404 | missing | Number of copies, and X and Y copies for array copy | D10 |
 | `w_indpanel.c` | `dec_numxcopies` | 4411 | missing | Number of copies, and X and Y copies for array copy | D10 |
 | `w_indpanel.c` | `show_numxcopies` | 4418 | missing | Number of copies, and X and Y copies for array copy | D10 |
@@ -1835,7 +1835,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_keyboard.c` | `next_keyboard_history` | 62 | missing | type coordinates of the next point in a keyboard panel (with history) | D10 |
 | `w_keyboard.c` | `prior_keyboard_history` | 74 | missing | type coordinates of the next point in a keyboard panel (with history) | D10 |
 | `w_keyboard.c` | `ignore_keyboard_input` | 87 | missing | type coordinates of the next point in a keyboard panel (with history) | D10 |
-| `w_keyboard.c` | `handle_keyboard_input` | 94 | missing | type coordinates of the next point in a keyboard panel (with history) | D10 |
+| `w_keyboard.c` | `handle_keyboard_input` | 94 | ported | `tool.point` and `coords::parse_coordinate` | D10 |
 | `w_keyboard.c` | `create_keyboard_panel` | 417 | missing | type coordinates of the next point in a keyboard panel (with history) | D10 |
 | `w_keyboard.c` | `popup_keyboard_panel` | 487 | missing | type coordinates of the next point in a keyboard panel (with history) | D10 |
 | `w_keyboard.c` | `popdown_keyboard_panel` | 512 | missing | type coordinates of the next point in a keyboard panel (with history) | D10 |
@@ -1989,12 +1989,12 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_msgpanel.c` | `init_msg` | 92 | ported | message panel `panels::message_panel`, `Engine::set_status` |  |
 | `w_msgpanel.c` | `setup_msg` | 113 | ported | message panel `panels::message_panel`, `Engine::set_status` |  |
 | `w_msgpanel.c` | `put_msg` | 125 | ported | message panel `panels::message_panel`, `Engine::set_status` |  |
-| `w_msgpanel.c` | `boxsize_msg` | 154 | missing | lengths, sizes and angles shown while drawing (Show lengths), dimension strings | D10 |
+| `w_msgpanel.c` | `boxsize_msg` | 154 | ported | `tools/lengths.rs`: message and Show Lengths labels | D10 |
 | `w_msgpanel.c` | `boxsize_scale_msg` | 240 | missing | lengths, sizes and angles shown while drawing (Show lengths), dimension strings | D10 |
-| `w_msgpanel.c` | `erase_box_lengths` | 264 | missing | lengths, sizes and angles shown while drawing (Show lengths), dimension strings | D10 |
-| `w_msgpanel.c` | `erase_lengths` | 276 | missing | lengths, sizes and angles shown while drawing (Show lengths), dimension strings | D10 |
-| `w_msgpanel.c` | `length_msg` | 295 | missing | lengths, sizes and angles shown while drawing (Show lengths), dimension strings | D10 |
-| `w_msgpanel.c` | `altlength_msg` | 306 | missing | lengths, sizes and angles shown while drawing (Show lengths), dimension strings | D10 |
+| `w_msgpanel.c` | `erase_box_lengths` | 264 | ported | not needed: the overlay is redrawn each frame | D10 |
+| `w_msgpanel.c` | `erase_lengths` | 276 | ported | not needed: the overlay is redrawn each frame | D10 |
+| `w_msgpanel.c` | `length_msg` | 295 | ported | `tools/lengths.rs`: message and Show Lengths triangle | D10 |
+| `w_msgpanel.c` | `altlength_msg` | 306 | ported | `tools/lengths.rs`: message and Show Lengths triangle | D10 |
 | `w_msgpanel.c` | `length_msg2` | 483 | missing | lengths, sizes and angles shown while drawing (Show lengths), dimension strings | D10 |
 | `w_msgpanel.c` | `arc_msg` | 521 | missing | lengths, sizes and angles shown while drawing (Show lengths), dimension strings | D10 |
 | `w_msgpanel.c` | `lenmeas_msg` | 550 | ported | `cmd/measure.rs` (`length_message`, `area_message`, `dimension_string`) | |
@@ -2004,7 +2004,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_msgpanel.c` | `clear_file_message` | 670 | ported | file name message and the message history (`file_msg`, `dialogs::messages_dialog`; filter and copy W10-29) |  |
 | `w_msgpanel.c` | `file_msg_panel_dismiss` | 704 | ported | file name message and the message history (`file_msg`, `dialogs::messages_dialog`; filter and copy W10-29) |  |
 | `w_msgpanel.c` | `popup_file_msg` | 713 | ported | file name message and the message history (`file_msg`, `dialogs::messages_dialog`; filter and copy W10-29) |  |
-| `w_msgpanel.c` | `make_dimension_string` | 802 | missing | lengths, sizes and angles shown while drawing (Show lengths), dimension strings | D10 |
+| `w_msgpanel.c` | `make_dimension_string` | 802 | ported | `dimline::length_text` (decimals, no fractions) | D10 |
 | `w_print.c` | `print_panel_dismiss` | 153 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
 | `w_print.c` | `do_print` | 164 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
 | `w_print.c` | `fit_page` | 225 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |

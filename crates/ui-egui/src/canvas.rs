@@ -357,6 +357,16 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         let pts: Vec<Pos2> = g.iter().map(|p| to_screen(*p)).collect();
         painter.extend(Shape::dashed_line(&pts, guide, 4.0, 3.0));
     }
+    // Show Lengths: the sides' lengths in red (xfig draws them in RED).
+    for (p, s) in &overlay.lengths {
+        painter.text(
+            to_screen(*p),
+            egui::Align2::LEFT_BOTTOM,
+            s,
+            egui::FontId::monospace(10.0),
+            Color32::from_rgb(255, 0, 0),
+        );
+    }
     if app.engine.tool() == rustfig_engine::ToolKind::Select && !app.engine.tool_busy() {
         let bb = app.engine.selection_bbox();
         if !bb.is_empty() {

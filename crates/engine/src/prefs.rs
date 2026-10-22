@@ -154,7 +154,7 @@ pub const RESOURCES: &[Resource] = &[
     r("showaxislines", Bool, "true", "-showaxislines, -dontshowaxislines", Planned("E9")),
     r("showballoons", Bool, "true", "-showballoons, -dontshowballoons", Applied),
     r("showdepthmanager", Bool, "true", "-showdepthmanager, -dontshowdepthmanager", Applied),
-    r("showlengths", Bool, "false", "-showlengths, -dontshowlengths", Planned("D10")),
+    r("showlengths", Bool, "false", "-showlengths, -dontshowlengths", Applied),
     r("shownums", Bool, "false", "-shownums, -dontshownums", Planned("D11")),
     r("showpageborder", Bool, "true", "-showpageborder, -dontshowpageborder", Applied),
     r("smallicons", Bool, "false", "-smallicons", Planned("E9")),
@@ -403,6 +403,9 @@ impl Prefs {
         }
         if let Some(u) = self.str("userunit") {
             e.unit_scale.unit = u;
+        }
+        if let Some(b) = self.bool("showlengths") {
+            e.show_lengths = b;
         }
         if let Some(b) = self.bool("showpageborder") {
             e.show_page_border = b;

@@ -20,6 +20,16 @@ pub(super) fn commands() -> Vec<Command> {
             run: align,
         },
         Command {
+            id: "arrange.align_canvas",
+            label: "Align to Canvas",
+            menu: "Object/Arrange",
+            shortcut: "",
+            params: "{\"ids\"?: [id] (all objects), \"h\"?: none|left|center|right, \"v\"?: none|top|center|bottom}  — each object is aligned to the page (xfig's Align mode, middle button; init_align_canvas), by the indicator's align modes",
+            mutates: true,
+            enabled: |_| true,
+            run: align_canvas,
+        },
+        Command {
             id: "arrange.distribute",
             label: "Distribute",
             menu: "Object/Arrange",
@@ -136,6 +146,59 @@ fn align(e: &mut Engine, p: &Value) -> CmdResult {
     }
     translate(e, moves);
     Ok(json!({"count": items.len()}))
+}
+
+/// Align every object (not each other) to the page: xfig's
+/// `init_align_canvas` in `e_align.c`. The page is the paper size, swapped in
+/// landscape; distribute and abut have no meaning against the canvas.
+fn align_canvas(e: &mut Engine, p: &Value) -> CmdResult {
+    let h = opt_str(p, "h")?.map_or_else(|| e.indicator.align_h.clone(), str::to_string);
+    let v = opt_str(p, "v")?.map_or_else(|| e.indicator.align_v.clone(), str::to_string);
+    if !matches!(h.as_str(), "none" | "" | "left" | "center" | "right") {
+        return Err(EngineError::bad_params(format!("unknown horizontal alignment {h:?}")));
+    }
+    if !matches!(v.as_str(), "none" | "" | "top" | "center" | "bottom") {
+        return Err(EngineError::bad_params(format!("unknown vertical alignment {v:?}")));
+    }
+    let ids: Vec<ObjectId> = match p.get("ids") {
+        Some(_) => e.target_ids(p)?,
+        None => e.doc().objects.iter().map(|o| o.id).collect(),
+    };
+    let (pw, ph) = e.doc().settings.paper.inches();
+    let (pw, ph) = match e.doc().settings.orientation {
+        rustfig_model::Orientation::Landscape => (ph, pw),
+        rustfig_model::Orientation::Portrait => (pw, ph),
+    };
+    let page = Rect::from_points([
+        rustfig_geom::Point::ZERO,
+        rustfig_geom::Point::new(pw * 1200.0, ph * 1200.0),
+    ]);
+    let mut moves = Vec::new();
+    for id in ids {
+        let Some(o) = e.doc().get(id) else { continue };
+        let b = o.geometry_bbox();
+        if b.is_empty() {
+            continue;
+        }
+        let dx = match h.as_str() {
+            "left" => page.min.x - b.min.x,
+            "center" => page.center().x - b.center().x,
+            "right" => page.max.x - b.max.x,
+            _ => 0.0,
+        };
+        let dy = match v.as_str() {
+            "top" => page.min.y - b.min.y,
+            "center" => page.center().y - b.center().y,
+            "bottom" => page.max.y - b.max.y,
+            _ => 0.0,
+        };
+        if dx.is_finite() && dy.is_finite() && (dx != 0.0 || dy != 0.0) {
+            moves.push((id, dx, dy));
+        }
+    }
+    let n = moves.len();
+    translate(e, moves);
+    Ok(json!({"count": n}))
 }
 
 fn distribute(e: &mut Engine, p: &Value) -> CmdResult {

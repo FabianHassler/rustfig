@@ -99,6 +99,9 @@ fn close(e: &mut Engine, _: &Value) -> CmdResult {
         .doc_mut()
         .close_compound()
         .ok_or_else(|| EngineError::bad_params("no compound is open"))?;
+    // xfig's close_compound recomputes a dimension line that was opened
+    // and edited (`rescale_dimension_line`).
+    super::dimline::recompute_objects(e, &[id]);
     e.set_selection(Vec::new());
     // xfig selects the open-compound mode again after a close.
     e.set_tool(ToolKind::OpenCompound);
@@ -113,6 +116,8 @@ fn close_all(e: &mut Engine, _: &Value) -> CmdResult {
         return Err(EngineError::bad_params("no compound is open"));
     }
     e.doc_mut().close_all();
+    let all: Vec<_> = e.doc().objects.iter().map(|o| o.id).collect();
+    super::dimline::recompute_objects(e, &all);
     e.set_selection(Vec::new());
     e.set_tool(ToolKind::OpenCompound);
     Ok(json!({"closed": n}))

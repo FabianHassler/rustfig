@@ -202,6 +202,19 @@ pub(super) fn commands() -> Vec<Command> {
             },
         },
         Command {
+            id: "view.toggle_lengths",
+            label: "Show Lengths",
+            menu: "",
+            shortcut: "",
+            params: "{\"on\"?: bool}  — while drawing, show the dx / dy triangle of the segment with its two sides' lengths (xfig's Show Lengths; the message panel always shows length, dx, dy and angle)",
+            mutates: false,
+            enabled: always,
+            run: |e, p| {
+                e.show_lengths = super::opt_bool(p, "on")?.unwrap_or(!e.show_lengths);
+                Ok(json!({"show_lengths": e.show_lengths}))
+            },
+        },
+        Command {
             id: "view.toggle_page_border",
             label: "Show Page Border",
             menu: "View",

@@ -26,6 +26,7 @@ No key (xfig key Ctrl+C). As Move, but leaves the original.
 - Left, “copy object”: press, drag, release (or click, click).
 - Middle, “horiz/vert copy”.
 - Right, “copy to cut buf”: puts the object on the clipboard; Edit > Paste objects places it later.
+- While the copy is being placed the buttons read “place object” (left, one copy) and “array placement” (middle): with Num X Copies and Num Y Copies set (indicator fields `num_x_copies` and `num_y_copies`, 0 to 99), the middle button places a grid of copies spaced by the distance you moved, along x and y. With only one of them set to 1 you get a single extra copy that way; with both at 1, one along x and one along y; with larger numbers a columns-by-rows grid without the original's cell (command `edit.copy_array`).
 
 ## Delete
 

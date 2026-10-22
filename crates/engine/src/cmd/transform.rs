@@ -43,7 +43,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Rotate",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id], \"angle\": degrees counter-clockwise, \"cx\"?, \"cy\"?, \"copy\"?: bool}  — copy: rotate copies, keep the originals",
+            params: "{\"ids\"?: [id], \"angle\": degrees counter-clockwise, \"cx\"?, \"cy\"?, \"copy\"?: bool, \"copies\"?: 1..99}  — copy: rotate copies, keep the originals; copies: that many copies, turned by 1x, 2x, ... the angle",
             mutates: true,
             enabled: has_selection_or_ids,
             run: rotate,
@@ -177,12 +177,43 @@ fn scale(e: &mut Engine, p: &Value) -> CmdResult {
     }
     let c = center(e, p)?;
     let text = opt_bool(p, "scale_text")?.unwrap_or(true);
-    apply(e, p, Affine::about(Affine::scale(sx, sy), c), text)
+    let ids = e.target_ids(p)?;
+    let r = apply(e, p, Affine::about(Affine::scale(sx, sy), c), text);
+    // A scaled dimension line shows its new length (`rescale_dimension_line`).
+    super::dimline::recompute_objects(e, &ids);
+    r
 }
 
 fn rotate_by(e: &mut Engine, p: &Value, deg: f64) -> CmdResult {
     let c = center(e, p)?;
-    apply(e, p, Affine::about(Affine::rotate(deg.to_radians()), c), false)
+    let copy = opt_bool(p, "copy")?.unwrap_or(false);
+    let n = if copy {
+        opt_num(p, "copies")?.unwrap_or(1.0).clamp(1.0, 99.0) as u32
+    } else {
+        1
+    };
+    if n <= 1 {
+        return apply(e, p, Affine::about(Affine::rotate(deg.to_radians()), c), false);
+    }
+    // xfig's copy & rotate (`init_copynrotate`, `e_rotate.c`): `n` copies of
+    // the originals, the k-th turned by k times the angle about one centre.
+    let ids = e.target_ids(p)?;
+    let ids_v = super::ids_value(&ids);
+    let mut all = Vec::new();
+    for k in 1..=n {
+        let q = json!({"ids": ids_v, "copy": true});
+        let r = apply(
+            e,
+            &q,
+            Affine::about(Affine::rotate((deg * f64::from(k)).to_radians()), c),
+            false,
+        )?;
+        if let Some(Value::Array(a)) = r.get("ids") {
+            all.extend(a.iter().filter_map(Value::as_u64).map(rustfig_model::ObjectId));
+        }
+    }
+    e.set_selection(all.clone());
+    Ok(json!({"count": all.len(), "ids": super::ids_value(&all)}))
 }
 
 fn rotate(e: &mut Engine, p: &Value) -> CmdResult {

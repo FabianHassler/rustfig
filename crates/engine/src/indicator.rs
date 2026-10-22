@@ -187,6 +187,13 @@ pub struct Indicator {
     pub sides: usize,
     /// Rotation step in degrees for the rotate tool.
     pub rotate_angle: f64,
+    /// Rotated copies made by one copy & rotate click (xfig `cur_numcopies`, 1..=99).
+    pub num_copies: u32,
+    /// Dimension line settings (xfig's `cur_dimline_*`).
+    pub dimline: crate::dimline::DimlineSettings,
+    /// Array copy: columns and rows (xfig `cur_numxcopies`/`cur_numycopies`, 0 = off, 1..=99).
+    pub num_x_copies: u32,
+    pub num_y_copies: u32,
     pub grid: Option<SnapMode>,
     pub snap: SnapMode,
     /// Align modes for the align command: "none", "left", "center", "right" / "top", "center", "bottom".
@@ -244,6 +251,10 @@ impl Default for Indicator {
             box_radius: 7,
             sides: 6,
             rotate_angle: 90.0,
+            num_copies: 1,
+            dimline: crate::dimline::DimlineSettings::default(),
+            num_x_copies: 0,
+            num_y_copies: 0,
             grid: None,
             // xfig's startposnmode 1: magnet (1/16 inch, 1 mm).
             snap: SnapMode::Fine,

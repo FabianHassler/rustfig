@@ -1158,6 +1158,15 @@ mod tests {
         ("edit.select", "scripting API; the Select tool picks objects"),
         ("edit.search_replace", "scripting API; Search/Replace... runs it"),
         ("edit.paste_text", "the middle button of the Text tool"),
+        (
+            "edit.copy_array",
+            "the middle button while a copy is placed (Num X / Num Y Copies)",
+        ),
+        ("arrange.align_canvas", "the middle button of the Align tool"),
+        (
+            "object.recompute_dimension",
+            "scripting API; runs by itself on scaling and closing",
+        ),
         ("object.add", "scripting API"),
         (
             "object.set_",

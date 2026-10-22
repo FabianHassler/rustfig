@@ -82,6 +82,10 @@ fn set(e: &mut Engine, p: &Value) -> CmdResult {
     ind.depth = ind.depth.clamp(0, rustfig_model::MAX_DEPTH);
     ind.area_fill = ind.area_fill.clamp(-1, 62);
     ind.sides = ind.sides.clamp(3, 1000);
+    ind.dimline.sanitize();
+    ind.num_copies = ind.num_copies.clamp(1, 99);
+    ind.num_x_copies = ind.num_x_copies.min(99);
+    ind.num_y_copies = ind.num_y_copies.min(99);
     if !ind.font_size.is_finite() {
         ind.font_size = 12.0;
     }

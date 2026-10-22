@@ -6,6 +6,7 @@ mod arrange;
 mod chop;
 mod chop_ext;
 mod compound;
+mod dimline;
 mod doc;
 mod edit;
 pub(crate) mod file;
@@ -20,6 +21,7 @@ mod region;
 pub(crate) mod shape;
 pub(crate) mod tangent;
 
+pub(crate) use dimline::formatter as dimension_formatter;
 pub(crate) use region::circumcircle;
 pub use shape::STYLE_PARAMS;
 mod tool;
@@ -81,6 +83,7 @@ pub fn all() -> &'static [Command] {
         v.extend(chop::commands());
         v.extend(tangent::commands());
         v.extend(measure::commands());
+        v.extend(dimline::commands());
         v.extend(joinsplit::commands());
         v.extend(region::commands());
         v.extend(doc::commands());

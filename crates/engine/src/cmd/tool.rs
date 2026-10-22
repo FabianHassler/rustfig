@@ -31,6 +31,16 @@ pub(super) fn commands() -> Vec<Command> {
         run: event,
     });
     v.push(Command {
+        id: "tool.point",
+        label: "Enter point",
+        menu: "",
+        shortcut: "",
+        params: "{\"text\": \"x,y\" | \"length<angle\", \"button\"?: left|middle|right (default left), \"shift\"?: bool}  — xfig's keyboard point entry: the point typed as text is used as if clicked. x,y in ruler units (inches or cm; fractions as 1-1/2), r before a number makes it relative to the current point (the last point of a line, or where the operation started), a absolute; length<angle is polar from the current point, the angle in degrees (or 2<0.5p in multiples of pi, 2<1r radians)",
+        mutates: false,
+        enabled: always,
+        run: point,
+    });
+    v.push(Command {
         id: "snap.mode",
         label: "Snap to",
         menu: "",
@@ -185,4 +195,25 @@ fn event(e: &mut Engine, p: &Value) -> CmdResult {
     };
     e.tool_event(ev)?;
     Ok(json!({"tool": e.tool().id()}))
+}
+
+/// xfig's keyboard point entry (`w_keyboard.c`): the typed point is fed to
+/// the tool as a press there, exactly (no snapping, no angle constraint).
+fn point(e: &mut Engine, p: &Value) -> CmdResult {
+    let text = super::string(p, "text")?;
+    if text.len() > 200 {
+        return Err(EngineError::bad_params("the coordinate text is too long"));
+    }
+    let button = match opt_str(p, "button")? {
+        Some(n) => Button::from_name(n).ok_or_else(|| EngineError::bad_params(format!("unknown button {n:?}")))?,
+        None => Button::Left,
+    };
+    let shift = opt_bool(p, "shift")?.unwrap_or(false);
+    let at = crate::coords::parse_coordinate(&text, e.current_point(), e.doc().settings.units).map_err(|m| {
+        e.set_status(m.clone());
+        EngineError::bad_params(m)
+    })?;
+    e.add_exact_point(at);
+    e.tool_event(ToolEvent::Press { pos: at, button, shift })?;
+    Ok(json!({"x": at.x, "y": at.y, "tool": e.tool().id()}))
 }

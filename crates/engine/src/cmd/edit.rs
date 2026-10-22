@@ -79,6 +79,16 @@ pub(super) fn commands() -> Vec<Command> {
             run: duplicate,
         },
         Command {
+            id: "edit.copy_array",
+            label: "Copy as array",
+            menu: "",
+            shortcut: "",
+            params: "{\"ids\"?: [id], \"dx\", \"dy\", \"nx\"?: columns (indicator num_x_copies), \"ny\"?: rows (indicator num_y_copies)}  — xfig's array placement (u_drag.c): copies at i*dx, j*dy; with one column or row only: the copy at dx (columns) and/or at dy (rows); 0 and 0 is a plain copy",
+            mutates: true,
+            enabled: has_selection,
+            run: copy_array,
+        },
+        Command {
             id: "edit.delete",
             label: "Delete",
             menu: "Edit",
@@ -270,6 +280,63 @@ fn duplicate(e: &mut Engine, p: &Value) -> CmdResult {
     r
 }
 
+/// The offsets of an array copy as xfig places them (`place_*` in `u_drag.c`):
+/// no counts is one copy at (dx, dy); counts below 2 are the special cases
+/// (one copy along x and/or along y); otherwise an nx by ny grid without the
+/// original's cell.
+pub(crate) fn array_offsets(nx: u32, ny: u32, dx: f64, dy: f64) -> Vec<(f64, f64)> {
+    if nx == 0 && ny == 0 {
+        return vec![(dx, dy)];
+    }
+    if nx < 2 && ny < 2 {
+        let mut v = Vec::new();
+        if nx > 0 {
+            v.push((dx, 0.0));
+        }
+        if ny > 0 {
+            v.push((0.0, dy));
+        }
+        return v;
+    }
+    let (nx, ny) = (nx.max(1), ny.max(1));
+    let mut v = Vec::new();
+    for i in 0..nx {
+        for j in 0..ny {
+            if i != 0 || j != 0 {
+                v.push((f64::from(i) * dx, f64::from(j) * dy));
+            }
+        }
+    }
+    v
+}
+
+fn copy_array(e: &mut Engine, p: &Value) -> CmdResult {
+    let nx = opt_count(p, "nx")?.unwrap_or(e.indicator.num_x_copies);
+    let ny = opt_count(p, "ny")?.unwrap_or(e.indicator.num_y_copies);
+    let (dx, dy) = (super::num(p, "dx")?, super::num(p, "dy")?);
+    if !dx.is_finite() || !dy.is_finite() || dx.abs() > 1.0e7 || dy.abs() > 1.0e7 {
+        return Err(EngineError::bad_params("dx and dy out of range"));
+    }
+    let originals = clone_targets(e, p)?;
+    let mut all = Vec::new();
+    for (ox, oy) in array_offsets(nx, ny, dx, dy) {
+        for mut o in originals.iter().cloned() {
+            o.translate(ox, oy);
+            all.push(e.add_object(o));
+        }
+    }
+    e.set_selection(all.clone());
+    Ok(json!({"count": all.len(), "ids": ids_value(&all)}))
+}
+
+fn opt_count(p: &Value, key: &str) -> Result<Option<u32>, EngineError> {
+    match super::opt_num(p, key)? {
+        None => Ok(None),
+        Some(v) if v.is_finite() && (0.0..=99.0).contains(&v) => Ok(Some(v.round() as u32)),
+        Some(_) => Err(EngineError::bad_params(format!("{key} must be between 0 and 99"))),
+    }
+}
+
 fn delete(e: &mut Engine, p: &Value) -> CmdResult {
     let ids = e.target_ids(p)?;
     if ids.is_empty() {
@@ -401,5 +468,20 @@ fn replace_text(o: &mut Object, find: &str, rep: &str, case: bool) -> usize {
         }
         ObjectKind::Compound(c) => c.objects.iter_mut().map(|x| replace_text(x, find, rep, case)).sum(),
         _ => 0,
+    }
+}
+
+#[cfg(test)]
+mod array_tests {
+    use super::array_offsets;
+
+    #[test]
+    fn array_offsets_follow_xfig() {
+        assert_eq!(array_offsets(0, 0, 5.0, 7.0), vec![(5.0, 7.0)]);
+        assert_eq!(array_offsets(1, 0, 5.0, 7.0), vec![(5.0, 0.0)]);
+        assert_eq!(array_offsets(0, 1, 5.0, 7.0), vec![(0.0, 7.0)]);
+        assert_eq!(array_offsets(1, 1, 5.0, 7.0), vec![(5.0, 0.0), (0.0, 7.0)]);
+        assert_eq!(array_offsets(2, 0, 5.0, 7.0), vec![(5.0, 0.0)]);
+        assert_eq!(array_offsets(3, 2, 1.0, 1.0).len(), 5);
     }
 }
