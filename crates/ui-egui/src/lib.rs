@@ -15,6 +15,7 @@ pub mod clipboard;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod control;
 pub mod dialogs;
+pub mod help;
 pub mod inject;
 pub mod input;
 pub mod menus;

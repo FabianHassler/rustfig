@@ -204,6 +204,8 @@ pub struct Dialogs {
     pub settings_open: bool,
     pub commands_open: bool,
     pub about_open: bool,
+    /// The bundled manual (`help.open`).
+    pub help: crate::help::HelpState,
     pub messages_open: bool,
     /// Edit › Global settings (RustFig's preferences).
     pub global_open: bool,
@@ -554,6 +556,7 @@ pub(crate) fn escape_closes_panels(app: &mut App, ctx: &egui::Context) {
         || d.settings_open
         || d.commands_open
         || d.about_open
+        || d.help.open
         || d.global_open
         || d.edit.is_some()
         || d.figure_comments.is_some()
@@ -572,6 +575,7 @@ pub(crate) fn escape_closes_panels(app: &mut App, ctx: &egui::Context) {
         d.settings_open = false;
         d.commands_open = false;
         d.about_open = false;
+        d.help.open = false;
         d.global_open = false;
         d.messages_open = false;
         app.unit_panel_open = false;
@@ -642,6 +646,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     settings_dialog(app, ctx);
     commands_dialog(app, ctx);
     about_dialog(app, ctx);
+    crate::help::help_dialog(app, ctx);
     messages_dialog(app, ctx);
     global_dialog(app, ctx);
     unsaved_dialog(app, ctx);

@@ -1,6 +1,6 @@
 # Window-by-window comparison with xfig (W10)
 
-**Status:** 2026-10-22. Group 1 (main window and menus) compared and re-checked against screenshots of the real xfig; group 2 (file windows: Open, Save As, Merge, Export, Print) compared; group 3 (object edit panels) compared with captures and fixed in part; group 4 (settings and tool windows) compared; group 5 (attribute pop-ups and mode panel) compared. W10 is done; the Smart Links button (D8) is no longer missing.
+**Status:** 2026-10-22 (W10-2, W10-28 done: Help menu and bundled manual). Group 1 (main window and menus) compared and re-checked against screenshots of the real xfig; group 2 (file windows: Open, Save As, Merge, Export, Print) compared; group 3 (object edit panels) compared with captures and fixed in part; group 4 (settings and tool windows) compared; group 5 (attribute pop-ups and mode panel) compared. W10 is done; the Smart Links button (D8) is no longer missing.
 
 ## W10 summary (2026-10-21)
 
@@ -57,7 +57,7 @@ Compared again with the A11 screenshots `a11-menu-*.png` against `xfig-menu-*.pn
 | Edit | Undo (Meta-U), Paste Objects (Meta-T), Paste Text (F18/F20), Search/Replace (Meta-I), Spell Check (Meta-K), Delete All (Meta-D), divider, Global settings (Meta-G), Set units (Shift-U) | same order and words | Paste Text greyed (E7), Spell Check greyed (F5). Extras after xfig's entries (W17): Units and Page, Redo, Delete, Cut, Copy, Duplicate, Select all, Select none; RustFig preferences inside Global settings. |
 | View | Manage Styles (Ctrl-Y), Redraw (Ctrl-L), Portrait/Landscape (Meta-C), Zoom In (Shift-Z), Zoom Out (z), Zoom to Fit canvas (Ctrl-Z), Unzoom, Pan to origin, Character map, divider, Show page borders (Meta-B), Show depth manager, Show info balloons (Meta-Y), Show line lengths (Meta-L), Show vertex numbers, Autorefresh mode | same order and words, check marks on the toggles | Greyed: Manage Styles (E6), Character map (E5), Show line lengths (D10), Show vertex numbers and Autorefresh mode (no task: see W10-3). Defaults match `app-defaults/Fig` (borders, depth manager and balloons on). Extras in Modern layout: grid, indicator, layout switch, xfig mouse buttons, xfig keys. |
 | Snap | Hold, Release, divider, Endpoint, Midpoint, Nearest, Focus, divider, Normal, Tangent, Intersection, Diameter | same words and order, current mode selected | none |
-| Help | Xfig Reference (HTML), Reference (PDF), Man Pages (HTML), How-To Guide (PDF), About Xfig | "RustFig Reference (commands)", "About RustFig" | Documentation entries differ (W10-2). Deliberate: RustFig's own About and command reference. |
+| Help | Xfig Reference (HTML), Reference (PDF), Man Pages (HTML), How-To Guide (PDF), About Xfig | "RustFig Manual", "RustFig Reference (commands)", "About RustFig" | ✅ W10-2: the bundled manual replaces the HTML/PDF viewers; man pages and How-To are topics of it. Deliberate: RustFig's own About and command reference. |
 | Menu letters | letter picks an entry while a menu is open (`Fig*commands*...translations`) | `XFIG_MENU_LETTERS`, same letters | Letters of greyed entries do nothing. |
 | Object (between Snap and Help) | none in xfig | Group/Ungroup, Update, Convert, Open/close, Arrows, Transform, Arrange, Measure, Edit Attributes (W17) | Extra: RustFig's own menu for commands xfig only has as modes or keys. The Modern layout's Tools menu is gone (tools: mode panel and keys). |
 
@@ -244,7 +244,7 @@ Sources: `w_cmdpanel.c` (menus, `create_global_panel`, `global_panel_done`), `w_
 | Colour panel and editor (pop-up from a colour button, Edit Pen / Edit Fill) | Standard Colors grid, User Defined Colors with "x In use", Add Color, Lookup and Add (X11 name or hex), Delete, UnDelete, Delete Unused, RGB and HSV sliders with Lock, hex entry, "No more user colors allowed", "That color is in use by an object" | colour menus with swatches; `color.add`, `color.remove_unused`, user colours in Global settings | E4 (accepted) |
 | Font menus (PostScript 35, LaTeX 6, pictorial) | in the indicator and the text edit panel | combo of names | E11 (accepted) |
 | Library panel (Library mode) | Load a Library, status and Stop, Icon/List view with icon size, selected object, preview, comments, Select object, Cancel; libraries in `library_dir` | mode button greyed | D6 (acceptance widened to this panel) |
-| Help menu | Reference (HTML), Reference (PDF), Man Pages (HTML), How-To (PDF), About Xfig | "RustFig Reference (commands)…", "About RustFig…" | W10-2 |
+| Help menu | Reference (HTML), Reference (PDF), Man Pages (HTML), How-To (PDF), About Xfig | "RustFig Manual…", "RustFig Reference (commands)…", "About RustFig…" | ✅ W10-2 |
 | About | version, icon, four copyright lines, Ok | version, description, licence | **fixed now**: lists xfig's copyrights (the licence asks for them); "clean-room" removed (it was wrong for ported code) |
 | File message window | list of messages, Dismiss, Clear; Return dismisses | list; Return dismisses | **fixed now**: Dismiss and Clear added |
 | Message line | one-line `put_msg` | status line | same |
@@ -339,6 +339,7 @@ Nothing in group 1 needed an in-place fix: labels, order, accelerators and defau
 
 | Date | Note |
 |---|---|
+| 2026-10-22 | W10-2, W10-28 done: Help has RustFig Manual (xfig's Reference), RustFig Reference (commands) and About; man pages and How-To are manual topics. |
 | 2026-10-21 | W10-1 (Update Control) done. |
 | 2026-10-21 | Group 5 (attribute pop-ups, mode panel) compared with the sources; stepping, ranges, dash/dot fields and mode balloons fixed; W10-25 to W10-27; five proposals; W10 summary. |
 | 2026-10-21 | Created; group 1 compared from xfig's sources. |

@@ -138,6 +138,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}",
     },
     UiCommand {
+        id: "help.open",
+        label: "Manual",
+        shortcut: "",
+        params: "{\"topic\"?: string}  — open the bundled manual, at a topic (file name such as \"chop.md\", or its title) or at the first page",
+    },
+    UiCommand {
         id: "app.about",
         label: "About RustFig",
         shortcut: "",
@@ -249,6 +255,7 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.redraw" => app.canvas.invalidate(),
         "app.commands" => app.dialogs.commands_open = true,
         "app.about" => app.dialogs.about_open = true,
+        "help.open" => app.dialogs.help.show(p.get("topic").and_then(Value::as_str))?,
         "app.import_picture" => {
             let file = path.or_else(|| app.file_dialogs.pick_file("Pictures", dialogs::PICTURE_EXTS));
             if let Some(f) = file {
@@ -389,6 +396,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
         (
             "Help",
             &[
+                Cmd("RustFig Manual...", "help.open"),
                 Cmd("RustFig Reference (commands)...", "app.commands"),
                 Cmd("About RustFig...", "app.about"),
             ],
@@ -431,7 +439,8 @@ pub const XFIG_MENU_LETTERS: &[(&str, char, &str)] = &[
     ("View", 'b', "view.toggle_page_border"),
     ("View", 'l', "Show line lengths"),
     ("View", 'a', "Autorefresh mode"),
-    ("Help", 'x', "app.commands"),
+    ("Help", 'x', "help.open"),
+    ("Help", 'c', "app.commands"),
     ("Help", 'a', "app.about"),
 ];
 

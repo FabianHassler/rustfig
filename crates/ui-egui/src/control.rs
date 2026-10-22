@@ -172,6 +172,7 @@ pub fn open_state(app: &App, ctx: &egui::Context) -> Value {
         ("settings", d.settings_open),
         ("commands", d.commands_open),
         ("about", d.about_open),
+        ("manual", d.help.open),
         ("messages", d.messages_open),
         ("global_settings", d.global_open),
         ("resources", d.resources_open),

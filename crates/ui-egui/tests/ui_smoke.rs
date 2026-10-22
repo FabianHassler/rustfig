@@ -1506,3 +1506,36 @@ fn the_platforms_cut_and_paste_keys_reach_the_clipboard_commands() {
     h.run_steps(2);
     assert_eq!(h.state().engine.doc().objects.len(), 1, "pasted once");
 }
+
+/// W10-28: Help > RustFig Manual opens the bundled manual; the search finds
+/// topics; links and the topic list navigate.
+#[test]
+fn manual_opens_from_the_help_menu_and_searches() {
+    let mut h = harness(app());
+    h.get_by_label("Help").click();
+    h.run_steps(2);
+    h.get_by_label_contains("RustFig Manual").click();
+    h.run_steps(3);
+    assert!(h.state().dialogs.help.open);
+    // The first page and the topic list.
+    assert!(h.query_all_by_label("RustFig manual").count() >= 1);
+    assert!(h.query_all_by_label("Chop").count() >= 1);
+    // Search: results replace the page; a result opens its topic.
+    h.get_by_label("Search the manual").click();
+    h.get_by_label("Search the manual").type_text("axe object");
+    h.run_steps(3);
+    h.get_by_label_contains("result(s)");
+    // The topic list comes first, the result (or link) after it.
+    h.query_all_by_label("Chop").last().unwrap().click();
+    h.run_steps(3);
+    assert!(h.state().dialogs.help.query.is_empty());
+    assert!(h.query_all_by_label("Shift variants").count() >= 1);
+    // A link inside a topic goes to another topic.
+    h.state_mut().run("help.open", json!({"topic": "index.md"}));
+    h.run_steps(3);
+    h.query_all_by_label("Line styles").last().unwrap().click();
+    h.run_steps(3);
+    assert!(h.query_all_by_label_contains("One number per line").count() >= 1);
+    // Unknown topics are reported, not ignored.
+    assert!(h.state_mut().try_run("help.open", &json!({"topic": "nope"})).is_err());
+}
