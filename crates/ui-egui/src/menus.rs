@@ -36,6 +36,18 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}  — the Styles window: xfig's style manager: families of named attribute sets (Family and Style lists with Add/Delete, Set applies to the indicator; see style.*)",
     },
     UiCommand {
+        id: "app.character_map",
+        label: "Character map…",
+        shortcut: "Ctrl+Shift+M",
+        params: "{}  — the Character Map window (E5): the characters of the text font (Latin, Greek, arrows, maths; the Symbol and ZapfDingbats tables for those fonts); clicking one inserts it at the caret of the text being typed (script: text.insert_char)",
+    },
+    UiCommand {
+        id: "app.keys",
+        label: "Keys…",
+        shortcut: "",
+        params: "{}  — the shortcut sheet (E8): every command with its keys in the standard and in xfig's scheme, per system, searchable",
+    },
+    UiCommand {
         id: "app.global_settings",
         label: "Global settings…",
         shortcut: "",
@@ -259,6 +271,8 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.keyboard_entry" => app.point_entry.open(),
         "app.global_settings" => app.dialogs.global_open = true,
         "app.styles" => app.styles.open = true,
+        "app.character_map" => app.charmap.open = true,
+        "app.keys" => app.keys_sheet.open = true,
         "app.colors" => {
             let current = p
                 .get("color")
@@ -389,7 +403,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Zoom to Fit canvas", "view.zoom_fit"),
                 Cmd("Unzoom", "view.zoom_actual"),
                 Cmd("Pan to origin", "view.pan_origin"),
-                Missing("Character map", "", "E5"),
+                Cmd("Character map...", "app.character_map"),
                 Sep,
                 Cmd("Show page borders", "view.toggle_page_border"),
                 Cmd("Show depth manager", "app.toggle_depths"),
@@ -406,6 +420,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
             &[
                 Cmd("RustFig Manual...", "help.open"),
                 Cmd("RustFig Reference (commands)...", "app.commands"),
+                Cmd("Keys...", "app.keys"),
                 Cmd("About RustFig...", "app.about"),
             ],
         ),
@@ -441,7 +456,7 @@ pub const XFIG_MENU_LETTERS: &[(&str, char, &str)] = &[
     ("View", 'f', "view.zoom_fit"),
     ("View", 'u', "view.zoom_actual"),
     ("View", 'p', "view.pan_origin"),
-    ("View", 'c', "Character map"),
+    ("View", 'c', "app.character_map"),
     ("View", 'd', "app.toggle_depths"),
     ("View", 'n', "app.toggle_balloons"),
     ("View", 'b', "view.toggle_page_border"),
@@ -449,11 +464,12 @@ pub const XFIG_MENU_LETTERS: &[(&str, char, &str)] = &[
     ("View", 'a', "app.toggle_autorefresh"),
     ("Help", 'x', "help.open"),
     ("Help", 'c', "app.commands"),
+    ("Help", 'k', "app.keys"),
     ("Help", 'a', "app.about"),
 ];
 
 /// The menus Meta (Alt) + letter pops up (`Fig*commands*File*accelerators` …).
-const XFIG_MENU_KEYS: &[(&str, &str)] = &[
+pub(crate) const XFIG_MENU_KEYS: &[(&str, &str)] = &[
     ("Alt+F", "File"),
     ("Alt+E", "Edit"),
     ("Alt+V", "View"),
@@ -687,7 +703,7 @@ pub fn snap_menu(app: &mut App, ui: &mut egui::Ui) {
 /// macOS, where the platform's shortcuts use Cmd and xfig's Ctrl and Option;
 /// on Linux and Windows not where xfig's Ctrl keys take it); otherwise the
 /// platform's shortcut.
-fn entry_keys(id: &str, xfig_keys: bool, mac: bool) -> String {
+pub(crate) fn entry_keys(id: &str, xfig_keys: bool, mac: bool) -> String {
     let platform = label_of(id).1;
     let platform = if platform.is_empty() || (xfig_keys && shadowed_by_xfig(platform, mac)) {
         String::new()
@@ -856,6 +872,10 @@ fn parse_xfig_key(spec: &str) -> Option<(bool, bool, bool, egui::Key)> {
 /// Windows "Alt+N", "Shift+Alt+X", "Ctrl+L".
 pub fn xfig_key_label(spec: &str) -> String {
     key_label(spec, cfg!(target_os = "macos"))
+}
+
+pub(crate) fn key_label_for(spec: &str, mac: bool) -> String {
+    key_label(spec, mac)
 }
 
 fn key_label(spec: &str, mac: bool) -> String {
@@ -1027,6 +1047,12 @@ pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
         app.mode_popup = None;
     }
     if app.engine.is_typing() {
+        // The character map's key works while typing too.
+        if let Some(k) = find_ui("app.character_map").and_then(|c| parse_shortcut(c.shortcut)) {
+            if ctx.input_mut(|i| i.consume_shortcut(&k)) {
+                app.run("app.character_map", json!({}));
+            }
+        }
         let events = ctx.input(|i| i.events.clone());
         let os = crate::platform::Os::current(ctx);
         let alt = ctx.input(|i| i.modifiers.alt);
@@ -1195,6 +1221,7 @@ mod tests {
         ("object.convert", "Convert mode; scripting API"),
         ("object.toggle_", "Open/close and Arrow modes; scripting API"),
         ("style.", "View > Manage Styles... (app.styles) is their window"),
+        ("text.", "View > Character map... (app.character_map) is their window"),
         (
             "file.",
             "the File menu's app.* entries wrap them (dialogs, unsaved-changes guard)",

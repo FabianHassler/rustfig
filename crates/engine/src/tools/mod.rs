@@ -1876,6 +1876,31 @@ impl Engine {
         Some(t)
     }
 
+    /// The Fig font of the text being typed (Text mode), if one is.
+    pub fn typing_font(&self) -> Option<i32> {
+        self.typing_text().map(|t| t.font)
+    }
+
+    /// Insert characters at the caret of the text being typed (the
+    /// character map, E5). In a Symbol or ZapfDingbats text each character
+    /// is stored as that font's own code, so fig2dev draws it; characters the
+    /// font does not have are skipped. Returns how many were inserted.
+    pub fn text_insert_chars(&mut self, chars: &str) -> Result<usize, EngineError> {
+        let font = self
+            .typing_font()
+            .ok_or_else(|| EngineError::bad_params("no text is being typed (use Text mode)"))?;
+        let stored: String = chars
+            .chars()
+            .filter_map(|c| rustfig_text::symbol_tables::store_char(font, c))
+            .collect();
+        let n = stored.chars().count();
+        if n == 0 {
+            return Err(EngineError::bad_params("the text font has no such character"));
+        }
+        self.tool_event(ToolEvent::Text(stored))?;
+        Ok(n)
+    }
+
     /// The selected part of the text being typed (for Copy).
     pub fn text_selection(&self) -> Option<String> {
         let ToolState::Text {

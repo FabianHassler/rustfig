@@ -16,6 +16,12 @@ Key `T`. Text objects hold one line each.
 <!-- os: end -->
 - Typing or pasting replaces the selection. Any Unicode text works, including input methods (the composition shows underlined at the caret until you commit it); pasted line breaks are dropped.
 
+### Character map
+
+View > Character map... (Ctrl+Shift+M, also while typing) opens a window with the characters of the font of the text being typed. Pick a block (Latin-1, Latin Extended, Greek, punctuation, arrows, mathematical operators and more) or type a character or its code (for example `2211`) in the search field; a click inserts the character at the caret. Characters are greyed out until you are typing in Text mode.
+
+With the PostScript Symbol font (Greek letters, maths: ∑ ∫ ≤ and so on) or ZapfDingbats the window shows that font's own table. Fig stores such texts as bytes in the font's encoding (∑ is code 0xE5 in Symbol), and RustFig stores exactly that, so the PostScript, PDF, SVG and the other exports draw the right glyph. Typing a character the font does not have is refused. Scripts use the `text.insert_char` command.
+
 The indicator panel sets the font, size, justification, angle and flags (hidden, rigid, special, LaTeX/PostScript fonts) for new text. Fonts: the PostScript and LaTeX fonts of xfig map to fonts shipped or substituted by RustFig; the picture on the canvas follows fig2dev's font metrics.
 
 ## Picture

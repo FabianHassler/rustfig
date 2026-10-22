@@ -28,6 +28,8 @@ The keys that choose a mode are shown in the mode sections: for example `C` Circ
 
 Mode keys do nothing while a menu is open or while you type text.
 
+The complete list, searchable and per system (macOS, Windows, Linux), is in Help > Keys...: every command with its key in the standard scheme and in xfig's scheme.
+
 ## xfig's menu keys (Meta = Option or Alt)
 
 | Key | Action |
@@ -49,7 +51,7 @@ Mode keys do nothing while a menu is open or while you type text.
 | Shift+Z, Z | Zoom in, zoom out |
 | Ctrl+Z (the physical Ctrl key) | Zoom to fit |
 
-Meta+F, E, V and H open the File, Edit, View and Help menus; while a menu is open, the underlined letter of an entry picks it (for example `i` for Zoom In in the View menu). In the Help menu `x` opens this manual.
+Meta+F, E, V and H open the File, Edit, View and Help menus; while a menu is open, the underlined letter of an entry picks it (for example `i` for Zoom In in the View menu). In the Help menu `x` opens this manual and `k` the key list. In the View menu `c` opens the character map (also Ctrl+Shift+M, even while typing).
 
 ## Platform keys
 

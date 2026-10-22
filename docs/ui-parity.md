@@ -16,7 +16,7 @@
 | Arc | `tool.arc` (three clicks) | ✅ |
 | Picture edit panel | Reread, Browse/Relink, drop a file, type, size, colours, transparency, thumbnail, width/length, rotation, h/w ratios, Shrink/Expand/Original/Scale %, Edit Image, XBM pen colour (W10-16, W10-20) | ✅ |
 | Picture | `tool.picture` (xfig's types: EPS/PS, PDF, GIF, JPEG, PCX, PNG, PPM, TIFF, XBM, XPM, `.gz`/`.Z`; also BMP) | ✅ |
-| Text | `tool.text`: caret by click, selection (mouse, Shift+arrows), word jumps, clipboard, IME (E10) | 🟡 no character map |
+| Text | `tool.text`: caret by click, selection (mouse, Shift+arrows), word jumps, clipboard, IME (E10) | ✅ character map (E5: View > Character map, inserts at the caret; Symbol and Dingbats tables) |
 | Library object | — | ❌ |
 
 ## Editing modes
@@ -56,7 +56,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | Edit: Spell check, Global settings | — | ❌ |
 | View: zoom, fit, pan to origin, page border, portrait/landscape | ✅ | ✅ |
 | View: depth manager | right panel | ✅ |
-| View: character map | — | ❌ |
+| View: character map | `app.character_map`, Ctrl+Shift+M | ✅ |
 | View: Manage Styles… (Ctrl+Y): style families as in xfig's panel (Family and Style lists, Add, Delete, Set), kept in the settings | ✅ E6 (`crates/ui-egui/src/styles.rs`); xfig's `~/.xfigrcstyle` file is replaced by settings.toml |
 | Indicator panel (line, colours, fill, depth, arrows, caps, joins, fonts, justification, angle, radius, sides, rotation, grid, positioning, arc type, text step, text flags, smart links) | xfig's buttons, per mode | 🟡 Angle Geom done (D7); no copy counts |
 | S4 editing functions | Ctrl+click zoom box, pan to origin and unzoom (E3), Ctrl+Shift+click shape factor (S4-6), `Engine::mouse_hints_for(shift, ctrl)`; Shift+click locate object (S4-1), Paste attached to the pointer (S4-2), a cursor per mode (S4-4), Convert box/arc-box (S4-5) | ✅ |

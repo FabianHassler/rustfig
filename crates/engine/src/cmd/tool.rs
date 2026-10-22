@@ -41,6 +41,22 @@ pub(super) fn commands() -> Vec<Command> {
         run: event,
     });
     v.push(Command {
+        id: "text.insert_char",
+        label: "Insert Character",
+        menu: "",
+        shortcut: "",
+        params: "{\"text\": string}  — the character map: inserts the characters at the caret of the text being typed (Text mode). In a Symbol or ZapfDingbats text each Unicode character is stored as that font's own code (∑ as 0xE5), so exports draw it; characters the font lacks are skipped; returns {\"inserted\": n}",
+        mutates: false,
+        enabled: |e| e.typing_font().is_some(),
+        run: |e, p| {
+            let s = super::string(p, "text")?;
+            if s.len() > 64 {
+                return Err(EngineError::bad_params("too many characters"));
+            }
+            Ok(json!({"inserted": e.text_insert_chars(&s)?}))
+        },
+    });
+    v.push(Command {
         id: "tool.point",
         label: "Enter point",
         menu: "",

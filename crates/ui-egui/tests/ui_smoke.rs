@@ -2225,3 +2225,53 @@ fn manage_styles_window_families_and_set() {
     let text = std::fs::read_to_string(&path).unwrap();
     assert!(text.contains("Keep"), "{text}");
 }
+
+/// E5: the Character Map inserts at the caret of the text being typed; in a
+/// Symbol text the stored byte is the Symbol code (∑ is 0xE5).
+#[test]
+fn character_map_inserts_into_the_text_being_typed() {
+    let mut h = harness(App::with_engine(Engine::new()));
+    {
+        let e = &mut h.state_mut().engine;
+        e.execute("indicator.set", &json!({"font": 32, "postscript": true}))
+            .unwrap();
+        e.execute("tool.text", &json!({})).unwrap();
+        e.execute("tool.event", &json!({"type": "press", "x": 1200, "y": 1200}))
+            .unwrap();
+    }
+    h.state_mut().run("app.character_map", json!({}));
+    h.run_steps(3);
+    assert!(h.state().charmap.open);
+    h.get_by_label("Character search").click();
+    h.get_by_label("Character search").type_text("2211");
+    h.run_steps(3);
+    h.get_by_label("Insert ∑").click();
+    h.run_steps(3);
+    h.state_mut().engine.execute("tool.escape", &json!({})).unwrap();
+    let texts: Vec<String> = h
+        .state()
+        .engine
+        .doc()
+        .objects
+        .iter()
+        .filter_map(|o| match &o.kind {
+            rustfig_model::ObjectKind::Text(t) => Some(t.text.clone()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(texts, vec!["\u{e5}".to_string()]);
+}
+
+/// E8: the shortcut sheet lists commands with keys, searchable.
+#[test]
+fn keys_sheet_lists_and_filters_commands() {
+    let mut h = harness(App::with_engine(Engine::new()));
+    h.state_mut().run("app.keys", json!({}));
+    h.run_steps(3);
+    assert!(h.state().keys_sheet.open);
+    h.get_by_label("Key search").click();
+    h.get_by_label("Key search").type_text("edit.undo");
+    h.run_steps(3);
+    assert!(h.query_by_label("edit.undo").is_some());
+    assert!(h.query_by_label("edit.redo").is_none());
+}

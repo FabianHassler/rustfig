@@ -24,7 +24,7 @@ the score.
 | Attributes / indicator | 10 | 87 % | copy counts; mix memory and lock of xfig's colour panel (not built, recent colours instead) | 6 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
 | Export | 12 | 68 % | `sld`, texts with `\ooo` octal escapes (raw bytes, B11 pass 5), the audit's hardening passes (B11), arrows on pie-wedge arcs and file arc centres lost on the way through the Fig writer (gap #25), picture frames and GIF transparency (gap #26) | 90 |
-| Text | 10 | 65 % | character map, LaTeX special-text export, exact PostScript font metrics, spell check (text editing on the canvas done 2026-10-22, E10) | 48 |
+| Text | 10 | 70 % | LaTeX special-text export, exact PostScript font metrics, spell check (text editing on the canvas done 2026-10-22, E10; character map 2026-10-22, E5) | 40 |
 | View & navigation | 8 | 100 % | — (zoom box, pan to origin and unzoom with Ctrl+click done 2026-10-22, E3) | 0 |
 | Undo | 4 | 100 % | — | 0 |
 | Libraries | 5 | 0 % | library browser and placement | 40 |
@@ -34,6 +34,8 @@ the score.
 | **Overall** | 100 | **≈73 %** | | **379** |
 
 ## Evidence of what ships
+
+- Character map and shortcut sheet (E5, E8; Text 65 → 70 %): `crates/text/src/symbol_tables.rs` (Symbol/ZapfDingbats tables from gensvg.c, code to Unicode and back), `Engine::text_insert_chars` and command `text.insert_char` (`crates/engine/src/{tools/mod.rs,cmd/tool.rs}`), windows `crates/ui-egui/src/{charmap,keys_sheet}.rs` (`app.character_map`, `app.keys`); tests `crates/engine/tests/char_map.rs` (∑ in Symbol exports as `&#8721;` in SVG and `\345` in PostScript), `crates/ui-egui/tests/ui_smoke.rs`.
 
 - Zoom box and shape factor (E3, S4-6; View & navigation 96 → 100 %): `crates/engine/src/tools/ctrl.rs` (`ToolEvent::Ctrl`, `ToolState::ZoomBox`), commands `view.zoom_box` (`cmd/view.rs`) and `spline.shape_factor` (`cmd/sfactor.rs`), `Engine::mouse_hints_for`, canvas `ctrl_modifier` (`crates/ui-egui/src/canvas.rs`); tests `crates/engine/tests/ctrl_click.rs`, `ui_smoke.rs` `xfig_ctrl_key_is_cmd_on_macos`.
 - Open compound and join/split (D1, D2): `crates/model/src/lib.rs` (`Document::open`), `crates/engine/src/cmd/{compound,joinsplit}.rs`, `tools/compound.rs`; tests `crates/engine/tests/{open_compound,join_split}.rs`.
@@ -88,6 +90,7 @@ the score.
 | Date | Overall | Note |
 |------|--------:|------|
 | 2026-10-22 | ≈73 % | Recount: Text 55 → 65 % (E10), Settings & styles 15 → 75 % (E1 persistence, recent files, E6 styles, E4 colours); the table had lagged behind. |
+| 2026-10-22 | ≈73 % | E5, E8: character map (Symbol and Dingbats stored as the font codes) and shortcut sheet; Text 65 → 70 %, 8 h less; headline not recounted. |
 | 2026-10-22 | ≈65 % | E3, S4-6: zoom box and shape factor on the canvas; View & navigation 96 → 100 % (rounds to the same overall). |
 | 2026-10-22 | ≈65 % | S4-3, S4-8, S4-9: Digitize (export line as data), relative picture names on Save As, Autorefresh mode, New window; evidence only, score unchanged. |
 | 2026-10-22 | ≈65 % | W10-28, W10-2: bundled manual (27 topics, search, Help > RustFig Manual, `help.open`); evidence only, score unchanged. |

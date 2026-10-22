@@ -4,6 +4,7 @@
 //! sequences for typing text.
 
 mod compose;
+pub mod symbol_tables;
 
 pub use compose::compose;
 pub use figbase::text::*;

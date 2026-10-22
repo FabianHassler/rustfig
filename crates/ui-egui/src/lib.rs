@@ -10,6 +10,7 @@ pub mod attributes;
 pub mod autosave;
 pub mod bevel;
 pub mod canvas;
+pub mod charmap;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod clipboard;
 pub mod color_dialog;
@@ -21,6 +22,7 @@ pub mod dimline_panel;
 pub mod help;
 pub mod inject;
 pub mod input;
+pub mod keys_sheet;
 pub mod menus;
 pub mod mode_icons;
 pub mod panels;
@@ -115,6 +117,10 @@ pub struct App {
     pub unit_panel_open: bool,
     /// The Styles window (E6).
     pub styles: styles::StylesWindow,
+    /// The Character Map window (E5).
+    pub charmap: charmap::CharMap,
+    /// The shortcut sheet (E8).
+    pub keys_sheet: keys_sheet::KeysSheet,
     /// The typed-coordinates window (xfig's keyboard panel, Ctrl+K).
     pub point_entry: point_entry::PointEntry,
     /// The override set during the previous frame, shown in this one.
@@ -170,6 +176,8 @@ impl App {
             hint_shown: None,
             unit_panel_open: false,
             styles: styles::StylesWindow::default(),
+            charmap: charmap::CharMap::default(),
+            keys_sheet: keys_sheet::KeysSheet::default(),
             point_entry: point_entry::PointEntry::default(),
             xfig_keys: true,
             open_menu: None,
@@ -480,6 +488,8 @@ impl App {
             .show(ctx, |ui| canvas::show(self, ui, &tokens));
         dialogs::show(self, ctx);
         digitize::show(self, ctx);
+        charmap::show(self, ctx);
+        keys_sheet::show(self, ctx);
         reload::tick(self, ctx);
         reload::ask(self, ctx);
         panels::mode_popup(self, ctx, &tokens);

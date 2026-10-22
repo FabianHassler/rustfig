@@ -14,7 +14,7 @@
 | 6 | ✅ closed 2026-10-22 (D5): measure modes (join/split D2, chop D3, tangent/normal D4) | Editing | Low | 0 |
 | 7 | Settings persistence (units, grid, recent files) and a style manager | Settings | Medium | 30 |
 | 8 | ~~The zoom box~~ (done 2026-10-22, E3; rulers landed with W6) | View | Medium | 4 |
-| 9 | Character map, compose-key input, LaTeX special-text handling | Text | Medium | 30 |
+| 9 | Compose-key input (done), LaTeX special-text handling; the character map is done (E5) | Text | Medium | 30 |
 | 10 | Bitmap exports GIF/JPEG/TIFF/PPM (with transparent colour) | Export | Medium | 12 |
 | 11 | Colour editor (create and edit user colours in the UI) | Attributes | Medium | 12 |
 | 12 | Point positioning modes: latex lines, manhattan, mountain | Attributes | Low | 10 |
