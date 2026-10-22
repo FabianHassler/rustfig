@@ -11,7 +11,7 @@ use rustfig_engine::cmd::color::{from_hsv_values, to_hsv};
 use rustfig_model::{ColorRef, Rgb};
 use serde_json::{json, Value};
 
-/// The current colour the picker's "Use" buttons and the eyedropper set.
+/// The current colour the picker's "Use" buttons set.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorField {
     Pen,
@@ -28,8 +28,6 @@ pub struct ColorDialog {
     selected: Option<i32>,
     /// A name for keeping the colour in the preferences.
     name: String,
-    /// The eyedropper last started takes the fill colour (else the pen's).
-    dropper_fill: bool,
     /// A pick from the screen in progress (E4b).
     pub pick: crate::screen_pick::ScreenPicker,
 }
@@ -43,7 +41,6 @@ impl Default for ColorDialog {
             hex: Rgb::BLACK.to_hex(),
             selected: None,
             name: String::new(),
-            dropper_fill: false,
             pick: Default::default(),
         }
     }
@@ -104,18 +101,6 @@ fn field_name(f: ColorField) -> &'static str {
         ColorField::Pen => "pen_color",
         ColorField::Fill => "fill_color",
     }
-}
-
-/// After an eyedropper pick: the picker shows the colour taken (the pen or
-/// fill colour, whichever the pick changed).
-pub fn follow_eyedropper(app: &mut App) {
-    if !app.dialogs.color.open {
-        return;
-    }
-    let (pen, fill) = (app.engine.indicator.pen_color, app.engine.indicator.fill_color);
-    let c = if app.dialogs.color.dropper_fill { fill } else { pen };
-    let rgb = app.engine.doc().rgb(ColorRef(c.max(0)));
-    app.dialogs.color.set_rgb(rgb);
 }
 
 /// Take the result of a pick from the screen: the picker shows the colour
@@ -350,14 +335,6 @@ fn body(app: &mut App, ui: &mut egui::Ui) {
         }
         if ui.button("Use as fill colour").clicked() {
             use_for(app, ColorField::Fill);
-        }
-        if ui.button("Eyedropper (pen)").clicked() {
-            app.dialogs.color.dropper_fill = false;
-            app.run("color.eyedropper", json!({"target": "pen"}));
-        }
-        if ui.button("Eyedropper (fill)").clicked() {
-            app.dialogs.color.dropper_fill = true;
-            app.run("color.eyedropper", json!({"target": "fill"}));
         }
     });
     ui.horizontal(|ui| {

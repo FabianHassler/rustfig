@@ -13,7 +13,6 @@ pub mod coords;
 pub mod dimline;
 mod error;
 pub mod export_panel;
-mod eyedropper;
 pub mod fig2dev;
 pub mod guard;
 mod history;
@@ -125,8 +124,6 @@ pub struct Engine {
     pub prefs: prefs::Prefs,
     /// Set when `prefs` changed and should be written.
     pub prefs_dirty: bool,
-    /// The colour eyedropper waits for a canvas click (E4).
-    pub(crate) eyedropper: Option<eyedropper::Eyedropper>,
     /// Edit > Copy as Picture waits for its objects (xfig has no
     /// selection): left an object, middle a region, right the whole figure.
     pub(crate) copy_pick: bool,
@@ -183,7 +180,6 @@ impl Engine {
             recovery_dir: None,
             prefs: prefs::Prefs::default(),
             prefs_dirty: false,
-            eyedropper: None,
             copy_pick: false,
             gray_hidden_depths: true,
             show_page_border: true,
@@ -280,11 +276,6 @@ impl Engine {
 
     pub fn tool(&self) -> ToolKind {
         self.tool
-    }
-
-    /// Whether the colour eyedropper waits for a click (E4).
-    pub fn eyedropper_waiting(&self) -> bool {
-        self.eyedropper.is_some()
     }
 
     pub fn status(&self) -> &str {

@@ -1269,7 +1269,7 @@ fn draw_value(app: &App, ui: &Ui, p: &Painter, r: Rect, button: Rect, tk: &Token
         }
         Attr::FillStyle => {
             let sw = Rect::from_center_size(r.center(), vec2(r.height().min(26.0), r.height().min(26.0)));
-            fill_swatch(p, sw, doc, ind.fill_color, ind.area_fill, ink, tk);
+            fill_swatch(p, sw, doc, (ind.pen_color, ind.fill_color), ind.area_fill, ink, tk);
         }
         Attr::LineWidth => {
             text_right(&ind.thickness.to_string());
@@ -1283,7 +1283,18 @@ fn draw_value(app: &App, ui: &Ui, p: &Painter, r: Rect, button: Rect, tk: &Token
 
 /// A swatch of an area fill: none, a shade or tint of the fill colour, or a
 /// pattern drawn in the pen colour over the fill colour.
-fn fill_swatch(p: &Painter, r: Rect, doc: &Document, fill_color: i32, area_fill: i32, ink: Color32, tk: &Tokens) {
+/// A fill-style box as xfig's panel draws it: shades and tints in the fill
+/// colour, patterns in the pen colour on the fill colour (as fig2dev fills
+/// them), at a scale where the lines stay apart.
+fn fill_swatch(
+    p: &Painter,
+    r: Rect,
+    doc: &Document,
+    (pen_color, fill_color): (i32, i32),
+    area_fill: i32,
+    ink: Color32,
+    tk: &Tokens,
+) {
     let stroke = Stroke::new(1.0_f32, tk.muted);
     match area_fill {
         -1 => {
@@ -1304,12 +1315,17 @@ fn fill_swatch(p: &Painter, r: Rect, doc: &Document, fill_color: i32, area_fill:
             let bg: Rgb = doc.rgb(ColorRef(fill_color));
             p.rect_filled(r, 0.0, Color32::from_rgb(bg.r, bg.g, bg.b));
             if let Some(t) = rustfig_render::pattern::tile(kind) {
-                // Two tiles across the swatch; pattern space has y up.
-                let (tw, th) = (t.width, t.height);
-                let s = r.width() as f64 / (2.0 * tw.max(1.0));
+                // Pattern space has y up; 0.7 points per pattern unit keeps
+                // the lines of the dense patterns apart.
+                let (tw, th) = (t.width.max(1.0), t.height.max(1.0));
+                let s = 0.7;
+                let pen = doc.rgb(ColorRef(pen_color.max(0)));
+                let pen = Color32::from_rgb(pen.r, pen.g, pen.b);
                 let painter = p.with_clip_rect(r);
-                for ty in 0..(r.height() as f64 / (th * s)).ceil() as i32 + 1 {
-                    for tx in 0..3 {
+                let ny = (f64::from(r.height()) / (th * s)).ceil() as i32 + 1;
+                let nx = (f64::from(r.width()) / (tw * s)).ceil() as i32 + 1;
+                for ty in 0..ny.clamp(1, 64) {
+                    for tx in 0..nx.clamp(1, 64) {
                         for l in &t.lines {
                             let pts: Vec<Pos2> = l
                                 .iter()
@@ -1320,7 +1336,7 @@ fn fill_swatch(p: &Painter, r: Rect, doc: &Document, fill_color: i32, area_fill:
                                     )
                                 })
                                 .collect();
-                            painter.add(egui::Shape::line(pts, Stroke::new(1.0_f32, Color32::BLACK)));
+                            painter.add(egui::Shape::line(pts, Stroke::new(0.8_f32, pen)));
                         }
                     }
                 }
@@ -1353,7 +1369,11 @@ fn cell(ui: &mut Ui, size: egui::Vec2, selected: bool, name: &str, paint: impl F
 }
 
 fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
-    ui.label(egui::RichText::new(a.name()).strong());
+    // xfig's Fill Style panel names its own sections ("Fill Style",
+    // "Patterns").
+    if a != Attr::FillStyle {
+        ui.label(egui::RichText::new(a.name()).strong());
+    }
     let ind = app.engine.indicator.clone();
     let ink = ui.visuals().text_color();
     match a {
@@ -1515,10 +1535,6 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                 if ui.button("More…").clicked() {
                     crate::color_dialog::open(app, cur);
                 }
-                if ui.button("Eyedropper").clicked() {
-                    let target = if a == Attr::PenColor { "pen" } else { "fill" };
-                    app.run("color.eyedropper", json!({ "target": target }));
-                }
             });
             if let Some(c) = chosen {
                 app.run("color.use", json!({ "color": c }));
@@ -1535,8 +1551,8 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                 let plain = matches!(ind.fill_color, -1 | 0 | 7);
                 for (i, f) in (-1..=40).filter(|f| !(plain && (21..=40).contains(f))).enumerate() {
                     let name = if f < 0 { "none".to_string() } else { format!("{f}") };
-                    if cell(ui, vec2(26.0, 26.0), ind.area_fill == f, &name, |p, r| {
-                        fill_swatch(p, r, doc, ind.fill_color, f, ink, tk)
+                    if cell(ui, vec2(32.0, 32.0), ind.area_fill == f, &name, |p, r| {
+                        fill_swatch(p, r, doc, (ind.pen_color, ind.fill_color), f, ink, tk)
                     }) {
                         chosen = Some(f);
                     }
@@ -1552,8 +1568,8 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                         .get(i)
                         .copied()
                         .unwrap_or("pattern");
-                    if cell(ui, vec2(26.0, 26.0), ind.area_fill == f, name, |p, r| {
-                        fill_swatch(p, r, doc, 7, f, ink, tk)
+                    if cell(ui, vec2(32.0, 32.0), ind.area_fill == f, name, |p, r| {
+                        fill_swatch(p, r, doc, (ind.pen_color, ind.fill_color), f, ink, tk)
                     }) {
                         chosen = Some(f);
                     }
@@ -1562,6 +1578,8 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                     }
                 }
             });
+            // xfig's Cancel: any click closes the panel; this one sets nothing.
+            let _ = ui.button("Cancel");
             if let Some(f) = chosen {
                 set(app, json!({ "area_fill": f }));
             }

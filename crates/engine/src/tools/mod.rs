@@ -778,10 +778,6 @@ impl Engine {
             self.set_status("Copy as picture cancelled.");
             return Ok("cancelled");
         }
-        if self.eyedropper.take().is_some() {
-            self.set_status("Eyedropper cancelled.");
-            return Ok("cancelled");
-        }
         match &self.tool_state {
             ToolState::Idle => {}
             ToolState::Text { .. } => {
@@ -925,21 +921,6 @@ impl Engine {
                 ToolEvent::Key(_) => {
                     self.copy_pick = false;
                     self.set_status("Copy as picture cancelled.");
-                    return Ok(());
-                }
-                _ => {}
-            }
-        }
-        // The colour eyedropper (E4) takes the next press, whatever the mode.
-        if let Some(target) = self.eyedropper {
-            match ev {
-                ToolEvent::Press { pos, button, .. } | ToolEvent::Ctrl { pos, button, .. } => {
-                    self.eyedropper_press(target, pos, button);
-                    return Ok(());
-                }
-                ToolEvent::Key(_) => {
-                    self.eyedropper = None;
-                    self.set_status("Eyedropper cancelled.");
                     return Ok(());
                 }
                 _ => {}

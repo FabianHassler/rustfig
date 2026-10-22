@@ -609,15 +609,10 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
 
     let send = |app: &mut App, ev: ToolEvent| {
         let moving = matches!(ev, ToolEvent::Move { .. });
-        let dropper = app.engine.eyedropper_waiting();
         if let Err(e) = app.engine.tool_event(ev) {
             app.error(e.message);
         }
         app.show_tool_status(moving);
-        // The colour picker shows the colour the eyedropper took.
-        if dropper && !app.engine.eyedropper_waiting() {
-            crate::color_dialog::follow_eyedropper(app);
-        }
     };
     if let Some(p) = hover {
         let fp = to_fig(p);

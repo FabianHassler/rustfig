@@ -58,7 +58,6 @@ pub(super) fn commands() -> Vec<Command> {
             enabled: |e| e.picture_clipboard.is_some(),
             run: |e, _| {
                 e.copy_pick = true;
-                e.eyedropper = None;
                 e.set_status("Copy as picture: click an object (left), a region (middle) or the whole figure (right); Escape cancels.");
                 Ok(json!({}))
             },

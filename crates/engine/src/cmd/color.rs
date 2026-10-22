@@ -1,12 +1,11 @@
 //! Colours (E4): parsing hex and X11 names, the colour editor (new, edit,
-//! delete user colours), recently used colours, the eyedropper.
+//! delete user colours), recently used colours.
 //!
 //! The editor follows xfig's colour panel (`w_color.c`: Add, Modify, Delete;
 //! a colour in use is not deleted, as xfig's `del_color` keeps it).
 // Ported from xfig src/w_color.c (xfig licence, see LICENSE-xfig).
 
 use super::{always, num, opt_num, opt_str, string, CmdResult, Command};
-use crate::eyedropper::Eyedropper;
 use crate::{Engine, EngineError};
 use rustfig_model::{ColorRef, Rgb, FIRST_USER_COLOR, LAST_USER_COLOR};
 use serde_json::{json, Value};
@@ -92,16 +91,6 @@ pub(super) fn commands() -> Vec<Command> {
             mutates: false,
             enabled: always,
             run: use_color,
-        },
-        Command {
-            id: "color.eyedropper",
-            label: "Eyedropper",
-            menu: "",
-            shortcut: "",
-            params: "{\"target\": \"pen\"|\"fill\", \"cancel\"?: true}  — the next canvas click takes the pen or fill colour of the object under it as the current colour (any other button or Escape cancels); \"cancel\" ends it",
-            mutates: false,
-            enabled: always,
-            run: eyedropper,
         },
     ]
 }
@@ -254,22 +243,4 @@ fn use_color(e: &mut Engine, p: &Value) -> CmdResult {
     };
     note_recent(e, rgb);
     Ok(json!({"rgb": rgb.to_hex()}))
-}
-
-fn eyedropper(e: &mut Engine, p: &Value) -> CmdResult {
-    if p.get("cancel").and_then(Value::as_bool) == Some(true) {
-        e.eyedropper = None;
-        return Ok(json!({"active": false}));
-    }
-    let target = match opt_str(p, "target")?.unwrap_or("pen") {
-        "pen" => Eyedropper::Pen,
-        "fill" => Eyedropper::Fill,
-        _ => return Err(EngineError::bad_params("target must be pen or fill")),
-    };
-    e.eyedropper = Some(target);
-    e.set_status(match target {
-        Eyedropper::Pen => "Eyedropper: click an object to take its pen colour (Escape cancels).",
-        Eyedropper::Fill => "Eyedropper: click an object to take its fill colour (Escape cancels).",
-    });
-    Ok(json!({"active": true}))
 }

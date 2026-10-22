@@ -1,10 +1,8 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-//! E4: colour commands: parsing, editor, recent colours, eyedropper, and
+//! E4: colour commands: parsing, editor, recent colours, and
 //! user colours surviving a save and reopen in the Fig file.
 
-use rustfig_engine::tools::{Button, ToolEvent};
 use rustfig_engine::Engine;
-use rustfig_geom::Point;
 use serde_json::json;
 
 fn run(e: &mut Engine, id: &str, p: serde_json::Value) -> serde_json::Value {
@@ -73,69 +71,6 @@ fn recent_colours_newest_first_unique_capped() {
     run(&mut e, "color.use", json!({"color": 4}));
     assert_eq!(run(&mut e, "color.recent", json!({}))["colors"][0], "#ff0000");
     assert!(e.prefs_dirty);
-}
-
-#[test]
-fn eyedropper_takes_the_next_click() {
-    let mut e = Engine::new();
-    let c = run(&mut e, "color.new", json!({"rgb": "#336699"}))["color"]
-        .as_i64()
-        .unwrap();
-    run(
-        &mut e,
-        "shape.rectangle",
-        json!({"x": 0, "y": 0, "width": 1200, "height": 1200, "pen_color": c, "fill_color": 4, "area_fill": 20}),
-    );
-    run(&mut e, "color.eyedropper", json!({"target": "pen"}));
-    let press = |button| ToolEvent::Press {
-        pos: Point::new(0.0, 600.0),
-        button,
-        shift: false,
-    };
-    e.tool_event(press(Button::Left)).unwrap();
-    assert_eq!(i64::from(e.indicator.pen_color), c);
-    // One shot: the next click does not pick again.
-    e.indicator.pen_color = 0;
-    e.tool_event(press(Button::Left)).unwrap();
-    assert_eq!(e.indicator.pen_color, 0);
-    // The colour under the pointer counts, whatever the target: inside
-    // the filled box it is the fill colour (here into the fill), and on
-    // the outline the line colour (here into the fill as well).
-    run(&mut e, "color.eyedropper", json!({"target": "fill"}));
-    e.tool_event(ToolEvent::Press {
-        pos: Point::new(600.0, 600.0),
-        button: Button::Left,
-        shift: false,
-    })
-    .unwrap();
-    assert_eq!(e.indicator.fill_color, 4);
-    run(&mut e, "color.eyedropper", json!({"target": "fill"}));
-    e.tool_event(press(Button::Left)).unwrap();
-    assert_eq!(i64::from(e.indicator.fill_color), c);
-    run(&mut e, "color.eyedropper", json!({"target": "pen"}));
-    e.tool_event(ToolEvent::Press {
-        pos: Point::new(600.0, 600.0),
-        button: Button::Left,
-        shift: false,
-    })
-    .unwrap();
-    assert_eq!(e.indicator.pen_color, 4, "green fill into the pen colour");
-    // Other buttons and Escape cancel; a click on nothing picks nothing.
-    run(&mut e, "color.eyedropper", json!({"target": "pen"}));
-    e.tool_event(press(Button::Right)).unwrap();
-    run(&mut e, "color.eyedropper", json!({"target": "pen"}));
-    run(&mut e, "tool.escape", json!({}));
-    e.indicator.pen_color = 0;
-    e.tool_event(press(Button::Left)).unwrap();
-    assert_eq!(e.indicator.pen_color, 0);
-    run(&mut e, "color.eyedropper", json!({"target": "pen"}));
-    e.tool_event(ToolEvent::Press {
-        pos: Point::new(90000.0, 90000.0),
-        button: Button::Left,
-        shift: false,
-    })
-    .unwrap();
-    assert_eq!(e.indicator.pen_color, 0);
 }
 
 #[test]
