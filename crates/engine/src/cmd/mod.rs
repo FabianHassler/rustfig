@@ -16,6 +16,7 @@ mod outline;
 mod prefs;
 mod region;
 pub(crate) mod shape;
+pub(crate) mod tangent;
 
 pub(crate) use region::circumcircle;
 pub use shape::STYLE_PARAMS;
@@ -75,6 +76,7 @@ pub fn all() -> &'static [Command] {
         v.extend(object::commands());
         v.extend(compound::commands());
         v.extend(chop::commands());
+        v.extend(tangent::commands());
         v.extend(joinsplit::commands());
         v.extend(region::commands());
         v.extend(doc::commands());

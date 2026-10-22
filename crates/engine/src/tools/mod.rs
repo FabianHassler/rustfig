@@ -11,6 +11,7 @@
 mod chop;
 mod compound;
 mod markers;
+mod tangent;
 use crate::Region;
 pub use markers::{mode_mask, object_markers, ObjMask};
 
@@ -67,10 +68,12 @@ pub enum ToolKind {
     Convert,
     OpenClose,
     Arrow,
+    /// Add a tangent or normal line to a curve (xfig's `F_TANGENT`).
+    Tangent,
 }
 
 impl ToolKind {
-    pub const ALL: [ToolKind; 41] = [
+    pub const ALL: [ToolKind; 42] = [
         ToolKind::Select,
         ToolKind::CircleRadius,
         ToolKind::CircleDiameter,
@@ -112,6 +115,7 @@ impl ToolKind {
         ToolKind::Convert,
         ToolKind::OpenClose,
         ToolKind::Arrow,
+        ToolKind::Tangent,
     ];
 
     pub fn id(self) -> &'static str {
@@ -158,6 +162,7 @@ impl ToolKind {
             ToolKind::Convert => "tool.convert",
             ToolKind::OpenClose => "tool.open_close",
             ToolKind::Arrow => "tool.arrow",
+            ToolKind::Tangent => "tool.tangent",
         }
     }
 
@@ -209,6 +214,7 @@ impl ToolKind {
             ToolKind::Convert => "Convert line ↔ spline",
             ToolKind::OpenClose => "Open/close",
             ToolKind::Arrow => "Add/remove arrows",
+            ToolKind::Tangent => "Add tangent/normal to curve",
         }
     }
 
@@ -249,6 +255,7 @@ impl ToolKind {
             ToolKind::RotateCcw => "Shift+R",
             ToolKind::Convert => "V",
             ToolKind::Arrow => "Shift+A",
+            ToolKind::Tangent => "n",
             _ => "",
         }
     }
@@ -602,6 +609,11 @@ impl Engine {
         PICK_PX / self.view.px_per_fig().max(1e-9)
     }
 
+    /// The pick tolerance in Fig units (for commands that take a click).
+    pub(crate) fn pick_tolerance(&self) -> f64 {
+        self.pick_tol()
+    }
+
     /// Feed an event to the active tool.
     pub fn tool_event(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
         let r = self.tool_event_inner(ev);
@@ -683,6 +695,7 @@ impl Engine {
             ToolKind::OpenCompound => self.open_compound_event(ev),
             ToolKind::JoinSplit => self.join_split_event(ev),
             ToolKind::Chop => self.chop_event(ev),
+            ToolKind::Tangent => self.tangent_event(ev),
             _ => self.click_event(ev),
         }
     }
@@ -2428,6 +2441,7 @@ impl Engine {
                     ToolKind::Convert => ("spline<->line", "", "open<->closed"),
                     ToolKind::OpenClose => ("open/close", "", ""),
                     ToolKind::Arrow => ("add arrow", "delete arrow", ""),
+                    ToolKind::Tangent => ("add tangent", "add normal", ""),
                     _ => ("", "", ""),
                 };
                 // The functions on buttons xfig leaves free (W13, W14).

@@ -1,6 +1,6 @@
 # Known gaps (ranked work list)
 
-**Status:** 2026-10-22 (D14: smart links extended, nothing listed here changed; the leftovers are the file-stored links xfig does not have). 2026-10-22 (D3: #6 dropped Chop; D8: linked move landed, #12 dropped "linked move", #33 dropped the Smart Links button). Earlier: 2026-10-21 (S4: #34 added; B15: #14 shrank to the leftovers; DD9: #25 restated after DD7; #14 restated: EPS/PDF pictures in exports need a PostScript interpreter). 2026-10-18 (B2, G1, B12, pict2e, TikZ, PSTricks, EMF, Tk (B1, B3, B9) landed; B11 added from the fig2dev audit). Ranked by user impact per hour. Pick work from the top.
+**Status:** 2026-10-22 (D4: #6 dropped tangent/normal). 2026-10-22 (D14: smart links extended, nothing listed here changed; the leftovers are the file-stored links xfig does not have). 2026-10-22 (D3: #6 dropped Chop; D8: linked move landed, #12 dropped "linked move", #33 dropped the Smart Links button). Earlier: 2026-10-21 (S4: #34 added; B15: #14 shrank to the leftovers; DD9: #25 restated after DD7; #14 restated: EPS/PDF pictures in exports need a PostScript interpreter). 2026-10-18 (B2, G1, B12, pict2e, TikZ, PSTricks, EMF, Tk (B1, B3, B9) landed; B11 added from the fig2dev audit). Ranked by user impact per hour. Pick work from the top.
 
 | # | Gap | Area | Impact | Hours |
 |---|-----|------|--------|------:|
@@ -11,7 +11,7 @@
 | 3 | PostScript output: page layout done 2026-10-18 (B4a); EPS previews (`-A`/`-T`/`-C`) and `-B`/`-R` done 2026-10-18 (B4b); printing remains | Export/Printing | Medium | 20 |
 | 4 | Library objects: browse a directory of .fig files and place them | Libraries | Medium | 40 |
 | 5 | ✅ closed 2026-10-21 (D1): open compound. Left: the dimension-line recomputation on close (D10); the save query landed 2026-10-21 | Editing | Low | 0 |
-| 6 | Tangent/normal, measure modes (join/split done 2026-10-21 D2, chop done 2026-10-22 D3) | Editing | Medium | 20 |
+| 6 | Measure modes (join/split done 2026-10-21 D2, chop done 2026-10-22 D3, tangent/normal done 2026-10-22 D4) | Editing | Medium | 12 |
 | 7 | Settings persistence (units, grid, recent files) and a style manager | Settings | Medium | 30 |
 | 8 | The zoom box (rulers landed with W6) | View | Medium | 4 |
 | 9 | Character map, compose-key input, LaTeX special-text handling | Text | Medium | 30 |
@@ -40,6 +40,7 @@
 | Date | Note |
 |------|------|
 | 2026-10-22 | D3 closed Chop from #6 (tangent/normal and measure remain). |
+| 2026-10-22 | D4 closed tangent/normal from #6 (measure remains). |
 | 2026-10-21 | W10-1 (Update Control) done: removed from #29 and #33. |
 | 2026-10-21 | #34 added (S4: function-level audit of xfig; S4-1 to S4-7). |
 | 2026-10-21 | #30 added (W10 group 2: file windows). |

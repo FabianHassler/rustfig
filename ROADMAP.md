@@ -18,8 +18,8 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Measure | Value |
 |---------|-------|
 | Overall parity (weighted) | ≈65 % |
-| Commands (all reachable from the control channel and MCP) | 144 engine (incl. 41 tool modes) + 14 UI |
-| Interactive tools (xfig modes) | 41 |
+| Commands (all reachable from the control channel and MCP) | 146 engine (incl. 42 tool modes) + 14 UI |
+| Interactive tools (xfig modes) | 42 |
 | Tests | 575 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 1.3–3.2, write 3.2 |
 | Export formats | all through fig2dev's ported drivers (`convert`): PDF, SVG, EPS, PNG, GIF, JPEG, TIFF, PPM, PCX, XBM, XPM, EPS+PDF pair, LaTeX box from its scene writers (PostScript without page layout yet); LaTeX picture, epic/eepic/eepicemu, PiCTeX, TeXtyl, tpic, pic, pstex/pdftex, pict2e, CGM, HPGL, DXF, MetaPost, METAFONT, ge, image map, Gerber, shape, TikZ, PSTricks, EMF, Tk/Perl-Tk from ported fig2dev drivers (every fig2dev language except `sld`); fig2dev's own suite 79 pass / 9 fail / 1 skipped |
@@ -30,7 +30,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Dimension | Parity | Details |
 |-----------|--------|---------|
 | Drawing modes | 88 % | all xfig shapes except library objects; freehand and arc by centre |
-| Editing modes | 78 % | missing tangent, measure modes |
+| Editing modes | 80 % | missing measure modes |
 | Attributes panel | 80 % | xfig's per-mode buttons; missing colour editor, latex/manhattan positioning |
 | File format | 92 % | Fig 1.3–3.2 read; exact pre-3.2 spline conversion missing |
 | Export | 66 % | every fig2dev language but `sld`; PostScript page layout and previews, hardening passes missing |
@@ -78,6 +78,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 | 2026-10-22 | D14: smart links extended. Targets also circles, ellipses, arcs, polygons, closed splines, text boxes (end within 45 Fig units of the outline); followers also open splines; a line between two moved shapes moves both ends; the attached end goes through move, nudge (`transform.nudge`), rotate, flip, scale, align and align-to; copy copies the attached lines; Move point on a box corner stretches them; Select highlights attached ends and the previews show every follower. `tests/linked_ext.rs` (13), 1 engine command. |
 | 2026-10-22 | D8: linked move. Moving a box drags the end points of lines attached to its perimeter (within 45 Fig units), and a compound drags the ends of lines inside it; a Smart Links indicator button (off/move/slide) sets `LinkMode`; `engine/links.rs` ports `u_list.c`'s `get_links`/`point_on_perim`/`get_interior_links`/`point_on_inside`/`adjust_links`; Move moves the end point, Slide also slides the adjacent point. `tests/linked_move.rs` (5). |
 | 2026-10-22 | D15: Chop extended: `object.chop` on boxes, arc-boxes, ellipses, splines and compounds (splines and compounds also as axes; X-spline pieces; arrowheads only at the original ends); commands `object.trim`, `object.split_at`, `object.cut_all`, `object.extend`; Chop mode's Shift+left/middle/right; `tests/chop_extended.rs` (14). 4 engine commands, 14 tests. |
+| 2026-10-22 | D4: Tangent/normal mode (`e_tangent.c`, `u_smartsearch.c`, `u_geom.c`): command `object.tangent_line` (a line through a curve point of a circle, ellipse, arc, line, polygon, box or spline, along its tangent or normal, one undo step), mode `tool.tangent` (`n`; left button tangent, middle button normal), Tangent/Norm Length setting and button; tests `crates/engine/tests/tangent.rs`. |
 | 2026-10-22 | D3: Chop mode (`e_chop.c`, `w_intersect.c`): command `object.chop` (cut a polyline, polygon, arc or circle at every intersection with the axe objects, pieces keeping the object's attributes, one undo step) and mode `tool.chop` (`x`; left collects axe objects, middle chops the log, right clears the axes); intersections in `crates/geom/src/intersect.rs`; elliptical arcs unsupported as xfig; `tests/chop.rs` (10) and a mouse-hint fixture. 2 engine commands, 1 tool, 15 tests. |
 | 2026-10-22 | W20: platform edit keys next to xfig's: Cmd+X/C/V on macOS (and Ctrl+X/V elsewhere) now reach cut, copy and paste; menus show xfig's accelerator, or the platform shortcut where xfig has none and its keys leave it free (on Linux and Windows xfig's Ctrl keys win). |
 | 2026-10-21 | E15: Export on save — the Export dialog's "Also export on every save" keeps the chosen file and options up to date on every save; `file.export_on_save` command, per-figure `Document::export_on_save`, stored in `.fig` as a `# RustFigExportOnSave` comment and in `.rustfig` as JSON; save stands when the automatic export fails. |

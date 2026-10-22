@@ -10,7 +10,7 @@
 | M3 | Engine (commands, undo, tools), egui app, control channel, MCP, CLI | done |
 | M4 | Exports: LaTeX family, PostScript/print, more bitmaps | in progress (every fig2dev language but `sld` done; page layout, previews, hardening left) |
 | M5 | Web build verified and packaged; browser file I/O | planned |
-| M6 | Libraries, tangent/normal and measure modes (open compound, join/split, chop done) | planned |
+| M6 | Libraries and measure modes (open compound, join/split, chop, tangent/normal done) | planned |
 | M7 | Settings, rulers, colour editor, character map | planned |
 | M8 | Beta: parity ≥ 85 % | planned |
 
@@ -18,6 +18,7 @@
 
 | Date | Note |
 |------|------|
+| 2026-10-22 | D4 done: Tangent/normal mode (`e_tangent.c`), Tangent/Norm Length; M6 edit modes now also tangent/normal. |
 | 2026-10-22 | D3 done: Chop mode (`e_chop.c`), intersections in `geom/intersect.rs`; M6 edit modes now open compound, join/split and chop. |
 | 2026-10-22 | D7 done: Angle Geom (latex, manhattan, mountain constraints, indicator button). |
 | 2026-10-22 | D14 done: smart links for every shape kind and operation, copy with links, box-corner resize. |

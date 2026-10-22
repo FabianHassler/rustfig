@@ -1,6 +1,6 @@
 # xfig key and mouse bindings checklist (W8)
 
-**Status:** 2026-10-22 (D3: Chop mode key `x`). 2026-10-15: audit complete: every binding works, is replaced by a modern equivalent, or waits for the feature it needs (task named). Every binding xfig defines, from
+**Status:** 2026-10-22 (D4: Tangent mode key `n`). 2026-10-22 (D3: Chop mode key `x`). 2026-10-15: audit complete: every binding works, is replaced by a modern equivalent, or waits for the feature it needs (task named). Every binding xfig defines, from
 `app-defaults/Fig` and the 78 translation tables (210 bindings) in xfig's
 `src/*.c`, with what RustFig does. X plumbing (window-manager close
 messages, expose and resize events, highlight on enter/leave) is left out:
@@ -43,6 +43,7 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside: on mac
 | o | Open compound mode (`ModeOpenCompound`) | `tool.open_compound` | ✅ (D1) |
 | j | Join/Split mode (`ModeJoinSplit`) | `tool.join_split` | ✅ (D2) |
 | x | Chop mode (`ModeChopObject`) | `tool.chop` | ✅ (D3) |
+| n | Tangent/normal mode (`ModeTangent`) | `tool.tangent` | ✅ (D4) |
 
 ## Letters while a menu is open (`Fig*commands*…*translations`)
 
@@ -104,6 +105,7 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside: on mac
 | Date | Note |
 |---|---|
 | 2026-10-22 | D3: Chop mode key `x` (`ModeChopObject`) added. |
+| 2026-10-22 | D4: Tangent mode key `n` (`ModeTangent`) added. |
 | 2026-10-15 | Balloons toggle, Alt+wheel mode menus, compose key, Unit panel and spinner keys; Ctrl-U and Ctrl-X decided. |
 | 2026-10-15 | Edit popup Return/Ctrl+Return/Escape; depth panel right click. |
 | 2026-10-15 | Menus: Meta-F/E/V/H and the letters inside them; plain-letter shortcuts are off while a menu or popup is open. |

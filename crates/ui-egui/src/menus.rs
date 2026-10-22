@@ -1159,6 +1159,10 @@ mod tests {
         ("object.trim", "the Chop tool's Shift+left button"),
         ("object.split_at", "the Chop tool's Shift+middle button"),
         ("object.extend", "the Chop tool's Shift+right button"),
+        (
+            "object.tangent_line",
+            "the Tangent tool (left button; middle button for the normal)",
+        ),
         ("object.cut_all", "scripting API (cut the selection against itself)"),
         ("object.update_region", "the Update tool's right button"),
         ("object.reverse_arrows", "the Arrow tool's right button"),

@@ -32,6 +32,7 @@ pub enum Attr {
     SmartLinks,
     LineWidth,
     LineStyle,
+    TangentLength,
     JoinStyle,
     CapStyle,
     ArrowMode,
@@ -47,7 +48,7 @@ pub enum Attr {
 }
 
 impl Attr {
-    pub const ORDER: [Attr; 28] = [
+    pub const ORDER: [Attr; 29] = [
         Attr::Zoom,
         Attr::Grid,
         Attr::PointPosn,
@@ -64,6 +65,7 @@ impl Attr {
         Attr::SmartLinks,
         Attr::LineWidth,
         Attr::LineStyle,
+        Attr::TangentLength,
         Attr::JoinStyle,
         Attr::CapStyle,
         Attr::ArrowMode,
@@ -97,6 +99,7 @@ impl Attr {
             Attr::SmartLinks => ("Smart", "Links"),
             Attr::LineWidth => ("Line", "Width"),
             Attr::LineStyle => ("Line", "Style"),
+            Attr::TangentLength => ("Tangent/Norm", "Length"),
             Attr::JoinStyle => ("Join", "Style"),
             Attr::CapStyle => ("Cap", "Style"),
             Attr::ArrowMode => ("Arrow", "Mode"),
@@ -173,7 +176,7 @@ impl Attr {
             // A one-line label, the value on the line below.
             Attr::FontSize => 64.0,
             Attr::ArrowSize => 76.0,
-            Attr::TextFlags => 90.0,
+            Attr::TextFlags | Attr::TangentLength => 90.0,
             Attr::TextAngle => 104.0,
             Attr::Font => 170.0,
         }
@@ -196,6 +199,7 @@ impl Attr {
                 | Attr::TextFlags
                 | Attr::FontSize
                 | Attr::TextStep
+                | Attr::TangentLength
         )
     }
 }
@@ -203,8 +207,7 @@ impl Attr {
 /// The attributes a mode shows (xfig's per-mode masks: `I_ELLIPSE`,
 /// `I_CLOSED`, `I_OPEN`, `I_LINE`, `I_BOX`, … in `w_indpanel.h`). Zoom and
 /// Grid Mode are always shown. Attributes whose feature RustFig doesn't
-/// have yet (copy counts, dimension lines, tangent
-/// length) are left out until it does.
+/// have yet (copy counts, dimension lines) are left out until it does.
 pub fn attributes_for(tool: ToolKind) -> Vec<Attr> {
     use Attr::*;
     const MIN2: &[Attr] = &[PointPosn];
@@ -243,6 +246,8 @@ pub fn attributes_for(tool: ToolKind) -> Vec<Attr> {
         ToolKind::Select => &[MIN2, TEXT0, LINE1, ARROWS, &[BoxRadius, ArcType]],
         ToolKind::RotateCcw | ToolKind::RotateCw => &[MIN2, &[RotnAngle, SmartLinks]],
         ToolKind::Arrow => &[&[LineWidth, ArrowType, ArrowSize]],
+        // xfig's `I_TANGENT`: the line attributes, the arrows and the length.
+        ToolKind::Tangent => &[MIN2, LINE1, ARROWS, &[TangentLength]],
         ToolKind::None
         | ToolKind::Break
         | ToolKind::OpenCompound
@@ -613,6 +618,7 @@ fn value_text(app: &App, a: Attr) -> String {
         }
         Attr::FontSize => format!("{}", ind.font_size),
         Attr::TextStep => format!("{:.1}", ind.text_step),
+        Attr::TangentLength => format!("{:.2}", ind.tangent_length),
         Attr::Font => font_name(ind.font, ind.postscript),
     }
 }
@@ -717,6 +723,11 @@ fn step(app: &mut App, a: Attr, dir: i32) {
         Attr::TextAngle => set(app, json!({"text_angle": step_angle(ind.text_angle, dir)})),
         Attr::FontSize => set(app, json!({"font_size": step_font_size(ind.font_size, dir)})),
         Attr::TextStep => set(app, json!({"text_step": step_text_step(ind.text_step, dir)})),
+        // `inc_tangnormlen` / `dec_tangnormlen`: 0.1, within 0..20.
+        Attr::TangentLength => {
+            let v = ((ind.tangent_length + 0.1 * f64::from(dir)) * 100.0).round() / 100.0;
+            set(app, json!({"tangent_length": v.clamp(0.0, 20.0)}));
+        }
         Attr::Font => {
             let count = if ind.postscript {
                 rustfig_text::PS_FONT_COUNT
@@ -1612,6 +1623,7 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
         | Attr::BoxRadius
         | Attr::TextAngle
         | Attr::FontSize
+        | Attr::TangentLength
         | Attr::TextStep => value_entry(app, ui, &ind, a),
     }
 }
@@ -1633,6 +1645,7 @@ fn value_entry(app: &mut App, ui: &mut Ui, ind: &Indicator, a: Attr) {
         Attr::TextAngle => ("text_angle", ind.text_angle, -360.0, 360.0, 1.0),
         Attr::FontSize => ("font_size", ind.font_size, 1.0, 500.0, 0.5),
         Attr::TextStep => ("text_step", ind.text_step, 0.0, 100.0, 0.05),
+        Attr::TangentLength => ("tangent_length", ind.tangent_length, 0.0, 20.0, 0.05),
         _ => return,
     };
     let integer = matches!(a, Attr::Depth | Attr::NumSides | Attr::LineWidth | Attr::BoxRadius);
@@ -1652,7 +1665,11 @@ fn value_entry(app: &mut App, ui: &mut Ui, ind: &Indicator, a: Attr) {
             let notches = (acc / 40.0).trunc();
             ui.data_mut(|d| d.insert_temp(id, acc - notches * 40.0));
             if notches != 0.0 {
-                let step = if a == Attr::TextStep { 0.1 } else { 1.0 };
+                let step = if matches!(a, Attr::TextStep | Attr::TangentLength) {
+                    0.1
+                } else {
+                    1.0
+                };
                 v = (v - f64::from(notches) * step).clamp(lo, hi);
                 changed = true;
             }

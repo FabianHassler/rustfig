@@ -197,6 +197,9 @@ pub struct Indicator {
     /// Line spacing of the text tool as a multiple of the font's (xfig's
     /// "Text Step").
     pub text_step: f64,
+    /// Length of the line the Tangent mode adds, in inches or cm (xfig's
+    /// `cur_tangnormlen`, "Tangent/Norm Length": 0 to 20, start 1.0).
+    pub tangent_length: f64,
     /// Update flags that are switched off (xfig's `cur_updatemask`; all on
     /// at the start, so the set is empty).
     pub update_off: BTreeSet<UpdateFlag>,
@@ -248,6 +251,7 @@ impl Default for Indicator {
             align_v: "none".into(),
             pie_arc: false,
             text_step: 1.0,
+            tangent_length: 1.0,
             update_off: BTreeSet::new(),
             // xfig's `cur_linkmode` starts SMART_OFF (mode.c).
             linkmode: LinkMode::Off,

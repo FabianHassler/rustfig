@@ -146,6 +146,7 @@ tool_runs!(
     Convert,
     OpenClose,
     Arrow,
+    Tangent,
 );
 
 fn event(e: &mut Engine, p: &Value) -> CmdResult {

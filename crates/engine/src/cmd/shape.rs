@@ -110,7 +110,7 @@ pub(crate) fn style_from(e: &Engine, p: &Value) -> Result<Style, EngineError> {
     Ok(s)
 }
 
-fn arrows_from(
+pub(super) fn arrows_from(
     e: &Engine,
     p: &Value,
 ) -> Result<(Option<rustfig_model::Arrow>, Option<rustfig_model::Arrow>), EngineError> {

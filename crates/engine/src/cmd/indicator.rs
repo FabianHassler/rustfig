@@ -21,7 +21,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Set current attributes",
             menu: "",
             shortcut: "",
-            params: "{any indicator field: line, thickness, pen_color, fill_color, area_fill, depth, style_val, cap, join, forward_arrow, backward_arrow, arrow, font, font_size, postscript, justify, text_angle, box_radius, dot_gap, sides, rotate_angle, grid, snap, align_h, align_v, pie_arc, text_step, linkmode: off|move|slide, angle_geom: unconstrained|latex_line|latex_arrow|mount_hattan|manhattan|mountain}",
+            params: "{any indicator field: line, thickness, pen_color, fill_color, area_fill, depth, style_val, cap, join, forward_arrow, backward_arrow, arrow, font, font_size, postscript, justify, text_angle, box_radius, dot_gap, sides, rotate_angle, grid, snap, align_h, align_v, pie_arc, text_step, tangent_length (0-20), linkmode: off|move|slide, angle_geom: unconstrained|latex_line|latex_arrow|mount_hattan|manhattan|mountain}",
             mutates: false,
             enabled: always,
             run: set,
@@ -95,6 +95,10 @@ fn set(e: &mut Engine, p: &Value) -> CmdResult {
     if !ind.style_val.is_finite() {
         ind.style_val = 4.0;
     }
+    if !ind.tangent_length.is_finite() {
+        ind.tangent_length = 1.0;
+    }
+    ind.tangent_length = ind.tangent_length.clamp(0.0, crate::cmd::tangent::MAX_LENGTH);
     if !ind.dot_gap.is_finite() {
         ind.dot_gap = 3.0;
     }

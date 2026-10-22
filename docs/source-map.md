@@ -2,7 +2,7 @@
 
 **Paths written `fig2dev:crates/…` are in the fig2dev repository (<https://github.com/FabianHassler/fig2dev>), where figbase, the fig2dev library and the `fig2dev` program moved (B13).**
 
-**Status:** 2026-10-22 (D14: `engine/links.rs` generalised); 2026-10-22 (D7: `u_elastic.c`/`u_geom.c` constraints in `engine/anglegeom.rs`; D8: smart links, `u_list.c`'s linked move in `engine/links.rs`, the Smart Links button; D3: `e_chop.c` ported, `geom/intersect.rs` from `w_intersect.c`); 2026-10-21 (S4: the xfig file statuses corrected from the function-level audit, [`source-audit.md`](source-audit.md); DD9: sweep; DD7: `read.c`'s repairs as functions used by `format/bridge/export`); 2026-10-20 (DD3: `f_read.c` read through fig2dev's reader); 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
+**Status:** 2026-10-22 (D4: `e_tangent.c` ported with the curve search of `u_smartsearch.c`/`u_geom.c`); 2026-10-22 (D14: `engine/links.rs` generalised); 2026-10-22 (D7: `u_elastic.c`/`u_geom.c` constraints in `engine/anglegeom.rs`; D8: smart links, `u_list.c`'s linked move in `engine/links.rs`, the Smart Links button; D3: `e_chop.c` ported, `geom/intersect.rs` from `w_intersect.c`); 2026-10-21 (S4: the xfig file statuses corrected from the function-level audit, [`source-audit.md`](source-audit.md); DD9: sweep; DD7: `read.c`'s repairs as functions used by `format/bridge/export`); 2026-10-20 (DD3: `f_read.c` read through fig2dev's reader); 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
 sources (`LICENSE-xfig`). Nothing has been ported line by line yet: every
 "own" row was written from the manual and the format description and must be
 checked against the C file named in it.
@@ -96,7 +96,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `e_placelib.c` | 337 | place library object | — | missing (11 functions, S4) | D6 |
 | `e_rotate.c` | 575 | rotate, copy & rotate, anchor, copies count | tools | partial: anchor, number of copies (S4) | D10 |
 | `e_scale.c` | 1444 | scale box/edge/centre | tools | partial: edge scaling in one dimension, dimension lines (S4) | D10 |
-| `e_tangent.c` | 159 | tangent/normal lines | — | missing (5 functions, S4) | D4 |
+| `e_tangent.c` | 159 | tangent/normal lines | `cmd/tangent.rs`, `tools/tangent.rs`; curve search from `u_smartsearch.c`, `u_geom.c` | ported (S4) | D4 |
 | `e_update.c` | 827 | update object / settings, update mask | tools, `indicator.take_from` | ported: update flags (`UpdateFlag`, `Indicator::update_object`, `take_from`) | W10-1 |
 
 ## xfig: files (`f_*`, 9.9 k lines)
@@ -239,5 +239,6 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | 2026-10-21 | S4: every xfig function audited (`source-audit.md`); file statuses of `d_*`, `e_*`, `f_*`, `u_*` and `w_*` rows corrected (f_readpcx/xbm/xpm and f_wrpcx/png, u_ghostscript, u_error are done or replaced, not missing). |
 | 2026-10-21 | DD7: `read.c`'s repairs and checks exposed as functions, used by the bridge's export. |
 | 2026-10-21 | B15: `f_readeps.c`, `readeps.c` (`read_pdf`, `pdftops`, `gsexe`) and the picture part of `genps.c` now covered by `util/{pdfpic,pdfps,gs}.rs`. |
+| 2026-10-22 | D4: `e_tangent.c` ported (`cmd/tangent.rs`, `tools/tangent.rs`), with `smart_next_{arc,ellipse,line,spline}_found` and `close_to_{ellipse,arc,polyline,spline,vector}`. |
 | 2026-10-22 | D15: `e_chop.c` extended beyond xfig (`cmd/outline.rs`, `cmd/chop_ext.rs`). |
 | 2026-10-22 | D3: `e_chop.c` ported (`cmd/chop.rs`, `tools/chop.rs`); `w_intersect.c`'s intersection math in `geom/intersect.rs`. |

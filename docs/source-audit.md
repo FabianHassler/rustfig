@@ -1,6 +1,6 @@
 # Function-level source audit of xfig (S4)
 
-**Status:** 2026-10-22 (S4 done: every function definition of `old/xfig-3.2.9a/src/*.c` has a status). Regenerate the table with `cargo xtask source-audit` (skips quietly when `old/` is absent; keeps the status, note and task columns of existing rows, merged by file, function name and occurrence).
+**Status:** 2026-10-22 (D4: the `e_tangent.c` functions, the Tangent/Norm Length button and `smart_next_{arc,ellipse,line,spline}_found` are ported). 2026-10-22 (S4 done: every function definition of `old/xfig-3.2.9a/src/*.c` has a status). Regenerate the table with `cargo xtask source-audit` (skips quietly when `old/` is absent; keeps the status, note and task columns of existing rows, merged by file, function name and occurrence).
 
 S0 ([`source-map.md`](source-map.md)) maps C files to RustFig modules; this file goes one level down, to every function. It covers xfig only. fig2dev's functions were audited one by one in the fig2dev repository (<https://github.com/FabianHassler/fig2dev>, its audit passes; the inventory of the first rounds is `plan/fig2dev-audit.md` here, local and gitignored) and their hardening is task B11; they are not repeated here.
 
@@ -601,11 +601,11 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_scale.c` | `rescale_points` | 1397 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
 | `e_scale.c` | `scale_arrows` | 1424 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
 | `e_scale.c` | `scale_arrow` | 1434 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_tangent.c` | `tangent_selected` | 49 | missing | Tangent / normal drawing mode | D4 |
-| `e_tangent.c` | `init_tangent_adding` | 68 | missing | Tangent / normal drawing mode | D4 |
-| `e_tangent.c` | `init_normal_adding` | 76 | missing | Tangent / normal drawing mode | D4 |
-| `e_tangent.c` | `tangent_or_normal` | 84 | missing | Tangent / normal drawing mode | D4 |
-| `e_tangent.c` | `tangent_normal_line` | 113 | missing | Tangent / normal drawing mode | D4 |
+| `e_tangent.c` | `tangent_selected` | 49 | ported | `cmd/tangent.rs` (`object.tangent_line`), `tools/tangent.rs` (`tool.tangent`); the length is `Indicator::tangent_length` | |
+| `e_tangent.c` | `init_tangent_adding` | 68 | ported | `cmd/tangent.rs` (`object.tangent_line`), `tools/tangent.rs` (`tool.tangent`); the length is `Indicator::tangent_length` | |
+| `e_tangent.c` | `init_normal_adding` | 76 | ported | `cmd/tangent.rs` (`object.tangent_line`), `tools/tangent.rs` (`tool.tangent`); the length is `Indicator::tangent_length` | |
+| `e_tangent.c` | `tangent_or_normal` | 84 | ported | `cmd/tangent.rs` (`object.tangent_line`), `tools/tangent.rs` (`tool.tangent`); the length is `Indicator::tangent_length` | |
+| `e_tangent.c` | `tangent_normal_line` | 113 | ported | `cmd/tangent.rs` (`object.tangent_line`), `tools/tangent.rs` (`tool.tangent`); the length is `Indicator::tangent_length` | |
 | `e_update.c` | `update_selected` | 92 | ported | tools: `ToolKind::Update` (`click_event`), commands `object.update`, `indicator.*` (take attributes from the object) |  |
 | `e_update.c` | `get_arrow_mode` | 111 | ported | tools: `ToolKind::Update` (`click_event`), commands `object.update`, `indicator.*` (take attributes from the object) |  |
 | `e_update.c` | `get_arrow_type` | 124 | ported | tools: `ToolKind::Update` (`click_event`), commands `object.update`, `indicator.*` (take attributes from the object) |  |
@@ -1308,10 +1308,10 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `u_smartsearch.c` | `set_smart_points` | 128 | missing | object search for smart links (find the box and line end to move together) | D8 |
 | `u_smartsearch.c` | `init_smart_search` | 137 | missing | object search for smart links (find the box and line end to move together) | D8 |
 | `u_smartsearch.c` | `do_smart_object_search` | 170 | missing | object search for smart links (find the box and line end to move together) | D8 |
-| `u_smartsearch.c` | `smart_next_arc_found` | 266 | missing | object search for smart links (find the box and line end to move together) | D8 |
-| `u_smartsearch.c` | `smart_next_ellipse_found` | 293 | missing | object search for smart links (find the box and line end to move together) | D8 |
-| `u_smartsearch.c` | `smart_next_line_found` | 328 | missing | object search for smart links (find the box and line end to move together) | D8 |
-| `u_smartsearch.c` | `smart_next_spline_found` | 358 | missing | object search for smart links (find the box and line end to move together) | D8 |
+| `u_smartsearch.c` | `smart_next_arc_found` | 266 | ported | the curve point and tangent for Tangent mode (`cmd/tangent.rs`, D4); the smart-links search is `engine/links.rs` | |
+| `u_smartsearch.c` | `smart_next_ellipse_found` | 293 | ported | the curve point and tangent for Tangent mode (`cmd/tangent.rs`, D4); the smart-links search is `engine/links.rs` | |
+| `u_smartsearch.c` | `smart_next_line_found` | 328 | ported | the curve point and tangent for Tangent mode (`cmd/tangent.rs`, D4); the smart-links search is `engine/links.rs` | |
+| `u_smartsearch.c` | `smart_next_spline_found` | 358 | ported | the curve point and tangent for Tangent mode (`cmd/tangent.rs`, D4); the smart-links search is `engine/links.rs` | |
 | `u_smartsearch.c` | `smart_next_text_found` | 388 | missing | object search for smart links (find the box and line end to move together) | D8 |
 | `u_smartsearch.c` | `smart_next_compound_found` | 417 | missing | object search for smart links (find the box and line end to move together) | D8 |
 | `u_smartsearch.c` | `smart_show_objecthighlight` | 455 | missing | object search for smart links (find the box and line end to move together) | D8 |
@@ -1729,9 +1729,9 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_indpanel.c` | `dec_linewidth` | 3449 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `inc_linewidth` | 3456 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `show_linewidth` | 3463 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
-| `w_indpanel.c` | `inc_tangnormlen` | 3537 | missing | Tangent/Normal length indicator button | D4 |
-| `w_indpanel.c` | `dec_tangnormlen` | 3544 | missing | Tangent/Normal length indicator button | D4 |
-| `w_indpanel.c` | `show_tangnormlen` | 3551 | missing | Tangent/Normal length indicator button | D4 |
+| `w_indpanel.c` | `inc_tangnormlen` | 3537 | ported | Tangent/Norm Length button (`ui-egui/attributes.rs`, `Indicator::tangent_length`, 0 to 20, steps of 0.1) | |
+| `w_indpanel.c` | `dec_tangnormlen` | 3544 | ported | Tangent/Norm Length button (`ui-egui/attributes.rs`, `Indicator::tangent_length`, 0 to 20, steps of 0.1) | |
+| `w_indpanel.c` | `show_tangnormlen` | 3551 | ported | Tangent/Norm Length button (`ui-egui/attributes.rs`, `Indicator::tangent_length`, 0 to 20, steps of 0.1) | |
 | `w_indpanel.c` | `show_anglegeom` | 3569 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
 | `w_indpanel.c` | `show_arctype` | 3621 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `show_joinstyle` | 3638 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
@@ -1957,7 +1957,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_modepanel.c` | `stub_arrow_head_selected` | 863 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `stub_edit_item_selected` | 869 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `stub_update_selected` | 875 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
-| `w_modepanel.c` | `stub_tangent_selected` | 881 | missing | Tangent mode button | D4 |
+| `w_modepanel.c` | `stub_tangent_selected` | 881 | ported | Tangent mode button, key `n` | |
 | `w_modepanel.c` | `stub_anglemeas_selected` | 887 | missing | Angle, length and area measure mode buttons | D5 |
 | `w_modepanel.c` | `stub_lenmeas_selected` | 893 | missing | Angle, length and area measure mode buttons | D5 |
 | `w_modepanel.c` | `stub_areameas_selected` | 899 | missing | Angle, length and area measure mode buttons | D5 |

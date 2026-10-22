@@ -1,6 +1,6 @@
 # UI parity checklist
 
-**Status:** 2026-10-22. ✅ done · 🟡 partial · ❌ missing
+**Status:** 2026-10-22 (D4: Tangent mode and its length button). ✅ done · 🟡 partial · ❌ missing
 
 ## Drawing modes
 | xfig mode | RustFig | |
@@ -37,7 +37,7 @@
 | Add/remove arrows | `tool.arrow` | ✅ |
 | Join/split | `tool.join_split`, `object.join`, `object.split` | ✅ |
 | Chop | `tool.chop`, `object.chop`; Shift+buttons: `object.trim`, `object.split_at`, `object.extend` | ✅ (D3, D15) |
-| Tangent/normal | — | ❌ |
+| Tangent/normal | `tool.tangent` (`n`), `object.tangent_line`; Tangent/Norm Length button | ✅ (D4) |
 | Angle / length / area measure | `object.measure` (command only) | 🟡 |
 
 The window-by-window comparison with the real xfig (what each window offers and does, rule: same or more functionality) is in [window-parity.md](window-parity.md) (W10).
