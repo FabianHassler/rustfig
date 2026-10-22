@@ -6,7 +6,7 @@ Chop cuts objects where other objects cross them, like a knife along a ruler. xf
 
 Key `x`. xfig's chop: you choose **axe** objects (the knives) and a **log** object (what gets cut). The log is cut at every point where it crosses an axe, and the pieces become separate objects with the log's attributes.
 
-- Left, “Select axe object”: click an object to make it an axe (a guide box marks axes); click it again to take it out. Any number of axes can be chosen.
+- Left, “Select axe object”: click an object to make it an axe; click it again to take it out. Any number of axes can be chosen. Axes are marked in orange (filled markers and a dashed box). Once there is an axe, the object under the pointer that the middle button would cut is marked in green.
 - Middle, “Select log object”: click the object to cut; it is chopped by every axe at once.
 - Right, “Clear axe list”: forgets all axes.
 

@@ -384,10 +384,27 @@ pub struct Overlay {
     pub handles: Vec<Point>,
     /// xfig's object markers of the active editing mode (`markers.rs`).
     pub markers: Vec<Point>,
+    /// The markers of the tagged (selected) objects among them, drawn
+    /// filled (xfig's `toggle_*highlight`).
+    pub tagged: Vec<Point>,
+    /// Chop: the axe objects collected so far.
+    pub chop_axes: Vec<Highlight>,
+    /// Chop: the log object under the pointer, which the middle button
+    /// would cut with the axes.
+    pub chop_log: Option<Highlight>,
     /// Join/Split: the end point picked first, drawn as a magenta square of
     /// 20 screen pixels (`draw_join_marker`).
     pub join_marker: Option<Point>,
     pub text: Option<OverlayText>,
+}
+
+/// An object picked out in a colour of its own: its markers drawn filled
+/// and its box outlined.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Highlight {
+    pub markers: Vec<Point>,
+    /// The object's box as a closed polyline.
+    pub outline: Vec<Point>,
 }
 
 /// What a rubber band does when it closes.
@@ -437,7 +454,9 @@ pub(crate) enum ToolState {
     /// `join_splines`); the next click picks the second.
     Join { id: ObjectId, first: bool, spline: bool },
     /// Chop: the axe (cutting) objects selected so far.
-    Chop { axes: Vec<ObjectId> },
+    /// The axe objects collected so far and the pointer (for the log
+    /// object highlighted under it).
+    Chop { axes: Vec<ObjectId>, hover: Option<Point> },
     Text {
         origin: Point,
         text: String,
@@ -625,7 +644,18 @@ impl Engine {
     }
 
     fn tool_event_inner(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
+        // Only the selecting modes change the selection (xfig tags objects
+        // in Glue, and Break's "break and tag", nowhere else). The other
+        // modes act on the clicked object and leave the selection as it
+        // was, so nothing they touched shows up tagged later.
+        let keep = !matches!(self.tool, ToolKind::Select | ToolKind::Glue | ToolKind::Break);
+        let before = keep.then(|| self.selection().to_vec());
         let r = crate::guard::catch(|| self.dispatch(ev));
+        if let Some(before) = before {
+            if self.selection() != before.as_slice() {
+                self.set_selection(before);
+            }
+        }
         self.snap_click = None;
         match r {
             Ok(r) => {
@@ -735,8 +765,13 @@ impl Engine {
                             if tool == ToolKind::Arc {
                                 return Ok(());
                             }
-                            // Final point.
-                            self.push_point(p, tol);
+                            // Final point; with Shift, finish at the last
+                            // point placed, without adding this one (a
+                            // RustFig addition).
+                            let freehand = matches!(self.tool_state, ToolState::Points { freehand: true, .. });
+                            if !shift || freehand {
+                                self.push_point(p, tol);
+                            }
                             return self.finish_points();
                         }
                         self.tool_state = if tool == ToolKind::Arc {
@@ -2329,7 +2364,8 @@ impl Engine {
     /// empty where Shift changes nothing.
     fn shift_hints(&self) -> (&'static str, &'static str, &'static str) {
         match (&self.tool_state, self.tool) {
-            (ToolState::Points { freehand: false, .. }, _) => ("del point", "", ""),
+            (ToolState::Points { freehand: false, .. }, ToolKind::Arc) => ("del point", "", ""),
+            (ToolState::Points { freehand: false, .. }, _) => ("del point", "finish here", ""),
             (ToolState::Idle | ToolState::Chop { .. }, ToolKind::Chop) => ("trim piece", "split here", "extend line"),
             (ToolState::Idle, ToolKind::Select) => ("add/remove", "", ""),
             (ToolState::Idle, ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture) => ("", "square at center", ""),
@@ -2452,7 +2488,7 @@ impl Engine {
                     ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture => ("corner point", "", ""),
                     ToolKind::RegularPolygon => ("center point", "", ""),
                     ToolKind::Text => ("position cursor", "", ""),
-                    ToolKind::Glue => ("tag object", "tag region (drag: lasso)", glue),
+                    ToolKind::Glue => ("tag object", "tag region", glue),
                     ToolKind::Break => ("break compound", "break and tag", ""),
                     ToolKind::OpenCompound => ("open compound", "open, keep visible", ""),
                     ToolKind::JoinSplit => ("Join Lines/Splines", "Split Line/Spline", ""),
@@ -2464,7 +2500,7 @@ impl Engine {
                     ToolKind::MovePoint => ("move point", "horiz/vert move", ""),
                     ToolKind::AddPoint => ("break/add here", "", ""),
                     ToolKind::DeletePoint => ("delete point", "", ""),
-                    ToolKind::Delete => ("delete object", "delete region (drag: lasso)", "del to cut buf"),
+                    ToolKind::Delete => ("delete object", "delete region", "del to cut buf"),
                     ToolKind::Update => ("update object", "update settings", ""),
                     ToolKind::Edit => ("edit object", "edit Main comment", "edit point"),
                     ToolKind::FlipV | ToolKind::FlipH => ("flip", "copy & flip", ""),
@@ -2477,9 +2513,9 @@ impl Engine {
                 };
                 // The functions on buttons xfig leaves free (W13, W14).
                 let (m, r) = match tool {
-                    ToolKind::Update => (m, "update region (drag: lasso)"),
-                    ToolKind::Move => (m, "move region (drag: lasso)"),
-                    ToolKind::DeletePoint => ("delete in region (drag: lasso)", r),
+                    ToolKind::Update => (m, "update region"),
+                    ToolKind::Move => (m, "move region"),
+                    ToolKind::DeletePoint => ("delete in region", r),
                     ToolKind::AddPoint => ("add at end", r),
                     ToolKind::Arrow => (m, "reverse arrows"),
                     ToolKind::Break => (m, "break all levels"),
@@ -2503,16 +2539,27 @@ impl Engine {
         let mut ov = Overlay::default();
         match &self.tool_state {
             ToolState::Idle | ToolState::Join { .. } => {}
-            ToolState::Chop { axes } => {
-                for id in axes {
-                    if let Some(o) = self.doc().get(*id) {
-                        let bb = o.geometry_bbox();
-                        let mut c = bb.corners().to_vec();
-                        if let Some(f) = c.first().copied() {
-                            c.push(f);
-                        }
-                        ov.guides.push(c);
+            ToolState::Chop { axes, hover } => {
+                let highlight = |o: &Object| {
+                    let bb = o.geometry_bbox();
+                    let mut markers = Vec::new();
+                    object_markers(o, &bb, &mut markers);
+                    let mut outline = bb.corners().to_vec();
+                    if let Some(f) = outline.first().copied() {
+                        outline.push(f);
                     }
+                    Highlight { markers, outline }
+                };
+                ov.chop_axes = axes
+                    .iter()
+                    .filter_map(|id| self.doc().get(*id))
+                    .map(highlight)
+                    .collect();
+                if let Some(p) = hover.filter(|_| !axes.is_empty()) {
+                    let mask = self.marker_mask();
+                    let tol = self.pick_tol();
+                    let log = self.hit_test_where(p, tol, &|o| mask.admits(o) && !axes.contains(&o.id));
+                    ov.chop_log = log.and_then(|id| self.doc().get(id)).map(highlight);
                 }
             }
             ToolState::Points {
@@ -2699,7 +2746,7 @@ impl Engine {
             }
         }
         ov.join_marker = self.join_marker();
-        ov.markers = self.mode_markers();
+        (ov.markers, ov.tagged) = self.mode_markers_tagged();
         if ov.handles.is_empty() && matches!(self.tool_state, ToolState::Idle) && self.tool == ToolKind::Select {
             let ids = self.selection().to_vec();
             if ids.len() <= 2000 {
@@ -3013,7 +3060,8 @@ mod tests {
         click(&mut e, 0.0, 0.0, Button::Left);
         click(&mut e, 600.0, 0.0, Button::Left);
         assert_eq!(e.mouse_hints_with(true).left, "del point");
-        assert_eq!(e.mouse_hints_with(true).middle, "final point");
+        assert_eq!(e.mouse_hints_with(true).middle, "finish here");
+        assert_eq!(e.mouse_hints_with(false).middle, "final point");
         let pos = Point::new(900.0, 0.0);
         e.tool_event(ToolEvent::Press {
             pos,
@@ -3025,6 +3073,17 @@ mod tests {
             panic!("still drawing")
         };
         assert_eq!(pts.len(), 1);
+        // Shift+middle finishes without adding the clicked point.
+        click(&mut e, 600.0, 600.0, Button::Left);
+        e.tool_event(ToolEvent::Press {
+            pos: Point::new(5000.0, 5000.0),
+            button: Button::Middle,
+            shift: true,
+        })
+        .unwrap();
+        assert!(!e.tool_busy());
+        let pts = e.doc().objects[0].points().unwrap().to_vec();
+        assert_eq!(pts, vec![Point::new(0.0, 0.0), Point::new(600.0, 600.0)]);
         // Modes without Shift meanings keep their labels.
         e.set_tool(ToolKind::Delete);
         assert_eq!(e.mouse_hints_with(true), e.mouse_hints());
@@ -3052,8 +3111,9 @@ mod tests {
     /// What a button press can change.
     fn snapshot(e: &Engine) -> String {
         format!(
-            "{} {:?} {:?} {} {} {}",
+            "{} {:?} {:?} {:?} {} {} {}",
             e.revision(),
+            e.status(),
             e.selection(),
             e.tool_state,
             serde_json::to_string(&e.indicator).unwrap(),

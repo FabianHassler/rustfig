@@ -833,8 +833,13 @@ pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
     } else {
         format!("\n{}", h.shift)
     };
+    let region_note = if [h.left, h.middle, h.right].iter().any(|l| l.contains("region")) {
+        "\nRegion: click two corners for a rectangle, or press and drag a loop (lasso)."
+    } else {
+        ""
+    };
     let resp = resp.on_hover_text(format!(
-        "{summary}{shift_note}\n\nTwo-button mouse or trackpad: Alt/Option+click is the middle button, \
+        "{summary}{shift_note}{region_note}\n\nTwo-button mouse or trackpad: Alt/Option+click is the middle button, \
          Ctrl+click the right button (macOS); on Linux and Windows left and right together \
          are the middle button."
     ));

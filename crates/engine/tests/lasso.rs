@@ -109,7 +109,7 @@ fn glue_tag_region_by_lasso_equals_rectangle() {
 fn glue_lasso_shows_overlay_and_hints() {
     let mut e = scene();
     e.set_tool(ToolKind::Glue);
-    assert_eq!(e.mouse_hints().middle, "tag region (drag: lasso)");
+    assert_eq!(e.mouse_hints().middle, "tag region");
     ev(
         &mut e,
         ToolEvent::Press {
@@ -163,7 +163,7 @@ fn non_rectangular_lasso_takes_what_is_inside() {
 fn delete_region_by_lasso() {
     let mut e = scene();
     e.set_tool(ToolKind::Delete);
-    assert_eq!(e.mouse_hints().middle, "delete region (drag: lasso)");
+    assert_eq!(e.mouse_hints().middle, "delete region");
     let before = snapshot(&e);
     lasso(&mut e, Button::Middle, &SQUARE);
     assert_eq!(e.doc().objects.len(), 2);
@@ -176,7 +176,7 @@ fn update_region_by_lasso() {
     let mut e = scene();
     e.execute("indicator.set", &json!({"thickness": 6})).unwrap();
     e.set_tool(ToolKind::Update);
-    assert_eq!(e.mouse_hints().right, "update region (drag: lasso)");
+    assert_eq!(e.mouse_hints().right, "update region");
     lasso(&mut e, Button::Right, &SQUARE);
     assert_eq!((thickness(&e, 0), thickness(&e, 1)), (6, 6));
     assert_ne!(thickness(&e, 2), 6);
@@ -187,10 +187,13 @@ fn update_region_by_lasso() {
 fn move_region_by_lasso_then_place() {
     let mut e = scene();
     e.set_tool(ToolKind::Move);
-    assert_eq!(e.mouse_hints().right, "move region (drag: lasso)");
+    assert_eq!(e.mouse_hints().right, "move region");
     lasso(&mut e, Button::Right, &SQUARE);
     assert!(e.tool_busy(), "the region follows the pointer");
-    assert_eq!(e.selection().len(), 2);
+    // Move mode doesn't tag the region's objects (only the selecting modes
+    // change the selection); its preview shows them.
+    assert!(e.selection().is_empty());
+    assert_eq!(e.overlay().preview.len(), 2);
     let before = e.doc().objects[0].geometry_bbox().min;
     // The region follows the pointer from the release point.
     click(&mut e, -200.0 + 300.0, 900.0, Button::Left);
@@ -208,7 +211,7 @@ fn delete_points_by_lasso() {
     )
     .unwrap();
     e.set_tool(ToolKind::DeletePoint);
-    assert_eq!(e.mouse_hints().middle, "delete in region (drag: lasso)");
+    assert_eq!(e.mouse_hints().middle, "delete in region");
     lasso(
         &mut e,
         Button::Middle,

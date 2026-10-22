@@ -252,12 +252,20 @@ fn the_mode_collects_axes_chops_a_log_and_clears() {
     // Left click on the axe (away from the log) selects it.
     press(&mut e, 1000.0, 500.0, Button::Left);
     assert!(e.status().contains("Axe object 1"), "{}", e.status());
-    // The axe shows a guide box around it.
-    assert_eq!(e.overlay().guides.len(), 1);
+    // The axe is highlighted in the axe colour; with the pointer on the
+    // other line, that one is highlighted as the log.
+    assert_eq!(e.overlay().chop_axes.len(), 1);
+    assert_eq!(e.overlay().markers.len(), 4, "the markers stay while picking");
+    assert!(e.overlay().chop_log.is_none());
+    e.tool_event(ToolEvent::Move { pos: p(1500.0, 0.0) }).unwrap();
+    let log = e.overlay().chop_log.unwrap();
+    assert_eq!(log.markers, vec![p(0.0, 0.0), p(2000.0, 0.0)]);
+    e.tool_event(ToolEvent::Move { pos: p(1000.0, 400.0) }).unwrap();
+    assert!(e.overlay().chop_log.is_none(), "an axe is not its own log");
     // Clicking the same axe again removes it.
     press(&mut e, 1000.0, 500.0, Button::Left);
     assert!(e.status().contains("removed"), "{}", e.status());
-    assert!(e.overlay().guides.is_empty());
+    assert!(e.overlay().chop_axes.is_empty());
     // Re-select, then middle-click the log to chop it.
     press(&mut e, 1000.0, 500.0, Button::Left);
     let before = snapshot(&e);

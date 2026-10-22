@@ -25,6 +25,6 @@ No key (xfig key Ctrl+A). Inserts a point into a line.
 Key `Shift+D`.
 
 - Left, “delete point”: click a point of a line or spline.
-- Middle, “delete in region (drag: lasso)”: mark a region; every point of lines and splines inside is deleted.
+- Middle, “delete in region”: mark a region; every point of lines and splines inside is deleted.
 
 If the region holds no point, the message panel says so.

@@ -8,7 +8,7 @@ Key `U`. Gives an object the current attributes of the [indicator panel](attribu
 
 - Left, “update object”: click an object.
 - Middle, “update settings”: the reverse: the clicked object's attributes become the indicator's current ones.
-- Right, “update region (drag: lasso)”: update every object completely inside a region.
+- Right, “update region”: update every object completely inside a region.
 
 Object > Update from Current Attributes (Ctrl+U) updates the selection.
 

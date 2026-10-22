@@ -90,7 +90,7 @@ fn update_region_updates_what_is_inside() {
     rect(&mut e, 5000, 5000, 500, 500);
     e.execute("indicator.set", &json!({"thickness": 6})).unwrap();
     e.set_tool(ToolKind::Update);
-    assert_eq!(hints(&e)[2], "update region (drag: lasso)");
+    assert_eq!(hints(&e)[2], "update region");
     let before = snapshot(&e);
     press(&mut e, -200.0, -200.0, Button::Right, false);
     assert_eq!(hints(&e), ["", "", "final corner"]);
@@ -146,7 +146,7 @@ fn move_region_moves_everything_inside() {
     rect(&mut e, 1500, 0, 500, 500);
     rect(&mut e, 5000, 5000, 500, 500);
     e.set_tool(ToolKind::Move);
-    assert_eq!(hints(&e)[2], "move region (drag: lasso)");
+    assert_eq!(hints(&e)[2], "move region");
     let before = snapshot(&e);
     click(&mut e, -200.0, -200.0, Button::Right);
     click(&mut e, 2500.0, 1000.0, Button::Right);
@@ -207,7 +207,7 @@ fn delete_points_in_a_region() {
     )
     .unwrap();
     e.set_tool(ToolKind::DeletePoint);
-    assert_eq!(hints(&e)[..2], ["delete point", "delete in region (drag: lasso)"]);
+    assert_eq!(hints(&e)[..2], ["delete point", "delete in region"]);
     let before = snapshot(&e);
     click(&mut e, 900.0, -500.0, Button::Middle);
     assert_eq!(hints(&e), ["", "final corner", "cancel"]);

@@ -203,11 +203,23 @@ impl Engine {
     /// visible part of the canvas. Empty while a tool is busy (xfig clears
     /// them, `update_markers(0)`, while an object is being dragged).
     pub fn mode_markers(&self) -> Vec<Point> {
+        self.mode_markers_tagged().0
+    }
+
+    /// [`Engine::mode_markers`], and separately the markers of the tagged
+    /// (selected) objects among them, which xfig fills
+    /// (`toggle_*highlight`, drawn when `tagged` is set).
+    pub fn mode_markers_tagged(&self) -> (Vec<Point>, Vec<Point>) {
         let mask = self.marker_mask();
         let mut out = Vec::new();
-        if mask == ObjMask::NONE || (self.tool_busy() && !self.joining()) {
-            return out;
+        let mut tagged = Vec::new();
+        // Picking states (Join's second end, Chop's axes and log, Align's
+        // reference) keep the markers: the next click needs them.
+        let picking = self.joining() || matches!(self.tool_state, ToolState::Chop { .. } | ToolState::AlignTo { .. });
+        if mask == ObjMask::NONE || (self.tool_busy() && !picking) {
+            return (out, tagged);
         }
+        let selected: std::collections::HashSet<_> = self.selection().iter().copied().collect();
         let view = self.view.visible();
         let cull = !view.is_empty() && self.view.size.0 > 0.0 && self.view.size.1 > 0.0;
         let mut marked = 0usize;
@@ -223,14 +235,19 @@ impl Engine {
             if !mask.admits(o) || !self.is_visible(o) {
                 continue;
             }
+            let first = out.len();
             object_markers(o, bbox, &mut out);
+            if selected.contains(&o.id) {
+                tagged.extend(out.get(first..).unwrap_or_default());
+            }
             marked += 1;
             if marked >= MAX_MARKED || out.len() >= MAX_MARKERS {
                 break;
             }
         }
         out.retain(|p| p.is_finite());
-        out
+        tagged.retain(|p| p.is_finite());
+        (out, tagged)
     }
 }
 

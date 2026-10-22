@@ -38,7 +38,7 @@ Key `Shift+E`.
 
 Key `P`. A closed shape with straight sides.
 
-- Left, “first point”: click the first point, then each next point. Shift+left removes the last point.
+- Left, “first point”: click the first point, then each next point. Shift+left removes the last point; Shift+middle finishes at the last point placed without adding the clicked one.
 - Middle, “freehand”: start a freehand path; move the pointer and the path follows. Middle again ends it ("final point"). When drawing with straight sides, middle at a point is the final point.
 - Right: cancels while drawing.
 
@@ -51,6 +51,7 @@ Key `L`. An open line of straight segments (the same buttons as Polygon).
 - Left, “first point”, then “next point” for each further point.
 - Middle, “freehand” to start a freehand line; “final point” ends the line.
 - Right, “single point”: before a line is started, enters a single dot; while drawing, cancels.
+- Shift+left, “del point”: removes the last point. Shift+middle, “finish here”: ends the line at the last point placed, without adding the clicked point.
 
 ## Box
 

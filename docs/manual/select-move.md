@@ -15,7 +15,7 @@ Key `M`. Moves one object, or a compound as a whole.
 
 - Left, “move object”: press on an object, drag, release; or click it and click again at the new place.
 - Middle, “horiz/vert move”: the same, but the move is restricted to horizontal or vertical, whichever is greater.
-- Right, “move region (drag: lasso)”: mark a region with two clicks or a drag; every object completely inside moves, placed with the next click.
+- Right, “move region”: mark a region with two clicks or a drag; every object completely inside moves, placed with the next click.
 
 With [Smart links](smart-links.md) on, lines attached to a moved shape follow. Grid and object snaps apply.
 
@@ -32,7 +32,7 @@ No key (xfig key Ctrl+C). As Move, but leaves the original.
 Key `D`.
 
 - Left, “delete object”: click an object.
-- Middle, “delete region (drag: lasso)”: mark a region; everything completely inside is deleted.
+- Middle, “delete region”: mark a region; everything completely inside is deleted.
 - Right, “del to cut buf”: deletes the object and keeps it on the clipboard (a cut).
 
 Undo brings objects back.

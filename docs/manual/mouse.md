@@ -19,18 +19,22 @@ The three functions of each mode are listed in the mode's section ([shapes](draw
 
 - Drawing: left adds the next point or starts the shape, middle is a variation (freehand, from the centre) or the final point, right cancels.
 - Editing: left acts on the object clicked, middle often acts on a copy or restricts a move to horizontal or vertical, right is a variation or region action.
-- Regions: where a mode says "(drag: lasso)" you can click two corners for a rectangle, or press and drag to draw a free-hand loop; everything inside is used.
+- Regions: every region action ("tag region", "delete region", "move region", "update region", "delete in region") takes either a rectangle or a lasso. Click two corners for a rectangle, or press and drag to draw a free-hand loop (the lasso); everything inside is used.
 
 ## Shift
 
 Holding Shift changes a button's job in some modes. While Shift is held, the mouse indicator shows the Shift meanings:
 
 - Select: Shift+left adds an object to the selection or removes it.
-- While drawing a polyline, polygon, spline or arc: Shift+left removes the last point ("del point").
+- While drawing a polyline, polygon, spline or arc: Shift+left removes the last point ("del point"). Shift+middle (not for arcs) finishes the object at the last point placed, without adding the clicked point ("finish here", a RustFig addition).
 - Box, Arc-box, Picture: Shift+middle draws a square from its centre.
 - Edit attributes: Shift+middle shows the object's comments in the message panel.
 - Rotate modes: Shift reverses the direction (the rotate buttons turn the other way and copy the other way).
 - Chop: Shift+left trims the clicked piece, Shift+middle splits at the point, Shift+right extends a line end ([Chop](chop.md)).
+
+## Markers and tags
+
+In the editing modes small hollow squares (markers) sit on every object the mode can act on, so you see what to click. Markers stay while a mode waits for its next click (Join's second end, Chop's log, Align's object). Tagged objects show filled markers: objects you tagged with Glue or selected with Select, and the parts of a compound broken with "break and tag". Only Select, Glue and Break tag objects; the other modes act on the object you click and leave the tags as they are, so drawing or editing never tags anything by itself.
 
 ## Clicking and dragging
 

@@ -79,6 +79,9 @@ impl CanvasState {
     }
 }
 
+/// Side of an object marker in points.
+const MARKER: f32 = 7.0;
+
 fn to_pos(p: Point, origin: Pos2) -> Pos2 {
     pos2(origin.x + p.x as f32, origin.y + p.y as f32)
 }
@@ -374,14 +377,33 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         painter.rect_filled(r, 0.0, tk.handle_fill);
         painter.rect_stroke(r, 0.0, Stroke::new(1.0_f32, tk.handle_stroke), egui::StrokeKind::Middle);
     }
-    // xfig's object markers: hollow squares (5 px) on what the mode can act on.
+    // xfig's object markers: hollow squares on what the mode can act on
+    // (xfig's 5 pixels at 80 dpi; 7 points here, readable on today's
+    // screens); a tagged (selected) object's are filled (`toggle_*highlight`).
     for m in &overlay.markers {
         let p = to_screen(*m);
-        if !rect.expand(4.0).contains(p) {
+        if !rect.expand(MARKER).contains(p) {
             continue;
         }
-        let r = Rect::from_center_size(p, vec2(5.0, 5.0));
+        let r = Rect::from_center_size(p, vec2(MARKER, MARKER));
         painter.rect_stroke(r, 0.0, Stroke::new(1.0_f32, tk.handle_stroke), egui::StrokeKind::Middle);
+    }
+    for m in &overlay.tagged {
+        let p = to_screen(*m);
+        if rect.expand(MARKER).contains(p) {
+            painter.rect_filled(Rect::from_center_size(p, vec2(MARKER, MARKER)), 0.0, tk.handle_stroke);
+        }
+    }
+    // Chop: the axes in one colour, the log object under the pointer (what
+    // the middle button cuts) in another.
+    let chop = overlay.chop_axes.iter().map(|h| (h, tk.chop_axe));
+    for (h, colour) in chop.chain(overlay.chop_log.iter().map(|h| (h, tk.chop_log))) {
+        let outline: Vec<Pos2> = h.outline.iter().map(|p| to_screen(*p)).collect();
+        painter.extend(Shape::dashed_line(&outline, Stroke::new(1.5_f32, colour), 5.0, 3.0));
+        for m in &h.markers {
+            let r = Rect::from_center_size(to_screen(*m), vec2(MARKER, MARKER));
+            painter.rect_filled(r, 0.0, colour);
+        }
     }
     // Join/Split: a magenta square around the first end point (xfig's
     // `draw_join_marker`, 20 pixels).

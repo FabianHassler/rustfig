@@ -22,6 +22,13 @@ impl Engine {
     /// `clear_axe_objects`). The search mask is xfig's
     /// `M_POLYLINE | M_ARC | M_ELLIPSE`.
     pub(super) fn chop_event(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
+        // The pointer, for the log object highlighted under it.
+        if let ToolEvent::Move { pos } = ev {
+            if let ToolState::Chop { hover, .. } = &mut self.tool_state {
+                *hover = Some(pos);
+            }
+            return Ok(());
+        }
         let ToolEvent::Press { pos, button, shift } = ev else {
             return Ok(());
         };
@@ -43,7 +50,7 @@ impl Engine {
                     return Ok(());
                 };
                 let mut axes = match &self.tool_state {
-                    ToolState::Chop { axes } => axes.clone(),
+                    ToolState::Chop { axes, .. } => axes.clone(),
                     _ => Vec::new(),
                 };
                 match axes.iter().position(|a| *a == id) {
@@ -56,23 +63,26 @@ impl Engine {
                         self.set_status(format!("Axe object {} selected", axes.len()));
                     }
                 }
-                self.tool_state = ToolState::Chop { axes };
+                self.tool_state = ToolState::Chop { axes, hover: Some(pos) };
             }
             Button::Right => {
-                self.tool_state = ToolState::Chop { axes: Vec::new() };
+                self.tool_state = ToolState::Chop {
+                    axes: Vec::new(),
+                    hover: Some(pos),
+                };
                 self.set_status("Axe object list cleared.");
             }
             Button::Middle => {
                 let axes = match &self.tool_state {
-                    ToolState::Chop { axes } => axes.clone(),
+                    ToolState::Chop { axes, .. } => axes.clone(),
                     _ => Vec::new(),
                 };
                 let Some(id) = self.hit_test_where(pos, tol, &|o| mask.admits(o)) else {
                     return Ok(());
                 };
-                // The log object is the selection while the command runs, so
-                // a click always has a visible effect (and scripts can see
-                // which object the next axe list will cut).
+                // The log object is the selection while the command runs;
+                // `tool_event` restores the selection afterwards (only the
+                // selecting modes tag objects).
                 self.set_selection(vec![id]);
                 if axes.is_empty() {
                     self.set_status("Select an axe object first.");
@@ -103,7 +113,7 @@ impl Engine {
     /// The axe list as command parameters (`None` when empty).
     fn chop_axe_ids(&self) -> Option<Vec<u64>> {
         match &self.tool_state {
-            ToolState::Chop { axes } if !axes.is_empty() => Some(axes.iter().map(|a| a.0).collect()),
+            ToolState::Chop { axes, .. } if !axes.is_empty() => Some(axes.iter().map(|a| a.0).collect()),
             _ => None,
         }
     }

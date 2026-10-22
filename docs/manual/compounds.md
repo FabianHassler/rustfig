@@ -7,7 +7,7 @@ A compound groups objects so that they act as one: move, copy, rotate and scale 
 Key `G`. Collects objects into a compound.
 
 - Left, “tag object”: click an object to tag it (it shows as selected); click it again to untag. Dragging on empty canvas tags everything inside the rectangle.
-- Middle, “tag region (drag: lasso)”: click two corners or draw a loop; everything inside is tagged.
+- Middle, “tag region”: click two corners or draw a loop; everything inside is tagged.
 - Right: with two or more objects tagged ("compound tagged"), makes the compound. While a region is being marked, cancels.
 
 Object > Group (Ctrl+G) does the same for the current selection.
