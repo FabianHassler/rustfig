@@ -1439,9 +1439,10 @@ impl Engine {
                 } = self.tool_state
                 {
                     // Finished with the button that started it (decided
-                    // 2026-10-23; xfig also lets the other button finish an
-                    // ellipse, RustFig keeps one function per button).
-                    let finishes = b == button;
+                    // 2026-10-23), except xfig's ellipse, which either
+                    // button finishes (`d_ellipse.c`; xfig's buttons stay).
+                    let ellipse = matches!(kind, ToolKind::EllipseRadii | ToolKind::EllipseDiameter);
+                    let finishes = (ellipse && button != Button::Right) || b == button;
                     if !finishes {
                         return Ok(());
                     }
@@ -3050,8 +3051,8 @@ impl Engine {
                 // Finished with the button that started it.
                 match kind {
                     _ if *button == Button::Right => h("", "", "final point"),
-                    ToolKind::EllipseRadii => on(*button, "Ellipse corner", "cancel"),
-                    ToolKind::EllipseDiameter => on(*button, "final corner", "cancel"),
+                    ToolKind::EllipseRadii => h("Ellipse corner", "Ellipse corner", "cancel"),
+                    ToolKind::EllipseDiameter => h("final corner", "final corner", "cancel"),
                     ToolKind::CircleRadius => on(*button, "set radius", "cancel"),
                     _ => on(*button, "final point", "cancel"),
                 }
@@ -4047,17 +4048,14 @@ mod tests {
         let mut e = Engine::new();
         e.set_tool(ToolKind::CircleRadius);
         click(&mut e, 0.0, 0.0, Button::Middle);
-        // The left button does not finish it: the starting button does.
-        click(&mut e, 1200.0, 600.0, Button::Left);
-        assert!(e.doc().objects.is_empty());
+        // Either button finishes it, as in xfig.
         click(&mut e, 1200.0, 600.0, Button::Middle);
         let ObjectKind::Ellipse(el) = objects_of(&e)[0] else {
             panic!()
         };
         assert_eq!(el.radii, Point::new(1200.0, 600.0));
-        // The middle button finishes an ellipse started with it.
         click(&mut e, 0.0, 0.0, Button::Middle);
-        click(&mut e, 600.0, 300.0, Button::Middle);
+        click(&mut e, 600.0, 300.0, Button::Left);
         assert_eq!(e.doc().objects.len(), 2);
         assert!(e.undo());
         click(&mut e, 0.0, 0.0, Button::Left);
