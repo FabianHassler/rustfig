@@ -373,3 +373,166 @@ fn search_finds_figures_in_all_libraries_by_name_and_comment() {
     .unwrap();
     let _ = std::fs::remove_dir_all(&user);
 }
+
+// ---- library list files (xfig's library_dir naming a file) and Stop ----
+
+fn fig_in(dir: &std::path::Path, name: &str) {
+    std::fs::create_dir_all(dir).unwrap();
+    let fig = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../libraries/Arrows/3darrow1.fig"),
+    )
+    .unwrap();
+    std::fs::write(dir.join(name), fig).unwrap();
+}
+
+#[test]
+fn parse_list_follows_xfigs_format() {
+    use rustfig_engine::library::parse_list;
+    let base = std::path::Path::new("/base");
+    let t = "# comment\n/abs/one\n\n  /abs/two  My Two  \nrel/three/\n#/abs/skipped\n/abs/four\tTab Name\n";
+    let v = parse_list(t, base);
+    let got: Vec<(String, String)> = v
+        .iter()
+        .map(|e| (e.name.clone(), e.path.to_string_lossy().into_owned()))
+        .collect();
+    assert_eq!(
+        got,
+        vec![
+            ("one".into(), "/abs/one".into()),
+            ("My Two".into(), "/abs/two".into()),
+            ("three".into(), "/base/rel/three/".into()),
+            ("Tab Name".into(), "/abs/four".into()),
+        ]
+    );
+}
+
+#[test]
+fn parse_list_survives_hostile_input() {
+    use rustfig_engine::library::{parse_list, MAX_LIST_ENTRIES};
+    let base = std::path::Path::new("/b");
+    assert!(parse_list("", base).is_empty());
+    assert!(parse_list("\u{0}\u{1}\n\r\n   \n/", base).is_empty());
+    assert!(parse_list(&"x".repeat(100_000), base).is_empty(), "overlong line");
+    assert!(parse_list("/a ..\n/a .\n/a (Toplevel Directory)\n/a \u{7}bell\n..\n", base).is_empty());
+    let many = "/a/x\n".repeat(MAX_LIST_ENTRIES * 3);
+    assert_eq!(parse_list(&many, base).len(), MAX_LIST_ENTRIES);
+    let long_name = format!("/a {}", "n".repeat(500));
+    assert!(parse_list(&long_name, base).is_empty());
+    // multi-byte characters at every position must not split a char.
+    let _ = parse_list("/a/é ü ö\n/é\u{3000}名前\n~\n~/x", base);
+}
+
+#[test]
+fn a_list_file_names_several_library_folders() {
+    let d = scratch("listfile");
+    fig_in(&d.join("alpha"), "a1.fig");
+    fig_in(&d.join("alpha/inner"), "a2.fig");
+    fig_in(&d.join("beta"), "b1.fig");
+    std::fs::write(
+        d.join("libs.txt"),
+        format!(
+            "# my libraries\n{}  First Set\nbeta\n{}\n",
+            d.join("alpha").display(),
+            d.join("missing").display()
+        ),
+    )
+    .unwrap();
+    let mut e = engine_with_user_dir(&d.join("libs.txt"));
+    let src = e.execute("library.source", &json!({})).unwrap();
+    assert_eq!(src["kind"], "list");
+    let entries = src["entries"].as_array().unwrap();
+    assert_eq!(entries.len(), 3);
+    assert_eq!(entries[1]["name"], "beta");
+    assert_eq!(entries[1]["exists"], true, "relative to the list file");
+    assert_eq!(entries[2]["exists"], false);
+    let r = e.execute("library.list", &json!({})).unwrap();
+    let user: Vec<(String, u64)> = r["libraries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|l| l["user"] == true)
+        .map(|l| (l["name"].as_str().unwrap().to_string(), l["objects"].as_u64().unwrap()))
+        .collect();
+    // In the list file's order, as xfig keeps it.
+    assert_eq!(
+        user,
+        vec![
+            ("First Set".to_string(), 1),
+            ("First Set / inner".to_string(), 1),
+            ("beta".to_string(), 1)
+        ]
+    );
+    let o = e
+        .execute("library.objects", &json!({"library": "First Set / inner"}))
+        .unwrap();
+    assert_eq!(o["objects"][0]["name"], "a2");
+    // Copy to library goes to the first folder named.
+    e.execute("shape.rectangle", &json!({"x": 0, "y": 0, "width": 600, "height": 600}))
+        .unwrap();
+    let s = e.execute("library.save", &json!({"name": "mine"})).unwrap();
+    assert_eq!(s["library"], "First Set");
+    assert!(d.join("alpha/mine.fig").exists());
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn library_use_checks_the_path_and_sets_the_preference() {
+    let d = scratch("use");
+    fig_in(&d.join("folder/sub"), "s.fig");
+    std::fs::write(d.join("empty.txt"), "# nothing\n").unwrap();
+    std::fs::write(d.join("ok.txt"), format!("{} Sub\n", d.join("folder/sub").display())).unwrap();
+    let mut e = engine_with_user_dir(&d.join("nowhere"));
+    assert_eq!(e.execute("library.source", &json!({})).unwrap()["kind"], "missing");
+    assert!(e
+        .execute("library.use", &json!({"path": d.join("nowhere").to_string_lossy()}))
+        .is_err());
+    assert!(e
+        .execute("library.use", &json!({"path": d.join("empty.txt").to_string_lossy()}))
+        .is_err());
+    assert!(e.execute("library.use", &json!({"path": ""})).is_err());
+    assert!(e.execute("library.use", &json!({"path": 5})).is_err());
+    let r = e
+        .execute("library.use", &json!({"path": d.join("ok.txt").to_string_lossy()}))
+        .unwrap();
+    assert_eq!(r["kind"], "list");
+    assert!(r["libraries"].as_u64().unwrap() >= 31);
+    let r = e
+        .execute("library.use", &json!({"path": d.join("folder").to_string_lossy()}))
+        .unwrap();
+    assert_eq!(r["kind"], "folder");
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn a_list_file_that_is_binary_or_huge_is_harmless() {
+    let d = scratch("hostile-list");
+    let big = d.join("big.txt");
+    std::fs::write(&big, vec![b'a'; 300 * 1024]).unwrap();
+    let bin = d.join("bin.txt");
+    std::fs::write(&bin, [0xffu8, 0xfe, b'\n', 0, 1, 2, b'/', b'\n']).unwrap();
+    for f in [big, bin] {
+        let mut e = engine_with_user_dir(&f);
+        let r = e.execute("library.list", &json!({})).unwrap();
+        assert!(r["libraries"].as_array().unwrap().iter().all(|l| l["user"] == false));
+    }
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn a_scan_can_be_stopped() {
+    use rustfig_engine::library::{scan, scan_cancellable, LibRoot};
+    use std::sync::atomic::AtomicBool;
+    let d = scratch("stop");
+    for i in 0..20 {
+        fig_in(&d.join(format!("lib{i:02}")), "f.fig");
+    }
+    let roots = vec![LibRoot {
+        path: d.clone(),
+        user: true,
+        name: None,
+    }];
+    assert_eq!(scan(&roots).len(), 20);
+    let stop = AtomicBool::new(true);
+    assert!(scan_cancellable(&roots, &stop).is_empty(), "stopped before it began");
+    let _ = std::fs::remove_dir_all(&d);
+}

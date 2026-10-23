@@ -2753,3 +2753,80 @@ fn browser_copy_is_offered_and_restored() {
     assert_eq!(e.path(), Some("plan.fig"));
     assert!(h.state().web_restorable.is_none());
 }
+
+/// D6: xfig's Stop button. A big library draws its icons a few per frame;
+/// Stop ends that, Resume goes on.
+#[test]
+fn library_panel_stop_ends_icon_loading() {
+    let user = std::env::temp_dir().join(format!("rustfig-ui-library-stop-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&user);
+    std::fs::create_dir_all(&user).unwrap();
+    let fig = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../libraries/Arrows/3darrow1.fig"),
+    )
+    .unwrap();
+    for i in 0..150 {
+        std::fs::write(user.join(format!("f{i:03}.fig")), &fig).unwrap();
+    }
+    let mut h = harness(app());
+    h.state_mut().run(
+        "prefs.set",
+        json!({"resource": "library_dir", "value": user.to_string_lossy()}),
+    );
+    h.state_mut()
+        .run("prefs.set", json!({"resource": "library_icon_size", "value": 40}));
+    h.get_by_label("Library").scroll_to_me();
+    h.get_by_label("Library").click();
+    h.run_steps(2);
+    assert!(h.state().library.open);
+    h.state_mut().library.load("(Toplevel Directory)");
+    h.run_steps(1);
+    let early = h.state().library.icons_drawn();
+    assert!(
+        early > 0 && early < 40,
+        "icons come a few per frame, not all at once: {early}"
+    );
+    h.get_by_label("Stop").click();
+    h.run_steps(1);
+    let stopped = h.state().library.icons_drawn();
+    h.run_steps(8);
+    assert_eq!(h.state().library.icons_drawn(), stopped, "no icon is drawn after Stop");
+    assert!(h.state().library.stopped);
+    h.get_by_label("Resume").click();
+    h.run_steps(12);
+    assert!(h.state().library.icons_drawn() > stopped, "Resume goes on");
+    assert!(!h.state().library.stopped);
+    let _ = std::fs::remove_dir_all(&user);
+}
+
+/// D6: the panel's Source field takes a library list file; Use rescans.
+#[test]
+fn library_panel_uses_a_library_list_file() {
+    let d = std::env::temp_dir().join(format!("rustfig-ui-library-list-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    std::fs::create_dir_all(d.join("one")).unwrap();
+    let fig = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../libraries/Arrows/3darrow1.fig"),
+    )
+    .unwrap();
+    std::fs::write(d.join("one/x.fig"), fig).unwrap();
+    std::fs::write(d.join("libs.txt"), format!("{} Listed One\n", d.join("one").display())).unwrap();
+    let mut h = harness(app());
+    h.state_mut().run(
+        "prefs.set",
+        json!({"resource": "library_dir", "value": d.join("nowhere").to_string_lossy()}),
+    );
+    h.get_by_label("Library").scroll_to_me();
+    h.get_by_label("Library").click();
+    h.run_steps(3);
+    h.get_by_label("Library source");
+    h.state_mut().library.source = d.join("libs.txt").to_string_lossy().into_owned();
+    h.run_steps(2);
+    h.get_by_label("Use").click();
+    h.run_steps(3);
+    assert!(h.state().library.scanning() || h.state().library.current.is_some());
+    h.state_mut().library.load("Listed One");
+    h.run_steps(2);
+    h.get_by_label("Library object x");
+    let _ = std::fs::remove_dir_all(&d);
+}

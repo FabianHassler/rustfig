@@ -36,6 +36,26 @@ pub(super) fn commands() -> Vec<Command> {
             run: list,
         },
         Command {
+            id: "library.source",
+            label: "Library source",
+            menu: "",
+            shortcut: "",
+            params: "{}  — what the preference library_dir names, a folder or xfig's library list file (one library folder per line as `PATH [NAME]`, `#` comments): {\"path\", \"kind\": \"folder\"|\"list\"|\"missing\"|\"none\", \"entries\"?: [{\"name\", \"path\", \"exists\": bool}]}",
+            mutates: false,
+            enabled: always,
+            run: source,
+        },
+        Command {
+            id: "library.use",
+            label: "Use library folder or list",
+            menu: "",
+            shortcut: "",
+            params: "{\"path\": folder or list file}  — makes it your library source (sets library_dir, as `-library_dir` does) after checking that it exists and, for a list file, names at least one folder; returns library.source's reply plus \"libraries\": n",
+            mutates: false,
+            enabled: always,
+            run: use_source,
+        },
+        Command {
             id: "library.search",
             label: "Search libraries",
             menu: "",
@@ -110,6 +130,56 @@ fn list(e: &mut Engine, _: &Value) -> CmdResult {
         .map(|l| json!({"name": l.name, "objects": l.objects, "user": l.user}))
         .collect();
     Ok(json!({"libraries": libs}))
+}
+
+fn source(e: &mut Engine, _: &Value) -> CmdResult {
+    let pref = e
+        .prefs
+        .get("library_dir")
+        .and_then(|v| v.as_str().map(str::to_string))
+        .unwrap_or_else(|| "~/xfiglib".to_string());
+    Ok(source_json(&pref))
+}
+
+fn source_json(pref: &str) -> Value {
+    use library::Source;
+    match library::source(pref) {
+        None => json!({"path": "", "kind": "none"}),
+        Some(Source::Folder(p)) => json!({"path": p.to_string_lossy(), "kind": "folder"}),
+        Some(Source::Missing(p)) => json!({"path": p.to_string_lossy(), "kind": "missing"}),
+        Some(Source::List(p, entries)) => {
+            let es: Vec<Value> = entries
+                .iter()
+                .map(|x| json!({"name": x.name, "path": x.path.to_string_lossy(), "exists": x.path.is_dir()}))
+                .collect();
+            json!({"path": p.to_string_lossy(), "kind": "list", "entries": es})
+        }
+    }
+}
+
+fn use_source(e: &mut Engine, p: &Value) -> CmdResult {
+    use library::Source;
+    let path = string(p, "path")?;
+    match library::source(&path) {
+        None => return Err(EngineError::bad_params("the path is empty")),
+        Some(Source::Missing(_)) => {
+            return Err(EngineError::bad_params(format!(
+                "{path:?} is not a folder or a readable library list"
+            )))
+        }
+        Some(Source::List(_, entries)) if entries.is_empty() => {
+            return Err(EngineError::bad_params(format!("{path:?} names no library folder")))
+        }
+        Some(_) => {}
+    }
+    e.prefs
+        .set("library_dir", toml::Value::String(path.clone()))
+        .map_err(EngineError::bad_params)?;
+    let mut v = source_json(&path);
+    if let Some(o) = v.as_object_mut() {
+        o.insert("libraries".into(), json!(e.libraries().len()));
+    }
+    Ok(v)
 }
 
 fn search(e: &mut Engine, p: &Value) -> CmdResult {
@@ -204,14 +274,14 @@ fn save(e: &mut Engine, p: &Value) -> CmdResult {
     if !library::valid_name(&name) {
         return Err(EngineError::bad_params("the name must be a plain file name"));
     }
+    // With a library list file the first folder it names takes the figure.
     let root = e
         .library_roots()
         .into_iter()
-        .find(|(_, user)| *user)
-        .map(|(p, _)| p)
+        .find(|r| r.user && r.path.is_dir())
         .ok_or_else(|| EngineError::bad_params("no library folder: set the preference library_dir"))?;
-    let mut dir = root;
-    let mut sub_name = String::new();
+    let mut dir = root.path;
+    let mut sub_name = root.name.unwrap_or_default();
     if let Some(sub) = opt_str(p, "library")? {
         for part in sub.split(['/', '\\']).filter(|s| !s.is_empty()) {
             if !library::valid_name(part) {
