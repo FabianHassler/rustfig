@@ -368,11 +368,12 @@ pub fn measure_local(name: &str, size_pt: f64, text: &str) -> Option<Metrics> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
-    /// The tests that touch the global list run one at a time.
-    static SERIAL: Mutex<()> = Mutex::new(());
+    /// The tests that touch the global font state (the list, built-in fonts
+    /// only) run one at a time, also with other modules' tests.
+    pub(crate) static SERIAL: Mutex<()> = Mutex::new(());
 
     #[test]
     fn lays_out_and_scales() {
