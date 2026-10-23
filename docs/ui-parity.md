@@ -1,9 +1,10 @@
 # UI parity checklist
 
-P26-10-23 (D10: dimension line example preview; W10-14: Saved versions window; W9: cap/join pictures redrawn); 2026-10-23 (E5: character map lists only drawable characters, in the text's font); 2026-10-22 (E4, W10-36: colour picker and editor, recent colours, eyedropper); 2026-10-22 (E10: text editing); 2026-10-22 (S4-3, S4-8, S4-9: Digitize, New window, Autorefresh); 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: live edit panel, compound panel, point table, pictorial menus); 2026-10-22 (W10-16, W10-20: picture edit panel); 2026-10-22 (D5: measure modes); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: Tangent mode and its length button). ✅ done · 🟡 partial · ❌ missing
+P26-10-23 (W10-13: background export; D10: dimension line example preview; W10-14: Saved versions window; W9: cap/join pictures redrawn); 2026-10-23 (E5: character map lists only drawable characters, in the text's font); 2026-10-22 (E4, W10-36: colour picker and editor, recent colours, eyedropper); 2026-10-22 (E10: text editing); 2026-10-22 (S4-3, S4-8, S4-9: Digitize, New window, Autorefresh); 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: live edit panel, compound panel, point table, pictorial menus); 2026-10-22 (W10-16, W10-20: picture edit panel); 2026-10-22 (D5: measure modes); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: Tangent mode and its length button). ✅ done · 🟡 partial · ❌ missing
 
 ## Drawing modes
 
+Export panel (W10-13, 2026-10-23): the export runs in the background with a progress window (Cancel) and a finished notice with Show in folder.
 File > Saved versions… (W10-14, 2026-10-23, an extra beyond xfig's `.bak`): window listing the kept versions with Restore.
 | xfig mode | RustFig | |
 |---|---|---|
@@ -123,7 +124,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 ## Revision history
 | Date | Note |
 |---|---|
-| 2026-10-23 | D10 settings window preview and arrow pictures; W10-14 Saved versions window; W9 cap and join pictures redrawn. |
+| 2026-10-23 | W10-13 background export with progress, cancel, Show in folder. D10 settings window preview and arrow pictures; W10-14 Saved versions window; W9 cap and join pictures redrawn. |
 | 2026-10-23 | E5: character map hides characters the font cannot draw and draws each in the text's font. |
 | 2026-10-22 | E7 done: the cut buffer on the system clipboard (Fig text + pictures), Paste takes a figure from another window or an image. |
 | 2026-10-22 | E4, W10-36 done: colour picker and editor (Edit > Colours…), recent colours, eyedropper, `color.*` commands. |
