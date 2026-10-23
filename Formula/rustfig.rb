@@ -1,7 +1,8 @@
 # Homebrew formula for RustFig. The RustFig repository is its own tap:
 #   brew tap fabianhassler/rustfig https://github.com/FabianHassler/rustfig
 #   brew install --HEAD rustfig
-# fig2dev is built in: `rustfig fig2dev ARGS…` runs its command line.
+# fig2dev is built in: `fig2dev` is a link to `rustfig`, which runs fig2dev's
+# command line when started under that name (as `rustfig fig2dev ARGS…`).
 class Rustfig < Formula
   desc "Drawing program reimplementing xfig, with fig2dev built in"
   homepage "https://github.com/FabianHassler/rustfig"
@@ -18,9 +19,12 @@ class Rustfig < Formula
     depends_on "wayland"
   end
 
+  conflicts_with "fig2dev", because: "both install a `fig2dev` command"
+
   def install
     system "cargo", "install", *std_cargo_args(path: "apps/rustfig")
     system "cargo", "install", *std_cargo_args(path: "apps/cli")
+    bin.install_symlink "rustfig" => "fig2dev"
   end
 
   test do
@@ -40,5 +44,7 @@ class Rustfig < Formula
     system bin/"rustfig-cli", "info", "box.fig"
     system bin/"rustfig", "fig2dev", "-L", "svg", "box.fig", "box.svg"
     assert_match "<svg", (testpath/"box.svg").read
+    system bin/"fig2dev", "-L", "eps", "box.fig", "box.eps"
+    assert_match "%!PS-Adobe", (testpath/"box.eps").read
   end
 end
