@@ -9,13 +9,15 @@
 
 use crate::App;
 use egui::{vec2, Color32, Sense, TextureOptions};
-use rustfig_engine::library::{self, Library};
+use rustfig_engine::library::{self, LibRoot, Library};
 use rustfig_geom::Affine;
 use rustfig_model::Document;
 use rustfig_render::raster::{rasterize, RasterOptions};
 use rustfig_render::SceneOptions;
 use serde_json::json;
 use std::collections::HashMap;
+#[cfg(not(target_arch = "wasm32"))]
+use std::sync::{atomic::AtomicBool, atomic::Ordering, mpsc, Arc};
 
 /// xfig's icon sizes.
 pub const ICON_SIZES: [u32; 5] = [40, 60, 80, 100, 120];
@@ -24,10 +26,23 @@ const PER_FRAME: usize = 6;
 /// Side of the preview, in points.
 const PREVIEW: usize = 180;
 
+/// A library scan running on its own thread (xfig's Stop button stops it).
+#[cfg(not(target_arch = "wasm32"))]
+struct ScanJob {
+    rx: mpsc::Receiver<Vec<Library>>,
+    cancel: Arc<AtomicBool>,
+}
+
 /// State of the library panel.
 #[derive(Default)]
 pub struct LibraryPanel {
     pub open: bool,
+    #[cfg(not(target_arch = "wasm32"))]
+    scan: Option<ScanJob>,
+    /// Stop was pressed: the icons not yet drawn stay blank until Resume.
+    pub stopped: bool,
+    /// The folder or list file field (preference `library_dir`).
+    pub source: String,
     libs: Vec<Library>,
     /// The loaded library's name.
     pub current: Option<String>,
@@ -51,7 +66,83 @@ pub struct LibraryPanel {
 }
 
 impl LibraryPanel {
-    /// Open the panel (the engine asked for it): rescan the libraries.
+    /// Open the panel (the engine asked for it) and scan the library
+    /// folders on a thread: a big library list does not freeze the window,
+    /// and Stop ends the scan with what was found. `source` is the
+    /// preference `library_dir`.
+    pub fn start_scan(&mut self, roots: Vec<LibRoot>, source: String) {
+        self.open = true;
+        self.stopped = false;
+        self.source = source;
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some(old) = self.scan.take() {
+                old.cancel.store(true, Ordering::Relaxed);
+            }
+            let cancel = Arc::new(AtomicBool::new(false));
+            let (tx, rx) = mpsc::channel();
+            let (c, r) = (cancel.clone(), roots.clone());
+            let spawned = std::thread::Builder::new()
+                .name("library-scan".into())
+                .spawn(move || {
+                    // The panel may be gone by now: nobody to tell then.
+                    let _ = tx.send(library::scan_cancellable(&r, &c));
+                })
+                .is_ok();
+            if spawned {
+                // Small libraries are there at once; a big one finishes in the background.
+                match rx.recv_timeout(std::time::Duration::from_millis(250)) {
+                    Ok(libs) => self.show_panel(libs),
+                    Err(_) => self.scan = Some(ScanJob { rx, cancel }),
+                }
+                return;
+            }
+        }
+        self.show_panel(library::scan(&roots));
+    }
+
+    /// How many icons are drawn so far (tests).
+    pub fn icons_drawn(&self) -> usize {
+        self.thumbs.len()
+    }
+
+    /// Whether a scan is still running.
+    pub fn scanning(&self) -> bool {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.scan.is_some()
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            false
+        }
+    }
+
+    /// Take the scan's result once it is in.
+    fn poll_scan(&mut self) {
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(job) = &self.scan {
+            match job.rx.try_recv() {
+                Ok(libs) => {
+                    self.scan = None;
+                    self.show_panel(libs);
+                }
+                Err(mpsc::TryRecvError::Empty) => {}
+                Err(mpsc::TryRecvError::Disconnected) => self.scan = None,
+            }
+        }
+    }
+
+    /// xfig's Stop: end the scan and stop drawing icons.
+    pub fn stop(&mut self) {
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(job) = &self.scan {
+            job.cancel.store(true, Ordering::Relaxed);
+        }
+        self.stopped = true;
+    }
+
+    /// Set the libraries a scan found.
     pub fn show_panel(&mut self, app_libs: Vec<Library>) {
         self.open = true;
         // The libraries may have changed: search again.
@@ -79,6 +170,7 @@ impl LibraryPanel {
     /// Load a library by name (the panel's "Load a Library" menu).
     pub fn load(&mut self, name: &str) {
         self.current = Some(name.to_string());
+        self.stopped = false;
         self.objects = self
             .libs
             .iter()
@@ -154,6 +246,13 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
         return;
     }
     let mut open = true;
+    app.library.poll_scan();
+    if app.library.scanning() {
+        ctx.request_repaint_after(std::time::Duration::from_millis(50));
+    }
+    let mut stop = false;
+    let mut resume = false;
+    let mut use_source = false;
     let mut load: Option<String> = None;
     let mut pick: Option<usize> = None;
     let mut pick_hit: Option<(String, String)> = None;
@@ -223,6 +322,18 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                 });
                 r.response
                     .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, "Library"));
+            });
+            ui.horizontal(|ui| {
+                ui.label("Source:");
+                let r = ui.add(
+                    egui::TextEdit::singleline(&mut p.source)
+                        .hint_text("folder, or a list file naming several folders")
+                        .desired_width(260.0),
+                );
+                r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Library source"));
+                if ui.button("Use").clicked() || (r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter))) {
+                    use_source = true;
+                }
             });
             ui.horizontal(|ui| {
                 ui.label("Status:");
@@ -335,7 +446,9 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                                     if ui.is_rect_visible(rect) {
                                         let key = (lib.name.clone(), name.clone(), size);
                                         if !p.thumbs.contains_key(&key) {
-                                            if budget.get() > 0 {
+                                            if p.stopped {
+                                                // Stop was pressed: leave it blank.
+                                            } else if budget.get() > 0 {
                                                 budget.set(budget.get() - 1);
                                                 let t = thumbnail(ui.ctx(), &lib, &name, px, &format!("lib-{name}"));
                                                 p.thumbs.insert(key.clone(), t);
@@ -392,6 +505,23 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                 }
             } else {
                 ui.allocate_space(vec2(1.0, area));
+            }
+            let scanning = p.scanning();
+            if scanning || pending.get() || p.stopped {
+                ui.horizontal(|ui| {
+                    if scanning || pending.get() {
+                        ui.spinner();
+                        ui.label(if scanning { "Scanning libraries..." } else { "Loading icons..." });
+                        if ui.button("Stop").clicked() {
+                            stop = true;
+                        }
+                    } else {
+                        ui.label("Stopped: icons not drawn yet.");
+                        if ui.button("Resume").clicked() {
+                            resume = true;
+                        }
+                    }
+                });
             }
             ui.separator();
             ui.horizontal(|ui| {
@@ -465,6 +595,23 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     }
     if let Some(s) = set_size {
         app.run("prefs.set", json!({"resource": "library_icon_size", "value": s}));
+    }
+    if stop {
+        app.library.stop();
+    }
+    if resume {
+        app.library.stopped = false;
+    }
+    if use_source {
+        let path = app.library.source.clone();
+        app.library.message = match app.try_run("library.use", &json!({"path": path})) {
+            Ok(_) => {
+                let roots = app.engine.library_roots();
+                app.library.start_scan(roots, path);
+                String::new()
+            }
+            Err(m) => m,
+        };
     }
     if let Some(l) = load {
         app.library.load(&l);

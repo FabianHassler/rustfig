@@ -377,8 +377,14 @@ impl App {
                 UiRequest::PasteText => ctx.send_viewport_cmd(egui::ViewportCommand::RequestPaste),
                 UiRequest::EditObject { id } => self.dialogs.open_edit(&self.engine, id),
                 UiRequest::OpenLibrary => {
-                    let libs = self.engine.libraries();
-                    self.library.show_panel(libs);
+                    let roots = self.engine.library_roots();
+                    let source = self
+                        .engine
+                        .prefs
+                        .get("library_dir")
+                        .and_then(|v| v.as_str().map(str::to_string))
+                        .unwrap_or_else(|| "~/xfiglib".to_string());
+                    self.library.start_scan(roots, source);
                 }
                 UiRequest::EditFigureComments => self.dialogs.open_figure_comments(&self.engine),
                 UiRequest::EditSplinePoint { id, index } => self.dialogs.open_spline_point(&self.engine, id, index),

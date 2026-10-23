@@ -18,6 +18,7 @@ use rustfig_model::{Compound, ObjectKind};
 use rustfig_model::{Document, Object, ObjectId};
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Most libraries listed.
 pub const MAX_LIBRARIES: usize = 5_000;
@@ -187,12 +188,146 @@ fn home_dir() -> Option<PathBuf> {
     None
 }
 
-/// Every library under the folders (`true`: the user's).
-pub fn scan(roots: &[(PathBuf, bool)]) -> Vec<Library> {
+/// One folder libraries are read from.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LibRoot {
+    pub path: PathBuf,
+    /// The user's folder, not the bundled one.
+    pub user: bool,
+    /// From a library list file: the name of the library this folder is
+    /// (its subfolders are `name / sub`). Without a name the folder's own
+    /// subfolders are the top-level libraries.
+    pub name: Option<String>,
+}
+
+/// One line of a library list file.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ListEntry {
+    pub name: String,
+    pub path: PathBuf,
+}
+
+/// The most bytes read from a library list file.
+pub const MAX_LIST_BYTES: u64 = 256 * 1024;
+/// The most entries taken from a library list file.
+pub const MAX_LIST_ENTRIES: usize = 500;
+const MAX_LIST_LINE: usize = 4096;
+
+/// Parse a library list file (xfig's `MakeLibrary`: a `library_dir` that is
+/// a file names the library folders, one per line as `PATH [NAME]`; a line
+/// starting with `#` is a comment). Without NAME the last folder of PATH
+/// names the library. Beyond xfig: blank lines are skipped, `~` is the home
+/// folder, a relative PATH is taken from `base` (the list file's folder),
+/// and overlong lines, names with control characters, and entries past
+/// `MAX_LIST_ENTRIES` are dropped.
+pub fn parse_list(text: &str, base: &Path) -> Vec<ListEntry> {
+    let mut out: Vec<ListEntry> = Vec::new();
+    for line in text.lines() {
+        if out.len() >= MAX_LIST_ENTRIES {
+            break;
+        }
+        if line.starts_with('#') || line.len() > MAX_LIST_LINE || line.chars().any(|c| c.is_control() && c != '\t') {
+            continue;
+        }
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let (path_text, name_text) = match line.find(char::is_whitespace) {
+            Some(i) => (line.get(..i).unwrap_or(line), line.get(i..).unwrap_or("").trim()),
+            None => (line, ""),
+        };
+        let Some(path) = user_root(path_text) else { continue };
+        let path = if path.is_absolute() { path } else { base.join(path) };
+        let name = if name_text.is_empty() {
+            path_text
+                .trim_end_matches(['/', '\\'])
+                .rsplit(['/', '\\'])
+                .next()
+                .unwrap_or("")
+                .to_string()
+        } else {
+            name_text.to_string()
+        };
+        if name.is_empty() || name.chars().count() > MAX_NAME || name == "." || name == ".." || name == TOP_NAME {
+            continue;
+        }
+        out.push(ListEntry { name, path });
+    }
+    out
+}
+
+/// What the preference `library_dir` names.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Source {
+    /// A folder whose subfolders are the libraries.
+    Folder(PathBuf),
+    /// A list file and the folders it names.
+    List(PathBuf, Vec<ListEntry>),
+    /// Nothing there (or unreadable).
+    Missing(PathBuf),
+}
+
+/// Look at `library_dir`: a folder, a list file, or nothing.
+pub fn source(pref: &str) -> Option<Source> {
+    let path = user_root(pref)?;
+    let Ok(meta) = std::fs::metadata(&path) else {
+        return Some(Source::Missing(path));
+    };
+    if meta.is_dir() {
+        return Some(Source::Folder(path));
+    }
+    if meta.len() > MAX_LIST_BYTES {
+        return Some(Source::Missing(path));
+    }
+    // Lossy: a stray non-UTF-8 byte only spoils its own line, as in the C reader.
+    let Ok(bytes) = std::fs::read(&path) else {
+        return Some(Source::Missing(path));
+    };
+    let text = String::from_utf8_lossy(&bytes);
+    let base = path.parent().map(Path::to_path_buf).unwrap_or_default();
+    let entries = parse_list(&text, &base);
+    Some(Source::List(path, entries))
+}
+
+/// The folders to scan for the user's libraries (`library_dir`).
+pub fn user_roots(pref: &str) -> Vec<LibRoot> {
+    match source(pref) {
+        None | Some(Source::Missing(_)) => Vec::new(),
+        Some(Source::Folder(p)) => vec![LibRoot {
+            path: p,
+            user: true,
+            name: None,
+        }],
+        Some(Source::List(_, entries)) => entries
+            .into_iter()
+            .map(|e| LibRoot {
+                path: e.path,
+                user: true,
+                name: Some(e.name),
+            })
+            .collect(),
+    }
+}
+
+/// Every library under the folders.
+pub fn scan(roots: &[LibRoot]) -> Vec<Library> {
+    scan_cancellable(roots, &AtomicBool::new(false))
+}
+
+/// `scan`, stopping early (with what was found so far) once `cancel` is
+/// set: xfig's Stop button while a big library loads.
+pub fn scan_cancellable(roots: &[LibRoot], cancel: &AtomicBool) -> Vec<Library> {
     let mut out: Vec<Library> = Vec::new();
-    for (root, user) in roots {
+    for LibRoot { path: root, user, name } in roots {
+        if cancel.load(Ordering::Relaxed) {
+            break;
+        }
         let mut found = Vec::new();
-        scan_dir(root, "", *user, true, 0, &mut found);
+        match name {
+            Some(n) => scan_dir(root, n, *user, false, 0, cancel, &mut found),
+            None => scan_dir(root, "", *user, true, 0, cancel, &mut found),
+        }
         found.sort_by(|a, b| {
             a.name
                 .to_lowercase()
@@ -213,8 +348,8 @@ pub fn scan(roots: &[(PathBuf, bool)]) -> Vec<Library> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn scan_dir(dir: &Path, name: &str, user: bool, top: bool, depth: usize, out: &mut Vec<Library>) {
-    if depth > MAX_DEPTH {
+fn scan_dir(dir: &Path, name: &str, user: bool, top: bool, depth: usize, cancel: &AtomicBool, out: &mut Vec<Library>) {
+    if depth > MAX_DEPTH || cancel.load(Ordering::Relaxed) || out.len() >= MAX_LIBRARIES {
         return;
     }
     let Ok(rd) = std::fs::read_dir(dir) else { return };
@@ -243,12 +378,21 @@ fn scan_dir(dir: &Path, name: &str, user: bool, top: bool, depth: usize, out: &m
     }
     for (fname, path) in subs {
         let sub = if top { fname } else { format!("{name} / {fname}") };
-        scan_dir(&path, &sub, user, false, depth + 1, out);
+        scan_dir(&path, &sub, user, false, depth + 1, cancel, out);
     }
 }
 
 #[cfg(target_arch = "wasm32")]
-fn scan_dir(_dir: &Path, _name: &str, _user: bool, _top: bool, _depth: usize, _out: &mut Vec<Library>) {}
+fn scan_dir(
+    _dir: &Path,
+    _name: &str,
+    _user: bool,
+    _top: bool,
+    _depth: usize,
+    _cancel: &AtomicBool,
+    _out: &mut Vec<Library>,
+) {
+}
 
 #[cfg(not(target_arch = "wasm32"))]
 fn is_fig_name(n: &str) -> bool {
@@ -421,16 +565,21 @@ pub fn nw_of(o: &Object) -> Point {
 impl Engine {
     /// The folders libraries are read from: the bundled ones, then the
     /// user's (`library_dir`).
-    pub fn library_roots(&self) -> Vec<(PathBuf, bool)> {
-        let mut v: Vec<(PathBuf, bool)> = bundled_roots().into_iter().map(|p| (p, false)).collect();
+    pub fn library_roots(&self) -> Vec<LibRoot> {
+        let mut v: Vec<LibRoot> = bundled_roots()
+            .into_iter()
+            .map(|path| LibRoot {
+                path,
+                user: false,
+                name: None,
+            })
+            .collect();
         let pref = self
             .prefs
             .get("library_dir")
             .and_then(|v| v.as_str().map(str::to_string))
             .unwrap_or_else(|| "~/xfiglib".to_string());
-        if let Some(u) = user_root(&pref) {
-            v.push((u, true));
-        }
+        v.extend(user_roots(&pref));
         v
     }
 

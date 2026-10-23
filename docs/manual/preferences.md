@@ -40,7 +40,7 @@ RustFig starts like xfig: `rustfig [options] [file]`, and every option of xfig's
 - Start attributes: `-startfontsize`, `-startlinewidth`, `-startfillstyle`, `-startgridmode 0-3`, `-startposnmode 0-4`, `-startpsFont`, `-startlatexFont`, `-latexfonts`, `-specialtext`, `-hiddentext`, `-rigidtext`, the `-startarrow...` options.
 - View: `-zoom 1.5`, `-showpageborder`, `-userscale`, `-userunit`, `-geometry 1000x700+50+50` (window size and position).
 - Export: `-exportLanguage pdf`, `-export_margin` (the border before any is kept), `-correct_font_size`. The Export panel's values are kept per language in the `[rustfig.export.<language>]` tables of the settings file.
-- Libraries: `-library_dir FOLDER` (your library folder, default `~/xfiglib`; [Libraries](libraries.md)), `-icon_view` / `-list_view`, `-library_icon_size N` (40 to 120).
+- Libraries: `-library_dir FOLDER` (your library folder or a list file naming several folders, default `~/xfiglib`; [Libraries](libraries.md)), `-icon_view` / `-list_view`, `-library_icon_size N` (40 to 120).
 - Files: `-write_bak` / `-nowrite_bak` (keep the old file as `NAME.bak` when saving; on by default).
 - `-update file.fig ...` rewrites old files in the current Fig format (the original stays as `file.fig.bak`) and quits without opening a window.
 - Options that only make sense on X11 (`-display`, `-visual`, `-iconic`, colours and fonts of the toolkit) are accepted and ignored; RustFig prints a note to the terminal. An unknown option stops the start with a message.
