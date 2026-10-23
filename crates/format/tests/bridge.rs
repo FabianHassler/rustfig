@@ -21,13 +21,12 @@ fn norm(doc: &Document) -> Document {
     fn n(o: &Object) -> Object {
         let mut o = o.clone();
         o.id = ObjectId(0);
-        // The file has no arrowheads on closed shapes and pie arcs.
+        // The file has no arrowheads on closed shapes.
         match &mut o.kind {
             ObjectKind::Polyline(p) if p.kind != PolyKind::Polyline => {
                 (p.forward_arrow, p.backward_arrow) = (None, None)
             }
             ObjectKind::Spline(s) if s.closed => (s.forward_arrow, s.backward_arrow) = (None, None),
-            ObjectKind::Arc(a) if a.pie => (a.forward_arrow, a.backward_arrow) = (None, None),
             _ => {}
         }
         // The file has the cap of lines, splines and arcs, the join of lines.
@@ -35,7 +34,14 @@ fn norm(doc: &Document) -> Document {
         match &mut o.kind {
             ObjectKind::Ellipse(e) => (e.style.cap, e.style.join) = (cap, join),
             ObjectKind::Spline(s) => s.style.join = join,
-            ObjectKind::Arc(a) => a.style.join = join,
+            ObjectKind::Arc(a) => {
+                a.style.join = join;
+                // The file has the centre to three decimals.
+                a.center = Point::new(
+                    (a.center.x * 1000.0).round() / 1000.0,
+                    (a.center.y * 1000.0).round() / 1000.0,
+                );
+            }
             _ => {}
         }
         if let ObjectKind::Compound(c) = &mut o.kind {
@@ -421,10 +427,8 @@ fn object(depth: u32) -> BoxedStrategy<Object> {
         "collinear",
         |(st, p, pie, fa, ba)| {
             let mut a = Arc::through(st, p[0], pt(p[1].x as i32, p[1].y as i32 + 2000), p[2], pie)?;
-            if !pie {
-                a.forward_arrow = fa;
-                a.backward_arrow = ba;
-            }
+            a.forward_arrow = fa;
+            a.backward_arrow = ba;
             Some(ObjectKind::Arc(a))
         },
     );
@@ -627,4 +631,47 @@ fn hostile_documents_do_not_panic() {
     let _ = driver_objects(&mut fig);
     let _ = to_document(&fig.ctx, &fig.objects);
     let _ = from_model(&Document::new());
+}
+
+#[test]
+fn arcs_keep_centre_and_pie_arrows() {
+    let arrow = Arrow {
+        kind: 1,
+        style: 1,
+        thickness: 1.0,
+        width: 60.0,
+        height: 120.0,
+    };
+    let mut doc = Document::default();
+    // Centre deliberately off the circle through the rounded points.
+    for (pie, c) in [(true, pt(1000, 1000)), (false, pt(2000, 2000))] {
+        let mut a = Arc::through(Style::default(), pt(0, 100), pt(100, 0), pt(200, 100), pie).unwrap();
+        a.center = Point::new(c.x + 0.375, c.y - 0.25);
+        a.forward_arrow = Some(arrow);
+        a.backward_arrow = Some(arrow);
+        doc.objects.push(std::sync::Arc::new(Object {
+            id: Default::default(),
+            comments: vec![],
+            kind: ObjectKind::Arc(a),
+        }));
+    }
+    let check_arcs = |d: &Document, what: &str| {
+        let mut n = 0;
+        for o in &d.objects {
+            let ObjectKind::Arc(a) = &o.kind else { continue };
+            n += 1;
+            assert!(
+                a.forward_arrow.is_some() && a.backward_arrow.is_some(),
+                "{what}: arrows"
+            );
+            assert!(
+                (a.center.x.fract().abs() - 0.375).abs() < 1e-9,
+                "{what}: centre {:?}",
+                a.center
+            );
+        }
+        assert_eq!(n, 2, "{what}");
+    };
+    check_arcs(&read_fig(write_fig(&doc).as_bytes()).unwrap(), "fig text");
+    check_arcs(&round_trip(&doc), "bridge");
 }
