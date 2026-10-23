@@ -22,6 +22,7 @@ mod indicator;
 mod links;
 pub mod picture;
 pub mod prefs;
+pub mod print;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod recovery;
 mod region;
@@ -115,6 +116,10 @@ pub struct Engine {
     clipboard: Vec<Object>,
     /// The system clipboard for "Copy as picture" (E14), when the front end has one.
     picture_clipboard: Option<Box<dyn picture::PictureClipboard>>,
+    /// Where Print sends its PDF (B5); refuses until the front end attaches one.
+    spooler: Box<dyn print::Spooler>,
+    /// The Print panel's batch: figures waiting to be printed together.
+    pub(crate) print_batch: Vec<print::BatchItem>,
     /// The Fig text this engine last put on the system clipboard (E7): a
     /// clipboard holding the same text is the cut buffer itself.
     pub(crate) last_fig: Option<String>,
@@ -179,6 +184,8 @@ impl Engine {
             set_point: None,
             clipboard: Vec::new(),
             picture_clipboard: None,
+            spooler: Box::new(print::NoSpooler),
+            print_batch: Vec::new(),
             last_fig: None,
             path: None,
             modified: false,
@@ -305,6 +312,17 @@ impl Engine {
     /// system clipboard); without one the command reports "not available".
     pub fn set_picture_clipboard(&mut self, c: Option<Box<dyn picture::PictureClipboard>>) {
         self.picture_clipboard = c;
+    }
+
+    /// Install where Print sends its PDF (the system's print system, or a
+    /// recorder in tests).
+    pub fn set_spooler(&mut self, s: Box<dyn print::Spooler>) {
+        self.spooler = s;
+    }
+
+    /// How many figures wait in the print batch.
+    pub fn print_batch_len(&self) -> usize {
+        self.print_batch.len()
     }
 
     /// Plain text on the system clipboard (Edit > Paste Text), if the

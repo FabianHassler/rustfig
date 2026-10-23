@@ -31,6 +31,7 @@ RustFig is a Rust reimplementation of xfig, the classic vector drawing program f
 
 - [Files](files.md): open, save, merge, autosave and recovery.
 - [Export](export.md): PDF, SVG, EPS, PNG and many more formats.
+- [Print](print.md): page setup, preview, printer and batch.
 - [Preferences](preferences.md) and [Automation](automation.md) (control channel, MCP, command line).
 
 ## Where xfig's own manual went

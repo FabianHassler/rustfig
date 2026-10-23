@@ -248,9 +248,16 @@ pub struct RustFigPrefs {
     /// sessions; never in the drawing file.
     #[serde(skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub export: std::collections::BTreeMap<String, crate::export_panel::PanelSettings>,
+    /// The Print panel's values (B5), kept across sessions.
+    #[serde(skip_serializing_if = "is_default_print")]
+    pub print: crate::print::PrintSettings,
     /// Keys this version doesn't know, kept as they are.
     #[serde(flatten)]
     pub other: toml::Table,
+}
+
+fn is_default_print(p: &crate::print::PrintSettings) -> bool {
+    *p == crate::print::PrintSettings::default()
 }
 
 /// All preferences.

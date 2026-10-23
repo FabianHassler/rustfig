@@ -20,6 +20,7 @@ mod object;
 mod outline;
 pub mod picture;
 mod prefs;
+mod print;
 mod region;
 mod sfactor;
 pub(crate) mod shape;
@@ -75,6 +76,7 @@ pub fn all() -> &'static [Command] {
         v.extend(file::commands());
         v.extend(digitize::commands());
         v.extend(export_panel::commands());
+        v.extend(print::commands());
         v.extend(edit::commands());
         v.extend(view::commands());
         v.extend(shape::commands());

@@ -1203,18 +1203,18 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `u_pan.c` | `pan_up` | 52 | ported | `ui-egui/rulers.rs` `pan_step`, commands `view.pan`, `view.pan_origin` |  |
 | `u_pan.c` | `pan_down` | 60 | ported | `ui-egui/rulers.rs` `pan_step`, commands `view.pan`, `view.pan_origin` |  |
 | `u_pan.c` | `pan_origin` | 71 | ported | `ui-egui/rulers.rs` `pan_step`, commands `view.pan`, `view.pan_origin` |  |
-| `u_print.c` | `cmdlinetoargarray` | 72 | missing | printing: planned as a RustFig print dialog and a PDF handed to the OS print dialog (no spawned `lpr`) | B5 |
-| `u_print.c` | `start_argumentlist` | 125 | missing | printing: planned as a RustFig print dialog and a PDF handed to the OS print dialog (no spawned `lpr`) | B5 |
+| `u_print.c` | `cmdlinetoargarray` | 72 | ported | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `u_print.c` | `start_argumentlist` | 125 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
 | `u_print.c` | `addargs_postscript` | 157 | replaced | export runs fig2dev's ported drivers in process (`engine::fig2dev::export`, `file.export`); options map in `driver_args` |  |
 | `u_print.c` | `border_arg` | 195 | replaced | export runs fig2dev's ported drivers in process (`engine::fig2dev::export`, `file.export`); options map in `driver_args` |  |
 | `u_print.c` | `spawn_export_to_fd` | 208 | replaced | export runs fig2dev's ported drivers in process (`engine::fig2dev::export`, `file.export`); options map in `driver_args` |  |
 | `u_print.c` | `spawn_exportcommand` | 225 | replaced | export runs fig2dev's ported drivers in process (`engine::fig2dev::export`, `file.export`); options map in `driver_args` |  |
-| `u_print.c` | `print_to_printer` | 248 | missing | printing: planned as a RustFig print dialog and a PDF handed to the OS print dialog (no spawned `lpr`) | B5 |
-| `u_print.c` | `print_to_batchfile` | 308 | missing | printing: planned as a RustFig print dialog and a PDF handed to the OS print dialog (no spawned `lpr`) | B5 |
-| `u_print.c` | `strsub` | 336 | missing | printing: planned as a RustFig print dialog and a PDF handed to the OS print dialog (no spawned `lpr`) | B5 |
-| `u_print.c` | `pass_environment` | 357 | missing | printing: planned as a RustFig print dialog and a PDF handed to the OS print dialog (no spawned `lpr`) | B5 |
+| `u_print.c` | `print_to_printer` | 248 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `u_print.c` | `print_to_batchfile` | 308 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `u_print.c` | `strsub` | 336 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `u_print.c` | `pass_environment` | 357 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
 | `u_print.c` | `print_export` | 383 | replaced | export runs fig2dev's ported drivers in process (`engine::fig2dev::export`, `file.export`); options map in `driver_args` |  |
-| `u_print.c` | `print_spawn_printcmd` | 769 | missing | printing: planned as a RustFig print dialog and a PDF handed to the OS print dialog (no spawned `lpr`) | B5 |
+| `u_print.c` | `print_spawn_printcmd` | 769 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
 | `u_print.c` | `make_rgb_string` | 825 | ported | background colour and active layers as export options (`driver_args`, `active_layers_only`) |  |
 | `u_print.c` | `build_layer_list` | 840 | ported | background colour and active layers as export options (`driver_args`, `active_layers_only`) |  |
 | `u_print.c` | `append_group` | 915 | ported | background colour and active layers as export options (`driver_args`, `active_layers_only`) |  |
@@ -2001,32 +2001,32 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_msgpanel.c` | `file_msg_panel_dismiss` | 704 | ported | file name message and the message history (`file_msg`, `dialogs::messages_dialog`; filter and copy W10-29) |  |
 | `w_msgpanel.c` | `popup_file_msg` | 713 | ported | file name message and the message history (`file_msg`, `dialogs::messages_dialog`; filter and copy W10-29) |  |
 | `w_msgpanel.c` | `make_dimension_string` | 802 | ported | `dimline::length_text` (decimals, no fractions) | D10 |
-| `w_print.c` | `print_panel_dismiss` | 153 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `do_print` | 164 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `fit_page` | 225 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `get_magnif` | 273 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `update_mag` | 289 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `update_figure_size` | 300 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `do_print_batch` | 315 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `do_clear_batch` | 381 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `update_batch_count` | 399 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `orient_select` | 418 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `just_select` | 434 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `papersize_select` | 447 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `multiple_select` | 463 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `overlap_select` | 498 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `background_select` | 514 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `print_grid_minor_select` | 542 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `print_grid_major_select` | 567 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `print_command_select` | 590 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `printer_select` | 601 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `print_update_figure_size` | 617 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `popup_print_panel` | 637 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `create_print_panel` | 678 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `switch_print_layers` | 1279 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `switch_bound` | 1322 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `parse_printcap` | 1346 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
-| `w_print.c` | `make_layer_choice` | 1431 | missing | Print panel: printer and command, batch list, page layout, magnification, layers (modern replacement planned: preview and PDF to the OS print dialog) | B5 |
+| `w_print.c` | `print_panel_dismiss` | 153 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `do_print` | 164 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `fit_page` | 225 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `get_magnif` | 273 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `update_mag` | 289 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `update_figure_size` | 300 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `do_print_batch` | 315 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `do_clear_batch` | 381 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `update_batch_count` | 399 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `orient_select` | 418 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `just_select` | 434 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `papersize_select` | 447 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `multiple_select` | 463 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `overlap_select` | 498 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `background_select` | 514 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `print_grid_minor_select` | 542 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `print_grid_major_select` | 567 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `print_command_select` | 590 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `printer_select` | 601 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `print_update_figure_size` | 617 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `popup_print_panel` | 637 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `create_print_panel` | 678 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `switch_print_layers` | 1279 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `switch_bound` | 1322 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `parse_printcap` | 1346 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
+| `w_print.c` | `make_layer_choice` | 1431 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
 | `w_rottext.c` | `my_strtok` | 60 | not needed | rotated text through X bitmaps (the renderer rotates glyph outlines) |  |
 | `w_rottext.c` | `XRotDrawString` | 113 | not needed | rotated text through X bitmaps (the renderer rotates glyph outlines) |  |
 | `w_rottext.c` | `XRotDrawImageString` | 130 | not needed | rotated text through X bitmaps (the renderer rotates glyph outlines) |  |

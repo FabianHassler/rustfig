@@ -13,7 +13,7 @@ RustFig's own formats are xfig's **Fig** files (`.fig`, Fig 3.2 on writing) and 
 - **Digitize...** (Alt+Z) saves the points of the selected polylines and splines as text for a plotting program, xfig's Digitize the other way round. Name the files by prefix, starting number and suffix (`PREFIX_NNNN.SUFFIX`, four digits, as xfig's example line shows); **New file for each line** writes one numbered file per object, **Append to one file** adds all lines to a single file (a blank line between lines, added to the file if it exists). A suffix of `csv` writes comma separated values with an `x_fig,y_fig` header, any other suffix one `x y` pair per line. Without calibration the numbers are figure units (1/1200 inch). Tick **Calibrate to data units** and give two reference points of a scanned plot (position in the figure and the value there) to get the plot's own units, with optional logarithmic axes. Boxes, arcs and pictures are not lines and are skipped. Command `file.digitize`; native versions only.
 - **New window...** starts a second RustFig, optionally on a file (xfig's New xfig button); native versions only.
 - **Autorefresh mode** (View menu, off at start, kept in the preferences): once a second RustFig looks at the open file and reloads it when another program changed it. If the figure has unsaved edits you are asked first: Reload (your edits are lost) or Keep my version. Saving from RustFig itself never triggers it. Native versions only.
-- **Print**: not available yet. Export to PDF ([Export](export.md)) and print that.
+- **Print** (Meta+P): the Print panel with page preview ([Print](print.md)).
 
 ## Autosave and recovery
 

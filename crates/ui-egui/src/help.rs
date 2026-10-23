@@ -52,6 +52,7 @@ pub const TOPICS: &[Topic] = &[
     topic!("view.md"),
     topic!("files.md"),
     topic!("export.md"),
+    topic!("print.md"),
     topic!("preferences.md"),
     topic!("automation.md"),
 ];

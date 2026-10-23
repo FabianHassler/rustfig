@@ -1172,6 +1172,22 @@ pub(super) fn export_bytes(e: &Engine, doc: &Document, id: &str, p: &Value) -> R
     Ok(write_part_of(e, doc, &part, p)?.0)
 }
 
+/// [`export_bytes`] with fig2dev's messages (printing).
+pub(crate) fn export_bytes_msgs(
+    e: &Engine,
+    doc: &Document,
+    id: &str,
+    p: &Value,
+) -> Result<(Vec<u8>, Vec<String>), EngineError> {
+    let lang = export_language(&json!({ "format": id }), None)?;
+    let part = Part {
+        lang: lang.id,
+        half: Half::Whole,
+        graphics: None,
+    };
+    write_part_of(e, doc, &part, p)
+}
+
 /// Whether `part` writes text (the rest comes back as base64).
 fn is_text(part: &Part, bytes: &[u8]) -> bool {
     match ExportFormat::from_name(scene::options_lang(part.lang)) {

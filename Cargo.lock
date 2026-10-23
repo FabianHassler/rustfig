@@ -3329,6 +3329,7 @@ name = "rustfig-engine"
 version = "0.1.0"
 dependencies = [
  "fig2dev",
+ "hayro",
  "hayro-syntax",
  "image",
  "proptest",

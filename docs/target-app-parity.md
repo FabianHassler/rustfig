@@ -28,12 +28,14 @@ the score.
 | View & navigation | 8 | 100 % | — (zoom box, pan to origin and unzoom with Ctrl+click done 2026-10-22, E3) | 0 |
 | Undo | 4 | 100 % | — | 0 |
 | Libraries | 5 | 0 % | library browser and placement | 40 |
-| Printing | 5 | 10 % | print dialog and printer output | 30 |
+| Printing | 5 | 85 % | verification of the printer hand-off on Windows and Linux, browser printing (web), several figures as one job | 6 |
 | Settings & styles | 5 | 80 % | — (Global settings rows with effect, Unit/Scale panel, Arrow Size panel and number pop-ups done in W10-23, -24, -31, -32; preferences, recent files, styles with families E6, colours E4 done) | 0 |
 | Platforms | 7 | 50 % | Windows/Linux verification, web build and file I/O on the web | 40 |
 | **Overall** | 100 | **≈73 %** | | **371** |
 
 ## Evidence of what ships
+
+- Printing (B5, 2026-10-23; Printing 10 → 85 %): `crates/engine/src/print.rs` (settings, fig2dev PDF in page mode as `u_print.c` builds its options, `Spooler` trait with `SystemSpooler`/`RecordingSpooler`/`NoSpooler`, page rendering with hayro), commands `print.*` in `cmd/print.rs`, panel `crates/ui-egui/src/print_dialog.rs`, manual `docs/manual/print.md`; tests `crates/engine/tests/print.rs` (paper, orientation, pages, grid, layers, spooler, batch, hostile params), `crates/ui-egui/tests/print_panel_ui.rs`. Not tested on Windows and Linux hardware; the batch is sent as one job per figure.
 
 - Mode options and saved versions (D10, W10-14, 2026-10-23): dimension-line lengths as xfig's fractions of an inch (`view::length_string`, `UnitScale.decimal_inches`), the Dimension line settings window with example preview, arrow pictures and "none" per end (`crates/ui-egui/src/dimline_panel.rs`); `file.save` keeps versions in the recovery folder (`crates/engine/src/recovery.rs`, `cmd/file.rs`: `file.versions`, `file.restore_version`; test `crates/engine/tests/export_panel.rs`), File > Saved versions… (`ui-egui/src/dialogs.rs`). Leftovers: preview arrowheads are plain triangles, lengths while drawing stay decimal.
 

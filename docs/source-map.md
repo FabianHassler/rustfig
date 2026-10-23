@@ -139,7 +139,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `u_undo.c` | 962 | undo (one level) | `engine/history` (multi-level) | replaced: multi-level snapshot undo (S4) | — |
 | `u_error.c` | 136 | emergency save on crash | `engine/guard` | replaced: `engine::guard` and recovery files (A6) (S4) | — |
 | `u_pan.c` | 89 | pan steps | `rulers::pan_step` | ported | — |
-| `u_print.c` | 923 | print and export through fig2dev (passes `-F`, true point sizes, for PS/EPS/PDF) | `cmd/file` export | export replaced (fig2dev in process); printing missing, modern replacement planned (S4) | B5 |
+| `u_print.c` | 923 | print and export through fig2dev (passes `-F`, true point sizes, for PS/EPS/PDF) | `cmd/file` export | export replaced (fig2dev in process); printing: `print.rs` builds the same fig2dev options, PDF to the OS print system (B5) | B5 |
 | `u_ghostscript.c` | 1218 | EPS/PDF preview through ghostscript | `fig2dev:crates/fig2dev/src/util/{pdfpic,pdfps,gs}.rs` | replaced: fig2dev `util/{pdfpic,pdfps,gs}.rs` (B15); library callbacks not needed (S4) | — |
 | `u_spawn.c` | 587 | run external programs | — | replaced: no spawned exports; image editor and help viewer through the OS (S4) | W10-16, W10-2 |
 
@@ -163,7 +163,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_cursor.c` | 144 | cursors per mode | canvas | partial: one cursor (S4) | S4-4 |
 | `w_color.c` | 2592 | colour panel and editor | indicator combo | replaced: the Colours window (`color_dialog.rs`) and `color.*` commands (E4, W10-36); mix memory and lock not built | E4 |
 | `w_export.c` | 2054 | export panel | `dialogs::export` (language menu in xfig's order), default suffixes in `fig2dev:crates/fig2dev/src/languages.rs` | ported: Export panel options (rows per language, preview, fit to page, kept per language; HPGL rows B9) (26 functions, S4) | W10-4, W10-10, W10-11 |
-| `w_print.c` | 1542 | print panel | — | missing; modern: PDF to the system print dialog (decided) | B5 |
+| `w_print.c` | 1542 | print panel | `ui-egui/print_dialog`, `cmd/print` | replaced: Print panel with preview, PDF to the system print dialog; all options kept, printcap not needed (B5) | B5 |
 | `w_file.c`, `w_dir.c`, `w_browse.c`, `w_listwidget.c` | 3.5 k | file panel and browser with preview | native dialogs (`rfd`) | modern; Open of a missing name starts a new figure; preview and offset fields missing (S4) | W10-12 |
 | `w_library.c` | 1831 | library panel | — | missing | D6 |
 | `w_srchrepl.c` | 966 | search/replace, spell check | `dialogs::search` | partial: spell check | F5 |

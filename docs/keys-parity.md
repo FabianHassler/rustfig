@@ -22,8 +22,8 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside: on mac
 | Meta-A | Save As | `app.save_as` | ✅ |
 | Shift-Meta-X | Export with current settings | `app.export_now` | ✅ |
 | Meta-X | Export panel | `app.export` | ✅ |
-| Shift-Meta-P | Print with current settings | — | ❌ B5 (printing) |
-| Meta-P | Print panel | — | ❌ B5 |
+| Shift-Meta-P | Print with current settings | — | ✅ `print.quick` |
+| Meta-P | Print panel | `app.print` | ✅ |
 | Meta-Q | Quit | `app.quit` | ✅ |
 | Shift-U | Unit panel | `app.unit_panel` | ✅ |
 | Meta-U | Undo | `edit.undo` | ✅ |
@@ -51,7 +51,7 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside: on mac
 
 | Menu | Letters | Status |
 |---|---|---|
-| File | n o m d s a e p x; 1–9 recent files | ✅ letters (`XFIG_MENU_LETTERS`; d, p wait for D11, B5); ❌ recent files E1 |
+| File | n o m d s a e p x; 1–9 recent files | ✅ letters (`XFIG_MENU_LETTERS`; d waits for D11); ❌ recent files E1 |
 | Edit | u p t f s d g n | ✅ (t waits for E7, s for D11) |
 | View | s r t i o f u p c d n b l a, v v | ✅ for the entries RustFig has (n: balloons); named styles (E6), character map (E5), lengths (D10), auto refresh and vertex numbers (D11) wait for their features |
 | Help | x m h a | ✅ x (the manual), c (command reference, RustFig's), a (about); m, h: xfig's man pages and How-To are manual topics, no keys |
