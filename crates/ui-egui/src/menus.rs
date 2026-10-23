@@ -1439,6 +1439,7 @@ mod tests {
     #[test]
     fn key_symbols_exist_in_the_fonts() {
         let ctx = egui::Context::default();
+        crate::key_font::install(&ctx);
         let _ = ctx.run(egui::RawInput::default(), |_| {});
         let font = egui::FontId::proportional(13.0);
         // Every symbol the menus draw for keys is in the fonts.

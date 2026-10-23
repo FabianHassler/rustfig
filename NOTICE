@@ -32,6 +32,10 @@ generated in code (ui-egui/src/app_icon.rs), MIT OR Apache-2.0.
 
 Fonts used at run time
 ----------------------
+- Key symbols (⌘ ⇧ ⌥ ⌃ ⌫ ⎋ ↩ ⇥): assets/fonts/rustfig-key-symbols.ttf, a subset of
+  Noto Sans Symbols 2, Noto Sans Symbols and Noto Sans Math (Copyright 2022 The
+  Noto Project Authors, SIL Open Font License 1.1, assets/fonts/OFL.txt),
+  renamed "RustFig Key Symbols"; embedded as the last fallback font.
 - Optional: fonts from storytold/craft-fonts, embedded only when the build
   sets CRAFT_FONTS_DIR; their licences ship with that repository.
 - Fallback: Ubuntu Light (Ubuntu Font Licence 1.0) and Hack (MIT/Bitstream

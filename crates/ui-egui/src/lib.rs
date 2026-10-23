@@ -25,6 +25,7 @@ pub mod font_chooser;
 pub mod help;
 pub mod inject;
 pub mod input;
+pub mod key_font;
 pub mod keys_sheet;
 pub mod menus;
 pub mod mode_icons;
@@ -459,6 +460,7 @@ impl App {
 
     /// Run one UI frame (guarded against panics).
     pub fn ui(&mut self, ctx: &egui::Context) {
+        key_font::install(ctx);
         #[cfg(not(target_arch = "wasm32"))]
         let start = std::time::Instant::now();
         let frame_result = rustfig_engine::guard::catch(|| self.frame(ctx));
