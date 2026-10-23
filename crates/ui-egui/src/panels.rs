@@ -90,7 +90,7 @@ pub const MODE_PANEL_WIDTH: f32 = 2.0 * SLOT.x + 2.0 + 2.0 * MODE_PANEL_MARGIN +
 
 /// Rows of buttons in the mode panel: the drawing modes with the library row
 /// and the editing modes.
-const MODE_ROWS: f32 = 9.0 + 13.0;
+const MODE_ROWS: f32 = 8.0 + 13.0;
 
 /// The height of one mode button so that every row fits the panel (xfig's
 /// window is sized to fit); only a very short window falls back to
@@ -184,10 +184,8 @@ pub fn mode_popup(app: &mut App, ctx: &egui::Context, tk: &Tokens) {
 const SLOT: egui::Vec2 = vec2(38.0, 34.0);
 
 fn slot_grid(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, id: &str, slots: &[Slot], size: egui::Vec2) {
-    // The library icon is twice as wide: it gets its own row below.
-    let wide = |s: &Slot| matches!(s, Slot::Command(icon, ..) if icon.width > 40);
     egui::Grid::new(id).spacing(vec2(2.0, 2.0)).show(ui, |ui| {
-        for (i, slot) in slots.iter().filter(|s| !wide(s)).enumerate() {
+        for (i, slot) in slots.iter().enumerate() {
             match slot {
                 Slot::Command(icon, id, tip) => command_button(app, ui, tk, icon, id, tip, size),
                 Slot::Tool(t, icon) => tool_button(app, ui, tk, *t, icon, size),
@@ -197,11 +195,6 @@ fn slot_grid(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, id: &str, slots: &[S
             }
         }
     });
-    for slot in slots.iter().filter(|s| wide(s)) {
-        if let Slot::Command(icon, id, tip) = slot {
-            command_button(app, ui, tk, icon, id, tip, vec2(size.x * 2.0 + 2.0, size.y));
-        }
-    }
 }
 
 fn tool_button(
@@ -335,7 +328,13 @@ fn command_button(
     crate::bevel::paint(ui.painter(), rect, tk, state);
     let ink = if active { tk.icon_active } else { tk.icon };
     let sunk = matches!(state, crate::bevel::State::Selected | crate::bevel::State::Pressed) && tk.bevel;
-    let inner = if sunk { rect.translate(vec2(1.0, 1.0)) } else { rect };
+    let mut inner = if sunk { rect.translate(vec2(1.0, 1.0)) } else { rect };
+    // The library picture is twice as wide as the others: keep its
+    // proportions in a normal sized button.
+    if icon.width > 40 {
+        let h = inner.width() * icon.height as f32 / icon.width as f32;
+        inner = egui::Rect::from_center_size(inner.center(), vec2(inner.width(), h));
+    }
     paint_mode_icon(ui, icon, inner, ink);
     let label = rustfig_engine::cmd::find(id).map_or("Library", |c| c.label);
     resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, active, label));

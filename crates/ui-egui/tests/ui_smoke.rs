@@ -993,9 +993,23 @@ fn plot_mode_button_opens_dialog_and_draw_adds_a_compound() {
     h.get_by_label("Plot").click();
     h.run_steps(3);
     assert_eq!(h.state().engine.tool(), ToolKind::Plot);
-    for (ty, x, y) in [("press", 600, 600), ("move", 3000, 2400), ("release", 3000, 2400)] {
+    // Beside the library button, both of normal size.
+    let lib = h.get_by_label("Library").rect();
+    let plot = h
+        .query_all_by_label("Plot")
+        .map(|n| n.rect())
+        .find(|r| (r.width() - lib.width()).abs() < 1.0)
+        .expect("a Plot button the size of the library button");
+    assert!((lib.center().y - plot.center().y).abs() < 1.0, "same row");
+    assert!((lib.width() - plot.width()).abs() < 1.0, "same size");
+    assert!(plot.center().x > lib.center().x);
+    for (ty, x, y) in [("press", 600, 600), ("move", 3000, 2400)] {
         h.state_mut().run("tool.event", json!({"type": ty, "x": x, "y": y}));
     }
+    h.run_steps(3);
+    assert!(!h.state().plot_dialog.open, "one corner opens nothing");
+    h.state_mut()
+        .run("tool.event", json!({"type": "press", "x": 3000, "y": 2400}));
     h.run_steps(3);
     assert!(h.state().plot_dialog.open, "the drag opens the dialog");
     // A bad expression is an error in the dialog and draws nothing.
