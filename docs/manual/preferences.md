@@ -15,7 +15,7 @@ The upper part is xfig's panel, with the same rows. **Ok** applies every row you
 - **Recently used files**: 0 to 9 entries in File > Open recent (`max_recent_files`).
 - **Maximum image colors**: kept for pictures (`max_image_colors`; 0 is no limit); RustFig shows pictures in full colour, so it has no effect yet.
 - **Image editor**: the program Edit Image starts (`image_editor`); `%f` stands for the picture file, and without `%f` the file is added at the end. The default (`open` on macOS, `start` on Windows, `xdg-open` on Linux) uses the system's own program for the file type.
-- **Spell checker**, **HTML Browser**, **PDF Viewer**: kept for the features that use them (`spellcheckcommand`, `browser`, `pdf_viewer`).
+- **Spell checker**, **HTML Browser**, **PDF Viewer**: kept for the features that use them (`spellcheckcommand`, `browser`, `pdf_viewer`). `%f` stands for a file with the drawing's texts; the spell checker prints the misspelt words, one per line. The default is `aspell list < %f` (xfig's was `spell %f`, a Unix program most systems no longer have); `hunspell -l %f` works the same way. Spell checking itself is still to come (plan F5).
 
 The lower part is RustFig's own:
 
@@ -31,6 +31,10 @@ The lower part is RustFig's own:
 The colour theme follows the system's light or dark setting unless you choose Light or Dark above.
 
 Document-specific settings (units, paper, orientation, comments) are saved in the drawing itself: see Edit > Document settings and [Zoom and view](view.md).
+
+## LaTeX text
+
+Under **LaTeX text** in Edit > Global settings: **Typeset LaTeX text on the canvas** (View > Typeset LaTeX text), the **TeX program** (empty: `pdflatex`, then `lualatex`, from the `PATH`; the line below names the one in use) and the **Preamble** added after `\usepackage{amsmath,amssymb,color,graphicx}`. **Apply** saves the program and the preamble and typesets the texts again; **Revert** goes back to the saved values. See [Text and pictures](draw-text-pictures.md).
 
 ## Command-line options
 

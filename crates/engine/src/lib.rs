@@ -649,7 +649,7 @@ impl Engine {
             size: t.size,
             color: render::Rgba::opaque(self.doc.rgb(t.color)),
         })?;
-        let corners = render::typeset_corners(t.origin, t.angle, t.justify, &ts);
+        let corners = render::typeset_corners(t.origin, t.angle, t.justify, &ts, 0.0);
         Some((corners, (ts.height_pt - ts.depth_pt) * rustfig_geom::FIG_PER_POINT))
     }
 

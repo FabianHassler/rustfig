@@ -172,7 +172,7 @@ pub const RESOURCES: &[Resource] = &[
     r("smallicons", Bool, "false", "-smallicons", Planned("E9")),
     r("smooth_factor", Int, "0", "-smooth_factor", Planned("B6")),
     r("specialtext", Bool, "false", "-specialtext", Applied),
-    r("spellcheckcommand", Str, "spell %s", "-spellcheckcommand", Planned("D11")),
+    r("spellcheckcommand", Str, "aspell list < %f", "-spellcheckcommand", Planned("D11")),
     r("startarrowlength", Float, "8", "-startarrowlength", Applied),
     r("startarrowthick", Float, "1", "-startarrowthick", Applied),
     r("startarrowtype", Int, "0", "-startarrowtype", Applied),

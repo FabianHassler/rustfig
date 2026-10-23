@@ -1157,7 +1157,7 @@ impl GlobalDraft {
             image_colors: int("max_image_colors", 0),
             save_versions: int("save_versions", 5),
             image_editor: text("image_editor", rustfig_engine::prefs::SYSTEM_OPEN),
-            spell: text("spellcheckcommand", "spell %s"),
+            spell: text("spellcheckcommand", "aspell list < %f"),
             browser: text("browser", rustfig_engine::prefs::SYSTEM_OPEN),
             pdf_viewer: text("pdf_viewer", rustfig_engine::prefs::SYSTEM_OPEN),
         }
@@ -1288,6 +1288,8 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
                 app.run("prefs.use_current_attributes", serde_json::json!({}));
             }
             ui.separator();
+            latex_settings(app, ui);
+            ui.separator();
             user_colors_editor(app, ui);
             ui.separator();
             ui.label(
@@ -1364,6 +1366,70 @@ fn apply_global(app: &mut App, was: &GlobalDraft, now: &GlobalDraft) {
 }
 
 /// The colours kept for every drawing (E1): offered in every colour menu.
+/// RustFig's LaTeX settings (F8): typeset special texts on the canvas, the
+/// TeX program and the preamble added to every typeset text.
+fn latex_settings(app: &mut App, ui: &mut egui::Ui) {
+    use rustfig_engine::latex_preview::BASE_PREAMBLE;
+    ui.label(egui::RichText::new("LaTeX text").strong());
+    let settings = app.engine.latex.settings();
+    let mut on = settings.enabled;
+    if ui
+        .checkbox(&mut on, "Typeset LaTeX text on the canvas")
+        .on_hover_text("Special texts are typeset by TeX, as they will appear in the document")
+        .changed()
+    {
+        app.run("view.toggle_latex_preview", serde_json::json!({}));
+    }
+    let found = app.engine.latex.program();
+    let id = ui.id().with("latex_settings_draft");
+    let (mut program, mut preamble): (String, String) = ui
+        .data(|d| d.get_temp(id))
+        .unwrap_or_else(|| (settings.program.clone(), settings.preamble.clone()));
+    ui.horizontal(|ui| {
+        ui.label("TeX program:");
+        ui.add(
+            egui::TextEdit::singleline(&mut program)
+                .hint_text("pdflatex (found on the PATH)")
+                .desired_width(220.0),
+        );
+    });
+    ui.label(
+        egui::RichText::new(match &found {
+            Some(p) => format!("Using {}", p.display()),
+            None => "No TeX program found: special texts show their source".to_string(),
+        })
+        .small(),
+    );
+    ui.label("Preamble (after the packages every text gets):");
+    ui.label(egui::RichText::new(BASE_PREAMBLE).monospace().small());
+    ui.add(
+        egui::TextEdit::multiline(&mut preamble)
+            .code_editor()
+            .hint_text("\\usepackage{siunitx}")
+            .desired_rows(4)
+            .desired_width(f32::INFINITY),
+    );
+    let changed = program != settings.program || preamble != settings.preamble;
+    ui.horizontal(|ui| {
+        if ui.add_enabled(changed, egui::Button::new("Apply")).clicked() {
+            if program != settings.program {
+                app.run(
+                    "view.set_latex_program",
+                    serde_json::json!({ "program": program.trim() }),
+                );
+            }
+            if preamble != settings.preamble {
+                app.run("view.set_latex_preamble", serde_json::json!({ "preamble": preamble }));
+            }
+        }
+        if ui.add_enabled(changed, egui::Button::new("Revert")).clicked() {
+            program = settings.program.clone();
+            preamble = settings.preamble.clone();
+        }
+    });
+    ui.data_mut(|d| d.insert_temp(id, (program, preamble)));
+}
+
 fn user_colors_editor(app: &mut App, ui: &mut egui::Ui) {
     ui.label(egui::RichText::new("Your colours").strong());
     let colors = app.engine.prefs.rustfig.user_colors.clone();

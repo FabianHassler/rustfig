@@ -358,6 +358,9 @@ pub fn find_tex(program: &str) -> Option<PathBuf> {
     None
 }
 
+/// The packages every typeset text gets, before the user's preamble.
+pub const BASE_PREAMBLE: &str = "\\usepackage{amsmath,amssymb,color,graphicx}";
+
 /// The LaTeX file for one text: the preamble the `pdftex` export's
 /// documents need (`amsmath`, `amssymb`, `color`, `graphicx`), the user's
 /// additions, and the text in a box whose size and depth go to `doc.dim`.
@@ -380,20 +383,36 @@ pub fn latex_document(preamble: &str, key_text: &str, font: i32, postscript: boo
     };
     let c = |v: u8| format!("{:.3}", f64::from(v) / 255.0);
     format!(
-        "\\documentclass{{article}}\n\\usepackage{{amsmath,amssymb,color,graphicx}}\n{preamble}\n\
+        "\\documentclass{{article}}\n{base}\n{preamble}\n\
          \\pagestyle{{empty}}\n\\newwrite\\rfdim\n\
          \\begin{{document}}\n\\immediate\\openout\\rfdim=doc.dim\n\
          \\setbox0\\hbox{{\\fontsize{{{size:.2}}}{{{lead:.2}}}\\selectfont {family}\\color[rgb]{{{r},{g},{b}}}{text}}}\n\
          \\immediate\\write\\rfdim{{\\the\\wd0,\\the\\ht0,\\the\\dp0}}\n\\immediate\\closeout\\rfdim\n\
-         \\newdimen\\rfh \\rfh=\\ht0 \\advance\\rfh by \\dp0\n\
-         \\ifdefined\\pagewidth\\pagewidth=\\wd0 \\pageheight=\\rfh\\else\\pdfpagewidth=\\wd0 \\pdfpageheight=\\rfh\\fi\n\
-         \\hoffset=-1in \\voffset=-1in\n\\shipout\\hbox{{\\box0}}\n\\end{{document}}\n",
+         \\newdimen\\rfw \\rfw=\\wd0 \\advance\\rfw by {m2:.3}bp\n\
+         \\newdimen\\rfh \\rfh=\\ht0 \\advance\\rfh by \\dp0 \\advance\\rfh by {m2:.3}bp\n\
+         \\ifdefined\\pagewidth\\pagewidth=\\rfw \\pageheight=\\rfh\\else\\pdfpagewidth=\\rfw \\pdfpageheight=\\rfh\\fi\n\
+         \\hoffset=-1in \\advance\\hoffset by {m:.3}bp \\voffset=-1in \\advance\\voffset by {m:.3}bp\n\
+         \\shipout\\hbox{{\\box0}}\n\\end{{document}}\n",
+        base = BASE_PREAMBLE,
+        m = margin_pt(size),
+        m2 = 2.0 * margin_pt(size),
         lead = size * 1.2,
         r = c(rgb[0]),
         g = c(rgb[1]),
         b = c(rgb[2]),
         text = key_text,
     )
+}
+
+/// Room around TeX's box on the page, in PostScript points: ink may reach
+/// outside the box (the integral sign below its depth, italic overhangs), and
+/// a page cut exactly at the box clips it.
+pub fn margin_pt(size: f64) -> f64 {
+    if size.is_finite() {
+        (size * 0.3).clamp(2.0, 60.0)
+    } else {
+        2.0
+    }
 }
 
 /// Parse `doc.dim`: width, height and depth in TeX points ("12.0pt 5.0pt 1.0pt").
@@ -459,8 +478,8 @@ fn run_tex(program: &std::path::Path, preamble: &str, key: &Key, n: u64) -> Resu
             return Err(tex_error(&dir.join("doc.log")));
         };
         let dim = std::fs::read_to_string(dir.join("doc.dim")).unwrap_or_default();
-        let (_w, _h, d) = parse_dim(&dim).ok_or_else(|| format!("TeX gave no size ({:?})", shorten(dim.trim(), 40)))?;
-        render_pdf(pdf, d)
+        let (w, h, d) = parse_dim(&dim).ok_or_else(|| format!("TeX gave no size ({:?})", shorten(dim.trim(), 40)))?;
+        render_pdf(pdf, (w, h, d), margin_pt(size))
     })();
     // Best effort: a stray temp folder is harmless.
     let _ = std::fs::remove_dir_all(&dir);
@@ -487,14 +506,20 @@ fn tex_error(log: &std::path::Path) -> String {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn render_pdf(pdf: Vec<u8>, d: f64) -> Result<Typeset, String> {
-    // The page is TeX's box (height plus depth); TeX's depth places the baseline.
+fn render_pdf(pdf: Vec<u8>, (w, h, d): (f64, f64, f64), margin: f64) -> Result<Typeset, String> {
+    // The page is TeX's box (height plus depth) with `margin` on every side;
+    // TeX's depth places the baseline.
     let pic = fig2dev::util::pdfpic::PdfPicture::open(pdf).ok_or("the TeX output cannot be shown")?;
     let (pw, ph) = pic.size();
+    // A page that is not the box plus the margin (a TeX that ignored the page
+    // size) is taken as the box itself.
+    let fits = (pw - (w + 2.0 * margin)).abs() < 0.5 && (ph - (h + d + 2.0 * margin)).abs() < 0.5;
+    let m = if fits { margin } else { 0.0 };
     Ok(Typeset {
         pdf: Arc::new(pic),
-        width_pt: pw,
-        height_pt: ph,
-        depth_pt: d.min(ph),
+        width_pt: (pw - 2.0 * m).max(0.0),
+        height_pt: (ph - 2.0 * m).max(0.0),
+        depth_pt: d.min((ph - 2.0 * m).max(0.0)),
+        margin_pt: m,
     })
 }
