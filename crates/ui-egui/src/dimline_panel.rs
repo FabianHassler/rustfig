@@ -8,8 +8,11 @@
 use crate::attributes::{color32, color_name, colors, font_name};
 use crate::App;
 use egui::Ui;
-use rustfig_engine::dimline::DimlineSettings;
-use rustfig_model::LineKind;
+use rustfig_engine::dimline::{self, DimlineDefaults, DimlineSettings};
+use rustfig_geom::{Affine, Point};
+use rustfig_model::{Document, LineKind};
+use rustfig_render::raster::{rasterize, Pixmap, RasterOptions};
+use rustfig_render::SceneOptions;
 use serde_json::json;
 
 const OPEN: &str = "dimline_panel_open";
@@ -120,79 +123,117 @@ fn arrow_box(ui: &mut Ui, id: &str, name: &str, v: &mut i32) {
     }
 }
 
-/// The example dimension line drawn from the settings (xfig's panel shows
-/// one too): line with ticks, arrows, and the text in its box.
+/// Fig units per preview point.
+const PREVIEW_U: f64 = 15.0;
+const PREVIEW_W: f32 = 300.0;
+const PREVIEW_H: f32 = 70.0;
+
+/// The example dimension line as a Fig drawing: the engine's own builder
+/// with the draft settings and the indicator's other attributes.
+fn example_objects(app: &App, d: &DimlineSettings) -> Vec<rustfig_model::Object> {
+    let e = &app.engine;
+    let ind = &e.indicator;
+    let defaults = DimlineDefaults {
+        pen_color: ind.pen_color,
+        depth: ind.depth,
+        join: ind.join,
+        style_val: ind.style_val,
+        dot_gap: ind.dot_gap,
+    };
+    let doc = e.doc();
+    let (units, scale, ruler) = (doc.settings.units, e.unit_scale.clone(), doc.unit_name());
+    let prec = d.precision;
+    let fmt = move |l: f64| dimline::length_text(l, units, &scale, ruler, prec);
+    let y = f64::from(PREVIEW_H) * PREVIEW_U * 0.68;
+    let a = Point::new(24.0 * PREVIEW_U, y);
+    let b = Point::new(f64::from(PREVIEW_W - 24.0) * PREVIEW_U, y);
+    let text = d.fixed.then_some("text");
+    vec![dimline::create(d, &defaults, a, b, text, &fmt)]
+}
+
+/// The example dimension line (xfig's panel shows one too): the compound a
+/// new dimension line would be, rendered by the canvas renderer at the
+/// screen's pixel density.
 fn preview(app: &App, ui: &mut Ui, d: &DimlineSettings) {
     let doc = app.engine.doc();
     let tk = crate::theme::Tokens::for_dark(ui.visuals().dark_mode);
-    let (resp, p) = ui.allocate_painter(egui::vec2(300.0, 70.0), egui::Sense::hover());
+    let (resp, _) = ui.allocate_painter(egui::vec2(PREVIEW_W, PREVIEW_H), egui::Sense::hover());
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, "Dimension line example"));
     let r = resp.rect;
-    p.rect_filled(r, 2.0, tk.paper);
-    p.rect_stroke(
+    let ppp = ui.ctx().pixels_per_point();
+    let key = format!(
+        "{:?}|{}|{}|{:?}|{:?}",
+        d,
+        ppp,
+        ui.visuals().dark_mode,
+        doc.settings.units,
+        app.engine.indicator.pen_color
+    );
+    let id = egui::Id::new("dimline_preview_tex");
+    let cached: Option<(String, egui::TextureHandle)> = ui.ctx().data(|x| x.get_temp(id));
+    let tex = match cached {
+        Some((k, t)) if k == key => Some(t),
+        _ => {
+            let paper = tk.paper;
+            render_example(app, d, ppp, [paper.r(), paper.g(), paper.b()]).map(|img| {
+                let t = ui
+                    .ctx()
+                    .load_texture("dimline-preview", img, egui::TextureOptions::LINEAR);
+                ui.ctx().data_mut(|x| x.insert_temp(id, (key, t.clone())));
+                t
+            })
+        }
+    };
+    if let Some(t) = tex {
+        ui.painter().image(
+            t.id(),
+            r,
+            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+            egui::Color32::WHITE,
+        );
+    }
+    ui.painter().rect_stroke(
         r,
         2.0,
         egui::Stroke::new(1.0_f32, tk.page_border),
         egui::StrokeKind::Inside,
     );
-    let w = |t: i32| (t.max(1) as f32 * 0.5).clamp(0.5, 6.0);
-    let (x0, x1, y) = (r.left() + 24.0, r.right() - 24.0, r.center().y + 8.0);
-    let line_col = color32(doc, d.color);
-    let stroke = egui::Stroke::new(w(d.thick), line_col);
-    for x in [x0, x1] {
-        p.line_segment(
-            [egui::pos2(x, y - 26.0), egui::pos2(x, y + 6.0)],
-            egui::Stroke::new(1.0_f32, tk.muted),
-        );
+}
+
+fn render_example(app: &App, d: &DimlineSettings, ppp: f32, paper: [u8; 3]) -> Option<egui::ColorImage> {
+    let ppp = if ppp.is_finite() { ppp.clamp(0.5, 8.0) } else { 1.0 };
+    let (pw, ph) = ((PREVIEW_W * ppp).round() as u32, (PREVIEW_H * ppp).round() as u32);
+    let mut doc = Document::new();
+    doc.colors = app.engine.doc().colors.clone();
+    doc.settings = app.engine.doc().settings.clone();
+    doc.objects = example_objects(app, d).into_iter().map(std::sync::Arc::new).collect();
+    let scene = rustfig_render::build_scene(&doc, &SceneOptions::default());
+    let mut pm = Pixmap::new(pw, ph)?;
+    for px in pm.data_mut().as_chunks_mut::<4>().0 {
+        *px = [paper[0], paper[1], paper[2], 255];
     }
-    let len = (d.arrow_length as f32).clamp(4.0, 16.0);
-    let half = (d.arrow_width as f32 / 2.0).clamp(2.0, 8.0);
-    let head = |x: f32, dir: f32, v: i32| {
-        if v < 0 {
-            return;
-        }
-        let pts = vec![
-            egui::pos2(x, y),
-            egui::pos2(x + dir * len, y - half),
-            egui::pos2(x + dir * len, y + half),
-        ];
-        let hollow = v > 0 && v % 2 == 1;
-        let fill = if hollow { tk.paper } else { line_col };
-        p.add(egui::Shape::convex_polygon(pts, fill, stroke));
-    };
-    let gap = |v: i32| if v < 0 { 0.0 } else { len };
-    p.line_segment(
-        [
-            egui::pos2(x0 + gap(d.left_arrow), y),
-            egui::pos2(x1 - gap(d.right_arrow), y),
-        ],
-        stroke,
+    let k = f64::from(ppp) / PREVIEW_U;
+    rasterize(
+        &scene,
+        &mut pm,
+        &RasterOptions {
+            transform: Affine::scale(k, k),
+            min_line_px: 1.0,
+            pattern: rustfig_render::pattern::PatternFrame::screen(),
+        },
     );
-    head(x0, 1.0, d.left_arrow);
-    head(x1, -1.0, d.right_arrow);
-    if d.ticks {
-        let ts = egui::Stroke::new(w(d.tick_thick), line_col);
-        for x in [x0, x1] {
-            p.line_segment([egui::pos2(x, y - 7.0), egui::pos2(x, y + 7.0)], ts);
-        }
-    }
-    let text = if d.fixed {
-        "text".to_string()
-    } else {
-        format!("{:.*}", d.precision.min(9) as usize, 12.5)
-    };
-    let font = egui::FontId::proportional((d.font_size as f32 * 1.2).clamp(8.0, 22.0));
-    let galley = p.layout_no_wrap(text, font, color32(doc, d.text_color));
-    let c = egui::pos2(r.center().x, y - 14.0);
-    let boxr = egui::Rect::from_center_size(c, galley.size() + egui::vec2(8.0, 2.0));
-    p.rect_filled(boxr, 0.0, tk.paper);
-    p.rect_stroke(
-        boxr,
-        0.0,
-        egui::Stroke::new(w(d.box_thick), color32(doc, d.box_color)),
-        egui::StrokeKind::Middle,
-    );
-    p.galley(boxr.center() - galley.size() / 2.0, galley, color32(doc, d.text_color));
+    let pixels = pm
+        .data()
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|p| egui::Color32::from_rgb(p[0], p[1], p[2]))
+        .collect();
+    Some(egui::ColorImage {
+        size: [pw as usize, ph as usize],
+        source_size: egui::vec2(pw as f32, ph as f32),
+        pixels,
+    })
 }
 
 fn fields(app: &App, ui: &mut Ui, d: &mut DimlineSettings) {
