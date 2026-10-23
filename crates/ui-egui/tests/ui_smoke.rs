@@ -2285,6 +2285,48 @@ fn edit_panel_has_pictorial_menus() {
     );
 }
 
+/// W10: the edit panel's fill style is the indicator's pictorial panel.
+#[test]
+fn edit_panel_fill_style_uses_the_pictorial_panel() {
+    use rustfig_model::ObjectKind;
+    let mut h = edit_harness();
+    open_panel(&mut h, "polyline");
+    let area = |h: &Harness<'static, App>| match &first_of(h, "polyline").kind {
+        ObjectKind::Polyline(p) => p.style.area_fill,
+        _ => panic!(),
+    };
+    h.state_mut().dialogs.edit.as_mut().unwrap().fill = 4;
+    h.run_steps(2);
+    h.get_by_label("Fill style choices").click();
+    h.run_steps(3);
+    h.get_by_label("30").click();
+    h.run_steps(3);
+    assert_eq!(area(&h), 30, "a tint");
+    assert!(h.query_all_by_label("Filled 150 %").count() >= 1);
+    h.get_by_label("Fill style choices").click();
+    h.run_steps(3);
+    h.get_by_label("none").click();
+    h.run_steps(3);
+    assert_eq!(area(&h), -1);
+    assert!(h.query_all_by_label("No fill").count() >= 1);
+    h.get_by_label("Fill style choices").click();
+    h.run_steps(3);
+    let name = rustfig_render::pattern::PATTERN_NAMES[3];
+    h.get_by_label(name).click();
+    h.run_steps(3);
+    assert_eq!(area(&h), 44);
+    assert!(h.query_all_by_label("Pattern 3").count() >= 1);
+    // Black fill: no tints in the panel.
+    h.state_mut().dialogs.edit.as_mut().unwrap().fill = 0;
+    h.run_steps(2);
+    h.get_by_label("Fill style choices").click();
+    h.run_steps(3);
+    assert_eq!(h.query_all_by_label("30").count(), 0);
+    h.get_by_label("12").click();
+    h.run_steps(3);
+    assert_eq!(area(&h), 12);
+}
+
 #[test]
 fn colour_picker_hex_input_sets_the_pen_colour() {
     let mut h = harness(app());

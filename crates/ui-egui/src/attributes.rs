@@ -1426,6 +1426,89 @@ fn cell(ui: &mut Ui, size: egui::Vec2, selected: bool, name: &str, paint: impl F
     clicked
 }
 
+/// The Fill Style choice panel's swatches (shared by the indicator and the edit
+/// panel): NONE, shades and tints of the fill colour (no tints for black,
+/// white and default), then the patterns in the pen colour.
+pub(crate) fn fill_choices_grid(
+    ui: &mut Ui,
+    doc: &Document,
+    (pen, fill): (i32, i32),
+    current: i32,
+    tk: &Tokens,
+) -> Option<i32> {
+    let mut chosen = None;
+    let ink = ui.visuals().text_color();
+    ui.label("Fill Style");
+    egui::Grid::new("fill_shades").spacing(vec2(2.0, 2.0)).show(ui, |ui| {
+        let plain = matches!(fill, -1 | 0 | 7);
+        for (i, f) in (-1..=40).filter(|f| !(plain && (21..=40).contains(f))).enumerate() {
+            let name = if f < 0 { "none".to_string() } else { format!("{f}") };
+            if cell(ui, vec2(32.0, 32.0), current == f, &name, |p, r| {
+                fill_swatch(p, r, doc, (pen, fill), f, ink, tk)
+            }) {
+                chosen = Some(f);
+            }
+            if i % 11 == 10 {
+                ui.end_row();
+            }
+        }
+    });
+    ui.label("Patterns");
+    egui::Grid::new("fill_patterns").spacing(vec2(2.0, 2.0)).show(ui, |ui| {
+        for (i, f) in (41..=62).enumerate() {
+            let name = rustfig_render::pattern::PATTERN_NAMES
+                .get(i)
+                .copied()
+                .unwrap_or("pattern");
+            if cell(ui, vec2(32.0, 32.0), current == f, name, |p, r| {
+                fill_swatch(p, r, doc, (pen, fill), f, ink, tk)
+            }) {
+                chosen = Some(f);
+            }
+            if i % 11 == 10 {
+                ui.end_row();
+            }
+        }
+    });
+    chosen
+}
+
+/// The edit panel's fill style: a button showing the current fill that opens
+/// the indicator's choice panel, and xfig's words for it beside it.
+pub(crate) fn fill_menu(ui: &mut Ui, doc: &Document, (pen, fill): (i32, i32), current: i32) -> Option<i32> {
+    let tk = Tokens::for_dark(ui.visuals().dark_mode);
+    let mut chosen = None;
+    ui.horizontal(|ui| {
+        let (r, resp) = ui.allocate_exact_size(vec2(32.0, 32.0), Sense::click());
+        fill_swatch(
+            ui.painter(),
+            r,
+            doc,
+            (pen, fill),
+            current,
+            ui.visuals().text_color(),
+            &tk,
+        );
+        resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Fill style choices"));
+        egui::Popup::from_toggle_button_response(&resp)
+            .close_behavior(egui::PopupCloseBehavior::CloseOnClick)
+            .show(|ui| {
+                chosen = fill_choices_grid(ui, doc, (pen, fill), current, &tk);
+            });
+        ui.label(fill_words(current));
+    });
+    chosen
+}
+
+/// xfig's words for an area fill: "No fill", "Filled 50 %", "Pattern 3".
+pub(crate) fn fill_words(area: i32) -> String {
+    match area {
+        ..=-1 => "No fill".into(),
+        f @ 0..=40 => format!("Filled {} %", f * 5),
+        f => format!("Pattern {}", f - 41),
+    }
+}
+
 fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
     // xfig's Fill Style panel names its own sections ("Fill Style",
     // "Patterns").
@@ -1433,7 +1516,6 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
         ui.label(egui::RichText::new(a.name()).strong());
     }
     let ind = app.engine.indicator.clone();
-    let ink = ui.visuals().text_color();
     match a {
         Attr::Zoom => {
             // xfig's number pop-up with the Integer zoom check box.
@@ -1617,40 +1699,7 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             }
         }
         Attr::FillStyle => {
-            let mut chosen = None;
-            let doc = app.engine.doc();
-            ui.label("Fill Style");
-            egui::Grid::new("fill_shades").spacing(vec2(2.0, 2.0)).show(ui, |ui| {
-                let plain = matches!(ind.fill_color, -1 | 0 | 7);
-                for (i, f) in (-1..=40).filter(|f| !(plain && (21..=40).contains(f))).enumerate() {
-                    let name = if f < 0 { "none".to_string() } else { format!("{f}") };
-                    if cell(ui, vec2(32.0, 32.0), ind.area_fill == f, &name, |p, r| {
-                        fill_swatch(p, r, doc, (ind.pen_color, ind.fill_color), f, ink, tk)
-                    }) {
-                        chosen = Some(f);
-                    }
-                    if i % 11 == 10 {
-                        ui.end_row();
-                    }
-                }
-            });
-            ui.label("Patterns");
-            egui::Grid::new("fill_patterns").spacing(vec2(2.0, 2.0)).show(ui, |ui| {
-                for (i, f) in (41..=62).enumerate() {
-                    let name = rustfig_render::pattern::PATTERN_NAMES
-                        .get(i)
-                        .copied()
-                        .unwrap_or("pattern");
-                    if cell(ui, vec2(32.0, 32.0), ind.area_fill == f, name, |p, r| {
-                        fill_swatch(p, r, doc, (ind.pen_color, ind.fill_color), f, ink, tk)
-                    }) {
-                        chosen = Some(f);
-                    }
-                    if i % 11 == 10 {
-                        ui.end_row();
-                    }
-                }
-            });
+            let chosen = fill_choices_grid(ui, app.engine.doc(), (ind.pen_color, ind.fill_color), ind.area_fill, tk);
             // xfig's Cancel: any click closes the panel; this one sets nothing.
             let _ = ui.button("Cancel");
             if let Some(f) = chosen {

@@ -5,7 +5,7 @@
 // rows, live apply) (xfig licence, see LICENSE-xfig).
 
 use crate::attributes::{arrow_menu, cap_menu, join_menu, line_menu};
-use crate::panels::{color_combo, fill_combo_for, font_combo, limit_fill, plain_fill_color};
+use crate::panels::{color_combo, font_combo, limit_fill};
 use crate::web_io::{WebInbox, WebPick};
 use crate::{menus, App};
 use rustfig_engine::export_panel::{figure_size, PanelSettings, TRANSP_BACKGROUND, TRANSP_NONE};
@@ -2067,7 +2067,8 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                         ui.label("Fill style");
                         // xfig offers no tints for black, white and default.
                         st.area = limit_fill(st.area, st.fill);
-                        if let Some(f) = fill_combo_for(ui, "edit_area", st.area, plain_fill_color(st.fill)) {
+                        if let Some(f) = crate::attributes::fill_menu(ui, app.engine.doc(), (st.pen, st.fill), st.area)
+                        {
                             st.area = f;
                         }
                         ui.end_row();
