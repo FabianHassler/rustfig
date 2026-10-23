@@ -42,8 +42,25 @@ an object's comment, with a plain Fig fallback), never extend or break it.
 
 ## Installation
 
-There are no installers or prebuilt binaries yet; RustFig is built from source
-with Rust's own tools.
+There are no installers or prebuilt binaries yet; RustFig is built from source,
+either by Homebrew or with Rust's own tools.
+
+### Homebrew (macOS, Linux)
+
+The repository is its own tap; the formula builds `rustfig`, `rustfig-cli`
+and `fig2dev` (the Rust port, at the tag RustFig uses) from source:
+
+```sh
+brew tap fabianhassler/rustfig https://github.com/FabianHassler/rustfig
+brew install --HEAD rustfig
+```
+
+Update with `brew upgrade --fetch-HEAD rustfig`, remove with
+`brew uninstall rustfig`. Homebrew's own `fig2dev` formula (the C program)
+installs the same command name: `brew unlink fig2dev` first if you have it.
+While the repository is private, git needs your GitHub login (as below).
+
+### Cargo
 
 1. **Rust 1.92 or newer** from [rustup](https://rustup.rs) (`rustup update`
    brings an older one up to date).
