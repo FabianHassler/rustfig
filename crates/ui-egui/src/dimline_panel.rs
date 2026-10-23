@@ -47,6 +47,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
         .resizable(false)
         .default_pos(egui::pos2(260.0, 120.0))
         .show(ctx, |ui| {
+            preview(app, ui, &draft);
             fields(app, ui, &mut draft);
             ui.separator();
             ui.horizontal(|ui| {
@@ -101,26 +102,97 @@ fn color_box(app: &App, ui: &mut Ui, name: &str, c: &mut i32) {
         .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, name));
 }
 
-fn arrow_name(v: i32) -> String {
-    if v < 0 {
-        "none".to_string()
-    } else {
-        let kind = (v + 1) / 2;
-        let style = if v - (kind * 2 - 1) == 1 { "filled" } else { "hollow" };
-        format!("type {kind}, {style}")
+/// One arrow end: a "None" box and xfig's pictorial arrow type menu
+/// (`attributes::arrow_menu`, the pictures of the attribute panel).
+fn arrow_box(ui: &mut Ui, id: &str, name: &str, v: &mut i32) {
+    ui.label(name);
+    let mut none = *v < 0;
+    let label = format!("{name} arrow: none");
+    let r = ui.checkbox(&mut none, "None");
+    r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Checkbox, true, label.clone()));
+    if r.changed() {
+        *v = if none { -1 } else { 2 };
+    }
+    if *v >= 0 {
+        if let Some(n) = crate::attributes::arrow_menu(ui, id, *v) {
+            *v = n;
+        }
     }
 }
 
-fn arrow_box(ui: &mut Ui, name: &str, v: &mut i32) {
-    egui::ComboBox::from_id_salt(name)
-        .selected_text(arrow_name(*v))
-        .show_ui(ui, |ui| {
-            for n in -1..=28 {
-                ui.selectable_value(v, n, arrow_name(n));
-            }
-        })
-        .response
-        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, name));
+/// The example dimension line drawn from the settings (xfig's panel shows
+/// one too): line with ticks, arrows, and the text in its box.
+fn preview(app: &App, ui: &mut Ui, d: &DimlineSettings) {
+    let doc = app.engine.doc();
+    let tk = crate::theme::Tokens::for_dark(ui.visuals().dark_mode);
+    let (resp, p) = ui.allocate_painter(egui::vec2(300.0, 70.0), egui::Sense::hover());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, "Dimension line example"));
+    let r = resp.rect;
+    p.rect_filled(r, 2.0, tk.paper);
+    p.rect_stroke(
+        r,
+        2.0,
+        egui::Stroke::new(1.0_f32, tk.page_border),
+        egui::StrokeKind::Inside,
+    );
+    let w = |t: i32| (t.max(1) as f32 * 0.5).clamp(0.5, 6.0);
+    let (x0, x1, y) = (r.left() + 24.0, r.right() - 24.0, r.center().y + 8.0);
+    let line_col = color32(doc, d.color);
+    let stroke = egui::Stroke::new(w(d.thick), line_col);
+    for x in [x0, x1] {
+        p.line_segment(
+            [egui::pos2(x, y - 26.0), egui::pos2(x, y + 6.0)],
+            egui::Stroke::new(1.0_f32, tk.muted),
+        );
+    }
+    let len = (d.arrow_length as f32).clamp(4.0, 16.0);
+    let half = (d.arrow_width as f32 / 2.0).clamp(2.0, 8.0);
+    let head = |x: f32, dir: f32, v: i32| {
+        if v < 0 {
+            return;
+        }
+        let pts = vec![
+            egui::pos2(x, y),
+            egui::pos2(x + dir * len, y - half),
+            egui::pos2(x + dir * len, y + half),
+        ];
+        let hollow = v > 0 && v % 2 == 1;
+        let fill = if hollow { tk.paper } else { line_col };
+        p.add(egui::Shape::convex_polygon(pts, fill, stroke));
+    };
+    let gap = |v: i32| if v < 0 { 0.0 } else { len };
+    p.line_segment(
+        [
+            egui::pos2(x0 + gap(d.left_arrow), y),
+            egui::pos2(x1 - gap(d.right_arrow), y),
+        ],
+        stroke,
+    );
+    head(x0, 1.0, d.left_arrow);
+    head(x1, -1.0, d.right_arrow);
+    if d.ticks {
+        let ts = egui::Stroke::new(w(d.tick_thick), line_col);
+        for x in [x0, x1] {
+            p.line_segment([egui::pos2(x, y - 7.0), egui::pos2(x, y + 7.0)], ts);
+        }
+    }
+    let text = if d.fixed {
+        "text".to_string()
+    } else {
+        format!("{:.*}", d.precision.min(9) as usize, 12.5)
+    };
+    let font = egui::FontId::proportional((d.font_size as f32 * 1.2).clamp(8.0, 22.0));
+    let galley = p.layout_no_wrap(text, font, color32(doc, d.text_color));
+    let c = egui::pos2(r.center().x, y - 14.0);
+    let boxr = egui::Rect::from_center_size(c, galley.size() + egui::vec2(8.0, 2.0));
+    p.rect_filled(boxr, 0.0, tk.paper);
+    p.rect_stroke(
+        boxr,
+        0.0,
+        egui::Stroke::new(w(d.box_thick), color32(doc, d.box_color)),
+        egui::StrokeKind::Middle,
+    );
+    p.galley(boxr.center() - galley.size() / 2.0, galley, color32(doc, d.text_color));
 }
 
 fn fields(app: &App, ui: &mut Ui, d: &mut DimlineSettings) {
@@ -147,8 +219,8 @@ fn fields(app: &App, ui: &mut Ui, d: &mut DimlineSettings) {
     ui.strong("Arrows");
     ui.horizontal(|ui| {
         ui.label("Types");
-        arrow_box(ui, "Left arrow", &mut d.left_arrow);
-        arrow_box(ui, "Right arrow", &mut d.right_arrow);
+        arrow_box(ui, "dimline_left_arrow", "Left", &mut d.left_arrow);
+        arrow_box(ui, "dimline_right_arrow", "Right", &mut d.right_arrow);
     });
     ui.horizontal(|ui| {
         float(ui, "Arrow length", &mut d.arrow_length, 0.1, 200.0);

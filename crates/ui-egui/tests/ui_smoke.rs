@@ -1774,6 +1774,9 @@ fn dimension_line_panel_edits_the_indicator() {
     for (button, expect) in [("Cancel", true), ("OK", false)] {
         h.get_by_label("Dimension line: settings").click();
         h.run_steps(3);
+        assert!(h.query_by_label("Dimension line example").is_some());
+        // Arrow types are pictures (the attribute panel's arrow menu).
+        assert!(h.query_all_by_label("type 1 filled").count() >= 2);
         h.get_by_label("Show ticks").click();
         h.run_steps(2);
         h.get_by_label(button).click();
