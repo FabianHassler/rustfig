@@ -2590,3 +2590,40 @@ fn theme_and_scale_persist() {
     h.get_by_label("UI scale");
     let _ = std::fs::remove_dir_all(path.parent().unwrap());
 }
+
+/// W10-14: File > Saved versions lists the kept versions; Restore opens one
+/// as an unsaved drawing.
+#[test]
+fn saved_versions_window_restores_a_version() {
+    let dir = std::env::temp_dir().join(format!("rustfig-ui-versions-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("v.fig").to_string_lossy().into_owned();
+    let mut e = Engine::new();
+    e.recovery_dir = Some(dir.join("rec"));
+    e.execute("file.save", &json!({"path": path})).unwrap();
+    for i in 0..2 {
+        e.execute(
+            "shape.rectangle",
+            &json!({"x": i * 700, "y": 0, "width": 600, "height": 600}),
+        )
+        .unwrap();
+        e.execute("file.save", &json!({})).unwrap();
+    }
+    assert!(!e.is_modified());
+    assert_eq!(e.doc().objects.len(), 2);
+    let mut a = App::with_engine(e);
+    a.file_dialogs = Box::new(ScriptedDialogs::default());
+    let mut h = harness(a);
+    h.state_mut().run("app.versions", json!({}));
+    h.run_steps(3);
+    // Newest first: [1 rectangle, empty drawing]; restore the oldest.
+    assert_eq!(h.get_all_by_label("Restore").count(), 2);
+    h.get_all_by_label("Restore").last().unwrap().click();
+    h.run_steps(3);
+    let e = &h.state().engine;
+    assert_eq!(e.doc().objects.len(), 0, "the oldest version is the empty drawing");
+    assert!(e.is_modified(), "a restored version is unsaved");
+    assert_eq!(h.query_all_by_label("Restore").count(), 0, "the window closes");
+    let _ = std::fs::remove_dir_all(&dir);
+}
