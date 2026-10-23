@@ -43,6 +43,7 @@ pub mod styles;
 pub mod tex_gyre;
 pub mod theme;
 pub mod vector_icons;
+pub mod web_autosave;
 pub mod web_io;
 pub mod xfig_icons;
 
@@ -95,6 +96,11 @@ pub struct App {
     /// Crash-recovery copies of the drawing (A6); `None` until enabled.
     #[cfg(not(target_arch = "wasm32"))]
     autosave: Option<autosave::AutoSave>,
+    /// Browser autosave (C3); wasm only.
+    #[cfg(target_arch = "wasm32")]
+    web_autosave: Option<web_autosave::WebAutosave<web_autosave::BrowserStore>>,
+    /// A drawing the last browser session left unsaved, offered at load (C3).
+    pub web_restorable: Option<web_autosave::Saved>,
     /// Drawings left by instances that stopped without saving, offered at
     /// start: (recovery id, the file they came from).
     pub recoverable: Vec<(String, Option<String>)>,
@@ -191,6 +197,9 @@ impl App {
             mode_popup: None,
             #[cfg(not(target_arch = "wasm32"))]
             autosave: None,
+            #[cfg(target_arch = "wasm32")]
+            web_autosave: None,
+            web_restorable: None,
             recoverable: Vec::new(),
             frame_times: std::collections::VecDeque::new(),
             settings: settings::Settings::default(),
@@ -264,6 +273,12 @@ impl App {
         }
         #[cfg(target_arch = "wasm32")]
         let _ = control_port;
+        #[cfg(target_arch = "wasm32")]
+        {
+            let mut w = web_autosave::WebAutosave::new(web_autosave::BrowserStore);
+            app.web_restorable = w.find();
+            app.web_autosave = Some(w);
+        }
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(dir) = rustfig_engine::recovery::default_dir() {
             app.enable_recovery(dir);
@@ -509,6 +524,14 @@ impl App {
             if let Some(a) = &mut self.autosave {
                 a.emergency(&self.engine);
             }
+            #[cfg(target_arch = "wasm32")]
+            {
+                let (modified, rev) = (self.engine.is_modified(), self.engine.revision());
+                if let Some(w) = &mut self.web_autosave {
+                    let engine = &mut self.engine;
+                    w.emergency(modified, rev, || web_fig(engine));
+                }
+            }
             self.error(format!("internal error (please report): {msg}"));
         }
     }
@@ -582,6 +605,16 @@ impl App {
         panels::close_compound_popup(self, ctx);
         self.handle_requests(ctx);
         settings::tick(self);
+        #[cfg(target_arch = "wasm32")]
+        if self.web_restorable.is_none() {
+            let now = ctx.input(|i| i.time);
+            let (modified, rev) = (self.engine.is_modified(), self.engine.revision());
+            if let Some(w) = &mut self.web_autosave {
+                let engine = &mut self.engine;
+                let wait = w.tick(modified, rev, now, || web_fig(engine));
+                ctx.request_repaint_after(std::time::Duration::from_secs_f64(wait));
+            }
+        }
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(a) = &mut self.autosave {
             if let Some(wait) = a.tick(&self.engine, std::time::Instant::now()) {
@@ -690,4 +723,14 @@ fn apply_balloons(ctx: &egui::Context, on: bool) {
     if ctx.style().interaction.tooltip_delay != want {
         ctx.style_mut(|s| s.interaction.tooltip_delay = want);
     }
+}
+
+/// The drawing as Fig text with its file name, for the browser autosave.
+#[cfg(target_arch = "wasm32")]
+fn web_fig(engine: &mut Engine) -> web_autosave::Snapshot {
+    let v = engine
+        .execute("file.save_data", &serde_json::json!({"format": "fig"}))
+        .ok()?;
+    let data = v.get("data")?.as_str()?.to_string();
+    Some((data, engine.path().map(str::to_string)))
 }

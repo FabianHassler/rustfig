@@ -19,6 +19,8 @@ RustFig's own formats are xfig's **Fig** files (`.fig`, Fig 3.2 on writing) and 
 
 While you work, RustFig writes a recovery copy of any drawing with unsaved changes a few seconds after the last change. If the program stops without saving (a crash, power loss, a killed process), the next start offers to restore each drawing it finds, or discard it. After a normal save or exit the copy is removed. Restore a drawing, check it and save it where you want.
 
+In the browser the copy goes to the browser's local storage (as Fig text, drawings up to 2 MB). Reload the page and RustFig offers to restore it or discard it; saving the drawing or starting a new one removes the copy. Clearing the site's data, or a private window, loses it, so download (File > Save) what matters.
+
 **Saved versions.** Each time you save, RustFig keeps the file it replaces in the recovery folder. File > Saved versions… lists the last versions of the open file with their times; Restore puts one back as the open drawing (save it to keep it). Global settings > Saved versions kept sets how many (default 5, 0 switches it off, at most 50). Versions are kept only where the recovery folder is available (native app). The commands are `file.versions` and `file.restore_version`.
 
 ## Starting from the command line
