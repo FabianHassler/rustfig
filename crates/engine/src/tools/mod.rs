@@ -1171,8 +1171,18 @@ impl Engine {
                             }
                             // Final point; with Shift, finish at the last
                             // point placed, without adding this one (a
-                            // RustFig addition).
+                            // RustFig addition). xfig's middle button does
+                            // nothing for a polygon or closed spline until
+                            // only one point is missing (`null_proc` until
+                            // `num_point == min_num_points - 1`).
                             let freehand = matches!(self.tool_state, ToolState::Points { freehand: true, .. });
+                            let have = match &self.tool_state {
+                                ToolState::Points { pts, .. } => pts.len(),
+                                _ => 0,
+                            };
+                            if !freehand && self.tool_gated() && have + 1 < self.min_points() {
+                                return Ok(());
+                            }
                             if !shift || freehand {
                                 self.push_point(p, tol);
                             }
@@ -1202,12 +1212,12 @@ impl Engine {
                             if *freehand {
                                 return Ok(());
                             }
-                            if shift {
-                                // xfig: Shift+left removes the last point.
+                            // xfig: Shift+left removes the last point, but
+                            // never the first one; with one point only it
+                            // adds a point as usual (`get_intermediatepoint`
+                            // counts the new point before it deletes two).
+                            if shift && pts.len() >= 2 && pts.last().is_none_or(|l| l.dist(p) > 1e-6) {
                                 pts.pop();
-                                if pts.is_empty() {
-                                    self.tool_state = ToolState::Idle;
-                                }
                                 return Ok(());
                             }
                         }
@@ -1369,15 +1379,61 @@ impl Engine {
     }
 
     fn finish_points(&mut self) -> Result<(), EngineError> {
-        let ToolState::Points { mut pts, center, .. } = std::mem::take(&mut self.tool_state) else {
+        let ToolState::Points {
+            mut pts,
+            cursor,
+            freehand,
+            center,
+            dimension,
+        } = std::mem::take(&mut self.tool_state)
+        else {
             return Ok(());
         };
         // Drop accidental duplicates from double clicks.
         pts.dedup_by(|a, b| a.dist(*b) < 1e-6);
+        // xfig `create_splineobject`: too few points gives a message and the
+        // drawing goes on; polygons never finish before their third point.
+        if self.tool != ToolKind::Arc && pts.len() < self.min_points() {
+            if self.tool.spline_kind().is_some() {
+                self.set_status("Not enough points for spline".to_string());
+            }
+            self.tool_state = ToolState::Points {
+                pts,
+                cursor,
+                freehand,
+                center,
+                dimension,
+            };
+            return Ok(());
+        }
         match self.points_object(&pts, center) {
             Some(o) => self.commit_object(o),
             None => Ok(()),
         }
+    }
+
+    /// Fewest points xfig finishes the current shape with
+    /// (`min_num_points`): 3 for a polygon and a closed spline, 2 for an
+    /// open spline and a dimension line, 1 for a polyline.
+    fn min_points(&self) -> usize {
+        if matches!(self.tool_state, ToolState::Points { dimension: true, .. }) {
+            return 2;
+        }
+        match self.tool {
+            ToolKind::Polygon => 3,
+            t => match t.spline_kind() {
+                Some((_, true)) => 3,
+                Some((_, false)) => 2,
+                None => 1,
+            },
+        }
+    }
+
+    /// Whether xfig's middle button is dead until `min_num_points - 1`
+    /// points are placed (polygon and closed splines); open splines accept it
+    /// at once and complain.
+    fn tool_gated(&self) -> bool {
+        self.tool == ToolKind::Polygon || matches!(self.tool.spline_kind(), Some((_, true)))
     }
 
     fn commit_object(&mut self, obj: Object) -> Result<(), EngineError> {
@@ -3019,7 +3075,15 @@ impl Engine {
             (ToolState::Idle, ToolKind::Polyline) => ("dimension line", "", ""),
             (ToolState::Text { .. }, _) => ("", "paste text", ""),
             (ToolState::Library { .. }, _) => ("place and edit", "change draw mode", "place at orig posn"),
-            (ToolState::Points { freehand: false, .. }, _) => ("del point", "finish here", ""),
+            (
+                ToolState::Points {
+                    freehand: false, pts, ..
+                },
+                _,
+            ) => {
+                let ready = !(self.tool_gated() && pts.len() + 1 < self.min_points());
+                ("del point", if ready { "finish here" } else { "" }, "")
+            }
             (ToolState::Idle, ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture) => ("", "square at center", ""),
             (ToolState::Idle, ToolKind::AreaMeasure) => ("locate object", "", "reset to +-0"),
             (ToolState::Idle, ToolKind::Edit) => ("locate object", "show comments", ""),
@@ -3068,6 +3132,9 @@ impl Engine {
                     h(left, "", "cancel")
                 } else if *dimension {
                     h("final point", "", "cancel")
+                } else if self.tool_gated() && pts.len() + 1 < self.min_points() {
+                    // xfig: the middle button is dead until one point is missing.
+                    h("next point", "", "cancel")
                 } else {
                     h("next point", "final point", "cancel")
                 }
@@ -3647,6 +3714,96 @@ mod tests {
         assert_eq!(e.doc().objects.len(), 1);
         assert_eq!(e.doc().objects[0].points().unwrap().len(), 3);
         assert!(!e.tool_busy());
+    }
+
+    fn button(e: &mut Engine, x: f64, y: f64, button: Button, shift: bool) {
+        e.tool_event(ToolEvent::Press {
+            pos: Point::new(x, y),
+            button,
+            shift,
+        })
+        .unwrap();
+        e.tool_event(ToolEvent::Release {
+            pos: Point::new(x, y),
+            button,
+        })
+        .unwrap();
+    }
+
+    /// xfig `d_line.c`: the middle button is dead for a polygon until only
+    /// the last point is missing, and a polygon never has fewer than 3 points.
+    #[test]
+    fn polygon_needs_three_points() {
+        let mut e = Engine::new();
+        e.set_tool(ToolKind::Polygon);
+        press(&mut e, 0.0, 0.0);
+        button(&mut e, 1200.0, 0.0, Button::Middle, false);
+        assert!(e.doc().objects.is_empty());
+        assert!(e.tool_busy());
+        press(&mut e, 1200.0, 0.0);
+        e.tool_event(ToolEvent::Key(Key::Enter)).unwrap();
+        assert!(e.doc().objects.is_empty());
+        assert!(e.tool_busy());
+        button(&mut e, 1200.0, 1200.0, Button::Middle, false);
+        assert_eq!(e.doc().objects.len(), 1);
+        assert_eq!(e.doc().objects[0].points().unwrap().len(), 3);
+        assert!(!e.tool_busy());
+    }
+
+    /// xfig `d_spline.c` (`CLOSED_SPLINE_MIN_NUM_POINTS` 3): same as a polygon.
+    #[test]
+    fn closed_spline_needs_three_points() {
+        let mut e = Engine::new();
+        e.set_tool(ToolKind::SplineApproxClosed);
+        press(&mut e, 0.0, 0.0);
+        button(&mut e, 1200.0, 0.0, Button::Middle, false);
+        assert!(e.tool_busy());
+        press(&mut e, 1200.0, 0.0);
+        button(&mut e, 600.0, 900.0, Button::Middle, false);
+        assert_eq!(e.doc().objects.len(), 1);
+        assert!(!e.tool_busy());
+    }
+
+    /// xfig `create_splineobject`: an open spline with one point says "Not
+    /// enough points for spline" and goes on.
+    #[test]
+    fn open_spline_with_one_point_keeps_drawing() {
+        let mut e = Engine::new();
+        e.set_tool(ToolKind::SplineApprox);
+        press(&mut e, 0.0, 0.0);
+        e.tool_event(ToolEvent::Key(Key::Enter)).unwrap();
+        assert!(e.doc().objects.is_empty());
+        assert!(e.tool_busy());
+        assert!(e.status().contains("Not enough points"));
+        button(&mut e, 1200.0, 0.0, Button::Middle, false);
+        assert_eq!(e.doc().objects.len(), 1);
+    }
+
+    /// xfig `get_intermediatepoint`: Shift+left never deletes the first point;
+    /// with one point it adds a point like the plain click.
+    #[test]
+    fn shift_click_keeps_first_point() {
+        let mut e = Engine::new();
+        e.set_tool(ToolKind::Polyline);
+        press(&mut e, 0.0, 0.0);
+        button(&mut e, 1200.0, 0.0, Button::Left, true);
+        assert!(e.tool_busy());
+        button(&mut e, 2400.0, 0.0, Button::Left, true);
+        assert!(e.tool_busy());
+        button(&mut e, 600.0, 600.0, Button::Middle, false);
+        assert_eq!(e.doc().objects.len(), 1);
+        assert_eq!(e.doc().objects[0].points().unwrap().len(), 2);
+    }
+
+    /// xfig `create_lineobject`: the middle button on the first point makes a
+    /// single-point polyline (a dot), no closing.
+    #[test]
+    fn polyline_middle_on_first_point_is_a_dot() {
+        let mut e = Engine::new();
+        e.set_tool(ToolKind::Polyline);
+        press(&mut e, 300.0, 300.0);
+        button(&mut e, 300.0, 300.0, Button::Middle, false);
+        assert_eq!(e.doc().objects[0].points().unwrap().len(), 1);
     }
 
     #[test]

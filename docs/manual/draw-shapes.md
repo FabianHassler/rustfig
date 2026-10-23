@@ -42,7 +42,7 @@ Key `P`. A closed shape with straight sides.
 - Middle, “freehand”: start a freehand path; move the pointer and the path follows. Middle again ends it ("final point"). When drawing with straight sides, middle at a point is the final point.
 - Right: cancels while drawing.
 
-The polygon closes itself when you finish. Angle Geom can constrain the points ([Angle Geom](angle-geom.md)).
+As in xfig, the middle button does nothing until only the last point is missing, so a polygon always has at least three points; Enter or a double click with fewer keeps you drawing. Shift+left never removes the first point (with one point it adds a point). The polygon closes itself when you finish. Angle Geom can constrain the points ([Angle Geom](angle-geom.md)).
 
 ## Polyline
 

@@ -6,7 +6,7 @@ A spline is a smooth curve through or near a series of control points. Fig files
 - **Interpolated splines** pass through every point. Modes **Interpolated spline** and **Closed interpolated spline**.
 - **X-splines** let you choose per point how sharp or smooth the curve is (see below). Modes **X-spline** and **Closed X-spline**. This is the most flexible kind.
 
-Buttons in all six modes: left adds points, middle draws freehand or finishes, right cancels. A closed spline joins its last point to the first. Shift+left removes the last point; Shift+middle finishes at the last point placed without adding the clicked one. [Angle Geom](angle-geom.md) can constrain the points.
+Buttons in all six modes: left adds points, middle draws freehand or finishes, right cancels. A closed spline joins its last point to the first. A closed spline needs three points (the middle button is dead until the last one is missing); an open spline needs two, otherwise the message panel says "Not enough points for spline" and you keep drawing. Shift+left removes the last point but never the first; Shift+middle finishes at the last point placed without adding the clicked one. [Angle Geom](angle-geom.md) can constrain the points.
 
 ## Approximated spline
 
