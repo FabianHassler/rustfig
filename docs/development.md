@@ -60,13 +60,15 @@ it, so `cargo +toolchain xtask …` stays on that toolchain.
 
 ## Fonts
 
-Fonts are never committed here. They live in
-[storytold/craft-fonts](https://github.com/storytold/craft-fonts). Build with
-`CRAFT_FONTS_DIR="$PWD/../craft-fonts" cargo xtask ci` (absolute path) to embed
-them; figbase's `build.rs` (fig2dev repo) generates `figbase::text::CRAFT_FONTS`. Without
-it RustFig uses Ubuntu Light and Hack from the `epaint_default_fonts` crate,
-with synthetic bold and italic. Everything builds and tests with
-`CRAFT_FONTS` empty.
+Fonts are not committed here (the one exception is the key-symbol subset,
+see `ASSETS.md`). Text uses the fonts installed on the system, found by
+figbase; TeX Gyre fonts from a TeX installation or from Help > Install TeX
+Gyre fonts… are used too; the fallback is Ubuntu Light and Hack from the
+`epaint_default_fonts` crate with synthetic bold and italic.
+`FIG2DEV_BUILTIN_FONTS=1` (or `rustfig_text::set_builtin_fonts(true)`) forces
+the built-in fonts: `cargo xtask ci` sets it for the tests, and the fig2dev
+reference and corpus tests and `rustfig-cli perf`/`bench` set it themselves.
+Everything builds and tests with no font installed.
 
 ## Driving the app
 

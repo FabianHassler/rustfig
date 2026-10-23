@@ -46,6 +46,8 @@ epaint_default_fonts = "0.33"
 pdf-writer = "0.15"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "bmp", "pnm", "tiff"] }
 flate2 = "1"
+sha2 = "0.10"
+zip = { version = "2", default-features = false, features = ["deflate"] }
 egui = "0.33"
 eframe = { version = "0.33", default-features = false, features = ["accesskit", "default_fonts", "glow", "wayland", "x11"] }
 rfd = "0.15"
@@ -53,6 +55,11 @@ proptest = "1"
 log = "0.4"
 wasm-bindgen-futures = "0.4"
 web-sys = "0.3"
+
+# Temporary until fig2dev's system-fonts release (F1) is tagged: the local clone.
+[patch."https://github.com/FabianHassler/fig2dev"]
+figbase = { path = "/Users/fabian/Documents/fig2dev/crates/figbase" }
+fig2dev = { path = "/Users/fabian/Documents/fig2dev/crates/fig2dev" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

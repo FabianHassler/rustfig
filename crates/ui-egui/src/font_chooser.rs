@@ -4,8 +4,9 @@
 //! canvas, `rustfig_text::shape`), a search field, a size field and a live
 //! preview of sample text, the current font marked.
 //!
-//! Where no real face for a font is installed (the build has no craft-fonts),
-//! the name is drawn in the fallback face and tagged "(substitute)".
+//! With the built-in fonts only (no installed fonts used: wasm, or
+//! `FIG2DEV_BUILTIN_FONTS=1`), the names are drawn in the fallback face and
+//! tagged "(substitute)".
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -33,9 +34,9 @@ pub fn list_name(font: i32, postscript: bool) -> String {
     }
 }
 
-/// Whether the library has a real face for the font (not only the fallback).
+/// Whether installed faces are used (not only the built-in fallback fonts).
 pub fn has_real_face() -> bool {
-    !rustfig_text::CRAFT_FONTS.is_empty()
+    !rustfig_text::builtin_fonts()
 }
 
 /// Whether the font matches the search text (case-insensitive, every word).

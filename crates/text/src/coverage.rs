@@ -44,6 +44,8 @@ mod tests {
 
     #[test]
     fn latin_letters_are_covered_private_use_is_not() {
+        // Installed fonts may cover the private-use area (Apple logo): use the built-in ones.
+        figbase::text::set_builtin_fonts(true);
         let req = FontRequest::for_fig(0, true);
         assert!(covers(&req, 'A'));
         assert!(covers(&req, 'é'));

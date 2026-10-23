@@ -43,6 +43,7 @@ pub use rustfig_format as format;
 pub use rustfig_geom as geom;
 pub use rustfig_model as model;
 pub use rustfig_render as render;
+pub use rustfig_text as text;
 
 use history::History;
 use rustfig_geom::{Point, Rect};

@@ -27,7 +27,7 @@ P26-10-23 (D10 done: fractions of an inch landed; leftovers: preview arrowheads 
 | 27 | ✅ closed 2026-10-18: text bytes as C (`Text::raw`, `Comment::raw`; drivers write the input bytes). `-E` charsets beyond UTF-8/ISO-8859-1/-2 convert through `encoding_rs` (audit pass 27, 2026-10-18; no CP437/CP850, stderr messages with raw bytes and tk/pstricks picture names are Unicode) | Export | Low | 2 |
 | 24 | fig2dev port hardening: the audit's partial and missing functions outside the unported drivers (options and messages, text bytes, depth order, FMA in bounds, EPS/PDF fonts and Unicode, SVG text, `readpics`, JPEG passthrough; B11) | Export | Medium | 66 |
 | 28 | ✅ 2026-10-18 (audit pass 15): non-Latin-1 text in EPS/PS goes through fig2dev's Xfig-UTF8-H CMap and `composefont` fonts, in PDF through Type 3 fonts from RustFig's glyph outlines with a ToUnicode map (was `?`). Left: the 35 PostScript fonts are not embedded in PDF (substitutes; needs font files that cannot live in this repo), PDF text in Symbol/ZapfDingbats beyond WinAnsi, `-j` composite fonts | Export | Low | 12 |
-| 20 | Real PostScript font metrics when craft-fonts lacks a face (synthetic bold/italic today); the A10 corpus shows text widths as the main remaining difference from fig2dev | Text | Medium | 12 |
+| 20 | Text widths use the installed or TeX Gyre faces (F1 ✅); with the built-in fallback only (no matching system font, wasm) bold/italic are synthetic and widths differ from the PostScript fonts; the A10 corpus shows text widths as the main remaining difference from fig2dev | Text | Low | 4 |
 | 29 | Main-window leftovers found by W10 group 1 ([window-parity.md](window-parity.md)): Help documentation entries (done: W10-2, W10-28), Show vertex numbers and Autorefresh (done: S4-9) (W10-3) | UI | Low | 13 |
 | 30 | File-window leftovers found by W10 group 2 ([window-parity.md](window-parity.md)): Export panel options (W10-4), Open/Merge offset field, preview and comments (W10-6), Open of a missing name (W10-8), `.bak` on save (W10-9), New xfig button (no task); the Print panel is B5 | UI/Export | Medium | 25 |
 | 31 | ✅ closed 2026-10-22: edit-panel leftovers found by W10 group 3 ([window-parity.md](window-parity.md)): the picture panel W10-16/W10-20, the compound panel W10-15, the live panel with Done as one undo step W10-17/W10-18, the point table W10-19 and the pictorial menus W10-21 are done; the position rows, arrow rows, text flags, arc type, figure comments and Cancel-restores were fixed in the same pass | UI | Medium | 0 |
@@ -39,6 +39,7 @@ P26-10-23 (D10 done: fractions of an inch landed; leftovers: preview arrowheads 
 
 | Date | Note |
 |------|------|
+| 2026-10-23 | F1 shrank #20 (system fonts and TeX Gyre; craft-fonts gone). |
 | 2026-10-23 | D10 closed its last item (fractions of an inch in dimension-line lengths); small leftovers noted in plan.md. |
 | 2026-10-22 | D3 closed Chop from #6 (tangent/normal and measure remain). |
 | 2026-10-22 | D4 closed tangent/normal from #6 (measure remains). |

@@ -210,6 +210,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{\"topic\"?: string}  — open the bundled manual, at a topic (file name such as \"chop.md\", or its title) or at the first page",
     },
     UiCommand {
+        id: "app.install_tex_gyre",
+        label: "Install TeX Gyre fonts…",
+        shortcut: "",
+        params: "{}  — download CTAN's TeX Gyre fonts (checked by SHA-256) into RustFig's user data folder, in the background; native only",
+    },
+    UiCommand {
         id: "app.about",
         label: "About RustFig",
         shortcut: "",
@@ -378,6 +384,12 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.redraw" => app.canvas.invalidate(),
         "app.commands" => app.dialogs.commands_open = true,
         "app.about" => app.dialogs.about_open = true,
+        "app.install_tex_gyre" => {
+            #[cfg(not(target_arch = "wasm32"))]
+            crate::tex_gyre::start(app)?;
+            #[cfg(target_arch = "wasm32")]
+            return Err("Installing fonts is not available on the web".into());
+        }
         "help.open" => app.dialogs.help.show(p.get("topic").and_then(Value::as_str))?,
         "app.import_picture" => {
             let file = path.or_else(|| app.file_dialogs.pick_file("Pictures", dialogs::PICTURE_EXTS));
@@ -481,6 +493,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("RustFig Manual...", "help.open"),
                 Cmd("RustFig Reference (commands)...", "app.commands"),
                 Cmd("Keys...", "app.keys"),
+                Cmd("Install TeX Gyre fonts...", "app.install_tex_gyre"),
                 Cmd("About RustFig...", "app.about"),
             ],
         ),

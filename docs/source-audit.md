@@ -1008,10 +1008,10 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `u_fonts.c` | `fontnum` | 183 | ported | font number tables and lookups in `figbase` text / `rustfig_text` (PostScript and LaTeX font numbers, 35 families, flags) |  |
 | `u_fonts.c` | `psfontnum` | 196 | ported | font number tables and lookups in `figbase` text / `rustfig_text` (PostScript and LaTeX font numbers, 35 families, flags) |  |
 | `u_fonts.c` | `latexfontnum` | 208 | ported | font number tables and lookups in `figbase` text / `rustfig_text` (PostScript and LaTeX font numbers, 35 families, flags) |  |
-| `u_fonts.c` | `font_close` | 221 | replaced | fonts are egui/craft-fonts faces loaded by the renderer; no X font open/close/cache |  |
-| `u_fonts.c` | `font_closeall` | 274 | replaced | fonts are egui/craft-fonts faces loaded by the renderer; no X font open/close/cache |  |
-| `u_fonts.c` | `font_open` | 318 | replaced | fonts are egui/craft-fonts faces loaded by the renderer; no X font open/close/cache |  |
-| `u_fonts.c` | `font_xfcopy` | 452 | replaced | fonts are egui/craft-fonts faces loaded by the renderer; no X font open/close/cache |  |
+| `u_fonts.c` | `font_close` | 221 | replaced | fonts are system, TeX Gyre or built-in faces found by figbase (F1); no X font open/close/cache |  |
+| `u_fonts.c` | `font_closeall` | 274 | replaced | fonts are system, TeX Gyre or built-in faces found by figbase (F1); no X font open/close/cache |  |
+| `u_fonts.c` | `font_open` | 318 | replaced | fonts are system, TeX Gyre or built-in faces found by figbase (F1); no X font open/close/cache |  |
+| `u_fonts.c` | `font_xfcopy` | 452 | replaced | fonts are system, TeX Gyre or built-in faces found by figbase (F1); no X font open/close/cache |  |
 | `u_fonts.c` | `_textextents` | 470 | ported | text metrics (ascent, descent, width, baseline box, origin) in `rustfig_text` / `figbase` text (fig2dev `bound.c` text bounds) |  |
 | `u_fonts.c` | `font_textoffset` | 535 | ported | text metrics (ascent, descent, width, baseline box, origin) in `rustfig_text` / `figbase` text (fig2dev `bound.c` text bounds) |  |
 | `u_fonts.c` | `font_setbbox_offset` | 548 | ported | text metrics (ascent, descent, width, baseline box, origin) in `rustfig_text` / `figbase` text (fig2dev `bound.c` text bounds) |  |
@@ -1020,11 +1020,11 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `u_fonts.c` | `font_ascentdescent` | 694 | ported | text metrics (ascent, descent, width, baseline box, origin) in `rustfig_text` / `figbase` text (fig2dev `bound.c` text bounds) |  |
 | `u_fonts.c` | `text_origin` | 719 | ported | text metrics (ascent, descent, width, baseline box, origin) in `rustfig_text` / `figbase` text (fig2dev `bound.c` text bounds) |  |
 | `u_fonts.c` | `font_base` | 747 | ported | text metrics (ascent, descent, width, baseline box, origin) in `rustfig_text` / `figbase` text (fig2dev `bound.c` text bounds) |  |
-| `u_fonts.c` | `font_reload` | 771 | replaced | fonts are egui/craft-fonts faces loaded by the renderer; no X font open/close/cache |  |
+| `u_fonts.c` | `font_reload` | 771 | replaced | fonts are system, TeX Gyre or built-in faces found by figbase (F1); no X font open/close/cache |  |
 | `u_fonts.c` | `map_dingbats` | 796 | ported | Symbol and ZapfDingbats character tables (`figbase` text, fig2dev SVG tables) |  |
 | `u_fonts.c` | `map_symbols` | 1013 | ported | Symbol and ZapfDingbats character tables (`figbase` text, fig2dev SVG tables) |  |
-| `u_fonts.c` | `_charmap` | 1223 | replaced | fonts are egui/craft-fonts faces loaded by the renderer; no X font open/close/cache |  |
-| `u_fonts.c` | `font_drawtext` | 1240 | replaced | fonts are egui/craft-fonts faces loaded by the renderer; no X font open/close/cache |  |
+| `u_fonts.c` | `_charmap` | 1223 | replaced | fonts are system, TeX Gyre or built-in faces found by figbase (F1); no X font open/close/cache |  |
+| `u_fonts.c` | `font_drawtext` | 1240 | replaced | fonts are system, TeX Gyre or built-in faces found by figbase (F1); no X font open/close/cache |  |
 | `u_free.c` | `free_arc` | 38 | not needed | memory management (Rust ownership) |  |
 | `u_free.c` | `free_compound` | 57 | not needed | memory management (Rust ownership) |  |
 | `u_free.c` | `free_ellipse` | 81 | not needed | memory management (Rust ownership) |  |
