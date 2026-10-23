@@ -1638,12 +1638,12 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_file.c` | `save_nuser_colors` | 1701 | not needed | saving user colours around a preview (the preview will use its own document) |  |
 | `w_file.c` | `restore_user_colors` | 1722 | not needed | saving user colours around a preview (the preview will use its own document) |  |
 | `w_file.c` | `restore_nuser_colors` | 1776 | not needed | saving user colours around a preview (the preview will use its own document) |  |
-| `w_fontpanel.c` | `init_fontmenu` | 85 | replaced | font menus: the Text Font attribute pop-up `attributes` (Attr::Font); the font chooser is E11 | E11 |
-| `w_fontpanel.c` | `setup_fontmenu` | 278 | replaced | font menus: the Text Font attribute pop-up `attributes` (Attr::Font); the font chooser is E11 | E11 |
-| `w_fontpanel.c` | `fontpane_popup` | 343 | replaced | font menus: the Text Font attribute pop-up `attributes` (Attr::Font); the font chooser is E11 | E11 |
-| `w_fontpanel.c` | `fontpane_select` | 372 | replaced | font menus: the Text Font attribute pop-up `attributes` (Attr::Font); the font chooser is E11 | E11 |
-| `w_fontpanel.c` | `fontpane_cancel` | 403 | replaced | font menus: the Text Font attribute pop-up `attributes` (Attr::Font); the font chooser is E11 | E11 |
-| `w_fontpanel.c` | `fontpane_swap` | 409 | replaced | font menus: the Text Font attribute pop-up `attributes` (Attr::Font); the font chooser is E11 | E11 |
+| `w_fontpanel.c` | `init_fontmenu` | 85 | replaced | font menus: the font chooser `font_chooser` (E11: PostScript/LaTeX lists, search, size, preview) in the Text Font pop-up and the edit panel | E11 |
+| `w_fontpanel.c` | `setup_fontmenu` | 278 | replaced | font menus: the font chooser `font_chooser` (E11: PostScript/LaTeX lists, search, size, preview) in the Text Font pop-up and the edit panel | E11 |
+| `w_fontpanel.c` | `fontpane_popup` | 343 | replaced | font menus: the font chooser `font_chooser` (E11: PostScript/LaTeX lists, search, size, preview) in the Text Font pop-up and the edit panel | E11 |
+| `w_fontpanel.c` | `fontpane_select` | 372 | replaced | font menus: the font chooser `font_chooser` (E11: PostScript/LaTeX lists, search, size, preview) in the Text Font pop-up and the edit panel | E11 |
+| `w_fontpanel.c` | `fontpane_cancel` | 403 | replaced | font menus: the font chooser `font_chooser` (E11: PostScript/LaTeX lists, search, size, preview) in the Text Font pop-up and the edit panel | E11 |
+| `w_fontpanel.c` | `fontpane_swap` | 409 | replaced | font menus: the font chooser `font_chooser` (E11: PostScript/LaTeX lists, search, size, preview) in the Text Font pop-up and the edit panel | E11 |
 | `w_grid.c` | `init_grid` | 45 | ported | grid drawing in the canvas, `view.toggle_grid`, `view.set_grid` |  |
 | `w_grid.c` | `setup_grid` | 62 | ported | grid drawing in the canvas (square and isometric), `view.toggle_grid`, `view.set_grid` |  |
 | `w_help.c` | `launch_refman` | 48 | missing | Help menu entries that open the reference manual, PDF manuals, how-to and man page, and external viewer launching | W10-2 |

@@ -26,6 +26,8 @@ Buttons that exist (labels as in xfig):
 | Box Curve | corner radius of rounded boxes |
 | Text Just, Text/Ellipse Angle, Text Flags, Text Size, Text Step, Text Font | text settings |
 
+**Text Font** opens the font chooser (also in the edit panel's Font row). The switch **PostScript / LaTeX** picks xfig's two lists: the 35 PostScript fonts, or the six LaTeX fonts (Default, Roman, Bold, Italic, Sans Serif, Typewriter). Every name is drawn in its own font (a font without a face installed is drawn in the fallback and tagged "(substitute)"); the current font is marked with a dot and highlighted. Type in **Search fonts** to narrow the list (every word must occur in the name). **Size** sets the Text Size, and the preview line shows sample text in the font under the pointer (or the current font) at that size. Click a name to choose it.
+
 **Arrow Size** opens xfig's panel: **Absolute Values** or **Multiple of Line Width**, each with Thickness, Width and Length (0.1 to 10000; absolute values are in 1/80 inch). Only the set you chose is used for new arrows; with the multiples (xfig's start state: 1, 4 and 8) an arrow grows with the line width. **Set** (or Return) applies, **Cancel** keeps the old values. "Use current attributes as defaults" keeps the choice for the next start.
 
 Number pop-ups (Line Width, Text Size, Depth, Rotn Angle, Num Sides, copies, Box Curve, Text Step, Zoom and others) work as xfig's: type or drag a value, then **Set** or Return applies it and closes the pop-up; **Cancel** closes it without a change. The Zoom pop-up also has **Integer zoom**: zoom values above 1 become whole numbers when you set them there (rounded) or use Fit (truncated).

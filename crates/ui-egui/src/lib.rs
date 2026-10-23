@@ -19,6 +19,7 @@ pub mod control;
 pub mod dialogs;
 pub mod digitize;
 pub mod dimline_panel;
+pub mod font_chooser;
 pub mod help;
 pub mod inject;
 pub mod input;
@@ -72,6 +73,10 @@ pub struct App {
     pub show_balloons: bool,
     /// A theme to switch to on the next frame (`app.theme`).
     pub theme_request: Option<egui::ThemePreference>,
+    /// E9: the theme setting, "system", "light" or "dark" (persisted).
+    pub theme: String,
+    /// E9: the UI scale, 1.0 = 100 % (persisted).
+    pub ui_scale: f32,
     /// Button style: bevelled "3D" buttons (default) or flat ones.
     pub button_3d: bool,
     /// xfig's mode menu popped up by Alt+wheel over the canvas: drawing
@@ -157,6 +162,8 @@ impl App {
             show_depths: true,
             show_balloons: true,
             theme_request: None,
+            theme: "system".to_string(),
+            ui_scale: 1.0,
             button_3d: true,
             mode_popup: None,
             #[cfg(not(target_arch = "wasm32"))]
@@ -464,6 +471,9 @@ impl App {
         apply_balloons(ctx, self.show_balloons);
         if let Some(t) = self.theme_request.take() {
             ctx.set_theme(t);
+        }
+        if (ctx.zoom_factor() - self.ui_scale).abs() > 1e-3 {
+            ctx.set_zoom_factor(self.ui_scale);
         }
         #[cfg(not(target_arch = "wasm32"))]
         self.poll_control(ctx);

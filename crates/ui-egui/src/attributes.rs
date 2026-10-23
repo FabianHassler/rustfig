@@ -220,6 +220,7 @@ impl Attr {
                 | Attr::TextAngle
                 | Attr::TextFlags
                 | Attr::FontSize
+                | Attr::Font
                 | Attr::TextStep
                 | Attr::TangentLength
         )
@@ -1892,27 +1893,16 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             }
         }
         Attr::Font => {
-            egui::ScrollArea::vertical().max_height(320.0).show(ui, |ui| {
-                ui.label(egui::RichText::new("PostScript fonts").small());
-                for f in 0..rustfig_text::PS_FONT_COUNT {
-                    if ui
-                        .selectable_label(ind.postscript && f == ind.font, font_name(f, true))
-                        .clicked()
-                    {
-                        set(app, json!({"font": f, "postscript": true}));
-                    }
-                }
-                ui.separator();
-                ui.label(egui::RichText::new("LaTeX fonts").small());
-                for f in 0..rustfig_text::LATEX_FONT_COUNT {
-                    if ui
-                        .selectable_label(!ind.postscript && f == ind.font, font_name(f, false))
-                        .clicked()
-                    {
-                        set(app, json!({"font": f, "postscript": false}));
-                    }
-                }
-            });
+            // E11: the font chooser (names in their fonts, search, size, preview).
+            ui.set_min_width(260.0);
+            let out = crate::font_chooser::show(ui, "indicator_font", ind.font, ind.postscript, Some(ind.font_size));
+            if let Some((f, ps)) = out.font {
+                set(app, json!({"font": f, "postscript": ps}));
+                ui.close();
+            }
+            if let Some(s) = out.size {
+                set(app, json!({"font_size": s}));
+            }
         }
         Attr::Depth
         | Attr::RotnAngle

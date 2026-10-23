@@ -96,6 +96,7 @@ the score.
 | 2026-10-22 | ≈73 % | E5, E8: character map (Symbol and Dingbats stored as the font codes) and shortcut sheet; Text 65 → 70 %, 8 h less; headline not recounted. |
 | 2026-10-22 | ≈65 % | E3, S4-6: zoom box and shape factor on the canvas; View & navigation 96 → 100 % (rounds to the same overall). |
 | 2026-10-22 | ≈65 % | S4-3, S4-8, S4-9: Digitize (export line as data), relative picture names on Save As, Autorefresh mode, New window; evidence only, score unchanged. |
+| 2026-10-23 | ≈73 % | E11, E9: font chooser (`ui-egui/src/font_chooser.rs`, names drawn through `rustfig_text::shape`, search, size, preview; tests `font_chooser_*` in `ui_smoke.rs`), theme and UI scale settings (`app.theme`, `app.ui_scale`, `RustFigPrefs::theme/ui_scale`; test `theme_and_scale_persist`); evidence only, score unchanged. |
 | 2026-10-22 | ≈65 % | W10-28, W10-2: bundled manual (27 topics, search, Help > RustFig Manual, `help.open`); evidence only, score unchanged. |
 | 2026-10-22 | ≈65 % | D7: Angle Geom (Attributes 80 → 83 %). |
 | 2026-10-22 | ≈65 % | D14: smart links extended (Attributes 83 → 84 %). |

@@ -2417,3 +2417,81 @@ fn grid_and_align_indicators_list_xfigs_choices() {
     h.run_steps(3);
     assert_eq!(h.state().engine.indicator.align_h, "abut");
 }
+
+/// E11: the font chooser of the Text Font indicator: search filters, a choice
+/// sets the indicator font, the size field is there, LaTeX list as xfig.
+#[test]
+fn font_chooser_searches_and_chooses() {
+    let mut h = harness(app());
+    h.state_mut().run("tool.text", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Text Font: Times Roman").click();
+    h.run_steps(4);
+    h.get_by_label("Search fonts");
+    h.get_by_label("Font size");
+    h.get_by_label("Times Roman");
+    h.get_by_label("Courier");
+    // Search narrows the list.
+    h.get_by_label("Search fonts").click();
+    h.get_by_label("Search fonts").type_text("symbol");
+    h.run_steps(4);
+    h.get_by_label("Symbol");
+    assert!(h.query_by_label("Courier").is_none(), "search filters");
+    h.get_by_label("Symbol").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.indicator.font, 32);
+    assert!(h.state().engine.indicator.postscript);
+    // LaTeX fonts, as xfig's second list.
+    h.get_by_label("Text Font: Symbol").click();
+    h.run_steps(3);
+    h.get_by_label("LaTeX fonts").click();
+    h.run_steps(8);
+    h.get_by_label("LaTeX Typewriter").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.indicator.font, 5);
+    assert!(!h.state().engine.indicator.postscript);
+}
+
+/// E11: every font xfig offers has a name the chooser lists.
+#[test]
+fn font_chooser_lists_every_font() {
+    for f in 0..rustfig_text::PS_FONT_COUNT {
+        assert!(!rustfig_ui_egui::font_chooser::list_name(f, true).is_empty());
+    }
+    assert_eq!(rustfig_text::LATEX_FONT_COUNT, 6);
+}
+
+/// E9: theme and UI scale are settings, kept in the preferences.
+#[test]
+fn theme_and_scale_persist() {
+    let path = settings_file("theme");
+    {
+        let mut h = harness(app_with_settings(&path));
+        assert_eq!(h.state().theme, "system");
+        h.state_mut().run("app.theme", json!({"theme": "dark"}));
+        h.state_mut().run("app.ui_scale", json!({"percent": 150}));
+        h.run_steps(3);
+        assert!(h.ctx.style().visuals.dark_mode);
+        assert!((h.ctx.zoom_factor() - 1.5).abs() < 1e-3);
+        assert!(h.state_mut().run("app.ui_scale", json!({"percent": 500})).is_none());
+        assert!(h.state_mut().run("app.theme", json!({"theme": "pink"})).is_none());
+        h.run_steps(2);
+    }
+    let text = std::fs::read_to_string(&path).unwrap();
+    assert!(
+        text.contains("theme = \"dark\"") && text.contains("ui_scale = 1.5"),
+        "{text}"
+    );
+    let a = app_with_settings(&path);
+    assert_eq!(a.theme, "dark");
+    assert!((a.ui_scale - 1.5).abs() < 1e-6);
+    // Global settings offers both.
+    let mut h = harness(app());
+    h.state_mut().run("app.global_settings", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Light").click();
+    h.run_steps(3);
+    assert_eq!(h.state().theme, "light");
+    h.get_by_label("UI scale");
+    let _ = std::fs::remove_dir_all(path.parent().unwrap());
+}

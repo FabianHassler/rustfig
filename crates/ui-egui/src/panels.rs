@@ -459,30 +459,18 @@ pub fn line_combo(ui: &mut egui::Ui, id: &str, current: LineKind) -> Option<Line
 }
 
 pub fn font_combo(ui: &mut egui::Ui, id: &str, font: i32, postscript: bool) -> Option<(i32, bool)> {
+    // E11: the font chooser in a pop-up under a button labelled with the font.
+    let name = crate::font_chooser::list_name(font, postscript);
+    let resp = ui.button(format!("{name}  \u{25be}"));
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, name.clone()));
     let mut chosen = None;
-    let name = if postscript {
-        rustfig_text::ps_font_display_name(font).to_string()
-    } else {
-        format!("LaTeX {}", rustfig_text::latex_font_name(font))
-    };
-    egui::ComboBox::from_id_salt(id)
-        .selected_text(name)
-        .width(170.0)
-        .show_ui(ui, |ui| {
-            for f in 0..rustfig_text::PS_FONT_COUNT {
-                if ui
-                    .selectable_label(postscript && f == font, rustfig_text::ps_font_display_name(f))
-                    .clicked()
-                {
-                    chosen = Some((f, true));
-                }
-            }
-            ui.separator();
-            for f in 0..rustfig_text::LATEX_FONT_COUNT {
-                let label = format!("LaTeX {}", rustfig_text::latex_font_name(f));
-                if ui.selectable_label(!postscript && f == font, label).clicked() {
-                    chosen = Some((f, false));
-                }
+    egui::Popup::from_toggle_button_response(&resp)
+        .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+        .show(|ui| {
+            ui.set_min_width(260.0);
+            if let Some(f) = crate::font_chooser::show(ui, id, font, postscript, None).font {
+                chosen = Some(f);
+                ui.close();
             }
         });
     chosen

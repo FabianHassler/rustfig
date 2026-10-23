@@ -1062,6 +1062,23 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
                 }
             });
             ui.horizontal(|ui| {
+                ui.label("Theme:");
+                for (t, label) in [("system", "System"), ("light", "Light"), ("dark", "Dark")] {
+                    if ui.radio(app.theme == t, label).clicked() {
+                        app.run("app.theme", serde_json::json!({ "theme": t }));
+                    }
+                }
+            });
+            ui.horizontal(|ui| {
+                ui.label("UI scale:");
+                let mut pct = (app.ui_scale * 100.0).round();
+                let r = ui.add(egui::Slider::new(&mut pct, 75.0..=200.0).suffix(" %").step_by(5.0));
+                r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Slider, true, "UI scale"));
+                if r.drag_stopped() || (r.changed() && !r.dragged()) {
+                    app.run("app.ui_scale", serde_json::json!({ "percent": pct }));
+                }
+            });
+            ui.horizontal(|ui| {
                 if ui.button("Units and page…").clicked() {
                     app.run("app.document_settings", serde_json::json!({}));
                 }

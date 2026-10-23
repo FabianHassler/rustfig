@@ -82,6 +82,8 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | Colour picker and editor (xfig's colour panel `w_color.c`) | ✅ (E4b adds Pick from screen: macOS NSColorSampler, Windows live pick, Linux portal PickColor, greyed out on the web) Edit › Colours…, the colour pop-up's recent colours, More… and Eyedropper (E4, W10-36): hue/saturation square, RGB/HSV, hex and X11 names, user colours (add, change, delete, remove unused, keep under a name); mix memory and lock not built | — |
 | Preferences (xfig's resources, recent files, user colours) | ✅ `settings.toml`; Edit › Global settings › xfig resources… | — |
 | Icons at HiDPI | ✅ every icon and picture is drawn as a vector at the screen's density (xfig's bitmaps optional); application icon | — |
+| Font menus (`w_fontpanel.c`): Text Font pop-up and the edit panel's font menu | ✅ font chooser (E11): PostScript/LaTeX switch, every name in its own font, search, size field, sample preview, current font marked | — |
+| Theme and scale | ✅ Global settings: Theme System/Light/Dark, UI scale 75 to 200 %, kept in the preferences; the paper stays white (E9) | — |
 | 3D (bevelled) buttons, Global setting "Button style: 3D / Flat" | ✅ raised light/dark edges and soft shading, sunken when pressed or selected; mode, depth, snap, attribute and top-strip buttons; `app.button_style`, saved in the preferences (W11) | — |
 | Mode panel never clipped | ✅ two columns and every row fit at the default window size; buttons shrink to 26 pt before the panel scrolls (W11) | — |
 | Snap Mode box | ✅ a chooser (None and the Snap menu's modes), HOLD tag while held, Hold checked and Release enabled only when held (additions, W11) | — |

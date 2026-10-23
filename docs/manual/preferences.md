@@ -21,12 +21,14 @@ The lower part is RustFig's own:
 
 - **xfig keyboard shortcuts**: on by default; xfig's Meta and Ctrl keys ([Keys](keys.md)).
 - **Button style**: 3D (xfig's bevelled buttons) or flat.
+- **Theme**: System (follows the system's light or dark setting), Light or Dark. The drawing's paper stays white in every theme.
+- **UI scale**: 75 % to 200 % (a slider in steps of 5), for small or large screens. Both are kept for every start (`app.theme`, `app.ui_scale`).
 - **Units and page**: opens Document settings.
 - **xfig resources**: every X resource and command-line option of xfig under its xfig name (for example `startfontsize`, `startlinewidth`), with its value, default and what RustFig does with it. A value set here is kept for every start; xfig's command-line options override it for one run.
 - **Use current attributes as defaults**: the indicator panel's values become the start values for new drawings.
 - **Your colours**: colours added here appear in every colour menu of every drawing.
 
-The colour theme follows the system's light or dark setting.
+The colour theme follows the system's light or dark setting unless you choose Light or Dark above.
 
 Document-specific settings (units, paper, orientation, comments) are saved in the drawing itself: see Edit > Document settings and [Zoom and view](view.md).
 

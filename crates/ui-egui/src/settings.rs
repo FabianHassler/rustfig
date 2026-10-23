@@ -153,6 +153,15 @@ impl Settings {
     }
 }
 
+/// The UI scale limits (E9): 75 % to 200 %; not finite means 100 %.
+pub fn clamp_scale(s: f32) -> f32 {
+    if s.is_finite() {
+        s.clamp(0.75, 2.0)
+    } else {
+        1.0
+    }
+}
+
 /// Apply the UI's resources and switches from the engine's preferences.
 pub fn apply_ui(app: &mut App) {
     let p = app.engine.prefs.clone();
@@ -183,6 +192,12 @@ pub fn apply_ui(app: &mut App) {
     if let Some(style) = r.button_style.as_deref() {
         app.button_3d = style != "flat";
     }
+    if let Some(t) = r.theme.as_deref() {
+        let _ = crate::menus::set_theme(app, t);
+    }
+    if let Some(s) = r.ui_scale {
+        app.ui_scale = clamp_scale(s);
+    }
 }
 
 /// Write the current switches into the preferences (they persist).
@@ -201,6 +216,11 @@ pub fn collect_ui(app: &mut App) {
         &mut r.button_style,
         Some(if app.button_3d { "3d" } else { "flat" }.to_string()),
     );
+    upd(&mut r.theme, Some(app.theme.clone()));
+    if r.ui_scale != Some(app.ui_scale) {
+        r.ui_scale = Some(app.ui_scale);
+        changed = true;
+    }
     if r.xfig_keys != Some(app.xfig_keys) {
         r.xfig_keys = Some(app.xfig_keys);
         changed = true;

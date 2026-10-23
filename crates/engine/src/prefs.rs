@@ -224,6 +224,12 @@ pub struct RustFigPrefs {
     /// "3d" (bevelled buttons, default) or "flat".
     #[serde(skip_serializing_if = "Option::is_none")]
     pub button_style: Option<String>,
+    /// E9: "system" (default), "light" or "dark".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub theme: Option<String>,
+    /// E9: UI scale, 1.0 = 100 % (0.75 to 2.0).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ui_scale: Option<f32>,
     /// Arrow Size panel (W10-31): absolute values or multiples of the line width,
     /// and the multiples (thickness, width, length).
     #[serde(skip_serializing_if = "Option::is_none")]

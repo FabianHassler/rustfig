@@ -141,7 +141,13 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         id: "app.theme",
         label: "Theme",
         shortcut: "",
-        params: "{\"theme\": \"light\"|\"dark\"|\"system\"}  — colour theme (for screenshots and tests)",
+        params: "{\"theme\": \"light\"|\"dark\"|\"system\"}  — colour theme (a choice in Global settings; persists; the paper stays white)",
+    },
+    UiCommand {
+        id: "app.ui_scale",
+        label: "UI scale",
+        shortcut: "",
+        params: "{\"percent\": 75..200}  — size of the interface (a choice in Global settings; persists)",
     },
     UiCommand {
         id: "app.toggle_balloons",
@@ -210,6 +216,19 @@ pub fn find_ui(id: &str) -> Option<&'static UiCommand> {
 }
 
 /// Run a UI-only command.
+/// Set the theme setting (E9): "system", "light" or "dark".
+pub fn set_theme(app: &mut App, theme: &str) -> Result<(), String> {
+    let pref = match theme {
+        "light" => egui::ThemePreference::Light,
+        "dark" => egui::ThemePreference::Dark,
+        "system" => egui::ThemePreference::System,
+        _ => return Err("theme must be light, dark or system".into()),
+    };
+    app.theme = theme.to_string();
+    app.theme_request = Some(pref);
+    Ok(())
+}
+
 pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
     let path = p.get("path").and_then(Value::as_str).map(str::to_string);
     match id {
@@ -309,12 +328,20 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
             };
         }
         "app.theme" => {
-            app.theme_request = Some(match p.get("theme").and_then(Value::as_str) {
-                Some("light") => egui::ThemePreference::Light,
-                Some("dark") => egui::ThemePreference::Dark,
-                Some("system") => egui::ThemePreference::System,
-                _ => return Err("theme must be light, dark or system".into()),
-            });
+            set_theme(app, p.get("theme").and_then(Value::as_str).unwrap_or(""))?;
+        }
+        "app.ui_scale" => {
+            // Percent (75 to 200) or a factor (0.75 to 2.0).
+            let v = p
+                .get("percent")
+                .and_then(Value::as_f64)
+                .map(|x| x / 100.0)
+                .or_else(|| p.get("scale").and_then(Value::as_f64))
+                .ok_or("ui_scale needs percent (75 to 200) or scale (0.75 to 2.0)")?;
+            if !v.is_finite() || !(0.75..=2.0).contains(&v) {
+                return Err("the UI scale is 75 % to 200 %".into());
+            }
+            app.ui_scale = crate::settings::clamp_scale(v as f32);
         }
         "app.redraw" => app.canvas.invalidate(),
         "app.commands" => app.dialogs.commands_open = true,
@@ -1246,7 +1273,8 @@ mod tests {
         ),
         ("app.toggle_xfig_keys", "a checkbox in Global settings"),
         ("app.button_style", "a choice in Global settings"),
-        ("app.theme", "set by the system; for screenshots and tests"),
+        ("app.theme", "a choice in Global settings"),
+        ("app.ui_scale", "a choice in Global settings"),
         ("app.export_now", "the Export panel's Export button and the E key"),
         ("edit.select", "scripting API (xfig has no selection)"),
         ("edit.search_replace", "scripting API; Search/Replace... runs it"),
