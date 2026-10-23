@@ -24,14 +24,14 @@ the score.
 | Drawing modes | 12 | 98 % | none known | 0 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
 | Export | 12 | 68 % | `sld`, texts with `\ooo` octal escapes (raw bytes, B11 pass 5), the audit's hardening passes (B11), arrows on pie-wedge arcs and file arc centres lost on the way through the Fig writer (gap #25), picture frames and GIF transparency (gap #26) | 90 |
-| Text | 10 | 70 % | exact PostScript font metrics, spell check (text editing on the canvas done 2026-10-22, E10; character map 2026-10-22, E5) | 40 |
+| Text | 10 | 72 % | exact PostScript font metrics, spell check (text editing on the canvas done 2026-10-22, E10; character map 2026-10-22, E5) | 34 |
 | View & navigation | 8 | 100 % | — (zoom box, pan to origin and unzoom with Ctrl+click done 2026-10-22, E3) | 0 |
 | Undo | 4 | 100 % | — | 0 |
 | Libraries | 5 | 85 % | xfig's library list files (a file naming several library folders), the Stop button while a big library loads, the web build (no file system: no bundled libraries yet) | 6 |
 | Printing | 5 | 85 % | verification of the printer hand-off on Windows and Linux, browser printing (web), several figures as one job | 6 |
 | Settings & styles | 5 | 80 % | — (Global settings rows with effect, Unit/Scale panel, Arrow Size panel and number pop-ups done in W10-23, -24, -31, -32; preferences, recent files, styles with families E6, colours E4 done) | 0 |
 | Platforms | 7 | 70 % | Windows/Linux manual checks (checklist in hardware-parity.md), browser check of the web build, autosave in the browser (C3), pictures and Merge on the web | 16 |
-| **Overall** | 100 | **≈84 %** | | **337** |
+| **Overall** | 100 | **≈85 %** | | **314** |
 
 ## Evidence of what ships
 
@@ -107,6 +107,7 @@ the score.
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-23 | ≈85 % | Recount after step 1 towards beta: D11 click-to-close rules (Drawing 95 → 98 %), figure comments from Edit mode (Editing 83 → 86 %), F2 LaTeX special text (Text 70 → 72 %); 337 → 314 h. |
 | 2026-10-23 | ≈84 % | D10: copy counts (Attributes 87 → 90 %, 6 → 3 h). |
 | 2026-10-23 | ≈84 % | Recount after D6 (Libraries 0 → 85 %, Drawing modes 90 → 95 %).
 | 2026-10-23 | ≈79 % | Recount after B5, C1, C2, P2 (Printing 10 → 85 %, Platforms 50 → 70 %).

@@ -1,6 +1,6 @@
 # RustFig roadmap
 
-**Status (2026-10-23):** Stage **Alpha**. Overall xfig parity **≈84 %**
+**Status (2026-10-23):** Stage **Alpha**. Overall xfig parity **≈85 %**
 ([assessment](docs/target-app-parity.md)). The native app draws, edits,
 saves and exports. The web build compiles; it is not yet packaged or tested in a browser.
 
@@ -17,7 +17,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 
 | Measure | Value |
 |---------|-------|
-| Overall parity (weighted) | ≈84 % |
+| Overall parity (weighted) | ≈85 % |
 | Commands (all reachable from the control channel and MCP) | 223 engine (incl. 44 tool modes and "no mode") + 29 UI |
 | Interactive tools (xfig modes) | 44 (xfig's 43 + Trim/Split/Extend) |
 | Tests | 598 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-23 | Step 1 towards beta: xfig's click-to-close rules in the drawing modes (D11), copy counts and figure comments from Edit mode confirmed with tests, LaTeX special text tests (F2), Homebrew formula (P3); parity ≈84 → ≈85 %. |
 | 2026-10-23 | D6: library mode. xfig's libraries in `libraries/` (30 libraries, 2,540 figures; Charts, house_plans and transit left out for their licences), `ASSETS.md` rows and an extended `cargo xtask assets`; `library.*` commands, library tool state with xfig's buttons and keys, the library panel with thumbnails, Copy to library, manual topic; parity ≈79 → ≈84 %. |
 | 2026-10-23 | E5 (character map lists only drawable characters), S4-7 (Shift/Ctrl meanings in the mouse-function indicator), D10 done (dimension-line lengths as fractions of an inch, example-line preview and arrow pictures in the Dimension line window), W10-14 (saved versions: `file.versions`, `file.restore_version`, File > Saved versions…), W9 fix (cap and join pictures redrawn as xfig's). 2 engine commands. |
 | 2026-10-23 | Parity ≈73 → ≈79 %: B5 printing with preview (Printing 10 → 85 %), C1 web packaging, C2 browser file I/O, P2 platform checks (Platforms 50 → 70 %); F1 system fonts (fig2dev v0.7.0). |
