@@ -22,21 +22,12 @@ use std::time::SystemTime;
 
 /// The platform's folder for RustFig's recovery files.
 pub fn default_dir() -> Option<PathBuf> {
-    let env = |k: &str| std::env::var_os(k).filter(|v| !v.is_empty()).map(PathBuf::from);
+    use crate::dirs::{data_dir, process_env, HostOs};
     // Scripts and agents (`rustfig --background`) keep their copies apart.
-    if let Some(d) = env("RUSTFIG_RECOVERY_DIR") {
+    if let Some(d) = process_env("RUSTFIG_RECOVERY_DIR") {
         return Some(d);
     }
-    let base = if cfg!(target_os = "macos") {
-        env("HOME").map(|h| h.join("Library/Application Support/RustFig"))
-    } else if cfg!(windows) {
-        env("LOCALAPPDATA").map(|d| d.join("RustFig"))
-    } else {
-        env("XDG_DATA_HOME")
-            .or_else(|| env("HOME").map(|h| h.join(".local/share")))
-            .map(|d| d.join("rustfig"))
-    };
-    base.map(|b| b.join("recovery"))
+    data_dir(HostOs::current(), &process_env).map(|b| b.join("recovery"))
 }
 
 /// A drawing left behind by an instance that stopped.

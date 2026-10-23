@@ -158,13 +158,33 @@ fn tiny_skia_pixmap(w: usize, h: usize) -> Option<rustfig_render::raster::Pixmap
     rustfig_render::raster::Pixmap::new(w.clamp(1, 16_384) as u32, h.clamp(1, 16_384) as u32)
 }
 
+/// The raster's pixels per point: the screen's, but no more than fits the
+/// biggest texture (`max_side` pixels) for a canvas `longest_side` points long.
+pub fn raster_scale(ppp: f32, longest_side: f32, max_side: usize) -> f32 {
+    let limit = max_side as f32 / longest_side.max(1.0);
+    if ppp.is_finite() && ppp > 0.0 && limit.is_finite() {
+        // A little under, so rounding up never passes the limit.
+        ppp.min(limit * 0.999)
+    } else {
+        1.0
+    }
+}
+
 pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     let area = ui.available_rect_before_wrap();
     // xfig's rulers: top, right side, and the units box in the corner.
     let (rect, top, side, unit_box) = crate::rulers::layout(area);
     let resp = ui.allocate_rect(rect, Sense::click_and_drag());
     let painter = ui.painter_at(rect);
-    let ppp = ui.ctx().pixels_per_point();
+    // Physical pixels per point for the raster, lowered when the canvas would
+    // be larger than the graphics driver's biggest texture (a big window on
+    // a 4K or 5K screen with a weak GPU: 2048 or 4096 pixels): the picture is
+    // then a little soft, but there (P2).
+    let ppp = raster_scale(
+        ui.ctx().pixels_per_point(),
+        rect.width().max(rect.height()),
+        ui.ctx().input(|i| i.max_texture_side),
+    );
     app.engine.view.size = (f64::from(rect.width()), f64::from(rect.height()));
     let view = app.engine.view;
     let origin = rect.min;

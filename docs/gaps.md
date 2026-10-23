@@ -79,3 +79,4 @@ P26-10-23 (D10 done: fractions of an inch landed; leftovers: preview arrowheads 
 | 2026-10-23 | #34: S4-7 done. |
 | 2026-10-23 | #2: C1 done (trunk packaging, `cargo xtask web`). |
 | 2026-10-23 | #2: C2 done (browser file I/O); pictures, Merge and Export on save are desktop-only for now. |
+| 2026-10-23 | P2: macOS checks done, two bugs fixed (huge canvas texture, non-UTF-8 arguments); Windows and Linux rows are manual checks in `docs/hardware-parity.md`. |

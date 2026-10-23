@@ -30,10 +30,12 @@ the score.
 | Libraries | 5 | 0 % | library browser and placement | 40 |
 | Printing | 5 | 10 % | print dialog and printer output | 30 |
 | Settings & styles | 5 | 80 % | — (Global settings rows with effect, Unit/Scale panel, Arrow Size panel and number pop-ups done in W10-23, -24, -31, -32; preferences, recent files, styles with families E6, colours E4 done) | 0 |
-| Platforms | 7 | 65 % | Windows/Linux verification, browser check of the web build, autosave in the browser (C3), pictures and Merge on the web | 22 |
+| Platforms | 7 | 70 % | Windows/Linux manual checks (checklist in hardware-parity.md), browser check of the web build, autosave in the browser (C3), pictures and Merge on the web | 16 |
 | **Overall** | 100 | **≈73 %** | | **371** |
 
 ## Evidence of what ships
+
+- Platform checks (P2, 2026-10-23; Platforms 65 → 70 %): `crates/engine/src/dirs.rs` (settings and recovery folders per OS as functions, tested for all three; Windows falls back to `%USERPROFILE%`, a relative XDG value is ignored); `crates/engine/tests/platform_paths.rs` (command line with any file name, open/save/recent/recovery with non-ASCII paths); `crates/ui-egui/tests/platform_checks.rs` (HiDPI scales 1 to 4, non-ASCII names through the menus, `raster_scale`). Fixed: a canvas wider than the GPU's biggest texture (2048 pixels in the test harness; weak GPUs and 4K/5K screens) drew nothing and raised an internal error every frame; the raster now lowers its resolution (`canvas::raster_scale`). Fixed: `rustfig` and `rustfig-cli` aborted at start on a command-line argument that is not UTF-8 (`std::env::args`), now read lossily. Live on macOS (Retina 2x, control channel): `.fig` with a path of accents, CJK and emoji opened from the command line and saved; screenshot 2560x1652. Mouse buttons are covered by `input.rs` tests (Ctrl+click right, Alt+click middle, left+right chord) and `ui_smoke.rs`.
 
 - Browser file I/O (C2, 2026-10-23; Platforms 55 → 65 %): `crates/ui-egui/src/web_io.rs`; `FileDialogs` gained `is_web`, `pick_web` (async `rfd::AsyncFileDialog`, answer through a `WebInbox`) and `download` (rfd's write starts the browser download); Open reads the picked bytes with `file.open_data {base64}` (also PDF/SVG/PNG exports with the figure embedded, which open as `NAME.fig`), dropped files take the same way (unsaved changes asked first), Save and Save As download `file.save_data`, the Export panel downloads `file.export_data` (several files for PostScript+PDF). Tests: `crates/ui-egui/tests/web_io.rs` (open, edit, save, reopen the download; drop; export; embedded PDF; hostile bytes) on `ScriptedDialogs::web`, `crates/engine/tests/open_data.rs`; `cargo xtask wasm` compiles it.
 
@@ -98,6 +100,7 @@ the score.
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-23 | ≈73 % | P2: platform behaviour checks (paths per OS, non-ASCII names, HiDPI, command line); Platforms 65 → 70 %. |
 | 2026-10-23 | ≈73 % | C2: browser file I/O (open by picker and drop, save and export as downloads); Platforms 55 → 65 %. |
 | 2026-10-23 | ≈73 % | C1: web packaging with trunk (`cargo xtask web`); Platforms 50 → 55 %. |
 | 2026-10-23 | ≈73 % | D10, W10-13, W10-14, W9 fix: fractions of an inch and the dimension line preview; saved versions; cap/join pictures. Scores unchanged. |
