@@ -1,6 +1,6 @@
 # xfig key and mouse bindings checklist (W8)
 
-**Status:** 2026-10-22 (E10: selection, word jumps, clipboard keys while typing). 2026-10-22 (D5: measure keys Ctrl-g, Ctrl-n, Ctrl-m). 2026-10-22 (D4: Tangent mode key `n`). 2026-10-22 (D3: Chop mode key `x`). 2026-10-15: audit complete: every binding works, is replaced by a modern equivalent, or waits for the feature it needs (task named). Every binding xfig defines, from
+**Status:** 2026-10-23 (W21: key notation, both schemes side by side, Help > Keys for the current system). 2026-10-22 (E10: selection, word jumps, clipboard keys while typing). 2026-10-22 (D5: measure keys Ctrl-g, Ctrl-n, Ctrl-m). 2026-10-22 (D4: Tangent mode key `n`). 2026-10-22 (D3: Chop mode key `x`). 2026-10-15: audit complete: every binding works, is replaced by a modern equivalent, or waits for the feature it needs (task named). Every binding xfig defines, from
 `app-defaults/Fig` and the 78 translation tables (210 bindings) in xfig's
 `src/*.c`, with what RustFig does. X plumbing (window-manager close
 messages, expose and resize events, highlight on enter/leave) is left out:
@@ -9,6 +9,8 @@ egui does those itself.
 Legend: ✅ works as in xfig · 🟡 partly · ❌ missing (task) · ↻ replaced by a
 modern equivalent. Meta is Alt (Option on macOS); xfig binds Meta and Alt
 alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside: on macOS always (Cmd), on Linux and Windows wherever xfig's Ctrl keys leave them free (W20); a menu entry shows xfig's key, or the platform's where xfig has none.
+
+How keys are written (W21): macOS ⌃ ⌥ ⇧ ⌘ plus a thin space ("⌥ U"), Windows and Linux Ctrl+Alt+Shift+Key; punctuation keys spelled (Quote, Minus, Equals). Menus show xfig's and the system's key side by side ("⌥ U / ⌘ Z"); Help > Keys shows both columns for the current system only. No platform key was added for xfig-keyed commands that have none; both schemes work.
 
 ## Accelerators (`Fig*accelerators`)
 
@@ -117,3 +119,4 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside: on mac
 | 2026-10-21 | W16: no modern scheme: Shift+left in Open compound and the right-button split in Join/Split went with it; the left+right chord, Option/Alt+click and macOS Ctrl+click remain. |
 | 2026-10-21 | Mouse buttons xfig leaves free now do something (W13, W14): Update right = region; Move right = region move; Delete point middle = region; Add point middle = point at an end; Arrow right = reverse; Break right = all levels; Align right = to first object; Box/ArcBox/Picture middle = from the centre (Shift: square); Picture right = keep aspect; Regular polygon middle = by one side; Circle right = through three points; Text middle (clipboard holds text) = paste. xfig's own meanings are unchanged; the modern scheme has none of them. |
 | 2026-10-21 | Region selections (Glue middle, Delete middle, Update right, Move right, Delete point middle): press and drag draws a lasso (W15); click, move, click keeps xfig's rectangle. |
+| 2026-10-23 | W21: modifiers as ⌃ ⌥ ⇧ ⌘ (macOS) or Ctrl+Alt+Shift, punctuation keys spelled, both keys per menu entry, Help > Keys for the running system only. |

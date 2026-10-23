@@ -3,11 +3,11 @@
 <!-- os: mac -->
 RustFig understands two sets of keys: xfig's own, and the usual ones of macOS. xfig's set can be switched off in Edit > Global settings ("xfig keyboard shortcuts"). The macOS shortcuts use Cmd (written Ctrl in the tables below); xfig's Meta is the Option key. Where a table says "the physical Ctrl key", it means the Control key, not Cmd.
 
-The menus show the key that applies.
+The menus show both keys of an entry where it has both, for example `⌥ U / ⌘ Z`: Option and Cmd are written ⌥ and ⌘ (with Control ⌃ and Shift ⇧), and punctuation keys are spelled out (`⌘ Quote` is Cmd and the apostrophe key, `⌘ Minus`, `⌘ Equals`).
 <!-- os: linux windows -->
 RustFig understands two sets of keys: xfig's own, and the usual ones of your system. xfig's set can be switched off in Edit > Global settings ("xfig keyboard shortcuts"). xfig's Meta is the Alt key.
 
-Where both sets want the same key (Ctrl+S, Ctrl+C and so on), xfig's meaning wins while xfig's keys are on. The menus show the key that applies.
+Where both sets want the same key (Ctrl+S, Ctrl+C and so on), xfig's meaning wins while xfig's keys are on. The menus show both keys of an entry where it has both, for example `Alt+U / Ctrl+Z`; modifiers are written Ctrl, Alt and Shift, and punctuation keys are spelled out (`Ctrl+Quote` is Ctrl and the apostrophe key, `Ctrl+Minus`, `Ctrl+Equals`).
 <!-- os: end -->
 
 ## Mode keys
@@ -28,7 +28,7 @@ The keys that choose a mode are shown in the mode sections: for example `C` Circ
 
 Mode keys do nothing while a menu is open or while you type text.
 
-The complete list, searchable and per system (macOS, Windows, Linux), is in Help > Keys...: every command with its key in the standard scheme and in xfig's scheme.
+The complete list, searchable, is in Help > Keys...: every command with its key in your system's scheme and in xfig's scheme, side by side (it shows the keys of the system you are on). Both sets work.
 
 ## xfig's menu keys (Meta = Option or Alt)
 

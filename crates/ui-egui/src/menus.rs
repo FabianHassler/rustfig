@@ -788,11 +788,10 @@ pub fn snap_menu(app: &mut App, ui: &mut egui::Ui) {
     }
 }
 
-/// The key a menu entry shows: with xfig's keys on, xfig's accelerator, or
-/// else the platform's shortcut where xfig's keys leave it free (always on
-/// macOS, where the platform's shortcuts use Cmd and xfig's Ctrl and Option;
-/// on Linux and Windows not where xfig's Ctrl keys take it); otherwise the
-/// platform's shortcut.
+/// The keys a menu entry shows: xfig's accelerator and the platform's
+/// shortcut, both when both exist ("⌥ U / ⌘ Z"); both work. The platform's
+/// is left out where xfig's Ctrl keys take it (Linux and Windows, xfig's keys
+/// on).
 pub(crate) fn entry_keys(id: &str, xfig_keys: bool, mac: bool) -> String {
     // Paste Text: xfig's F18/F20 (Sun Paste keys) are gone from keyboards;
     // while typing, the platform's paste key inserts the clipboard's text.
@@ -803,25 +802,29 @@ pub(crate) fn entry_keys(id: &str, xfig_keys: bool, mac: bool) -> String {
             "Ctrl+V".to_string()
         };
     }
-    let platform = label_of(id).1;
-    let platform = if platform.is_empty() || (xfig_keys && shadowed_by_xfig(platform, mac)) {
-        String::new()
-    } else if mac {
-        mac_shortcut(platform)
-    } else {
-        platform.to_string()
-    };
-    let xfig = if xfig_keys {
-        xfig_accelerator(id).map(|k| key_label(k, mac)).unwrap_or_default()
-    } else {
-        String::new()
-    };
-    // One key per entry: xfig's where it has one.
-    if xfig.is_empty() {
-        platform
-    } else {
-        xfig
+    let (platform, xfig) = entry_key_pair(id, mac);
+    let platform_shadowed = xfig_keys && shadowed_by_xfig(label_of(id).1, mac);
+    let mut v = Vec::new();
+    if xfig_keys && !xfig.is_empty() {
+        v.push(xfig);
     }
+    if !platform.is_empty() && !platform_shadowed {
+        v.push(platform);
+    }
+    v.join(" / ")
+}
+
+/// (platform's shortcut, xfig's accelerator) of a command as written for the
+/// system; empty where there is none.
+pub(crate) fn entry_key_pair(id: &str, mac: bool) -> (String, String) {
+    let platform = label_of(id).1;
+    let platform = if platform.is_empty() {
+        String::new()
+    } else {
+        shortcut_text(platform, mac)
+    };
+    let xfig = xfig_accelerator(id).map(|k| key_label(k, mac)).unwrap_or_default();
+    (platform, xfig)
 }
 
 /// Whether one of xfig's Ctrl keys takes the platform shortcut `s` (Linux
@@ -838,45 +841,84 @@ fn shadowed_by_xfig(s: &str, mac: bool) -> bool {
             })
 }
 
-/// A shortcut as macOS writes it, Shift and Option before ⌘ ("Shift+⌘Z").
-/// Only ⌘ is drawn as a symbol: the fonts have no ⇧, ⌥ or ⌃ (test
-/// `key_symbols_exist_in_the_fonts`), so those are spelled out as in xfig's
-/// labels ("Option+U").
-fn mac_shortcut(s: &str) -> String {
-    let parts: Vec<&str> = s.split('+').collect();
-    let has = |m: &str| parts.contains(&m);
-    let key = parts
-        .iter()
-        .rev()
-        .find(|p| !matches!(**p, "Ctrl" | "Shift" | "Alt"))
-        .copied();
-    // "Ctrl++" (a plus key) splits into an empty last part.
-    let key = if s.ends_with("++") || s == "+" {
-        "+"
+/// Thin space between the modifier symbols and the key on macOS.
+pub(crate) const THIN: char = '\u{2009}';
+
+/// The name a punctuation key is spelled with, so that "Cmd+'" is not a
+/// lone speck: menus and the key sheet write "⌘ Quote", "Ctrl+Quote".
+fn key_name(k: &str) -> &str {
+    match k {
+        "'" => "Quote",
+        "=" => "Equals",
+        "-" => "Minus",
+        "+" => "Plus",
+        "," => "Comma",
+        "." => "Period",
+        "/" => "Slash",
+        ";" => "Semicolon",
+        "\\" => "Backslash",
+        "`" => "Backtick",
+        _ => k,
+    }
+}
+
+/// Modifiers and key as the system writes them. macOS: the symbols
+/// ⌃ ⌥ ⇧ ⌘ (in Apple's order), a thin space, the key ("⇧⌘ Z"); Windows and
+/// Linux: "Ctrl+Alt+Shift+Key". `ctrl` is the Control key itself, `cmd` the
+/// platform's command key (Ctrl on Windows and Linux).
+fn write_keys(mac: bool, ctrl: bool, alt: bool, shift: bool, cmd: bool, key: &str) -> String {
+    let key = key_name(key);
+    if mac {
+        let mut out = String::new();
+        for (on, sym) in [(ctrl, '⌃'), (alt, '⌥'), (shift, '⇧'), (cmd, '⌘')] {
+            if on {
+                out.push(sym);
+            }
+        }
+        if !out.is_empty() {
+            out.push(THIN);
+        }
+        out + key
     } else {
-        key.unwrap_or("")
-    };
-    let mut out = String::new();
-    if has("Shift") {
-        out.push_str("Shift+");
+        let mut parts = Vec::new();
+        if ctrl || cmd {
+            parts.push("Ctrl");
+        }
+        if alt {
+            parts.push("Alt");
+        }
+        if shift {
+            parts.push("Shift");
+        }
+        parts.push(key);
+        parts.join("+")
     }
-    if has("Alt") {
-        out.push_str("Option+");
+}
+
+/// A shortcut spec ("Ctrl+Shift+Z", Ctrl = the platform's command key) as
+/// macOS writes it.
+fn mac_shortcut(s: &str) -> String {
+    shortcut_text(s, true)
+}
+
+fn shortcut_text(s: &str, mac: bool) -> String {
+    let (mut cmd, mut alt, mut shift, mut key) = (false, false, false, String::new());
+    for part in s.split('+') {
+        match part {
+            "Ctrl" => cmd = true,
+            "Shift" => shift = true,
+            "Alt" => alt = true,
+            // "Ctrl++" (a plus key) splits into empty parts.
+            "" => key = "+".to_string(),
+            k => key = k.to_string(),
+        }
     }
-    if has("Ctrl") {
-        out.push('⌘');
-    }
-    out.push_str(key);
-    out
+    write_keys(mac, false, alt, shift, cmd, &key)
 }
 
 /// Human-readable shortcut ("Ctrl" shows as ⌘ on macOS).
 pub fn display_shortcut(s: &str) -> String {
-    if cfg!(target_os = "macos") {
-        mac_shortcut(s)
-    } else {
-        s.to_string()
-    }
+    shortcut_text(s, cfg!(target_os = "macos"))
 }
 
 /// Parse "Ctrl+Shift+Z" into an egui shortcut.
@@ -968,7 +1010,8 @@ fn parse_xfig_key(spec: &str) -> Option<(bool, bool, bool, egui::Key)> {
 
 /// An xfig accelerator as the platform names its keys. xfig prints "Meta-N",
 /// "Shift-Meta-X", "Ctrl-L"; its Meta is the Alt key (Option on macOS), so
-/// macOS shows "Option+N", "Shift+Option+X", "Ctrl+L" (the key's printed
+/// macOS shows "⌥ N", "⇧⌥ X", "⌃ L" (symbols, see `write_keys`) and Linux and
+/// Windows "Alt+N", "Shift+Alt+X", "Ctrl+L".
 /// name; the ⌥ symbol is missing from the fallback fonts) and Linux and
 /// Windows "Alt+N", "Shift+Alt+X", "Ctrl+L".
 pub fn xfig_key_label(spec: &str) -> String {
@@ -984,12 +1027,16 @@ fn key_label(spec: &str, mac: bool) -> String {
         // A bare letter is lower case in xfig's labels: "(z)".
         return spec.to_ascii_lowercase();
     }
-    let spec = spec.replace("PhysCtrl", "Ctrl");
-    if mac {
-        spec.replace("Alt", "Option")
-    } else {
-        spec
+    let (mut ctrl, mut alt, mut shift, mut key) = (false, false, false, String::new());
+    for part in spec.split('+') {
+        match part {
+            "PhysCtrl" => ctrl = true,
+            "Alt" => alt = true,
+            "Shift" => shift = true,
+            k => key = k.to_string(),
+        }
     }
+    write_keys(mac, ctrl, alt, shift, false, &key)
 }
 
 /// The xfig accelerator shown for a command in the menus.
@@ -1477,10 +1524,10 @@ mod tests {
             );
             assert!(seen.insert(*spec), "{spec} twice");
         }
-        assert_eq!(key_label("Shift+Alt+X", false), "Shift+Alt+X");
+        assert_eq!(key_label("Shift+Alt+X", false), "Alt+Shift+X");
         assert_eq!(key_label("PhysCtrl+L", false), "Ctrl+L");
-        assert_eq!(key_label("Shift+Alt+X", true), "Shift+Option+X");
-        assert_eq!(key_label("PhysCtrl+L", true), "Ctrl+L");
+        assert_eq!(key_label("Shift+Alt+X", true), "⌥⇧\u{2009}X");
+        assert_eq!(key_label("PhysCtrl+L", true), "⌃\u{2009}L");
         assert_eq!(xfig_key_label("Z"), "z");
         assert_eq!(xfig_accelerator("edit.undo"), Some("Alt+U"));
     }
@@ -1488,12 +1535,12 @@ mod tests {
     #[test]
     fn menus_show_the_platform_keys_xfig_leaves_free() {
         // macOS: Cmd never clashes with xfig's Ctrl and Option keys.
-        assert_eq!(entry_keys("edit.undo", true, true), "Option+U");
-        assert_eq!(entry_keys("edit.paste", true, true), "Option+T");
+        assert_eq!(entry_keys("edit.undo", true, true), "⌥\u{2009}U / ⌘\u{2009}Z");
+        assert_eq!(entry_keys("edit.paste", true, true), "⌥\u{2009}T / ⌘\u{2009}V");
         // Linux and Windows: xfig's Ctrl-Z (zoom fit) takes the key.
         assert_eq!(entry_keys("edit.undo", true, false), "Alt+U");
-        assert_eq!(entry_keys("edit.paste", true, false), "Alt+T");
-        assert_eq!(entry_keys("view.zoom_fit", true, false), "Ctrl+Z");
+        assert_eq!(entry_keys("edit.paste", true, false), "Alt+T / Ctrl+V");
+        assert_eq!(entry_keys("view.zoom_fit", true, false), "Ctrl+Z / Ctrl+0");
         // Without xfig's keys, the platform's shortcuts.
         assert_eq!(entry_keys("edit.undo", false, false), "Ctrl+Z");
     }
@@ -1510,6 +1557,7 @@ mod tests {
             .map(|c| c.shortcut)
             .chain(UI_COMMANDS.iter().map(|c| c.shortcut))
             .map(|s| mac_shortcut(s) + &display_shortcut(s))
+            .chain([THIN.to_string()])
             .collect();
         for c in all.chars() {
             assert!(ctx.fonts_mut(|f| f.has_glyph(&font, c)), "no glyph for {c:?}");
@@ -1518,9 +1566,14 @@ mod tests {
         for c in "°±²·×—•…↔✔".chars() {
             assert!(ctx.fonts_mut(|f| f.has_glyph(&font, c)), "no glyph for {c:?}");
         }
-        assert_eq!(mac_shortcut("Ctrl+Shift+Z"), "Shift+⌘Z");
-        assert_eq!(mac_shortcut("Ctrl+="), "⌘=");
-        assert_eq!(mac_shortcut("Ctrl+Shift+Up"), "Shift+⌘Up");
+        assert_eq!(mac_shortcut("Ctrl+Shift+Z"), "⇧⌘\u{2009}Z");
+        assert_eq!(mac_shortcut("Ctrl+="), "⌘\u{2009}Equals");
+        assert_eq!(mac_shortcut("Ctrl+'"), "⌘\u{2009}Quote");
+        assert_eq!(mac_shortcut("Ctrl+Alt+K"), "⌥⌘\u{2009}K");
+        assert_eq!(shortcut_text("Ctrl+Alt+Shift+'", false), "Ctrl+Alt+Shift+Quote");
+        assert_eq!(shortcut_text("Ctrl+-", false), "Ctrl+Minus");
+        assert_eq!(key_label("PhysCtrl+Alt+K", true), "⌃⌥\u{2009}K");
+        assert_eq!(mac_shortcut("Ctrl+Shift+Up"), "⇧⌘\u{2009}Up");
         assert_eq!(mac_shortcut("Delete"), "Delete");
     }
 
