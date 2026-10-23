@@ -16,13 +16,49 @@ pub use fig2dev::scene::{
 };
 
 use fig2dev::scene::{fill, picture_prims, shape_prims, stroke, Shape};
-use rustfig_geom::{ArrowSpec, Rect, Seg};
+use rustfig_geom::{ArrowSpec, Point, Rect, Seg};
+use rustfig_model::RasterImage;
 use rustfig_model::{flatten_object, Arrow, ColorRef, Document, Object, ObjectKind, PolyKind, Style};
 use std::collections::BTreeSet;
+use std::sync::Arc;
+
+/// What a typesetter is asked for: one special (LaTeX) text.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypesetRequest<'a> {
+    pub text: &'a str,
+    pub font: i32,
+    /// Fig fonts of the PostScript set rather than the LaTeX set.
+    pub postscript: bool,
+    /// Points.
+    pub size: f64,
+    pub color: Rgba,
+}
+
+/// A special text typeset by TeX: the picture and its size (F8).
+#[derive(Debug, Clone)]
+pub struct Typeset {
+    /// Straight-alpha RGBA, tightly cropped to the text.
+    pub image: Arc<RasterImage>,
+    /// Width, height (including depth) and depth below the baseline, in
+    /// PostScript points.
+    pub width_pt: f64,
+    pub height_pt: f64,
+    pub depth_pt: f64,
+}
+
+/// Source of typeset special texts. L3 never starts a process: the engine
+/// supplies one that runs TeX in the background and answers `None` until
+/// the picture is ready (or when TeX is missing or failed).
+pub trait Typesetter: Send + Sync + std::fmt::Debug {
+    fn typeset(&self, req: &TypesetRequest<'_>) -> Option<Typeset>;
+}
 
 /// Options for building a scene.
 #[derive(Debug, Clone, Default)]
 pub struct SceneOptions {
+    /// Draw special texts as TeX typeset them where the typesetter has them
+    /// (canvas only; exports never set it).
+    pub typeset: Option<Arc<dyn Typesetter>>,
     /// Depths that are off in the depth manager.
     pub hidden_depths: BTreeSet<i32>,
     /// Draw objects on hidden depths in gray instead of leaving them out
@@ -129,6 +165,32 @@ pub fn arrow_spec(a: &Arrow) -> ArrowSpec {
     }
 }
 
+/// The picture of a typeset text at the text's anchor, justification and angle.
+fn typeset_prim(origin: Point, angle: f64, justify: rustfig_model::Justify, ts: &Typeset) -> Prim {
+    const FIG_PER_PT: f64 = 1200.0 / 72.0;
+    let angle = if angle.is_finite() { angle } else { 0.0 };
+    let (w, h, d) = (
+        ts.width_pt * FIG_PER_PT,
+        ts.height_pt * FIG_PER_PT,
+        ts.depth_pt * FIG_PER_PT,
+    );
+    let u0 = match justify {
+        rustfig_model::Justify::Left => 0.0,
+        rustfig_model::Justify::Center => -w / 2.0,
+        rustfig_model::Justify::Right => -w,
+    };
+    let (c, s) = (angle.cos(), angle.sin());
+    // u along the baseline, v up (Fig's y grows downwards).
+    let at = |u: f64, v: f64| Point::new(origin.x + u * c - v * s, origin.y - u * s - v * c);
+    let (v0, v1) = (-d, h - d);
+    Prim::Image {
+        corners: [at(u0, v1), at(u0 + w, v1), at(u0 + w, v0), at(u0, v0)],
+        image: ts.image.clone(),
+        flipped: false,
+        dct: None,
+    }
+}
+
 fn object_prims(doc: &Document, o: &Object, opts: &SceneOptions, out: &mut Vec<Prim>) {
     match &o.kind {
         ObjectKind::Text(t) => {
@@ -137,6 +199,20 @@ fn object_prims(doc: &Document, o: &Object, opts: &SceneOptions, out: &mut Vec<P
             } else {
                 t.text.clone()
             };
+            if opts.screen && t.is_special() && !t.is_hidden() {
+                if let Some(ts) = opts.typeset.as_ref().and_then(|ty| {
+                    ty.typeset(&TypesetRequest {
+                        text: &t.text,
+                        font: t.font,
+                        postscript: t.is_postscript(),
+                        size: t.size,
+                        color: color(doc, t.color),
+                    })
+                }) {
+                    out.push(typeset_prim(t.origin, t.angle, t.justify, &ts));
+                    return;
+                }
+            }
             out.push(Prim::Text(TextPrim {
                 origin: t.origin,
                 angle: if t.angle.is_finite() { t.angle } else { 0.0 },

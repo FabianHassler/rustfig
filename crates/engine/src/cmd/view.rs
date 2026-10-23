@@ -270,6 +270,72 @@ pub(super) fn commands() -> Vec<Command> {
             },
         },
         Command {
+            id: "view.toggle_latex_preview",
+            label: "Typeset LaTeX Text",
+            menu: "View",
+            shortcut: "",
+            params: r#"{"on": bool (optional)}"#,
+            mutates: false,
+            enabled: always,
+            run: |e, p| {
+                let on = p
+                    .get("on")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(!e.prefs.rustfig.latex_preview.unwrap_or(true));
+                e.prefs.rustfig.latex_preview = Some(on);
+                e.prefs_dirty = true;
+                e.prefs.apply_latex(e);
+                e.bump_revision();
+                Ok(json!({"latex_preview": on, "tex": e.latex.program().map(|p| p.display().to_string())}))
+            },
+        },
+        Command {
+            id: "view.set_latex_program",
+            label: "LaTeX Program",
+            menu: "",
+            shortcut: "",
+            params: r#"{"program": string (name or path; empty looks for pdflatex, then lualatex)}"#,
+            mutates: false,
+            enabled: always,
+            run: |e, p| {
+                let program = p
+                    .get("program")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| EngineError::bad_params("program: a string is required"))?;
+                if program.len() > 1024 || program.contains('\0') {
+                    return Err(EngineError::bad_params("program: not a program name"));
+                }
+                e.prefs.rustfig.latex_program = Some(program.trim().to_string());
+                e.prefs_dirty = true;
+                e.prefs.apply_latex(e);
+                e.bump_revision();
+                Ok(json!({"program": program.trim(), "found": e.latex.program().map(|p| p.display().to_string())}))
+            },
+        },
+        Command {
+            id: "view.set_latex_preamble",
+            label: "LaTeX Preamble",
+            menu: "",
+            shortcut: "",
+            params: r#"{"preamble": string (added to the preamble of typeset texts)}"#,
+            mutates: false,
+            enabled: always,
+            run: |e, p| {
+                let pre = p
+                    .get("preamble")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| EngineError::bad_params("preamble: a string is required"))?;
+                if pre.len() > crate::latex_preview::MAX_PREAMBLE_BYTES {
+                    return Err(EngineError::bad_params("preamble: too long"));
+                }
+                e.prefs.rustfig.latex_preamble = Some(pre.to_string());
+                e.prefs_dirty = true;
+                e.prefs.apply_latex(e);
+                e.bump_revision();
+                Ok(json!({"preamble": pre}))
+            },
+        },
+        Command {
             id: "view.toggle_page_border",
             label: "Show Page Border",
             menu: "View",

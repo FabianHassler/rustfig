@@ -73,6 +73,8 @@ with solid or pattern fill and stroke, arrowheads, text runs, pictures),
 which fig2dev's rasteriser (`fig2dev::scene::raster`) draws. The
 canvas caches the raster per (revision, view) and draws overlays separately.
 
+WYSIWYG LaTeX text (F8): `engine::latex_preview` runs the installed TeX in a background thread per special text (cached, one at a time, 20 s limit), renders the PDF with hayro and hands `rustfig_render::SceneOptions::typeset` a `Typesetter` the canvas passes in; the render crate (L3) only draws the picture, never starts a process; exports never set it.
+
 Exports: the engine converts the document to fig2dev's objects and context
 (`rustfig_format::bridge::export_objects`: what fig2dev's reader returns for
 the Fig 3.2 text the document would be saved as, repairs included, built with

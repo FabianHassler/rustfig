@@ -338,7 +338,12 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         hide: overlay.hide.clone(),
     };
     let t = view.transform().then(&Affine::scale(f64::from(ppp), f64::from(ppp)));
+    app.engine.poll_latex();
+    if app.engine.latex.pending() > 0 {
+        ui.ctx().request_repaint_after(std::time::Duration::from_millis(150));
+    }
     let scene_opts = SceneOptions {
+        typeset: app.engine.latex.typesetter(),
         hidden_depths: app.engine.hidden_depths.clone(),
         gray_hidden: app.engine.gray_hidden_depths,
         screen: true,

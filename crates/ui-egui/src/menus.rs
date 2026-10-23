@@ -492,6 +492,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Character map...", "app.character_map"),
                 Sep,
                 Cmd("Show page borders", "view.toggle_page_border"),
+                Cmd("Typeset LaTeX text", "view.toggle_latex_preview"),
                 Cmd("Show depth manager", "app.toggle_depths"),
                 Cmd("Show info balloons", "app.toggle_balloons"),
                 Cmd("Show line lengths", "view.toggle_lengths"),
@@ -547,6 +548,7 @@ pub const XFIG_MENU_LETTERS: &[(&str, char, &str)] = &[
     ("View", 'd', "app.toggle_depths"),
     ("View", 'n', "app.toggle_balloons"),
     ("View", 'b', "view.toggle_page_border"),
+    ("View", 'x', "view.toggle_latex_preview"),
     ("View", 'l', "view.toggle_lengths"),
     ("View", 'v', "view.toggle_vertex_numbers"),
     ("View", 'a', "app.toggle_autorefresh"),
@@ -678,6 +680,7 @@ const MENU_LABELS: &[(&str, &str)] = &[
 fn checked(app: &App, id: &str) -> Option<bool> {
     match id {
         "view.toggle_page_border" => Some(app.engine.show_page_border),
+        "view.toggle_latex_preview" => Some(app.engine.prefs.rustfig.latex_preview.unwrap_or(true)),
         "app.toggle_depths" => Some(app.show_depths),
         "app.toggle_balloons" => Some(app.show_balloons),
         "app.toggle_autorefresh" => Some(app.reload.on),

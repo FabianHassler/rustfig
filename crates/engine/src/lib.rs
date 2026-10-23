@@ -20,6 +20,7 @@ pub mod guard;
 mod history;
 pub mod import;
 mod indicator;
+pub mod latex_preview;
 pub mod library;
 mod links;
 pub mod picture;
@@ -140,6 +141,8 @@ pub struct Engine {
     pub prefs: prefs::Prefs,
     /// Set when `prefs` changed and should be written.
     pub prefs_dirty: bool,
+    /// WYSIWYG LaTeX text (F8): TeX typesets the special texts for the canvas.
+    pub latex: latex_preview::LatexPreview,
     /// Edit > Copy as Picture waits for its objects (xfig has no
     /// selection): left an object, middle a region, right the whole figure.
     pub(crate) copy_pick: bool,
@@ -199,6 +202,7 @@ impl Engine {
             recovery_dir: None,
             prefs: prefs::Prefs::default(),
             prefs_dirty: false,
+            latex: latex_preview::LatexPreview::new(),
             copy_pick: false,
             gray_hidden_depths: true,
             show_page_border: true,
@@ -257,7 +261,16 @@ impl Engine {
 
     /// Increases whenever the document or its visibility changes.
     pub fn revision(&self) -> u64 {
+        // A finished TeX job changes what the canvas shows.
         self.revision
+            .wrapping_add(self.latex.generation().wrapping_mul(0x9E37_79B9))
+    }
+
+    /// Shows the errors of finished TeX jobs in the message panel (once each).
+    pub fn poll_latex(&mut self) {
+        if let Some(m) = self.latex.take_messages().into_iter().next() {
+            self.set_status(m);
+        }
     }
 
     pub fn bump_revision(&mut self) {

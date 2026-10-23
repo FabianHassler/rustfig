@@ -228,6 +228,15 @@ pub struct RustFigPrefs {
     pub arrow_absolute: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub arrow_mult: Option<[f64; 3]>,
+    /// F8: typeset special texts with TeX on the canvas (default on).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub latex_preview: Option<bool>,
+    /// F8: the TeX program (name or path); empty looks for pdflatex, then lualatex.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub latex_program: Option<String>,
+    /// F8: extra preamble lines for the typeset texts.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub latex_preamble: Option<String>,
     pub recent_files: Vec<String>,
     pub user_colors: Vec<NamedColor>,
     /// Colours used lately (`#rrggbb`, newest first), offered in the colour pop-ups (E4).
@@ -418,10 +427,21 @@ impl Prefs {
         self.rustfig.arrow_mult = Some([ind.arrow_mult.0, ind.arrow_mult.1, ind.arrow_mult.2]);
     }
 
+    /// Hand the LaTeX preview settings (F8) to the engine.
+    pub fn apply_latex(&self, e: &Engine) {
+        let r = &self.rustfig;
+        e.latex.configure(crate::latex_preview::PreviewSettings {
+            enabled: r.latex_preview.unwrap_or(true),
+            program: r.latex_program.clone().unwrap_or_default(),
+            preamble: r.latex_preamble.clone().unwrap_or_default(),
+        });
+    }
+
     /// Apply the drawing-related resources that are set; returns warnings
     /// for values RustFig can't use.
     pub fn apply(&self, e: &mut Engine) -> Vec<String> {
         let mut warn = Vec::new();
+        self.apply_latex(e);
         // The drawing's settings (for the empty start drawing and, as
         // file.new keeps them, every new one).
         let mut s = e.doc().settings.clone();
