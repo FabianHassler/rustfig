@@ -189,7 +189,7 @@ fn main() {
         else {
             return;
         };
-        let _ = eframe::WebRunner::new()
+        let started = eframe::WebRunner::new()
             .start(
                 canvas,
                 web_options,
@@ -201,6 +201,13 @@ fn main() {
                     )))
                 }),
             )
-            .await; // start-up errors are shown by eframe in the page
+            .await;
+        // The page's "Loading" text goes once the app runs; a start-up error
+        // is shown by eframe in the page.
+        if started.is_ok() {
+            if let Some(l) = document.get_element_by_id("loading") {
+                l.remove();
+            }
+        }
     });
 }

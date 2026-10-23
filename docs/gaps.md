@@ -5,7 +5,7 @@ P26-10-23 (D10 done: fractions of an inch landed; leftovers: preview arrowheads 
 | # | Gap | Area | Impact | Hours |
 |---|-----|------|--------|------:|
 | 1 | LaTeX exports closed: TikZ, PSTricks, pict2e, pstex/pdftex ported (B1, B2, B3); text bytes now as C (#27 closed 2026-10-18) | Export | High | 0 |
-| 2 | Web build: compiles locally (2026-10-14); still to do: the wasm check in CI, trunk packaging and browser open/save/download | Platforms | High | 24 |
+| 2 | Web build: compiles locally (2026-10-14); trunk packaging landed (C1: `cargo xtask web`, manual browser check pending); still to do: browser open/save/download (C2) | Platforms | High | 18 |
 | 25 | Exports hand fig2dev the objects the Fig 3.2 text would give (the bridge, DD7; the writer's rules, not the model, decide), which drop arrows on pie-wedge arcs and refits arc centres from the rounded points instead of keeping the file's centre; fig2dev draws both from the file (`fig2dev_reference` arcs, 2 corpus bounding boxes). Saving loses them too | Export/File format | Medium | 3 |
 | 26 | ✅ closed 2026-10-18 (audit pass 9): pictures get no frame in PS, EPS, PDF and bitmaps (genps strokes none; SVG keeps it) and transparent pixels stay transparent in EPS (colour-key `/ImageType 4`). Left: opaque pixels with the transparent colour are masked too (as fig2dev does for RGB images; for indexed GIFs it masks the index only), PNG with partial alpha is blended over white | Export | Low | 0 |
 | 3 | PostScript output: page layout done 2026-10-18 (B4a); EPS previews (`-A`/`-T`/`-C`) and `-B`/`-R` done 2026-10-18 (B4b); printing remains | Export/Printing | Medium | 20 |
@@ -77,3 +77,4 @@ P26-10-23 (D10 done: fractions of an inch landed; leftovers: preview arrowheads 
 | 2026-10-21 | #14 restated: EPS/PDF pictures in exports need a PostScript interpreter (fig2dev has none); the canvas half shrank with DD5. |
 | 2026-10-21 | #14 shrank (B15): PDF and EPS pictures in exports and on the canvas; leftovers listed in the row. |
 | 2026-10-23 | #34: S4-7 done. |
+| 2026-10-23 | #2: C1 done (trunk packaging, `cargo xtask web`). |

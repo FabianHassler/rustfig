@@ -7,7 +7,7 @@
 | macOS (Apple Silicon) | ✅ built and driven via the control channel |
 | Windows | 🟡 should build (eframe/glow, rfd); CI job added (P1), first run pending |
 | Linux (X11, Wayland) | 🟡 should build; unverified |
-| Web (wasm32) | 🟡 code is cfg-gated; build unverified (gap #2) |
+| Web (wasm32) | 🟡 `cargo xtask web` builds `dist/` (C1); not yet opened in Chrome, Firefox, Safari (see the web checklist) |
 | HiDPI / Retina | ✅ canvas renders at physical pixels |
 | Mouse: left/right buttons, double click | ✅ |
 | Middle-button and space-drag panning, scroll panning | ✅ |
@@ -19,4 +19,5 @@
 ## Revision history
 | Date | Note |
 |---|---|
+| 2026-10-23 | C1: web build packaged with trunk. |
 | 2026-10-13 | First checklist. |

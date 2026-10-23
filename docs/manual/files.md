@@ -24,3 +24,7 @@ While you work, RustFig writes a recovery copy of any drawing with unsaved chang
 ## Starting from the command line
 
 Running `rustfig FILE.fig` opens a file at start. See [Automation](automation.md).
+
+## The web version
+
+RustFig also runs in a browser (WebAssembly). Build it with `cargo xtask web` (needs `trunk`: `cargo install --locked trunk`) and serve the `dist/` folder with any static web server, or run `cargo xtask web --serve` and open http://127.0.0.1:8080. The page shows "Loading RustFig…" until the program has started.

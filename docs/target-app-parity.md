@@ -30,10 +30,12 @@ the score.
 | Libraries | 5 | 0 % | library browser and placement | 40 |
 | Printing | 5 | 10 % | print dialog and printer output | 30 |
 | Settings & styles | 5 | 80 % | — (Global settings rows with effect, Unit/Scale panel, Arrow Size panel and number pop-ups done in W10-23, -24, -31, -32; preferences, recent files, styles with families E6, colours E4 done) | 0 |
-| Platforms | 7 | 50 % | Windows/Linux verification, web build and file I/O on the web | 40 |
+| Platforms | 7 | 55 % | Windows/Linux verification, browser check of the web build, file I/O on the web | 34 |
 | **Overall** | 100 | **≈73 %** | | **371** |
 
 ## Evidence of what ships
+
+- Web packaging (C1, 2026-10-23; Platforms 50 → 55 %): `cargo xtask web` runs trunk (`web/index.html`, built from `apps/rustfig`; finds `trunk` on PATH or in cargo's bin folder, prints the install line otherwise; `--debug`, `--serve`), checks that `dist/` holds index.html and the wasm; the page shows "Loading RustFig…" until the app starts. Built here: `dist/` = index.html, 14 MB wasm (release, wasm-opt), JS glue. Not opened in a browser (manual check in `docs/hardware-parity.md`).
 
 - Mode options and saved versions (D10, W10-14, 2026-10-23): dimension-line lengths as xfig's fractions of an inch (`view::length_string`, `UnitScale.decimal_inches`), the Dimension line settings window with example preview, arrow pictures and "none" per end (`crates/ui-egui/src/dimline_panel.rs`); `file.save` keeps versions in the recovery folder (`crates/engine/src/recovery.rs`, `cmd/file.rs`: `file.versions`, `file.restore_version`; test `crates/engine/tests/export_panel.rs`), File > Saved versions… (`ui-egui/src/dialogs.rs`). Leftovers: preview arrowheads are plain triangles, lengths while drawing stay decimal.
 
@@ -94,6 +96,7 @@ the score.
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-23 | ≈73 % | C1: web packaging with trunk (`cargo xtask web`); Platforms 50 → 55 %. |
 | 2026-10-23 | ≈73 % | D10, W10-13, W10-14, W9 fix: fractions of an inch and the dimension line preview; saved versions; cap/join pictures. Scores unchanged. |
 | 2026-10-22 | ≈73 % | W10-23, -24, -31, -32, -33, W10-3: Global settings rows with effect, Unit/Scale panel, Arrow Size panel, number pop-ups, seven align and nine grid choices; Settings & styles 75 → 80 %. |
 | 2026-10-22 | ≈73 % | Recount: Text 55 → 65 % (E10), Settings & styles 15 → 75 % (E1 persistence, recent files, E6 styles, E4 colours); the table had lagged behind. |

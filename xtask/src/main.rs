@@ -1,4 +1,4 @@
-//! Project automation: `cargo xtask ci | layers | assets | wasm`.
+//! Project automation: `cargo xtask ci | layers | assets | licences | wasm | web | source-audit`.
 
 mod audit;
 
@@ -323,6 +323,73 @@ fn wasm() -> Result<(), String> {
     run(cargo().args(["check", "--target", "wasm32-unknown-unknown", "-p", "rustfig"]))
 }
 
+/// `trunk` on `PATH`, or in cargo's bin folder (where `cargo install` puts it).
+fn find_trunk() -> Option<PathBuf> {
+    let exe = if cfg!(windows) { "trunk.exe" } else { "trunk" };
+    let mut dirs: Vec<PathBuf> = std::env::var_os("PATH")
+        .map(|p| std::env::split_paths(&p).collect())
+        .unwrap_or_default();
+    if let Some(h) = std::env::var_os("CARGO_HOME") {
+        dirs.push(Path::new(&h).join("bin"));
+    }
+    if let Some(h) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
+        dirs.push(Path::new(&h).join(".cargo/bin"));
+    }
+    dirs.into_iter().map(|d| d.join(exe)).find(|p| p.is_file())
+}
+
+/// `cargo xtask web [--debug] [--serve]`: the web app (C1), built by trunk
+/// from `web/index.html` into `dist/` (index.html, the wasm, its JS glue).
+/// `--serve` runs trunk's dev server instead (http://127.0.0.1:8080).
+fn web() -> Result<(), String> {
+    let args: Vec<String> = std::env::args().skip(2).collect();
+    let Some(trunk) = find_trunk() else {
+        return Err(
+            "trunk is not installed. Install it once with:\n  cargo install --locked trunk\n\
+             (the build also needs the wasm target: rustup target add wasm32-unknown-unknown; \
+             trunk downloads wasm-bindgen itself on the first build)"
+                .into(),
+        );
+    };
+    if !wasm_target_installed() {
+        return Err("wasm32-unknown-unknown is not installed (rustup target add wasm32-unknown-unknown)".into());
+    }
+    let (html, dist) = (root().join("web/index.html"), root().join("dist"));
+    let mut cmd = Command::new(trunk);
+    if args.iter().any(|a| a == "--serve") {
+        cmd.arg("serve");
+    } else {
+        cmd.arg("build");
+    }
+    cmd.arg(&html).arg("--dist").arg(&dist);
+    // (after the path: `--release` takes an optional value)
+    if !args.iter().any(|a| a == "--debug" || a == "--serve") {
+        cmd.arg("--release");
+    }
+    if std::env::var_os("RUSTC").is_none() {
+        if let Some(r) = sibling_rustc() {
+            cmd.env("RUSTC", r);
+        }
+    }
+    // Trunk reads the package it builds from the Cargo.toml of its working
+    // directory, which must name a package (the workspace root is virtual).
+    cmd.current_dir(root().join("apps/rustfig"));
+    eprintln!("$ {cmd:?}");
+    let status = cmd.status().map_err(|e| e.to_string())?;
+    if !status.success() {
+        return Err(format!("trunk failed: {status}"));
+    }
+    let wasm = std::fs::read_dir(&dist)
+        .map_err(|e| format!("dist/: {e}"))?
+        .filter_map(Result::ok)
+        .any(|e| e.path().extension().is_some_and(|x| x == "wasm"));
+    if !dist.join("index.html").is_file() || !wasm {
+        return Err("trunk finished, but dist/ has no index.html and .wasm file".into());
+    }
+    println!("web: built dist/ (serve it with `cargo xtask web --serve`, or any static server)");
+    Ok(())
+}
+
 fn ci() -> Result<(), String> {
     run(cargo().args(["fmt", "--all", "--check"]))?;
     run(cargo().args(["clippy", "--workspace", "--all-targets", "--", "-D", "warnings"]))?;
@@ -343,8 +410,9 @@ fn main() -> ExitCode {
         "assets" => assets(),
         "licences" => licences(),
         "wasm" => wasm(),
+        "web" => web(),
         "source-audit" => audit::run(&root()),
-        _ => Err("usage: cargo xtask ci | layers | assets | licences | wasm | source-audit".into()),
+        _ => Err("usage: cargo xtask ci | layers | assets | licences | wasm | web | source-audit".into()),
     };
     match r {
         Ok(()) => ExitCode::SUCCESS,

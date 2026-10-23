@@ -4,13 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RustFig</title>
-  <link data-trunk rel="rust" data-bin="rustfig" href="../apps/rustfig/Cargo.toml">
+  <link data-trunk rel="rust" data-bin="rustfig" data-wasm-opt="z" href="../apps/rustfig/Cargo.toml">
   <style>
     html, body { margin: 0; height: 100%; overflow: hidden; background: #3a3c42; }
     canvas { width: 100%; height: 100%; display: block; }
+    #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      color: #d8d8d8; font: 16px sans-serif; pointer-events: none; }
   </style>
 </head>
 <body>
   <canvas id="rustfig_canvas"></canvas>
+  <div id="loading">Loading RustFig…</div>
+  <noscript><p style="color:#d8d8d8;font:16px sans-serif;padding:1em">RustFig needs JavaScript and WebAssembly.</p></noscript>
 </body>
 </html>
