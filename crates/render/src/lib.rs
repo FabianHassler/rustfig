@@ -336,6 +336,9 @@ fn object_prims(doc: &Document, o: &Object, opts: &SceneOptions, out: &mut Vec<P
                 text,
                 color: color(doc, t.color),
                 special: t.is_special(),
+                // An installed font is drawn above (`local_text_prim`); here
+                // it is missing, so the Fig font stands in.
+                local_font: None,
             }));
         }
         ObjectKind::Polyline(p) if p.kind == PolyKind::Picture => {

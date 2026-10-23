@@ -220,7 +220,7 @@ xfig features with no equivalent that are not gaps: Screen Capture grabs an X11 
 
 Not implemented. E4 (colour picker and editor), E10 (canvas text editing) and E11 (font chooser) are accepted and not repeated here. Each keeps every xfig function listed above.
 
-1. **Live edit panel with preview.** xfig: nothing changes until Apply or Done. Proposal: changes show on the canvas as they are made (as the indicator does), Cancel undoes, Done is one undo step; kept: Done, Apply, Cancel, Return and Esc. Hours: 8 (includes W10-17).
+1. **Live edit panel with preview.** xfig: nothing changes until Apply or Done. Proposal: changes show on the canvas as they are made (as the indicator does), Cancel undoes, Done is one undo step; kept: Done, Cancel, Return and Esc (Apply dropped 2026-10-23 at the user's request: nothing is left for it to do). Hours: 8 (includes W10-17).
 2. **Edit several objects at once.** xfig: one object per panel, Update mode copies attributes. Proposal: the panel opens for the whole selection, shows common values and "mixed" where they differ, and changes only what is touched. Kept: single-object panel and Update. Hours: 10.
 3. **Point table.** xfig: a fixed list of X/Y fields, shape factors through the right-button panel. Proposal: a table with add, delete and insert point rows, paste of coordinates, and a shape-factor column for X-splines (the right-button panel stays). Hours: 6.
 4. **Fields that take units and expressions** ("2.5cm", "1/3 in", "3*1.5") with the unit shown. Kept: the Units menu. Hours: 3.

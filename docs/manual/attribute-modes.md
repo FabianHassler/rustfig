@@ -13,7 +13,7 @@ Key `U`. Gives an object the current attributes of the [indicator panel](attribu
 
 ## Edit attributes
 
-No key (xfig key Ctrl+E). Opens the edit panel for an object with all of its attributes, text, points and comments. The panel is live: every change you make shows on the canvas at once, and Done (Ctrl+Return) keeps the whole edit as one undo step however many changes you made. Cancel (Escape) undoes everything since the panel opened. Apply is there as in xfig; as changes are applied as you make them, it has nothing left to do.
+No key (xfig key Ctrl+E). Opens the edit panel for an object with all of its attributes, text, points and comments. The panel is live: every change you make shows on the canvas at once, and Done (Ctrl+Return) keeps the whole edit as one undo step however many changes you made. Cancel (Escape) undoes everything since the panel opened. xfig's Apply button is left out: changes are applied as you make them.
 
 - Line style, cap style, join style and the arrow types are pictorial menus: the button shows the picture of the current value, its pop-up lists every value as a picture (the same pictures as the attribute panel).
 - Fill style (indicator and edit panel): the edit panel's "Fill style" row is a button showing the current fill; it opens the same choice panel as the indicator (NONE, shades and tints of the fill colour, patterns) and a label beside it says "No fill", "Filled 50 %" or "Pattern 3" as xfig's panel does. For the fill colours black, white and default the menu has no tints, as in xfig (a tint set earlier becomes the full colour).

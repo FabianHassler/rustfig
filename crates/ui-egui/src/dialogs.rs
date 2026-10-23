@@ -1457,14 +1457,24 @@ fn latex_settings(app: &mut App, ui: &mut egui::Ui) {
     let (mut program, mut preamble): (String, String) = ui
         .data(|d| d.get_temp(id))
         .unwrap_or_else(|| (settings.program.clone(), settings.preamble.clone()));
-    ui.horizontal(|ui| {
-        ui.label("TeX program:");
-        ui.add(
-            egui::TextEdit::singleline(&mut program)
-                .hint_text("pdflatex (found on the PATH)")
-                .desired_width(220.0),
+    // No Apply button: a field takes effect when you leave it (typesetting
+    // on every key would run TeX for each letter).
+    let program_field = ui
+        .horizontal(|ui| {
+            ui.label("TeX program:");
+            ui.add(
+                egui::TextEdit::singleline(&mut program)
+                    .hint_text("pdflatex (found on the PATH)")
+                    .desired_width(220.0),
+            )
+        })
+        .inner;
+    if program_field.lost_focus() && program != settings.program {
+        app.run(
+            "view.set_latex_program",
+            serde_json::json!({ "program": program.trim() }),
         );
-    });
+    }
     ui.label(
         egui::RichText::new(match &found {
             Some(p) => format!("Using {}", p.display()),
@@ -1472,33 +1482,23 @@ fn latex_settings(app: &mut App, ui: &mut egui::Ui) {
         })
         .small(),
     );
-    ui.label("Preamble (after the packages every text gets):");
+    ui.label("Preamble (after the packages every text gets; used when you leave the field):");
     ui.label(egui::RichText::new(BASE_PREAMBLE).monospace().small());
-    ui.add(
+    let preamble_field = ui.add(
         egui::TextEdit::multiline(&mut preamble)
             .code_editor()
             .hint_text("\\usepackage{siunitx}")
             .desired_rows(4)
             .desired_width(f32::INFINITY),
     );
-    let changed = program != settings.program || preamble != settings.preamble;
-    ui.horizontal(|ui| {
-        if ui.add_enabled(changed, egui::Button::new("Apply")).clicked() {
-            if program != settings.program {
-                app.run(
-                    "view.set_latex_program",
-                    serde_json::json!({ "program": program.trim() }),
-                );
-            }
-            if preamble != settings.preamble {
-                app.run("view.set_latex_preamble", serde_json::json!({ "preamble": preamble }));
-            }
-        }
-        if ui.add_enabled(changed, egui::Button::new("Revert")).clicked() {
-            program = settings.program.clone();
-            preamble = settings.preamble.clone();
-        }
-    });
+    if preamble_field.lost_focus() && preamble != settings.preamble {
+        app.run("view.set_latex_preamble", serde_json::json!({ "preamble": preamble }));
+    }
+    if !program_field.has_focus() && !preamble_field.has_focus() {
+        // Not being edited: follow the saved values (a command may change them).
+        program = app.engine.latex.settings().program;
+        preamble = app.engine.latex.settings().preamble;
+    }
     ui.data_mut(|d| d.insert_temp(id, (program, preamble)));
 }
 
@@ -2231,15 +2231,20 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                 });
             ui.separator();
             ui.horizontal(|ui| {
-                if ui.button("Done").clicked() {
+                // The panel is live, so xfig's Apply has nothing to do and
+                // is left out.
+                if ui
+                    .button("Done")
+                    .on_hover_text("Changes show as you make them; Done keeps them as one undo step")
+                    .clicked()
+                {
                     close = true;
                 }
-                // The panel is live: Apply has nothing left to apply, it is
-                // here as in xfig.
-                ui.button("Apply").on_hover_text(
-                    "Changes are applied as you make them; Done keeps them as one undo step, Cancel undoes them.",
-                );
-                if ui.button("Cancel").clicked() {
+                if ui
+                    .button("Cancel")
+                    .on_hover_text("Undo every change since the panel opened")
+                    .clicked()
+                {
                     cancel = true;
                 }
             });
