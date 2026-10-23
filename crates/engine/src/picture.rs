@@ -69,4 +69,9 @@ pub trait PictureClipboard: Send {
     fn get_image(&mut self) -> Option<Vec<u8>> {
         None
     }
+
+    /// Plain text on the clipboard, if any (Edit > Paste Text).
+    fn get_text(&mut self) -> Option<String> {
+        None
+    }
 }

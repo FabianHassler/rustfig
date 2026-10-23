@@ -165,3 +165,41 @@ fn without_a_system_clipboard_the_cut_buffer_works() {
     assert!(paste_at_once(&mut e));
     assert_eq!(e.doc().objects.len(), 2);
 }
+
+/// Edit > Paste Text (xfig's F18/F20): the clipboard's text goes in at the
+/// caret of the text being typed; disabled when nothing is typed.
+#[test]
+fn paste_text_inserts_the_clipboard_text_at_the_caret() {
+    struct TextClip;
+    impl PictureClipboard for TextClip {
+        fn set_pictures(&mut self, _: &[PictureData]) -> Result<(), String> {
+            Ok(())
+        }
+        fn get_text(&mut self) -> Option<String> {
+            Some("lo wor".into())
+        }
+    }
+    let mut e = Engine::new();
+    e.set_picture_clipboard(Some(Box::new(TextClip)));
+    assert!(e.execute("text.paste", &json!({})).is_err(), "not typing");
+    e.execute("tool.text", &json!({})).unwrap();
+    e.execute("tool.event", &json!({"type": "press", "x": 600, "y": 600}))
+        .unwrap();
+    e.execute("tool.event", &json!({"type": "text", "text": "Hel"}))
+        .unwrap();
+    let r = e.execute("text.paste", &json!({})).unwrap();
+    assert_eq!(r["inserted"], 6);
+    e.execute("tool.event", &json!({"type": "text", "text": "ld"})).unwrap();
+    e.execute("tool.event", &json!({"type": "press", "x": 3000, "y": 3000}))
+        .unwrap();
+    let texts: Vec<String> = e
+        .doc()
+        .objects
+        .iter()
+        .filter_map(|o| match &o.kind {
+            rustfig_engine::model::ObjectKind::Text(t) => Some(t.text.clone()),
+            _ => None,
+        })
+        .collect();
+    assert!(texts.iter().any(|t| t == "Hello world"), "{texts:?}");
+}

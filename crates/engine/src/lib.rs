@@ -306,6 +306,12 @@ impl Engine {
         self.picture_clipboard = c;
     }
 
+    /// Plain text on the system clipboard (Edit > Paste Text), if the
+    /// platform clipboard is attached and holds some.
+    pub fn clipboard_plain_text(&mut self) -> Option<String> {
+        self.picture_clipboard.as_mut()?.get_text()
+    }
+
     /// Requests for the UI, drained by the caller.
     pub fn take_requests(&mut self) -> Vec<UiRequest> {
         std::mem::take(&mut self.requests)

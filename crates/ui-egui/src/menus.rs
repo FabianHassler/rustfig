@@ -437,7 +437,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
             &[
                 Cmd("Undo", "edit.undo"),
                 Cmd("Paste Objects", "edit.paste"),
-                Missing("Paste Text", "F18/F20", "E7"),
+                Cmd("Paste Text", "text.paste"),
                 Cmd("Search/Replace...", "app.search"),
                 Missing("Spell Check...", "Alt+K", "F5"),
                 Cmd("Delete All", "edit.delete_all"),
@@ -502,7 +502,7 @@ pub const XFIG_MENU_LETTERS: &[(&str, char, &str)] = &[
     ("File", 'x', "app.quit"),
     ("Edit", 'u', "edit.undo"),
     ("Edit", 'p', "edit.paste"),
-    ("Edit", 't', "Paste Text"),
+    ("Edit", 't', "text.paste"),
     ("Edit", 'f', "app.search"),
     ("Edit", 's', "Spell Check..."),
     ("Edit", 'd', "edit.delete_all"),
@@ -767,6 +767,15 @@ pub fn snap_menu(app: &mut App, ui: &mut egui::Ui) {
 /// on Linux and Windows not where xfig's Ctrl keys take it); otherwise the
 /// platform's shortcut.
 pub(crate) fn entry_keys(id: &str, xfig_keys: bool, mac: bool) -> String {
+    // Paste Text: xfig's F18/F20 (Sun Paste keys) are gone from keyboards;
+    // while typing, the platform's paste key inserts the clipboard's text.
+    if id == "text.paste" {
+        return if mac {
+            mac_shortcut("Ctrl+V")
+        } else {
+            "Ctrl+V".to_string()
+        };
+    }
     let platform = label_of(id).1;
     let platform = if platform.is_empty() || (xfig_keys && shadowed_by_xfig(platform, mac)) {
         String::new()

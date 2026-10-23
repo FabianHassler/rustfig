@@ -6,6 +6,9 @@ use crate::{Engine, EngineError};
 use rustfig_geom::Point;
 use serde_json::{json, Value};
 
+/// Most characters Paste Text inserts at once.
+const MAX_PASTE_CHARS: usize = 10_000;
+
 pub(super) fn commands() -> Vec<Command> {
     let mut v: Vec<Command> = ToolKind::ALL
         .iter()
@@ -39,6 +42,27 @@ pub(super) fn commands() -> Vec<Command> {
         mutates: false,
         enabled: always,
         run: event,
+    });
+    v.push(Command {
+        id: "text.paste",
+        label: "Paste Text",
+        menu: "Edit",
+        shortcut: "",
+        params: "{\"text\"?: string}  — xfig's Paste Text (its F18/F20 keys are gone from keyboards; while typing the platform paste key does the same): inserts the system clipboard's text (or `text`) at the caret of the text being typed (Text mode), as if typed; returns {\"inserted\": n}",
+        mutates: false,
+        enabled: |e| e.typing_font().is_some(),
+        run: |e, p| {
+            let text = match p.get("text") {
+                Some(_) => super::string(p, "text")?,
+                None => e
+                    .clipboard_plain_text()
+                    .ok_or_else(|| EngineError::bad_params("the clipboard holds no text"))?,
+            };
+            if text.chars().count() > MAX_PASTE_CHARS {
+                return Err(EngineError::bad_params("the text on the clipboard is too long"));
+            }
+            Ok(json!({"inserted": e.text_insert_chars(&text)?}))
+        },
     });
     v.push(Command {
         id: "text.insert_char",

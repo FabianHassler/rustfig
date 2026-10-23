@@ -75,6 +75,11 @@ impl PictureClipboard for SystemPictureClipboard {
         String::from_utf8(bytes).ok()
     }
 
+    fn get_text(&mut self) -> Option<String> {
+        let ctx = self.context().ok()?;
+        ctx.get_text().ok().filter(|t| !t.is_empty())
+    }
+
     fn get_image(&mut self) -> Option<Vec<u8>> {
         let ctx = self.context().ok()?;
         // PNG only: every platform's screenshot and image copy offers it.
