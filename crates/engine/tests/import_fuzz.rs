@@ -5,6 +5,27 @@ use proptest::prelude::*;
 use rustfig_engine::Engine;
 use serde_json::json;
 
+/// A PDF, an SVG and a PNG export with the figure embedded.
+fn embedded_bases() -> &'static Vec<Vec<u8>> {
+    static BASES: std::sync::OnceLock<Vec<Vec<u8>>> = std::sync::OnceLock::new();
+    BASES.get_or_init(|| {
+        let mut e = Engine::new();
+        e.execute("shape.rectangle", &json!({"x": 0, "y": 0, "width": 600, "height": 300}))
+            .unwrap();
+        ["pdf", "svg", "png"]
+            .iter()
+            .map(|f| {
+                let dir = std::env::temp_dir().join(format!("rustfig-e16-fuzz-{}", std::process::id()));
+                std::fs::create_dir_all(&dir).unwrap();
+                let path = dir.join(format!("f.{f}"));
+                e.execute("file.export", &json!({"path": path.to_str().unwrap(), "embed": true}))
+                    .unwrap();
+                std::fs::read(path).unwrap()
+            })
+            .collect()
+    })
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(256))]
     #[test]
@@ -60,6 +81,31 @@ proptest! {
                 let _ = e.execute("file.export_data", &json!({"format": f}));
             }
         }
+    }
+
+    /// E16: damaged or hostile embedded figures (PDF, SVG, PNG) never panic.
+    #[test]
+    fn embedded_figure_damaged(
+        which in 0usize..3,
+        cut in 0usize..100_000,
+        pos in 0usize..100_000,
+        byte in any::<u8>(),
+        junk in "[ -~]{0,200}",
+    ) {
+        let bases = embedded_bases();
+        let base = &bases[which];
+        let mut data = base.clone();
+        let at = pos % data.len();
+        data[at] = byte;
+        let _ = rustfig_format::read_any(&data);
+        data.truncate(cut % (data.len() + 1));
+        let _ = rustfig_format::read_any(&data);
+        data.extend_from_slice(junk.as_bytes());
+        let _ = rustfig_format::read_any(&data);
+        let marked = format!("%PDF-1.4 /Subtype /application#2Fx-xfig /Length {cut} stream\n{junk}");
+        let _ = rustfig_format::read_any(marked.as_bytes());
+        let svg = format!("<svg><rustfig:fig encoding=\"base64\">{junk}</rustfig:fig>");
+        let _ = rustfig_format::read_any(svg.as_bytes());
     }
 
     #[test]

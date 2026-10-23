@@ -2,6 +2,7 @@
 //! 3.2) and the native `.rustfig` JSON format.
 
 pub mod bridge;
+pub mod embed;
 mod fig_read;
 mod fig_write;
 mod native;
@@ -101,9 +102,14 @@ pub fn read_any_messages(src: &[u8]) -> Result<(Document, Vec<String>), FormatEr
     match FileFormat::sniff(src) {
         Some(FileFormat::Fig) => read_fig_messages(src, TextEncoding::Auto),
         Some(FileFormat::Native) => read_native(src).map(|d| (d, Vec::new())),
-        None => Err(FormatError::new(
-            "unrecognised file format (expected a Fig or RustFig document)",
-        )),
+        None => match embed::extract_figure(src)? {
+            // A PDF, SVG or PNG export with the figure inside (plan E16).
+            Some(fig) => read_fig_messages(fig.as_bytes(), TextEncoding::Auto),
+            None if embed::is_embedding_container(src) => Err(FormatError::new("no embedded figure in this file")),
+            None => Err(FormatError::new(
+                "unrecognised file format (expected a Fig or RustFig document)",
+            )),
+        },
     }
 }
 

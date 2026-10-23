@@ -45,6 +45,7 @@ ttf-parser = "0.25"
 epaint_default_fonts = "0.33"
 pdf-writer = "0.15"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "bmp", "pnm", "tiff"] }
+flate2 = "1"
 egui = "0.33"
 eframe = { version = "0.33", default-features = false, features = ["accesskit", "default_fonts", "glow", "wayland", "x11"] }
 rfd = "0.15"

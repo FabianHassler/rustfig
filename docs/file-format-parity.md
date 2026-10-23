@@ -55,4 +55,5 @@ Fuzzing: `crates/format/tests/prop_format.rs`, `crates/engine/tests/import_fuzz.
 | 2026-10-17 | PSTricks (B3), byte-identical to fig2dev on 285 of 300 sample figures. |
 | 2026-10-20 | DD3: one reader, fig2dev's, for Fig 1.3–3.2; its repairs listed. |
 | 2026-10-21 | B15: PDF and EPS picture objects (row "Pictures in exports"). |
+| 2026-10-23 | E16: PDF, SVG and PNG exports can carry the Fig text (PDF embedded file, SVG metadata, PNG iTXt); File > Open reads it back. |
 | 2026-10-21 | E15: export-on-save setting round-trips through Fig comments and native JSON. |

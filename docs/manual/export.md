@@ -19,6 +19,8 @@ File > Export (Meta+X, Ctrl+E) writes the drawing in another format. RustFig has
 - **Export** writes the file next to the figure with the chosen name. **Export now** (Shift+Meta+X) repeats the last export without the panel.
 - **Export on save**: when checked, every Save also rewrites the exported file, so the PDF in your document is always current.
 
+- **Embed the figure** (PDF, SVG and PNG; off at start, kept per language like the other rows): stores the figure's Fig text inside the file, so you can edit the picture you sent around. In a PDF it is an attached file `figure.fig` (PDF readers list it among the attachments); in an SVG it is a `<metadata>` element; in a PNG a compressed text chunk (`rustfig-fig`). Other programs show the file as usual and ignore the payload. **File > Open** (or dropping the file on the window) opens the embedded figure under a `.fig` name, so Save never overwrites the export. The embedded figure includes depths that are switched off and the figure's comments, so leave the option off for files you publish. `file.export` takes `"embed": true`; Export on save keeps it.
+
 ## Notes
 
 - Text uses fig2dev's font metrics; special LaTeX text (the "special" flag) is typeset by TeX in the TeX languages and shown as written on the canvas.

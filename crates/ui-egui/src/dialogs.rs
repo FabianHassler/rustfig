@@ -644,8 +644,9 @@ pub const LINE_STYLE_VALUE_HELP: &str = "A Fig file keeps one number per line, i
     Dash-triple-dotted: dash v, gaps 0.4v, 0.3v, 0.3v, 0.4v between the dots\n\
     The attribute panel's Line Style keeps two defaults: the dash length for the dashed styles, the dot gap for Dotted.";
 
-/// Extensions offered when picking a figure.
-pub const FIGURE_EXTS: &[&str] = &["fig", "xfig", "rustfig"];
+/// Extensions offered when picking a figure: also PDF, SVG and PNG exports
+/// with the figure embedded (E16).
+pub const FIGURE_EXTS: &[&str] = &["fig", "xfig", "rustfig", "pdf", "svg", "png"];
 /// Extensions offered when picking a picture: xfig's picture types
 /// (`f_picobj.c`: EPS/PS, PDF, GIF, PCX, PPM, TIFF, XBM, JPEG, PNG, XPM),
 /// BMP, and compressed files (`.gz`, `.Z`), which fig2dev's reader unpacks.
@@ -2154,6 +2155,14 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
                         if let Some(c) = text_combo(ui, "export_preview_kind", cur, &names) {
                             st.settings.preview = names.iter().position(|n| *n == c).map_or(0, |i| i as u8);
                         }
+                        ui.end_row();
+                    }
+                    if rows.embed {
+                        ui.label("Editable");
+                        ui.checkbox(&mut st.settings.embed, "Embed the figure").on_hover_text(
+                            "Store the figure (.fig text, with hidden depths and comments) inside the file, \
+                                 so File > Open can edit it again",
+                        );
                         ui.end_row();
                     }
                     if rows.pdf_page_mode {

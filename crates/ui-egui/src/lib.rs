@@ -477,6 +477,14 @@ impl App {
         }
         #[cfg(not(target_arch = "wasm32"))]
         self.poll_control(ctx);
+        // A figure, or a PDF/SVG/PNG export with the figure embedded (E16),
+        // dropped on the window opens. The picture panel takes its own drops.
+        if self.dialogs.edit.is_none() {
+            let dropped = ctx.input(|i| i.raw.dropped_files.iter().find_map(|f| f.path.clone()));
+            if let Some(p) = dropped.and_then(|p| p.to_str().map(str::to_string)) {
+                self.guard_unsaved(Pending::Open(Some(p)));
+            }
+        }
         let tokens = theme::Tokens::new(ctx.style().visuals.dark_mode, self.button_3d);
         // Panels set the hint override while hovered; show last frame's.
         self.hint_shown = self.hint_override.take();

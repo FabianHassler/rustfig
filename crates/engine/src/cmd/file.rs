@@ -133,7 +133,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Export…",
             menu: "",
             shortcut: "",
-            params: "{\"path\": string, \"part\"?: bool (only the visible part while a compound is open), \"format\"?: language id (see file.export_formats; default from the file name), \"magnification\"?: percent, \"margin\"?: fig units, \"dpi\"?: number, \"background\"?: \"#rrggbb\", \"active_layers_only\"?: bool, \"whole_figure_bounds\"?: bool, \"options\"?: {key: value} fig2dev's options for the language, by key or letter (see file.export_formats), \"panel\"?: true | {…} the Export panel's settings kept for the language (export.settings) turned into options}  — active_layers_only leaves out depths that are off; whole_figure_bounds then still sizes the page by the whole figure; pspdf writes NAME.eps and NAME.pdf",
+            params: "{\"path\": string, \"part\"?: bool (only the visible part while a compound is open), \"format\"?: language id (see file.export_formats; default from the file name), \"magnification\"?: percent, \"margin\"?: fig units, \"dpi\"?: number, \"background\"?: \"#rrggbb\", \"active_layers_only\"?: bool, \"whole_figure_bounds\"?: bool, \"embed\"?: bool (PDF, SVG, PNG: store the figure's Fig text in the file, so File > Open reads it back; default false), \"options\"?: {key: value} fig2dev's options for the language, by key or letter (see file.export_formats), \"panel\"?: true | {…} the Export panel's settings kept for the language (export.settings) turned into options}  — active_layers_only leaves out depths that are off; whole_figure_bounds then still sizes the page by the whole figure; pspdf writes NAME.eps and NAME.pdf",
             mutates: false,
             enabled: has_objects,
             run: export_file,
@@ -213,7 +213,21 @@ fn open(e: &mut Engine, p: &Value) -> CmdResult {
         e.set_status(format!("{path} (new file)"));
         return Ok(json!({"objects": 0, "warnings": [], "new_file": true}));
     }
-    let (mut doc, mut warnings) = parse(&read_file(&path)?)?;
+    let bytes = read_file(&path)?;
+    let (mut doc, mut warnings) = parse(&bytes)?;
+    // The figure embedded in a PDF, SVG or PNG export (E16) opens under a
+    // .fig name of its own, so that Save never overwrites the export.
+    let embedded = rustfig_format::FileFormat::sniff(&bytes).is_none();
+    let export_path = path.clone();
+    let path = if embedded {
+        let mut name = with_extension(&path, "fig");
+        if Path::new(&name).exists() {
+            name = with_extension(&path, "embedded.fig");
+        }
+        name
+    } else {
+        path
+    };
     let (dx, dy) = offset(p)?;
     if dx != 0.0 || dy != 0.0 {
         for o in &mut doc.objects {
@@ -224,10 +238,18 @@ fn open(e: &mut Engine, p: &Value) -> CmdResult {
     warnings.extend(import::load_all_pictures(&mut doc, base.as_deref()));
     let count = doc.objects.len();
     e.replace_document(doc, Some(path.clone()));
-    e.prefs.add_recent(&path);
-    e.prefs_dirty = true;
+    if embedded {
+        e.set_modified(true);
+    } else {
+        e.prefs.add_recent(&path);
+        e.prefs_dirty = true;
+    }
     let r = e.doc_bounds();
     e.view.fit(&r);
+    if embedded {
+        e.set_status(format!("Opened the figure embedded in {export_path} as {path}"));
+        return Ok(json!({"objects": count, "warnings": warnings, "embedded": true, "path": path}));
+    }
     e.set_status(format!("Opened {path}"));
     Ok(json!({"objects": count, "warnings": warnings}))
 }
@@ -574,6 +596,7 @@ fn export_on_save_params(p: &Value) -> serde_json::Map<String, Value> {
         "background",
         "active_layers_only",
         "whole_figure_bounds",
+        "embed",
         "options",
     ] {
         if let Some(value) = obj.get(key) {
@@ -1030,7 +1053,23 @@ fn write_part_of(e: &Engine, doc: &Document, part: &Part, p: &Value) -> Result<(
     if let Some(g) = &part.graphics {
         args.push(('p', Some(g.clone())));
     }
-    crate::fig2dev::export(doc, part.lang, &args, doc_dir(e).as_deref()).map_err(EngineError::format)
+    let (bytes, msgs) =
+        crate::fig2dev::export(doc, part.lang, &args, doc_dir(e).as_deref()).map_err(EngineError::format)?;
+    // "Embed the figure" (E16): the Fig text goes into the finished file.
+    if opt_bool(p, "embed")?.unwrap_or(false) && matches!(part.half, Half::Whole) {
+        if !rustfig_format::embed::can_embed(part.lang) {
+            return Err(EngineError::bad_params(format!(
+                "cannot embed the figure in {} files (only PDF, SVG and PNG)",
+                part.lang
+            )));
+        }
+        let fig = rustfig_format::write(doc, rustfig_format::FileFormat::Fig)
+            .map_err(|err| EngineError::format(err.to_string()))?;
+        let bytes = rustfig_format::embed::embed_figure(part.lang, bytes, &fig)
+            .map_err(|err| EngineError::format(err.to_string()))?;
+        return Ok((bytes, msgs));
+    }
+    Ok((bytes, msgs))
 }
 
 /// The export of `doc` in language `id` with the export parameters `p`

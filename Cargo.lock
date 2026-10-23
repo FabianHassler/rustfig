@@ -3260,6 +3260,7 @@ name = "rustfig-engine"
 version = "0.1.0"
 dependencies = [
  "fig2dev",
+ "hayro-syntax",
  "image",
  "proptest",
  "resvg",
@@ -3278,6 +3279,7 @@ name = "rustfig-format"
 version = "0.1.0"
 dependencies = [
  "fig2dev",
+ "flate2",
  "proptest",
  "rustfig-geom",
  "rustfig-model",

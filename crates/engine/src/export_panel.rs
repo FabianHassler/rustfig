@@ -53,6 +53,8 @@ pub struct PanelSettings {
     pub dpi: f64,
     pub smoothing: Option<u32>,
     pub quality: u32,
+    /// PDF, SVG, PNG: store the figure's Fig text in the file (plan E16).
+    pub embed: bool,
 }
 
 impl Default for PanelSettings {
@@ -86,6 +88,7 @@ impl PanelSettings {
             dpi: 150.0,
             smoothing: Some(1),
             quality: 75,
+            embed: false,
         }
     }
 
@@ -131,6 +134,8 @@ pub struct Rows {
     pub transparent: bool,
     /// JPEG: image quality.
     pub quality: bool,
+    /// PDF, SVG, PNG: "Embed the figure" (plan E16).
+    pub embed: bool,
     pub border: bool,
     /// The border is in pixels (bitmaps), else points.
     pub border_pixels: bool,
@@ -159,6 +164,7 @@ pub fn rows(id: &str) -> Rows {
     Rows {
         transparent: id == "gif",
         quality: id == "jpeg",
+        embed: rustfig_format::embed::can_embed(id),
         border: ps || bitmap || matches!(id, "pict2e" | "tikz" | "map"),
         border_pixels: bitmap,
         background: ps || bitmap || id == "tk",
@@ -293,6 +299,9 @@ pub fn params(e: &Engine, id: &str, s: &PanelSettings) -> Map<String, Value> {
         if let Some(sm) = s.smoothing {
             options.insert("smoothing".into(), json!(sm));
         }
+    }
+    if r.embed && s.embed {
+        out.insert("embed".into(), json!(true));
     }
     if r.quality {
         options.insert("quality".into(), json!(s.quality));
