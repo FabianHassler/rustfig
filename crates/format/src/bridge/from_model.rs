@@ -180,6 +180,14 @@ fn repair_lines(c: &mut Compound) {
             *l = saved;
         }
     }
+    // `sanitize_arc`: the last point goes onto the circle about the file's
+    // centre (an arc the reader rejects is left as it is).
+    for a in &mut c.arcs {
+        let saved = a.clone();
+        if fig2dev::read::repair_arc(a).is_err() {
+            *a = saved;
+        }
+    }
     c.compounds.iter_mut().for_each(repair_lines);
 }
 
