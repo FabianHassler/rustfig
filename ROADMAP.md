@@ -51,7 +51,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 
 ## Outlook
 
-- A WYSIWYG editor for LaTeX text in figures (special text typeset on the canvas as it will appear in the document). An idea for after 1.0; not planned yet.
+- A WYSIWYG editor for LaTeX text in figures (special text typeset on the canvas as it will appear in the document): plan F8, before the beta.
 
 ## Languages
 
