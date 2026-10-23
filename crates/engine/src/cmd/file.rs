@@ -14,6 +14,7 @@ use rustfig_format::FileFormat;
 use rustfig_model::{Document, ObjectKind, Rgb};
 use serde_json::{json, Value};
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 pub(super) fn commands() -> Vec<Command> {
@@ -1134,33 +1135,114 @@ fn uses_picture_file(objects: &[rustfig_model::Object], dir: Option<&Path>, path
 }
 
 fn export_file(e: &mut Engine, p: &Value) -> CmdResult {
+    let job = export_job(e, p)?;
+    let r = job.run(&AtomicBool::new(false))?;
+    let written: Vec<&str> = r["paths"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .collect();
+    e.set_status(format!("Exported {}", written.join(" and ")));
+    Ok(r)
+}
+
+/// An export that can run on another thread: everything it needs is
+/// snapshotted by [`export_job`] (document clone, driver options), so the
+/// UI keeps drawing while [`ExportJob::run`] converts and writes.
+pub struct ExportJob {
+    doc: Document,
+    dir: Option<std::path::PathBuf>,
+    path: String,
+    embed: bool,
+    lang: &'static str,
+    /// Target file, driver, share of the export, fig2dev's options.
+    parts: Vec<JobPart>,
+}
+
+/// Target file, driver, share of the export, fig2dev's options.
+type JobPart = (String, Part, Vec<(char, Option<String>)>);
+
+impl ExportJob {
+    /// The file the export writes (the first of its files).
+    pub fn path(&self) -> &str {
+        &self.path
+    }
+
+    /// Convert and write every file. `cancel` is checked between the
+    /// conversion steps and before any file is touched (fig2dev's drivers
+    /// have no cancel hook inside one conversion): a cancelled job writes
+    /// nothing and returns an error.
+    pub fn run(self, cancel: &AtomicBool) -> CmdResult {
+        let cancelled = || EngineError::bad_params("Export cancelled");
+        let mut outputs = Vec::with_capacity(self.parts.len());
+        let mut warnings = Vec::new();
+        for (target, part, args) in &self.parts {
+            if cancel.load(Ordering::Relaxed) {
+                return Err(cancelled());
+            }
+            let mut args = args.clone();
+            if let Some(g) = &part.graphics {
+                args.push(('p', Some(g.clone())));
+            }
+            let (mut bytes, msgs) = crate::fig2dev::export(&self.doc, part.lang, &args, self.dir.as_deref())
+                .map_err(EngineError::format)?;
+            if self.embed && matches!(part.half, Half::Whole) {
+                if !rustfig_format::embed::can_embed(part.lang) {
+                    return Err(EngineError::bad_params(format!(
+                        "cannot embed the figure in {} files (only PDF, SVG and PNG)",
+                        part.lang
+                    )));
+                }
+                let fig = rustfig_format::write(&self.doc, rustfig_format::FileFormat::Fig)
+                    .map_err(|err| EngineError::format(err.to_string()))?;
+                bytes = rustfig_format::embed::embed_figure(part.lang, bytes, &fig)
+                    .map_err(|err| EngineError::format(err.to_string()))?;
+            }
+            warnings.extend(msgs);
+            outputs.push((target.clone(), bytes));
+        }
+        if cancel.load(Ordering::Relaxed) {
+            return Err(cancelled());
+        }
+        // Every part is converted before a file is touched, so a failure leaves none.
+        let mut written = Vec::new();
+        let mut total = 0;
+        for (target, bytes) in outputs {
+            write_atomic(&target, &bytes)?;
+            total += bytes.len();
+            written.push(target);
+        }
+        Ok(json!({"path": self.path, "paths": written, "bytes": total, "format": self.lang, "warnings": warnings}))
+    }
+}
+
+/// Prepare `file.export`'s work without doing it ([`ExportJob`]): the
+/// same checks and parameters as the command.
+pub fn export_job(e: &Engine, p: &Value) -> Result<ExportJob, EngineError> {
     let path = string(p, "path")?;
     let p = &with_panel(e, p, Some(&path))?;
-    let objs: Vec<rustfig_model::Object> = scope_doc(e, p)?.objects.iter().map(|o| (**o).clone()).collect();
+    let doc = scope_doc(e, p)?.into_owned();
+    let objs: Vec<rustfig_model::Object> = doc.objects.iter().map(|o| (**o).clone()).collect();
     if uses_picture_file(&objs, doc_dir(e).as_deref(), Path::new(&path)) {
         return Err(EngineError::bad_params(format!(
             "\"{path}\" is an input file.\nExport aborted"
         )));
     }
     let lang = export_language(p, Some(&path))?;
-    let parts = parts(lang, &path);
-    // Write every part before touching a file, so a failure leaves none.
-    let mut outputs = Vec::with_capacity(parts.len());
-    let mut warnings = Vec::new();
-    for (target, part) in &parts {
-        let (bytes, msgs) = write_part(e, part, p)?;
-        warnings.extend(msgs);
-        outputs.push((target.clone(), bytes));
+    let mut parts_with_args = Vec::new();
+    for (target, part) in parts(lang, &path) {
+        let args = driver_args(e, part.lang, part.half, p)?;
+        parts_with_args.push((target, part, args));
     }
-    let mut written = Vec::new();
-    let mut total = 0;
-    for (target, bytes) in outputs {
-        write_atomic(&target, &bytes)?;
-        total += bytes.len();
-        written.push(target);
-    }
-    e.set_status(format!("Exported {}", written.join(" and ")));
-    Ok(json!({"path": path, "paths": written, "bytes": total, "format": lang.id, "warnings": warnings}))
+    Ok(ExportJob {
+        doc,
+        dir: doc_dir(e),
+        path,
+        embed: opt_bool(p, "embed")?.unwrap_or(false),
+        lang: lang.id,
+        parts: parts_with_args,
+    })
 }
 
 /// `p` with the Export panel's settings for its language when it has

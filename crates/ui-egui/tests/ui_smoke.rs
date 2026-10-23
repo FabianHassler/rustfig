@@ -26,6 +26,19 @@ fn open_edit(h: &mut Harness<'static, App>) {
     }
 }
 
+/// Run frames until the background export (W10-13) has been collected.
+fn wait_export(h: &mut Harness<'static, App>) {
+    for _ in 0..400 {
+        h.run_steps(1);
+        if h.state().export_bg.is_none() {
+            h.run_steps(1);
+            return;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(25));
+    }
+    panic!("the export did not finish");
+}
+
 fn app() -> App {
     let mut a = App::with_engine(Engine::new());
     a.file_dialogs = Box::new(ScriptedDialogs::default());
@@ -557,6 +570,7 @@ fn export_on_save_checkbox_keeps_the_export_current() {
     h.run_steps(2);
     h.get_by_label("Export…").click();
     h.run_steps(2);
+    wait_export(&mut h);
     let setting = h
         .state()
         .engine
@@ -590,6 +604,7 @@ fn export_dialog_embed_checkbox_makes_an_editable_pdf() {
     h.run_steps(2);
     h.get_by_label("Export…").click();
     h.run_steps(2);
+    wait_export(&mut h);
     h.state_mut().run("file.open", json!({"path": pdf}));
     assert_eq!(h.state().engine.doc().objects.len(), 1, "the PDF opens as the figure");
     let _ = std::fs::remove_dir_all(&dir);
@@ -614,6 +629,7 @@ fn export_dialog_lists_xfigs_languages() {
     h.run_steps(2);
     h.get_by_label("Export…").click();
     h.run_steps(2);
+    wait_export(&mut h);
     let text = std::fs::read_to_string(&out).unwrap();
     assert!(text.starts_with("\\makebox["), "{text}");
     std::fs::remove_dir_all(&dir).unwrap();
@@ -874,8 +890,64 @@ fn return_exports_from_the_panel() {
     h.state_mut().run("app.export", json!({}));
     h.run_steps(2);
     press_key(&mut h, egui::Key::Enter, egui::Modifiers::NONE);
+    wait_export(&mut h);
     assert!(std::path::Path::new(&out).exists());
     assert!(!h.state().dialogs.export.open);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// W10-13: the panel's export runs on a thread; the UI keeps drawing, the
+/// progress window has Cancel, and the finished file gets "Show in folder".
+#[test]
+fn export_runs_in_the_background_and_writes_the_file() {
+    let dir = std::env::temp_dir().join(format!("rustfig-export-bg-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let out = dir.join("bg.pdf").to_string_lossy().into_owned();
+    let mut a = app();
+    a.file_dialogs = Box::new(ScriptedDialogs::new([Some(out.clone())]));
+    a.run("shape.rectangle", json!({"x": 0, "y": 0, "width": 600, "height": 300}));
+    let mut h = harness(a);
+    h.state_mut().run("app.export", json!({}));
+    h.run_steps(2);
+    h.get_by_label("Export…").click();
+    h.run_steps(1);
+    wait_export(&mut h);
+    assert!(std::path::Path::new(&out).exists(), "file written once frames ran");
+    assert!(!h.state().dialogs.export.open, "panel closes when done");
+    assert_eq!(h.state().last_export.as_deref(), Some(out.as_str()));
+    h.run_steps(2);
+    assert!(h.query_all_by_label("Show in folder").count() >= 1);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// W10-13: Cancel discards the result: no file appears.
+#[test]
+fn cancelling_a_background_export_discards_it() {
+    let dir = std::env::temp_dir().join(format!("rustfig-export-cancel-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let out = dir.join("cancelled.pdf").to_string_lossy().into_owned();
+    let mut a = app();
+    a.file_dialogs = Box::new(ScriptedDialogs::new([Some(out.clone())]));
+    a.run("shape.rectangle", json!({"x": 0, "y": 0, "width": 600, "height": 300}));
+    let mut h = harness(a);
+    h.state_mut().run("app.export", json!({}));
+    h.run_steps(2);
+    h.get_by_label("Export…").click();
+    h.run_steps(1);
+    // Cancel at once, in the same frame sequence the export started in.
+    // (A very fast export may already be collected; then there is nothing to cancel.)
+    let running = h.state().export_bg.is_some();
+    if running {
+        h.state_mut().run("app.cancel_export", json!({}));
+    }
+    assert!(h.state().export_bg.is_none());
+    h.run_steps(2);
+    std::thread::sleep(std::time::Duration::from_millis(500));
+    h.run_steps(2);
+    if running {
+        assert!(h.state().last_export.is_none(), "a cancelled export reports nothing");
+        assert_eq!(h.query_all_by_label("Show in folder").count(), 0);
+    }
     let _ = std::fs::remove_dir_all(&dir);
 }
 

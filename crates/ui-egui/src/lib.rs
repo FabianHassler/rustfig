@@ -19,6 +19,8 @@ pub mod control;
 pub mod dialogs;
 pub mod digitize;
 pub mod dimline_panel;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod export_bg;
 pub mod font_chooser;
 pub mod help;
 pub mod inject;
@@ -131,6 +133,12 @@ pub struct App {
     /// The override set during the previous frame, shown in this one.
     pub hint_shown: Option<(&'static str, &'static str, &'static str)>,
     pub pending: Option<Pending>,
+    /// The Export panel's export running on its thread (W10-13).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub export_bg: Option<export_bg::Running>,
+    /// The file the last background export wrote ("Show in folder").
+    #[cfg(not(target_arch = "wasm32"))]
+    pub last_export: Option<String>,
     /// The Digitize window (S4-8).
     pub digitize: digitize::Digitize,
     /// Autorefresh mode and the changed-on-disk question (S4-9).
@@ -189,6 +197,10 @@ impl App {
             xfig_keys: true,
             open_menu: None,
             pending: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            export_bg: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            last_export: None,
             digitize: digitize::Digitize::default(),
             reload: reload::Reload::default(),
             after_save: None,
@@ -505,6 +517,8 @@ impl App {
             .frame(egui::Frame::NONE)
             .show(ctx, |ui| canvas::show(self, ui, &tokens));
         dialogs::show(self, ctx);
+        #[cfg(not(target_arch = "wasm32"))]
+        export_bg::tick(self, ctx);
         digitize::show(self, ctx);
         charmap::show(self, ctx);
         keys_sheet::show(self, ctx);
