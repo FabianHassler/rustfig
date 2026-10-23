@@ -204,19 +204,99 @@ fn edit_follows_a_moved_frame() {
     assert_eq!(frame.points[0].x, 1600.0, "redrawn where the user moved it");
 }
 
+fn kinds(o: &Object) -> Vec<String> {
+    members(o)
+        .iter()
+        .filter_map(|m| m.comments.iter().find_map(|c| c.strip_prefix("rustfig-plot-part: ")))
+        .map(str::to_string)
+        .collect()
+}
+
 #[test]
-fn plot_mode_drag_and_click_request_the_dialog() {
+fn every_generated_part_is_marked() {
+    let mut e = Engine::new();
+    let r = e
+        .execute(
+            "plot.add",
+            &json!({"expr": "sin(x)", "grid": true, "xlabel": "x", "ylabel": "y"}),
+        )
+        .unwrap();
+    let o = e.doc().get(ObjectId(r["id"].as_u64().unwrap())).unwrap();
+    assert_eq!(kinds(o).len(), members(o).len(), "no unmarked part");
+    for k in ["frame", "grid", "tick", "number", "label", "curve"] {
+        assert!(kinds(o).iter().any(|x| x == k), "no {k}");
+    }
+}
+
+#[test]
+fn redraw_replaces_only_the_marked_parts() {
+    let mut e = Engine::new();
+    let id = sine(&mut e);
+    let parts = members(e.doc().get(ObjectId(id)).unwrap()).len();
+    // Edit inside the compound: add a box of your own and restyle a tick.
+    e.execute("compound.open", &json!({"id": id})).unwrap();
+    e.execute("shape.rectangle", &json!({"x": 10, "y": 10, "width": 50, "height": 50}))
+        .unwrap();
+    e.execute("compound.close", &json!({})).unwrap();
+    let o = e.doc().get(ObjectId(id)).unwrap();
+    assert!(
+        o.comments.iter().any(|c| c.starts_with("rustfig-plot:")),
+        "the plot comment stays"
+    );
+    assert_eq!(members(o).len(), parts + 1);
+    // Redraw with another curve: the user's box stays, the parts are new.
+    e.execute("plot.update", &json!({"id": id, "expr": "cos(x)", "grid": true}))
+        .unwrap();
+    let o = e.doc().get(ObjectId(id)).unwrap();
+    let own: Vec<_> = members(o)
+        .iter()
+        .filter(|m| m.comments.iter().all(|c| !c.starts_with("rustfig-plot-part:")))
+        .collect();
+    assert_eq!(own.len(), 1);
+    assert!(matches!(&own[0].kind, ObjectKind::Polyline(p) if p.points.iter().any(|q| q.x == 10.0)));
+    assert_eq!(
+        kinds(o).iter().filter(|k| *k == "curve").count(),
+        1,
+        "no duplicate curve"
+    );
+    assert!(kinds(o).iter().any(|k| k == "grid"));
+    assert!(o.comments.iter().filter(|c| c.starts_with("rustfig-plot:")).count() == 1);
+}
+
+#[test]
+fn breaking_a_plot_leaves_an_ordinary_drawing() {
+    let mut e = Engine::new();
+    let id = sine(&mut e);
+    e.execute("object.ungroup", &json!({"ids": [id]})).unwrap();
+    assert!(e.doc().objects.len() > 10);
+    for o in &e.doc().objects {
+        assert!(
+            o.comments.iter().all(|c| !c.starts_with("rustfig-plot")),
+            "{:?}",
+            o.comments
+        );
+    }
+    assert!(e.execute("plot.update", &json!({"id": id})).is_err());
+}
+
+#[test]
+fn plot_mode_two_corners_request_the_dialog() {
     let mut e = Engine::new();
     e.set_tool(ToolKind::Plot);
-    let h = e.mouse_hints();
-    assert!(!h.left.is_empty());
+    assert_eq!(e.mouse_hints().left, "first corner");
     let ev = |e: &mut Engine, ev: ToolEvent| e.tool_event(ev).unwrap();
+    let press = |x: f64, y: f64, button: Button| ToolEvent::Press {
+        pos: Point::new(x, y),
+        button,
+        shift: false,
+    };
+    // The first click sets a corner, a rubber band follows, no dialog yet.
+    ev(&mut e, press(600.0, 600.0, Button::Left));
     ev(
         &mut e,
-        ToolEvent::Press {
+        ToolEvent::Release {
             pos: Point::new(600.0, 600.0),
             button: Button::Left,
-            shift: false,
         },
     );
     ev(
@@ -225,6 +305,11 @@ fn plot_mode_drag_and_click_request_the_dialog() {
             pos: Point::new(3000.0, 2400.0),
         },
     );
+    assert!(e.take_requests().is_empty(), "one click opens nothing");
+    assert_eq!(e.mouse_hints().left, "final point");
+    assert_eq!(e.mouse_hints().right, "cancel");
+    assert!(!e.overlay().preview.is_empty(), "the rubber band shows");
+    // A release after a drag does not finish it either.
     ev(
         &mut e,
         ToolEvent::Release {
@@ -232,6 +317,9 @@ fn plot_mode_drag_and_click_request_the_dialog() {
             button: Button::Left,
         },
     );
+    assert!(e.take_requests().is_empty());
+    // The second click opens the dialog for that frame.
+    ev(&mut e, press(3000.0, 2400.0, Button::Left));
     let reqs = e.take_requests();
     assert!(
         matches!(
@@ -241,30 +329,19 @@ fn plot_mode_drag_and_click_request_the_dialog() {
         ),
         "{reqs:?}"
     );
-    // A click: the default size.
-    ev(
-        &mut e,
-        ToolEvent::Press {
-            pos: Point::new(100.0, 100.0),
-            button: Button::Left,
-            shift: false,
-        },
-    );
-    ev(
-        &mut e,
-        ToolEvent::Release {
-            pos: Point::new(100.0, 100.0),
-            button: Button::Left,
-        },
-    );
-    let reqs = e.take_requests();
-    assert!(
-        matches!(
-            reqs.as_slice(),
-            [UiRequest::PlotDialog { rect: Some(r), edit: None }] if (r.width() - 4800.0).abs() < 1e-6
-        ),
-        "{reqs:?}"
-    );
+    assert!(e.overlay().preview.is_empty());
+    // The right button cancels the frame in progress.
+    ev(&mut e, press(100.0, 100.0, Button::Left));
+    ev(&mut e, press(500.0, 500.0, Button::Right));
+    ev(&mut e, press(900.0, 900.0, Button::Left));
+    assert!(e.take_requests().is_empty(), "the click after cancel is a first corner");
+    ev(&mut e, press(900.0, 900.0, Button::Right));
+    // The same point twice is no frame.
+    ev(&mut e, press(100.0, 100.0, Button::Left));
+    ev(&mut e, press(100.0, 100.0, Button::Left));
+    assert!(e.take_requests().is_empty());
+    // Nothing is drawn until the dialog runs plot.add.
+    assert!(e.doc().objects.is_empty());
     // Nothing is drawn until the dialog runs plot.add.
     assert!(e.doc().objects.is_empty());
     // plot.panel and plot.edit.

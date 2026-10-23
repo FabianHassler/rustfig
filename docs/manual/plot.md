@@ -6,10 +6,10 @@ A plot is **one compound**: the frame, the ticks with their numbers, an optional
 
 ## Plot
 
-Key `y`. The last button of the Drawing column (below the library button); the same as the Edit menu's **Plot curve...** (Ctrl+Shift+P, Cmd+Shift+P on macOS).
+Key `y`. The last button of the Drawing column, beside the library button; the same as the Edit menu's **Plot curve...** (Ctrl+Shift+P, Cmd+Shift+P on macOS).
 
-- Left, “corner point”: press where one corner of the plot's frame goes, drag to the opposite corner and release; the Plot dialog opens. A click without dragging places a frame of the default size (4 by 2.5 inches) with the clicked point as its upper left corner. Nothing is drawn until you press **Draw plot** in the dialog; Cancel leaves the drawing as it was.
-- The middle button does nothing in this mode; the right button cancels a frame you have started.
+- Left, “first corner”: click where one corner of the plot's frame goes, as in Box mode. A rubber-band rectangle follows the pointer and the left button now says “final point”: click the opposite corner and the Plot dialog opens for that frame. A single click opens nothing. Nothing is drawn until you press **Draw plot** in the dialog; Cancel leaves the drawing as it was.
+- The right button, “cancel”, drops the frame you have started. The middle button does nothing in this mode.
 
 Edit > **Plot curve...** opens the same dialog without placing a frame: the plot goes to the origin at the default size.
 
@@ -31,7 +31,11 @@ Where the function is not defined (division by zero, the root of a negative numb
 
 ## Edit plot
 
-Edit > **Edit plot...** (and Edit mode's left button on a plot) opens the dialog filled with the plot's settings. **Draw plot** redraws it in its present frame, where you have moved or scaled it; things you drew onto the plot yourself are replaced, since the plot is drawn again from its settings. Undo brings the old one back.
+A plot stays one compound that carries the `rustfig-plot:` comment, and every part RustFig generated (the frame, grid lines, ticks, numbers, labels and the curve) carries a marker comment such as `rustfig-plot-part: curve`.
+
+- **Edit inside**: use Open compound (see [Compounds](compounds.md)) to move, restyle or delete single parts, or to add your own objects (an arrow, a note, a second curve you drew by hand).
+- **Redraw**: while the compound keeps its plot comment, Edit > **Edit plot...** (and Edit mode's left button on the plot) opens the dialog filled with the plot's settings, and **Draw plot** redraws it in its present frame, where you have moved or scaled it. Redraw replaces only the marked parts. Objects you added are kept, with their changes. A generated part you edited keeps its marker, so it is replaced by the redraw as well; to keep such a part, remove its marker comment first (Edit mode, comments) or draw a copy. Undo brings the old plot back.
+- **Break**: Break compound (see [Compounds](compounds.md)) turns the plot into an ordinary drawing: the plot comment goes away with the compound and the parts lose their markers. It can no longer be edited as a plot.
 
 ## Commands
 

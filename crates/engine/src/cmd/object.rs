@@ -220,8 +220,14 @@ fn ungroup(e: &mut Engine, p: &Value) -> CmdResult {
         match &o.kind {
             ObjectKind::Compound(_) if ids.contains(&o.id) => {
                 broke += 1;
+                // A broken plot (E12) is an ordinary drawing: its parts lose
+                // their markers (the plot comment goes with the compound).
+                let was_plot = super::plot::is_plot(&o);
                 if let ObjectKind::Compound(c) = Arc::unwrap_or_clone(o).kind {
-                    for child in c.objects {
+                    for mut child in c.objects {
+                        if was_plot {
+                            crate::plot::strip_part_marker(&mut child);
+                        }
                         freed.push(child.id);
                         out.push(Arc::new(child));
                     }

@@ -1051,7 +1051,11 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
         let b = Point::new(fig(rect.max.x), fig(rect.max.y));
         let mut frame = thin(LineKind::Solid, depth);
         frame.thickness = look.curve.thickness.clamp(1, 3);
-        members.push(Object::new(ObjectKind::Polyline(Polyline::rect(frame, a, b))));
+        push_part(
+            &mut members,
+            "frame",
+            Object::new(ObjectKind::Polyline(Polyline::rect(frame, a, b))),
+        );
     }
 
     let size = look.font_size.clamp(6.0, 72.0);
@@ -1092,24 +1096,33 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
             let len = if t.label.is_some() { tick_len } else { 0.5 * tick_len };
             if spec.grid && t.label.is_some() {
                 let g = thin(LineKind::Dotted, depth + 1);
-                members.push(line(
-                    g,
-                    vec![Point::new(x, fig(rect.min.y)), Point::new(x, fig(rect.max.y))],
-                ));
+                push_part(
+                    &mut members,
+                    "grid",
+                    line(g, vec![Point::new(x, fig(rect.min.y)), Point::new(x, fig(rect.max.y))]),
+                );
             }
-            members.push(line(
-                thin(LineKind::Solid, depth),
-                vec![Point::new(x, fig(rect.max.y)), Point::new(x, fig(rect.max.y - len))],
-            ));
+            push_part(
+                &mut members,
+                "tick",
+                line(
+                    thin(LineKind::Solid, depth),
+                    vec![Point::new(x, fig(rect.max.y)), Point::new(x, fig(rect.max.y - len))],
+                ),
+            );
             if let Some(l) = &t.label {
-                members.push(text(
-                    l,
-                    Justify::Center,
-                    Point::new(x, fig(rect.max.y + gap + tick_h)),
-                    0.0,
-                    tick_size,
-                    false,
-                ));
+                push_part(
+                    &mut members,
+                    "number",
+                    text(
+                        l,
+                        Justify::Center,
+                        Point::new(x, fig(rect.max.y + gap + tick_h)),
+                        0.0,
+                        tick_size,
+                        false,
+                    ),
+                );
             }
         }
         for t in ticks(r.y0, r.y1, spec.log_y) {
@@ -1117,51 +1130,68 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
             let len = if t.label.is_some() { tick_len } else { 0.5 * tick_len };
             if spec.grid && t.label.is_some() {
                 let g = thin(LineKind::Dotted, depth + 1);
-                members.push(line(
-                    g,
-                    vec![Point::new(fig(rect.min.x), y), Point::new(fig(rect.max.x), y)],
-                ));
+                push_part(
+                    &mut members,
+                    "grid",
+                    line(g, vec![Point::new(fig(rect.min.x), y), Point::new(fig(rect.max.x), y)]),
+                );
             }
-            members.push(line(
-                thin(LineKind::Solid, depth),
-                vec![Point::new(fig(rect.min.x), y), Point::new(fig(rect.min.x + len), y)],
-            ));
+            push_part(
+                &mut members,
+                "tick",
+                line(
+                    thin(LineKind::Solid, depth),
+                    vec![Point::new(fig(rect.min.x), y), Point::new(fig(rect.min.x + len), y)],
+                ),
+            );
             if let Some(l) = &t.label {
                 left_width = left_width.max(l.chars().count() as f64 * tick_size * unit * 0.55);
-                members.push(text(
-                    l,
-                    Justify::Right,
-                    Point::new(fig(rect.min.x - gap), fig(y + 0.35 * tick_h)),
-                    0.0,
-                    tick_size,
-                    false,
-                ));
+                push_part(
+                    &mut members,
+                    "number",
+                    text(
+                        l,
+                        Justify::Right,
+                        Point::new(fig(rect.min.x - gap), fig(y + 0.35 * tick_h)),
+                        0.0,
+                        tick_size,
+                        false,
+                    ),
+                );
             }
         }
         let label_size = size;
         let label_h = label_size * unit * 0.75;
         if !spec.xlabel.trim().is_empty() {
             let y = rect.max.y + gap + tick_h + gap + label_h * 1.1;
-            members.push(text(
-                &spec.xlabel,
-                Justify::Center,
-                Point::new(fig(0.5 * (rect.min.x + rect.max.x)), fig(y)),
-                0.0,
-                label_size,
-                spec.latex,
-            ));
+            push_part(
+                &mut members,
+                "label",
+                text(
+                    &spec.xlabel,
+                    Justify::Center,
+                    Point::new(fig(0.5 * (rect.min.x + rect.max.x)), fig(y)),
+                    0.0,
+                    label_size,
+                    spec.latex,
+                ),
+            );
         }
         if !spec.ylabel.trim().is_empty() {
             // Reads upwards; the baseline lies right of the glyphs.
             let x = rect.min.x - gap - left_width - gap;
-            members.push(text(
-                &spec.ylabel,
-                Justify::Center,
-                Point::new(fig(x), fig(0.5 * (rect.min.y + rect.max.y))),
-                std::f64::consts::FRAC_PI_2,
-                label_size,
-                spec.latex,
-            ));
+            push_part(
+                &mut members,
+                "label",
+                text(
+                    &spec.ylabel,
+                    Justify::Center,
+                    Point::new(fig(x), fig(0.5 * (rect.min.y + rect.max.y))),
+                    std::f64::consts::FRAC_PI_2,
+                    label_size,
+                    spec.latex,
+                ),
+            );
         }
     }
 
@@ -1182,7 +1212,7 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
         if pts.len() >= 2 {
             total += pts.len();
             count += 1;
-            members.push(line(look.curve, pts));
+            push_part(&mut members, "curve", line(look.curve, pts));
         }
     }
     if count == 0 {
@@ -1200,17 +1230,45 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
     })
 }
 
+/// The comment line that marks a generated part of a plot (frame, grid,
+/// tick, number, label, curve); "Redraw" replaces exactly the marked parts.
+pub const PART_COMMENT: &str = "rustfig-plot-part:";
+
+fn push_part(members: &mut Vec<Object>, kind: &str, mut o: Object) {
+    o.comments = vec![format!("{PART_COMMENT} {kind}")];
+    members.push(o);
+}
+
+/// Whether the object is a generated part of a plot.
+pub fn is_part(o: &Object) -> bool {
+    part_kind(o).is_some()
+}
+
+fn part_kind(o: &Object) -> Option<&str> {
+    o.comments
+        .iter()
+        .find_map(|c| c.trim_start().strip_prefix(PART_COMMENT))
+        .map(str::trim)
+}
+
+/// Remove the part markers of a member of a compound that is being broken:
+/// the pieces become an ordinary drawing.
+pub fn strip_part_marker(o: &mut Object) {
+    o.comments.retain(|c| !c.trim_start().starts_with(PART_COMMENT));
+}
+
 /// The frame of an existing plot: its first member when that is a box (the
 /// frame, wherever the user moved or scaled it), else the stored rectangle.
 pub fn frame_of(o: &Object, spec: &PlotSpec) -> Option<Rect> {
     if let ObjectKind::Compound(c) = &o.kind {
+        let frame = c.objects.iter().find(|m| part_kind(m) == Some("frame"));
         if let Some(Object {
             kind: ObjectKind::Polyline(p),
             ..
-        }) = c.objects.first()
+        }) = frame
         {
-            if p.kind == PolyKind::Box && !p.points.is_empty() {
-                let mut r = Rect::new(p.points[0], p.points[0]);
+            if let (PolyKind::Box, Some(first)) = (p.kind, p.points.first()) {
+                let mut r = Rect::new(*first, *first);
                 for q in &p.points {
                     r = Rect::new(
                         Point::new(r.min.x.min(q.x), r.min.y.min(q.y)),

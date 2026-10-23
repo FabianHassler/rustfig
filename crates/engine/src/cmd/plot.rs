@@ -7,7 +7,7 @@ use super::{always, num_or, opt_str, CmdResult, Command};
 use crate::plot::{self, PlotLook, PlotMode, PlotSpec};
 use crate::{Engine, EngineError, UiRequest};
 use rustfig_geom::{Point, Rect};
-use rustfig_model::{ColorRef, ObjectId, ObjectKind};
+use rustfig_model::{ColorRef, Object, ObjectId, ObjectKind};
 use serde_json::{json, Value};
 use std::sync::Arc;
 
@@ -194,6 +194,26 @@ fn update(e: &mut Engine, p: &Value) -> CmdResult {
     let idx = doc
         .index_of(id)
         .ok_or_else(|| EngineError::bad_params("the plot is gone"))?;
+    // Only the generated parts are replaced: what the user added to the
+    // plot (in an open compound) and left unmarked stays, and so do other
+    // comments of the compound.
+    if let Some(Object {
+        kind: ObjectKind::Compound(old),
+        comments,
+        ..
+    }) = doc.objects.get(idx).map(|o| &**o)
+    {
+        if let ObjectKind::Compound(new) = &mut obj.kind {
+            new.objects
+                .extend(old.objects.iter().filter(|m| !plot::is_part(m)).cloned());
+        }
+        obj.comments.extend(
+            comments
+                .iter()
+                .filter(|c| !c.trim_start().starts_with(plot::PLOT_COMMENT))
+                .cloned(),
+        );
+    }
     doc.reassign_ids(&mut obj);
     obj.id = id;
     if let Some(slot) = doc.objects.get_mut(idx) {

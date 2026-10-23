@@ -1563,8 +1563,17 @@ impl Engine {
             }
             ToolEvent::Release { pos, button } => {
                 let p = self.snap(pos);
-                // Plot: a click without a drag places the plot at its
-                // default size, the clicked point being its upper left corner.
+                // Plot, as xfig's Box: the first click sets a corner, the
+                // second click (not a release) the opposite one.
+                if matches!(
+                    self.tool_state,
+                    ToolState::Drag {
+                        kind: ToolKind::Plot,
+                        ..
+                    }
+                ) {
+                    return Ok(());
+                }
                 if let ToolState::Drag {
                     start,
                     dragged: false,
@@ -3129,7 +3138,7 @@ impl Engine {
                 ("del point", if ready { "finish here" } else { "" }, "")
             }
             (ToolState::Idle, ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture) => ("", "square at center", ""),
-            (ToolState::Idle, ToolKind::Plot) => ("corner point", "", ""),
+            (ToolState::Idle, ToolKind::Plot) => ("first corner", "", ""),
             (ToolState::Idle, ToolKind::AreaMeasure) => ("locate object", "", "reset to +-0"),
             (ToolState::Idle, ToolKind::Edit) => ("locate object", "show comments", ""),
             (ToolState::Idle | ToolState::Chop { .. }, t) if t.locates() => ("locate object", "", ""),
@@ -3272,7 +3281,8 @@ impl Engine {
                     ToolKind::Arc => ("first point", "center point", ""),
                     ToolKind::CircleRadius | ToolKind::EllipseRadii => ("Circle center", "Ellipse center", ""),
                     ToolKind::CircleDiameter | ToolKind::EllipseDiameter => ("Circle diameter", "Ellipse corner", ""),
-                    ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture | ToolKind::Plot => ("corner point", "", ""),
+                    ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture => ("corner point", "", ""),
+                    ToolKind::Plot => ("first corner", "", ""),
                     ToolKind::RegularPolygon => ("center point", "", ""),
                     ToolKind::Text => ("position cursor", "", ""),
                     ToolKind::Glue => ("tag object", "tag region", glue),
