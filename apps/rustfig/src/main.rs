@@ -11,13 +11,14 @@ fn main() -> eframe::Result<()> {
             rustfig_engine::fig2dev::process_args(),
         )));
     }
-    if std::env::args().nth(1).as_deref() == Some("fig2dev") {
+    // (`args_os`, lossily: a file name that is not UTF-8 must not abort the start.)
+    if rustfig_engine::fig2dev::process_args().first().map(String::as_str) == Some("fig2dev") {
         let mut args = rustfig_engine::fig2dev::process_args();
         args.drain(..1.min(args.len()));
         std::process::exit(i32::from(rustfig_engine::fig2dev::run_cli(args)));
     }
     // xfig's command line (S3), plus RustFig's --control and --background.
-    let opts = match rustfig_engine::cmdline::parse(std::env::args().skip(1)) {
+    let opts = match rustfig_engine::cmdline::parse(rustfig_engine::fig2dev::process_args()) {
         Ok(o) => o,
         Err(e) => {
             eprintln!("{e}");
@@ -189,7 +190,7 @@ fn main() {
         else {
             return;
         };
-        let _ = eframe::WebRunner::new()
+        let started = eframe::WebRunner::new()
             .start(
                 canvas,
                 web_options,
@@ -201,6 +202,13 @@ fn main() {
                     )))
                 }),
             )
-            .await; // start-up errors are shown by eframe in the page
+            .await;
+        // The page's "Loading" text goes once the app runs; a start-up error
+        // is shown by eframe in the page.
+        if started.is_ok() {
+            if let Some(l) = document.get_element_by_id("loading") {
+                l.remove();
+            }
+        }
     });
 }

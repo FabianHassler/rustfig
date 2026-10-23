@@ -1,6 +1,6 @@
 # RustFig roadmap
 
-**Status (2026-10-23):** Stage **Alpha**. Overall xfig parity **≈73 %**
+**Status (2026-10-23):** Stage **Alpha**. Overall xfig parity **≈79 %**
 ([assessment](docs/target-app-parity.md)). The native app draws, edits,
 saves and exports. The web build compiles; it is not yet packaged or tested in a browser.
 
@@ -17,7 +17,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 
 | Measure | Value |
 |---------|-------|
-| Overall parity (weighted) | ≈73 % |
+| Overall parity (weighted) | ≈79 % |
 | Commands (all reachable from the control channel and MCP) | 216 engine (incl. 44 tool modes and "no mode") + 29 UI |
 | Interactive tools (xfig modes) | 44 (xfig's 43 + Trim/Split/Extend) |
 | Tests | 589 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
@@ -73,6 +73,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 | Date | Change |
 |------|--------|
 | 2026-10-23 | E5 (character map lists only drawable characters), S4-7 (Shift/Ctrl meanings in the mouse-function indicator), D10 done (dimension-line lengths as fractions of an inch, example-line preview and arrow pictures in the Dimension line window), W10-14 (saved versions: `file.versions`, `file.restore_version`, File > Saved versions…), W9 fix (cap and join pictures redrawn as xfig's). 2 engine commands. |
+| 2026-10-23 | Parity ≈73 → ≈79 %: B5 printing with preview (Printing 10 → 85 %), C1 web packaging, C2 browser file I/O, P2 platform checks (Platforms 50 → 70 %); F1 system fonts (fig2dev v0.7.0). |
 | 2026-10-22 | Recount: parity ≈65 → ≈73 % (Text 55 → 65 %, Settings & styles 15 → 75 %). Since the last entry: D5 measure modes, S3 command line, W10 panels (picture, compound, edit panel live, point table, export panel), D10 mode options, S4 (locate, paste, cursors, convert, shape factor, relative pictures, Digitize, Autorefresh, New window), E3 zoom box, D16 Trim mode, D17 Escape levels, E10 text editing, E4/E4b colours and pick from screen, E6 styles, D18 no selection layer (xfig's mode-first way). 214 engine commands, 589 tests. |
 | 2026-10-22 | W10-28, W10-2: the bundled, searchable, offline manual: 27 Markdown topics in `docs/manual/` compiled into the app (`crates/ui-egui/src/help.rs`: topic list, search, a small Markdown renderer, links between topics), opened by Help > RustFig Manual (xfig's Help `x`) and by the UI command `help.open` with `topic`; every mode has a section quoting the mouse indicator's words, tests fail when a mode is undocumented, a quote drifts or a link breaks. Help menu: RustFig Manual, command reference, About. |
 | 2026-10-22 | P1 (workflow ready, first run pending): `ci.yml` runs the gates on Linux, Windows and macOS (wasm check and perf budgets on Linux only, `RUSTFIG_SKIP_WASM` for the others, rust-cache per OS); `.gitattributes` forces LF. |

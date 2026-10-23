@@ -24,7 +24,7 @@ an object's comment, with a plain Fig fallback), never extend or break it.
 
 ## Status
 
-**Alpha. Overall xfig parity ≈73 %** (see [ROADMAP.md](ROADMAP.md) and the
+**Alpha. Overall xfig parity ≈79 %** (see [ROADMAP.md](ROADMAP.md) and the
 [parity assessment](docs/target-app-parity.md)).
 
 - Draw: circles, ellipses, approximated/interpolated/X-splines, polylines,

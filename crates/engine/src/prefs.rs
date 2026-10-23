@@ -23,22 +23,12 @@ pub use toml::Value as TomlValue;
 /// The settings file in the platform's config folder (native).
 #[cfg(not(target_arch = "wasm32"))]
 pub fn config_path() -> Option<std::path::PathBuf> {
-    use std::path::PathBuf;
-    let env = |k: &str| std::env::var_os(k).filter(|v| !v.is_empty()).map(PathBuf::from);
+    use crate::dirs::{config_dir, process_env, HostOs};
     // Scripts, tests and agents keep their settings apart from the user's.
-    if let Some(d) = env("RUSTFIG_SETTINGS_DIR") {
+    if let Some(d) = process_env("RUSTFIG_SETTINGS_DIR") {
         return Some(d.join("settings.toml"));
     }
-    let dir = if cfg!(target_os = "macos") {
-        env("HOME").map(|h| h.join("Library/Application Support/RustFig"))
-    } else if cfg!(windows) {
-        env("APPDATA").map(|d| d.join("RustFig"))
-    } else {
-        env("XDG_CONFIG_HOME")
-            .or_else(|| env("HOME").map(|h| h.join(".config")))
-            .map(|d| d.join("rustfig"))
-    };
-    dir.map(|d| d.join("settings.toml"))
+    config_dir(HostOs::current(), &process_env).map(|d| d.join("settings.toml"))
 }
 
 /// Recently used colours kept (E4).

@@ -3430,6 +3430,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "ttf-parser",
+ "wasm-bindgen-futures",
  "web-sys",
  "zip",
 ]

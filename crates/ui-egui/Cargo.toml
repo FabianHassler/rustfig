@@ -37,3 +37,6 @@ clipboard-rs = { version = "0.3.5", default-features = false }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 web-sys = { workspace = true, features = ["Window", "Storage"] }
+# Open (file picker) and downloads (C2): rfd's async dialogs.
+rfd.workspace = true
+wasm-bindgen-futures.workspace = true

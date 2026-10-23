@@ -24,3 +24,9 @@ While you work, RustFig writes a recovery copy of any drawing with unsaved chang
 ## Starting from the command line
 
 Running `rustfig FILE.fig` opens a file at start. See [Automation](automation.md).
+
+## The web version
+
+RustFig also runs in a browser (WebAssembly). Build it with `cargo xtask web` (needs `trunk`: `cargo install --locked trunk`) and serve the `dist/` folder with any static web server, or run `cargo xtask web --serve` and open http://127.0.0.1:8080. The page shows "Loading RustFig…" until the program has started.
+
+In the browser there are no file paths. **File > Open** shows the browser's file picker (a Fig file, or a PDF, SVG or PNG export with the figure embedded); you can also drop such a file on the window. **File > Save** and **Save As** download the figure as a file named after the open one (`figure.fig` for a new figure; the browser decides the folder), and **File > Export** downloads each exported file. Pictures inside a figure are not found in the browser: they stay as empty boxes with their names.

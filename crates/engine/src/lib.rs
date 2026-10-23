@@ -11,6 +11,7 @@ pub mod cmd;
 pub mod cmdline;
 pub mod coords;
 pub mod dimline;
+pub mod dirs;
 mod error;
 pub mod export_panel;
 pub mod fig2dev;
@@ -32,7 +33,7 @@ pub mod tools;
 mod view;
 
 pub use anglegeom::{constrain as constrain_angle, AngleGeom};
-pub use cmd::file::{export_job, ExportJob};
+pub use cmd::file::{base64, base64_decode, export_job, ExportJob};
 pub use error::EngineError;
 pub use indicator::{arrow_choice, arrow_choice_of, GridMode, Indicator, LinkMode, SnapMode, UpdateFlag};
 pub use region::Region;

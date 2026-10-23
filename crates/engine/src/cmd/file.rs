@@ -44,7 +44,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Open from data",
             menu: "",
             shortcut: "",
-            params: "{\"data\": string, \"name\"?: string}  — open a document from its text",
+            params: "{\"data\": string | \"base64\": string, \"name\"?: string}  — open a document from its text, or from its bytes in base64 (a Fig file, or a PDF, SVG or PNG export with the figure embedded); the browser's Open and drag-and-drop use this",
             mutates: false,
             enabled: always,
             run: open_data,
@@ -402,8 +402,14 @@ fn discard_recovery(_: &mut Engine, _: &Value) -> CmdResult {
 }
 
 fn open_data(e: &mut Engine, p: &Value) -> CmdResult {
-    let data = string(p, "data")?;
-    let (doc, warnings) = parse(data.as_bytes())?;
+    let bytes = match opt_str(p, "base64")? {
+        Some(b) => base64_decode(b),
+        None => string(p, "data")?.into_bytes(),
+    };
+    if bytes.len() > rustfig_format::MAX_FILE_BYTES {
+        return Err(EngineError::io("the file is too large"));
+    }
+    let (doc, warnings) = parse(&bytes)?;
     let count = doc.objects.len();
     e.replace_document(doc, opt_str(p, "name")?.map(str::to_string));
     let r = e.doc_bounds();
@@ -1474,7 +1480,8 @@ fn export_formats(_: &mut Engine, _: &Value) -> CmdResult {
     Ok(json!({ "formats": formats }))
 }
 
-pub(crate) fn base64(data: &[u8]) -> String {
+/// Base64 (standard alphabet, padded) of `data`.
+pub fn base64(data: &[u8]) -> String {
     const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut s = String::with_capacity(data.len().div_ceil(3) * 4);
     for c in data.chunks(3) {
@@ -1489,4 +1496,28 @@ pub(crate) fn base64(data: &[u8]) -> String {
         s.push(if c.len() > 2 { ch(0) } else { '=' });
     }
     s
+}
+
+/// The bytes of base64 text; whitespace, padding and other characters are skipped.
+pub fn base64_decode(s: &str) -> Vec<u8> {
+    let mut out = Vec::with_capacity(s.len() / 4 * 3);
+    let (mut acc, mut bits) = (0u32, 0u32);
+    for c in s.bytes() {
+        let v = match c {
+            b'A'..=b'Z' => c - b'A',
+            b'a'..=b'z' => c - b'a' + 26,
+            b'0'..=b'9' => c - b'0' + 52,
+            b'+' => 62,
+            b'/' => 63,
+            _ => continue,
+        };
+        acc = (acc << 6) | u32::from(v);
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((acc >> bits) as u8);
+            acc &= (1 << bits) - 1;
+        }
+    }
+    out
 }

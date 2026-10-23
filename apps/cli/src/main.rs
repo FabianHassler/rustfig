@@ -24,12 +24,12 @@ const USAGE: &str = "usage:
 fn main() -> ExitCode {
     // fig2dev's command line runs exactly as the program itself (stdin,
     // stdout, stderr, exit status), before anything here looks at the arguments.
-    if std::env::args().nth(1).as_deref() == Some("fig2dev") {
+    if rustfig_engine::fig2dev::process_args().first().map(String::as_str) == Some("fig2dev") {
         let mut args = rustfig_engine::fig2dev::process_args();
         args.drain(..1.min(args.len()));
         return ExitCode::from(rustfig_engine::fig2dev::run_cli(args));
     }
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    let args: Vec<String> = rustfig_engine::fig2dev::process_args();
     let result = match args.first().map(String::as_str) {
         Some("convert") => convert(&args[1..]),
         Some("info") => info(&args[1..]),

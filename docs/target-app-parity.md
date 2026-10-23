@@ -30,12 +30,18 @@ the score.
 | Libraries | 5 | 0 % | library browser and placement | 40 |
 | Printing | 5 | 85 % | verification of the printer hand-off on Windows and Linux, browser printing (web), several figures as one job | 6 |
 | Settings & styles | 5 | 80 % | — (Global settings rows with effect, Unit/Scale panel, Arrow Size panel and number pop-ups done in W10-23, -24, -31, -32; preferences, recent files, styles with families E6, colours E4 done) | 0 |
-| Platforms | 7 | 50 % | Windows/Linux verification, web build and file I/O on the web | 40 |
-| **Overall** | 100 | **≈73 %** | | **371** |
+| Platforms | 7 | 70 % | Windows/Linux manual checks (checklist in hardware-parity.md), browser check of the web build, autosave in the browser (C3), pictures and Merge on the web | 16 |
+| **Overall** | 100 | **≈79 %** | | **371** |
 
 ## Evidence of what ships
 
 - Printing (B5, 2026-10-23; Printing 10 → 85 %): `crates/engine/src/print.rs` (settings, fig2dev PDF in page mode as `u_print.c` builds its options, `Spooler` trait with `SystemSpooler`/`RecordingSpooler`/`NoSpooler`, page rendering with hayro), commands `print.*` in `cmd/print.rs`, panel `crates/ui-egui/src/print_dialog.rs`, manual `docs/manual/print.md`; tests `crates/engine/tests/print.rs` (paper, orientation, pages, grid, layers, spooler, batch, hostile params), `crates/ui-egui/tests/print_panel_ui.rs`. Not tested on Windows and Linux hardware; the batch is sent as one job per figure.
+
+- Platform checks (P2, 2026-10-23; Platforms 65 → 70 %): `crates/engine/src/dirs.rs` (settings and recovery folders per OS as functions, tested for all three; Windows falls back to `%USERPROFILE%`, a relative XDG value is ignored); `crates/engine/tests/platform_paths.rs` (command line with any file name, open/save/recent/recovery with non-ASCII paths); `crates/ui-egui/tests/platform_checks.rs` (HiDPI scales 1 to 4, non-ASCII names through the menus, `raster_scale`). Fixed: a canvas wider than the GPU's biggest texture (2048 pixels in the test harness; weak GPUs and 4K/5K screens) drew nothing and raised an internal error every frame; the raster now lowers its resolution (`canvas::raster_scale`). Fixed: `rustfig` and `rustfig-cli` aborted at start on a command-line argument that is not UTF-8 (`std::env::args`), now read lossily. Live on macOS (Retina 2x, control channel): `.fig` with a path of accents, CJK and emoji opened from the command line and saved; screenshot 2560x1652. Mouse buttons are covered by `input.rs` tests (Ctrl+click right, Alt+click middle, left+right chord) and `ui_smoke.rs`.
+
+- Browser file I/O (C2, 2026-10-23; Platforms 55 → 65 %): `crates/ui-egui/src/web_io.rs`; `FileDialogs` gained `is_web`, `pick_web` (async `rfd::AsyncFileDialog`, answer through a `WebInbox`) and `download` (rfd's write starts the browser download); Open reads the picked bytes with `file.open_data {base64}` (also PDF/SVG/PNG exports with the figure embedded, which open as `NAME.fig`), dropped files take the same way (unsaved changes asked first), Save and Save As download `file.save_data`, the Export panel downloads `file.export_data` (several files for PostScript+PDF). Tests: `crates/ui-egui/tests/web_io.rs` (open, edit, save, reopen the download; drop; export; embedded PDF; hostile bytes) on `ScriptedDialogs::web`, `crates/engine/tests/open_data.rs`; `cargo xtask wasm` compiles it.
+
+- Web packaging (C1, 2026-10-23; Platforms 50 → 55 %): `cargo xtask web` runs trunk (`web/index.html`, built from `apps/rustfig`; finds `trunk` on PATH or in cargo's bin folder, prints the install line otherwise; `--debug`, `--serve`), checks that `dist/` holds index.html and the wasm; the page shows "Loading RustFig…" until the app starts. Built here: `dist/` = index.html, 14 MB wasm (release, wasm-opt), JS glue. Not opened in a browser (manual check in `docs/hardware-parity.md`).
 
 - Mode options and saved versions (D10, W10-14, 2026-10-23): dimension-line lengths as xfig's fractions of an inch (`view::length_string`, `UnitScale.decimal_inches`), the Dimension line settings window with example preview, arrow pictures and "none" per end (`crates/ui-egui/src/dimline_panel.rs`); `file.save` keeps versions in the recovery folder (`crates/engine/src/recovery.rs`, `cmd/file.rs`: `file.versions`, `file.restore_version`; test `crates/engine/tests/export_panel.rs`), File > Saved versions… (`ui-egui/src/dialogs.rs`). Leftovers: preview arrowheads are plain triangles, lengths while drawing stay decimal.
 
@@ -96,6 +102,10 @@ the score.
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-23 | ≈79 % | Recount after B5, C1, C2, P2 (Printing 10 → 85 %, Platforms 50 → 70 %).
+| 2026-10-23 | ≈73 % | P2: platform behaviour checks (paths per OS, non-ASCII names, HiDPI, command line); Platforms 65 → 70 %. |
+| 2026-10-23 | ≈73 % | C2: browser file I/O (open by picker and drop, save and export as downloads); Platforms 55 → 65 %. |
+| 2026-10-23 | ≈73 % | C1: web packaging with trunk (`cargo xtask web`); Platforms 50 → 55 %. |
 | 2026-10-23 | ≈73 % | D10, W10-13, W10-14, W9 fix: fractions of an inch and the dimension line preview; saved versions; cap/join pictures. Scores unchanged. |
 | 2026-10-22 | ≈73 % | W10-23, -24, -31, -32, -33, W10-3: Global settings rows with effect, Unit/Scale panel, Arrow Size panel, number pop-ups, seven align and nine grid choices; Settings & styles 75 → 80 %. |
 | 2026-10-22 | ≈73 % | Recount: Text 55 → 65 % (E10), Settings & styles 15 → 75 % (E1 persistence, recent files, E6 styles, E4 colours); the table had lagged behind. |
