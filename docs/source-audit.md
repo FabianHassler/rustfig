@@ -1767,9 +1767,9 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_indpanel.c` | `inc_numsides` | 4342 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `dec_numsides` | 4349 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `show_numsides` | 4356 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
-| `w_indpanel.c` | `inc_numcopies` | 4373 | ported | indicator `num_copies` (field; panel button open) | D10 |
-| `w_indpanel.c` | `dec_numcopies` | 4380 | ported | indicator `num_copies` (field; panel button open) | D10 |
-| `w_indpanel.c` | `show_numcopies` | 4387 | ported | indicator `num_copies` (field; panel button open) | D10 |
+| `w_indpanel.c` | `inc_numcopies` | 4373 | ported | indicator button Num Copies (rotate modes) in `ui-egui/attributes.rs`; `indicator.set` | D10 |
+| `w_indpanel.c` | `dec_numcopies` | 4380 | ported | indicator button Num Copies (rotate modes) in `ui-egui/attributes.rs`; `indicator.set` | D10 |
+| `w_indpanel.c` | `show_numcopies` | 4387 | ported | indicator button Num Copies (rotate modes) in `ui-egui/attributes.rs`; `indicator.set` | D10 |
 | `w_indpanel.c` | `inc_numxcopies` | 4404 | ported | indicator buttons Num Copies (rotate), Num X / Num Y Copies (copy) in `ui-egui/attributes.rs`; `indicator.set` | D10 |
 | `w_indpanel.c` | `dec_numxcopies` | 4411 | ported | indicator buttons Num Copies (rotate), Num X / Num Y Copies (copy) in `ui-egui/attributes.rs`; `indicator.set` | D10 |
 | `w_indpanel.c` | `show_numxcopies` | 4418 | ported | indicator buttons Num Copies (rotate), Num X / Num Y Copies (copy) in `ui-egui/attributes.rs`; `indicator.set` | D10 |

@@ -21,7 +21,7 @@ the score.
 |------|-------:|------:|---------|------:|
 | Drawing modes | 12 | 95 % | xfig's click-to-close rules for some shapes | 8 |
 | Editing modes | 12 | 83 % | figure comments from Edit mode | 18 |
-| Attributes / indicator | 10 | 87 % | copy counts; mix memory and lock of xfig's colour panel (not built, recent colours instead) | 6 |
+| Attributes / indicator | 10 | 90 % | mix memory and lock of xfig's colour panel (not built, recent colours instead) | 3 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
 | Export | 12 | 68 % | `sld`, texts with `\ooo` octal escapes (raw bytes, B11 pass 5), the audit's hardening passes (B11), arrows on pie-wedge arcs and file arc centres lost on the way through the Fig writer (gap #25), picture frames and GIF transparency (gap #26) | 90 |
 | Text | 10 | 70 % | LaTeX special-text export, exact PostScript font metrics, spell check (text editing on the canvas done 2026-10-22, E10; character map 2026-10-22, E5) | 40 |
@@ -92,6 +92,7 @@ the score.
 - Edit panel (W10-15, W10-17 to W10-19, W10-21): `ui-egui/dialogs.rs` `edit_dialog`, `live_apply`, `point_table`, `parse_points` (ports `e_edit.c` `make_window_compound`, `collapse_depths`, `get_new_compound_values`), pictorial menus `ui-egui/attributes.rs` (`line_menu` and others), engine `object.set_geometry` (compound corners, `resize`) and `object.set_attributes` (`texts`); tests `compound_corners_reposition_and_rescale_like_xfig`, `point_table_resizes_lines_and_splines` in `engine/tests/edit_panel.rs`, `live_edit_panel_is_one_undo_step_and_cancel_restores`, `compound_panel_repositions_rescales_collapses_and_edits_texts`, `point_table_edits_points`, `edit_panel_has_pictorial_menus` in `ui_smoke.rs`.
 - Attribute panel (W19: xfig's layout, buttons narrowed to their content): `ui-egui/attributes` (ported from `w_indpanel.c`), tests `attribute_panel_shows_the_modes_attributes` and `attribute_buttons_step_and_choose` in `ui_smoke.rs`.
 - Angle Geom (D7): `crates/engine/src/anglegeom.rs` (ports `u_geom.c`'s `latex_endpoint`, `get_slope` and `u_elastic.c`'s `constrainedangle_line`), `Engine::angle_constrained` / `angle_anchor` in `tools/mod.rs`, the Angle Geom button in `ui-egui/attributes`; tests `crates/engine/tests/angle_geom.rs`.
+- Copy counts (D10): Num Copies (rotate modes, `I_ROTATE`), Num X / Num Y Copies (Copy mode, `I_COPY`) in `Indicator` and `ui-egui/attributes.rs`; engine `edit.copy_array`, `transform.rotate` `copies`; tests in `crates/engine/tests/mode_options.rs`, `ui_smoke.rs`.
 - Text editing (E10): `crates/engine/src/tools/textedit.rs` (word ranges, selection buffer, caret under the pointer), `tools/mod.rs` `text_event` (`ToolEvent::Nav`, `Preedit`, `TripleClick`), `text_selection`/`text_cut` for the clipboard, caret, selection and IME underline in `ui-egui/canvas.rs` `draw_caret`, keys in `menus.rs` `text_key`; tests `text_*` in `tools/mod.rs`.
 - Linked move (D8): `crates/engine/src/links.rs` (ports `u_list.c`'s `get_links`, `point_on_perim`, `get_interior_links`, `point_on_inside`, `adjust_links`); the Smart Links indicator button in `ui-egui/attributes`; tests `crates/engine/tests/linked_move.rs`. D14 extends it: `links.rs` targets circles, ellipses, arcs, polygons, closed splines, text boxes (distance to the outline) beside boxes and compounds, follows with open polylines and splines, links both ends of a line, and every operation (`transform.apply`, `links::translate_each`, `edit.duplicate` copy with links, `point.move` box resize, `transform.nudge`); previews and end highlights in `tools/mod.rs`; tests `crates/engine/tests/linked_ext.rs`.
 - Mouse buttons: xfig's three-button semantics per mode, the only scheme (W16 removed the modern one); `mouse_hints_match_behaviour` in `crates/engine/src/tools/mod.rs` presses every button in every tool and state and checks the indicator against what happened; Alt/Ctrl+click map to middle/right (`canvas::tool_button`), tested in `ui_smoke.rs`.
@@ -103,6 +104,7 @@ the score.
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-23 | ≈84 % | D10: copy counts (Attributes 87 → 90 %, 6 → 3 h). |
 | 2026-10-23 | ≈84 % | Recount after D6 (Libraries 0 → 85 %, Drawing modes 90 → 95 %).
 | 2026-10-23 | ≈79 % | Recount after B5, C1, C2, P2 (Printing 10 → 85 %, Platforms 50 → 70 %).
 | 2026-10-23 | ≈73 % | P2: platform behaviour checks (paths per OS, non-ASCII names, HiDPI, command line); Platforms 65 → 70 %. |
