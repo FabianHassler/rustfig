@@ -19,7 +19,7 @@ the score.
 
 | Area | Weight | Score | Missing | Hours |
 |------|-------:|------:|---------|------:|
-| Drawing modes | 12 | 95 % | xfig's click-to-close rules for some shapes | 8 |
+| Drawing modes | 12 | 98 % | none known | 0 |
 | Editing modes | 12 | 83 % | figure comments from Edit mode | 18 |
 | Attributes / indicator | 10 | 87 % | copy counts; mix memory and lock of xfig's colour panel (not built, recent colours instead) | 6 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
@@ -55,6 +55,7 @@ the score.
 - Tangent/normal (D4): `crates/engine/src/cmd/tangent.rs` (command `object.tangent_line`, curve geometry from `u_smartsearch.c`/`u_geom.c`), `crates/engine/src/tools/tangent.rs` (mode `tool.tangent`, key `n`), Tangent/Norm Length in `Indicator::tangent_length` and `ui-egui/attributes.rs`; tests `crates/engine/tests/tangent.rs`.
 - Trim, split and extend mode (D16): `ToolKind::Trim` (`tool.trim`, key `w`), `trim_event` in `crates/engine/src/tools/chop.rs`, vector icon `"trim"` in `crates/ui-egui/src/mode_icons.rs`; tests `crates/engine/tests/trim_mode.rs`, `ui_smoke.rs`; manual `docs/manual/trim.md`.
 - Chop extended (D15): `crates/engine/src/cmd/outline.rs`, `cmd/chop_ext.rs` (commands `object.trim`, `object.split_at`, `object.cut_all`, `object.extend`), the buttons moved to the Trim mode (D16); tests `crates/engine/tests/chop_extended.rs`.
+- Click-to-close rules (D11; Drawing modes 95 → 98 %): `points_event`, `finish_points`, `min_points` in `crates/engine/src/tools/mod.rs` (xfig `d_line.c`, `d_spline.c`: minimum 3 points for polygons and closed splines with a dead middle button until one is missing, 2 for open splines with the "Not enough points for spline" message, Shift+left keeps the first point); tests `polygon_needs_three_points`, `closed_spline_needs_three_points`, `open_spline_with_one_point_keeps_drawing`, `shift_click_keeps_first_point`, `polyline_middle_on_first_point_is_a_dot`.
 - Drawing tools: `crates/engine/src/tools/mod.rs` (41 tools; tests draw polylines, boxes and text and move objects).
 - Global settings, Unit/Scale, Arrow Size, number pop-ups, align and grid choices (W10-23, -24, -31, -32, -33, W10-3): `crates/engine/src/globals.rs` (rows read from the preferences), `cmd/arrange.rs` (`spread`, the seven align choices), `indicator.rs` (`snap_iso`, `arrow_value`), `view.rs` (`apply_integer_zoom`), `crates/ui-egui/src/{dialogs,rulers,attributes,canvas}.rs`, tests `crates/engine/tests/w10_group4_5.rs` and five in `crates/ui-egui/tests/ui_smoke.rs`.
 - Picture edit panel (W10-16, W10-20): `crates/engine/src/cmd/picture.rs` (`picture.*` commands), `crates/ui-egui/src/dialogs.rs` (`picture_rows`), tests `crates/engine/tests/picture_panel.rs` and `picture_panel_rows_relink_and_drop` in `crates/ui-egui/tests/ui_smoke.rs`.
