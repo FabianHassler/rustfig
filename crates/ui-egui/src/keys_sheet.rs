@@ -139,7 +139,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_system_has_its_keys_and_punctuation_is_spelled() {
+    fn every_system_has_its_keys_and_punctuation_is_shown() {
         for os in [Os::Mac, Os::Windows, Os::Linux] {
             let r = rows(os);
             for (_, id) in menus::XFIG_KEYS {
@@ -148,19 +148,13 @@ mod tests {
             }
             for row in &r {
                 for k in [&row.standard, &row.xfig] {
-                    let last = k.chars().last();
-                    assert!(
-                        last.is_none_or(|c| c.is_alphanumeric()),
-                        "{}: {k:?} ends in a bare symbol",
-                        row.id
-                    );
                     let words = ["Ctrl+", "Alt+", "Shift+"].iter().any(|w| k.contains(w));
                     let symbols = "\u{2318}\u{2325}\u{2303}\u{21e7}".chars().any(|c| k.contains(c));
                     assert!(if os == Os::Mac { !words } else { !symbols }, "{k:?} {os:?}");
                 }
             }
             let quote = r.iter().find(|r| r.id == "view.toggle_grid").unwrap();
-            assert!(quote.standard.ends_with("Quote"), "{}", quote.standard);
+            assert!(quote.standard.ends_with('\''), "{}", quote.standard);
         }
     }
 

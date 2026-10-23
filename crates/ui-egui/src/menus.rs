@@ -869,30 +869,11 @@ fn shadowed_by_xfig(s: &str, mac: bool) -> bool {
 /// Thin space between the modifier symbols and the key on macOS.
 pub(crate) const THIN: char = '\u{2009}';
 
-/// The name a punctuation key is spelled with, so that "Cmd+'" is not a
-/// lone speck: menus and the key sheet write "⌘ Quote", "Ctrl+Quote".
-fn key_name(k: &str) -> &str {
-    match k {
-        "'" => "Quote",
-        "=" => "Equals",
-        "-" => "Minus",
-        "+" => "Plus",
-        "," => "Comma",
-        "." => "Period",
-        "/" => "Slash",
-        ";" => "Semicolon",
-        "\\" => "Backslash",
-        "`" => "Backtick",
-        _ => k,
-    }
-}
-
 /// Modifiers and key as the system writes them. macOS: the symbols
 /// ⌃ ⌥ ⇧ ⌘ (in Apple's order), a thin space, the key ("⇧⌘ Z"); Windows and
 /// Linux: "Ctrl+Alt+Shift+Key". `ctrl` is the Control key itself, `cmd` the
 /// platform's command key (Ctrl on Windows and Linux).
 fn write_keys(mac: bool, ctrl: bool, alt: bool, shift: bool, cmd: bool, key: &str) -> String {
-    let key = key_name(key);
     if mac {
         let mut out = String::new();
         for (on, sym) in [(ctrl, '⌃'), (alt, '⌥'), (shift, '⇧'), (cmd, '⌘')] {
@@ -1592,11 +1573,11 @@ mod tests {
             assert!(ctx.fonts_mut(|f| f.has_glyph(&font, c)), "no glyph for {c:?}");
         }
         assert_eq!(mac_shortcut("Ctrl+Shift+Z"), "⇧⌘\u{2009}Z");
-        assert_eq!(mac_shortcut("Ctrl+="), "⌘\u{2009}Equals");
-        assert_eq!(mac_shortcut("Ctrl+'"), "⌘\u{2009}Quote");
+        assert_eq!(mac_shortcut("Ctrl+="), "⌘\u{2009}=");
+        assert_eq!(mac_shortcut("Ctrl+'"), "⌘\u{2009}'");
         assert_eq!(mac_shortcut("Ctrl+Alt+K"), "⌥⌘\u{2009}K");
-        assert_eq!(shortcut_text("Ctrl+Alt+Shift+'", false), "Ctrl+Alt+Shift+Quote");
-        assert_eq!(shortcut_text("Ctrl+-", false), "Ctrl+Minus");
+        assert_eq!(shortcut_text("Ctrl+Alt+Shift+'", false), "Ctrl+Alt+Shift+'");
+        assert_eq!(shortcut_text("Ctrl+-", false), "Ctrl+-");
         assert_eq!(key_label("PhysCtrl+Alt+K", true), "⌃⌥\u{2009}K");
         assert_eq!(mac_shortcut("Ctrl+Shift+Up"), "⇧⌘\u{2009}Up");
         assert_eq!(mac_shortcut("Delete"), "Delete");
