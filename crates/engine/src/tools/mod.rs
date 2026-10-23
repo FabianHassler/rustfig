@@ -1438,12 +1438,10 @@ impl Engine {
                     ..
                 } = self.tool_state
                 {
-                    // xfig finishes an ellipse with either button; RustFig
-                    // with the left one only (no two buttons for one
-                    // function, decided 2026-10-22). A drag ends on the
-                    // release of its own button.
-                    let ellipse = matches!(kind, ToolKind::EllipseRadii | ToolKind::EllipseDiameter);
-                    let finishes = if ellipse { button == Button::Left } else { b == button };
+                    // Finished with the button that started it (decided
+                    // 2026-10-23; xfig also lets the other button finish an
+                    // ellipse, RustFig keeps one function per button).
+                    let finishes = b == button;
                     if !finishes {
                         return Ok(());
                     }
@@ -2423,10 +2421,16 @@ impl Engine {
                 ..
             } = self.tool_state.clone()
             {
-                // Placed with the left button only, also a new end point
-                // started with the middle one (decided 2026-10-22: no two
-                // buttons for one function).
-                if c != constrain {
+                // Placed with the button that started it (decided
+                // 2026-10-23): a new end point (started with the middle
+                // button) with the middle one, an inserted point with the
+                // left one.
+                let started_middle = if insert && self.is_end_insert(id, index) {
+                    true
+                } else {
+                    c
+                };
+                if started_middle != constrain {
                     return Ok(());
                 }
                 self.tool_state = ToolState::Idle;
@@ -2455,6 +2459,17 @@ impl Engine {
             return Ok(());
         }
         self.drag_common(ev)
+    }
+
+    /// Whether inserting at `index` adds a point beyond an end of the
+    /// object (Add point's middle button), not on one of its segments.
+    fn is_end_insert(&self, id: ObjectId, index: usize) -> bool {
+        let n = self
+            .doc()
+            .get(id)
+            .and_then(|o| o.points().map(<[Point]>::len))
+            .unwrap_or(0);
+        index == 0 || index >= n
     }
 
     /// The nearest editable vertex of any top-level object.
@@ -3032,12 +3047,11 @@ impl Engine {
                 }
             }
             ToolState::Drag { kind, button, .. } => {
-                // xfig finishes an ellipse with either button
-                // (`d_ellipse.c`); RustFig with the left one only.
+                // Finished with the button that started it.
                 match kind {
                     _ if *button == Button::Right => h("", "", "final point"),
-                    ToolKind::EllipseRadii => h("Ellipse corner", "", "cancel"),
-                    ToolKind::EllipseDiameter => h("final corner", "", "cancel"),
+                    ToolKind::EllipseRadii => on(*button, "Ellipse corner", "cancel"),
+                    ToolKind::EllipseDiameter => on(*button, "final corner", "cancel"),
                     ToolKind::CircleRadius => on(*button, "set radius", "cancel"),
                     _ => on(*button, "final point", "cancel"),
                 }
@@ -3094,12 +3108,15 @@ impl Engine {
             ToolState::RubberBand { click: true, .. } => h("", "final corner", "cancel"),
             ToolState::RubberBand { .. } => h("drag region", "", "cancel"),
             ToolState::PointDrag {
+                id,
+                index,
                 dragging,
                 constrain,
                 insert,
                 ..
             } => {
-                let b = if *constrain { Button::Middle } else { Button::Left };
+                let middle = *constrain || (*insert && !*dragging && self.is_end_insert(*id, *index));
+                let b = if middle { Button::Middle } else { Button::Left };
                 let place = if *insert { "place new point" } else { "new posn" };
                 on(b, if *dragging { "drop point" } else { place }, "cancel")
             }
@@ -4030,17 +4047,17 @@ mod tests {
         let mut e = Engine::new();
         e.set_tool(ToolKind::CircleRadius);
         click(&mut e, 0.0, 0.0, Button::Middle);
-        // The middle button does not finish it (one function per button).
-        click(&mut e, 1200.0, 600.0, Button::Middle);
-        assert!(e.doc().objects.is_empty());
+        // The left button does not finish it: the starting button does.
         click(&mut e, 1200.0, 600.0, Button::Left);
+        assert!(e.doc().objects.is_empty());
+        click(&mut e, 1200.0, 600.0, Button::Middle);
         let ObjectKind::Ellipse(el) = objects_of(&e)[0] else {
             panic!()
         };
         assert_eq!(el.radii, Point::new(1200.0, 600.0));
-        // The left button finishes an ellipse started with the middle one.
+        // The middle button finishes an ellipse started with it.
         click(&mut e, 0.0, 0.0, Button::Middle);
-        click(&mut e, 600.0, 300.0, Button::Left);
+        click(&mut e, 600.0, 300.0, Button::Middle);
         assert_eq!(e.doc().objects.len(), 2);
         assert!(e.undo());
         click(&mut e, 0.0, 0.0, Button::Left);

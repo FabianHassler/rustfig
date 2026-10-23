@@ -184,6 +184,10 @@ pub fn object_markers(o: &Object, bbox: &Rect, out: &mut Vec<Point>) {
 impl Engine {
     /// The object mask of the active tool (see the table above).
     pub fn marker_mask(&self) -> ObjMask {
+        // Copy as Picture waits for an object: every object is a candidate.
+        if self.copy_pick && matches!(self.tool_state, ToolState::Idle) {
+            return ObjMask::ALL;
+        }
         // Join/Split, after the first end point: only what can be joined
         // to it (`join_lines`, `join_splines`: `update_markers`).
         if let ToolState::Join { spline, .. } = self.tool_state {

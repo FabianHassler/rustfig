@@ -1,6 +1,6 @@
 //! Object commands: grouping, attributes, points, conversion, inspection.
 
-use super::{has_selection, ids_value, num, opt_bool, opt_num, opt_str, point_value, CmdResult, Command};
+use super::{always, ids_value, num, opt_bool, opt_num, opt_str, point_value, CmdResult, Command};
 use crate::{Engine, EngineError};
 use rustfig_geom::{polygon_area, polyline_length, Affine, Point, Rect};
 use rustfig_model::{
@@ -19,7 +19,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
-            enabled: |e| e.selection().len() >= 2,
+            enabled: always,
             run: group,
         },
         Command {
@@ -29,7 +29,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: ungroup,
         },
         Command {
@@ -39,7 +39,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id]}  — apply the indicator's attributes",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: update,
         },
         Command {
@@ -89,7 +89,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id]}  — length, area and size",
             mutates: false,
-            enabled: has_selection,
+            enabled: always,
             run: measure,
         },
         Command {
@@ -99,7 +99,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: convert,
         },
         Command {
@@ -109,7 +109,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: toggle_closed,
         },
         Command {
@@ -119,7 +119,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: |e, p| toggle_arrow(e, p, true),
         },
         Command {
@@ -129,7 +129,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: |e, p| toggle_arrow(e, p, false),
         },
         Command {

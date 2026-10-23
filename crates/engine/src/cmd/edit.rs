@@ -1,6 +1,6 @@
 //! Edit commands: undo/redo, clipboard, delete, selection, search/replace.
 
-use super::{always, has_objects, has_selection, ids_value, num_or, opt_bool, string, CmdResult, Command};
+use super::{always, has_objects, ids_value, num_or, opt_bool, string, CmdResult, Command};
 use crate::{Engine, EngineError};
 use rustfig_model::{Object, ObjectId, ObjectKind};
 use serde_json::{json, Value};
@@ -35,7 +35,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: cut,
         },
         Command {
@@ -45,7 +45,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: false,
-            enabled: has_selection,
+            enabled: always,
             run: copy,
         },
         Command {
@@ -89,7 +89,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id], \"dx\"?: number, \"dy\"?: number}  — with smart links on, the lines attached to the objects are copied too (the original line ends follow the copy)",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: duplicate,
         },
         Command {
@@ -99,7 +99,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id], \"dx\", \"dy\", \"nx\"?: columns (indicator num_x_copies), \"ny\"?: rows (indicator num_y_copies)}  — xfig's array placement (u_drag.c): copies at i*dx, j*dy; with one column or row only: the copy at dx (columns) and/or at dy (rows); 0 and 0 is a plain copy",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: copy_array,
         },
         Command {
@@ -109,7 +109,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: delete,
         },
         Command {

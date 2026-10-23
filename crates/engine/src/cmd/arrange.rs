@@ -1,6 +1,6 @@
 //! Alignment, distribution and stacking order (depth).
 
-use super::{has_selection, num, opt_str, CmdResult, Command};
+use super::{always, num, opt_str, CmdResult, Command};
 use crate::{Engine, EngineError};
 use rustfig_geom::Rect;
 use rustfig_model::{ObjectId, MAX_DEPTH};
@@ -16,7 +16,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id], \"h\"?: none|left|center|right, \"v\"?: none|top|center|bottom}  — defaults from the indicator",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: align,
         },
         Command {
@@ -36,7 +36,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id], \"axis\": horizontal|vertical}  — equal gaps between objects",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: distribute,
         },
         Command {
@@ -46,7 +46,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: |e, p| restack(e, p, Stack::Front),
         },
         Command {
@@ -56,7 +56,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id]}  — depth - 1",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: |e, p| restack(e, p, Stack::Forward),
         },
         Command {
@@ -66,7 +66,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id]}  — depth + 1",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: |e, p| restack(e, p, Stack::Backward),
         },
         Command {
@@ -76,7 +76,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: |e, p| restack(e, p, Stack::Back),
         },
         Command {

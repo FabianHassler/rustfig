@@ -245,8 +245,9 @@ fn add_point_at_the_nearest_end() {
     assert_eq!(e.doc().objects[0].points().unwrap()[0], Point::new(-500.0, 0.0));
 }
 
-/// Middle click, move, left click: the middle click starts the new end
-/// point, the left click places it; a middle click meanwhile does nothing.
+/// Middle click, move, middle click: the middle click starts the new end
+/// point, the next middle click places it; a left click meanwhile does
+/// nothing (finished with the button that started it).
 #[test]
 fn add_point_middle_click_click_adds_at_end() {
     let mut e = engine();
@@ -262,9 +263,9 @@ fn add_point_middle_click_click_adds_at_end() {
         shown.as_deref().and_then(<[Point]>::last),
         Some(&Point::new(2600.0, 600.0))
     );
-    click(&mut e, 2600.0, 600.0, Button::Middle);
-    assert_eq!(e.doc().objects[0].points().unwrap().len(), 2);
     click(&mut e, 2600.0, 600.0, Button::Left);
+    assert_eq!(e.doc().objects[0].points().unwrap().len(), 2);
+    click(&mut e, 2600.0, 600.0, Button::Middle);
     let pts = e.doc().objects[0].points().unwrap().to_vec();
     assert_eq!(pts.len(), 3, "{pts:?}");
     assert_eq!(pts[2], Point::new(2600.0, 600.0));
