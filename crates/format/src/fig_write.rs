@@ -213,11 +213,8 @@ fn object(out: &mut String, o: &Object) {
             );
         }
         ObjectKind::Arc(a) => {
-            let (fa, ba) = if a.pie {
-                (&None, &None)
-            } else {
-                (&a.forward_arrow, &a.backward_arrow)
-            };
+            // Arrows are kept on pie wedges too, as fig2dev reads them.
+            let (fa, ba) = (&a.forward_arrow, &a.backward_arrow);
             let _ = write!(out, "5 {}", if a.pie { 2 } else { 1 });
             style_common(out, &a.style);
             let _ = writeln!(

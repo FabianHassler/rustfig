@@ -268,7 +268,9 @@ impl Conv<'_> {
             a.cap_style,
             0,
         );
-        let mut arc = Arc {
+        // The file's centre (floats) and direction are kept, not refitted
+        // from the rounded points.
+        Arc {
             pie: a.type_ == f::T_PIE_WEDGE_ARC,
             style,
             ccw: a.direction == 1,
@@ -276,9 +278,7 @@ impl Conv<'_> {
             backward_arrow: self.arrow(&a.back_arrow),
             center: pt(self.coord(a.center.x), self.coord(a.center.y)),
             points: a.point.map(|p| self.point(p)),
-        };
-        arc.refit();
-        arc
+        }
     }
 
     fn ellipse(&self, e: &f::Ellipse) -> Ellipse {

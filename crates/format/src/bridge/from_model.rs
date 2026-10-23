@@ -363,8 +363,8 @@ pub(super) fn object_at(o: &rustfig_model::Object, ctx: &Ctx, odd: &Cell<bool>) 
                 pen: st.pen_style,
                 fill_style: st.area_fill,
                 style_val: st.style_val,
-                for_arrow: c.arrow(!a.pie, &a.forward_arrow),
-                back_arrow: c.arrow(!a.pie, &a.backward_arrow),
+                for_arrow: c.arrow(true, &a.forward_arrow),
+                back_arrow: c.arrow(true, &a.backward_arrow),
                 cap_style: a.style.cap.to_fig(),
                 direction: i32::from(a.ccw),
                 center: f::DPoint {
