@@ -214,7 +214,18 @@ fn read_file(path: &str) -> Result<Vec<u8>, EngineError> {
 /// Read a document (Fig 1.3 to 3.2 through fig2dev's reader). The document
 /// and the reader's messages.
 fn parse(bytes: &[u8]) -> Result<(Document, Vec<String>), EngineError> {
-    rustfig_format::read_any_messages(bytes).map_err(|err| EngineError::format(err.to_string()))
+    let (doc, mut warnings) =
+        rustfig_format::read_any_messages(bytes).map_err(|err| EngineError::format(err.to_string()))?;
+    // One message for all the installed fonts the drawing wants that this
+    // machine lacks (F7); those texts are drawn in their Fig font.
+    let missing = crate::missing_local_fonts(&doc);
+    if !missing.is_empty() {
+        warnings.push(format!(
+            "Installed fonts not found, drawn in the nearest Fig font: {}",
+            missing.join(", ")
+        ));
+    }
+    Ok((doc, warnings))
 }
 
 fn open(e: &mut Engine, p: &Value) -> CmdResult {

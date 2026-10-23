@@ -241,10 +241,9 @@ pub(crate) fn caret_in_text(t: &Text, pos: Point, tol: f64, strict: bool) -> Opt
     }
     let li = (((local.y - top) / lh).floor().max(0.0) as usize).min(n - 1);
     let line = lines.get(li).copied().unwrap_or("");
-    let req = rustfig_text::FontRequest::for_fig(t.font, t.is_postscript());
     let width = |k: usize| -> f64 {
         let p: String = line.chars().take(k).collect();
-        rustfig_text::measure(&req, t.size, &p).width
+        crate::measure_in_font(t, &p).width
     };
     let nc = line.chars().count();
     let lw = width(nc);

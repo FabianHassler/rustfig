@@ -2572,6 +2572,56 @@ fn font_chooser_searches_and_chooses() {
     assert!(!h.state().engine.indicator.postscript);
 }
 
+/// F7: the chooser's third choice lists the installed fonts (an injected
+/// list here), searches them, and a choice sets the indicator's installed
+/// font and its nearest Fig font.
+#[test]
+fn font_chooser_has_local_fonts() {
+    use rustfig_text::{Generic, LocalFace};
+    let face = |name: &str, generic, bold, italic| LocalFace {
+        family: name.to_string(),
+        label: "Regular".into(),
+        name: name.to_string(),
+        generic,
+        bold,
+        italic,
+    };
+    rustfig_text::override_local_faces(Some(vec![
+        face("Zzfake Serif", Generic::Serif, false, false),
+        face("Zzfake Sans", Generic::Sans, true, false),
+        face("Zzfake Mono", Generic::Mono, false, false),
+    ]));
+    let mut h = harness(app());
+    h.state_mut().run("tool.text", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Text Font: Times Roman").click();
+    h.run_steps(4);
+    h.get_by_label("Local fonts").click();
+    h.run_steps(6);
+    h.get_by_label("Zzfake Serif");
+    h.get_by_label("Zzfake Mono");
+    assert!(h.query_by_label("Courier").is_none(), "only installed fonts are listed");
+    h.get_by_label("Search fonts").click();
+    h.get_by_label("Search fonts").type_text("sans");
+    h.run_steps(4);
+    assert!(h.query_by_label("Zzfake Mono").is_none(), "search filters");
+    h.get_by_label("Zzfake Sans").click();
+    h.run_steps(3);
+    let ind = &h.state().engine.indicator;
+    assert_eq!(ind.local_font.as_deref(), Some("Zzfake Sans"));
+    // Sans, bold: Helvetica Bold.
+    assert_eq!((ind.font, ind.postscript), (18, true));
+    // Choosing a Fig font again drops it.
+    h.get_by_label("Text Font: Zzfake Sans").click();
+    h.run_steps(4);
+    h.get_by_label("PostScript fonts").click();
+    h.run_steps(6);
+    h.get_by_label("Courier").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.indicator.local_font, None);
+    rustfig_text::override_local_faces(None);
+}
+
 /// E11: every font xfig offers has a name the chooser lists.
 #[test]
 fn font_chooser_lists_every_font() {

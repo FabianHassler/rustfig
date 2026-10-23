@@ -12,3 +12,11 @@ workspace = true
 
 [dependencies]
 figbase.workspace = true
+ttf-parser.workspace = true
+fontdb.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+fontdb = { workspace = true, features = ["fs", "memmap"] }
+
+[dev-dependencies]
+epaint_default_fonts.workspace = true

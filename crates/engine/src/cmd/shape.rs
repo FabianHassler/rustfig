@@ -284,6 +284,7 @@ pub(crate) fn make_text(e: &Engine, origin: Point, s: String) -> Text {
         length: 0.0,
         origin,
         text: s,
+        local_font: ind.local_font.clone(),
     }
 }
 
@@ -299,6 +300,7 @@ fn text(e: &mut Engine, p: &Value) -> CmdResult {
     }
     if let Some(v) = opt_num(p, "font")? {
         t.font = (v.round() as i32).clamp(-1, 34);
+        t.local_font = None;
     }
     if let Some(ps) = opt_bool(p, "postscript")? {
         if ps {

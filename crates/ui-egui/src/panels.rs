@@ -501,9 +501,18 @@ pub fn line_combo(ui: &mut egui::Ui, id: &str, current: LineKind) -> Option<Line
     chosen
 }
 
-pub fn font_combo(ui: &mut egui::Ui, id: &str, font: i32, postscript: bool) -> Option<(i32, bool)> {
+pub fn font_combo(
+    ui: &mut egui::Ui,
+    id: &str,
+    font: i32,
+    postscript: bool,
+    local: Option<&str>,
+) -> Option<crate::font_chooser::Outcome> {
     // E11: the font chooser in a pop-up under a button labelled with the font.
-    let name = crate::font_chooser::list_name(font, postscript);
+    let name = match local {
+        Some(n) => n.to_string(),
+        None => crate::font_chooser::list_name(font, postscript),
+    };
     let resp = ui.button(format!("{name}  \u{25be}"));
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, name.clone()));
     let mut chosen = None;
@@ -511,8 +520,9 @@ pub fn font_combo(ui: &mut egui::Ui, id: &str, font: i32, postscript: bool) -> O
         .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
         .show(|ui| {
             ui.set_min_width(260.0);
-            if let Some(f) = crate::font_chooser::show(ui, id, font, postscript, None).font {
-                chosen = Some(f);
+            let out = crate::font_chooser::show(ui, id, font, postscript, local, None);
+            if out.font.is_some() {
+                chosen = Some(out);
                 ui.close();
             }
         });

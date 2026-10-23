@@ -250,7 +250,7 @@ impl Conv<'_> {
             out.push(with_comments(ObjectKind::Spline(self.spline(s)), &s.comments));
         }
         for t in &com.texts {
-            out.push(with_comments(ObjectKind::Text(self.text(t)), &t.comments));
+            out.push(with_comments(ObjectKind::Text(self.text(t)), &t.comments).take_local_font());
         }
         out
     }
@@ -412,6 +412,7 @@ impl Conv<'_> {
             length: self.coord(finite(t.length, 0.0)),
             origin: pt(self.coord(f64::from(t.base_x)), self.coord(f64::from(t.base_y))),
             text: t.cstring.clone(),
+            local_font: None,
         }
     }
 }

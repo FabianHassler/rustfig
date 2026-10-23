@@ -931,9 +931,55 @@ fn fix_texts(o: &mut Object) {
     }
 }
 
-pub fn fix_text_metrics(t: &mut Text) {
+/// What choosing the installed font `name` means (F7): its canonical name
+/// from the font list and the nearest Fig font number (a PostScript font).
+pub fn local_font_choice(name: &str) -> Result<(String, i32), EngineError> {
+    use rustfig_model::FontKind;
+    let face = rustfig_text::find_local_face(name)
+        .ok_or_else(|| EngineError::bad_params(format!("the font {:?} is not installed", name.trim())))?;
+    let kind = match face.generic {
+        rustfig_text::Generic::Serif => FontKind::Serif,
+        rustfig_text::Generic::Sans => FontKind::Sans,
+        rustfig_text::Generic::Mono => FontKind::Mono,
+    };
+    Ok((face.name, rustfig_model::nearest_ps_font(kind, face.bold, face.italic)))
+}
+
+/// The installed fonts that texts of `doc` use and that are missing on this
+/// machine, sorted, without repeats (the message on opening a file).
+pub fn missing_local_fonts(doc: &Document) -> Vec<String> {
+    fn walk(o: &Object, out: &mut std::collections::BTreeSet<String>) {
+        match &o.kind {
+            ObjectKind::Text(Text {
+                local_font: Some(n), ..
+            }) if !rustfig_text::local_font_available(n) => {
+                out.insert(n.clone());
+            }
+            ObjectKind::Compound(c) => c.objects.iter().for_each(|x| walk(x, out)),
+            _ => {}
+        }
+    }
+    let mut set = std::collections::BTreeSet::new();
+    doc.objects.iter().for_each(|o| walk(o, &mut set));
+    set.into_iter().collect()
+}
+
+/// The extent of `s` set as text `t` is: in its installed font (F7) when it
+/// has one that is present, else in its Fig font.
+pub fn measure_in_font(t: &Text, s: &str) -> rustfig_text::Metrics {
+    if let Some(m) = t
+        .local_font
+        .as_deref()
+        .and_then(|n| rustfig_text::measure_local(n, t.size, s))
+    {
+        return m;
+    }
     let req = rustfig_text::FontRequest::for_fig(t.font, t.is_postscript());
-    let m = rustfig_text::measure(&req, t.size, &t.text);
+    rustfig_text::measure(&req, t.size, s)
+}
+
+pub fn fix_text_metrics(t: &mut Text) {
+    let m = measure_in_font(t, &t.text);
     t.length = m.width;
     t.height = m.ascent;
 }

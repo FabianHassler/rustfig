@@ -3417,13 +3417,17 @@ dependencies = [
  "fig2dev",
  "rustfig-geom",
  "rustfig-model",
+ "rustfig-text",
 ]
 
 [[package]]
 name = "rustfig-text"
 version = "0.1.0"
 dependencies = [
+ "epaint_default_fonts",
  "figbase",
+ "fontdb",
+ "ttf-parser",
 ]
 
 [[package]]

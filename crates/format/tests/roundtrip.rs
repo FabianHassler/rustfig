@@ -247,3 +247,37 @@ fn text_keeps_leading_blanks() {
     };
     assert_eq!(t.text, "  two");
 }
+
+/// F7: an installed font of a text is a `rustfig-font:` comment line in the
+/// Fig file (xfig and fig2dev ignore it); other comments stay, and the
+/// text's Fig font number is the nearest Fig font.
+#[test]
+fn local_font_is_a_text_comment_in_fig() {
+    let src = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+        # first note\n# rustfig-font: Minion Pro Semibold\n# second note\n\
+        4 0 0 50 -1 16 12 0.0000 4 135 450 300 600 hello\\001\n";
+    let doc = read_fig(src.as_bytes()).unwrap();
+    let ObjectKind::Text(t) = &doc.objects[0].kind else {
+        panic!()
+    };
+    assert_eq!(t.local_font.as_deref(), Some("Minion Pro Semibold"));
+    assert_eq!(t.font, 16);
+    assert_eq!(doc.objects[0].comments, ["first note", "second note"]);
+    // Written back the line is there once, and a second read agrees.
+    let out = write_fig(&doc);
+    assert_eq!(out.matches("# rustfig-font: Minion Pro Semibold\n").count(), 1);
+    assert!(
+        out.contains("# first note\n# second note\n")
+            || out.contains("# rustfig-font: Minion Pro Semibold\n# first note\n# second note\n")
+    );
+    assert_eq!(read_fig(out.as_bytes()).unwrap(), doc);
+    // A text without the line is a plain Fig text.
+    let plain = src.replace("# rustfig-font: Minion Pro Semibold\n", "");
+    let doc2 = read_fig(plain.as_bytes()).unwrap();
+    let ObjectKind::Text(t2) = &doc2.objects[0].kind else {
+        panic!()
+    };
+    assert!(t2.local_font.is_none());
+    // The native format keeps the family too.
+    assert_eq!(read_native(write_native(&doc).unwrap().as_bytes()).unwrap(), doc);
+}

@@ -21,7 +21,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Set current attributes",
             menu: "",
             shortcut: "",
-            params: "{any indicator field: line, thickness, pen_color, fill_color, area_fill, depth, style_val, cap, join, forward_arrow, backward_arrow, arrow, font, font_size, postscript, justify, text_angle, box_radius, dot_gap, sides, rotate_angle, grid, snap, align_h, align_v, pie_arc, text_step, tangent_length (0-20), linkmode: off|move|slide, angle_geom: unconstrained|latex_line|latex_arrow|mount_hattan|manhattan|mountain}",
+            params: "{any indicator field: line, thickness, pen_color, fill_color, area_fill, depth, style_val, cap, join, forward_arrow, backward_arrow, arrow, font, font_size, local_font (string|null), postscript, justify, text_angle, box_radius, dot_gap, sides, rotate_angle, grid, snap, align_h, align_v, pie_arc, text_step, tangent_length (0-20), linkmode: off|move|slide, angle_geom: unconstrained|latex_line|latex_arrow|mount_hattan|manhattan|mountain}",
             mutates: false,
             enabled: always,
             run: set,
@@ -66,10 +66,16 @@ fn set(e: &mut Engine, p: &Value) -> CmdResult {
     let Value::Object(changes) = p else {
         return Err(EngineError::bad_params("expected an object of indicator fields"));
     };
+    // Choosing a Fig font drops the installed one, unless it is set too.
+    let drop_local =
+        (changes.contains_key("font") || changes.contains_key("postscript")) && !changes.contains_key("local_font");
     let mut cur = serde_json::to_value(&e.indicator).map_err(|err| EngineError::internal(err.to_string()))?;
     let Value::Object(fields) = &mut cur else {
         return Err(EngineError::internal("indicator is not an object"));
     };
+    if drop_local {
+        fields.insert("local_font".into(), Value::Null);
+    }
     for (k, v) in changes {
         if !fields.contains_key(k) {
             return Err(EngineError::bad_params(format!("unknown indicator field {k:?}")));

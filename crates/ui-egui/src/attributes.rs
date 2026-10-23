@@ -692,7 +692,10 @@ fn value_text(app: &App, a: Attr) -> String {
         Attr::FontSize => format!("{}", ind.font_size),
         Attr::TextStep => format!("{:.1}", ind.text_step),
         Attr::TangentLength => format!("{:.2}", ind.tangent_length),
-        Attr::Font => font_name(ind.font, ind.postscript),
+        Attr::Font => match &ind.local_font {
+            Some(n) => n.clone(),
+            None => font_name(ind.font, ind.postscript),
+        },
     }
 }
 
@@ -1895,9 +1898,19 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
         Attr::Font => {
             // E11: the font chooser (names in their fonts, search, size, preview).
             ui.set_min_width(260.0);
-            let out = crate::font_chooser::show(ui, "indicator_font", ind.font, ind.postscript, Some(ind.font_size));
+            let out = crate::font_chooser::show(
+                ui,
+                "indicator_font",
+                ind.font,
+                ind.postscript,
+                ind.local_font.as_deref(),
+                Some(ind.font_size),
+            );
             if let Some((f, ps)) = out.font {
-                set(app, json!({"font": f, "postscript": ps}));
+                set(
+                    app,
+                    json!({"font": f, "postscript": ps, "local_font": out.local.flatten()}),
+                );
                 ui.close();
             }
             if let Some(s) = out.size {

@@ -238,6 +238,7 @@ pub fn create(
         length: 0.0,
         origin: Point::ZERO,
         text: String::new(),
+        local_font: None,
     }));
     if s.fixed {
         label.comments = vec![FIXED.into()];
@@ -325,6 +326,7 @@ pub fn recompute(o: &mut Object, s: &DimlineSettings, fmt: &dyn Fn(f64) -> Strin
                     length: 0.0,
                     origin: Point::ZERO,
                     text: String::new(),
+                    local_font: None,
                 }));
                 t.comments = Vec::new();
                 c.objects.push(t);
@@ -342,8 +344,7 @@ pub fn recompute(o: &mut Object, s: &DimlineSettings, fmt: &dyn Fn(f64) -> Strin
         if !fixed {
             t.text = fmt(length);
         }
-        let req = rustfig_text::FontRequest::for_fig(t.font, t.is_postscript());
-        let m = rustfig_text::measure(&req, t.size, &t.text);
+        let m = crate::measure_in_font(t, &t.text);
         t.length = m.width;
         t.height = m.ascent;
         t.angle = angle;
