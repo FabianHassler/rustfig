@@ -23,7 +23,7 @@ the score.
 | Attributes / indicator | 10 | 90 % | mix memory and lock of xfig's colour panel (not built, recent colours instead) | 3 |
 | Drawing modes | 12 | 98 % | none known | 0 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
-| Export | 12 | 70 % | `sld`, texts with `\ooo` octal escapes (raw bytes, B11 pass 5), the audit's hardening passes (B11), picture frames and GIF transparency (gap #26) | 87 |
+| Export | 12 | 73 % | the audit's remaining hardening passes (B11), picture frames and GIF transparency (gap #26), local fonts (F7) embedded in PDF, SVG and EPS (`sld` checked 2026-10-23: fig2dev has no `gensld`, the port reproduces `ppmtoacad`; `\ooo` escapes byte-identical to C fig2dev, fig2dev branch `b11-export-hardening`) | 79 |
 | Text | 10 | 80 % | exact PostScript font metrics, spell check, region selection and fit use the stored size of a typeset LaTeX text (F8; text editing on the canvas done 2026-10-22, E10; character map 2026-10-22, E5); installed fonts per text drawn on the canvas (F7, 2026-10-23), their embedding in PDF/SVG/EPS exports is still to do (fig2dev repo) | 26 |
 | View & navigation | 8 | 100 % | — (zoom box, pan to origin and unzoom with Ctrl+click done 2026-10-22, E3) | 0 |
 | Undo | 4 | 100 % | — | 0 |
