@@ -161,9 +161,19 @@ fn bounds_and_picking_follow_the_typeset_size() {
     // The stored size and fig2dev's bounds are unchanged.
     let bounds = e.object_fig_bounds(id).unwrap();
     assert!(bounds.width() < 1000.0, "{bounds:?}");
+    // Zoom to fit and region selection use the typeset box.
+    let fit = e.fit_bounds();
+    assert!(fit.width() >= w - 1.0, "{fit:?}");
+    assert!(e.doc_bounds().width() < fit.width());
+    let small = rustfig_engine::geom::Rect::from_points([
+        rustfig_engine::geom::Point::new(2000.0, 0.0),
+        rustfig_engine::geom::Point::new(4000.0, 2000.0),
+    ]);
+    assert!(!e.objects_within(&small).contains(&id));
     // Off: back to the stored box.
     e.execute("view.toggle_latex_preview", &json!({"on": false})).unwrap();
     assert_eq!(e.hit_test(far, 10.0), None);
+    assert_eq!(e.fit_bounds(), e.doc_bounds());
     let _ = std::fs::remove_dir_all(&dir);
 }
 
