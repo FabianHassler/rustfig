@@ -7,7 +7,7 @@
 | macOS (Apple Silicon) | ✅ built and driven via the control channel |
 | Windows | 🟡 should build (eframe/glow, rfd); CI job added (P1), first run pending |
 | Linux (X11, Wayland) | 🟡 should build; unverified |
-| Web (wasm32) | 🟡 `cargo xtask web` builds `dist/` (C1); not yet opened in Chrome, Firefox, Safari (see the web checklist) |
+| Web (wasm32) | 🟡 `cargo xtask web` builds `dist/` (C1); browser print (hidden iframe, B5) unchecked; not yet opened in Chrome, Firefox, Safari (see the web checklist) |
 | HiDPI / Retina | ✅ canvas renders at physical pixels, lowered when the GPU's biggest texture is smaller (P2); scales 1 to 4 tested |
 | Mouse: left/right buttons, double click | ✅ |
 | Middle-button and space-drag panning, scroll panning | ✅ |
@@ -48,7 +48,7 @@ Build with `cargo xtask web`, serve `dist/` (`cd dist && python3 -m http.server 
 | Dropping a `.fig` on the window opens it | [ ] | [ ] | [ ] |
 | Edit, then File > Save: a download named like the file arrives; opening it again gives the edit | [ ] | [ ] | [ ] |
 | File > Export (PDF, SVG, EPS): a download arrives and opens in a viewer | [ ] | [ ] | [ ] |
-| File > Print… > Print FIGURE opens the PDF in a new tab (pop-ups allowed); print from the viewer (B5b) | [ ] | [ ] | [ ] |
+| File > Print… > Print FIGURE opens the browser print dialog for the PDF (hidden iframe; fallback: new tab, pop-ups allowed) (B5b); Print Batch gives one multi-page job | [ ] | [ ] | [ ] |
 | Draw, wait 5 s, reload: "Restore unsaved drawing" appears and Restore brings the drawing back; after Save and reload there is no offer (C3) | [ ] | [ ] | [ ] |
 | Retina: the canvas is sharp; resizing the window works | [ ] | [ ] | [ ] |
 | Downloads are not blocked (Safari may ask once) | [ ] | [ ] | [ ] |

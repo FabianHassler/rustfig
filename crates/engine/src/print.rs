@@ -270,6 +270,70 @@ pub struct BatchItem {
     pub pdf: Vec<u8>,
 }
 
+/// The PDFs one after the other as one multi-page PDF (the batch as one job).
+/// A single PDF is returned as it is.
+pub fn merge_pdfs(pdfs: &[&[u8]]) -> Result<Vec<u8>, String> {
+    use hayro_write::pdf_writer::{Pdf as Writer, Ref};
+    use hayro_write::{extract, ChunkSettings, ExtractionQuery};
+    use std::cell::Cell;
+    use std::rc::Rc;
+    if let [one] = pdfs {
+        return Ok(one.to_vec());
+    }
+    if pdfs.is_empty() {
+        return Err("nothing to merge".into());
+    }
+    let counter = Rc::new(Cell::new(1i32));
+    let bump = |c: &Cell<i32>| {
+        let v = c.get();
+        c.set(v.saturating_add(1));
+        Ref::new(v)
+    };
+    let catalog = bump(&counter);
+    let root = bump(&counter);
+    let mut groups: Vec<(Ref, Vec<Ref>)> = Vec::new();
+    let mut chunks = Vec::new();
+    for (i, bytes) in pdfs.iter().enumerate() {
+        let doc = hayro_syntax::Pdf::new(Arc::new(bytes.to_vec()))
+            .map_err(|_| format!("figure {} is not a readable PDF", i + 1))?;
+        let queries: Vec<_> = (0..doc.pages().len()).map(ExtractionQuery::new_page).collect();
+        let c = counter.clone();
+        let res = guarded(|| {
+            extract(
+                &doc,
+                Box::new(move || {
+                    let v = c.get();
+                    c.set(v.saturating_add(1));
+                    Ref::new(v)
+                }),
+                ChunkSettings::default(),
+                &queries,
+            )
+            .ok()
+        })
+        .ok_or_else(|| format!("figure {} could not be copied", i + 1))?;
+        let pages: Vec<Ref> = res.root_refs.iter().filter_map(|r| r.as_ref().ok().copied()).collect();
+        groups.push((res.page_tree_parent_ref, pages));
+        chunks.push(res.chunk);
+    }
+    let mut out = Writer::new();
+    out.catalog(catalog).pages(root);
+    let total: usize = groups.iter().map(|g| g.1.len()).sum();
+    out.pages(root)
+        .kids(groups.iter().map(|g| g.0))
+        .count(i32::try_from(total).unwrap_or(i32::MAX));
+    for (node, pages) in &groups {
+        let mut t = out.pages(*node);
+        t.parent(root);
+        t.kids(pages.iter().copied())
+            .count(i32::try_from(pages.len()).unwrap_or(i32::MAX));
+    }
+    for c in &chunks {
+        out.extend(c);
+    }
+    Ok(out.finish())
+}
+
 /// A name for jobs and files: the figure's file name without folder and
 /// extension.
 pub fn job_name(e: &Engine) -> String {

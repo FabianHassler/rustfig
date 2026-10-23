@@ -307,10 +307,52 @@ fn platform_print(pdf: &[u8], _job_name: &str) -> Result<PrintOutcome, String> {
         .map_err(|_| "the browser could not make the PDF".to_string())?;
     let url = web_sys::Url::create_object_url_with_blob(&blob)
         .map_err(|_| "the browser could not make the PDF".to_string())?;
+    if print_in_frame(&window, &url).is_some() {
+        return Ok(PrintOutcome::Printed);
+    }
     match window.open_with_url_and_target(&url, "_blank") {
         Ok(Some(_)) => Ok(PrintOutcome::Printed),
         _ => Err("The browser blocked the new tab; allow pop-ups for this page".into()),
     }
+}
+
+/// Load the PDF in an invisible iframe and open the browser's print dialog
+/// for it once it has loaded. `None` when the page can't hold the frame (the
+/// caller opens a tab instead). If the browser refuses `print()` on the
+/// frame (some PDF viewers), the frame's own load handler opens the tab.
+#[cfg(target_arch = "wasm32")]
+fn print_in_frame(window: &web_sys::Window, url: &str) -> Option<()> {
+    use wasm_bindgen::closure::Closure;
+    use wasm_bindgen::JsCast;
+    const ID: &str = "rustfig-print-frame";
+    let document = window.document()?;
+    if let Some(old) = document.get_element_by_id(ID) {
+        old.remove();
+    }
+    let frame: web_sys::HtmlIFrameElement = document.create_element("iframe").ok()?.dyn_into().ok()?;
+    frame.set_id(ID);
+    frame
+        .set_attribute(
+            "style",
+            "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden",
+        )
+        .ok()?;
+    let target = window.clone();
+    let target_url = url.to_string();
+    let frame_for_load = frame.clone();
+    let on_load = Closure::once_into_js(move || {
+        let printed = frame_for_load
+            .content_window()
+            .is_some_and(|w| w.focus().is_ok() && w.print().is_ok());
+        if !printed {
+            // Ignored on purpose: nothing else can be done if this is blocked too.
+            let _ = target.open_with_url_and_target(&target_url, "_blank");
+        }
+    });
+    frame.set_onload(Some(on_load.unchecked_ref()));
+    frame.set_src(url);
+    document.body()?.append_child(&frame).ok()?;
+    Some(())
 }
 
 #[cfg(test)]

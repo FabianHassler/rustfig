@@ -195,7 +195,27 @@ fn batch_add_clear_and_print() {
     let r = e.execute("print.quick", &json!({})).unwrap();
     assert_eq!(r["printed"], 2);
     assert_eq!(e.print_batch_len(), 0);
-    assert_eq!(jobs.lock().unwrap().len(), 3);
+    let jobs = jobs.lock().unwrap();
+    assert_eq!(jobs.len(), 2, "the batch is one job");
+    assert_eq!(rustfig_engine::print::pdf_info(&jobs[1].pdf).unwrap().0, 2);
+}
+
+#[test]
+fn the_batch_is_one_job_with_a_page_per_figure() {
+    let (mut e, jobs) = engine();
+    for _ in 0..3 {
+        e.execute("print.batch_add", &json!({})).unwrap();
+    }
+    let r = e.execute("print.batch_print", &json!({})).unwrap();
+    assert_eq!(r["printed"], 3);
+    assert_eq!(e.print_batch_len(), 0);
+    let jobs = jobs.lock().unwrap();
+    assert_eq!(jobs.len(), 1);
+    assert_eq!(jobs[0].name, "3 figures");
+    assert_eq!(rustfig_engine::print::pdf_info(&jobs[0].pdf).unwrap().0, 3);
+    for i in 0..3 {
+        assert!(rustfig_engine::print::render_page(&jobs[0].pdf, i, 200).is_ok());
+    }
 }
 
 #[test]

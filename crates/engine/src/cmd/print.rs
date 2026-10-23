@@ -76,7 +76,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Print the batch",
             menu: "",
             shortcut: "",
-            params: "{\"settings\"?: {…as print.settings, used without keeping them}}  — show the system's print dialog for each figure of the batch, one after the other, and clear it (a cancel stops and keeps the rest); returns {message, printed}",
+            params: "{\"settings\"?: {…as print.settings, used without keeping them}}  — send all figures of the batch as one print job (one multi-page PDF, one print dialog) and clear it (a cancel keeps the batch); returns {message, printed}",
             mutates: false,
             enabled: |e| !e.print_batch.is_empty(),
             run: batch_print,
@@ -205,40 +205,32 @@ fn batch_print(e: &mut Engine, p: &Value) -> CmdResult {
     print_batch_with(e)
 }
 
-/// Send every figure of the batch in order and clear it; if one fails, it
-/// and those after it stay.
+/// Send the whole batch as ONE job (the figures' PDFs joined, in order) and
+/// clear it; on a cancel or an error it stays.
 fn print_batch_with(e: &mut Engine) -> CmdResult {
-    let mut printed = 0usize;
-    let mut message = String::new();
-    while !e.print_batch.is_empty() {
-        let item = e.print_batch.remove(0);
-        let job_name = item.name.clone();
-        match submit(e, item.name.clone(), item.pdf.clone()) {
-            Ok(Some(m)) => {
-                message = m;
-                printed += 1;
-            }
-            Ok(None) => {
-                // The user cancelled: this figure and the rest wait.
-                e.print_batch.insert(0, item);
-                let message = format!("Printing cancelled ({printed} sent, {} waiting)", e.print_batch.len());
-                e.set_status(message.clone());
-                return Ok(json!({"message": message, "printed": printed}));
-            }
-            Err(err) => {
-                e.print_batch.insert(0, item);
-                return Err(EngineError::io(format!(
-                    "{job_name}: {} ({printed} sent, {} waiting)",
-                    err.message,
-                    e.print_batch.len()
-                )));
-            }
+    let n = e.print_batch.len();
+    let name = match e.print_batch.as_slice() {
+        [one] => one.name.clone(),
+        _ => format!("{n} figures"),
+    };
+    let pdf = {
+        let parts: Vec<&[u8]> = e.print_batch.iter().map(|b| b.pdf.as_slice()).collect();
+        print::merge_pdfs(&parts).map_err(EngineError::io)?
+    };
+    match submit(e, name, pdf)? {
+        Some(m) => {
+            e.print_batch.clear();
+            let message = format!(
+                "Printed {n} figure{} from the batch: {m}",
+                if n == 1 { "" } else { "s" }
+            );
+            e.set_status(message.clone());
+            Ok(json!({"message": message, "printed": n}))
+        }
+        None => {
+            let message = format!("Printing cancelled ({n} waiting in the batch)");
+            e.set_status(message.clone());
+            Ok(json!({"message": message, "printed": 0}))
         }
     }
-    let message = format!(
-        "Printed {printed} figure{} from the batch: {message}",
-        if printed == 1 { "" } else { "s" }
-    );
-    e.set_status(message.clone());
-    Ok(json!({"message": message, "printed": printed}))
 }
