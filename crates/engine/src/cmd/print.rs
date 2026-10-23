@@ -16,7 +16,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Print panel settings",
             menu: "",
             shortcut: "",
-            params: "{\"settings\"?: {overlap, background (colour number, -1 none), grid_minor, grid_major (\"None\" or a spacing like \"1/4\"), all_layers (false: only the active layers), bound_active_layers, printer (\"\" = the default printer), params (options for lp, %f is the file name), system_dialog (true: the system's print dialog; false: straight to the printer)}, \"reset\"?: bool}  — without settings returns the ones kept; settings are merged into them and kept in the settings file across sessions (not in the drawing); reset goes back to xfig's defaults. Magnification, paper size, orientation, justification and single/multiple pages are the figure's own: doc.set_magnification, export.fit_page, doc.set_paper, doc.set_page. Returns {settings, magnification, paper, orientation, justify, pages, figure_width, figure_height, unit, batch}",
+            params: "{\"settings\"?: {overlap, background (colour number, -1 none), grid_minor, grid_major (\"None\" or a spacing like \"1/4\"), all_layers (false: only the active layers), bound_active_layers}, \"reset\"?: bool}  — without settings returns the ones kept; settings are merged into them and kept in the settings file across sessions (not in the drawing); reset goes back to xfig's defaults. Magnification, paper size, orientation, justification and single/multiple pages are the figure's own: doc.set_magnification, export.fit_page, doc.set_paper, doc.set_page. Returns {settings, magnification, paper, orientation, justify, pages, figure_width, figure_height, unit, batch}",
             mutates: false,
             enabled: always,
             run: settings,
@@ -36,7 +36,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Print",
             menu: "",
             shortcut: "",
-            params: "{\"settings\"?: {…as print.settings, used without keeping them}}  — print the figure (the PDF to the system's print dialog, or to the printer named in the settings); the batch is left alone (print.batch_print sends it). Returns {message, printed (figures sent)}",
+            params: "{\"settings\"?: {…as print.settings, used without keeping them}}  — print the figure (the PDF in the operating system's print dialog, where the printer, copies and pages are chosen; the user may cancel); the batch is left alone (print.batch_print sends it). Returns {message, printed (figures sent, 0 when cancelled)}",
             mutates: false,
             enabled: always,
             run,
@@ -76,7 +76,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Print the batch",
             menu: "",
             shortcut: "",
-            params: "{\"settings\"?: {…as print.settings, used without keeping them}}  — send the batch's figures to the printer, one after the other, and clear it; returns {message, printed}",
+            params: "{\"settings\"?: {…as print.settings, used without keeping them}}  — show the system's print dialog for each figure of the batch, one after the other, and clear it (a cancel stops and keeps the rest); returns {message, printed}",
             mutates: false,
             enabled: |e| !e.print_batch.is_empty(),
             run: batch_print,
@@ -129,29 +129,33 @@ fn pdf(e: &mut Engine, p: &Value) -> CmdResult {
     }))
 }
 
-/// Send one PDF to the spooler; the message to show.
-fn submit(e: &mut Engine, s: &PrintSettings, name: String, pdf: Vec<u8>) -> Result<String, EngineError> {
-    let job = print::job_for(e, s, name, pdf);
+/// Send one PDF to the spooler: the message to show, `None` when the user
+/// cancelled the system's dialog.
+fn submit(e: &mut Engine, name: String, pdf: Vec<u8>) -> Result<Option<String>, EngineError> {
+    let job = print::job_for(name, pdf);
     let sent = e.spooler.submit(&job).map_err(EngineError::io)?;
-    Ok(if s.system_dialog {
-        sent
-    } else if s.printer.is_empty() {
-        format!("Printing on default printer with {} ... done", print::mode_text(e))
-    } else {
-        format!("Printing on \"{}\" with {} ... done", s.printer, print::mode_text(e))
-    })
+    Ok(sent.map(|m| {
+        if m.is_empty() {
+            format!("Printed with {}", print::mode_text(e))
+        } else {
+            m
+        }
+    }))
 }
 
 fn print_now(e: &mut Engine, s: &PrintSettings, batch_first: bool) -> CmdResult {
     // xfig's Print and Quick Print send the batch when there is one.
     if batch_first && !e.print_batch.is_empty() {
-        return print_batch_with(e, s);
+        return print_batch_with(e);
     }
     let (bytes, warnings) = print::make_pdf(e, s)?;
     let name = print::job_name(e);
-    let message = submit(e, s, name, bytes)?;
+    let (message, printed) = match submit(e, name, bytes)? {
+        Some(m) => (m, 1),
+        None => ("Printing cancelled".to_string(), 0),
+    };
     e.set_status(message.clone());
-    Ok(json!({"message": message, "printed": 1, "warnings": warnings}))
+    Ok(json!({"message": message, "printed": printed, "warnings": warnings}))
 }
 
 fn run(e: &mut Engine, p: &Value) -> CmdResult {
@@ -194,25 +198,32 @@ fn batch_clear(e: &mut Engine, _: &Value) -> CmdResult {
 }
 
 fn batch_print(e: &mut Engine, p: &Value) -> CmdResult {
-    let s = effective(e, p)?;
+    effective(e, p)?;
     if e.print_batch.is_empty() {
         return Err(EngineError::bad_params("the print batch is empty"));
     }
-    print_batch_with(e, &s)
+    print_batch_with(e)
 }
 
 /// Send every figure of the batch in order and clear it; if one fails, it
 /// and those after it stay.
-fn print_batch_with(e: &mut Engine, s: &PrintSettings) -> CmdResult {
+fn print_batch_with(e: &mut Engine) -> CmdResult {
     let mut printed = 0usize;
     let mut message = String::new();
     while !e.print_batch.is_empty() {
         let item = e.print_batch.remove(0);
         let job_name = item.name.clone();
-        match submit(e, s, item.name.clone(), item.pdf.clone()) {
-            Ok(m) => {
+        match submit(e, item.name.clone(), item.pdf.clone()) {
+            Ok(Some(m)) => {
                 message = m;
                 printed += 1;
+            }
+            Ok(None) => {
+                // The user cancelled: this figure and the rest wait.
+                e.print_batch.insert(0, item);
+                let message = format!("Printing cancelled ({printed} sent, {} waiting)", e.print_batch.len());
+                e.set_status(message.clone());
+                return Ok(json!({"message": message, "printed": printed}));
             }
             Err(err) => {
                 e.print_batch.insert(0, item);

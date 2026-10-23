@@ -1,6 +1,6 @@
 //! Pick a colour from the screen (E4b): the egui side. The OS calls (macOS
 //! `NSColorSampler`, Windows `GetPixel`, the Linux portal) are in
-//! `rustfig-screenpick`; this keeps the pick in progress and repaints.
+//! `rustfig-os`; this keeps the pick in progress and repaints.
 //!
 //! Windows has no system sampler: while picking, every frame reads the pixel
 //! under the pointer, the picker shows it live, the next left click takes it
@@ -8,7 +8,7 @@
 
 use std::sync::mpsc::Receiver;
 
-pub use rustfig_screenpick::{available, unavailable_reason, Outcome};
+pub use rustfig_os::screen::{available, unavailable_reason, Outcome};
 
 /// A pick in progress.
 #[derive(Default)]
@@ -55,14 +55,14 @@ impl ScreenPicker {
         if !available() {
             return Err(unavailable_reason().to_string());
         }
-        if rustfig_screenpick::polls_pixels() {
+        if rustfig_os::screen::polls_pixels() {
             self.own = true;
             self.wait_release = true;
             self.live = None;
             return Ok(());
         }
         let ctx = ctx.clone();
-        self.rx = Some(rustfig_screenpick::start_sampler(move || ctx.request_repaint())?);
+        self.rx = Some(rustfig_os::screen::start_sampler(move || ctx.request_repaint())?);
         Ok(())
     }
 
@@ -88,7 +88,7 @@ impl ScreenPicker {
     /// Windows' own picking, one frame.
     fn poll_own(&mut self, ctx: &egui::Context) -> Option<Outcome> {
         ctx.request_repaint_after(std::time::Duration::from_millis(16));
-        let s = rustfig_screenpick::poll_pixel();
+        let s = rustfig_os::screen::poll_pixel();
         self.live = s.colour;
         if s.escape {
             return Some(self.end_own(Outcome::Cancelled));

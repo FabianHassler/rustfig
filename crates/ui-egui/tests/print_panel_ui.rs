@@ -48,8 +48,6 @@ fn the_panel_has_xfigs_rows_and_a_preview() {
         "Layers",
         "Print all layers",
         "Print only active",
-        "Printer",
-        "Print job params",
         "Figures in batch",
         "Dismiss",
         "Print FIGURE",

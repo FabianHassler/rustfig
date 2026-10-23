@@ -2,8 +2,9 @@
 //!
 //! The panel keeps xfig's rows (magnification and Fit to Page, paper size,
 //! orientation, justification, single or multiple pages with overlap,
-//! background, grid, layers, printer and job parameters, the batch); the
-//! preview is the PDF that Print hands to the system, rendered again when an
+//! background, grid, layers, the batch); the preview is the PDF that Print
+//! hands to the operating system's own print dialog (`rustfig-os`), where
+//! printer, copies and page ranges are chosen; it is rendered again when an
 //! option changes. Everything it does is a command (`print.*`, `doc.set_*`,
 //! `export.fit_page`).
 //
@@ -63,6 +64,20 @@ struct Actions {
     magnification: Option<f64>,
     page: Vec<(&'static str, &'static str)>,
     paper: Option<PaperSize>,
+}
+
+/// Shows the operating system's print dialog for each job (`rustfig-os`).
+/// The engine runs commands on the UI thread, which the macOS dialog needs.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct OsSpooler;
+
+impl print::Spooler for OsSpooler {
+    fn submit(&mut self, job: &print::PrintJob) -> Result<Option<String>, String> {
+        match rustfig_os::print::print_pdf(&job.pdf, &job.name)? {
+            rustfig_os::print::PrintOutcome::Printed => Ok(Some(String::new())),
+            rustfig_os::print::PrintOutcome::Cancelled => Ok(None),
+        }
+    }
 }
 
 pub fn dialog(app: &mut App, ctx: &egui::Context) {
@@ -202,27 +217,6 @@ pub fn dialog(app: &mut App, ctx: &egui::Context) {
                             });
                         });
                         ui.end_row();
-                        ui.label("Printer");
-                        ui.add(
-                            egui::TextEdit::singleline(&mut st.settings.printer)
-                                .hint_text("default printer")
-                                .desired_width(190.0),
-                        );
-                        ui.end_row();
-                        ui.label("Print job params");
-                        ui.add(
-                            egui::TextEdit::singleline(&mut st.settings.params)
-                                .hint_text("options for lp, e.g. -n 2")
-                                .desired_width(190.0),
-                        );
-                        ui.end_row();
-                        ui.label("Send to");
-                        ui.checkbox(&mut st.settings.system_dialog, "The system's print dialog")
-                            .on_hover_text(
-                                "Open the PDF in the system's viewer to choose printer, copies and pages; \
-                                 off: send it to the printer named above at once (lp, or the Print verb on Windows)",
-                            );
-                        ui.end_row();
                     });
                 ui.vertical(|ui| {
                     ui.label("Preview");
@@ -234,7 +228,11 @@ pub fn dialog(app: &mut App, ctx: &egui::Context) {
                 if ui.button("Dismiss").clicked() {
                     act.close = true;
                 }
-                if ui.button("Print FIGURE").clicked() {
+                if ui
+                    .button("Print FIGURE")
+                    .on_hover_text("Open the system's print dialog")
+                    .clicked()
+                {
                     act.print = true;
                 }
                 if ui.button("Add to Batch").clicked() {

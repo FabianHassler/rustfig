@@ -1,6 +1,6 @@
 # Hardware and platform parity checklist
 
-**Status:** 2026-10-23 (P2: macOS checked; Windows, Linux and web rows are manual checks, unchecked below).
+**Status:** 2026-10-23 (B5b print rows; P2: macOS checked; Windows, Linux and web rows are manual checks, unchecked below).
 
 | Item | State |
 |---|---|
@@ -33,6 +33,7 @@ Automated by `cargo xtask ci` on every system: the folders per OS (`crates/engin
 | HiDPI: sharp at 2x; moving the window between a 1x and a 2x screen redraws sharply | [x] 2x screenshot; mixed screens [ ] | [ ] 125 %, 150 %, 200 % | [ ] | [ ] fractional scale |
 | Clipboard: Copy as picture, Paste Text (E14, E7) | [ ] | [ ] | [ ] | [ ] |
 | Keyboard: xfig's keys next to the platform's (Cmd or Ctrl), the Alt/Meta menu keys | [ ] | [ ] | [ ] | [ ] |
+| File > Print… > Print FIGURE opens the system's print dialog (macOS print panel; Windows print dialog then the PDF viewer's `printto`; Linux portal dialog); Cancel prints nothing (B5b) | [ ] 2026-10-23 Print FIGURE blocks the app in the system panel (not seen: no screen capture permission); printing to paper [ ] | [ ] | [ ] | [ ] |
 | Emoji in a file name: the file-name box draws a replacement glyph (no emoji font; known, cosmetic) | seen | [ ] | [ ] | [ ] |
 
 ## Web checklist (C1, C2): Chrome, Firefox, Safari
@@ -47,12 +48,14 @@ Build with `cargo xtask web`, serve `dist/` (`cd dist && python3 -m http.server 
 | Dropping a `.fig` on the window opens it | [ ] | [ ] | [ ] |
 | Edit, then File > Save: a download named like the file arrives; opening it again gives the edit | [ ] | [ ] | [ ] |
 | File > Export (PDF, SVG, EPS): a download arrives and opens in a viewer | [ ] | [ ] | [ ] |
+| File > Print… > Print FIGURE opens the PDF in a new tab (pop-ups allowed); print from the viewer (B5b) | [ ] | [ ] | [ ] |
 | Retina: the canvas is sharp; resizing the window works | [ ] | [ ] | [ ] |
 | Downloads are not blocked (Safari may ask once) | [ ] | [ ] | [ ] |
 
 ## Revision history
 | Date | Note |
 |---|---|
+| 2026-10-23 | B5b: print dialog rows. |
 | 2026-10-23 | P2: per-OS and web checklists; HiDPI and three-button rows updated. |
 | 2026-10-23 | C2: browser open, drop, save and export. |
 | 2026-10-23 | C1: web build packaged with trunk. |

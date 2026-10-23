@@ -18,7 +18,7 @@ lower layers; nothing below L6 may depend on egui, eframe, winit or rfd.
 | L3 | `rustfig-render` | the canvas scene: a document → fig2dev's `Scene` (depth order, gray layers), drawn by fig2dev's rasteriser |
 | L4 | `rustfig-engine` | session: commands, undo, selection, indicator, view, tools, guard, picture import; exports through `fig2dev::convert` |
 | L5 | `rustfig-mcp` | MCP server over stdio |
-| L5 | `rustfig-screenpick` | pick a colour from the screen (E4b): the only crate with `unsafe` (`deny` plus `allow` on the few OS-call functions: macOS NSColorSampler, Windows GetPixel); safe API, no egui |
+| L5 | `rustfig-os` | OS calls: pick a colour from the screen (E4b) and the native print dialog for a PDF (B5b): the only crate with `unsafe` (`deny` plus `allow` on the few OS-call functions: macOS NSColorSampler and PDFKit print operation, Windows GetPixel and `PrintDlgEx`); safe API, no egui |
 | L6 | `rustfig-ui-egui` | egui app: canvas, panels, menus, dialogs, control channel |
 | L7 | `rustfig` (app), `rustfig-cli`, `fig2dev` | binaries |
 

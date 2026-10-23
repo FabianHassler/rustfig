@@ -8,7 +8,7 @@ members = [
     "crates/render",
     "crates/engine",
     "crates/mcp",
-    "crates/screenpick",
+    "crates/os",
     "crates/ui-egui",
     "apps/rustfig",
     "apps/cli",
@@ -35,7 +35,7 @@ rustfig-format = { path = "crates/format" }
 rustfig-render = { path = "crates/render" }
 rustfig-engine = { path = "crates/engine" }
 rustfig-mcp = { path = "crates/mcp" }
-rustfig-screenpick = { path = "crates/screenpick" }
+rustfig-os = { path = "crates/os" }
 rustfig-ui-egui = { path = "crates/ui-egui" }
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1"

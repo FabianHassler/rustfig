@@ -1,7 +1,6 @@
 //! Pick a colour from the screen (E4b), also from other programs' windows.
 //!
-//! The only crate of the workspace that may contain `unsafe` (the OS calls
-//! below); its API is safe and knows nothing of egui.
+//! The OS calls below are `unsafe`, allowed per function; the API is safe and knows nothing of egui.
 //!
 //! - macOS: the system colour sampler (`NSColorSampler`), via [`start_sampler`].
 //! - Linux/BSD: the xdg-desktop-portal `Screenshot.PickColor` request on a

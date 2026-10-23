@@ -13,7 +13,7 @@ workspace = true
 [dependencies]
 rustfig-geom.workspace = true
 # Pick a colour from the screen (E4b); the unsafe OS calls live there (native only inside; empty on wasm).
-rustfig-screenpick.workspace = true
+rustfig-os.workspace = true
 rustfig-model.workspace = true
 rustfig-engine.workspace = true
 rustfig-render.workspace = true

@@ -1,17 +1,18 @@
 # Print
 
-File > Print (Meta+P, Ctrl+P) opens the Print panel. RustFig makes a PDF of the page exactly as fig2dev lays it out and hands it to the operating system's print system: you choose printer, copies and page ranges there.
+File > Print (Meta+P, Ctrl+P) opens the Print panel. RustFig makes a PDF of the page exactly as fig2dev lays it out and shows your operating system's own print dialog for it: you choose printer, copies, page ranges and the printer's options there (the macOS print panel, the Windows print dialog, the desktop's print dialog on Linux).
 
 ## The panel
 
 - **Magnification** and **Fit to Page** (a half inch of margin all round); **Figure size** follows the magnification. The magnification, **Paper size**, **Orientation**, **Justification** (centred or flush left) and **Pages** (single or multiple, with **Overlap**) are the figure's own settings, stored in the .fig file as in xfig and shared with the Export panel.
 - **Background** colour, **Grid** (minor and major spacing), **Layers**: print all, or only the active ones (depths not switched off in the depth manager), optionally with the page sized by them.
-- **Printer** and **Print job params** (options for `lp`, for example `-n 2`; `%f` is the figure's file name) apply when **The system's print dialog** is switched off: the PDF then goes straight to the printer named (macOS and Linux `lp`, Windows the Print verb). With it on (the default) the PDF opens in the system's viewer (Preview on macOS, the desktop's PDF viewer on Linux, the default viewer on Windows) and you print from there.
 - **Preview** shows the page as it prints, made again when you change an option; with several pages, step with the arrow buttons. Very large figures are not previewed.
-- **Print FIGURE** prints. **Add to Batch** keeps the figure's PDF in the batch (with the settings it has now), **Print Batch** sends every figure of the batch, one after the other, and **Clear Batch** forgets them. The batch lives in memory until RustFig quits.
+- **Print FIGURE** opens the system's print dialog with the page as the preview shows it; if you cancel the dialog nothing is printed. **Add to Batch** keeps the figure's PDF in the batch (with the settings it has now), **Print Batch** opens the dialog for every figure of the batch, one after the other (cancel stops and keeps the rest), and **Clear Batch** forgets them. The batch lives in memory until RustFig quits.
 - Shift+Meta+P (Quick print) prints with the kept settings without the panel; if figures wait in the batch it prints the batch instead, as xfig does.
 
-The panel's values are kept in the settings file. In the web app printing is not available yet: export to PDF and print that.
+The panel's values are kept in the settings file. RustFig has no printer name or job options of its own: the dialog lists the printers the system knows.
+
+- macOS: the standard print panel (it also saves as PDF). Windows: the print dialog; the PDF then goes to the chosen printer through the program registered for PDF files, so one must be installed, and the dialog's copies and page ranges are not passed on. Linux: the xdg-desktop-portal print dialog (needs a portal with a Print backend, such as the GTK or KDE one). Web: the PDF opens in a new browser tab, where you print it with the browser's viewer (allow pop-ups).
 
 ## Scripts
 

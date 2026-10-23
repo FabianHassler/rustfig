@@ -246,9 +246,8 @@ impl App {
         #[cfg(not(target_arch = "wasm32"))]
         app.engine
             .set_picture_clipboard(Some(Box::new(clipboard::SystemPictureClipboard::default())));
-        // Print (B5) hands its PDF to the operating system's print system.
-        #[cfg(not(target_arch = "wasm32"))]
-        app.engine.set_spooler(Box::new(rustfig_engine::print::SystemSpooler));
+        // Print (B5, B5b) shows the operating system's print dialog (the browser's viewer on the web).
+        app.engine.set_spooler(Box::new(print_dialog::OsSpooler));
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(port) = control_port {
             app.attach(&cc.egui_ctx);

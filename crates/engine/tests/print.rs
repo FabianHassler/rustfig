@@ -110,31 +110,46 @@ fn background_grid_and_layers_reach_fig2dev() {
 }
 
 #[test]
-fn print_goes_to_the_spooler_with_the_job_options() {
+fn print_goes_to_the_spooler() {
     let (mut e, jobs) = engine();
-    e.execute(
-        "print.settings",
-        &json!({"settings": {"printer": "hp1700", "params": "-n 2 -o sides=two-sided-long-edge", "system_dialog": false}}),
-    )
-    .unwrap();
     let r = e.execute("print.run", &json!({})).unwrap();
     assert_eq!(r["printed"], 1);
-    assert!(r["message"].as_str().unwrap().contains("hp1700"));
     let jobs = jobs.lock().unwrap();
     assert_eq!(jobs.len(), 1);
-    let j = &jobs[0];
-    assert!(j.pdf.starts_with(b"%PDF") && !j.system_dialog);
-    assert_eq!(j.printer, "hp1700");
-    assert_eq!(j.args, ["-n", "2", "-o", "sides=two-sided-long-edge"]);
+    assert!(jobs[0].pdf.starts_with(b"%PDF"));
 }
 
 #[test]
-fn quick_print_uses_the_kept_settings_and_the_dialog_by_default() {
+fn a_cancelled_dialog_prints_nothing_and_keeps_the_batch() {
+    let (mut e, _) = engine();
+    let rec = RecordingSpooler {
+        cancel: true,
+        ..RecordingSpooler::default()
+    };
+    let jobs = rec.jobs.clone();
+    e.set_spooler(Box::new(rec));
+    let r = e.execute("print.run", &json!({})).unwrap();
+    assert_eq!(r["printed"], 0);
+    e.execute("print.batch_add", &json!({})).unwrap();
+    let r = e.execute("print.batch_print", &json!({})).unwrap();
+    assert_eq!(r["printed"], 0);
+    assert_eq!(e.print_batch_len(), 1);
+    assert!(jobs.lock().unwrap().is_empty());
+}
+
+#[test]
+fn quick_print_uses_the_kept_settings() {
     let (mut e, jobs) = engine();
     e.execute("print.quick", &json!({})).unwrap();
-    let jobs = jobs.lock().unwrap();
-    assert_eq!(jobs.len(), 1);
-    assert!(jobs[0].system_dialog && jobs[0].printer.is_empty());
+    assert_eq!(jobs.lock().unwrap().len(), 1);
+}
+
+#[test]
+fn old_printer_settings_are_ignored_in_the_settings_file() {
+    let back: rustfig_engine::prefs::Prefs =
+        toml::from_str("[rustfig.print]\noverlap = true\nprinter = \"hp\"\nparams = \"-n 2\"\nsystem_dialog = false\n")
+            .unwrap();
+    assert!(back.rustfig.print.overlap);
 }
 
 #[test]
@@ -159,7 +174,7 @@ fn settings_are_kept_and_reset() {
     assert_eq!(r["settings"]["overlap"], false);
     assert!(e.execute("print.settings", &json!({"settings": {"bogus": 1}})).is_err());
     assert!(e
-        .execute("print.settings", &json!({"settings": {"printer": "-x"}}))
+        .execute("print.settings", &json!({"settings": {"printer": "hp"}}))
         .is_err());
 }
 
@@ -214,8 +229,6 @@ fn hostile_parameters_are_refused() {
     let (mut e, jobs) = engine();
     for s in [
         json!({"printer": "a\nb"}),
-        json!({"printer": "x".repeat(10_000)}),
-        json!({"params": "a\u{0}b"}),
         json!({"params": "x ".repeat(5_000)}),
         json!({"overlap": 5}),
         json!({"background": "red"}),

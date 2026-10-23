@@ -1,17 +1,18 @@
-//! Printing (plan B5): xfig's Print panel, modernised.
+//! Printing (plan B5, B5b): xfig's Print panel, modernised.
 //!
 //! xfig pipes fig2dev's PostScript to `lpr` (`print_to_printer`, `print_to_batchfile`
 //! and `do_print` of `u_print.c` and `w_print.c`). RustFig makes a PDF of the
-//! same page, with the same fig2dev options, and hands it to the operating
-//! system's print system: the viewer's print dialog (macOS Preview, the
-//! desktop's PDF viewer, Windows) for printer, copies and page ranges, or
-//! straight to `lp` (macOS, Linux) when a printer is named. Magnification,
-//! paper size, orientation, justification and single/multiple pages are the
-//! figure's own settings (the .fig file, as in xfig); everything else is kept
-//! in the settings file ([`PrintSettings`]).
+//! same page, with the same fig2dev options, and shows the operating system's
+//! own print dialog for it (`rustfig-os`: macOS print panel, Windows print
+//! dialog, the desktop portal's on Linux, the browser's viewer on the web):
+//! printer, copies and page ranges are chosen there, not in RustFig.
+//! Magnification, paper size, orientation, justification and single/multiple
+//! pages are the figure's own settings (the .fig file, as in xfig); everything
+//! else is kept in the settings file ([`PrintSettings`]).
 //!
 //! What reaches the printer goes through [`Spooler`], so tests and scripts
-//! can look at a job instead of sending it.
+//! can look at a job instead of sending it; the app installs the one that
+//! calls the system dialog.
 //!
 // Ported from xfig src/u_print.c, src/w_print.c (xfig licence, see LICENSE-xfig).
 
@@ -24,10 +25,6 @@ use std::sync::{Arc, Mutex};
 /// Most figures in the batch, and most bytes all of them may hold.
 pub const MAX_BATCH_FIGURES: usize = 200;
 pub const MAX_BATCH_BYTES: usize = 512 << 20;
-/// Longest printer name, job parameter string, and number of parameters.
-const MAX_NAME: usize = 256;
-const MAX_PARAMS: usize = 1024;
-const MAX_ARGS: usize = 32;
 /// Most pixels along the longer side of a page preview.
 pub const MAX_PREVIEW_EDGE: u32 = 2048;
 
@@ -46,13 +43,6 @@ pub struct PrintSettings {
     pub all_layers: bool,
     /// With only the active layers: size the page by them too (fig2dev's `-K`).
     pub bound_active_layers: bool,
-    /// The printer's name; empty is the system's default printer.
-    pub printer: String,
-    /// "Print Job Params": extra options for `lp`, `%f` is the file name.
-    pub params: String,
-    /// Hand the PDF to the system's print dialog (true, the default) or send it
-    /// to the printer at once with `lp` (macOS, Linux) or the Print verb (Windows).
-    pub system_dialog: bool,
 }
 
 impl Default for PrintSettings {
@@ -64,9 +54,6 @@ impl Default for PrintSettings {
             grid_major: "None".into(),
             all_layers: true,
             bound_active_layers: false,
-            printer: String::new(),
-            params: String::new(),
-            system_dialog: true,
         }
     }
 }
@@ -84,12 +71,6 @@ impl PrintSettings {
         self.grid_minor = grids.grid_minor;
         self.grid_major = grids.grid_major;
         self.background = grids.background;
-        if check_printer(&self.printer).is_err() {
-            self.printer.clear();
-        }
-        if check_params(&self.params).is_err() {
-            self.params.clear();
-        }
         self
     }
 }
@@ -111,8 +92,6 @@ pub fn merge(base: PrintSettings, v: &Value) -> Result<PrintSettings, EngineErro
     }
     let s: PrintSettings =
         serde_json::from_value(cur).map_err(|err| EngineError::bad_params(format!("print settings: {err}")))?;
-    check_printer(&s.printer)?;
-    check_params(&s.params)?;
     Ok(s.sanitized())
 }
 
@@ -130,58 +109,6 @@ pub fn store(e: &mut Engine, s: PrintSettings) {
     }
 }
 
-/// A printer name the system's print command can take: it can't look like an
-/// option and has no control characters.
-pub fn check_printer(name: &str) -> Result<(), EngineError> {
-    if name.len() > MAX_NAME || name.starts_with('-') || name.chars().any(char::is_control) {
-        return Err(EngineError::bad_params("the printer name is not valid"));
-    }
-    Ok(())
-}
-
-/// Job parameters: control characters and absurd lengths are refused.
-pub fn check_params(params: &str) -> Result<(), EngineError> {
-    if params.len() > MAX_PARAMS || params.chars().any(char::is_control) {
-        return Err(EngineError::bad_params("the print job parameters are not valid"));
-    }
-    if split_args(params).len() > MAX_ARGS {
-        return Err(EngineError::bad_params("too many print job parameters"));
-    }
-    Ok(())
-}
-
-/// Break `cmdline` at spaces; a space quoted by a backslash stays in its
-/// word (xfig's `cmdlinetoargarray`).
-pub fn split_args(cmdline: &str) -> Vec<String> {
-    let mut out = Vec::new();
-    let mut cur = String::new();
-    let mut started = false;
-    let mut chars = cmdline.chars().peekable();
-    while let Some(c) = chars.next() {
-        match c {
-            '\\' if chars.peek() == Some(&' ') => {
-                cur.push(' ');
-                chars.next();
-                started = true;
-            }
-            ' ' => {
-                if started {
-                    out.push(std::mem::take(&mut cur));
-                    started = false;
-                }
-            }
-            c => {
-                cur.push(c);
-                started = true;
-            }
-        }
-    }
-    if started {
-        out.push(cur);
-    }
-    out
-}
-
 /// What the printer is sent.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrintJob {
@@ -189,17 +116,14 @@ pub struct PrintJob {
     pub pdf: Vec<u8>,
     /// A name for the job and the temporary file.
     pub name: String,
-    pub printer: String,
-    /// `lp`'s options, already split (`%f` replaced).
-    pub args: Vec<String>,
-    pub system_dialog: bool,
 }
 
 /// Where print jobs go. The system's one is [`SystemSpooler`]; tests use
 /// [`RecordingSpooler`]; an engine without a front end has [`NoSpooler`].
 pub trait Spooler: Send {
-    /// Hand `job` over; a short message for the user.
-    fn submit(&mut self, job: &PrintJob) -> Result<String, String>;
+    /// Hand `job` over: `Some(message)` when it went to the print system,
+    /// `None` when the user cancelled the dialog.
+    fn submit(&mut self, job: &PrintJob) -> Result<Option<String>, String>;
 }
 
 /// Refuses every job: the engine's default, so scripts and tests never print.
@@ -207,7 +131,7 @@ pub trait Spooler: Send {
 pub struct NoSpooler;
 
 impl Spooler for NoSpooler {
-    fn submit(&mut self, _: &PrintJob) -> Result<String, String> {
+    fn submit(&mut self, _: &PrintJob) -> Result<Option<String>, String> {
         Err("no print system is attached".into())
     }
 }
@@ -218,157 +142,22 @@ pub struct RecordingSpooler {
     pub jobs: Arc<Mutex<Vec<PrintJob>>>,
     /// When set, every job fails with this message.
     pub fail: Option<String>,
+    /// When set, the "user" cancels the dialog: the job is not recorded.
+    pub cancel: bool,
 }
 
 impl Spooler for RecordingSpooler {
-    fn submit(&mut self, job: &PrintJob) -> Result<String, String> {
+    fn submit(&mut self, job: &PrintJob) -> Result<Option<String>, String> {
         if let Some(f) = &self.fail {
             return Err(f.clone());
+        }
+        if self.cancel {
+            return Ok(None);
         }
         if let Ok(mut jobs) = self.jobs.lock() {
             jobs.push(job.clone());
         }
-        Ok("recorded".into())
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub use system::SystemSpooler;
-
-#[cfg(not(target_arch = "wasm32"))]
-mod system {
-    use super::{PrintJob, Spooler};
-    use std::path::PathBuf;
-    use std::process::Command;
-
-    /// The operating system's print system: the PDF goes to a temporary
-    /// file, then to the viewer's print dialog (`open -a Preview` on macOS,
-    /// `xdg-open` on Linux, the shell on Windows) or, without a dialog, to
-    /// `lp` (macOS, Linux) or the Print verb (Windows).
-    #[derive(Debug, Default, Clone, Copy)]
-    pub struct SystemSpooler;
-
-    fn temp_dir() -> PathBuf {
-        std::env::temp_dir().join("rustfig-print")
-    }
-
-    /// Write the job's PDF; files older than a day are removed first.
-    fn write_pdf(job: &PrintJob) -> Result<PathBuf, String> {
-        let dir = temp_dir();
-        std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
-        if let Ok(rd) = std::fs::read_dir(&dir) {
-            let day = std::time::Duration::from_secs(24 * 3600);
-            for f in rd.flatten() {
-                let old = f
-                    .metadata()
-                    .and_then(|m| m.modified())
-                    .ok()
-                    .and_then(|t| t.elapsed().ok())
-                    .is_some_and(|age| age > day);
-                if old {
-                    // A leftover of an earlier print; failing to remove it is harmless.
-                    let _ = std::fs::remove_file(f.path());
-                }
-            }
-        }
-        let name: String = job
-            .name
-            .chars()
-            .map(|c| {
-                if c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.') {
-                    c
-                } else {
-                    '_'
-                }
-            })
-            .take(80)
-            .collect();
-        let name = name.trim_start_matches('.');
-        let name = if name.is_empty() { "figure" } else { name };
-        let stamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_or(0, |d| d.as_millis());
-        let path = dir.join(format!("{stamp}-{}-{name}.pdf", std::process::id()));
-        std::fs::write(&path, &job.pdf).map_err(|e| format!("{}: {e}", path.display()))?;
-        Ok(path)
-    }
-
-    fn run(mut c: Command) -> Result<String, String> {
-        let program = c.get_program().to_string_lossy().into_owned();
-        let out = c.output().map_err(|e| format!("cannot run {program}: {e}"))?;
-        let text = String::from_utf8_lossy(&out.stdout).trim().to_string();
-        if out.status.success() {
-            Ok(text)
-        } else {
-            let err = String::from_utf8_lossy(&out.stderr);
-            let err = err.trim();
-            Err(format!(
-                "{program} failed: {}",
-                if err.is_empty() { &text } else { err }
-            ))
-        }
-    }
-
-    impl Spooler for SystemSpooler {
-        fn submit(&mut self, job: &PrintJob) -> Result<String, String> {
-            let path = write_pdf(job)?;
-            let file = path.to_string_lossy().into_owned();
-            if job.system_dialog {
-                #[cfg(target_os = "macos")]
-                {
-                    let mut c = Command::new("open");
-                    c.args(["-a", "Preview", &file]);
-                    run(c)?;
-                    return Ok("Opened in Preview: choose File > Print there".to_string());
-                }
-                #[cfg(target_os = "windows")]
-                {
-                    let mut c = Command::new("cmd");
-                    c.args(["/C", "start", "", &file]);
-                    run(c)?;
-                    return Ok("Opened in the PDF viewer: print it from there".to_string());
-                }
-                #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-                {
-                    let mut c = Command::new("xdg-open");
-                    c.arg(&file);
-                    run(c)?;
-                    return Ok("Opened in the PDF viewer: print it from there".to_string());
-                }
-            }
-            #[cfg(target_os = "windows")]
-            {
-                let mut script = format!("Start-Process -FilePath '{}' ", file.replace('\'', "''"));
-                if job.printer.is_empty() {
-                    script.push_str("-Verb Print");
-                } else {
-                    script.push_str(&format!(
-                        "-Verb PrintTo -ArgumentList '\"{}\"'",
-                        job.printer.replace('\'', "''")
-                    ));
-                }
-                let mut c = Command::new("powershell");
-                c.args(["-NoProfile", "-NonInteractive", "-Command", &script]);
-                run(c)?;
-                Ok("Sent to the printer".into())
-            }
-            #[cfg(not(target_os = "windows"))]
-            {
-                let mut c = Command::new("lp");
-                if !job.printer.is_empty() {
-                    c.args(["-d", &job.printer]);
-                }
-                c.args(&job.args);
-                c.arg("--");
-                c.arg(&file);
-                let id = run(c)?;
-                Ok(if id.is_empty() {
-                    "Sent to the printer".into()
-                } else {
-                    id
-                })
-            }
-        }
+        Ok(Some("recorded".into()))
     }
 }
 
@@ -506,20 +295,9 @@ pub fn mode_text(e: &Engine) -> String {
     )
 }
 
-/// The job for `pdf`: `%f` in the parameters becomes the figure's file name.
-pub fn job_for(e: &Engine, s: &PrintSettings, name: String, pdf: Vec<u8>) -> PrintJob {
-    let file = e.path().unwrap_or("");
-    let args = split_args(&s.params)
-        .into_iter()
-        .map(|a| a.replace("%f", file))
-        .collect();
-    PrintJob {
-        pdf,
-        name,
-        printer: s.printer.clone(),
-        args,
-        system_dialog: s.system_dialog,
-    }
+/// The job for `pdf`.
+pub fn job_for(name: String, pdf: Vec<u8>) -> PrintJob {
+    PrintJob { pdf, name }
 }
 
 #[cfg(test)]
@@ -527,31 +305,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn args_split_like_xfig() {
-        assert_eq!(
-            split_args("  -o  sides=two-sided  -n 2 "),
-            ["-o", "sides=two-sided", "-n", "2"]
-        );
-        assert_eq!(split_args(r"-t my\ title x"), ["-t", "my title", "x"]);
-        assert!(split_args("   ").is_empty());
-    }
-
-    #[test]
-    fn names_are_checked() {
-        assert!(check_printer("hp1700").is_ok());
-        assert!(check_printer("-d").is_err());
-        assert!(check_printer("a\nb").is_err());
-        assert!(check_params("-n 2").is_ok());
-        assert!(check_params("a\0b").is_err());
-        assert!(check_params(&"x ".repeat(100)).is_err());
-    }
-
-    #[test]
     fn merge_rejects_unknown_keys_and_bad_values() {
         let d = PrintSettings::default();
         assert!(merge(d.clone(), &json!({"nope": 1})).is_err());
         assert!(merge(d.clone(), &json!({"overlap": "yes"})).is_err());
-        assert!(merge(d.clone(), &json!({"printer": "-x"})).is_err());
+        assert!(merge(d.clone(), &json!({"printer": "hp"})).is_err());
         let m = merge(d, &json!({"overlap": true, "grid_minor": "1/4"})).unwrap();
         assert!(m.overlap && m.grid_minor == "1/4");
     }

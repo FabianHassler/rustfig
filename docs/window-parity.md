@@ -136,7 +136,7 @@ xfig: "Xfig: Print menu", "Print to PostScript Printer". RustFig: **File > Print
 | Magnification %, Fit to Page, Fig Size | scale to the page | none |
 | Paper Size (29), Orientation, Justification, Pages Single/Multiple, Overlap | same options as Export (shared state) | none |
 | Background colour, Grid minor/major | like Export | none |
-| Print Command (lp, lpr), Printer (text and a menu from /etc/printcap, default `$PRINTER`), Print Job Params (`%f` becomes the file name) | the spool command line | modernised: the OS print dialog (see proposals) |
+| Print Command (lp, lpr), Printer (text and a menu from /etc/printcap, default `$PRINTER`), Print Job Params (`%f` becomes the file name) | the spool command line | modernised: the OS print dialog, no printer or job-parameter fields (B5b; see proposals) |
 | Figures in batch, Print FIGURE to Batch, Clear Batch, Print BATCH to Printer | collect several figures in one spool file, print them together | none |
 | Print all layers / Print only active / Boundary only active layers | layer choice | the Export option exists; Print not built |
 | Print FIGURE to Printer, Dismiss; accelerators Meta-P (print), Meta-B (batch), Esc | | none |
