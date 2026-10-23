@@ -583,3 +583,109 @@ impl Engine {
         Ok(())
     }
 }
+
+/// Whether `text` holds every word of `query` (case-insensitive), as the font
+/// chooser's search matches.
+pub fn matches(text: &str, query: &str) -> bool {
+    let text = text.to_lowercase();
+    query.split_whitespace().all(|w| text.contains(&w.to_lowercase()))
+}
+
+/// Most hits `library.search` returns.
+pub const MAX_HITS: usize = 1_000;
+/// Longest query used.
+const MAX_QUERY: usize = 200;
+
+/// One search result: a figure and its library.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Hit {
+    pub library: String,
+    pub name: String,
+    pub user: bool,
+    /// Found by its comments, not its name.
+    pub by_comment: bool,
+}
+
+/// Comments read so far, by file: (modification time, comment text). A
+/// figure is read again when its file changed.
+#[cfg(not(target_arch = "wasm32"))]
+type CommentCache = std::collections::HashMap<PathBuf, (Option<std::time::SystemTime>, String)>;
+
+#[cfg(not(target_arch = "wasm32"))]
+fn comment_cache() -> &'static std::sync::Mutex<CommentCache> {
+    static C: std::sync::OnceLock<std::sync::Mutex<CommentCache>> = std::sync::OnceLock::new();
+    C.get_or_init(Default::default)
+}
+
+/// Search the figures of all libraries for `query` (every word, case
+/// insensitive): by name first, then (`comments`) by the comment lines at the
+/// top of the file. The names come from the folders each time (a few
+/// milliseconds for xfig's 2,540 figures); comments are read on the first
+/// search that needs them and kept until the file changes. At most `limit`
+/// hits (capped at [`MAX_HITS`] + 1); an empty query finds nothing.
+pub fn search(libs: &[Library], query: &str, limit: usize, comments: bool) -> Vec<Hit> {
+    let query: String = query.chars().take(MAX_QUERY).collect();
+    let limit = limit.min(MAX_HITS + 1);
+    let mut out: Vec<Hit> = Vec::new();
+    if query.trim().is_empty() || limit == 0 {
+        return out;
+    }
+    let mut rest: Vec<(&Library, String)> = Vec::new();
+    'libs: for l in libs {
+        for n in object_names(&l.path) {
+            if matches(&n, &query) {
+                if out.len() >= limit {
+                    break 'libs;
+                }
+                out.push(Hit {
+                    library: l.name.clone(),
+                    name: n,
+                    user: l.user,
+                    by_comment: false,
+                });
+            } else if comments {
+                rest.push((l, n));
+            }
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let mut cache = comment_cache().lock().ok();
+        for (l, n) in rest {
+            if out.len() >= limit {
+                break;
+            }
+            let path = l.path.join(format!("{n}.fig"));
+            let mtime = std::fs::metadata(&path).and_then(|m| m.modified()).ok();
+            let cached = cache
+                .as_ref()
+                .and_then(|c| c.get(&path))
+                .filter(|(t, _)| *t == mtime)
+                .map(|(_, s)| s.clone());
+            let text = match cached {
+                Some(s) => s,
+                None => {
+                    let s = object_comments(&l.path, &n).join("\n");
+                    if let Some(c) = cache.as_mut() {
+                        if c.len() > 100_000 {
+                            c.clear();
+                        }
+                        c.insert(path, (mtime, s.clone()));
+                    }
+                    s
+                }
+            };
+            if !text.is_empty() && matches(&text, &query) {
+                out.push(Hit {
+                    library: l.name.clone(),
+                    name: n,
+                    user: l.user,
+                    by_comment: true,
+                });
+            }
+        }
+    }
+    #[cfg(target_arch = "wasm32")]
+    let _ = rest;
+    out
+}

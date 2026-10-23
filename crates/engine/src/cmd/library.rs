@@ -36,6 +36,16 @@ pub(super) fn commands() -> Vec<Command> {
             run: list,
         },
         Command {
+            id: "library.search",
+            label: "Search libraries",
+            menu: "",
+            shortcut: "",
+            params: "{\"query\": text, \"limit\"?: n (default 200, at most 1000), \"comments\"?: bool (default true)}  — the figures of all libraries whose name (and comment lines) hold every word of the query, case-insensitive, names first: {\"query\", \"hits\": [{\"library\", \"name\", \"user\": bool, \"comment\": bool}], \"truncated\": bool}; place one with library.place or library.hand",
+            mutates: false,
+            enabled: always,
+            run: search,
+        },
+        Command {
             id: "library.objects",
             label: "List library objects",
             menu: "",
@@ -100,6 +110,24 @@ fn list(e: &mut Engine, _: &Value) -> CmdResult {
         .map(|l| json!({"name": l.name, "objects": l.objects, "user": l.user}))
         .collect();
     Ok(json!({"libraries": libs}))
+}
+
+fn search(e: &mut Engine, p: &Value) -> CmdResult {
+    let query = string(p, "query")?;
+    let limit = match opt_num(p, "limit")? {
+        Some(n) if n >= 0.0 => (n as usize).min(library::MAX_HITS),
+        Some(_) => return Err(EngineError::bad_params("limit must not be negative")),
+        None => 200,
+    };
+    let comments = opt_bool(p, "comments")?.unwrap_or(true);
+    let hits = library::search(&e.libraries(), &query, limit.saturating_add(1), comments);
+    let truncated = hits.len() > limit;
+    let hits: Vec<Value> = hits
+        .into_iter()
+        .take(limit)
+        .map(|h| json!({"library": h.library, "name": h.name, "user": h.user, "comment": h.by_comment}))
+        .collect();
+    Ok(json!({"query": query, "hits": hits, "truncated": truncated}))
 }
 
 fn objects(e: &mut Engine, p: &Value) -> CmdResult {

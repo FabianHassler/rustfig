@@ -42,12 +42,20 @@ pub struct LibraryPanel {
     save_name: String,
     save_folder: String,
     message: String,
+    /// The search text, and the text `hits` were found for.
+    query: String,
+    searched: String,
+    /// Search results: library, figure, found by comment.
+    hits: Vec<(String, String, bool)>,
+    truncated: bool,
 }
 
 impl LibraryPanel {
     /// Open the panel (the engine asked for it): rescan the libraries.
     pub fn show_panel(&mut self, app_libs: Vec<Library>) {
         self.open = true;
+        // The libraries may have changed: search again.
+        self.searched = "\u{0}".into();
         self.libs = app_libs;
         if let Some(c) = self.current.clone() {
             if !self.libs.iter().any(|l| l.name == c) {
@@ -80,6 +88,16 @@ impl LibraryPanel {
         self.selected = None;
         self.comments.clear();
         self.preview = None;
+    }
+
+    /// Pick a search result: load its library and pick the figure.
+    fn pick_hit(&mut self, library: &str, name: &str) {
+        if self.current.as_deref() != Some(library) {
+            self.load(library);
+        }
+        if let Some(i) = self.objects.iter().position(|n| n == name) {
+            self.pick(i);
+        }
     }
 
     fn pick(&mut self, i: usize) {
@@ -138,6 +156,27 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     let mut open = true;
     let mut load: Option<String> = None;
     let mut pick: Option<usize> = None;
+    let mut pick_hit: Option<(String, String)> = None;
+    if app.library.open && app.library.query != app.library.searched {
+        let q = app.library.query.clone();
+        app.library.searched = q.clone();
+        app.library.hits.clear();
+        app.library.truncated = false;
+        if !q.trim().is_empty() {
+            if let Ok(v) = app.try_run("library.search", &json!({"query": q, "limit": 300})) {
+                let s = |h: &serde_json::Value, k: &str| h[k].as_str().unwrap_or("").to_string();
+                app.library.hits = v["hits"]
+                    .as_array()
+                    .map(|a| {
+                        a.iter()
+                            .map(|h| (s(h, "library"), s(h, "name"), h["comment"].as_bool().unwrap_or(false)))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                app.library.truncated = v["truncated"].as_bool().unwrap_or(false);
+            }
+        }
+    }
     let mut select = false;
     let mut cancel = false;
     let mut save = false;
@@ -227,13 +266,54 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                         });
                 }
             });
+            ui.horizontal(|ui| {
+                ui.label("Search:");
+                let r = ui.add(
+                    egui::TextEdit::singleline(&mut p.query)
+                        .hint_text("name or comment, in all libraries")
+                        .desired_width(220.0),
+                );
+                r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Search libraries"));
+                if !p.query.is_empty() && ui.button("Clear").clicked() {
+                    p.query.clear();
+                }
+            });
             ui.separator();
+            let searching = !p.query.trim().is_empty();
             let lib = p.lib().cloned();
             let n = p.objects.len();
             let budget = std::cell::Cell::new(PER_FRAME);
             let pending = std::cell::Cell::new(false);
             let area = 240.0_f32;
-            if let Some(lib) = lib {
+            if searching {
+                egui::ScrollArea::vertical()
+                    .id_salt("library_search_results")
+                    .max_height(area)
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| {
+                        if p.hits.is_empty() {
+                            ui.label("No figure found.");
+                        }
+                        for (l, n, by_comment) in &p.hits {
+                            let sel = p.current.as_deref() == Some(l.as_str())
+                                && p.selected.and_then(|i| p.objects.get(i)) == Some(n);
+                            let text = format!("{n}   ({l}{})", if *by_comment { ", comment" } else { "" });
+                            let r = ui.selectable_label(sel, text);
+                            let label = format!("Search result {n} in {l}");
+                            r.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, sel, label.clone()));
+                            if r.clicked() {
+                                pick_hit = Some((l.clone(), n.clone()));
+                            }
+                            if r.double_clicked() {
+                                pick_hit = Some((l.clone(), n.clone()));
+                                select = true;
+                            }
+                        }
+                        if p.truncated {
+                            ui.weak("More figures match: type more of the name.");
+                        }
+                    });
+            } else if let Some(lib) = lib {
                 let px = size as usize;
                 if p.thumb_px != size {
                     p.thumb_px = size;
@@ -391,6 +471,9 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     }
     if let Some(i) = pick {
         app.library.pick(i);
+    }
+    if let Some((l, n)) = pick_hit {
+        app.library.pick_hit(&l, &n);
     }
     if save {
         let name = app.library.save_name.trim().to_string();
