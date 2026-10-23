@@ -49,12 +49,14 @@ Build with `cargo xtask web`, serve `dist/` (`cd dist && python3 -m http.server 
 | Edit, then File > Save: a download named like the file arrives; opening it again gives the edit | [ ] | [ ] | [ ] |
 | File > Export (PDF, SVG, EPS): a download arrives and opens in a viewer | [ ] | [ ] | [ ] |
 | File > Print… > Print FIGURE opens the PDF in a new tab (pop-ups allowed); print from the viewer (B5b) | [ ] | [ ] | [ ] |
+| Draw, wait 5 s, reload: "Restore unsaved drawing" appears and Restore brings the drawing back; after Save and reload there is no offer (C3) | [ ] | [ ] | [ ] |
 | Retina: the canvas is sharp; resizing the window works | [ ] | [ ] | [ ] |
 | Downloads are not blocked (Safari may ask once) | [ ] | [ ] | [ ] |
 
 ## Revision history
 | Date | Note |
 |---|---|
+| 2026-10-23 | C3: browser autosave row in the web checklist. |
 | 2026-10-23 | B5b: print dialog rows. |
 | 2026-10-23 | P2: per-OS and web checklists; HiDPI and three-button rows updated. |
 | 2026-10-23 | C2: browser open, drop, save and export. |

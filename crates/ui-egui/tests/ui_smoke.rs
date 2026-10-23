@@ -2728,3 +2728,28 @@ fn library_panel_search_picks_a_result_from_another_library() {
     assert_eq!(hand, Some(("Computers".to_string(), "floppy_lg".to_string())));
     let _ = std::fs::remove_dir_all(&user);
 }
+
+#[test]
+fn browser_copy_is_offered_and_restored() {
+    let mut src = rustfig_engine::Engine::new();
+    src.execute("shape.rectangle", &json!({"x": 0, "y": 0, "width": 600, "height": 300}))
+        .unwrap();
+    let data = src.execute("file.save_data", &json!({"format": "fig"})).unwrap()["data"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let mut a = app();
+    a.web_restorable = Some(rustfig_ui_egui::web_autosave::Saved {
+        data,
+        name: Some("plan.fig".into()),
+    });
+    let mut h = harness(a);
+    h.get_by_label("Restore unsaved drawing");
+    h.get_by_label("Restore").click();
+    h.run_steps(2);
+    let e = &h.state().engine;
+    assert_eq!(e.doc().objects.len(), 1);
+    assert!(e.is_modified());
+    assert_eq!(e.path(), Some("plan.fig"));
+    assert!(h.state().web_restorable.is_none());
+}

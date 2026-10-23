@@ -922,6 +922,62 @@ fn recovery_dialog(app: &mut App, ctx: &egui::Context) {
     }
 }
 
+/// The drawing the last browser session left unsaved (C3): restore or discard.
+fn web_restore_dialog(app: &mut App, ctx: &egui::Context) {
+    let Some(saved) = app.web_restorable.clone() else {
+        return;
+    };
+    let mut restore = None;
+    egui::Window::new("Restore unsaved drawing")
+        .collapsible(false)
+        .resizable(false)
+        .show(ctx, |ui| {
+            let name = saved.name.as_deref().unwrap_or("Untitled");
+            ui.label(format!(
+                "The browser still holds an unsaved copy of {name} from your last visit. Restore it to keep working, then save it."
+            ));
+            ui.add_space(4.0);
+            ui.horizontal(|ui| {
+                if ui.button("Restore").clicked() {
+                    restore = Some(true);
+                }
+                if ui.button("Discard").clicked() {
+                    restore = Some(false);
+                }
+            });
+        });
+    let Some(restore) = restore else { return };
+    if restore {
+        let name = saved.name.clone().unwrap_or_else(|| "figure.fig".to_string());
+        let ok = app
+            .run(
+                "file.open_data",
+                json!({"base64": rustfig_engine::base64(saved.data.as_bytes()), "name": name}),
+            )
+            .is_some();
+        if !ok {
+            // Unreadable: drop it rather than offering it again.
+            app.web_restorable = None;
+            web_clear_copy(app);
+            return;
+        }
+        app.engine.set_path(saved.name.clone());
+        app.engine.set_modified(true);
+        app.info("Restored the unsaved drawing");
+    } else {
+        web_clear_copy(app);
+    }
+    app.web_restorable = None;
+}
+
+/// Remove the browser copy (wasm only; there is none elsewhere).
+fn web_clear_copy(_app: &mut App) {
+    #[cfg(target_arch = "wasm32")]
+    if let Some(w) = &mut _app.web_autosave {
+        w.clear();
+    }
+}
+
 /// File > Saved versions: the versions of the current file kept at each
 /// save (W10-14), each restorable as an unsaved drawing.
 fn versions_dialog(app: &mut App, ctx: &egui::Context) {
@@ -1003,6 +1059,7 @@ fn version_time(ms: u64) -> String {
 pub fn show(app: &mut App, ctx: &egui::Context) {
     versions_dialog(app, ctx);
     recovery_dialog(app, ctx);
+    web_restore_dialog(app, ctx);
     figure_comments_dialog(app, ctx);
     spline_point_dialog(app, ctx);
     resources_dialog(app, ctx);
