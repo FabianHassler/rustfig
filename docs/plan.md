@@ -233,6 +233,7 @@ covered by W2.
 | F4 | ❌ Dropped 2026-10-22 (the user: not needed). ~~**Localization framework** (Fluent or similar) with English and German.~~ RustFig stays English only. | — | 0 |
 | F5 | Spell check of text objects (Hunspell dictionaries, optional). | Flags misspelt texts. | 12 |
 | F6 | Right-to-left and complex-script shaping (rustybuzz). | Arabic sample shapes correctly. | 6 |
+| F7 | **Installed fonts per text** (asked 2026-10-23; after F1): the font chooser gets a third choice beside PostScript and LaTeX, **Local fonts**: every installed family (F1's fontdb lookup), with search, each name in its own font and the size preview. Fig 3.2 stores fonts only as numbers, so a text keeps the nearest Fig font as its number (serif → Times, sans → Helvetica, mono → Courier, weight and slant matched) and the family in its comment (`#rustfig-font: Minion Pro Semibold`); xfig and fig2dev see a valid Fig text. RustFig draws and measures the text in that family; a file opened where the family is missing falls back to the Fig number and says which fonts are missing. Exports: PDF and SVG embed a subset of the font; EPS as Type 42 (fig2dev repo); LaTeX languages name the family; fonts whose `fsType` forbids embedding go out as outlines (or refuse, with a message). | Choosing a local font round-trips through .fig (comment + fallback number); xfig-readable file; missing-font message; PDF/SVG/EPS show the font (embedded, checked with pdffonts / SVG inspection); fsType respected (tests with fake fonts). | 16 |
 
 ## Phase G: file formats and Beta (≈60 h)
 
@@ -446,3 +447,4 @@ User decision 2026-10-20: RustFig uses fig2dev for everything fig2dev can do.
 | 2026-10-21 | W10 group 3 done (object edit panels); W10-15 to W10-17 added; position rows, arrows, text flags, figure comments, Cancel-restores fixed. |
 | 2026-10-21 | D1 (open compound) and D2 (join/split) done. |
 | 2026-10-23 | S4-7 done: Shift, Ctrl and Ctrl+Shift labels of the mouse indicator verified against behaviour; `ui.modifiers` control method. |
+| 2026-10-23 | F7 added: installed fonts as a third font choice (Local fonts), stored as comment plus nearest Fig font. |
