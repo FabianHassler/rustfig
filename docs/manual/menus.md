@@ -8,7 +8,7 @@ New, Open, Merge, Save, Save As, Export, Import picture (RustFig), Exit, then th
 
 ## Edit
 
-Undo, Paste objects, Search/Replace, Delete all, Global settings, Colours, Set units, Document settings (RustFig), Enter point, then Redo and Copy as picture. xfig has no selection, so there is no Cut, Copy or Select all: the modes act on the object you click, and the cut buffer is filled by Copy mode or Delete mode (right button).
+Undo, Paste objects, Search/Replace, Spell check (native app only), Delete all, Global settings, Colours, Set units, Document settings (RustFig), Enter point, then Redo and Copy as picture. xfig has no selection, so there is no Cut, Copy or Select all: the modes act on the object you click, and the cut buffer is filled by Copy mode or Delete mode (right button).
 
 - Undo and Redo have many levels.
 - Paste objects attaches the cut buffer to the pointer as an outline, its top-left corner at the pointer. Left places the objects there (“place object”), middle at the position they were cut or copied from (“place at orig posn”), right or Escape cancels (“cancel paste”). One placement is one undo step. If the system clipboard holds a figure copied in another RustFig window, that is pasted instead of the cut buffer; if it holds an image (PNG, for example from a browser or a screenshot), it is pasted as a picture object, saved as `clipboard-<number>.png` next to the figure (in the temporary folder while the figure has no file name) and referenced by that path like any picture in a .fig file. The web version has only the cut buffer. Scripts and MCP give `dx` and `dy` to `edit.paste` to place the objects at once, moved by that offset.

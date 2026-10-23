@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-23 | F5 spell check (`text.spell_check`: `spellcheckcommand` through the shell, hunspell fallback; Edit > Spell Check... opens xfig's Misspelled words window) and the F8 leftover (zoom to fit and region selection use the typeset box). Text 80 → 84 %. |
 | 2026-10-23 | F8 WYSIWYG LaTeX text (typeset by the installed TeX, vector on the canvas, preamble in Global settings), F7 installed fonts per text (exports pending), arc centres and pie-wedge arrows kept (gap 25), C3 browser autosave, library list files and Stop (D6); a test that every menu command is in the help; parity ≈85 → ≈87 %. |
 | 2026-10-23 | Step 1 towards beta: xfig's click-to-close rules in the drawing modes (D11), copy counts and figure comments from Edit mode confirmed with tests, LaTeX special text tests (F2), Homebrew formula (P3); parity ≈84 → ≈85 %. |
 | 2026-10-23 | D6: library mode. xfig's libraries in `libraries/` (30 libraries, 2,540 figures; Charts, house_plans and transit left out for their licences), `ASSETS.md` rows and an extended `cargo xtask assets`; `library.*` commands, library tool state with xfig's buttons and keys, the library panel with thumbnails, Copy to library, manual topic; parity ≈79 → ≈84 %. |

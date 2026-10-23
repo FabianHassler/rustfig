@@ -43,6 +43,7 @@ The complete list, searchable, is in Help > Keys...: every command with its key 
 | Meta+U | Undo |
 | Meta+T | Paste |
 | Meta+I | Search/Replace |
+| Meta+K | Spell check |
 | Meta+D | Delete all |
 | Meta+R or Ctrl+L | Redraw |
 | Meta+C | Portrait/Landscape |

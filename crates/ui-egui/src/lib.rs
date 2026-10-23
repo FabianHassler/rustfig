@@ -38,6 +38,7 @@ pub mod reload;
 pub mod rulers;
 pub mod screen_pick;
 pub mod settings;
+pub mod spell_dialog;
 pub mod styles;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod tex_gyre;

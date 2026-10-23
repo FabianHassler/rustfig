@@ -253,6 +253,10 @@ fn arc(e: &mut Engine, p: &Value) -> CmdResult {
 fn regpoly(e: &mut Engine, p: &Value) -> CmdResult {
     let c = Point::new(num(p, "cx")?, num(p, "cy")?);
     let r = num(p, "r")?;
+    // A polygon of zero size has no shape (and the Fig reader drops it).
+    if !r.is_finite() || r.abs() < 1.0 {
+        return Err(EngineError::bad_params("the radius must be at least 1"));
+    }
     let sides = num_or(p, "sides", e.indicator.sides as f64)?.round().clamp(3.0, 1000.0) as usize;
     let a = num_or(p, "angle", -90.0)?.to_radians();
     let first = Point::new(c.x + r * a.cos(), c.y + r * a.sin());

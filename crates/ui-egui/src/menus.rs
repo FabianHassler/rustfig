@@ -4,6 +4,8 @@
 // app-defaults/Fig (`Fig*accelerators`) and src/w_modepanel.c (mode keys)
 // (xfig licence, see LICENSE-xfig).
 
+#[cfg(not(target_arch = "wasm32"))]
+use crate::spell_dialog;
 use crate::{dialogs, reload, App, Pending};
 use rustfig_engine::{cmd, Key, ToolEvent};
 use serde_json::{json, Value};
@@ -142,6 +144,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         label: "Search/Replace…",
         shortcut: "Ctrl+F",
         params: "{}",
+    },
+    UiCommand {
+        id: "app.spell_check",
+        label: "Spell Check…",
+        shortcut: "",
+        params: "{}  — checks the texts with the spell checker (preference spellcheckcommand) and opens the Misspelled words window; native only",
     },
     UiCommand {
         id: "app.document_settings",
@@ -336,6 +344,12 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         }
         "app.quit" => app.guard_unsaved(Pending::Quit),
         "app.search" => app.dialogs.search.open = true,
+        "app.spell_check" => {
+            #[cfg(target_arch = "wasm32")]
+            return Err("Spell check is not available on the web".into());
+            #[cfg(not(target_arch = "wasm32"))]
+            spell_dialog::check(app);
+        }
         "app.document_settings" => app.dialogs.settings_open = true,
         "app.unit_panel" => app.unit_panel_open = true,
         "app.keyboard_entry" => app.point_entry.open(),
@@ -439,7 +453,7 @@ pub enum XfigItem {
 /// menu is [`snap_menu`] and sits before Help; preferences are under
 /// Edit › Global settings.
 pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
-    use XfigItem::{Cmd, Missing, Own, Sep};
+    use XfigItem::{Cmd, Own, Sep};
     &[
         (
             "File",
@@ -465,7 +479,10 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Paste Objects", "edit.paste"),
                 Cmd("Paste Text", "text.paste"),
                 Cmd("Search/Replace...", "app.search"),
-                Missing("Spell Check...", "Alt+K", "F5"),
+                #[cfg(not(target_arch = "wasm32"))]
+                Cmd("Spell Check...", "app.spell_check"),
+                #[cfg(target_arch = "wasm32")]
+                XfigItem::Missing("Spell Check...", "Alt+K", "web"),
                 Cmd("Delete All", "edit.delete_all"),
                 Sep,
                 Cmd("Global settings...", "app.global_settings"),
@@ -532,6 +549,9 @@ pub const XFIG_MENU_LETTERS: &[(&str, char, &str)] = &[
     ("Edit", 'p', "edit.paste"),
     ("Edit", 't', "text.paste"),
     ("Edit", 'f', "app.search"),
+    #[cfg(not(target_arch = "wasm32"))]
+    ("Edit", 's', "app.spell_check"),
+    #[cfg(target_arch = "wasm32")]
     ("Edit", 's', "Spell Check..."),
     ("Edit", 'd', "edit.delete_all"),
     ("Edit", 'g', "app.global_settings"),
@@ -635,7 +655,9 @@ fn xfig_items(app: &mut App, ui: &mut egui::Ui, items: &[XfigItem]) {
                 if !accel.is_empty() {
                     b = b.shortcut_text(xfig_key_label(accel));
                 }
-                let why = if task == "—" {
+                let why = if task == "web" {
+                    "Not available on the web".to_string()
+                } else if task == "—" {
                     "Not available in RustFig".to_string()
                 } else {
                     format!("Not available yet (plan task {task})")
@@ -975,6 +997,7 @@ pub const XFIG_KEYS: &[(&str, &str)] = &[
     ("Alt+U", "edit.undo"),
     ("Alt+T", "edit.paste"),
     ("Alt+I", "app.search"),
+    ("Alt+K", "app.spell_check"),
     ("Alt+D", "edit.delete_all"),
     ("PhysCtrl+L", "app.redraw"),
     ("Alt+R", "app.redraw"),
@@ -1424,6 +1447,7 @@ mod tests {
         ("app.show_export_folder", "the Show in folder button after an export"),
         ("edit.select", "scripting API (xfig has no selection)"),
         ("edit.search_replace", "scripting API; Search/Replace... runs it"),
+        ("text.spell_check", "scripting API; Spell Check... runs it"),
         ("edit.paste_text", "the middle button of the Text tool"),
         (
             "edit.copy_array",
