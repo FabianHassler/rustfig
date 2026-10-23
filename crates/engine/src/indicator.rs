@@ -181,6 +181,9 @@ pub struct Indicator {
     pub arrow_mult: (f64, f64, f64),
     pub font: i32,
     pub font_size: f64,
+    /// An installed font (F7) for new texts, `Family Style`; `font` is its
+    /// nearest Fig font.
+    pub local_font: Option<String>,
     pub postscript: bool,
     pub justify: Justify,
     /// Text angle in degrees.
@@ -254,6 +257,7 @@ impl Default for Indicator {
             arrow_mult: (1.0, 4.0, 8.0),
             font: 0,
             font_size: 12.0,
+            local_font: None,
             postscript: true,
             justify: Justify::Left,
             text_angle: 0.0,
@@ -383,6 +387,7 @@ impl Indicator {
             }
             if self.updates(F::Font) {
                 t.font = self.font;
+                t.local_font = self.local_font.clone();
             }
             if self.updates(F::FontSize) {
                 t.size = self.font_size.clamp(1.0, 2000.0);
@@ -494,6 +499,7 @@ impl Indicator {
             }
             if fnt {
                 self.font = t.font;
+                self.local_font = t.local_font.clone();
                 self.postscript = t.flags & POSTSCRIPT != 0;
             }
             if fsz {

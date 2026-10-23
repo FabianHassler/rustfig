@@ -16,6 +16,14 @@ Key `T`. Text objects hold one line each.
 <!-- os: end -->
 - Typing or pasting replaces the selection. Any Unicode text works, including input methods (the composition shows underlined at the caret until you commit it); pasted line breaks are dropped.
 
+### Local fonts
+
+The font chooser (the Text Font button of the indicator, and the Font row of the edit panel) has a third choice beside PostScript fonts and LaTeX fonts: **Local fonts**, every font installed on your computer. Each name is drawn in its own font (only the rows you can see are loaded, so a long list stays fast), the search field narrows the list, and the preview line shows the font at the chosen size. The list is empty in the web build and when RustFig runs with the built-in fonts only.
+
+A Fig file knows fonts only as numbers, so a text in a local font also keeps the nearest Fig font as its number (serif: Times, sans-serif: Helvetica, monospace: Courier, with the weight and slant matched) and the font's name in a comment line of the text, `# rustfig-font: Minion Pro Semibold`. xfig and fig2dev read the file as an ordinary Fig text and ignore the comment; your own comments on the text stay. RustFig draws and measures the text in the installed font, so selecting, editing and the text's box follow it. When a file names a font this computer does not have, the text is drawn in its Fig font and one message on opening lists the missing fonts; saving the file keeps the font name.
+
+Exports (PostScript, PDF, SVG and the others) draw such a text with its Fig font. Embedding the local font in PDF and SVG exports is a follow-up in the fig2dev repository. Scripts use `text.set_local_font` (a font name or `null`, for the selection or `ids`; it also sets the font for new text), `text.local_fonts` (the list) and the `local_font` parameter of `object.set_attributes`.
+
 ### Character map
 
 View > Character map... (Ctrl+Shift+M, also while typing) opens a window with the characters of the font of the text being typed. Pick a block (Latin-1, Latin Extended, Greek, punctuation, arrows, mathematical operators and more) or type a character or its code (for example `2211`) in the search field; a click inserts the character at the caret. Only characters the current font can draw are listed (its own face or the fallback face; none shows as an empty box), and each button is drawn in that font (PostScript or LaTeX font as set for the text). Characters are greyed out until you are typing in Text mode.

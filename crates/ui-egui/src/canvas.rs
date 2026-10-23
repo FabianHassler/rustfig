@@ -548,7 +548,6 @@ fn draw_caret(
     tk: &Tokens,
 ) {
     let ObjectKind::Text(t) = &ot.object.kind else { return };
-    let req = rustfig_text::FontRequest::for_fig(t.font, t.is_postscript());
     let em = t.size * rustfig_geom::FIG_PER_POINT;
     let rot = Affine::rotate(t.angle);
     let lines: Vec<&str> = t.text.split('\n').collect();
@@ -567,8 +566,8 @@ fn draw_caret(
         }
         let line = lines.get(li).copied().unwrap_or("");
         let prefix: String = line.chars().take(rest).collect();
-        let pw = rustfig_text::measure(&req, t.size, &prefix).width;
-        let lw = rustfig_text::measure(&req, t.size, line).width;
+        let pw = rustfig_engine::measure_in_font(t, &prefix).width;
+        let lw = rustfig_engine::measure_in_font(t, line).width;
         let x0 = match t.justify {
             rustfig_model::Justify::Left => 0.0,
             rustfig_model::Justify::Center => -lw / 2.0,

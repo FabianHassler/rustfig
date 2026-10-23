@@ -5,7 +5,13 @@
 
 mod compose;
 pub mod coverage;
+mod local;
 pub mod symbol_tables;
 
 pub use compose::compose;
 pub use figbase::text::*;
+// Shadows figbase's `add_font_dirs`: the folders also go to the installed-font list (F7).
+pub use local::{
+    add_font_dirs, find_local_face, local_faces, local_font_available, measure_local, override_local_faces,
+    shape_local, LocalFace,
+};

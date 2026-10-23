@@ -243,7 +243,7 @@ fn object_below(o: &rustfig_model::Object, ctx: &Ctx, depth: usize) -> FigObject
 /// an arrowhead it drops), which an export through objects must not hide.
 pub(super) fn object_at(o: &rustfig_model::Object, ctx: &Ctx, odd: &Cell<bool>) -> FigObject {
     let c = Conv { ctx, odd };
-    let cm = comments(&o.comments);
+    let cm = comments(&rustfig_model::comments_with_local_font(o));
     match &o.kind {
         ObjectKind::Ellipse(e) => {
             let st = c.style(&e.style);

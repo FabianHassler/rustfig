@@ -421,6 +421,7 @@ fn object(depth: u32) -> BoxedStrategy<Object> {
                 length: f64::from(l),
                 origin: pt(o.0, o.1),
                 text: txt,
+                local_font: None,
             })
         });
     let arc = (style(), points(3, 4), any::<bool>(), arrow(), arrow()).prop_filter_map(
@@ -596,6 +597,7 @@ fn hostile_documents_do_not_panic() {
             length: v,
             origin: p,
             text: "a\u{0}b\u{1}c\n".into(),
+            local_font: None,
         })));
         objs.push(Object::new(ObjectKind::Arc(Arc {
             pie: false,
@@ -621,6 +623,7 @@ fn hostile_documents_do_not_panic() {
         length: 0.0,
         origin: Point::new(0.0, 0.0),
         text: String::new(),
+        local_font: None,
     }));
     for _ in 0..(rustfig_format::MAX_NESTING + 40) {
         inner = Object::new(ObjectKind::Compound(Compound { objects: vec![inner] }));

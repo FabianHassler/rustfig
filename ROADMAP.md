@@ -1,6 +1,6 @@
 # RustFig roadmap
 
-**Status (2026-10-23):** Stage **Alpha**. Overall xfig parity **≈85 %**
+**Status (2026-10-23):** Stage **Alpha**. Overall xfig parity **≈87 %**
 ([assessment](docs/target-app-parity.md)). The native app draws, edits,
 saves and exports. The web build compiles; it is not yet packaged or tested in a browser.
 
@@ -17,7 +17,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 
 | Measure | Value |
 |---------|-------|
-| Overall parity (weighted) | ≈85 % |
+| Overall parity (weighted) | ≈87 % |
 | Commands (all reachable from the control channel and MCP) | 223 engine (incl. 44 tool modes and "no mode") + 29 UI |
 | Interactive tools (xfig modes) | 44 (xfig's 43 + Trim/Split/Extend) |
 | Tests | 598 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-23 | F8 WYSIWYG LaTeX text (typeset by the installed TeX, vector on the canvas, preamble in Global settings), F7 installed fonts per text (exports pending), arc centres and pie-wedge arrows kept (gap 25), C3 browser autosave, library list files and Stop (D6); a test that every menu command is in the help; parity ≈85 → ≈87 %. |
 | 2026-10-23 | Step 1 towards beta: xfig's click-to-close rules in the drawing modes (D11), copy counts and figure comments from Edit mode confirmed with tests, LaTeX special text tests (F2), Homebrew formula (P3); parity ≈84 → ≈85 %. |
 | 2026-10-23 | D6: library mode. xfig's libraries in `libraries/` (30 libraries, 2,540 figures; Charts, house_plans and transit left out for their licences), `ASSETS.md` rows and an extended `cargo xtask assets`; `library.*` commands, library tool state with xfig's buttons and keys, the library panel with thumbnails, Copy to library, manual topic; parity ≈79 → ≈84 %. |
 | 2026-10-23 | E5 (character map lists only drawable characters), S4-7 (Shift/Ctrl meanings in the mouse-function indicator), D10 done (dimension-line lengths as fractions of an inch, example-line preview and arrow pictures in the Dimension line window), W10-14 (saved versions: `file.versions`, `file.restore_version`, File > Saved versions…), W9 fix (cap and join pictures redrawn as xfig's). 2 engine commands. |

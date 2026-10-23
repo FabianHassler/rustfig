@@ -92,6 +92,10 @@ fn hostile_values() -> Vec<Value> {
         json!({"color": 543.5, "rgb": "#abc", "h": null, "text": "#ff00zz", "cancel": "yes"}),
         json!({"attr": "wavy", "on": 3, "all": "maybe"}),
         json!({"attr": "line_width", "on": "yes", "all": 7}),
+        json!({"name": 5, "ids": [1], "query": [1], "local_font": 7}),
+        json!({"name": "\u{0}\u{1}", "ids": [3], "query": "\u{0}", "local_font": ["x"]}),
+        json!({"name": null, "ids": [999], "local_font": "Nope", "font": 1e308}),
+        json!({"name": "x".repeat(5000), "local_font": "x".repeat(5000)}),
     ]
 }
 

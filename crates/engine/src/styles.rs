@@ -33,6 +33,7 @@ pub struct AttrStyle {
     pub arrow: Arrow,
     pub font: i32,
     pub font_size: f64,
+    pub local_font: Option<String>,
     pub postscript: bool,
     pub justify: Justify,
     pub text_angle: f64,
@@ -68,6 +69,7 @@ impl AttrStyle {
             arrow: i.arrow,
             font: i.font,
             font_size: i.font_size,
+            local_font: i.local_font.clone(),
             postscript: i.postscript,
             justify: i.justify,
             text_angle: i.text_angle,
@@ -101,6 +103,7 @@ impl AttrStyle {
         i.backward_arrow = self.backward_arrow;
         i.arrow = self.arrow;
         i.font = self.font;
+        i.local_font = self.local_font.clone();
         i.font_size = if self.font_size.is_finite() {
             self.font_size
         } else {

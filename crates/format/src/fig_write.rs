@@ -108,7 +108,7 @@ fn object(out: &mut String, o: &Object) {
             return;
         }
     }
-    comments(out, &o.comments);
+    comments(out, &rustfig_model::comments_with_local_font(o));
     match &o.kind {
         ObjectKind::Ellipse(e) => {
             let _ = write!(out, "1 {}", e.kind.to_fig());

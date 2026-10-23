@@ -325,6 +325,59 @@ pub struct Text {
     /// Baseline anchor; meaning depends on `justify`.
     pub origin: Point,
     pub text: String,
+    /// An installed font (F7), `Family Style` as [`local_font_name`] gives
+    /// it, drawn instead of the Fig font `font`, which is its nearest Fig
+    /// font ([`nearest_ps_font`]). Fig 3.2 keeps it as a comment of the text
+    /// ([`local_font_comment`]); xfig and fig2dev ignore that.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub local_font: Option<String>,
+}
+
+/// The prefix of the text comment that carries [`Text::local_font`].
+pub const LOCAL_FONT_PREFIX: &str = "rustfig-font:";
+
+/// The comment line (without the `# `) for a local font.
+pub fn local_font_comment(name: &str) -> String {
+    format!("{LOCAL_FONT_PREFIX} {}", name.replace('\n', " "))
+}
+
+/// The local font a comment line names, if it is such a line.
+pub fn parse_local_font_comment(line: &str) -> Option<&str> {
+    let name = line.trim().strip_prefix(LOCAL_FONT_PREFIX)?.trim();
+    (!name.is_empty()).then_some(name)
+}
+
+/// The generic kind of a local font, for choosing its nearest Fig font.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FontKind {
+    Serif,
+    Sans,
+    Mono,
+}
+
+/// The PostScript font number nearest to a local font: serif is Times (0),
+/// sans Helvetica (16), mono Courier (12); bold adds 2 and italic 1 (xfig's
+/// order Roman, Italic, Bold, Bold Italic).
+pub fn nearest_ps_font(kind: FontKind, bold: bool, italic: bool) -> i32 {
+    let base = match kind {
+        FontKind::Serif => 0,
+        FontKind::Sans => 16,
+        FontKind::Mono => 12,
+    };
+    base + if bold { 2 } else { 0 } + i32::from(italic)
+}
+
+/// The comments of `o` as the Fig file keeps them: a text's local font
+/// comes first.
+pub fn comments_with_local_font(o: &Object) -> Vec<String> {
+    let mut v = o.comments.clone();
+    if let ObjectKind::Text(Text {
+        local_font: Some(n), ..
+    }) = &o.kind
+    {
+        v.insert(0, local_font_comment(n));
+    }
+    v
 }
 
 impl Text {
@@ -446,6 +499,26 @@ impl AsRef<Object> for Object {
 }
 
 impl Object {
+    /// A text's local font (F7), if it has one.
+    pub fn local_font(&self) -> Option<&str> {
+        match &self.kind {
+            ObjectKind::Text(t) => t.local_font.as_deref(),
+            _ => None,
+        }
+    }
+
+    /// Move a `rustfig-font:` comment line of a text into
+    /// [`Text::local_font`] (what the Fig reader does); other comments stay.
+    pub fn take_local_font(mut self) -> Object {
+        if let ObjectKind::Text(t) = &mut self.kind {
+            if let Some(pos) = self.comments.iter().position(|c| parse_local_font_comment(c).is_some()) {
+                let line = self.comments.remove(pos);
+                t.local_font = parse_local_font_comment(&line).map(str::to_string);
+            }
+        }
+        self
+    }
+
     pub fn new(kind: ObjectKind) -> Object {
         Object {
             id: ObjectId(0),
@@ -834,6 +907,7 @@ mod tests {
             length: 300.0,
             origin: Point::new(100.0, 100.0),
             text: "hi".into(),
+            local_font: None,
         }));
         o.transform(&Affine::scale(-1.0, 1.0), false);
         let ObjectKind::Text(t) = &o.kind else { panic!() };

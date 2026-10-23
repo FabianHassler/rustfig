@@ -121,6 +121,10 @@ pub struct EditState {
     pub radius: i32,
     pub text: String,
     pub font: i32,
+    /// The installed font of the text (F7), and the one it had when the
+    /// dialog opened.
+    pub local_font: Option<String>,
+    pub orig_local_font: Option<String>,
     pub postscript: bool,
     pub size: f64,
     pub justify: Justify,
@@ -338,6 +342,8 @@ impl Dialogs {
             radius: 7,
             text: String::new(),
             font: 0,
+            local_font: None,
+            orig_local_font: None,
             postscript: true,
             size: 12.0,
             justify: Justify::Left,
@@ -393,6 +399,8 @@ impl Dialogs {
                 st.is_text = true;
                 st.text = t.text.clone();
                 st.font = t.font;
+                st.local_font = t.local_font.clone();
+                st.orig_local_font = t.local_font.clone();
                 st.postscript = t.is_postscript();
                 st.size = t.size;
                 st.justify = t.justify;
@@ -526,6 +534,11 @@ impl Dialogs {
             p["text"] = json!(st.text);
             p["font"] = json!(st.font);
             p["postscript"] = json!(st.postscript);
+            // A changed installed font goes along; an unchanged one stays
+            // as it is, also when this machine lacks it.
+            if st.local_font != st.orig_local_font {
+                p["local_font"] = json!(st.local_font);
+            }
             p["font_size"] = json!(st.size);
             p["justify"] = json!(match st.justify {
                 Justify::Left => "left",
@@ -2000,9 +2013,15 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                         });
                         ui.end_row();
                         ui.label("Font");
-                        if let Some((f, ps)) = font_combo(ui, "edit_font", st.font, st.postscript) {
-                            st.font = f;
-                            st.postscript = ps;
+                        if let Some(out) = font_combo(ui, "edit_font", st.font, st.postscript, st.local_font.as_deref())
+                        {
+                            if let Some((f, ps)) = out.font {
+                                st.font = f;
+                                st.postscript = ps;
+                            }
+                            if let Some(l) = out.local {
+                                st.local_font = l;
+                            }
                         }
                         ui.end_row();
                         ui.label("Text");

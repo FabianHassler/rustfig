@@ -209,6 +209,97 @@ fn typeset_prim(origin: Point, angle: f64, justify: rustfig_model::Justify, ts: 
     }
 }
 
+/// A text in an installed font (F7) as glyph outlines, or `None` when it has
+/// none or the font is missing (the Fig font is drawn then).
+fn local_text_prim(doc: &Document, t: &rustfig_model::Text, text: &str, opts: &SceneOptions) -> Option<Prim> {
+    use rustfig_text::PathOp;
+    let name = t.local_font.as_deref()?;
+    let size = t.size * opts.text_scale.filter(|s| s.is_finite() && *s > 0.0).unwrap_or(1.0);
+    let shaped = rustfig_text::shape_local(name, size, text)?;
+    let angle = if t.angle.is_finite() { t.angle } else { 0.0 };
+    let rot = rustfig_geom::Affine::rotate(angle);
+    let mut subpaths: Vec<SubPath> = Vec::new();
+    for (line, w) in shaped.lines.iter().zip(shaped.line_widths.iter()) {
+        let dx = match t.justify {
+            rustfig_model::Justify::Left => 0.0,
+            rustfig_model::Justify::Center => -w / 2.0,
+            rustfig_model::Justify::Right => -w,
+        };
+        let map = |x: f64, y: f64| t.origin + rot.apply_vec(Point::new(x + dx, y));
+        let mut cur: Option<(Vec<Point>, Vec<Seg>)> = None;
+        let mut last = Point::new(0.0, 0.0);
+        let mut finish = |c: &mut Option<(Vec<Point>, Vec<Seg>)>| {
+            if let Some((pts, curve)) = c.take() {
+                if pts.len() > 2 {
+                    subpaths.push(SubPath {
+                        pts,
+                        closed: true,
+                        curve: Some(curve),
+                    });
+                }
+            }
+        };
+        for op in line {
+            match *op {
+                PathOp::Move(x, y) => {
+                    finish(&mut cur);
+                    last = map(x, y);
+                    cur = Some((vec![last], vec![Seg::Move(last)]));
+                }
+                PathOp::Line(x, y) => {
+                    if let Some((pts, curve)) = cur.as_mut() {
+                        last = map(x, y);
+                        pts.push(last);
+                        curve.push(Seg::Line(last));
+                    }
+                }
+                PathOp::Quad(a, b, x, y) => {
+                    if let Some((pts, curve)) = cur.as_mut() {
+                        let (q, e) = (map(a, b), map(x, y));
+                        // Elevate to a cubic.
+                        let c1 = last + (q - last) * (2.0 / 3.0);
+                        let c2 = e + (q - e) * (2.0 / 3.0);
+                        flatten_cubic(last, c1, c2, e, pts);
+                        curve.push(Seg::Cubic(c1, c2, e));
+                        last = e;
+                    }
+                }
+                PathOp::Cubic(a, b, c, d, x, y) => {
+                    if let Some((pts, curve)) = cur.as_mut() {
+                        let (c1, c2, e) = (map(a, b), map(c, d), map(x, y));
+                        flatten_cubic(last, c1, c2, e, pts);
+                        curve.push(Seg::Cubic(c1, c2, e));
+                        last = e;
+                    }
+                }
+                PathOp::Close => finish(&mut cur),
+            }
+        }
+        finish(&mut cur);
+    }
+    if subpaths.is_empty() {
+        return None;
+    }
+    Some(Prim::Path {
+        subpaths,
+        fill: Some(Fill::Solid(color(doc, t.color))),
+        stroke: None,
+    })
+}
+
+fn flatten_cubic(p0: Point, p1: Point, p2: Point, p3: Point, out: &mut Vec<Point>) {
+    const STEPS: usize = 8;
+    for i in 1..=STEPS {
+        let t = i as f64 / STEPS as f64;
+        let u = 1.0 - t;
+        let (a, b, c, d) = (u * u * u, 3.0 * u * u * t, 3.0 * u * t * t, t * t * t);
+        out.push(Point::new(
+            a * p0.x + b * p1.x + c * p2.x + d * p3.x,
+            a * p0.y + b * p1.y + c * p2.y + d * p3.y,
+        ));
+    }
+}
+
 fn object_prims(doc: &Document, o: &Object, opts: &SceneOptions, out: &mut Vec<Prim>) {
     match &o.kind {
         ObjectKind::Text(t) => {
@@ -230,6 +321,10 @@ fn object_prims(doc: &Document, o: &Object, opts: &SceneOptions, out: &mut Vec<P
                     out.push(typeset_prim(t.origin, t.angle, t.justify, &ts));
                     return;
                 }
+            }
+            if let Some(prim) = local_text_prim(doc, t, &text, opts) {
+                out.push(prim);
+                return;
             }
             out.push(Prim::Text(TextPrim {
                 origin: t.origin,

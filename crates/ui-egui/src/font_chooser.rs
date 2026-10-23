@@ -4,6 +4,10 @@
 //! canvas, `rustfig_text::shape`), a search field, a size field and a live
 //! preview of sample text, the current font marked.
 //!
+//! F7 adds a third choice, "Local fonts": every installed face
+//! (`rustfig_text::local_faces`), each name in its own font, loaded lazily
+//! for the visible rows only.
+//!
 //! With the built-in fonts only (no installed fonts used: wasm, or
 //! `FIG2DEV_BUILTIN_FONTS=1`), the names are drawn in the fallback face and
 //! tagged "(substitute)".
@@ -15,9 +19,13 @@ use egui::{vec2, Color32, Rect, RichText, Sense};
 use rustfig_text::{FontRequest, PathOp};
 
 /// What the chooser changed this frame.
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Outcome {
+    /// The Fig font chosen; for an installed font its nearest Fig font.
     pub font: Option<(i32, bool)>,
+    /// Set with `font`: the installed font chosen (`Some(Some(name))`), or
+    /// `Some(None)` when a Fig font was chosen.
+    pub local: Option<Option<String>>,
     pub size: Option<f64>,
 }
 
@@ -51,16 +59,22 @@ struct Tex {
     size: egui::Vec2,
 }
 
-type Cache = Arc<Mutex<HashMap<(i32, bool, String, u32), Option<Tex>>>>;
+type Cache = Arc<Mutex<HashMap<(i32, bool, String, String, u32), Option<Tex>>>>;
 
 /// A string drawn in a Fig font as a texture (coverage in the alpha channel).
-fn rendered(ctx: &egui::Context, font: i32, ps: bool, text: &str, px: f32) -> Option<Tex> {
+fn rendered(ctx: &egui::Context, font: i32, ps: bool, local: Option<&str>, text: &str, px: f32) -> Option<Tex> {
     let cache: Cache = ctx.data_mut(|d| {
         d.get_temp_mut_or_insert_with(egui::Id::new("font_chooser_cache"), Cache::default)
             .clone()
     });
     let ppp = ctx.pixels_per_point().max(0.5);
-    let key = (font, ps, text.to_string(), (px * ppp * 4.0) as u32);
+    let key = (
+        font,
+        ps,
+        local.unwrap_or_default().to_string(),
+        text.to_string(),
+        (px * ppp * 4.0) as u32,
+    );
     let mut map = cache.lock().ok()?;
     if map.len() > 600 {
         map.clear();
@@ -68,7 +82,7 @@ fn rendered(ctx: &egui::Context, font: i32, ps: bool, text: &str, px: f32) -> Op
     if let Some(t) = map.get(&key) {
         return t.clone();
     }
-    let img = rasterise(font, ps, text, px * ppp);
+    let img = rasterise(font, ps, local, text, px * ppp);
     let tex = img.map(|(image, w, h)| Tex {
         tex: ctx.load_texture("font_sample", image, egui::TextureOptions::LINEAR),
         size: vec2(w as f32 / ppp, h as f32 / ppp),
@@ -79,12 +93,22 @@ fn rendered(ctx: &egui::Context, font: i32, ps: bool, text: &str, px: f32) -> Op
 
 /// Flatten the outlines, fill them (non-zero rule, 4 sub-scanlines, exact
 /// horizontal coverage) and return the alpha image with its size in pixels.
-fn rasterise(font: i32, ps: bool, text: &str, px: f32) -> Option<(egui::ColorImage, usize, usize)> {
+fn rasterise(
+    font: i32,
+    ps: bool,
+    local: Option<&str>,
+    text: &str,
+    px: f32,
+) -> Option<(egui::ColorImage, usize, usize)> {
     if !px.is_finite() || px < 1.0 {
         return None;
     }
     let size_pt = f64::from(px.min(400.0));
-    let shaped = rustfig_text::shape(&FontRequest::for_fig(font, ps), size_pt, text);
+    // An installed font that is not there is drawn as its Fig font.
+    let shaped = match local.and_then(|n| rustfig_text::shape_local(n, size_pt, text)) {
+        Some(s) => s,
+        None => rustfig_text::shape(&FontRequest::for_fig(font, ps), size_pt, text),
+    };
     let k = 1.0 / rustfig_text::FIG_PER_POINT;
     let (asc, desc) = (shaped.metrics.ascent * k, shaped.metrics.descent * k);
     let width = shaped.metrics.width * k;
@@ -210,14 +234,14 @@ pub(crate) fn sample_image(
     text: &str,
     px: f32,
 ) -> Option<egui::Image<'static>> {
-    let t = rendered(ctx, font, ps, text, px)?;
+    let t = rendered(ctx, font, ps, None, text, px)?;
     Some(egui::Image::new(&t.tex).fit_to_exact_size(t.size))
 }
 
 /// Draw `text` in the font at `px` (points), tinted `ink`. Falls back to the
 /// UI font when it can't be rendered.
-fn paint_text(ui: &mut egui::Ui, font: i32, ps: bool, text: &str, px: f32, ink: Color32) {
-    match rendered(ui.ctx(), font, ps, text, px) {
+fn paint_text(ui: &mut egui::Ui, font: i32, ps: bool, local: Option<&str>, text: &str, px: f32, ink: Color32) {
+    match rendered(ui.ctx(), font, ps, local, text, px) {
         Some(t) => {
             ui.add(egui::Image::new(&t.tex).fit_to_exact_size(t.size).tint(ink));
         }
@@ -227,28 +251,65 @@ fn paint_text(ui: &mut egui::Ui, font: i32, ps: bool, text: &str, px: f32, ink: 
     }
 }
 
-/// The chooser. `size`: the current font size when the size field is offered.
-/// State (switch, search) lives in egui's memory under `id`.
-pub fn show(ui: &mut egui::Ui, id: &str, font: i32, postscript: bool, size: Option<f64>) -> Outcome {
+/// The chooser. `size`: the current font size when the size field is offered;
+/// `local`: the current installed font (F7), if the text has one.
+/// State (list, search) lives in egui's memory under `id`.
+pub fn show(
+    ui: &mut egui::Ui,
+    id: &str,
+    font: i32,
+    postscript: bool,
+    local: Option<&str>,
+    size: Option<f64>,
+) -> Outcome {
     let mut out = Outcome::default();
     ui.set_width(280.0);
     let sid = egui::Id::new(("font_chooser", id));
+    /// What the list shows: the 35 PostScript fonts, the LaTeX fonts or the
+    /// installed ones.
+    #[derive(Clone, Copy, PartialEq)]
+    enum Kind {
+        PostScript,
+        Latex,
+        Local,
+    }
+    /// A font the preview shows.
+    #[derive(Clone, PartialEq)]
+    enum Shown {
+        Fig(i32, bool),
+        Local(String),
+    }
     #[derive(Clone, Default)]
     struct St {
-        ps: Option<bool>,
+        kind: Option<u8>,
         query: String,
-        hover: Option<(i32, bool)>,
+        hover: Option<Shown>,
     }
     let mut st: St = ui.data_mut(|d| d.get_temp(sid)).unwrap_or_default();
-    let mut ps_list = st.ps.unwrap_or(postscript);
+    let mut kind = match st.kind {
+        Some(0) => Kind::PostScript,
+        Some(1) => Kind::Latex,
+        Some(_) => Kind::Local,
+        None if local.is_some() => Kind::Local,
+        None if postscript => Kind::PostScript,
+        None => Kind::Latex,
+    };
     let ink = ui.visuals().text_color();
     ui.horizontal(|ui| {
-        for (v, label) in [(true, "PostScript"), (false, "LaTeX")] {
-            let r = ui.radio_value(&mut ps_list, v, label);
-            r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::RadioButton, true, format!("{label} fonts")));
+        for (v, label, text) in [
+            (Kind::PostScript, "PostScript fonts", "PostScript"),
+            (Kind::Latex, "LaTeX fonts", "LaTeX"),
+            (Kind::Local, "Local fonts", "Local fonts"),
+        ] {
+            let r = ui.radio_value(&mut kind, v, text);
+            r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::RadioButton, true, label));
         }
     });
-    st.ps = Some(ps_list);
+    st.kind = Some(match kind {
+        Kind::PostScript => 0,
+        Kind::Latex => 1,
+        Kind::Local => 2,
+    });
     ui.horizontal(|ui| {
         let r = ui.add(
             egui::TextEdit::singleline(&mut st.query)
@@ -267,9 +328,17 @@ pub fn show(ui: &mut egui::Ui, id: &str, font: i32, postscript: bool, size: Opti
         }
     });
     let sample_px = (size.unwrap_or(14.0) as f32).clamp(6.0, 36.0);
-    let shown = st.hover.unwrap_or((font, postscript));
+    let current = match local {
+        Some(n) => Shown::Local(n.to_string()),
+        None => Shown::Fig(font, postscript),
+    };
+    let shown = st.hover.clone().unwrap_or_else(|| current.clone());
     ui.separator();
-    ui.label(RichText::new(format!("Preview: {}", list_name(shown.0, shown.1))).small());
+    let shown_name = match &shown {
+        Shown::Fig(f, ps) => list_name(*f, *ps),
+        Shown::Local(n) => n.clone(),
+    };
+    ui.label(RichText::new(format!("Preview: {shown_name}")).small());
     // A fixed height: a preview that grew or shrank with the hovered font
     // would move the list under the pointer and make the hover flicker.
     let preview_h = sample_px * 2.0 + 8.0;
@@ -278,84 +347,146 @@ pub fn show(ui: &mut egui::Ui, id: &str, font: i32, postscript: bool, size: Opti
         .max_height(preview_h)
         .min_scrolled_height(preview_h)
         .auto_shrink([false, false])
-        .show(ui, |ui| paint_text(ui, shown.0, shown.1, SAMPLE, sample_px, ink));
+        .show(ui, |ui| match &shown {
+            Shown::Fig(f, ps) => paint_text(ui, *f, *ps, None, SAMPLE, sample_px, ink),
+            Shown::Local(n) => {
+                let fig = engine_font(n);
+                paint_text(ui, fig, true, Some(n), SAMPLE, sample_px, ink)
+            }
+        });
     ui.separator();
-    let count = if ps_list {
-        rustfig_text::PS_FONT_COUNT
-    } else {
-        rustfig_text::LATEX_FONT_COUNT
-    };
     let real = has_real_face();
     let mut hover = None;
     let mut any = false;
+    // One row: the name in its own font. Rows touch, so the pointer is never
+    // between two of them.
+    let row = |ui: &mut egui::Ui,
+               name: &str,
+               fig: i32,
+               ps: bool,
+               loc: Option<&str>,
+               is_current: bool,
+               substitute: bool|
+     -> (bool, bool) {
+        let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width().max(230.0), 24.0), Sense::click());
+        resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, is_current, name.to_string()));
+        if ui.is_rect_visible(rect) {
+            let p = ui.painter();
+            if is_current {
+                p.rect_filled(rect, 2.0, ui.visuals().selection.bg_fill);
+            } else if resp.hovered() {
+                p.rect_filled(rect, 2.0, ui.visuals().widgets.hovered.weak_bg_fill);
+            }
+            let color = if is_current {
+                ui.visuals().selection.stroke.color
+            } else {
+                ink
+            };
+            if is_current {
+                p.text(
+                    rect.left_center() + vec2(4.0, 0.0),
+                    egui::Align2::LEFT_CENTER,
+                    "\u{2022}",
+                    egui::FontId::proportional(14.0),
+                    color,
+                );
+            }
+            let inner = Rect::from_min_max(rect.min + vec2(18.0, 1.0), rect.max - vec2(2.0, 1.0));
+            let mut child = ui.new_child(egui::UiBuilder::new().max_rect(inner));
+            child.horizontal_centered(|ui| {
+                paint_text(ui, fig, ps, loc, name, 15.0, color);
+                if substitute {
+                    ui.label(RichText::new("(substitute)").small().weak());
+                }
+            });
+        }
+        (resp.hovered(), resp.clicked())
+    };
     let list = egui::ScrollArea::vertical()
         .id_salt(("font_list", id))
         .max_height(300.0)
         .min_scrolled_height(300.0)
-        .auto_shrink([false, false])
-        .show(ui, |ui| {
-            // Rows touch, so the pointer is never between two of them.
-            ui.spacing_mut().item_spacing.y = 0.0;
-            for f in 0..count {
-                let name = list_name(f, ps_list);
-                if !matches(&name, &st.query) {
-                    continue;
-                }
-                any = true;
-                let current = f == font && ps_list == postscript;
-                let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width().max(230.0), 24.0), Sense::click());
-                resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, current, name.clone()));
-                if ui.is_rect_visible(rect) {
-                    let p = ui.painter();
-                    if current {
-                        p.rect_filled(rect, 2.0, ui.visuals().selection.bg_fill);
-                    } else if resp.hovered() {
-                        p.rect_filled(rect, 2.0, ui.visuals().widgets.hovered.weak_bg_fill);
+        .auto_shrink([false, false]);
+    let list = match kind {
+        Kind::PostScript | Kind::Latex => {
+            let ps_list = kind == Kind::PostScript;
+            let count = if ps_list {
+                rustfig_text::PS_FONT_COUNT
+            } else {
+                rustfig_text::LATEX_FONT_COUNT
+            };
+            list.show(ui, |ui| {
+                ui.spacing_mut().item_spacing.y = 0.0;
+                for f in 0..count {
+                    let name = list_name(f, ps_list);
+                    if !matches(&name, &st.query) {
+                        continue;
                     }
-                    let color = if current {
-                        ui.visuals().selection.stroke.color
+                    any = true;
+                    let is_current = local.is_none() && f == font && ps_list == postscript;
+                    let (hov, clicked) = row(ui, &name, f, ps_list, None, is_current, !real);
+                    if hov {
+                        hover = Some(Shown::Fig(f, ps_list));
+                    }
+                    if clicked {
+                        out.font = Some((f, ps_list));
+                        out.local = Some(None);
+                    }
+                }
+                if !any {
+                    ui.label(RichText::new("No font matches.").weak());
+                }
+            })
+        }
+        Kind::Local => {
+            // Only the visible rows are drawn, so only their fonts are loaded.
+            let faces: Vec<rustfig_text::LocalFace> = rustfig_text::local_faces()
+                .into_iter()
+                .filter(|f| matches(&f.name, &st.query))
+                .collect();
+            if faces.is_empty() {
+                list.show(ui, |ui| {
+                    let msg = if rustfig_text::local_faces().is_empty() {
+                        "No installed fonts are available here."
                     } else {
-                        ink
+                        "No font matches."
                     };
-                    if current {
-                        p.text(
-                            rect.left_center() + vec2(4.0, 0.0),
-                            egui::Align2::LEFT_CENTER,
-                            "•",
-                            egui::FontId::proportional(14.0),
-                            color,
-                        );
-                    }
-                    let inner = Rect::from_min_max(rect.min + vec2(18.0, 1.0), rect.max - vec2(2.0, 1.0));
-                    let mut child = ui.new_child(egui::UiBuilder::new().max_rect(inner));
-                    child.horizontal_centered(|ui| {
-                        paint_text(ui, f, ps_list, &name, 15.0, color);
-                        if !real {
-                            ui.label(RichText::new("(substitute)").small().weak());
+                    ui.label(RichText::new(msg).weak());
+                })
+            } else {
+                list.show_rows(ui, 24.0, faces.len(), |ui, range| {
+                    ui.spacing_mut().item_spacing.y = 0.0;
+                    for f in faces.get(range).unwrap_or_default() {
+                        let fig = engine_font(&f.name);
+                        let is_current = local.is_some_and(|l| l.eq_ignore_ascii_case(&f.name));
+                        let (hov, clicked) = row(ui, &f.name, fig, true, Some(&f.name), is_current, false);
+                        if hov {
+                            hover = Some(Shown::Local(f.name.clone()));
                         }
-                    });
-                }
-                if resp.hovered() {
-                    hover = Some((f, ps_list));
-                }
-                if resp.clicked() {
-                    out.font = Some((f, ps_list));
-                }
+                        if clicked {
+                            out.font = Some((fig, true));
+                            out.local = Some(Some(f.name.clone()));
+                        }
+                    }
+                })
             }
-            if !any {
-                ui.label(RichText::new("No font matches.").weak());
-            }
-        });
+        }
+    };
     // Inside the list the preview keeps the last hovered font (the pointer
     // may be on the scroll bar); it returns to the current one on leaving.
     let in_list = ui.rect_contains_pointer(list.inner_rect);
     st.hover = hover.or(if in_list { st.hover } else { None });
     if out.font.is_some() {
-        // The next opening starts with the full list of the font's own kind.
+        // The next opening starts with the list of the font's own kind.
         st = St::default();
     }
     ui.data_mut(|d| d.insert_temp(sid, st));
     out
+}
+
+/// The Fig font number nearest to the installed font `name` (0 if unknown).
+fn engine_font(name: &str) -> i32 {
+    rustfig_engine::local_font_choice(name).map(|(_, f)| f).unwrap_or(0)
 }
 
 #[cfg(test)]
@@ -378,12 +509,14 @@ mod tests {
                 rustfig_text::LATEX_FONT_COUNT
             };
             for f in 0..n {
-                let (img, w, h) = rasterise(f, ps, &list_name(f, ps), 15.0).unwrap();
+                let (img, w, h) = rasterise(f, ps, None, &list_name(f, ps), 15.0).unwrap();
                 assert!(w > 4 && h > 4);
                 assert!(img.pixels.iter().any(|p| p.a() > 100), "font {f} {ps}");
             }
         }
-        assert!(rasterise(0, true, "x", f32::NAN).is_none());
-        let _ = rasterise(9999, true, "\u{0}", 12.0);
+        assert!(rasterise(0, true, None, "x", f32::NAN).is_none());
+        let _ = rasterise(9999, true, None, "\u{0}", 12.0);
+        // An installed font that is missing is drawn as its Fig font.
+        assert!(rasterise(0, true, Some("No Such Family"), "abc", 15.0).is_some());
     }
 }

@@ -47,10 +47,30 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Set attributes",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id], \"line\"?, \"thickness\"?, \"pen_color\"?, \"fill_color\"?, \"area_fill\"?, \"depth\"?, \"style_val\"?, \"cap\"?: butt|round|projecting, \"join\"?: miter|round|bevel, \"forward_arrow\"?: bool, \"backward_arrow\"?: bool, \"arrow_kind\"?, \"arrow_style\"?, \"arrow_width\"?, \"arrow_height\"?, \"radius\"?, \"font\"?, \"font_size\"?, \"justify\"?, \"angle\"?: degrees, \"text\"?, \"postscript\"?: bool, \"hidden\"?: bool, \"rigid\"?: bool, \"special\"?: bool, \"pie\"?: bool, \"flipped\"?: bool (pictures), \"arrow_thickness\"?, \"comment\"?: string, \"texts\"?: [string] (compound: the texts directly in it, in order), \"forward_arrow_spec\"?, \"backward_arrow_spec\"?: {kind, style, thickness, width, height}, \"geometry\"?: as object.set_geometry without id}",
+            params: "{\"ids\"?: [id], \"line\"?, \"thickness\"?, \"pen_color\"?, \"fill_color\"?, \"area_fill\"?, \"depth\"?, \"style_val\"?, \"cap\"?: butt|round|projecting, \"join\"?: miter|round|bevel, \"forward_arrow\"?: bool, \"backward_arrow\"?: bool, \"arrow_kind\"?, \"arrow_style\"?, \"arrow_width\"?, \"arrow_height\"?, \"radius\"?, \"font\"?, \"local_font\"?: string|null (installed font; applied after font and postscript), \"font_size\"?, \"justify\"?, \"angle\"?: degrees, \"text\"?, \"postscript\"?: bool, \"hidden\"?: bool, \"rigid\"?: bool, \"special\"?: bool, \"pie\"?: bool, \"flipped\"?: bool (pictures), \"arrow_thickness\"?, \"comment\"?: string, \"texts\"?: [string] (compound: the texts directly in it, in order), \"forward_arrow_spec\"?, \"backward_arrow_spec\"?: {kind, style, thickness, width, height}, \"geometry\"?: as object.set_geometry without id}",
             mutates: true,
             enabled: |_| true,
             run: set_attributes,
+        },
+        Command {
+            id: "text.set_local_font",
+            label: "Set installed font",
+            menu: "",
+            shortcut: "",
+            params: "{\"name\": string|null, \"ids\"?: [id]}  — an installed font (`Family Style`, see text.local_fonts) for the texts (default: the selection) and for new texts; its nearest Fig font becomes the font number, the family goes into the text's comment. null goes back to the Fig font",
+            mutates: true,
+            enabled: always,
+            run: set_local_font,
+        },
+        Command {
+            id: "text.local_fonts",
+            label: "List installed fonts",
+            menu: "",
+            shortcut: "",
+            params: "{\"query\"?: string}  — the installed font faces: name, family, label, generic (serif|sans|mono), bold, italic",
+            mutates: false,
+            enabled: always,
+            run: local_fonts,
         },
         Command {
             id: "object.set_geometry",
@@ -249,6 +269,77 @@ pub(super) fn update(e: &mut Engine, p: &Value) -> CmdResult {
     Ok(json!({"count": n}))
 }
 
+fn local_choice(p: &Value) -> Result<Option<Option<(String, i32)>>, EngineError> {
+    match p.get("local_font") {
+        None => Ok(None),
+        Some(Value::Null) => Ok(Some(None)),
+        Some(Value::String(s)) => crate::local_font_choice(s).map(|c| Some(Some(c))),
+        Some(_) => Err(EngineError::bad_params(
+            "parameter \"local_font\" must be a string or null",
+        )),
+    }
+}
+
+fn apply_local(t: &mut rustfig_model::Text, choice: &Option<(String, i32)>) {
+    match choice {
+        None => t.local_font = None,
+        Some((name, font)) => {
+            t.local_font = Some(name.clone());
+            t.font = *font;
+            t.flags |= rustfig_model::text_flags::POSTSCRIPT;
+        }
+    }
+    crate::fix_text_metrics(t);
+}
+
+fn set_local_font(e: &mut Engine, p: &Value) -> CmdResult {
+    let choice = local_choice(&json!({"local_font": p.get("name").cloned().unwrap_or(Value::Null)}))?.unwrap_or(None);
+    let ids = e.target_ids(p)?;
+    if let Some((name, font)) = &choice {
+        e.indicator.local_font = Some(name.clone());
+        e.indicator.font = *font;
+        e.indicator.postscript = true;
+    } else {
+        e.indicator.local_font = None;
+    }
+    let mut n = 0usize;
+    if !ids.is_empty() {
+        for o in e.doc_mut().objects.iter_mut() {
+            if ids.contains(&o.id) {
+                walk_mut(Arc::make_mut(o), &mut |o| {
+                    if let ObjectKind::Text(t) = &mut o.kind {
+                        apply_local(t, &choice);
+                        n += 1;
+                    }
+                });
+            }
+        }
+    }
+    Ok(json!({"count": n}))
+}
+
+fn local_fonts(_e: &mut Engine, p: &Value) -> CmdResult {
+    let query = opt_str(p, "query")?.unwrap_or("").to_lowercase();
+    let words: Vec<&str> = query.split_whitespace().collect();
+    let faces: Vec<Value> = rustfig_text::local_faces()
+        .into_iter()
+        .filter(|f| {
+            let n = f.name.to_lowercase();
+            words.iter().all(|w| n.contains(w))
+        })
+        .map(|f| {
+            let generic = match f.generic {
+                rustfig_text::Generic::Serif => "serif",
+                rustfig_text::Generic::Sans => "sans",
+                rustfig_text::Generic::Mono => "mono",
+            };
+            json!({"name": f.name, "family": f.family, "label": f.label, "generic": generic,
+                   "bold": f.bold, "italic": f.italic})
+        })
+        .collect();
+    Ok(json!({"fonts": faces}))
+}
+
 fn set_attributes(e: &mut Engine, p: &Value) -> CmdResult {
     // The edit panel's position rows travel with its attributes, so one
     // Apply is one undo step.
@@ -301,6 +392,7 @@ fn set_attributes(e: &mut Engine, p: &Value) -> CmdResult {
     let depth = int("depth", 0, MAX_DEPTH)?;
     let radius = int("radius", 0, 100_000)?;
     let font = int("font", -1, 34)?;
+    let local = local_choice(p)?;
     let style_val = opt_num(p, "style_val")?.map(|v| v.clamp(0.0, 1000.0));
     let font_size = opt_num(p, "font_size")?.map(|v| v.clamp(1.0, 2000.0));
     let angle = opt_num(p, "angle")?.map(f64::to_radians);
@@ -334,7 +426,14 @@ fn set_attributes(e: &mut Engine, p: &Value) -> CmdResult {
                 t.depth = v;
             }
             if let Some(v) = font {
+                // (The edit panel sends the unchanged number along.)
+                if t.font != v {
+                    t.local_font = None;
+                }
                 t.font = v;
+            }
+            if let Some(c) = &local {
+                apply_local(t, c);
             }
             if let Some(v) = font_size {
                 t.size = v;

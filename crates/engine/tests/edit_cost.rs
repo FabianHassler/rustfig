@@ -29,6 +29,7 @@ fn large(n: usize) -> Document {
                 length: 0.0,
                 origin: Point::new(x, y),
                 text: format!("t{i}"),
+                local_font: None,
             })
         } else {
             ObjectKind::Polyline(Polyline::new(
