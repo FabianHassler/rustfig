@@ -1881,6 +1881,12 @@ impl Engine {
         self.typing_text().map(|t| t.font)
     }
 
+    /// The font of the text being typed and whether it is a PostScript font.
+    pub fn typing_font_postscript(&self) -> Option<(i32, bool)> {
+        self.typing_text()
+            .map(|t| (t.font, t.flags & rustfig_model::text_flags::POSTSCRIPT != 0))
+    }
+
     /// Insert characters at the caret of the text being typed (the
     /// character map, E5). In a Symbol or ZapfDingbats text each character
     /// is stored as that font's own code, so fig2dev draws it; characters the

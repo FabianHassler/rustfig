@@ -2,7 +2,9 @@
 //! the characters of the font of the text being typed; a click inserts one
 //! at the caret through the `text.insert_char` command (which stores the
 //! font's own code for Symbol and ZapfDingbats). Ordinary fonts show Unicode
-//! blocks; the Symbol and ZapfDingbats fonts show their own tables.
+//! blocks; the Symbol and ZapfDingbats fonts show their own tables. Only
+//! the characters the font can draw are listed (its own face or the
+//! fallback face), each drawn in that font.
 
 use crate::App;
 use rustfig_text::symbol_tables::{self, FONT_DINGBATS, FONT_SYMBOL};
@@ -32,6 +34,29 @@ pub struct CharMap {
     pub filter: String,
     /// The character last pointed at (shown below the table).
     pub hover: Option<(char, Option<u8>)>,
+    /// The characters last listed and what they were listed for (font,
+    /// PostScript, block, search): shaping every character each frame is
+    /// too slow.
+    cache: Option<(ListKey, Vec<Entry>)>,
+}
+
+/// What the character list was made for: font, PostScript, block, search.
+type ListKey = (i32, bool, usize, String);
+
+/// A listed character and its stored code for Symbol and ZapfDingbats.
+type Entry = (char, Option<u8>);
+
+/// The characters to list: the block's or the search's, without those the
+/// font draws as the missing-glyph box.
+fn drawable(font: i32, ps: bool, block: usize, filter: &str) -> Vec<(char, Option<u8>)> {
+    let chars = if filter.trim().is_empty() {
+        table(font, block)
+    } else {
+        found(font, filter)
+    };
+    let req = rustfig_text::FontRequest::for_fig(font, ps);
+    let ok = rustfig_text::coverage::covered(&req, chars.iter().map(|(c, _)| *c));
+    chars.into_iter().filter(|(c, _)| ok.contains(c)).collect()
 }
 
 /// The characters of `font`'s table: (character, stored code for the
@@ -101,14 +126,15 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     if !app.charmap.open {
         return;
     }
-    let typing_font = app.engine.typing_font();
-    let font = typing_font.unwrap_or(app.engine.indicator.font);
+    let typing_font = app.engine.typing_font_postscript();
+    let (font, ps) = typing_font.unwrap_or((app.engine.indicator.font, app.engine.indicator.postscript));
     let typing = typing_font.is_some();
     let mut open = true;
     let mut insert: Option<char> = None;
     let mut block = app.charmap.block.min(BLOCKS.len() - 1);
     let mut filter = std::mem::take(&mut app.charmap.filter);
     let mut hover = None;
+    let mut cache = app.charmap.cache.take();
     egui::Window::new("Character Map")
         .open(&mut open)
         .resizable(false)
@@ -134,17 +160,27 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                 r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Character search"));
                 ui.weak("a character or its code, e.g. 2211");
             });
-            let chars = if filter.trim().is_empty() {
-                table(font, block)
-            } else {
-                found(font, &filter)
+            let key = (font, ps, block, filter.clone());
+            let chars = match &cache {
+                Some((k, chars)) if *k == key => chars.clone(),
+                _ => {
+                    let chars = drawable(font, ps, block, &filter);
+                    cache = Some((key, chars.clone()));
+                    chars
+                }
             };
             egui::ScrollArea::vertical().max_height(260.0).show(ui, |ui| {
                 ui.spacing_mut().item_spacing = egui::vec2(2.0, 2.0);
                 ui.horizontal_wrapped(|ui| {
                     ui.set_max_width(12.0 * 30.0);
                     for (c, code) in &chars {
-                        let b = egui::Button::new(c.to_string()).min_size(egui::vec2(28.0, 28.0));
+                        let text = c.to_string();
+                        let ink = ui.visuals().text_color();
+                        let b = match crate::font_chooser::sample_image(ui.ctx(), font, ps, &text, 16.0) {
+                            Some(img) => egui::Button::image(img.tint(ink)),
+                            None => egui::Button::new(text),
+                        }
+                        .min_size(egui::vec2(28.0, 28.0));
                         let r = ui.add_enabled(typing, b);
                         let label = format!("Insert {c}");
                         r.widget_info(move || egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label.clone()));
@@ -170,6 +206,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                 ui.weak("Choose Text mode and click in the drawing to start typing; then click a character.");
             }
         });
+    app.charmap.cache = cache;
     app.charmap.open = open;
     app.charmap.block = block;
     app.charmap.filter = filter;
@@ -193,5 +230,15 @@ mod tests {
         assert!(found(FONT_SYMBOL, "∑").contains(&('∑', Some(0xE5))));
         assert!(found(0, "U+00e9").iter().any(|(c, _)| *c == 'é'));
         assert!(found(0, "zzzz").is_empty());
+    }
+
+    /// Characters the font can't draw (the missing-glyph box) aren't listed.
+    #[test]
+    fn only_drawable_characters_are_listed() {
+        let all: usize = (0..BLOCKS.len()).map(|b| table(0, b).len()).sum();
+        let shown: usize = (0..BLOCKS.len()).map(|b| drawable(0, true, b, "").len()).sum();
+        assert!(shown > 0 && shown <= all);
+        assert!(drawable(0, true, 0, "").iter().any(|(c, _)| *c == 'é'));
+        assert!(drawable(0, true, 0, "E000").is_empty());
     }
 }

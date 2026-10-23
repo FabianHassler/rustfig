@@ -200,6 +200,19 @@ fn rasterise(font: i32, ps: bool, text: &str, px: f32) -> Option<(egui::ColorIma
     Some((egui::ColorImage::from_rgba_unmultiplied([w, h], &rgba), w, h))
 }
 
+/// `text` drawn in the font at `px` (points) as an image to tint, or None
+/// when it can't be rendered.
+pub(crate) fn sample_image(
+    ctx: &egui::Context,
+    font: i32,
+    ps: bool,
+    text: &str,
+    px: f32,
+) -> Option<egui::Image<'static>> {
+    let t = rendered(ctx, font, ps, text, px)?;
+    Some(egui::Image::new(&t.tex).fit_to_exact_size(t.size))
+}
+
 /// Draw `text` in the font at `px` (points), tinted `ink`. Falls back to the
 /// UI font when it can't be rendered.
 fn paint_text(ui: &mut egui::Ui, font: i32, ps: bool, text: &str, px: f32, ink: Color32) {

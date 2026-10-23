@@ -4,6 +4,7 @@
 //! sequences for typing text.
 
 mod compose;
+pub mod coverage;
 pub mod symbol_tables;
 
 pub use compose::compose;

@@ -1,6 +1,6 @@
 # UI parity checklist
 
-**Status:** 2026-10-22 (E4, W10-36: colour picker and editor, recent colours, eyedropper); 2026-10-22 (E10: text editing); 2026-10-22 (S4-3, S4-8, S4-9: Digitize, New window, Autorefresh); 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: live edit panel, compound panel, point table, pictorial menus); 2026-10-22 (W10-16, W10-20: picture edit panel); 2026-10-22 (D5: measure modes); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: Tangent mode and its length button). ✅ done · 🟡 partial · ❌ missing
+**Status:** 2026-10-23 (E5: character map lists only drawable characters, in the text's font); 2026-10-22 (E4, W10-36: colour picker and editor, recent colours, eyedropper); 2026-10-22 (E10: text editing); 2026-10-22 (S4-3, S4-8, S4-9: Digitize, New window, Autorefresh); 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: live edit panel, compound panel, point table, pictorial menus); 2026-10-22 (W10-16, W10-20: picture edit panel); 2026-10-22 (D5: measure modes); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: Tangent mode and its length button). ✅ done · 🟡 partial · ❌ missing
 
 ## Drawing modes
 | xfig mode | RustFig | |
@@ -16,7 +16,7 @@
 | Arc | `tool.arc` (three clicks) | ✅ |
 | Picture edit panel | Reread, Browse/Relink, drop a file, type, size, colours, transparency, thumbnail, width/length, rotation, h/w ratios, Shrink/Expand/Original/Scale %, Edit Image, XBM pen colour (W10-16, W10-20) | ✅ |
 | Picture | `tool.picture` (xfig's types: EPS/PS, PDF, GIF, JPEG, PCX, PNG, PPM, TIFF, XBM, XPM, `.gz`/`.Z`; also BMP) | ✅ |
-| Text | `tool.text`: caret by click, selection (mouse, Shift+arrows), word jumps, clipboard, IME (E10) | ✅ character map (E5: View > Character map, inserts at the caret; Symbol and Dingbats tables) |
+| Text | `tool.text`: caret by click, selection (mouse, Shift+arrows), word jumps, clipboard, IME (E10) | ✅ character map (E5: View > Character map, inserts at the caret; Symbol and Dingbats tables; only characters the font can draw, shown in that font) |
 | Library object | — | ❌ |
 
 ## Editing modes
@@ -121,6 +121,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 ## Revision history
 | Date | Note |
 |---|---|
+| 2026-10-23 | E5: character map hides characters the font cannot draw and draws each in the text's font. |
 | 2026-10-22 | E7 done: the cut buffer on the system clipboard (Fig text + pictures), Paste takes a figure from another window or an image. |
 | 2026-10-22 | E4, W10-36 done: colour picker and editor (Edit > Colours…), recent colours, eyedropper, `color.*` commands. |
 | 2026-10-22 | E4b done: Pick from screen in the Colours window (macOS, Windows, Linux portal; web greyed out). |
