@@ -45,7 +45,7 @@ impl Engine {
                 start, cursor, kind, ..
             } => {
                 let msg = match kind {
-                    ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture => Msg::Box,
+                    ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture | ToolKind::Plot => Msg::Box,
                     ToolKind::CircleRadius | ToolKind::RegularPolygon => Msg::Radius,
                     ToolKind::CircleDiameter | ToolKind::EllipseDiameter => Msg::Diameter,
                     ToolKind::EllipseRadii => Msg::Radius2,

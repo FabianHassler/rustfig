@@ -32,6 +32,7 @@ pub mod menus;
 pub mod mode_icons;
 pub mod panels;
 pub mod platform;
+pub mod plot_dialog;
 pub mod point_entry;
 pub mod print_dialog;
 pub mod reload;
@@ -161,6 +162,8 @@ pub struct App {
     pub last_export: Option<String>,
     /// The Digitize window (S4-8).
     pub digitize: digitize::Digitize,
+    /// The Plot dialog (E12).
+    pub plot_dialog: plot_dialog::PlotDialog,
     /// Autorefresh mode and the changed-on-disk question (S4-9).
     pub reload: reload::Reload,
     /// The action (quit, new, open) that resumes once the Save All / Save
@@ -230,6 +233,7 @@ impl App {
             #[cfg(not(target_arch = "wasm32"))]
             last_export: None,
             digitize: digitize::Digitize::default(),
+            plot_dialog: plot_dialog::PlotDialog::default(),
             reload: reload::Reload::default(),
             after_save: None,
             file_dialogs: Box::new(dialogs::NativeDialogs),
@@ -402,6 +406,15 @@ impl App {
                         .unwrap_or_else(|| "~/xfiglib".to_string());
                     self.library.start_scan(roots, source);
                 }
+                UiRequest::PlotDialog { rect, edit } => match edit {
+                    None => self
+                        .plot_dialog
+                        .open_new(rect.map(|r| [r.min.x, r.min.y, r.width(), r.height()])),
+                    Some(id) => match self.try_run("plot.get", &json!({"id": id.0})) {
+                        Ok(v) => self.plot_dialog.open_edit(&v, id.0),
+                        Err(e) => self.error(e),
+                    },
+                },
                 UiRequest::EditFigureComments => self.dialogs.open_figure_comments(&self.engine),
                 UiRequest::EditSplinePoint { id, index } => self.dialogs.open_spline_point(&self.engine, id, index),
                 UiRequest::PickPicture { rect, keep_aspect } => {
@@ -603,6 +616,7 @@ impl App {
         #[cfg(not(target_arch = "wasm32"))]
         tex_gyre::tick(self, ctx);
         digitize::show(self, ctx);
+        plot_dialog::show(self, ctx);
         charmap::show(self, ctx);
         library::show(self, ctx);
         keys_sheet::show(self, ctx);

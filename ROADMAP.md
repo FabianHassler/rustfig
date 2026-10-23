@@ -48,6 +48,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 - A modern Select tool (click, shift-click, rubber band, drag to move, vertex handles).
 - JSON-lines control channel, MCP server (`rustfig-cli mcp`), command-line converter.
 - Native `.rustfig` JSON format.
+- Plot a curve (E12): a Plot mode and dialog draw a function, a parametric curve or data from a file as vector objects with axes, grid, log axes and LaTeX labels; the plot is edited again from its comment (`plot.add`, `plot.update`).
 
 ## Outlook
 

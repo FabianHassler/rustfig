@@ -44,6 +44,7 @@ pub const TOPICS: &[Topic] = &[
     topic!("tangent-normal.md"),
     topic!("measure.md"),
     topic!("libraries.md"),
+    topic!("plot.md"),
     topic!("attribute-modes.md"),
     topic!("attributes.md"),
     topic!("line-styles.md"),

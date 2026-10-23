@@ -984,6 +984,57 @@ fn digitize_window_writes_selected_line() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// E12: the Plot mode button, a drag on the canvas, the dialog and Draw plot
+/// add one compound; a bad expression stays in the dialog as an error; Edit
+/// mode on the plot reopens the dialog with its settings.
+#[test]
+fn plot_mode_button_opens_dialog_and_draw_adds_a_compound() {
+    let mut h = harness(app());
+    h.get_by_label("Plot").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.tool(), ToolKind::Plot);
+    for (ty, x, y) in [("press", 600, 600), ("move", 3000, 2400), ("release", 3000, 2400)] {
+        h.state_mut().run("tool.event", json!({"type": ty, "x": x, "y": y}));
+    }
+    h.run_steps(3);
+    assert!(h.state().plot_dialog.open, "the drag opens the dialog");
+    // A bad expression is an error in the dialog and draws nothing.
+    h.state_mut().plot_dialog.expr = "sin(".into();
+    h.run_steps(2);
+    h.get_by_label("Draw plot").click();
+    h.run_steps(3);
+    assert!(h.state().plot_dialog.open);
+    assert!(!h.state().plot_dialog.error.is_empty());
+    assert!(h.state().engine.doc().objects.is_empty());
+    // A good one draws a compound in the dragged frame.
+    h.state_mut().plot_dialog.expr = "sin(x)".into();
+    h.run_steps(2);
+    h.get_by_label("Draw plot").click();
+    h.run_steps(3);
+    assert!(!h.state().plot_dialog.open);
+    let doc = h.state().engine.doc();
+    assert_eq!(doc.objects.len(), 1);
+    let o = &doc.objects[0];
+    assert!(matches!(o.kind, rustfig_model::ObjectKind::Compound(_)));
+    assert!(o.comments[0].starts_with("rustfig-plot:"));
+    // Edit mode on the plot opens the dialog with its settings.
+    h.state_mut().plot_dialog.expr = "other".into();
+    h.state_mut().run("tool.edit", json!({}));
+    for (ty, x, y) in [("press", 600, 600), ("release", 600, 600)] {
+        h.state_mut().run("tool.event", json!({"type": ty, "x": x, "y": y}));
+    }
+    h.run_steps(3);
+    assert!(h.state().plot_dialog.open);
+    assert!(h.state().plot_dialog.edit.is_some());
+    assert_eq!(h.state().plot_dialog.expr, "sin(x)");
+    h.state_mut().plot_dialog.expr = "cos(x)".into();
+    h.run_steps(2);
+    h.get_by_label("Draw plot").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.doc().objects.len(), 1);
+    assert!(h.state().engine.doc().objects[0].comments[0].contains("cos(x)"));
+}
+
 /// S4-9: Autorefresh is a View menu entry; the New window command is in File.
 #[test]
 fn autorefresh_toggle_and_new_window_entries() {

@@ -20,6 +20,7 @@ pub(crate) mod measure;
 mod object;
 mod outline;
 pub mod picture;
+pub(crate) mod plot;
 mod prefs;
 mod print;
 mod region;
@@ -94,6 +95,7 @@ pub fn all() -> &'static [Command] {
         v.extend(dimline::commands());
         v.extend(joinsplit::commands());
         v.extend(library::commands());
+        v.extend(plot::commands());
         v.extend(region::commands());
         v.extend(doc::commands());
         v.extend(color::commands());

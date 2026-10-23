@@ -436,6 +436,15 @@ pub const TRIM: Xbm = Xbm {
     bits: &[0; 128],
 };
 
+/// Plot a curve: RustFig's own mode (E12), so no xfig bitmap; the icon is
+/// the vector drawing in `mode_icons` (original work). Blank here.
+pub const PLOT: Xbm = Xbm {
+    name: "plot",
+    width: 36,
+    height: 32,
+    bits: &[0; 128],
+};
+
 pub const CHOP: Xbm = Xbm {
     name: "chop",
     width: 36,

@@ -291,7 +291,7 @@ pub const TRACED: &[&Xbm] = &[
 
 /// Mode icons RustFig draws itself: no xfig bitmap to trace, so a blank
 /// bitmap carries the name and size.
-pub const ORIGINAL: &[&Xbm] = &[&xi::TRIM];
+pub const ORIGINAL: &[&Xbm] = &[&xi::TRIM, &xi::PLOT];
 
 /// The traced bitmap called `name`.
 pub fn bitmap(name: &str) -> Option<&'static Xbm> {
@@ -874,6 +874,20 @@ pub fn drawing(name: &str) -> Option<Vec<Object>> {
             .marker(23.0, 15.5, 2.0)
             .marker(27.0, 15.5, 2.0)
             .marker(31.0, 15.5, 2.0)
+            .done(),
+        // Plot a curve (RustFig's own): the two axes and a sine wave.
+        "plot" => Ic::new(&xi::PLOT)
+            .wide(&[(5.0, 4.0), (5.0, 27.0), (32.0, 27.0)])
+            .wide(&[
+                (7.0, 24.0),
+                (10.0, 14.0),
+                (13.0, 8.0),
+                (16.0, 10.0),
+                (19.0, 18.0),
+                (23.0, 24.0),
+                (26.0, 22.0),
+                (30.0, 12.0),
+            ])
             .done(),
         "areameas" => Ic::new(&xi::AREAMEAS).pixels(0, 0, 35, 31).done(),
         "library" => Ic::new(&xi::LIBRARY).pixels(0, 0, 72, 31).done(),

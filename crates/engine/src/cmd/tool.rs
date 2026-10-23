@@ -210,6 +210,7 @@ tool_runs!(
     AngleMeasure,
     LengthMeasure,
     AreaMeasure,
+    Plot,
 );
 
 fn event(e: &mut Engine, p: &Value) -> CmdResult {
