@@ -268,6 +268,7 @@ pub struct Dialogs {
     pub figure_comments: Option<FigureComments>,
     pub spline_point: Option<SplinePointEdit>,
     pub export: ExportState,
+    pub print: crate::print_dialog::PrintState,
     pub search: SearchState,
     pub settings_open: bool,
     pub commands_open: bool,
@@ -737,6 +738,7 @@ pub(crate) fn escape_closes_panels(app: &mut App, ctx: &egui::Context) {
     }
     let d = &mut app.dialogs;
     let any = d.export.open
+        || d.print.open
         || d.search.open
         || d.settings_open
         || d.commands_open
@@ -759,6 +761,7 @@ pub(crate) fn escape_closes_panels(app: &mut App, ctx: &egui::Context) {
         d.figure_comments = None;
         d.spline_point = None;
         d.export.open = false;
+        d.print.open = false;
         d.search.open = false;
         d.settings_open = false;
         d.commands_open = false;
@@ -912,6 +915,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     resources_dialog(app, ctx);
     edit_dialog(app, ctx);
     export_dialog(app, ctx);
+    crate::print_dialog::dialog(app, ctx);
     search_dialog(app, ctx);
     settings_dialog(app, ctx);
     commands_dialog(app, ctx);
@@ -2049,8 +2053,8 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
 }
 
 /// xfig's grid menus (`grid_inch_choices`, `grid_cm_choices` of w_util.c).
-const GRID_INCH: [&str; 9] = ["None", "1/16", "1/8", "1/4", "1/2", "1", "2", "5", "10"];
-const GRID_MM: [&str; 8] = ["None", "1", "2", "5", "10", "20", "50", "100"];
+pub(crate) const GRID_INCH: [&str; 9] = ["None", "1/16", "1/8", "1/4", "1/2", "1", "2", "5", "10"];
+pub(crate) const GRID_MM: [&str; 8] = ["None", "1", "2", "5", "10", "20", "50", "100"];
 
 /// What a click in the Export panel asks for, done after the panel is drawn.
 #[derive(Default)]
@@ -2063,7 +2067,7 @@ struct ExportActions {
 }
 
 /// A combo box of text choices that reports its choice.
-fn text_combo(ui: &mut egui::Ui, id: &str, current: &str, choices: &[&str]) -> Option<String> {
+pub(crate) fn text_combo(ui: &mut egui::Ui, id: &str, current: &str, choices: &[&str]) -> Option<String> {
     let mut chosen = None;
     let combo = egui::ComboBox::from_id_salt(id)
         .selected_text(current)

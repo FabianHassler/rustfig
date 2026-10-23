@@ -549,9 +549,9 @@ fn classic_menus_are_xfigs() {
     for entry in ["Open...", "Merge...", "Save As...", "Export...", "Exit"] {
         h.get_by_label_contains(entry);
     }
-    // Entries RustFig doesn't have yet are there, greyed out.
+    // Print... opens the Print panel (B5).
     use egui_kittest::kittest::NodeT;
-    assert!(h.get_by_label_contains("Print...").accesskit_node().is_disabled());
+    assert!(!h.get_by_label_contains("Print...").accesskit_node().is_disabled());
 }
 
 #[test]

@@ -108,6 +108,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}",
     },
     UiCommand {
+        id: "app.print",
+        label: "Print…",
+        shortcut: "Ctrl+P",
+        params: "{}  — the Print panel (page setup, preview, printer, batch); print.run and print.quick print without it",
+    },
+    UiCommand {
         id: "app.export_now",
         label: "Export with current settings",
         shortcut: "",
@@ -300,6 +306,7 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
             }
         }
         "app.export" => app.dialogs.export.open = true,
+        "app.print" => app.dialogs.print.open = true,
         "app.export_now" => dialogs::export_now(app),
         "app.cancel_export" => {
             #[cfg(not(target_arch = "wasm32"))]
@@ -428,7 +435,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Own("app.import_picture"),
                 Own("app.new_window"),
                 Own("app.versions"),
-                Missing("Print...", "Alt+P", "B5"),
+                Cmd("Print...", "app.print"),
                 Cmd("Exit", "app.quit"),
             ],
         ),
@@ -498,7 +505,7 @@ pub const XFIG_MENU_LETTERS: &[(&str, char, &str)] = &[
     ("File", 's', "app.save"),
     ("File", 'a', "app.save_as"),
     ("File", 'e', "app.export"),
-    ("File", 'p', "Print..."),
+    ("File", 'p', "app.print"),
     ("File", 'x', "app.quit"),
     ("Edit", 'u', "edit.undo"),
     ("Edit", 'p', "edit.paste"),
@@ -883,7 +890,7 @@ pub fn parse_shortcut(s: &str) -> Option<egui::KeyboardShortcut> {
 /// in `w_modepanel.c`): Meta (Alt/Option) + letter for menu entries, and
 /// physical Ctrl + letter for some modes. Specs use "Alt", "Shift" and
 /// "PhysCtrl" (the Control key itself, also on macOS where the platform's
-/// shortcuts use Cmd); xfig entries RustFig has no command for yet (print,
+/// shortcuts use Cmd); xfig entries RustFig has no command for yet (
 /// spell check, global settings, named styles) are left out.
 pub const XFIG_KEYS: &[(&str, &str)] = &[
     ("Alt+N", "app.new"),
@@ -894,6 +901,8 @@ pub const XFIG_KEYS: &[(&str, &str)] = &[
     ("Alt+A", "app.save_as"),
     ("Alt+X", "app.export"),
     ("Shift+Alt+X", "app.export_now"),
+    ("Alt+P", "app.print"),
+    ("Shift+Alt+P", "print.quick"),
     ("Alt+Q", "app.quit"),
     ("Alt+U", "edit.undo"),
     ("Alt+T", "edit.paste"),
@@ -1317,6 +1326,7 @@ mod tests {
         ("app.button_style", "a choice in Global settings"),
         ("app.theme", "a choice in Global settings"),
         ("app.ui_scale", "a choice in Global settings"),
+        ("print.", "the Print panel's buttons; Shift-Meta-P is print.quick"),
         ("app.export_now", "the Export panel's Export button and the E key"),
         ("app.cancel_export", "the Cancel button of the export progress window"),
         ("app.show_export_folder", "the Show in folder button after an export"),

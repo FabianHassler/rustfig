@@ -1,6 +1,6 @@
 # Export
 
-File > Export (Meta+X, Ctrl+E) writes the drawing in another format. RustFig has no separate print dialog yet: export to PDF and print that.
+File > Export (Meta+X, Ctrl+E) writes the drawing in another format. To print, use File > Print ([Print](print.md)).
 
 ## The Export panel
 

@@ -32,6 +32,7 @@ pub mod mode_icons;
 pub mod panels;
 pub mod platform;
 pub mod point_entry;
+pub mod print_dialog;
 pub mod reload;
 pub mod rulers;
 pub mod screen_pick;
@@ -225,6 +226,9 @@ impl App {
         #[cfg(not(target_arch = "wasm32"))]
         app.engine
             .set_picture_clipboard(Some(Box::new(clipboard::SystemPictureClipboard::default())));
+        // Print (B5) hands its PDF to the operating system's print system.
+        #[cfg(not(target_arch = "wasm32"))]
+        app.engine.set_spooler(Box::new(rustfig_engine::print::SystemSpooler));
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(port) = control_port {
             app.attach(&cc.egui_ctx);

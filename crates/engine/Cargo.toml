@@ -21,6 +21,8 @@ serde.workspace = true
 serde_json.workspace = true
 toml.workspace = true
 image.workspace = true
+# Rasterises the printed PDF for the Print panel's preview (B5).
+hayro = "0.8"
 
 [dev-dependencies]
 proptest.workspace = true
