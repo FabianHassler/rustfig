@@ -4,7 +4,7 @@
 //! `plot.update` (a plot being edited); the dialog only collects fields.
 
 use crate::App;
-use rustfig_engine::plot::{self, PlotMode, PlotSpec};
+use rustfig_engine::plot::{self, NumFormat, PlotMode, PlotSpec, TickDir, TickSpec};
 use serde_json::{json, Value};
 
 /// The dialog's fields as text; they stay between uses.
@@ -36,8 +36,108 @@ pub struct PlotDialog {
     pub xlabel: String,
     pub ylabel: String,
     pub latex: bool,
+    pub latex_numbers: bool,
+    pub xticks: TickFields,
+    pub yticks: TickFields,
     /// The last error, shown in the dialog.
     pub error: String,
+}
+
+/// The tick settings of one axis as typed.
+#[derive(Debug, Clone)]
+pub struct TickFields {
+    pub manual: bool,
+    pub first: String,
+    pub step: String,
+    pub count: String,
+    pub minor: String,
+    pub length: String,
+    pub dir: TickDir,
+    pub format: NumFormat,
+    pub decimals: String,
+    pub numbers: bool,
+}
+
+impl TickFields {
+    fn from_spec(t: &TickSpec) -> TickFields {
+        TickFields {
+            manual: t.manual,
+            first: num(t.first),
+            step: num(t.step),
+            count: t.count.map(|c| c.to_string()).unwrap_or_default(),
+            minor: t.minor.map(|c| c.to_string()).unwrap_or_default(),
+            length: num(Some(t.length)),
+            dir: t.dir,
+            format: t.format,
+            decimals: t.decimals.to_string(),
+            numbers: t.numbers,
+        }
+    }
+
+    fn params(&self, axis: &str) -> Result<Value, String> {
+        let opt_whole = |t: &str, name: &str| -> Result<Value, String> {
+            if t.trim().is_empty() {
+                Ok(Value::Null)
+            } else {
+                PlotDialog::whole(t, &format!("{axis} ticks: {name}")).map(|v| json!(v))
+            }
+        };
+        Ok(json!({
+            "manual": self.manual,
+            "first": PlotDialog::value(&self.first, &format!("{axis} ticks: first tick"))?,
+            "step": PlotDialog::value(&self.step, &format!("{axis} ticks: step"))?,
+            "count": opt_whole(&self.count, "count")?,
+            "minor": opt_whole(&self.minor, "minor ticks")?,
+            "length": PlotDialog::value(&self.length, &format!("{axis} ticks: length"))?
+                .as_f64().unwrap_or(105.0),
+            "dir": self.dir,
+            "format": self.format,
+            "decimals": PlotDialog::whole(&self.decimals, &format!("{axis} ticks: decimals"))?,
+            "numbers": self.numbers,
+        }))
+    }
+}
+
+fn tick_section(ui: &mut egui::Ui, axis: &str, t: &mut TickFields) {
+    egui::CollapsingHeader::new(format!("{axis} ticks"))
+        .id_salt(format!("plot_ticks_{axis}"))
+        .show(ui, |ui| {
+            ui.checkbox(&mut t.manual, "Manual (empty fields are automatic)");
+            ui.add_enabled_ui(t.manual, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label("First:");
+                    field(ui, &format!("{axis} tick first"), &mut t.first, 60.0);
+                    ui.label("Step:");
+                    field(ui, &format!("{axis} tick step"), &mut t.step, 60.0);
+                    ui.label("or count:");
+                    field(ui, &format!("{axis} tick count"), &mut t.count, 40.0);
+                });
+            });
+            ui.horizontal(|ui| {
+                ui.label("Minor per major (0-9):");
+                field(ui, &format!("{axis} tick minor"), &mut t.minor, 30.0);
+                ui.label("Length:");
+                field(ui, &format!("{axis} tick length"), &mut t.length, 50.0);
+            });
+            ui.horizontal(|ui| {
+                ui.label("Direction:");
+                ui.radio_value(&mut t.dir, TickDir::In, "in");
+                ui.radio_value(&mut t.dir, TickDir::Out, "out");
+                ui.radio_value(&mut t.dir, TickDir::Both, "both");
+            });
+            ui.horizontal(|ui| {
+                ui.label("Numbers:");
+                ui.checkbox(&mut t.numbers, "shown");
+                ui.radio_value(&mut t.format, NumFormat::Auto, "automatic");
+                ui.radio_value(&mut t.format, NumFormat::Fixed, "decimals");
+                field(ui, &format!("{axis} tick decimals"), &mut t.decimals, 25.0);
+                ui.radio_value(&mut t.format, NumFormat::Scientific, "scientific");
+                ui.radio_value(&mut t.format, NumFormat::Pi, "multiples of \u{3c0}");
+            });
+            ui.weak(
+                "On a logarithmic axis the step counts decades and the minor ticks are at 2 to n+1 times a decade.",
+            );
+        });
 }
 
 fn num(v: Option<f64>) -> String {
@@ -75,6 +175,9 @@ impl Default for PlotDialog {
             xlabel: String::new(),
             ylabel: String::new(),
             latex: false,
+            latex_numbers: false,
+            xticks: TickFields::from_spec(&TickSpec::default()),
+            yticks: TickFields::from_spec(&TickSpec::default()),
             error: String::new(),
         };
         d.load(&PlotSpec::default());
@@ -105,6 +208,9 @@ impl PlotDialog {
         self.xlabel = s.xlabel.clone();
         self.ylabel = s.ylabel.clone();
         self.latex = s.latex;
+        self.latex_numbers = s.latex_numbers;
+        self.xticks = TickFields::from_spec(&s.xticks);
+        self.yticks = TickFields::from_spec(&s.yticks);
         self.error.clear();
     }
 
@@ -173,6 +279,9 @@ impl PlotDialog {
             "xlabel": self.xlabel,
             "ylabel": self.ylabel,
             "latex": self.latex,
+            "latex_numbers": self.latex_numbers,
+            "xticks": self.xticks.params("x")?,
+            "yticks": self.yticks.params("y")?,
         });
         if let (Some(o), Some(id), _) = (p.as_object_mut(), self.edit, ()) {
             o.insert("id".into(), json!(id));
@@ -305,6 +414,9 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                 ui.end_row();
             });
             ui.checkbox(&mut d.latex, "Labels are LaTeX (special text)");
+            ui.checkbox(&mut d.latex_numbers, "Numbers as LaTeX");
+            tick_section(ui, "x", &mut d.xticks);
+            tick_section(ui, "y", &mut d.yticks);
             ui.weak("Line style, depth and font are the current ones in the attribute panel.");
             if !d.error.is_empty() {
                 ui.colored_label(ui.visuals().error_fg_color, &d.error);

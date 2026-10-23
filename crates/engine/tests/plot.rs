@@ -471,3 +471,64 @@ fn the_largest_expression_with_the_most_samples_finishes() {
     let big = format!("x{}", "+x".repeat(1_100));
     assert!(e.execute("plot.add", &json!({"expr": big})).is_err());
 }
+
+#[test]
+fn tick_settings_are_kept_and_honoured_by_redraw() {
+    let mut e = Engine::new();
+    let r = e
+        .execute(
+            "plot.add",
+            &json!({"expr": "sin(x)", "xmin": 0, "xmax": 2.0 * std::f64::consts::PI,
+                    "xticks": {"manual": true, "first": std::f64::consts::FRAC_PI_2, "step": std::f64::consts::FRAC_PI_2,
+                               "format": "pi", "dir": "out", "length": 200},
+                    "yticks": {"numbers": false}}),
+        )
+        .unwrap();
+    let id = r["id"].as_u64().unwrap();
+    let numbers = |e: &Engine| -> Vec<String> {
+        let o = e.doc().get(ObjectId(id)).unwrap();
+        members(o)
+            .iter()
+            .filter(|m| m.comments.iter().any(|c| c.ends_with("number")))
+            .filter_map(|m| match &m.kind {
+                ObjectKind::Text(t) => Some(t.text.clone()),
+                _ => None,
+            })
+            .collect()
+    };
+    assert_eq!(numbers(&e), ["\u{3c0}/2", "\u{3c0}", "3\u{3c0}/2", "2\u{3c0}"]);
+    // Redraw keeps the settings; changing one is honoured.
+    e.execute("plot.update", &json!({"id": id, "grid": true})).unwrap();
+    assert_eq!(numbers(&e).len(), 4);
+    let got = e.execute("plot.get", &json!({"id": id})).unwrap();
+    assert_eq!(got["spec"]["xticks"]["format"], "pi");
+    e.execute(
+        "plot.update",
+        &json!({"id": id, "xticks": {"manual": true, "count": 2}}),
+    )
+    .unwrap();
+    assert_eq!(numbers(&e).len(), 3);
+    // An old plot without tick settings keeps the automatic ticks.
+    let r = e.execute("plot.add", &json!({"expr": "x"})).unwrap();
+    let o = e.doc().get(ObjectId(r["id"].as_u64().unwrap())).unwrap();
+    assert!(!o.comments[0].contains("xticks"));
+    // Hostile values.
+    for t in [
+        json!({"manual": true, "step": 0}),
+        json!({"manual": true, "step": -2}),
+        json!({"manual": true, "step": 1e-12}),
+        json!({"manual": true, "count": 100000}),
+        json!({"minor": 12}),
+        json!({"length": -1}),
+        json!({"length": 1e30}),
+        json!({"decimals": 99}),
+        json!({"dir": "sideways"}),
+        json!({"first": "a"}),
+    ] {
+        assert!(
+            e.execute("plot.add", &json!({"expr": "x", "xticks": t.clone()}))
+                .is_err(),
+            "{t}"
+        );
+    }
+}
