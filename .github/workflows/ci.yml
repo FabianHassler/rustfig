@@ -1,11 +1,10 @@
-# Plan tasks A2 and P1: the quality gates on every push and pull request, on
-# Linux, Windows and macOS. The wasm check, the performance budgets and the
+# Plan tasks A2 and P1: the quality gates on Linux, Windows and macOS. Started
+# by hand only (Actions tab or `gh workflow run ci.yml`), to save Actions
+# minutes; `cargo xtask ci` runs locally before every commit. The wasm check, the performance budgets and the
 # fig2dev reference tools (system packages) run on Linux only.
 name: CI
 
 on:
-  push:
-  pull_request:
   workflow_dispatch:
 
 concurrency:

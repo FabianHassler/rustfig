@@ -40,8 +40,10 @@ it fail instead.
 `cargo xtask source-audit` (not part of `ci`) lists every function of `old/xfig-3.2.9a/src/*.c` into `docs/source-audit.md`, keeping the status, note and task columns by file and name; run it after porting a function and set the row's status; without `old/` it skips.
 
 GitHub Actions (plans A2, P1): `.github/workflows/ci.yml` runs `cargo xtask ci`
-on Linux, Windows and macOS (matrix, fail-fast off, one rust-cache per OS) for
-every push and pull request. Linux alone installs the system packages (with
+on Linux, Windows and macOS (matrix, fail-fast off, one rust-cache per OS). It
+runs only when started by hand (Actions tab or `gh workflow run ci.yml`), to
+save Actions minutes: run it before a release; `cargo xtask ci` runs locally
+before every commit. Linux alone installs the system packages (with
 fig2dev, so the A8 reference tests run; the other runners skip them), runs the
 wasm check (`RUSTFIG_REQUIRE_WASM=1`) and the perf budgets (tuned there). The
 other runners set `RUSTFIG_SKIP_WASM=1`, which makes `cargo xtask ci|wasm` skip
