@@ -17,6 +17,11 @@ action does. Departing from xfig needs a good reason, for example printing,
 which no longer works the old way on today's systems. A modern look is fine;
 a different program is not.
 
+The Fig file format stays **fully backward compatible**. RustFig reads every
+Fig version xfig reads and saves Fig 3.2 that xfig and fig2dev open
+unchanged. A feature RustFig adds must fit inside the format (for example in
+an object's comment, with a plain Fig fallback), never extend or break it.
+
 ## Status
 
 **Alpha. Overall xfig parity ≈73 %** (see [ROADMAP.md](ROADMAP.md) and the
