@@ -190,6 +190,112 @@ pub fn discard(dir: &Path, id: &str) {
     }
 }
 
+/// Most saved versions of one file the preference may ask for.
+pub const MAX_VERSIONS: usize = 50;
+/// Versions larger than this are not kept (a copy per save must stay cheap).
+const MAX_VERSION_BYTES: u64 = 64 * 1024 * 1024;
+
+/// A saved version of a file kept in the recovery folder (W10-14).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Version {
+    /// Digits: the time the version was replaced (nanoseconds since 1970),
+    /// unique per file; also the file's name.
+    pub id: String,
+    pub file: PathBuf,
+    /// Milliseconds since 1970.
+    pub time_ms: u64,
+    pub size: u64,
+}
+
+/// FNV-1a of the path: a name for the file's folder that stays the same
+/// across runs and versions of Rust.
+fn path_key(path: &str) -> String {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for b in path.bytes() {
+        h ^= u64::from(b);
+        h = h.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    format!("{h:016x}")
+}
+
+fn versions_dir(dir: &Path, path: &str) -> PathBuf {
+    dir.join("versions").join(path_key(path))
+}
+
+/// Versions of `path` in `dir`, newest first (at most [`MAX_VERSIONS`]).
+pub fn versions(dir: &Path, path: &str) -> Vec<Version> {
+    let vd = versions_dir(dir, path);
+    let Ok(rd) = std::fs::read_dir(&vd) else {
+        return Vec::new();
+    };
+    let mut out: Vec<Version> = rd
+        .flatten()
+        .take(MAX_VERSIONS * 4)
+        .filter_map(|e| {
+            let file = e.path();
+            let id = file.file_stem()?.to_str()?.to_string();
+            if id.is_empty() || id.len() > 24 || !id.chars().all(|c| c.is_ascii_digit()) {
+                return None;
+            }
+            let nanos: u128 = id.parse().ok()?;
+            let size = e.metadata().ok()?.len();
+            Some(Version {
+                time_ms: u64::try_from(nanos / 1_000_000).unwrap_or(u64::MAX),
+                id,
+                file,
+                size,
+            })
+        })
+        .collect();
+    out.sort_by(|a, b| b.id.len().cmp(&a.id.len()).then_with(|| b.id.cmp(&a.id)));
+    out.truncate(MAX_VERSIONS);
+    out
+}
+
+/// The file of version `id` of `path`.
+pub fn version_file(dir: &Path, path: &str, id: &str) -> Option<PathBuf> {
+    versions(dir, path).into_iter().find(|v| v.id == id).map(|v| v.file)
+}
+
+/// Keep the file at `path` (about to be overwritten by a save) as a version
+/// in `dir`, then drop all but the newest `keep` (0 keeps none and removes
+/// the old ones). No file yet: nothing to keep. Returns a failure message.
+pub fn keep_version(dir: &Path, path: &str, keep: usize) -> Option<String> {
+    let keep = keep.min(MAX_VERSIONS);
+    let vd = versions_dir(dir, path);
+    if keep == 0 {
+        let _ = std::fs::remove_dir_all(&vd); // absent is fine
+        return None;
+    }
+    let meta = std::fs::metadata(path).ok()?;
+    if !meta.is_file() || meta.len() > MAX_VERSION_BYTES {
+        return None;
+    }
+    let ext = Path::new(path)
+        .extension()
+        .and_then(|x| x.to_str())
+        .filter(|x| x.len() <= 8 && x.chars().all(|c| c.is_ascii_alphanumeric()))
+        .unwrap_or("fig");
+    let result = (|| -> Result<(), String> {
+        std::fs::create_dir_all(&vd).map_err(|e| format!("{}: {e}", vd.display()))?;
+        let mut nanos = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        // Strictly newer than the newest kept version, whatever the clock.
+        if let Some(newest) = versions(dir, path).first().and_then(|v| v.id.parse::<u128>().ok()) {
+            nanos = nanos.max(newest + 1);
+        }
+        let dest = vd.join(format!("{nanos:020}.{ext}"));
+        std::fs::copy(path, &dest).map_err(|e| format!("{}: {e}", dest.display()))?;
+        Ok(())
+    })();
+    for old in versions(dir, path).into_iter().skip(keep) {
+        let _ = std::fs::remove_file(old.file); // best effort: a leftover is pruned next time
+    }
+    result.err()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

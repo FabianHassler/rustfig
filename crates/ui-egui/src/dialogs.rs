@@ -277,6 +277,8 @@ pub struct Dialogs {
     pub messages_open: bool,
     /// Edit › Global settings (RustFig's preferences).
     pub global_open: bool,
+    /// File > Saved versions (W10-14).
+    pub versions_open: bool,
     /// The colour picker and editor (E4).
     pub color: crate::color_dialog::ColorDialog,
     /// The xfig resources window (E1).
@@ -741,6 +743,7 @@ pub(crate) fn escape_closes_panels(app: &mut App, ctx: &egui::Context) {
         || d.about_open
         || d.help.open
         || d.global_open
+        || d.versions_open
         || d.color.open
         || d.edit.is_some()
         || d.figure_comments.is_some()
@@ -762,6 +765,7 @@ pub(crate) fn escape_closes_panels(app: &mut App, ctx: &egui::Context) {
         d.about_open = false;
         d.help.open = false;
         d.global_open = false;
+        d.versions_open = false;
         d.color.open = false;
         d.messages_open = false;
         app.unit_panel_open = false;
@@ -822,7 +826,86 @@ fn recovery_dialog(app: &mut App, ctx: &egui::Context) {
     }
 }
 
+/// File > Saved versions: the versions of the current file kept at each
+/// save (W10-14), each restorable as an unsaved drawing.
+fn versions_dialog(app: &mut App, ctx: &egui::Context) {
+    if !app.dialogs.versions_open {
+        return;
+    }
+    let list: Vec<(String, u64, u64)> = app
+        .engine
+        .execute("file.versions", &json!({}))
+        .ok()
+        .and_then(|v| v.get("versions").and_then(serde_json::Value::as_array).cloned())
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|v| {
+            Some((
+                v.get("id")?.as_str()?.to_string(),
+                v.get("time_ms")?.as_u64()?,
+                v.get("size")?.as_u64()?,
+            ))
+        })
+        .collect();
+    let mut open = true;
+    let mut restore: Option<String> = None;
+    egui::Window::new("Saved versions")
+        .open(&mut open)
+        .collapsible(false)
+        .resizable(false)
+        .show(ctx, |ui| {
+            if app.engine.path().is_none() {
+                ui.label("Save the drawing first; its older versions are kept from then on.");
+            } else if list.is_empty() {
+                ui.label("No older versions of this file are kept yet.");
+            } else {
+                ui.label("Restore one to open it as an unsaved drawing; saving writes it over the file.");
+                egui::Grid::new("saved_versions").num_columns(3).show(ui, |ui| {
+                    for (id, ms, size) in &list {
+                        ui.label(version_time(*ms));
+                        ui.label(format!("{} KB", size.div_ceil(1024)));
+                        if ui.button("Restore").clicked() {
+                            restore = Some(id.clone());
+                        }
+                        ui.end_row();
+                    }
+                });
+            }
+        });
+    if let Some(id) = restore {
+        if app.engine.is_modified() {
+            app.error("Save or close the current drawing before restoring another");
+        } else if app.run("file.restore_version", json!({ "id": id })).is_some() {
+            open = false;
+        }
+    }
+    app.dialogs.versions_open = open;
+}
+
+/// "2026-10-23 14:05:09" (UTC) for a time in milliseconds since 1970.
+fn version_time(ms: u64) -> String {
+    let secs = ms / 1000;
+    let (days, rem) = (secs / 86_400, secs % 86_400);
+    // Civil-from-days (H. Hinnant).
+    let z = i64::try_from(days).unwrap_or(0) + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = yoe + era * 400 + i64::from(m <= 2);
+    format!(
+        "{y:04}-{m:02}-{d:02} {:02}:{:02}:{:02} UTC",
+        rem / 3600,
+        rem % 3600 / 60,
+        rem % 60
+    )
+}
+
 pub fn show(app: &mut App, ctx: &egui::Context) {
+    versions_dialog(app, ctx);
     recovery_dialog(app, ctx);
     figure_comments_dialog(app, ctx);
     spline_point_dialog(app, ctx);
@@ -949,6 +1032,7 @@ struct GlobalDraft {
     freehand: i64,
     recent: i64,
     image_colors: i64,
+    save_versions: i64,
     image_editor: String,
     spell: String,
     browser: String,
@@ -974,6 +1058,7 @@ impl GlobalDraft {
             freehand: int("freehand_resolution", 25),
             recent: i64::try_from(e.prefs.recent_max()).unwrap_or(9),
             image_colors: int("max_image_colors", 0),
+            save_versions: int("save_versions", 5),
             image_editor: text("image_editor", rustfig_engine::prefs::SYSTEM_OPEN),
             spell: text("spellcheckcommand", "spell %s"),
             browser: text("browser", rustfig_engine::prefs::SYSTEM_OPEN),
@@ -1025,6 +1110,11 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
             ui.horizontal(|ui| {
                 ui.label("Maximum image colors");
                 ui.add(egui::DragValue::new(&mut d.image_colors).range(0..=256));
+            });
+            ui.horizontal(|ui| {
+                ui.label("Saved versions kept");
+                ui.add(egui::DragValue::new(&mut d.save_versions).range(0..=50))
+                    .on_hover_text("Older versions of a file, kept in the recovery folder at each save (0: none)");
             });
             egui::Grid::new("global_commands").num_columns(2).show(ui, |ui| {
                 for (label, text) in [
@@ -1146,6 +1236,7 @@ fn apply_global(app: &mut App, was: &GlobalDraft, now: &GlobalDraft) {
         ("freehand_resolution", was.freehand, now.freehand),
         ("max_recent_files", was.recent, now.recent),
         ("max_image_colors", was.image_colors, now.image_colors),
+        ("save_versions", was.save_versions, now.save_versions),
     ];
     for (name, a, b) in ints {
         if a != b {
