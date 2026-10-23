@@ -23,10 +23,11 @@ toml.workspace = true
 image.workspace = true
 # Rasterises the printed PDF for the Print panel's preview (B5).
 hayro = "0.8"
+# Joins the batch's PDFs into one print job (B5); both already come with hayro.
+hayro-write = "0.8"
+hayro-syntax = "0.8"
 
 [dev-dependencies]
 proptest.workspace = true
 # Rasterises fig2dev's SVG for the reference tests (tests only).
 resvg = "0.48"
-# Reads the exported PDFs back (E16 tests).
-hayro-syntax = "0.8"

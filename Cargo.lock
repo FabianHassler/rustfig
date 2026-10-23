@@ -3342,6 +3342,7 @@ dependencies = [
  "fig2dev",
  "hayro",
  "hayro-syntax",
+ "hayro-write",
  "image",
  "proptest",
  "resvg",
@@ -3406,6 +3407,7 @@ dependencies = [
  "objc2-foundation 0.3.2",
  "objc2-pdf-kit",
  "pollster",
+ "wasm-bindgen",
  "web-sys",
  "windows-sys 0.61.2",
 ]
