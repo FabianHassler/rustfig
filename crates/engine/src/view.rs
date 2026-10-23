@@ -163,3 +163,122 @@ impl Default for UnitScale {
 
 /// Longest figure unit name accepted.
 pub const MAX_UNIT_NAME: usize = 16;
+
+// ---- length strings (w_msgpanel.c `make_dimension_string`) -----------------
+
+/// A length in Fig units as xfig's `make_dimension_string` writes it: scaled
+/// by the unit/scale setting, in the figure unit name (or the ruler's),
+/// with `precision` decimals. Inch drawings show whole numbers and fractions
+/// of 1/64 inch ("1-1/2 in", "2 ft 3-1/2 in") unless the unit/scale setting
+/// asks for decimal inches.
+pub fn length_string(
+    length: f64,
+    units: rustfig_model::Units,
+    scale: &UnitScale,
+    ruler: &str,
+    precision: u32,
+) -> String {
+    let (per_unit, inches) = match units {
+        rustfig_model::Units::Inches => (1200.0, true),
+        rustfig_model::Units::Metric => (450.0, false),
+    };
+    let factor = if scale.factor.is_finite() && scale.factor > 0.0 {
+        scale.factor
+    } else {
+        1.0
+    };
+    let unit = if scale.unit.is_empty() {
+        ruler
+    } else {
+        scale.unit.as_str()
+    };
+    let ulen = length / per_unit * factor;
+    if inches && !scale.decimal_inches && ulen.is_finite() && ulen.abs() < 1e12 {
+        inch_fraction(ulen, unit, precision as usize)
+    } else {
+        format!("{:.*} {unit}", precision as usize, ulen)
+    }
+}
+
+/// Inches as a whole number and a fraction of 1/64, with feet first when
+/// the unit is feet (the fractional branch of `make_dimension_string`).
+fn inch_fraction(mut ulen: f64, unit: &str, prec: usize) -> String {
+    let mut ilen = ulen as i64;
+    if ilen as f64 == ulen {
+        return format!("{ilen} {unit}");
+    }
+    let mut tmp = String::new();
+    let mut units = unit;
+    let mut ifeet = 0_i64;
+    if matches!(unit, "f" | "ft" | "feet") {
+        ifeet = ulen as i64;
+        if ifeet.abs() >= 1 {
+            tmp = format!("{ifeet} {unit} ");
+        }
+        ulen = (ulen - ifeet as f64) * 12.0;
+        ilen = ulen as i64;
+        units = "in";
+    }
+    let mut ifract = ((ulen - ilen as f64) * 64.0) as i64;
+    if ifract == 0 {
+        if ifeet < 0 {
+            ilen = ilen.abs();
+        }
+        return format!("{tmp}{ilen} {units}");
+    }
+    if ilen as f64 + ifract as f64 / 64.0 == ulen {
+        let mut iexp = 64_i64;
+        while iexp >= 2 && ifract % 2 == 0 {
+            ifract /= 2;
+            iexp /= 2;
+        }
+        format!("{tmp}{}-{}/{iexp} {units}", ilen.abs(), ifract.abs())
+    } else {
+        format!("{tmp}{ulen:.prec$} {units}")
+    }
+}
+
+#[cfg(test)]
+mod length_tests {
+    use super::*;
+    use rustfig_model::Units;
+
+    fn inch(len_inch: f64, unit: &str) -> String {
+        let sc = UnitScale {
+            unit: unit.into(),
+            ..UnitScale::default()
+        };
+        length_string(len_inch * 1200.0, Units::Inches, &sc, "in", 1)
+    }
+
+    #[test]
+    fn fractions_of_an_inch() {
+        assert_eq!(inch(2.0, ""), "2 in");
+        assert_eq!(inch(1.5, ""), "1-1/2 in");
+        assert_eq!(inch(3.0 / 64.0, ""), "0-3/64 in");
+        assert_eq!(inch(1.75, ""), "1-3/4 in");
+    }
+
+    #[test]
+    fn feet_and_fractions() {
+        // As in xfig, a fraction that does not reproduce the value exactly
+        // (2 ft 3-1/2 in) falls back to decimals; 2 ft 6-3/4 in is exact.
+        assert_eq!(inch(2.5625, "ft"), "2 ft 6-3/4 in");
+        assert_eq!(inch(2.25, "ft"), "2 ft 3 in");
+        assert_eq!(inch(2.0, "ft"), "2 ft");
+    }
+
+    #[test]
+    fn decimal_fallbacks() {
+        assert_eq!(inch(1.1, ""), "1.1 in");
+        let sc = UnitScale {
+            decimal_inches: true,
+            ..UnitScale::default()
+        };
+        assert_eq!(length_string(1800.0, Units::Inches, &sc, "in", 1), "1.5 in");
+        assert_eq!(
+            length_string(450.0, Units::Metric, &UnitScale::default(), "cm", 1),
+            "1.0 cm"
+        );
+    }
+}

@@ -131,23 +131,9 @@ pub fn is_dimline(o: &Object) -> bool {
 }
 
 /// xfig's `make_dimension_string`: the length in the figure units and scale,
-/// with `precision` decimals (xfig's fractions of an inch are not used).
+/// with `precision` decimals, or fractions of an inch ([`crate::view::length_string`]).
 pub fn length_text(length: f64, units: Units, scale: &UnitScale, ruler: &str, precision: u32) -> String {
-    let per_unit = match units {
-        Units::Inches => 1200.0,
-        Units::Metric => 450.0,
-    };
-    let factor = if scale.factor.is_finite() && scale.factor > 0.0 {
-        scale.factor
-    } else {
-        1.0
-    };
-    let unit = if scale.unit.is_empty() {
-        ruler
-    } else {
-        scale.unit.as_str()
-    };
-    format!("{:.*} {unit}", precision as usize, length / per_unit * factor)
+    crate::view::length_string(length, units, scale, ruler, precision)
 }
 
 fn line_style(kind: LineKind, thickness: i32, d: &DimlineDefaults) -> (LineKind, f64) {
@@ -451,7 +437,7 @@ mod tests {
             &fmt,
         );
         assert!(is_dimline(&o));
-        assert_eq!(o.comments, vec!["Dimension line: 2.0 in".to_string()]);
+        assert_eq!(o.comments, vec!["Dimension line: 2 in".to_string()]);
         let p = parts(&o);
         assert_eq!(p.len(), 4, "line, box and two ticks, besides the text");
         let ticks: Vec<_> = p.iter().filter(|(t, _)| t == "tick").collect();
@@ -460,6 +446,26 @@ mod tests {
         assert_eq!(ticks[0].1[0].x, 0.0);
         assert_eq!(ticks[0].1[1].x, 0.0);
         assert_eq!(ticks[1].1[0].x, 2400.0);
+    }
+
+    #[test]
+    fn dimension_line_label_uses_fractions() {
+        let d = DimlineDefaults {
+            pen_color: 0,
+            depth: 50,
+            join: JoinStyle::Miter,
+            style_val: 4.0,
+            dot_gap: 3.0,
+        };
+        let o = create(
+            &DimlineSettings::default(),
+            &d,
+            Point::new(0.0, 0.0),
+            Point::new(1800.0, 0.0),
+            None,
+            &fmt,
+        );
+        assert_eq!(o.comments, vec!["Dimension line: 1-1/2 in".to_string()]);
     }
 
     #[test]
