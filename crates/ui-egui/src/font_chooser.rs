@@ -270,9 +270,14 @@ pub fn show(ui: &mut egui::Ui, id: &str, font: i32, postscript: bool, size: Opti
     let shown = st.hover.unwrap_or((font, postscript));
     ui.separator();
     ui.label(RichText::new(format!("Preview: {}", list_name(shown.0, shown.1))).small());
+    // A fixed height: a preview that grew or shrank with the hovered font
+    // would move the list under the pointer and make the hover flicker.
+    let preview_h = sample_px * 2.0 + 8.0;
     egui::ScrollArea::horizontal()
         .id_salt(("font_preview", id))
-        .max_height(sample_px * 2.0 + 8.0)
+        .max_height(preview_h)
+        .min_scrolled_height(preview_h)
+        .auto_shrink([false, false])
         .show(ui, |ui| paint_text(ui, shown.0, shown.1, SAMPLE, sample_px, ink));
     ui.separator();
     let count = if ps_list {
@@ -283,12 +288,14 @@ pub fn show(ui: &mut egui::Ui, id: &str, font: i32, postscript: bool, size: Opti
     let real = has_real_face();
     let mut hover = None;
     let mut any = false;
-    egui::ScrollArea::vertical()
+    let list = egui::ScrollArea::vertical()
         .id_salt(("font_list", id))
         .max_height(300.0)
         .min_scrolled_height(300.0)
         .auto_shrink([false, false])
         .show(ui, |ui| {
+            // Rows touch, so the pointer is never between two of them.
+            ui.spacing_mut().item_spacing.y = 0.0;
             for f in 0..count {
                 let name = list_name(f, ps_list);
                 if !matches(&name, &st.query) {
@@ -339,7 +346,10 @@ pub fn show(ui: &mut egui::Ui, id: &str, font: i32, postscript: bool, size: Opti
                 ui.label(RichText::new("No font matches.").weak());
             }
         });
-    st.hover = hover;
+    // Inside the list the preview keeps the last hovered font (the pointer
+    // may be on the scroll bar); it returns to the current one on leaving.
+    let in_list = ui.rect_contains_pointer(list.inner_rect);
+    st.hover = hover.or(if in_list { st.hover } else { None });
     if out.font.is_some() {
         // The next opening starts with the full list of the font's own kind.
         st = St::default();
