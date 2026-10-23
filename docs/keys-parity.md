@@ -31,7 +31,7 @@ How keys are written (W21): macOS ⌃ ⌥ ⇧ ⌘ plus a thin space ("⌥ U"), W
 | Meta-U | Undo | `edit.undo` | ✅ |
 | Meta-T | Paste | `edit.paste` | ✅ |
 | Meta-I | Search | `app.search` | ✅ |
-| Meta-K | Spell check | — | ❌ D11 (spell check) |
+| Meta-K | Spell check | Spell Check... | ✅ F5 |
 | Meta-G | Global settings | `app.global_settings` | ✅ |
 | Meta-D | Delete all | `edit.delete_all` | ✅ |
 | Ctrl-L, Meta-R | Redraw | `app.redraw` | ✅ |
@@ -98,7 +98,7 @@ How keys are written (W21): macOS ⌃ ⌥ ⇧ ⌘ plus a thin space ("⌥ U"), W
 | Colour panel (`w_color.c`) | Return, double-click, lock toggles | set colour | ❌ E4 (colour editor) |
 | Library panel | Return, double-click, Escape | place object, dismiss | ✅ D6 (double-click an object; Escape closes the window; keys r l h v s S and Shift-l in library mode) |
 | Keyboard panel (`w_keyboard.c`) | Return, Escape, Up/Down, Ctrl-P/N | enter, ignore, history | ❌ D11 |
-| Spell check panel | Escape, u, v, x | close, update, convert, chop | ❌ D11 |
+| Spell check panel | Escape, u, v, x | close, update, convert, chop | 🟡 Escape closes (F5); the other keys do not apply to RustFig's panel |
 | Mode panel | middle/right button on a mode | nothing (`notused_middle`, `notused_right`) | ✅ (nothing either) |
 | Depth panel (`w_layers.c`) | left click, left drag | toggle, sweep | ✅ (W3) |
 | Depth panel | right click | set the depth of new objects to that layer | ✅ (`indicator.set`) |

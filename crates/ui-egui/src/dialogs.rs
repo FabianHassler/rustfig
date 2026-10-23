@@ -275,6 +275,7 @@ pub struct Dialogs {
     pub export: ExportState,
     pub print: crate::print_dialog::PrintState,
     pub search: SearchState,
+    pub spell: crate::spell_dialog::SpellState,
     pub settings_open: bool,
     pub commands_open: bool,
     pub about_open: bool,
@@ -1080,6 +1081,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     export_dialog(app, ctx);
     crate::print_dialog::dialog(app, ctx);
     search_dialog(app, ctx);
+    crate::spell_dialog::dialog(app, ctx);
     settings_dialog(app, ctx);
     commands_dialog(app, ctx);
     about_dialog(app, ctx);

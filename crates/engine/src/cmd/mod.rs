@@ -25,6 +25,7 @@ mod print;
 mod region;
 mod sfactor;
 pub(crate) mod shape;
+mod spell;
 mod styles;
 pub(crate) mod tangent;
 
@@ -100,6 +101,7 @@ pub fn all() -> &'static [Command] {
         v.extend(tool::commands());
         v.extend(prefs::commands());
         v.extend(styles::commands());
+        v.extend(spell::commands());
         v
     })
 }

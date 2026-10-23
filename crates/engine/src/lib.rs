@@ -586,6 +586,21 @@ impl Engine {
             .fold(Rect::EMPTY, |r, (_, _, b)| r.union(&b.get().unwrap_or(Rect::EMPTY)))
     }
 
+    /// The bounds the canvas shows: fig2dev's, except a special text with a
+    /// typeset picture counts as the picture's box (zoom to fit, F8).
+    pub fn fit_bounds(&self) -> Rect {
+        self.fig_bounds()
+            .iter()
+            .fold(Rect::EMPTY, |r, (o, _, b)| r.union(&self.shown_bounds(o, b.get())))
+    }
+
+    fn shown_bounds(&self, o: &Object, fig: Option<Rect>) -> Rect {
+        match self.typeset_box(o) {
+            Some((c, _)) => Rect::from_points(c),
+            None => fig.unwrap_or(Rect::EMPTY),
+        }
+    }
+
     /// The fig2dev bounds of one top-level object (a compound's corners in
     /// xfig's edit panel).
     pub fn object_fig_bounds(&self, id: ObjectId) -> Option<Rect> {
@@ -606,7 +621,7 @@ impl Engine {
     pub fn objects_within_region(&self, region: &Region) -> Vec<ObjectId> {
         self.fig_bounds()
             .iter()
-            .filter(|(o, _, b)| self.is_visible(o) && region.contains_rect(&b.get().unwrap_or(Rect::EMPTY)))
+            .filter(|(o, _, b)| self.is_visible(o) && region.contains_rect(&self.shown_bounds(o, b.get())))
             .map(|(o, ..)| o.id)
             .collect()
     }

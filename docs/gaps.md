@@ -21,7 +21,7 @@ P26-10-23 (D10 done: fractions of an inch landed; leftovers: preview arrowheads 
 | 14 | EPS and PDF picture objects (B15 closed most of it, 2026-10-21): PDF pictures are vectors in PDF and EPS/PS output and rendered in bitmaps and on the canvas; EPS pictures go through ghostscript when installed (PDF, bitmaps, canvas), else the preview or a box. Left: PDF pages with transparency, shadings or patterns are an image in PostScript output; EPS pictures need `gs` outside PostScript output; encrypted PDFs; CMYK becomes RGB. | File format/Export | Low | 3 |
 | 16 | Windows and Linux smoke tests in CI | Platforms | Low | 8 |
 | 17 | Localization of UI strings | Localization | Low | 24 |
-| 18 | Spell check | Text | Low | 16 |
+| 18 | ~~Spell check~~ (done 2026-10-23, F5; macOS's own checker as a fallback left) | Text | Low | 0 |
 | 19 | Accessibility (screen-reader labels for canvas objects) | Platforms | Low | 16 |
 | 21 | closed: EMF, Tk/Perl-Tk ported (B9); the `sld` driver (slide output) is the one fig2dev language left unported | Export | Low | 4 |
 | 27 | ✅ closed 2026-10-18: text bytes as C (`Text::raw`, `Comment::raw`; drivers write the input bytes). `-E` charsets beyond UTF-8/ISO-8859-1/-2 convert through `encoding_rs` (audit pass 27, 2026-10-18; no CP437/CP850, stderr messages with raw bytes and tk/pstricks picture names are Unicode) | Export | Low | 2 |

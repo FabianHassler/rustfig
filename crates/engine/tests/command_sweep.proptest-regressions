@@ -5,3 +5,4 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc 67070cbfa605f671b37a773137819384c626260ec9fbaab807b3cc438d93432f # shrinks to seq = [(323, 0.0, 0.0)]
+cc 38472e506c6842b59054dab2beae525eeac067af49174b771846a37bdb83c72d # shrinks to seq = [(71, 0.0, 0.0)]
