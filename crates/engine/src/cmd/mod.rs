@@ -63,10 +63,6 @@ pub(crate) fn always(_: &Engine) -> bool {
     true
 }
 
-pub(crate) fn has_selection(e: &Engine) -> bool {
-    !e.selection().is_empty()
-}
-
 pub(crate) fn has_objects(e: &Engine) -> bool {
     !e.doc().objects.is_empty()
 }

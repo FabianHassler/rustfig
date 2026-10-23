@@ -1,6 +1,6 @@
 //! Geometric transforms of objects.
 
-use super::{has_selection, num, num_or, opt_bool, opt_num, CmdResult, Command};
+use super::{always, num, num_or, opt_bool, opt_num, CmdResult, Command};
 use crate::{Engine, EngineError};
 use rustfig_geom::{Affine, Point};
 use serde_json::{json, Value};
@@ -25,7 +25,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id], \"dir\": left|right|up|down, \"steps\"?: number (1), \"distance\"?: Fig units per step (15)}  — move the objects a small step; smart links follow as for transform.move",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: nudge,
         },
         Command {
@@ -55,7 +55,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id]}  — by the indicator's rotation angle",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: |e, p| {
                 let a = e.indicator.rotate_angle;
                 rotate_by(e, p, a)
@@ -68,7 +68,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id]}",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: |e, p| {
                 let a = -e.indicator.rotate_angle;
                 rotate_by(e, p, a)
@@ -81,7 +81,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id], \"cx\"?, \"copy\"?: bool}  — copy: flip copies, keep the originals",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: |e, p| flip(e, p, true),
         },
         Command {
@@ -91,7 +91,7 @@ pub(super) fn commands() -> Vec<Command> {
             shortcut: "",
             params: "{\"ids\"?: [id], \"cy\"?, \"copy\"?: bool}",
             mutates: true,
-            enabled: has_selection,
+            enabled: always,
             run: |e, p| flip(e, p, false),
         },
     ]

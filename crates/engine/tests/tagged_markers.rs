@@ -85,3 +85,54 @@ fn only_the_selecting_modes_tag() {
     assert_eq!(e.doc().objects.len(), 2, "copied");
     assert_eq!(e.selection(), tagged.as_slice());
 }
+
+/// Every mode that waits for an object click shows the markers of the
+/// objects it can act on (xfig's `update_markers`), and so does Copy as
+/// picture while it waits.
+#[test]
+fn every_picking_mode_shows_markers() {
+    use rustfig_engine::ToolKind;
+    let fresh = || {
+        let mut e = Engine::new();
+        for (c, p) in [
+            (
+                "shape.polyline",
+                json!({"points": [[1200, 1200], [3600, 1200], [3600, 3000]]}),
+            ),
+            (
+                "shape.spline",
+                json!({"points": [[1200, 4800], [2400, 6000], [3600, 4800]], "kind": "x"}),
+            ),
+            (
+                "shape.rectangle",
+                json!({"x": 6000, "y": 1200, "width": 1200, "height": 600}),
+            ),
+            (
+                "shape.arc",
+                json!({"points": [[6000, 6000], [6500, 6500], [7000, 6000]]}),
+            ),
+            ("shape.circle", json!({"cx": 6000, "cy": 4000, "r": 500})),
+            ("shape.circle", json!({"cx": 8000, "cy": 4000, "r": 500})),
+        ] {
+            e.execute(c, &p).unwrap();
+        }
+        let ids: Vec<u64> = e.doc().objects.iter().rev().take(2).map(|o| o.id.0).collect();
+        e.execute("object.group", &json!({ "ids": ids })).unwrap();
+        e.execute("shape.text", &json!({"x": 100, "y": 7000, "text": "hi"}))
+            .unwrap();
+        e.set_selection(vec![]);
+        e
+    };
+    for &t in ToolKind::ALL.iter() {
+        if t.is_drawing() || t == ToolKind::None {
+            continue;
+        }
+        let mut e = fresh();
+        e.set_tool(t);
+        assert!(!e.overlay().markers.is_empty(), "{t:?} shows no markers");
+    }
+    // Copy as picture's markers do not need a clipboard to show.
+    let mut e = fresh();
+    e.set_tool(ToolKind::Polyline);
+    assert!(e.overlay().markers.is_empty());
+}
