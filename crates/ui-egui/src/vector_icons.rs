@@ -92,17 +92,23 @@ fn drawing(icon: VIcon) -> Vec<Object> {
             vec![line(st, &[(2.0, 16.0), (30.0, 16.0)])]
         }
         VIcon::Join(join) => {
-            let st = Style { join, ..style(4) };
-            vec![line(st, &[(6.0, 15.0), (26.0, 15.0), (7.0, 28.0)])]
+            // As xfig's pictures: a 6-pixel stroke (thickness 7) turning
+            // back at 35° (inside the rasteriser's miter limit), so the
+            // miter's long point, the round and the bevel are plain to see.
+            // Straight edges on whole pixels.
+            let st = Style { join, ..style(7) };
+            vec![line(st, &[(1.0, 13.0), (18.0, 13.0), (0.8, 25.1)])]
         }
         VIcon::Cap(cap) => {
-            let thick = Style { cap, ..style(4) };
-            let thin = style(1);
+            // A 10-pixel stroke (thickness 11) between 2-pixel marks at its
+            // true end points, as xfig's pictures: round and projecting caps
+            // reach 5 pixels past the marks. Edges on whole pixels.
+            let thick = Style { cap, ..style(11) };
+            let mark = style(3);
             vec![
-                line(thick, &[(8.0, 16.0), (24.0, 16.0)]),
-                // xfig's marks at the line's true end points.
-                line(thin, &[(8.0, 9.0), (8.0, 23.0)]),
-                line(thin, &[(24.0, 9.0), (24.0, 23.0)]),
+                line(thick, &[(10.0, 16.0), (22.0, 16.0)]),
+                line(mark, &[(10.0, 7.0), (10.0, 25.0)]),
+                line(mark, &[(22.0, 7.0), (22.0, 25.0)]),
             ]
         }
         VIcon::Arrow(kind, style_n) => {
@@ -287,6 +293,18 @@ mod tests {
                 forward: false
             })
         );
+    }
+
+    /// The cap and join pictures differ visibly, as xfig's do: each step
+    /// (butt, round, projecting; bevel, round, miter) adds ink.
+    #[test]
+    fn caps_and_joins_are_told_apart() {
+        let cap = |c| ink(VIcon::Cap(c));
+        assert!(cap(CapStyle::Butt) + 4 < cap(CapStyle::Round));
+        assert!(cap(CapStyle::Round) < cap(CapStyle::Projecting));
+        let join = |j| ink(VIcon::Join(j));
+        assert!(join(JoinStyle::Bevel) + 4 < join(JoinStyle::Round));
+        assert!(join(JoinStyle::Round) + 4 < join(JoinStyle::Miter));
     }
 
     #[test]
