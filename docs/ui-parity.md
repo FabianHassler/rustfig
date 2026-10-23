@@ -1,8 +1,10 @@
 # UI parity checklist
 
-**Status:** 2026-10-23 (E5: character map lists only drawable characters, in the text's font); 2026-10-22 (E4, W10-36: colour picker and editor, recent colours, eyedropper); 2026-10-22 (E10: text editing); 2026-10-22 (S4-3, S4-8, S4-9: Digitize, New window, Autorefresh); 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: live edit panel, compound panel, point table, pictorial menus); 2026-10-22 (W10-16, W10-20: picture edit panel); 2026-10-22 (D5: measure modes); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: Tangent mode and its length button). ✅ done · 🟡 partial · ❌ missing
+P26-10-23 (D10: dimension line example preview; W10-14: Saved versions window; W9: cap/join pictures redrawn); 2026-10-23 (E5: character map lists only drawable characters, in the text's font); 2026-10-22 (E4, W10-36: colour picker and editor, recent colours, eyedropper); 2026-10-22 (E10: text editing); 2026-10-22 (S4-3, S4-8, S4-9: Digitize, New window, Autorefresh); 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: live edit panel, compound panel, point table, pictorial menus); 2026-10-22 (W10-16, W10-20: picture edit panel); 2026-10-22 (D5: measure modes); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: Tangent mode and its length button). ✅ done · 🟡 partial · ❌ missing
 
 ## Drawing modes
+
+File > Saved versions… (W10-14, 2026-10-23, an extra beyond xfig's `.bak`): window listing the kept versions with Restore.
 | xfig mode | RustFig | |
 |---|---|---|
 | Circle by radius / diameter | `tool.circle_radius`, `tool.circle_diameter` | ✅ |
@@ -71,7 +73,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | Current file name | ✅ next to the menus, marks unsaved changes | — |
 | Message panel | ✅ under the menus; click for the history | — |
 | Mouse-function indicator | ✅ xfig's layout and wording, each button's current function per tool and state, checked against the tools by a test | — |
-| Indicator: Num Copies (rotate), Num X / Num Y Copies (copy), Dimension line (Polyline; settings window as `popup_dimline_panel`); typed-coordinate window (Edit > Enter point…, Ctrl+K); View > Show line lengths | ✅ (D10) | D |
+| Indicator: Num Copies (rotate), Num X / Num Y Copies (copy), Dimension line (Polyline; settings window as `popup_dimline_panel`); typed-coordinate window (Edit > Enter point…, Ctrl+K); View > Show line lengths; the settings window has a live example-line preview and arrow pictures with "none" per end (2026-10-23; preview draws plain triangles) | ✅ (D10) | D |
 | Three-button mouse semantics | ✅ xfig's per-mode functions, the only scheme (W16); Alt+click = middle, Ctrl+click = right. Dimension lines (Shift+left), rotate/flip anchor and centre (right button), array copy (middle while placing), align to canvas (middle) work (D10); the indicator buttons and the dimension-line panel too | D |
 | Units box | ✅ "1cm = 1.00cm" in the ruler corner; left: pan to origin, right: Unit/Scale panel with Cancel/Set, Show fractions, User defined unit and scale (W10-24) | — |
 | Top and side rulers | ✅ ported from `w_rulers.c` | — |
@@ -121,6 +123,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 ## Revision history
 | Date | Note |
 |---|---|
+| 2026-10-23 | D10 settings window preview and arrow pictures; W10-14 Saved versions window; W9 cap and join pictures redrawn. |
 | 2026-10-23 | E5: character map hides characters the font cannot draw and draws each in the text's font. |
 | 2026-10-22 | E7 done: the cut buffer on the system clipboard (Fig text + pictures), Paste takes a figure from another window or an image. |
 | 2026-10-22 | E4, W10-36 done: colour picker and editor (Edit > Colours…), recent colours, eyedropper, `color.*` commands. |

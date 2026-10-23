@@ -1,6 +1,6 @@
 # Target-app parity assessment: RustFig vs xfig 3.2.9
 
-**Status:** 2026-10-22 (recount after E4, E4b, E6, E10, D16–D18: Text 55 → 65 %, Settings & styles 15 → 75 %, overall ≈65 → ≈73 %, 413 → 379 h); 2026-10-22 (E10: text editing on the canvas; Text score unchanged, evidence added); 2026-10-22 (W10-4, W10-8, W10-9, W10-10, W10-11: Export panel rows per language with preview, kept per language; new file on Open; `.bak` on save; Export 68 %, scores otherwise unchanged); 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: edit panel live, compound rows, point table, pictorial menus; Attributes evidence); 2026-10-22 (W10-16, W10-20: picture edit panel; scores unchanged); 2026-10-22 (D5: measure modes, Editing 80 → 81 %, 18 → 12 h); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: tangent/normal, Editing 79 → 80 %, 26 → 18 h); 2026-10-22 (D15: Chop extended, Editing 78 → 79 %; D15 was a new task, so the hours stay); 2026-10-22 (D14: smart links extended, Attributes 83 → 84 %; D14 was a new task, so the hours stay); 2026-10-22 (D7: Angle Geom, Attributes 80 → 83 %; D3: chop, Editing 75 → 78 %; D8: linked move, Attributes 77 → 80 %, 10 h less); 2026-10-21 (W16, W17: one mouse scheme and one layout, scores unchanged; save query for open compounds); 2026-10-21 (D1, D2: open compound and join/split, Editing 70 → 75 %); 2026-10-21 (B15: PDF/EPS pictures, Export 66 → 68 %, overall ≈65 %); 2026-10-21 (DD9: evidence paths after the dedup series; scores unchanged); 2026-10-18, overall **≈65 %** (B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk; G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
+P26-10-23 (D10 done: fractions of an inch in dimension-line lengths removed from Drawing modes' missing items; W10-14 saved versions; scores unchanged); 2026-10-22 (recount after E4, E4b, E6, E10, D16–D18: Text 55 → 65 %, Settings & styles 15 → 75 %, overall ≈65 → ≈73 %, 413 → 379 h); 2026-10-22 (E10: text editing on the canvas; Text score unchanged, evidence added); 2026-10-22 (W10-4, W10-8, W10-9, W10-10, W10-11: Export panel rows per language with preview, kept per language; new file on Open; `.bak` on save; Export 68 %, scores otherwise unchanged); 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: edit panel live, compound rows, point table, pictorial menus; Attributes evidence); 2026-10-22 (W10-16, W10-20: picture edit panel; scores unchanged); 2026-10-22 (D5: measure modes, Editing 80 → 81 %, 18 → 12 h); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: tangent/normal, Editing 79 → 80 %, 26 → 18 h); 2026-10-22 (D15: Chop extended, Editing 78 → 79 %; D15 was a new task, so the hours stay); 2026-10-22 (D14: smart links extended, Attributes 83 → 84 %; D14 was a new task, so the hours stay); 2026-10-22 (D7: Angle Geom, Attributes 80 → 83 %; D3: chop, Editing 75 → 78 %; D8: linked move, Attributes 77 → 80 %, 10 h less); 2026-10-21 (W16, W17: one mouse scheme and one layout, scores unchanged; save query for open compounds); 2026-10-21 (D1, D2: open compound and join/split, Editing 70 → 75 %); 2026-10-21 (B15: PDF/EPS pictures, Export 66 → 68 %, overall ≈65 %); 2026-10-21 (DD9: evidence paths after the dedup series; scores unchanged); 2026-10-18, overall **≈65 %** (B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk; G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
 
 ## Methodology
 
@@ -19,7 +19,7 @@ the score.
 
 | Area | Weight | Score | Missing | Hours |
 |------|-------:|------:|---------|------:|
-| Drawing modes | 12 | 90 % | library objects; fractions of an inch in dimension-line lengths; xfig's click-to-close rules for some shapes | 14 |
+| Drawing modes | 12 | 90 % | library objects; xfig's click-to-close rules for some shapes | 14 |
 | Editing modes | 12 | 83 % | figure comments from Edit mode, copy to library | 18 |
 | Attributes / indicator | 10 | 87 % | copy counts; mix memory and lock of xfig's colour panel (not built, recent colours instead) | 6 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
@@ -34,6 +34,8 @@ the score.
 | **Overall** | 100 | **≈73 %** | | **371** |
 
 ## Evidence of what ships
+
+- Mode options and saved versions (D10, W10-14, 2026-10-23): dimension-line lengths as xfig's fractions of an inch (`view::length_string`, `UnitScale.decimal_inches`), the Dimension line settings window with example preview, arrow pictures and "none" per end (`crates/ui-egui/src/dimline_panel.rs`); `file.save` keeps versions in the recovery folder (`crates/engine/src/recovery.rs`, `cmd/file.rs`: `file.versions`, `file.restore_version`; test `crates/engine/tests/export_panel.rs`), File > Saved versions… (`ui-egui/src/dialogs.rs`). Leftovers: preview arrowheads are plain triangles, lengths while drawing stay decimal.
 
 - Character map and shortcut sheet (E5, E8; Text 65 → 70 %): `crates/text/src/symbol_tables.rs` (Symbol/ZapfDingbats tables from gensvg.c, code to Unicode and back), `Engine::text_insert_chars` and command `text.insert_char` (`crates/engine/src/{tools/mod.rs,cmd/tool.rs}`), windows `crates/ui-egui/src/{charmap,keys_sheet}.rs` (`app.character_map`, `app.keys`); tests `crates/engine/tests/char_map.rs` (∑ in Symbol exports as `&#8721;` in SVG and `\345` in PostScript), `crates/ui-egui/tests/ui_smoke.rs`.
 
@@ -92,6 +94,7 @@ the score.
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-23 | ≈73 % | D10, W10-14, W9 fix: fractions of an inch and the dimension line preview; saved versions; cap/join pictures. Scores unchanged. |
 | 2026-10-22 | ≈73 % | W10-23, -24, -31, -32, -33, W10-3: Global settings rows with effect, Unit/Scale panel, Arrow Size panel, number pop-ups, seven align and nine grid choices; Settings & styles 75 → 80 %. |
 | 2026-10-22 | ≈73 % | Recount: Text 55 → 65 % (E10), Settings & styles 15 → 75 % (E1 persistence, recent files, E6 styles, E4 colours); the table had lagged behind. |
 | 2026-10-22 | ≈73 % | E5, E8: character map (Symbol and Dingbats stored as the font codes) and shortcut sheet; Text 65 → 70 %, 8 h less; headline not recounted. |

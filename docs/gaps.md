@@ -1,6 +1,6 @@
 # Known gaps (ranked work list)
 
-**Status:** 2026-10-23 (#34: S4-7 closed). 2026-10-22 (D5: #6 closed). 2026-10-22 (D4: #6 dropped tangent/normal). 2026-10-22 (D14: smart links extended, nothing listed here changed; the leftovers are the file-stored links xfig does not have). 2026-10-22 (D3: #6 dropped Chop; D8: linked move landed, #12 dropped "linked move", #33 dropped the Smart Links button). Earlier: 2026-10-21 (S4: #34 added; B15: #14 shrank to the leftovers; DD9: #25 restated after DD7; #14 restated: EPS/PDF pictures in exports need a PostScript interpreter). 2026-10-18 (B2, G1, B12, pict2e, TikZ, PSTricks, EMF, Tk (B1, B3, B9) landed; B11 added from the fig2dev audit). Ranked by user impact per hour. Pick work from the top.
+P26-10-23 (D10 done: fractions of an inch landed; leftovers: preview arrowheads plain triangles, lengths while drawing decimal). 2026-10-23 (#34: S4-7 closed). 2026-10-22 (D5: #6 closed). 2026-10-22 (D4: #6 dropped tangent/normal). 2026-10-22 (D14: smart links extended, nothing listed here changed; the leftovers are the file-stored links xfig does not have). 2026-10-22 (D3: #6 dropped Chop; D8: linked move landed, #12 dropped "linked move", #33 dropped the Smart Links button). Earlier: 2026-10-21 (S4: #34 added; B15: #14 shrank to the leftovers; DD9: #25 restated after DD7; #14 restated: EPS/PDF pictures in exports need a PostScript interpreter). 2026-10-18 (B2, G1, B12, pict2e, TikZ, PSTricks, EMF, Tk (B1, B3, B9) landed; B11 added from the fig2dev audit). Ranked by user impact per hour. Pick work from the top.
 
 | # | Gap | Area | Impact | Hours |
 |---|-----|------|--------|------:|
@@ -39,6 +39,7 @@
 
 | Date | Note |
 |------|------|
+| 2026-10-23 | D10 closed its last item (fractions of an inch in dimension-line lengths); small leftovers noted in plan.md. |
 | 2026-10-22 | D3 closed Chop from #6 (tangent/normal and measure remain). |
 | 2026-10-22 | D4 closed tangent/normal from #6 (measure remains). |
 | 2026-10-22 | D5 closed #6 (measure modes). |

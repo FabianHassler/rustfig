@@ -57,7 +57,7 @@ fn dimension_line_by_shift_left_in_polyline_mode() {
     assert_eq!(e.doc().objects.len(), 1);
     let o = &e.doc().objects[0];
     assert!(rustfig_engine::dimline::is_dimline(o));
-    assert_eq!(o.comments[0], "Dimension line: 2.0 in");
+    assert_eq!(o.comments[0], "Dimension line: 2 in");
     let ObjectKind::Compound(c) = &o.kind else { panic!() };
     // The line, the text box, two ticks and the text.
     assert_eq!(c.objects.len(), 5);
@@ -79,7 +79,7 @@ fn dimension_line_recomputes_after_scaling_and_close() {
     .unwrap();
     assert_eq!(
         e.doc().get(rustfig_engine::model::ObjectId(id)).unwrap().comments[0],
-        "Dimension line: 2.0 in"
+        "Dimension line: 2 in"
     );
     // Open it, move the end of the main line, close: the length follows (gaps #5).
     e.execute("compound.open", &json!({"id": id})).unwrap();
@@ -94,7 +94,7 @@ fn dimension_line_recomputes_after_scaling_and_close() {
         .unwrap();
     e.execute("compound.close", &json!({})).unwrap();
     let o = &e.doc().objects[0];
-    assert_eq!(o.comments[0], "Dimension line: 3.0 in");
+    assert_eq!(o.comments[0], "Dimension line: 3 in");
 }
 
 #[test]
@@ -239,7 +239,7 @@ fn lengths_in_the_message_panel_and_on_the_canvas() {
     .unwrap();
     let s = e.status().to_string();
     assert!(
-        s.contains("Length = 1.0 in") && s.contains("dx = 1.0 in") && s.contains("dy = 0.0 in"),
+        s.contains("Length = 1 in") && s.contains("dx = 1 in") && s.contains("dy = 0 in"),
         "{s}"
     );
     assert!(s.contains("(0.0 deg)"), "{s}");
