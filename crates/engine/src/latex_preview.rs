@@ -2,12 +2,10 @@
 //!
 //! The canvas asks [`LatexPreview::typesetter`] for a [`Typesetter`]; it
 //! answers `None` for a text until a background job has run
-//! `pdflatex`/`lualatex` on it and rendered the PDF with hayro, so the raw
+//! `pdflatex`/`lualatex` on it and kept the PDF as a vector picture (the rasteriser renders it at the size shown, so it is sharp at every zoom), so the raw
 //! source shows meanwhile (and when TeX is missing, off, or failed). Results
 //! are cached per text, font, size and colour. Nothing here touches the
 //! drawing or the exports. Native only: on wasm no job ever starts.
-
-use crate::print::PageImage;
 
 use rustfig_render::{Typeset, TypesetRequest, Typesetter};
 use std::collections::{HashMap, VecDeque};
@@ -27,10 +25,6 @@ pub const MAX_CACHE: usize = 512;
 pub const MAX_PENDING: usize = 64;
 /// Largest PDF read back, in bytes.
 pub const MAX_PDF_BYTES: u64 = 8 << 20;
-/// Longest side of a typeset picture, in pixels.
-pub const MAX_EDGE_PX: f64 = 4096.0;
-/// Resolution of the typeset pictures (pixels per PostScript point).
-pub const PX_PER_PT: f64 = 4.0;
 
 /// The preferences that matter here.
 #[derive(Debug, Clone, PartialEq)]
@@ -176,6 +170,36 @@ impl LatexPreview {
         std::mem::take(&mut lock(&self.inner.cache).messages)
     }
 
+    /// The typeset picture for sizes (bounds, picking); never starts TeX.
+    pub fn peek(&self, req: &TypesetRequest<'_>) -> Option<Typeset> {
+        if !self.acceptable(req) {
+            return None;
+        }
+        match lock(&self.inner.cache).map.get(&Self::base_key(req)) {
+            Some(Entry::Ready(t)) => Some(t.clone()),
+            _ => None,
+        }
+    }
+
+    fn base_key(req: &TypesetRequest<'_>) -> Key {
+        Key {
+            text: req.text.to_string(),
+            font: req.font,
+            postscript: req.postscript,
+            size: (req.size * 100.0).round() as i64,
+            rgb: [req.color.r, req.color.g, req.color.b],
+        }
+    }
+
+    fn acceptable(&self, req: &TypesetRequest<'_>) -> bool {
+        self.active()
+            && !req.text.trim().is_empty()
+            && req.text.len() <= MAX_TEXT_BYTES
+            && req.size.is_finite()
+            && req.size > 0.0
+            && req.size <= 1000.0
+    }
+
     /// The source for the render crate, `None` when nothing would be typeset.
     pub fn typesetter(&self) -> Option<Arc<dyn Typesetter>> {
         self.active()
@@ -183,19 +207,10 @@ impl LatexPreview {
     }
 
     fn lookup(&self, req: &TypesetRequest<'_>) -> Option<Typeset> {
-        if !self.active() || req.text.trim().is_empty() || req.text.len() > MAX_TEXT_BYTES {
+        if !self.acceptable(req) {
             return None;
         }
-        if !req.size.is_finite() || req.size <= 0.0 || req.size > 1000.0 {
-            return None;
-        }
-        let key = Key {
-            text: req.text.to_string(),
-            font: req.font,
-            postscript: req.postscript,
-            size: (req.size * 100.0).round() as i64,
-            rgb: [req.color.r, req.color.g, req.color.b],
-        };
+        let key = Self::base_key(req);
         {
             let mut c = lock(&self.inner.cache);
             match c.map.get(&key) {
@@ -444,8 +459,8 @@ fn run_tex(program: &std::path::Path, preamble: &str, key: &Key, n: u64) -> Resu
             return Err(tex_error(&dir.join("doc.log")));
         };
         let dim = std::fs::read_to_string(dir.join("doc.dim")).unwrap_or_default();
-        let (w, h, d) = parse_dim(&dim).ok_or_else(|| format!("TeX gave no size ({:?})", shorten(dim.trim(), 40)))?;
-        render_pdf(&pdf, w, h, d)
+        let (_w, _h, d) = parse_dim(&dim).ok_or_else(|| format!("TeX gave no size ({:?})", shorten(dim.trim(), 40)))?;
+        render_pdf(pdf, d)
     })();
     // Best effort: a stray temp folder is harmless.
     let _ = std::fs::remove_dir_all(&dir);
@@ -471,62 +486,15 @@ fn tex_error(log: &std::path::Path) -> String {
         .unwrap_or_else(|| "TeX failed".to_string())
 }
 
-/// The first page as a transparent picture; `w`, `h`, `d` from TeX (points).
 #[cfg(not(target_arch = "wasm32"))]
-fn render_pdf(pdf: &[u8], w: f64, h: f64, d: f64) -> Result<Typeset, String> {
-    let (img, pw, ph) = render_transparent(pdf, PX_PER_PT).ok_or("the TeX output cannot be shown")?;
-    // The page is the box (height plus depth); TeX's width and height are
-    // only a check that it ran.
-    let _ = (w, h);
+fn render_pdf(pdf: Vec<u8>, d: f64) -> Result<Typeset, String> {
+    // The page is TeX's box (height plus depth); TeX's depth places the baseline.
+    let pic = fig2dev::util::pdfpic::PdfPicture::open(pdf).ok_or("the TeX output cannot be shown")?;
+    let (pw, ph) = pic.size();
     Ok(Typeset {
-        image: Arc::new(rustfig_model::RasterImage {
-            width: img.width,
-            height: img.height,
-            rgba: img.rgba,
-        }),
+        pdf: Arc::new(pic),
         width_pt: pw,
         height_pt: ph,
         depth_pt: d.min(ph),
     })
-}
-
-/// Page 1 of `pdf` at `scale` pixels per point, straight alpha, no paper,
-/// with the page size in points.
-pub fn render_transparent(pdf: &[u8], scale: f64) -> Option<(PageImage, f64, f64)> {
-    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let doc = hayro::hayro_syntax::Pdf::new(Arc::new(pdf.to_vec())).ok()?;
-        let pages = doc.pages();
-        let page = pages.first()?;
-        let (pw, ph) = page.render_dimensions();
-        if !(pw.is_finite() && ph.is_finite() && pw >= 0.5 && ph >= 0.5) {
-            return None;
-        }
-        let k = (scale as f32).min((MAX_EDGE_PX as f32) / pw.max(ph));
-        let settings = hayro::PixmapSettings {
-            x_scale: k,
-            y_scale: k,
-            ..hayro::PixmapSettings::default()
-        };
-        let cache = hayro::RenderCache::new();
-        let pm = hayro::render(
-            page,
-            &cache,
-            &hayro::hayro_interpret::InterpreterSettings::default(),
-            &hayro::RenderSettings::default(),
-            &settings,
-        );
-        let (w, h) = (u32::from(pm.width()), u32::from(pm.height()));
-        let out = pm.take_rgba8(hayro::vello_cpu::peniko::ImageAlphaType::Alpha);
-        (w > 0 && h > 0 && out.len() == (w as usize) * (h as usize) * 4).then_some((
-            PageImage {
-                width: w,
-                height: h,
-                rgba: out,
-            },
-            f64::from(pw),
-            f64::from(ph),
-        ))
-    }))
-    .ok()
-    .flatten()
 }

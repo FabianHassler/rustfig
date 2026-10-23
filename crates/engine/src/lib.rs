@@ -633,6 +633,49 @@ impl Engine {
         (!lines.is_empty()).then_some(lines)
     }
 
+    /// The box a special text has on the canvas while TeX's picture of it is
+    /// shown (F8): its four corners (see `render::typeset_corners`) and its
+    /// height above the baseline. Only the canvas, picking and markers use it;
+    /// the file, the exports and fig2dev's bounds keep the stored size.
+    pub fn typeset_box(&self, o: &Object) -> Option<([Point; 4], f64)> {
+        let ObjectKind::Text(t) = &o.kind else { return None };
+        if !t.is_special() || t.is_hidden() || !self.latex.active() {
+            return None;
+        }
+        let ts = self.latex.peek(&render::TypesetRequest {
+            text: &t.text,
+            font: t.font,
+            postscript: t.is_postscript(),
+            size: t.size,
+            color: render::Rgba::opaque(self.doc.rgb(t.color)),
+        })?;
+        let corners = render::typeset_corners(t.origin, t.angle, t.justify, &ts);
+        Some((corners, (ts.height_pt - ts.depth_pt) * rustfig_geom::FIG_PER_POINT))
+    }
+
+    /// Distance used for picking: a text with a typeset picture counts as its
+    /// picture's box.
+    fn pick_distance(&self, o: &Object, p: Point) -> f64 {
+        match self.typeset_box(o) {
+            Some((c, _)) => {
+                if rustfig_geom::point_in_polygon(p, &c) {
+                    0.0
+                } else {
+                    rustfig_geom::dist_to_polyline(p, &c, true)
+                }
+            }
+            None => o.distance(p),
+        }
+    }
+
+    /// The prefilter box of an object for picking.
+    fn pick_bbox(&self, o: &Object, bb: &Rect) -> Rect {
+        match self.typeset_box(o) {
+            Some((c, _)) => Rect::from_points(c),
+            None => *bb,
+        }
+    }
+
     /// Topmost top-level object within `tol` Fig units of `p`.
     pub fn hit_test(&self, p: Point, tol: f64) -> Option<ObjectId> {
         self.hit_test_where(p, tol, &|_| true)
@@ -645,7 +688,7 @@ impl Engine {
         if let Some(o) = self
             .locate_pick
             .and_then(|id| self.doc.get(id))
-            .filter(|o| self.is_visible(o) && accept(o) && o.distance(p) <= tol)
+            .filter(|o| self.is_visible(o) && accept(o) && self.pick_distance(o, p) <= tol)
         {
             return Some(o.id);
         }
@@ -654,10 +697,10 @@ impl Engine {
         let mut best: Option<(i32, u8, usize)> = None;
         for (i, o) in self.doc.objects.iter().enumerate() {
             let Some((_, bb, _)) = boxes.get(i) else { break };
-            if !bb.expand(tol).contains(p) || !self.is_visible(o) || !accept(o) {
+            if !self.pick_bbox(o, bb).expand(tol).contains(p) || !self.is_visible(o) || !accept(o) {
                 continue;
             }
-            let d = o.distance(p);
+            let d = self.pick_distance(o, p);
             if d > tol {
                 continue;
             }
@@ -680,7 +723,11 @@ impl Engine {
         let mut found: Vec<(i32, u8, usize, ObjectId)> = Vec::new();
         for (i, o) in self.doc.objects.iter().enumerate() {
             let Some((_, bb, _)) = boxes.get(i) else { break };
-            if !bb.expand(tol).contains(p) || !self.is_visible(o) || !accept(o) || o.distance(p) > tol {
+            if !self.pick_bbox(o, bb).expand(tol).contains(p)
+                || !self.is_visible(o)
+                || !accept(o)
+                || self.pick_distance(o, p) > tol
+            {
                 continue;
             }
             found.push((o.depth(), o.xfig_type_rank(), i, o.id));

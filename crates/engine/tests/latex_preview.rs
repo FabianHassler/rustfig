@@ -79,7 +79,7 @@ fn count(s: &rustfig_engine::render::Scene) -> (usize, usize, usize) {
                 texts += 1;
                 special += usize::from(t.special);
             }
-            Prim::Image { .. } => images += 1,
+            Prim::PdfPicture { .. } => images += 1,
             _ => {}
         }
     }
@@ -112,10 +112,11 @@ fn a_special_text_becomes_a_picture_once_typeset_and_is_cached() {
     let msgs = e.latex.take_messages();
     assert!(msgs.is_empty(), "{msgs:?}");
     assert_eq!(count(&s), (1, 0, 1));
-    let Some(Prim::Image { corners, image, .. }) = s.prims.iter().find(|p| matches!(p, Prim::Image { .. })) else {
+    let Some(Prim::PdfPicture { corners, pdf, .. }) = s.prims.iter().find(|p| matches!(p, Prim::PdfPicture { .. }))
+    else {
         panic!("no picture");
     };
-    assert!(image.width > 0 && image.height > 0);
+    assert!(pdf.size().0 > 1.0 && pdf.size().1 > 1.0);
     // Centred on x = 3000, the baseline (y = 900) inside the picture.
     let cx = (corners[0].x + corners[1].x) / 2.0;
     assert!((cx - 3000.0).abs() < 1.0, "{cx}");
@@ -125,6 +126,44 @@ fn a_special_text_becomes_a_picture_once_typeset_and_is_cached() {
     let _ = scene_of(&e);
     wait(&e);
     assert_eq!(std::fs::read_to_string(dir.join("count")).unwrap().lines().count(), 1);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn bounds_and_picking_follow_the_typeset_size() {
+    let dir = scratch("bounds");
+    let pdf = dir.join("in.pdf");
+    std::fs::write(&pdf, some_pdf()).unwrap();
+    let tex = fake_tex(&dir, &pdf, true);
+    let mut e = engine_with(&tex);
+    let id = e
+        .doc()
+        .objects
+        .iter()
+        .find(|o| {
+            e.typeset_box(o).is_none()
+                && matches!(&o.kind, rustfig_engine::model::ObjectKind::Text(t) if t.is_special())
+        })
+        .unwrap()
+        .id;
+    // Far right of the stored box (about 450 wide, centred on 3000).
+    let far = rustfig_engine::geom::Point::new(3000.0 + 4000.0, 900.0);
+    assert_eq!(e.hit_test(far, 10.0), None);
+    let _ = scene_of(&e);
+    wait(&e);
+    let o = e.doc().get(id).unwrap().clone();
+    let (corners, asc) = e.typeset_box(&o).expect("typeset box");
+    // The page is 792 x 612 pt, 2 pt of it below the baseline.
+    let w = (corners[1].x - corners[0].x).abs();
+    assert!((w - 792.0 * 1200.0 / 72.0).abs() < 1.0, "{w}");
+    assert!(asc > 1000.0);
+    assert_eq!(e.hit_test(far, 10.0), Some(id));
+    // The stored size and fig2dev's bounds are unchanged.
+    let bounds = e.object_fig_bounds(id).unwrap();
+    assert!(bounds.width() < 1000.0, "{bounds:?}");
+    // Off: back to the stored box.
+    e.execute("view.toggle_latex_preview", &json!({"on": false})).unwrap();
+    assert_eq!(e.hit_test(far, 10.0), None);
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -231,13 +270,17 @@ fn real_tex_typesets_an_integral() {
     let msgs = e.latex.take_messages();
     assert!(msgs.is_empty(), "{msgs:?}");
     let s = scene_of(&e);
-    let Some(Prim::Image { image, .. }) = s.prims.iter().find(|p| matches!(p, Prim::Image { .. })) else {
+    let Some(Prim::PdfPicture { pdf, .. }) = s.prims.iter().find(|p| matches!(p, Prim::PdfPicture { .. })) else {
         panic!("not typeset");
     };
-    let inked = image.rgba.chunks(4).filter(|p| p[3] > 128).count();
-    assert!(inked > 20, "{inked} inked pixels");
+    let (w, h) = pdf.size();
+    assert!((20.0..80.0).contains(&w) && (5.0..30.0).contains(&h), "{w} x {h} pt");
+    // Sharp at any size: rendered at the size asked, with ink in it.
+    let img = pdf.render(400, 150).unwrap();
+    let inked = img.rgba.chunks(4).filter(|p| p[3] > 128).count();
+    assert!(inked > 200, "{inked} inked pixels");
     if let Ok(path) = std::env::var("F8_PNG") {
-        let img = image::RgbaImage::from_raw(image.width, image.height, image.rgba.clone()).unwrap();
+        let img = image::RgbaImage::from_raw(img.width, img.height, img.rgba.clone()).unwrap();
         img.save(path).unwrap();
     }
 }

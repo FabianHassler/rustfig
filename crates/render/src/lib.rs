@@ -17,7 +17,6 @@ pub use fig2dev::scene::{
 
 use fig2dev::scene::{fill, picture_prims, shape_prims, stroke, Shape};
 use rustfig_geom::{ArrowSpec, Point, Rect, Seg};
-use rustfig_model::RasterImage;
 use rustfig_model::{flatten_object, Arrow, ColorRef, Document, Object, ObjectKind, PolyKind, Style};
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -37,8 +36,9 @@ pub struct TypesetRequest<'a> {
 /// A special text typeset by TeX: the picture and its size (F8).
 #[derive(Debug, Clone)]
 pub struct Typeset {
-    /// Straight-alpha RGBA, tightly cropped to the text.
-    pub image: Arc<RasterImage>,
+    /// TeX's page, exactly the text's box: vector, so it stays sharp at
+    /// every zoom (the rasteriser renders it at the size shown).
+    pub pdf: Arc<fig2dev::util::pdfpic::PdfPicture>,
     /// Width, height (including depth) and depth below the baseline, in
     /// PostScript points.
     pub width_pt: f64,
@@ -165,8 +165,10 @@ pub fn arrow_spec(a: &Arrow) -> ArrowSpec {
     }
 }
 
-/// The picture of a typeset text at the text's anchor, justification and angle.
-fn typeset_prim(origin: Point, angle: f64, justify: rustfig_model::Justify, ts: &Typeset) -> Prim {
+/// The corners of a typeset text's box (top-left, top-right, bottom-right,
+/// bottom-left of the unrotated text) at the text's anchor, justification
+/// and angle.
+pub fn typeset_corners(origin: Point, angle: f64, justify: rustfig_model::Justify, ts: &Typeset) -> [Point; 4] {
     const FIG_PER_PT: f64 = 1200.0 / 72.0;
     let angle = if angle.is_finite() { angle } else { 0.0 };
     let (w, h, d) = (
@@ -183,11 +185,16 @@ fn typeset_prim(origin: Point, angle: f64, justify: rustfig_model::Justify, ts: 
     // u along the baseline, v up (Fig's y grows downwards).
     let at = |u: f64, v: f64| Point::new(origin.x + u * c - v * s, origin.y - u * s - v * c);
     let (v0, v1) = (-d, h - d);
-    Prim::Image {
-        corners: [at(u0, v1), at(u0 + w, v1), at(u0 + w, v0), at(u0, v0)],
-        image: ts.image.clone(),
+    [at(u0, v1), at(u0 + w, v1), at(u0 + w, v0), at(u0, v0)]
+}
+
+/// The typeset text as a vector picture at the text's anchor, justification
+/// and angle.
+fn typeset_prim(origin: Point, angle: f64, justify: rustfig_model::Justify, ts: &Typeset) -> Prim {
+    Prim::PdfPicture {
+        corners: typeset_corners(origin, angle, justify, ts),
         flipped: false,
-        dct: None,
+        pdf: ts.pdf.clone(),
     }
 }
 

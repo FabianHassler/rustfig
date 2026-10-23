@@ -244,6 +244,14 @@ impl Engine {
             }
             let first = out.len();
             object_markers(o, bbox, &mut out);
+            // A typeset text's second marker sits at its picture's height.
+            if let (Some((_, asc)), ObjectKind::Text(t)) = (self.typeset_box(o), &o.kind) {
+                out.truncate(first + 1);
+                if asc > 5.0 * 15.0 {
+                    let rot = Affine::rotate(if t.angle.is_finite() { t.angle } else { 0.0 });
+                    out.push(t.origin + rot.apply_vec(Point::new(0.0, -asc)));
+                }
+            }
             if selected.contains(&o.id) {
                 tagged.extend(out.get(first..).unwrap_or_default());
             }
