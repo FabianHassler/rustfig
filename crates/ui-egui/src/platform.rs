@@ -41,8 +41,8 @@ impl Os {
     pub fn mouse_note(self) -> &'static str {
         match self {
             Os::Mac => {
-                "Trackpad or one-button mouse: Option+click is the middle button, \
-                 Ctrl+click (or a two-finger click) the right button."
+                "Trackpad or one-button mouse: \u{2325}-click (Option) is the middle button, \
+                 \u{2303}-click (Control, or a two-finger click) the right button."
             }
             Os::Windows | Os::Linux => {
                 "Two-button mouse: press the left and right buttons together for the middle \

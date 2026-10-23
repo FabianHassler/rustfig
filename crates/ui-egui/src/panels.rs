@@ -226,12 +226,38 @@ fn tool_button(
     };
     let label = t.label();
     resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, active, label));
+    let tip = tip_for_os(&tip, crate::platform::Os::current(ui.ctx()) == crate::platform::Os::Mac);
     if resp.on_hover_text(tip).clicked() {
         app.run(t.id(), json!({}));
     }
 }
 
 /// The balloon text of xfig's mode buttons (`mode_switches`, `w_modepanel.c`).
+/// A mode tooltip with its keys in the system's notation: on macOS xfig's
+/// "(Shift-c or e)" reads "(⇧ C or e)" and "Ctrl-p" reads "⌃ P", as in the
+/// menus; elsewhere xfig's text stays.
+fn tip_for_os(tip: &str, mac: bool) -> String {
+    let (Some(open), true) = (tip.rfind('('), mac && tip.ends_with(')')) else {
+        return tip.to_string();
+    };
+    let (head, keys) = tip.split_at(open);
+    let inner = keys.trim_start_matches('(').trim_end_matches(')');
+    let keys: Vec<String> = inner
+        .split(" or ")
+        .map(|k| {
+            let spec = if let Some(key) = k.strip_prefix("Shift-") {
+                format!("Shift+{}", key.to_ascii_uppercase())
+            } else if let Some(key) = k.strip_prefix("Ctrl-") {
+                format!("PhysCtrl+{}", key.to_ascii_uppercase())
+            } else {
+                return k.to_string();
+            };
+            crate::menus::key_label_for(&spec, true)
+        })
+        .collect();
+    format!("{head}({})", keys.join(" or "))
+}
+
 fn xfig_tip(t: ToolKind) -> Option<&'static str> {
     Some(match t {
         ToolKind::CircleRadius => "CIRCLE/ELLIPSE drawing: specify RADII   (c or e)",
@@ -310,7 +336,8 @@ fn command_button(
     paint_mode_icon(ui, icon, inner, ink);
     let label = rustfig_engine::cmd::find(id).map_or("Library", |c| c.label);
     resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, active, label));
-    if resp.on_hover_text(tip.to_string()).clicked() {
+    let tip = tip_for_os(tip, crate::platform::Os::current(ui.ctx()) == crate::platform::Os::Mac);
+    if resp.on_hover_text(tip).clicked() {
         app.run(id, json!({}));
     }
 }
@@ -926,4 +953,23 @@ pub fn rgb_of(doc: &Document, c: i32) -> Rgb {
 /// The standard colours (for tests and pickers).
 pub fn standard_colors() -> &'static [Rgb; 32] {
     &STANDARD_COLORS
+}
+
+#[cfg(test)]
+mod tests {
+    use super::tip_for_os;
+
+    #[test]
+    fn mode_tips_use_the_mac_key_symbols() {
+        let t = "CIRCLE/ELLIPSE drawing: specify DIAMETER(S)   (Shift-c or e)";
+        assert_eq!(tip_for_os(t, false), t);
+        let m = tip_for_os(t, true);
+        assert!(
+            m.contains('\u{21e7}') && m.ends_with("C or e)") && !m.contains("Shift"),
+            "{m}"
+        );
+        let p = tip_for_os("Picture Object   (Ctrl-p)", true);
+        assert!(p.contains('\u{2303}') && !p.contains("Ctrl"), "{p}");
+        assert_eq!(tip_for_os("SPLINE   (s)", true), "SPLINE   (s)");
+    }
 }
