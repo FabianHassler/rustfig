@@ -47,8 +47,9 @@ either by Homebrew or with Rust's own tools.
 
 ### Homebrew (macOS, Linux)
 
-The repository is its own tap; the formula builds `rustfig`, `rustfig-cli`
-and `fig2dev` (the Rust port, at the tag RustFig uses) from source:
+The repository is its own tap; the formula builds `rustfig` and
+`rustfig-cli` from source. fig2dev is built in: `rustfig fig2dev -L pdf in.fig
+out.pdf` runs its command line (so does `rustfig-cli fig2dev …`).
 
 ```sh
 brew tap fabianhassler/rustfig https://github.com/FabianHassler/rustfig
@@ -56,9 +57,7 @@ brew install --HEAD rustfig
 ```
 
 Update with `brew upgrade --fetch-HEAD rustfig`, remove with
-`brew uninstall rustfig`. Homebrew's own `fig2dev` formula (the C program)
-installs the same command name: `brew unlink fig2dev` first if you have it.
-While the repository is private, git needs your GitHub login (as below).
+`brew uninstall rustfig`. While the repository is private, git needs your GitHub login (as below).
 
 ### Cargo
 

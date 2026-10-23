@@ -62,7 +62,7 @@ it, so `cargo +toolchain xtask …` stays on that toolchain.
 
 ## Homebrew
 
-`Formula/rustfig.rb` makes the repository its own tap (`brew tap fabianhassler/rustfig https://github.com/FabianHassler/rustfig`, then `brew install --HEAD rustfig`). It builds `rustfig`, `rustfig-cli` and fig2dev's `fig2dev` from its `fig2dev` resource. When the fig2dev tag in the root `Cargo.toml` moves, update the resource's `tag` and `revision` (`git ls-remote https://github.com/FabianHassler/fig2dev refs/tags/vX.Y.Z`). Once RustFig has release tags, add a stable `url` with the tag.
+`Formula/rustfig.rb` makes the repository its own tap (`brew tap fabianhassler/rustfig https://github.com/FabianHassler/rustfig`, then `brew install --HEAD rustfig`). It builds `rustfig` and `rustfig-cli`; fig2dev is not installed separately (`rustfig fig2dev ARGS…` runs it, so Homebrew's C `fig2dev` formula can stay installed next to it). Once RustFig has release tags, add a stable `url` with the tag.
 
 ## Fonts
 

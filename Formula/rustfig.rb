@@ -1,11 +1,9 @@
-# Homebrew formula for RustFig, with fig2dev (Rust port) at the tag RustFig
-# depends on. The RustFig repository is its own tap:
+# Homebrew formula for RustFig. The RustFig repository is its own tap:
 #   brew tap fabianhassler/rustfig https://github.com/FabianHassler/rustfig
 #   brew install --HEAD rustfig
-# Keep the fig2dev resource's tag and revision in step with the fig2dev tag in
-# the root Cargo.toml.
+# fig2dev is built in: `rustfig fig2dev ARGS…` runs its command line.
 class Rustfig < Formula
-  desc "Drawing program reimplementing xfig, with the fig2dev converter"
+  desc "Drawing program reimplementing xfig, with fig2dev built in"
   homepage "https://github.com/FabianHassler/rustfig"
   license any_of: ["MIT", "Apache-2.0"]
   head "https://github.com/FabianHassler/rustfig.git", branch: "main"
@@ -20,20 +18,9 @@ class Rustfig < Formula
     depends_on "wayland"
   end
 
-  conflicts_with "fig2dev", because: "both install a `fig2dev` executable"
-
-  resource "fig2dev" do
-    url "https://github.com/FabianHassler/fig2dev.git",
-        tag:      "v0.7.0",
-        revision: "a79521cb0782e5b0a6a6f74530c91313c117f06c"
-  end
-
   def install
     system "cargo", "install", *std_cargo_args(path: "apps/rustfig")
     system "cargo", "install", *std_cargo_args(path: "apps/cli")
-    resource("fig2dev").stage do
-      system "cargo", "install", *std_cargo_args(path: "apps/fig2dev")
-    end
   end
 
   test do
@@ -51,7 +38,7 @@ class Rustfig < Formula
       \t 0 0 1200 0 1200 1200 0 1200 0 0
     FIG
     system bin/"rustfig-cli", "info", "box.fig"
-    system bin/"fig2dev", "-L", "svg", "box.fig", "box.svg"
+    system bin/"rustfig", "fig2dev", "-L", "svg", "box.fig", "box.svg"
     assert_match "<svg", (testpath/"box.svg").read
   end
 end
