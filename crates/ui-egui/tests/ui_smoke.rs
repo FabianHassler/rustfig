@@ -1226,6 +1226,31 @@ fn edit_mode_middle_button_opens_the_figure_comments() {
     assert!(h.state().dialogs.figure_comments.is_some());
 }
 
+/// D11: Done in the figure-comments panel sets the comments as one undo step.
+#[test]
+fn figure_comments_panel_done_is_one_undo_step() {
+    let mut h = harness(app());
+    h.state_mut().engine.execute("tool.edit", &json!({})).unwrap();
+    h.state_mut()
+        .engine
+        .execute(
+            "tool.event",
+            &json!({"type": "press", "x": 5000, "y": 5000, "button": "middle"}),
+        )
+        .unwrap();
+    h.run_steps(2);
+    if let Some(f) = h.state_mut().dialogs.figure_comments.as_mut() {
+        f.text = "line one\nline two".to_string();
+    }
+    h.run_steps(2);
+    h.get_by_label("Done").click();
+    h.run_steps(3);
+    assert!(h.state().dialogs.figure_comments.is_none());
+    assert_eq!(h.state().engine.doc().comments, vec!["line one", "line two"]);
+    assert!(h.state_mut().engine.undo());
+    assert!(h.state().engine.doc().comments.is_empty());
+}
+
 /// Press, move in steps and release one button, with the modifiers held
 /// (the way a user drags: the pointer is over the widget before the press).
 fn drag_button(

@@ -20,7 +20,7 @@ the score.
 | Area | Weight | Score | Missing | Hours |
 |------|-------:|------:|---------|------:|
 | Drawing modes | 12 | 95 % | xfig's click-to-close rules for some shapes | 8 |
-| Editing modes | 12 | 83 % | figure comments from Edit mode | 18 |
+| Editing modes | 12 | 86 % | none known beyond gaps.md | 12 |
 | Attributes / indicator | 10 | 90 % | mix memory and lock of xfig's colour panel (not built, recent colours instead) | 3 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
 | Export | 12 | 68 % | `sld`, texts with `\ooo` octal escapes (raw bytes, B11 pass 5), the audit's hardening passes (B11), arrows on pie-wedge arcs and file arc centres lost on the way through the Fig writer (gap #25), picture frames and GIF transparency (gap #26) | 90 |
