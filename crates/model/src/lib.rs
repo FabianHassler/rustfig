@@ -479,6 +479,21 @@ impl Document {
         Some(ColorRef(number))
     }
 
+    /// The page's width and height in Fig units, landscape swapped. Metric
+    /// drawings count 450 units per cm, so a page is 2.54 × 450 units per
+    /// inch there (xfig's `redraw_pageborder`, and `e_align.c` aligning to the page).
+    pub fn page_size(&self) -> (f64, f64) {
+        let (w, h) = self.settings.paper.inches();
+        let per_inch = match self.settings.units {
+            Units::Inches => rustfig_geom::FIG_PER_INCH,
+            Units::Metric => 2.54 * rustfig_geom::FIG_PER_CM,
+        };
+        match self.settings.orientation {
+            Orientation::Landscape => (h * per_inch, w * per_inch),
+            Orientation::Portrait => (w * per_inch, h * per_inch),
+        }
+    }
+
     /// Translate a point from Fig units to the given units (inches or cm).
     pub fn to_units(&self, v: f64) -> f64 {
         match self.settings.units {

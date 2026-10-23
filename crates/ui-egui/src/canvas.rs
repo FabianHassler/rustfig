@@ -6,7 +6,7 @@ use crate::App;
 use egui::{pos2, vec2, Color32, Pos2, Rect, Sense, Shape, Stroke, TextureHandle, TextureOptions};
 use rustfig_engine::{Button, Overlay, ToolEvent};
 use rustfig_geom::{Affine, Point};
-use rustfig_model::{Document, ObjectId, ObjectKind, Orientation};
+use rustfig_model::{Document, ObjectId, ObjectKind};
 use rustfig_render::raster::{rasterize, RasterOptions};
 use rustfig_render::{Scene, SceneOptions};
 
@@ -154,6 +154,31 @@ fn grid_spacing(g: rustfig_engine::SnapMode, units: rustfig_model::Units, px_per
     best
 }
 
+/// Top-left corners of the pages that touch the visible region, in every
+/// direction from the origin (multiple-page mode); none above 2,000 pages.
+pub(crate) fn page_tiles(page: (f64, f64), vis: rustfig_geom::Rect) -> Vec<(f64, f64)> {
+    let (w, h) = page;
+    let mut out = Vec::new();
+    if !(w.is_finite() && h.is_finite() && w > 0.0 && h > 0.0) {
+        return out;
+    }
+    let (i0, i1) = ((vis.min.x / w).floor(), (vis.max.x / w).ceil());
+    let (j0, j1) = ((vis.min.y / h).floor(), (vis.max.y / h).ceil());
+    if !(i0.is_finite() && i1.is_finite() && j0.is_finite() && j1.is_finite()) || (i1 - i0) * (j1 - j0) > 2000.0 {
+        return out;
+    }
+    let mut j = j0;
+    while j < j1 {
+        let mut i = i0;
+        while i < i1 {
+            out.push((i * w, j * h));
+            i += 1.0;
+        }
+        j += 1.0;
+    }
+    out
+}
+
 fn tiny_skia_pixmap(w: usize, h: usize) -> Option<rustfig_render::raster::Pixmap> {
     rustfig_render::raster::Pixmap::new(w.clamp(1, 16_384) as u32, h.clamp(1, 16_384) as u32)
 }
@@ -192,24 +217,35 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
 
     painter.rect_filled(rect, 0.0, tk.canvas_bg);
 
-    // Paper.
+    // Paper and page border, as xfig's `redisplay_pageborder` (u_redraw.c):
+    // the page's outline with the paper's name outside its lower-right
+    // corner; in multiple-page mode every page's outline. Without the border
+    // the canvas is all paper, as in xfig.
     let doc = app.engine.doc();
-    let (pw, ph) = doc.settings.paper.inches();
-    let (pw, ph) = match doc.settings.orientation {
-        Orientation::Landscape => (ph, pw),
-        Orientation::Portrait => (pw, ph),
-    };
-    let paper = Rect::from_two_pos(to_screen(Point::ZERO), to_screen(Point::new(pw * 1200.0, ph * 1200.0)));
-    painter.rect_filled(paper, 0.0, tk.paper);
-    if app.engine.show_page_border {
-        painter.rect_stroke(
-            paper,
-            0.0,
-            Stroke::new(1.0_f32, tk.page_border),
-            egui::StrokeKind::Outside,
-        );
+    let page = doc.page_size();
+    let border = app.engine.show_page_border;
+    if !border || doc.settings.multiple_pages {
+        painter.rect_filled(rect, 0.0, tk.paper);
+    } else {
+        let paper = Rect::from_two_pos(to_screen(Point::ZERO), to_screen(Point::new(page.0, page.1)));
+        painter.rect_filled(paper, 0.0, tk.paper);
+    }
+    if border {
+        let stroke = Stroke::new(1.0_f32, tk.page_border);
+        let pages = if doc.settings.multiple_pages {
+            page_tiles(page, view.visible())
+        } else {
+            vec![(0.0, 0.0)]
+        };
+        for (x, y) in pages {
+            let r = Rect::from_two_pos(
+                to_screen(Point::new(x, y)),
+                to_screen(Point::new(x + page.0, y + page.1)),
+            );
+            painter.rect_stroke(r, 0.0, stroke, egui::StrokeKind::Middle);
+        }
         painter.text(
-            paper.left_top() + vec2(4.0, -4.0),
+            to_screen(Point::new(page.0, page.1)) + vec2(3.0, 0.0),
             egui::Align2::LEFT_BOTTOM,
             doc.settings.paper.name(),
             egui::FontId::proportional(11.0),
@@ -768,6 +804,35 @@ pub(crate) fn cursor_icon(kind: rustfig_engine::CursorKind) -> egui::CursorIcon 
 #[cfg(test)]
 mod tests {
     use super::grid_spacing;
+
+    #[test]
+    fn metric_pages_use_450_units_per_cm() {
+        let mut doc = rustfig_model::Document::default();
+        doc.settings.paper = rustfig_model::PaperSize::A4;
+        doc.settings.orientation = rustfig_model::Orientation::Portrait;
+        doc.settings.units = rustfig_model::Units::Inches;
+        let (wi, _) = doc.page_size();
+        doc.settings.units = rustfig_model::Units::Metric;
+        let (wm, hm) = doc.page_size();
+        assert!((wi / wm - 1200.0 / 1143.0).abs() < 1e-9);
+        // A4 is 21 cm wide: 21 × 450 units.
+        assert!((wm - 21.0 * 450.0).abs() < 2.0, "{wm}");
+        doc.settings.orientation = rustfig_model::Orientation::Landscape;
+        assert_eq!(doc.page_size(), (hm, wm));
+    }
+
+    #[test]
+    fn multiple_pages_tile_the_view_in_every_direction() {
+        use rustfig_geom::{Point, Rect};
+        let t = super::page_tiles(
+            (100.0, 50.0),
+            Rect::new(Point::new(-150.0, -20.0), Point::new(120.0, 60.0)),
+        );
+        assert!(t.contains(&(-200.0, -50.0)) && t.contains(&(100.0, 50.0)) && t.contains(&(0.0, 0.0)));
+        assert_eq!(t.len(), 4 * 3);
+        assert!(super::page_tiles((0.0, 50.0), Rect::new(Point::ZERO, Point::new(1.0, 1.0))).is_empty());
+        assert!(super::page_tiles((1.0, 1.0), Rect::new(Point::ZERO, Point::new(1e6, 1e6))).is_empty());
+    }
     use rustfig_engine::SnapMode;
     use rustfig_model::Units;
 

@@ -248,15 +248,8 @@ fn align_canvas(e: &mut Engine, p: &Value) -> CmdResult {
         Some(_) => e.target_ids(p)?,
         None => e.doc().objects.iter().map(|o| o.id).collect(),
     };
-    let (pw, ph) = e.doc().settings.paper.inches();
-    let (pw, ph) = match e.doc().settings.orientation {
-        rustfig_model::Orientation::Landscape => (ph, pw),
-        rustfig_model::Orientation::Portrait => (pw, ph),
-    };
-    let page = Rect::from_points([
-        rustfig_geom::Point::ZERO,
-        rustfig_geom::Point::new(pw * 1200.0, ph * 1200.0),
-    ]);
+    let (pw, ph) = e.doc().page_size();
+    let page = Rect::from_points([rustfig_geom::Point::ZERO, rustfig_geom::Point::new(pw, ph)]);
     let mut moves = Vec::new();
     for id in ids {
         let Some(o) = e.doc().get(id) else { continue };
