@@ -28,6 +28,8 @@ The keys that choose a mode are shown in the mode sections: for example `C` Circ
 
 Mode keys do nothing while a menu is open or while you type text.
 
+In Help > Keys and the menus xfig's key comes first; the system's key is added only where it differs (a mode letter such as `C` is xfig's, so it appears once). On a Mac the Meta key is shown as ⌥ and the physical Ctrl key as ⌃; the words Meta and Alt are not used there.
+
 The complete list, searchable, is in Help > Keys...: every command with its key in your system's scheme and in xfig's scheme, side by side (it shows the keys of the system you are on). Both sets work.
 
 ## xfig's menu keys (Meta = Option or Alt)

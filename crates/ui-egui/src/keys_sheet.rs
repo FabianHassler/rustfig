@@ -89,7 +89,10 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                 r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Key search"));
                 ui.checkbox(&mut st.only_keys, "Only commands with keys");
             });
-            ui.label(format!("Keys for {}. xfig's keys and the system's keys both work.", os_name(os)));
+            ui.label(format!(
+                "Keys for {}. xfig's keys and the system's keys both work.",
+                os_name(os)
+            ));
             ui.weak(match (xfig_on, os) {
                 (false, _) => "xfig's keys are off (Edit > Global settings): only the system's keys work now.",
                 (true, Os::Mac) => "xfig's keys can be turned off in Edit > Global settings.",
@@ -159,6 +162,21 @@ mod tests {
             let quote = r.iter().find(|r| r.id == "view.toggle_grid").unwrap();
             assert!(quote.standard.ends_with("Quote"), "{}", quote.standard);
         }
+    }
+
+    #[test]
+    fn system_column_only_where_it_differs_from_xfig() {
+        for os in [Os::Mac, Os::Windows, Os::Linux] {
+            let r = rows(os);
+            for row in &r {
+                assert!(row.standard.is_empty() || row.standard != row.xfig, "{}", row.id);
+            }
+            let circle = r.iter().find(|r| r.id == "tool.circle_radius").unwrap();
+            assert_eq!(circle.xfig, "C");
+            assert!(circle.standard.is_empty());
+        }
+        let undo = rows(Os::Mac).into_iter().find(|r| r.id == "edit.undo").unwrap();
+        assert!(!undo.xfig.contains("Meta") && !undo.xfig.contains("Alt"));
     }
 
     #[test]

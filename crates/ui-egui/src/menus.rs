@@ -805,13 +805,24 @@ pub(crate) fn entry_keys(id: &str, xfig_keys: bool, mac: bool) -> String {
     let (platform, xfig) = entry_key_pair(id, mac);
     let platform_shadowed = xfig_keys && shadowed_by_xfig(label_of(id).1, mac);
     let mut v = Vec::new();
-    if xfig_keys && !xfig.is_empty() {
+    // Mode letters are always on; xfig's other keys follow its switch.
+    if !xfig.is_empty() && (xfig_keys || is_mode_letter(label_of(id).1)) {
         v.push(xfig);
     }
     if !platform.is_empty() && !platform_shadowed {
         v.push(platform);
     }
     v.join(" / ")
+}
+
+/// A plain letter shortcut (`C`, `Shift+E`): xfig's mode key, not a system key.
+fn is_mode_letter(spec: &str) -> bool {
+    !spec.contains("Ctrl")
+        && !spec.contains("Alt")
+        && spec
+            .rsplit('+')
+            .next()
+            .is_some_and(|k| k.len() == 1 && k.chars().all(|c| c.is_ascii_alphabetic()))
 }
 
 /// (platform's shortcut, xfig's accelerator) of a command as written for the
@@ -823,7 +834,18 @@ pub(crate) fn entry_key_pair(id: &str, mac: bool) -> (String, String) {
     } else {
         shortcut_text(platform, mac)
     };
-    let xfig = xfig_accelerator(id).map(|k| key_label(k, mac)).unwrap_or_default();
+    let mut xfig = xfig_accelerator(id).map(|k| key_label(k, mac)).unwrap_or_default();
+    // xfig's mode letters belong to xfig's column; the system column shows a
+    // key only where it differs from xfig's.
+    let platform = if is_mode_letter(label_of(id).1) {
+        if xfig.is_empty() {
+            xfig = platform;
+        }
+        String::new()
+    } else {
+        platform
+    };
+    let platform = if platform == xfig { String::new() } else { platform };
     (platform, xfig)
 }
 
