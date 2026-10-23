@@ -22,7 +22,7 @@ View > Character map... (Ctrl+Shift+M, also while typing) opens a window with th
 
 With the PostScript Symbol font (Greek letters, maths: ∑ ∫ ≤ and so on) or ZapfDingbats the window shows that font's own table. Fig stores such texts as bytes in the font's encoding (∑ is code 0xE5 in Symbol), and RustFig stores exactly that, so the PostScript, PDF, SVG and the other exports draw the right glyph. Typing a character the font does not have is refused. Scripts use the `text.insert_char` command.
 
-The indicator panel sets the font, size, justification, angle and flags (hidden, rigid, special, LaTeX/PostScript fonts) for new text. Fonts: the PostScript and LaTeX fonts of xfig map to fonts shipped or substituted by RustFig; the picture on the canvas follows fig2dev's font metrics.
+The indicator panel sets the font, size, justification, angle and flags (hidden, rigid, special, LaTeX/PostScript fonts) for new text. A special text is for LaTeX: the canvas shows its source as typed (for example `$\alpha^2$`), as xfig does, and the LaTeX-type exports (LaTeX, PSTeX/PDFTeX overlay, pict2e, TikZ, epic, eepic) write it unchanged, without escaping `\`, `$`, `^` or `_`, so LaTeX typesets it; the flag is stored in the `.fig` file. Fonts: the PostScript and LaTeX fonts of xfig map to fonts shipped or substituted by RustFig; the picture on the canvas follows fig2dev's font metrics.
 
 ## Picture
 
