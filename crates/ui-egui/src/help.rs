@@ -698,6 +698,29 @@ mod tests {
         assert!(search("   ").is_empty());
     }
 
+    /// Every feature is explained in the help: each menu command (engine
+    /// commands with a menu path, and the UI's own commands) appears in some
+    /// manual topic by its label or its id.
+    #[test]
+    fn every_menu_command_is_in_the_manual() {
+        let manual: String = TOPICS
+            .iter()
+            .map(|t| t.text.to_lowercase())
+            .collect::<Vec<_>>()
+            .join("\n");
+        let norm = |l: &str| l.trim_end_matches('…').trim_end_matches("...").trim().to_lowercase();
+        let mut missing: Vec<String> = rustfig_engine::cmd::all()
+            .iter()
+            .filter(|c| !c.menu.is_empty())
+            .map(|c| (c.id, c.label))
+            .chain(crate::menus::UI_COMMANDS.iter().map(|c| (c.id, c.label)))
+            .filter(|(id, l)| !manual.contains(&norm(l)) && !manual.contains(id))
+            .map(|(id, l)| format!("{id} ({l})"))
+            .collect();
+        missing.sort();
+        assert!(missing.is_empty(), "not in the manual: {}", missing.join(", "));
+    }
+
     #[test]
     fn every_manual_link_resolves() {
         for t in TOPICS {

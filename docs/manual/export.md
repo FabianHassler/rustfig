@@ -23,7 +23,7 @@ File > Export (Meta+X, Ctrl+E) writes the drawing in another format. To print, u
 
 ## Exporting in the background
 
-Export from the panel runs on a background thread, so the window stays responsive. A progress window shows a spinner and the seconds elapsed, with **Cancel**. Cancel is checked between steps: a driver that is already running finishes, but its result is discarded and no file is written. When the export is done an "Export finished" notice names the file and offers **Show in folder**. The commands `app.cancel_export` and `app.show_export_folder` do the same from scripts. `file.export` (commands, MCP, the command line) is synchronous. The web app downloads the file at once.
+Export from the panel runs on a background thread, so the window stays responsive. A progress window shows a spinner and the seconds elapsed, with **Cancel**. Cancel is checked between steps: a driver that is already running finishes, but its result is discarded and no file is written. When the export is done an "Export finished" notice names the file and offers **Show in folder**. The commands `app.cancel_export` and `app.show_export_folder` do the same from scripts. **Export with current settings** (Shift+Alt+X, command `app.export_now`; xfig's ExportFile) exports again without opening the panel: next to the figure, with the panel's language and settings. `file.export` (commands, MCP, the command line) is synchronous. The web app downloads the file at once.
 
 ## Notes
 
