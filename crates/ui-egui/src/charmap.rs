@@ -71,7 +71,13 @@ fn table(font: i32, block: usize) -> Vec<(char, Option<u8>)> {
             .collect();
     }
     let (_, lo, hi) = BLOCKS.get(block).copied().unwrap_or(BLOCKS[0]);
-    (lo..=hi).filter_map(char::from_u32).map(|c| (c, None)).collect()
+    let mut chars: Vec<char> = (lo..=hi).filter_map(char::from_u32).collect();
+    // Superscript one to three are Latin-1 characters (U+00B9, U+00B2,
+    // U+00B3), not in the superscripts block: list them after ⁰ too.
+    if lo == 0x2070 {
+        chars.splice(1..1, ['¹', '²', '³']);
+    }
+    chars.into_iter().map(|c| (c, None)).collect()
 }
 
 /// Whether `c` matches the search text: the character itself or its code
@@ -240,5 +246,13 @@ mod tests {
         assert!(shown > 0 && shown <= all);
         assert!(drawable(0, true, 0, "").iter().any(|(c, _)| *c == 'é'));
         assert!(drawable(0, true, 0, "E000").is_empty());
+    }
+
+    /// The superscripts block lists ¹²³ (Latin-1) with ⁰ and ⁴ to ⁹.
+    #[test]
+    fn superscripts_one_to_three_are_listed() {
+        let b = BLOCKS.iter().position(|(n, ..)| n.starts_with("Super")).unwrap();
+        let s: String = table(0, b).iter().map(|(c, _)| *c).take(6).collect();
+        assert!(s.starts_with("⁰¹²³"), "{s}");
     }
 }
