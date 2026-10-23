@@ -1,0 +1,320 @@
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+//! Library mode (plan D6): xfig's figure libraries, `w_library.c` and
+//! `e_placelib.c`. The bundled libraries are `libraries/` in the source tree.
+
+use rustfig_engine::geom::Point;
+use rustfig_engine::{Button, Engine, Key, ToolEvent, UiRequest};
+use serde_json::{json, Value};
+
+/// An engine whose user library folder is `dir` (never the real home).
+fn engine_with_user_dir(dir: &std::path::Path) -> Engine {
+    let mut e = Engine::new();
+    e.prefs
+        .set("library_dir", toml::Value::String(dir.to_string_lossy().into_owned()))
+        .unwrap();
+    e
+}
+
+fn scratch(name: &str) -> std::path::PathBuf {
+    let d = std::env::temp_dir().join(format!("rustfig-library-{name}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    std::fs::create_dir_all(&d).unwrap();
+    d
+}
+
+fn press(e: &mut Engine, x: f64, y: f64, button: Button, shift: bool) {
+    e.tool_event(ToolEvent::Press {
+        pos: Point::new(x, y),
+        button,
+        shift,
+    })
+    .unwrap();
+}
+
+#[test]
+fn the_bundled_libraries_are_listed() {
+    let user = scratch("list");
+    let mut e = engine_with_user_dir(&user);
+    let r = e.execute("library.list", &json!({})).unwrap();
+    let libs = r["libraries"].as_array().unwrap();
+    let names: Vec<&str> = libs.iter().map(|l| l["name"].as_str().unwrap()).collect();
+    for want in [
+        "Computers",
+        "Optics",
+        "Electronic / Schematic / Classic",
+        "Flags / Africa",
+    ] {
+        assert!(names.contains(&want), "{want} missing in {names:?}");
+    }
+    // Charts is GPL and left out.
+    assert!(!names.contains(&"Charts"));
+    assert!(libs.iter().all(|l| l["objects"].as_u64().unwrap() > 0));
+    let o = e
+        .execute("library.objects", &json!({"library": "Computers", "comments": true}))
+        .unwrap();
+    let objs = o["objects"].as_array().unwrap();
+    assert!(objs.iter().any(|o| o["name"] == "floppy_lg"), "{objs:?}");
+    let floppy = objs.iter().find(|o| o["name"] == "floppy_lg").unwrap();
+    assert!(floppy["comments"][0].as_str().unwrap().contains("floppy"));
+    assert!(e.execute("library.objects", &json!({"library": "Nope"})).is_err());
+    let _ = std::fs::remove_dir_all(&user);
+}
+
+#[test]
+fn placing_an_object_is_one_undoable_compound() {
+    let user = scratch("place");
+    let mut e = engine_with_user_dir(&user);
+    let r = e
+        .execute(
+            "library.place",
+            &json!({"library": "Computers", "name": "floppy_lg", "x": 1200, "y": 2400}),
+        )
+        .unwrap();
+    assert_eq!(e.doc().objects.len(), 1);
+    let id = r["id"].as_u64().unwrap();
+    let o = e.doc().get(rustfig_engine::model::ObjectId(id)).unwrap();
+    assert!(matches!(o.kind, rustfig_engine::model::ObjectKind::Compound(_)));
+    let bb = o.geometry_bbox();
+    assert!(
+        (bb.min.x - 1200.0).abs() < 1.0 && (bb.min.y - 2400.0).abs() < 1.0,
+        "{bb:?}"
+    );
+    assert!(o.comments.iter().any(|c| c.contains("floppy")));
+    assert!(e.undo());
+    assert!(e.doc().objects.is_empty());
+    assert!(e.redo());
+    assert_eq!(e.doc().objects.len(), 1);
+    // At its original position: the file's own coordinates.
+    e.execute(
+        "library.place",
+        &json!({"library": "Computers", "name": "floppy_lg", "orig": true}),
+    )
+    .unwrap();
+    assert_eq!(e.doc().objects.len(), 2);
+    let _ = std::fs::remove_dir_all(&user);
+}
+
+#[test]
+fn ops_turn_and_flip_the_object() {
+    let user = scratch("ops");
+    let mut e = engine_with_user_dir(&user);
+    let size = |e: &mut Engine, ops: Value| {
+        let r = e.execute(
+            "library.place",
+            &json!({"library": "Arrows", "name": "3darrow1", "x": 0, "y": 0, "ops": ops}),
+        );
+        let r = match r {
+            Ok(r) => r,
+            Err(_) => {
+                let names = e.execute("library.objects", &json!({"library": "Arrows"})).unwrap();
+                panic!("{names}");
+            }
+        };
+        let b = e
+            .doc()
+            .get(rustfig_engine::model::ObjectId(r["id"].as_u64().unwrap()))
+            .unwrap()
+            .geometry_bbox();
+        (b.max.x - b.min.x, b.max.y - b.min.y)
+    };
+    let (w, h) = size(&mut e, json!([]));
+    let (w2, h2) = size(&mut e, json!(["rotate_cw"]));
+    assert!((w - h2).abs() < 2.0 && (h - w2).abs() < 2.0, "{w}x{h} -> {w2}x{h2}");
+    let (w3, h3) = size(&mut e, json!(["larger"]));
+    assert!(w3 > w * 1.05 && h3 > h * 1.05);
+    assert!(e
+        .execute(
+            "library.place",
+            &json!({"library": "Arrows", "name": "3darrow1", "x": 0, "y": 0, "ops": ["spin"]})
+        )
+        .is_err());
+    let _ = std::fs::remove_dir_all(&user);
+}
+
+#[test]
+fn the_object_follows_the_pointer_and_the_buttons_do_what_xfig_does() {
+    let user = scratch("hand");
+    let mut e = engine_with_user_dir(&user);
+    let r = e
+        .execute("library.hand", &json!({"library": "Computers", "name": "floppy_lg"}))
+        .unwrap();
+    assert_eq!(r["attached"], true);
+    assert!(e.library_in_hand().is_some());
+    assert!(e.doc().objects.is_empty());
+    // xfig's hints: place object / new object / cancel library (and Shift).
+    let h = e.mouse_hints();
+    assert_eq!(
+        (h.left, h.middle, h.right),
+        ("place object", "new object", "cancel library")
+    );
+    let h = e.mouse_hints_with(true);
+    assert_eq!(
+        (h.left, h.middle, h.right),
+        ("place and edit", "change draw mode", "place at orig posn")
+    );
+    // The preview follows the pointer.
+    e.tool_event(ToolEvent::Move {
+        pos: Point::new(3000.0, 3000.0),
+    })
+    .unwrap();
+    let ov = e.overlay();
+    assert_eq!(ov.preview.len(), 1);
+    let bb = ov.preview[0].geometry_bbox();
+    assert!((bb.min.x - 3000.0).abs() < 200.0, "{bb:?}");
+    // Left places and stays in the mode.
+    press(&mut e, 3000.0, 3000.0, Button::Left, false);
+    press(&mut e, 6000.0, 3000.0, Button::Left, false);
+    assert_eq!(e.doc().objects.len(), 2);
+    assert!(e.library_in_hand().is_some());
+    // r turns the object in hand.
+    e.tool_event(ToolEvent::Text("r".into())).unwrap();
+    assert_eq!(e.library_in_hand().unwrap().2.len(), 1);
+    // Shift+middle shows a box instead of the object.
+    press(&mut e, 0.0, 0.0, Button::Middle, true);
+    assert!(e.overlay().preview.is_empty());
+    assert!(!e.overlay().guides.is_empty());
+    // Shift+right places at the original position.
+    press(&mut e, 0.0, 0.0, Button::Right, true);
+    assert_eq!(e.doc().objects.len(), 3);
+    // Shift+left places and asks for the edit panel.
+    let _ = e.take_requests();
+    press(&mut e, 9000.0, 0.0, Button::Left, true);
+    assert_eq!(e.doc().objects.len(), 4);
+    assert!(e
+        .take_requests()
+        .iter()
+        .any(|r| matches!(r, UiRequest::EditObject { .. })));
+    // Middle: back to the library panel.
+    press(&mut e, 0.0, 0.0, Button::Middle, false);
+    assert!(e.library_in_hand().is_none());
+    assert!(e.take_requests().contains(&UiRequest::OpenLibrary));
+    // Right cancels.
+    e.execute("library.hand", &json!({"library": "Computers", "name": "floppy_lg"}))
+        .unwrap();
+    press(&mut e, 0.0, 0.0, Button::Right, false);
+    assert!(e.library_in_hand().is_none());
+    assert_eq!(e.doc().objects.len(), 4);
+    // Escape cancels too.
+    e.execute("library.hand", &json!({"library": "Computers", "name": "floppy_lg"}))
+        .unwrap();
+    e.tool_event(ToolEvent::Key(Key::Escape)).unwrap();
+    assert!(e.library_in_hand().is_none());
+    // Each placement is its own undo step.
+    assert!(e.undo());
+    assert_eq!(e.doc().objects.len(), 3);
+    let _ = std::fs::remove_dir_all(&user);
+}
+
+#[test]
+fn a_figure_copied_to_the_user_library_is_listed_and_placeable() {
+    let user = scratch("save");
+    let mut e = engine_with_user_dir(&user);
+    e.execute(
+        "shape.rectangle",
+        &json!({"x": 600, "y": 600, "width": 1200, "height": 600}),
+    )
+    .unwrap();
+    let r = e
+        .execute(
+            "library.save",
+            &json!({"name": "my box", "library": "Mine/Boxes", "comments": "A box."}),
+        )
+        .unwrap();
+    assert!(std::path::Path::new(r["path"].as_str().unwrap()).is_file());
+    let list = e.execute("library.list", &json!({})).unwrap();
+    let mine = list["libraries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|l| l["name"] == "Mine / Boxes")
+        .unwrap();
+    assert_eq!(mine["user"], true);
+    let objs = e
+        .execute("library.objects", &json!({"library": "Mine / Boxes", "comments": true}))
+        .unwrap();
+    assert_eq!(objs["objects"][0]["name"], "my box");
+    assert_eq!(objs["objects"][0]["comments"][0], "A box.");
+    let mut e2 = engine_with_user_dir(&user);
+    e2.execute(
+        "library.place",
+        &json!({"library": "Mine / Boxes", "name": "my box", "x": 0, "y": 0}),
+    )
+    .unwrap();
+    assert_eq!(e2.doc().objects.len(), 1);
+    // Names that would leave the folder are refused.
+    for bad in ["../x", "a/b", ".hidden", "", "x\u{0}y"] {
+        assert!(e.execute("library.save", &json!({"name": bad})).is_err(), "{bad:?}");
+    }
+    assert!(e
+        .execute("library.save", &json!({"name": "ok", "library": "../.."}))
+        .is_err());
+    let _ = std::fs::remove_dir_all(&user);
+}
+
+#[test]
+fn hostile_library_params_fail_cleanly() {
+    let user = scratch("hostile");
+    let hostile = [
+        json!({}),
+        json!({"library": 5, "name": []}),
+        json!({"library": "Computers", "name": "../../x"}),
+        json!({"library": "Computers", "name": "floppy_lg", "x": 1e308}),
+        json!({"library": "Computers", "name": "floppy_lg", "x": 5}),
+        json!({"library": "Computers", "name": "floppy_lg", "x": "a", "y": null}),
+        json!({"library": "Computers", "name": "floppy_lg", "orig": "yes"}),
+        json!({"library": "Computers", "name": "floppy_lg", "x": 0, "y": 0, "ops": "r"}),
+        json!({"library": "Computers", "name": "floppy_lg", "x": 0, "y": 0, "ops": [1, null]}),
+        json!({"library": "Computers", "name": "floppy_lg", "x": 0, "y": 0, "ops": vec!["smaller"; 300]}),
+        json!({"library": "../Computers", "name": "floppy_lg"}),
+        json!({"library": "Computers", "comments": 3}),
+        json!({"op": "x"}),
+    ];
+    for id in [
+        "library.list",
+        "library.objects",
+        "library.place",
+        "library.hand",
+        "library.transform",
+        "library.panel",
+        "library.save",
+    ] {
+        for p in &hostile {
+            let mut e = engine_with_user_dir(&user);
+            e.execute("shape.rectangle", &json!({"x": 0, "y": 0, "width": 100, "height": 100}))
+                .unwrap();
+            let before = e.doc().clone();
+            let r = e.execute(id, p);
+            if r.is_err() {
+                assert_eq!(e.doc(), &before, "{id} {p}");
+            }
+            let _ = e.overlay();
+        }
+    }
+    let _ = std::fs::remove_dir_all(&user);
+}
+
+#[test]
+fn every_bundled_figure_reads() {
+    // The sweep over the whole bundle: every figure loads into a compound.
+    let user = scratch("all");
+    let mut e = engine_with_user_dir(&user);
+    let libs = e.execute("library.list", &json!({})).unwrap();
+    let mut n = 0;
+    let mut failed = Vec::new();
+    for l in libs["libraries"].as_array().unwrap() {
+        let name = l["name"].as_str().unwrap();
+        let lib = e.find_library(name).unwrap();
+        let objs = e.execute("library.objects", &json!({"library": name})).unwrap();
+        for o in objs["objects"].as_array().unwrap() {
+            let oname = o["name"].as_str().unwrap();
+            n += 1;
+            if e.library_object_in(&lib, oname).is_err() {
+                failed.push(format!("{name}/{oname}"));
+            }
+        }
+    }
+    assert!(n > 2400, "only {n} figures");
+    // xfig itself skips an empty library file; a handful may be empty.
+    assert!(failed.len() < 10, "{failed:?}");
+    let _ = std::fs::remove_dir_all(&user);
+}

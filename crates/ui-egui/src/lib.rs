@@ -27,6 +27,7 @@ pub mod inject;
 pub mod input;
 pub mod key_font;
 pub mod keys_sheet;
+pub mod library;
 pub mod menus;
 pub mod mode_icons;
 pub mod panels;
@@ -127,6 +128,8 @@ pub struct App {
     pub styles: styles::StylesWindow,
     /// The Character Map window (E5).
     pub charmap: charmap::CharMap,
+    /// The library panel (D6).
+    pub library: library::LibraryPanel,
     /// The shortcut sheet (E8).
     pub keys_sheet: keys_sheet::KeysSheet,
     /// The typed-coordinates window (xfig's keyboard panel, Ctrl+K).
@@ -193,6 +196,7 @@ impl App {
             unit_panel_open: false,
             styles: styles::StylesWindow::default(),
             charmap: charmap::CharMap::default(),
+            library: library::LibraryPanel::default(),
             keys_sheet: keys_sheet::KeysSheet::default(),
             point_entry: point_entry::PointEntry::default(),
             xfig_keys: true,
@@ -353,6 +357,10 @@ impl App {
                 // which the text tool types.
                 UiRequest::PasteText => ctx.send_viewport_cmd(egui::ViewportCommand::RequestPaste),
                 UiRequest::EditObject { id } => self.dialogs.open_edit(&self.engine, id),
+                UiRequest::OpenLibrary => {
+                    let libs = self.engine.libraries();
+                    self.library.show_panel(libs);
+                }
                 UiRequest::EditFigureComments => self.dialogs.open_figure_comments(&self.engine),
                 UiRequest::EditSplinePoint { id, index } => self.dialogs.open_spline_point(&self.engine, id, index),
                 UiRequest::PickPicture { rect, keep_aspect } => {
@@ -523,6 +531,7 @@ impl App {
         export_bg::tick(self, ctx);
         digitize::show(self, ctx);
         charmap::show(self, ctx);
+        library::show(self, ctx);
         keys_sheet::show(self, ctx);
         reload::tick(self, ctx);
         reload::ask(self, ctx);

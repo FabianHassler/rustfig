@@ -2627,3 +2627,44 @@ fn saved_versions_window_restores_a_version() {
     assert_eq!(h.query_all_by_label("Restore").count(), 0, "the window closes");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// D6: the library mode button opens xfig's library panel; Select object
+/// puts the object in hand, left places it (undoable), the mouse
+/// indicator shows xfig's functions.
+#[test]
+fn library_panel_places_an_object() {
+    let user = std::env::temp_dir().join(format!("rustfig-ui-library-{}", std::process::id()));
+    let mut h = harness(app());
+    h.state_mut().run(
+        "prefs.set",
+        json!({"resource": "library_dir", "value": user.to_string_lossy()}),
+    );
+    h.get_by_label("Library").scroll_to_me();
+    h.get_by_label("Library").click();
+    h.run_steps(3);
+    assert!(h.state().library.open);
+    h.get_by_label("Select an object or library");
+    h.state_mut().library.load("Computers");
+    h.run_steps(4);
+    h.get_by_label("Library object floppy_lg").scroll_to_me();
+    h.get_by_label("Library object floppy_lg").click();
+    h.run_steps(2);
+    h.get_by_label("Select object").click();
+    h.run_steps(3);
+    assert!(!h.state().library.open);
+    assert!(h.state().engine.library_in_hand().is_some());
+    h.get_by_label_contains("Left: place object; middle: new object; right: cancel library");
+    {
+        let e = &mut h.state_mut().engine;
+        e.tool_event(rustfig_engine::ToolEvent::Press {
+            pos: rustfig_geom::Point::new(1200.0, 1200.0),
+            button: rustfig_engine::Button::Left,
+            shift: false,
+        })
+        .unwrap();
+        assert_eq!(e.doc().objects.len(), 1);
+        assert!(e.undo());
+        assert!(e.doc().objects.is_empty());
+    }
+    let _ = std::fs::remove_dir_all(&user);
+}

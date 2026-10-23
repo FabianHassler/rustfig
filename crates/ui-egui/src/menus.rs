@@ -1171,6 +1171,25 @@ pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
     }
     app.compose = Compose::Off;
     pan_keys(app, ctx, false);
+    // A library object in hand: xfig's r, l, h, v, s, S turn, flip, shrink
+    // and enlarge it (`transform_lib_obj`), before they are mode keys.
+    if app.engine.library_in_hand().is_some() {
+        let keys = [
+            (egui::Modifiers::NONE, egui::Key::R, "r"),
+            (egui::Modifiers::NONE, egui::Key::L, "l"),
+            (egui::Modifiers::NONE, egui::Key::H, "h"),
+            (egui::Modifiers::NONE, egui::Key::V, "v"),
+            (egui::Modifiers::NONE, egui::Key::S, "s"),
+            (egui::Modifiers::SHIFT, egui::Key::S, "S"),
+        ];
+        for (m, k, c) in keys {
+            if ctx.input_mut(|i| i.consume_key(m, k)) {
+                if let Err(e) = app.engine.tool_event(ToolEvent::Text(c.to_string())) {
+                    app.error(e.message);
+                }
+            }
+        }
+    }
     // Keys a busy tool wants (finish, remove last point). Escape is the
     // `tool.escape` shortcut: cancel, clear, leave the mode, one per press.
     if app.engine.tool_busy() {
@@ -1377,6 +1396,10 @@ mod tests {
             "Ctrl+Shift+click on a spline point (Cmd+Shift on macOS) in the editing modes",
         ),
         ("picture.", "the picture edit panel's buttons; scripting API"),
+        (
+            "library.",
+            "the library mode button (Shift+L) and the library panel; scripting API",
+        ),
         (
             "export.",
             "the Export panel's rows and Fit to Page button; scripting API",

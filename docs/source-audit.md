@@ -521,17 +521,17 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `e_movept.c` | `cancel_movedlinepoint` | 793 | ported | moving a point works; a box corner resizes the attached lines' ends (`point.move`, `engine/links.rs`: D14; xfig does not link here) | |
 | `e_movept.c` | `fix_movedlinepoint` | 808 | ported | moving a point works; a box corner resizes the attached lines' ends (`point.move`, `engine/links.rs`: D14; xfig does not link here) | |
 | `e_movept.c` | `relocate_linepoint` | 835 | ported | tools: `ToolKind::MovePoint` (`point_event`, `commit_point`), command `point.move` |  |
-| `e_placelib.c` | `put_selected` | 70 | missing | Place a library object (drawing mode "library") | D6 |
-| `e_placelib.c` | `transform_lib_obj` | 119 | missing | Place a library object (drawing mode "library") | D6 |
-| `e_placelib.c` | `sel_place_lib_obj_proc` | 152 | missing | Place a library object (drawing mode "library") | D6 |
-| `e_placelib.c` | `sel_place_lib_obj` | 164 | missing | Place a library object (drawing mode "library") | D6 |
-| `e_placelib.c` | `put_draw` | 180 | missing | Place a library object (drawing mode "library") | D6 |
-| `e_placelib.c` | `change_draw_mode` | 199 | missing | Place a library object (drawing mode "library") | D6 |
-| `e_placelib.c` | `place_lib_object_orig` | 216 | missing | Place a library object (drawing mode "library") | D6 |
-| `e_placelib.c` | `place_lib_object` | 239 | missing | Place a library object (drawing mode "library") | D6 |
-| `e_placelib.c` | `move_object` | 276 | missing | Place a library object (drawing mode "library") | D6 |
-| `e_placelib.c` | `init_move_object` | 300 | missing | Place a library object (drawing mode "library") | D6 |
-| `e_placelib.c` | `cancel_place_lib_obj` | 315 | missing | Place a library object (drawing mode "library") | D6 |
+| `e_placelib.c` | `put_selected` | 70 | ported | Place a library object (drawing mode "library") | D6 |
+| `e_placelib.c` | `transform_lib_obj` | 119 | ported | Place a library object (drawing mode "library") | D6 |
+| `e_placelib.c` | `sel_place_lib_obj_proc` | 152 | ported | Place a library object (drawing mode "library") | D6 |
+| `e_placelib.c` | `sel_place_lib_obj` | 164 | ported | Place a library object (drawing mode "library") | D6 |
+| `e_placelib.c` | `put_draw` | 180 | ported | Place a library object (drawing mode "library") | D6 |
+| `e_placelib.c` | `change_draw_mode` | 199 | ported | Place a library object (drawing mode "library") | D6 |
+| `e_placelib.c` | `place_lib_object_orig` | 216 | ported | Place a library object (drawing mode "library") | D6 |
+| `e_placelib.c` | `place_lib_object` | 239 | ported | Place a library object (drawing mode "library") | D6 |
+| `e_placelib.c` | `move_object` | 276 | ported | Place a library object (drawing mode "library") | D6 |
+| `e_placelib.c` | `init_move_object` | 300 | ported | Place a library object (drawing mode "library") | D6 |
+| `e_placelib.c` | `cancel_place_lib_obj` | 315 | ported | Place a library object (drawing mode "library") | D6 |
 | `e_rotate.c` | `rotate_cw_selected` | 78 | ported | commands `transform.rotate`, `transform.rotate_cw/ccw`; tools `RotateCw`, `RotateCcw` (also copy and rotate) |  |
 | `e_rotate.c` | `rotate_ccw_selected` | 93 | ported | commands `transform.rotate`, `transform.rotate_cw/ccw`; tools `RotateCw`, `RotateCcw` (also copy and rotate) |  |
 | `e_rotate.c` | `rotate_selected` | 108 | ported | commands `transform.rotate`, `transform.rotate_cw/ccw`; tools `RotateCw`, `RotateCcw` (also copy and rotate) |  |
@@ -1864,37 +1864,37 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_layers.c` | `restore_counts` | 861 | not needed | saving and swapping layer state around print/export (RustFig passes the layer list to the export) |  |
 | `w_layers.c` | `swap_depths` | 871 | not needed | saving and swapping layer state around print/export (RustFig passes the layer list to the export) |  |
 | `w_layers.c` | `swap_counts` | 894 | not needed | saving and swapping layer state around print/export (RustFig passes the layer list to the export) |  |
-| `w_library.c` | `SPComp` | 190 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `LRComp` | 198 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `put_selected_request` | 208 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `library_stop` | 222 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `library_dismiss` | 232 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `library_cancel` | 239 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `load_library` | 299 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `put_object_sel` | 389 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `load_lib_obj` | 417 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `NewObjectSel` | 499 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `popup_library_panel` | 540 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `create_library_panel` | 584 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `make_library_menu` | 1067 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `sel_view` | 1107 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `change_icon_size` | 1157 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `set_preview_name` | 1184 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `set_cur_obj_name` | 1192 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `erase_pixmap` | 1199 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `PutLibraryEntry` | 1206 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `ScanLibraryDirectory` | 1245 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `MakeLibrary` | 1358 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `MakeObjectLibrary` | 1422 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `MakeLibraryFileList` | 1559 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `libraryStatus` | 1610 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `preview_libobj` | 1623 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `update_preview` | 1741 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `set_comments` | 1749 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `sel_item_icon` | 1762 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `unsel_icon` | 1801 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `sel_icon` | 1810 | missing | Library panel: browse a library directory, previews, place objects | D6 |
-| `w_library.c` | `copy_icon_to_preview` | 1825 | missing | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `SPComp` | 190 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `LRComp` | 198 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `put_selected_request` | 208 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `library_stop` | 222 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `library_dismiss` | 232 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `library_cancel` | 239 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `load_library` | 299 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `put_object_sel` | 389 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `load_lib_obj` | 417 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `NewObjectSel` | 499 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `popup_library_panel` | 540 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `create_library_panel` | 584 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `make_library_menu` | 1067 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `sel_view` | 1107 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `change_icon_size` | 1157 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `set_preview_name` | 1184 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `set_cur_obj_name` | 1192 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `erase_pixmap` | 1199 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `PutLibraryEntry` | 1206 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `ScanLibraryDirectory` | 1245 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `MakeLibrary` | 1358 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `MakeObjectLibrary` | 1422 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `MakeLibraryFileList` | 1559 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `libraryStatus` | 1610 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `preview_libobj` | 1623 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `update_preview` | 1741 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `set_comments` | 1749 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `sel_item_icon` | 1762 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `unsel_icon` | 1801 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `sel_icon` | 1810 | ported | Library panel: browse a library directory, previews, place objects | D6 |
+| `w_library.c` | `copy_icon_to_preview` | 1825 | ported | Library panel: browse a library directory, previews, place objects | D6 |
 | `w_listwidget.c` | `SelectHome` | 182 | replaced | list navigation keys of the file panel: the native dialogs |  |
 | `w_listwidget.c` | `SelectEnd` | 192 | replaced | list navigation keys of the file panel: the native dialogs |  |
 | `w_listwidget.c` | `SelectNext` | 205 | replaced | list navigation keys of the file panel: the native dialogs |  |
@@ -1939,7 +1939,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_modepanel.c` | `stub_point_adding_selected` | 785 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `stub_delete_point_selected` | 791 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `stub_move_selected` | 797 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
-| `w_modepanel.c` | `stub_popup_library` | 802 | missing | Library mode button (greyed out) | D6 |
+| `w_modepanel.c` | `stub_popup_library` | 802 | ported | Library mode button (opens the library panel) | D6 |
 | `w_modepanel.c` | `stub_move_point_selected` | 809 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `stub_delete_selected` | 815 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `stub_copy_selected` | 821 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |

@@ -19,7 +19,7 @@ a different program is not.
 
 ## Status
 
-**Alpha. Overall xfig parity ≈73 %** (see [ROADMAP.md](ROADMAP.md) and the
+**Alpha. Overall xfig parity ≈78 %** (see [ROADMAP.md](ROADMAP.md) and the
 [parity assessment](docs/target-app-parity.md)).
 
 - Draw: circles, ellipses, approximated/interpolated/X-splines, polylines,

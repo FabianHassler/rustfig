@@ -20,7 +20,8 @@ use serde_json::json;
 #[derive(Clone, Copy)]
 enum Slot {
     Tool(ToolKind, &'static xfig_icons::Xbm),
-    Missing(&'static xfig_icons::Xbm, &'static str, &'static str),
+    /// A button that runs a command (the library panel): icon, command id, balloon.
+    Command(&'static xfig_icons::Xbm, &'static str, &'static str),
 }
 
 /// xfig's drawing modes in its order (`mode_switches` in `w_modepanel.c`).
@@ -41,7 +42,11 @@ const DRAWING: [Slot; 15] = [
     Slot::Tool(ToolKind::Arc, &xfig_icons::ARC),
     Slot::Tool(ToolKind::Picture, &xfig_icons::PICOBJ),
     Slot::Tool(ToolKind::Text, &xfig_icons::TEXT),
-    Slot::Missing(&xfig_icons::LIBRARY, "Place a library object", "D6"),
+    Slot::Command(
+        &xfig_icons::LIBRARY,
+        "library.panel",
+        "PLACE a library element   (Shift-l)",
+    ),
 ];
 
 /// xfig's editing modes in its order.
@@ -178,11 +183,11 @@ const SLOT: egui::Vec2 = vec2(38.0, 34.0);
 
 fn slot_grid(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, id: &str, slots: &[Slot], size: egui::Vec2) {
     // The library icon is twice as wide: it gets its own row below.
-    let wide = |s: &Slot| matches!(s, Slot::Missing(icon, ..) if icon.width > 40);
+    let wide = |s: &Slot| matches!(s, Slot::Command(icon, ..) if icon.width > 40);
     egui::Grid::new(id).spacing(vec2(2.0, 2.0)).show(ui, |ui| {
         for (i, slot) in slots.iter().filter(|s| !wide(s)).enumerate() {
             match slot {
-                Slot::Missing(icon, tip, task) => missing_button(ui, tk, icon, tip, task, size),
+                Slot::Command(icon, id, tip) => command_button(app, ui, tk, icon, id, tip, size),
                 Slot::Tool(t, icon) => tool_button(app, ui, tk, *t, icon, size),
             }
             if i % 2 == 1 {
@@ -191,8 +196,8 @@ fn slot_grid(app: &mut App, ui: &mut egui::Ui, tk: &Tokens, id: &str, slots: &[S
         }
     });
     for slot in slots.iter().filter(|s| wide(s)) {
-        if let Slot::Missing(icon, tip, task) = slot {
-            missing_button(ui, tk, icon, tip, task, vec2(size.x * 2.0 + 2.0, size.y));
+        if let Slot::Command(icon, id, tip) = slot {
+            command_button(app, ui, tk, icon, id, tip, vec2(size.x * 2.0 + 2.0, size.y));
         }
     }
 }
@@ -283,20 +288,31 @@ fn paint_mode_icon(ui: &egui::Ui, icon: &'static xfig_icons::Xbm, rect: egui::Re
     }
 }
 
-fn missing_button(
+/// A mode button that runs a command: xfig's library mode button opens the
+/// library panel (and shows pressed while the panel is open or an object is
+/// in hand).
+fn command_button(
+    app: &mut App,
     ui: &mut egui::Ui,
     tk: &Tokens,
     icon: &'static xfig_icons::Xbm,
+    id: &str,
     tip: &str,
-    task: &str,
     size: egui::Vec2,
 ) {
-    let (rect, resp) = ui.allocate_exact_size(size, Sense::hover());
-    crate::bevel::paint(ui.painter(), rect, tk, crate::bevel::State::Disabled);
-    paint_mode_icon(ui, icon, rect, tk.muted.gamma_multiply(0.6));
-    let text = format!("{tip} (not available yet, plan task {task})");
-    resp.on_hover_text(text.clone())
-        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, false, text.clone()));
+    let (rect, resp) = ui.allocate_exact_size(size, Sense::click());
+    let active = app.library.open || app.engine.library_in_hand().is_some();
+    let state = crate::bevel::State::of(&resp, active, false);
+    crate::bevel::paint(ui.painter(), rect, tk, state);
+    let ink = if active { tk.icon_active } else { tk.icon };
+    let sunk = matches!(state, crate::bevel::State::Selected | crate::bevel::State::Pressed) && tk.bevel;
+    let inner = if sunk { rect.translate(vec2(1.0, 1.0)) } else { rect };
+    paint_mode_icon(ui, icon, inner, ink);
+    let label = rustfig_engine::cmd::find(id).map_or("Library", |c| c.label);
+    resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, active, label));
+    if resp.on_hover_text(tip.to_string()).clicked() {
+        app.run(id, json!({}));
+    }
 }
 
 /// Colour swatch + name.

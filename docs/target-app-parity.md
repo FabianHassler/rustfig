@@ -1,6 +1,6 @@
 # Target-app parity assessment: RustFig vs xfig 3.2.9
 
-P26-10-23 (W10-13 background export, scores unchanged; D10 done: fractions of an inch in dimension-line lengths removed from Drawing modes' missing items; W10-14 saved versions; scores unchanged); 2026-10-22 (recount after E4, E4b, E6, E10, D16–D18: Text 55 → 65 %, Settings & styles 15 → 75 %, overall ≈65 → ≈73 %, 413 → 379 h); 2026-10-22 (E10: text editing on the canvas; Text score unchanged, evidence added); 2026-10-22 (W10-4, W10-8, W10-9, W10-10, W10-11: Export panel rows per language with preview, kept per language; new file on Open; `.bak` on save; Export 68 %, scores otherwise unchanged); 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: edit panel live, compound rows, point table, pictorial menus; Attributes evidence); 2026-10-22 (W10-16, W10-20: picture edit panel; scores unchanged); 2026-10-22 (D5: measure modes, Editing 80 → 81 %, 18 → 12 h); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: tangent/normal, Editing 79 → 80 %, 26 → 18 h); 2026-10-22 (D15: Chop extended, Editing 78 → 79 %; D15 was a new task, so the hours stay); 2026-10-22 (D14: smart links extended, Attributes 83 → 84 %; D14 was a new task, so the hours stay); 2026-10-22 (D7: Angle Geom, Attributes 80 → 83 %; D3: chop, Editing 75 → 78 %; D8: linked move, Attributes 77 → 80 %, 10 h less); 2026-10-21 (W16, W17: one mouse scheme and one layout, scores unchanged; save query for open compounds); 2026-10-21 (D1, D2: open compound and join/split, Editing 70 → 75 %); 2026-10-21 (B15: PDF/EPS pictures, Export 66 → 68 %, overall ≈65 %); 2026-10-21 (DD9: evidence paths after the dedup series; scores unchanged); 2026-10-18, overall **≈65 %** (B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk; G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
+2026-10-23 (D6 done: library mode, 30 bundled libraries; Libraries 0 → 85 %); P26-10-23 (W10-13 background export, scores unchanged; D10 done: fractions of an inch in dimension-line lengths removed from Drawing modes' missing items; W10-14 saved versions; scores unchanged); 2026-10-22 (recount after E4, E4b, E6, E10, D16–D18: Text 55 → 65 %, Settings & styles 15 → 75 %, overall ≈65 → ≈73 %, 413 → 379 h); 2026-10-22 (E10: text editing on the canvas; Text score unchanged, evidence added); 2026-10-22 (W10-4, W10-8, W10-9, W10-10, W10-11: Export panel rows per language with preview, kept per language; new file on Open; `.bak` on save; Export 68 %, scores otherwise unchanged); 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: edit panel live, compound rows, point table, pictorial menus; Attributes evidence); 2026-10-22 (W10-16, W10-20: picture edit panel; scores unchanged); 2026-10-22 (D5: measure modes, Editing 80 → 81 %, 18 → 12 h); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: tangent/normal, Editing 79 → 80 %, 26 → 18 h); 2026-10-22 (D15: Chop extended, Editing 78 → 79 %; D15 was a new task, so the hours stay); 2026-10-22 (D14: smart links extended, Attributes 83 → 84 %; D14 was a new task, so the hours stay); 2026-10-22 (D7: Angle Geom, Attributes 80 → 83 %; D3: chop, Editing 75 → 78 %; D8: linked move, Attributes 77 → 80 %, 10 h less); 2026-10-21 (W16, W17: one mouse scheme and one layout, scores unchanged; save query for open compounds); 2026-10-21 (D1, D2: open compound and join/split, Editing 70 → 75 %); 2026-10-21 (B15: PDF/EPS pictures, Export 66 → 68 %, overall ≈65 %); 2026-10-21 (DD9: evidence paths after the dedup series; scores unchanged); 2026-10-18, overall **≈65 %** (B1, B3, B9: TikZ, PSTricks, EMF, Tk/Perl-Tk; G1 old Fig files; B2 pstex/pdftex; every ported fig2dev language exported from the app; B12 every export through fig2dev; B3 pict2e). Revised whenever a task lands.
 
 ## Methodology
 
@@ -19,19 +19,19 @@ the score.
 
 | Area | Weight | Score | Missing | Hours |
 |------|-------:|------:|---------|------:|
-| Drawing modes | 12 | 90 % | library objects; xfig's click-to-close rules for some shapes | 14 |
-| Editing modes | 12 | 83 % | figure comments from Edit mode, copy to library | 18 |
+| Drawing modes | 12 | 95 % | xfig's click-to-close rules for some shapes | 8 |
+| Editing modes | 12 | 83 % | figure comments from Edit mode | 18 |
 | Attributes / indicator | 10 | 87 % | copy counts; mix memory and lock of xfig's colour panel (not built, recent colours instead) | 6 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
 | Export | 12 | 68 % | `sld`, texts with `\ooo` octal escapes (raw bytes, B11 pass 5), the audit's hardening passes (B11), arrows on pie-wedge arcs and file arc centres lost on the way through the Fig writer (gap #25), picture frames and GIF transparency (gap #26) | 90 |
 | Text | 10 | 70 % | LaTeX special-text export, exact PostScript font metrics, spell check (text editing on the canvas done 2026-10-22, E10; character map 2026-10-22, E5) | 40 |
 | View & navigation | 8 | 100 % | — (zoom box, pan to origin and unzoom with Ctrl+click done 2026-10-22, E3) | 0 |
 | Undo | 4 | 100 % | — | 0 |
-| Libraries | 5 | 0 % | library browser and placement | 40 |
+| Libraries | 5 | 85 % | xfig's library list files (a file naming several library folders), the Stop button while a big library loads, the web build (no file system: no bundled libraries yet) | 6 |
 | Printing | 5 | 10 % | print dialog and printer output | 30 |
 | Settings & styles | 5 | 80 % | — (Global settings rows with effect, Unit/Scale panel, Arrow Size panel and number pop-ups done in W10-23, -24, -31, -32; preferences, recent files, styles with families E6, colours E4 done) | 0 |
 | Platforms | 7 | 50 % | Windows/Linux verification, web build and file I/O on the web | 40 |
-| **Overall** | 100 | **≈73 %** | | **371** |
+| **Overall** | 100 | **≈78 %** | | **331** |
 
 ## Evidence of what ships
 
@@ -88,12 +88,14 @@ the score.
 - Linked move (D8): `crates/engine/src/links.rs` (ports `u_list.c`'s `get_links`, `point_on_perim`, `get_interior_links`, `point_on_inside`, `adjust_links`); the Smart Links indicator button in `ui-egui/attributes`; tests `crates/engine/tests/linked_move.rs`. D14 extends it: `links.rs` targets circles, ellipses, arcs, polygons, closed splines, text boxes (distance to the outline) beside boxes and compounds, follows with open polylines and splines, links both ends of a line, and every operation (`transform.apply`, `links::translate_each`, `edit.duplicate` copy with links, `point.move` box resize, `transform.nudge`); previews and end highlights in `tools/mod.rs`; tests `crates/engine/tests/linked_ext.rs`.
 - Mouse buttons: xfig's three-button semantics per mode, the only scheme (W16 removed the modern one); `mouse_hints_match_behaviour` in `crates/engine/src/tools/mod.rs` presses every button in every tool and state and checks the indicator against what happened; Alt/Ctrl+click map to middle/right (`canvas::tool_button`), tested in `ui_smoke.rs`.
 - Digitize, relative picture names, Autorefresh, New window (S4-3, S4-8, S4-9): `crates/engine/src/cmd/digitize.rs` (`file.digitize`), `file.save` picture rebasing in `cmd/file.rs`, `crates/ui-egui/src/digitize.rs` and `reload.rs`; tests `relative_pictures.rs`, `digitize.rs`, `digitize_with_hostile_params` (`command_sweep.rs`), `digitize_window_writes_selected_line` and `autorefresh_toggle_and_new_window_entries` (`ui_smoke.rs`), unit tests in `reload.rs`.
+- Libraries (D6, 2026-10-23): xfig's 30 figure libraries (2,540 figures; Charts, house_plans and transit left out for their licences) in `libraries/` with an ASSETS.md row each (`cargo xtask assets` checks them); `crates/engine/src/library.rs` (scan, read, place; ports `w_library.c`, `e_placelib.c`), commands `library.{panel,list,objects,hand,place,transform,save}` in `cmd/library.rs`, `ToolState::Library` in `tools/mod.rs` (xfig's buttons and keys r l h v s S, hints), the panel `crates/ui-egui/src/library.rs` (thumbnails from the canvas renderer, Icon/List view, icon size, comments, Copy to library); tests `crates/engine/tests/library.rs`, `library_panel_places_an_object` in `ui_smoke.rs`.
 - Verified on macOS by driving the app over the control channel and reviewing screenshots.
 
 ## Revision history
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-23 | ≈78 % | D6: library mode (bundled libraries, panel with thumbnails, placing, copy to library); Libraries 0 → 85 %, Drawing modes 90 → 95 %, 40 h less. |
 | 2026-10-23 | ≈73 % | D10, W10-13, W10-14, W9 fix: fractions of an inch and the dimension line preview; saved versions; cap/join pictures. Scores unchanged. |
 | 2026-10-22 | ≈73 % | W10-23, -24, -31, -32, -33, W10-3: Global settings rows with effect, Unit/Scale panel, Arrow Size panel, number pop-ups, seven align and nine grid choices; Settings & styles 75 → 80 %. |
 | 2026-10-22 | ≈73 % | Recount: Text 55 → 65 % (E10), Settings & styles 15 → 75 % (E1 persistence, recent files, E6 styles, E4 colours); the table had lagged behind. |

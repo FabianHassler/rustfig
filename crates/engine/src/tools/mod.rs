@@ -600,6 +600,20 @@ pub(crate) enum ToolState {
     /// Edit > Paste: the cut buffer follows the pointer (xfig's `paste`);
     /// `nw` is the top-left corner of the buffer's objects.
     Paste { cursor: Point, nw: Point },
+    /// Library mode (D6, xfig's `put_selected`): a library object follows
+    /// the pointer. `orig` is the object as its file has it, `hand` that
+    /// with `ops` applied (r, l, h, v, s, S), `nw` its top-left corner,
+    /// `draw_box` shows a box instead of the object.
+    Library {
+        library: String,
+        name: String,
+        orig: Box<Object>,
+        ops: Vec<crate::library::LibOp>,
+        hand: Box<Object>,
+        nw: Point,
+        cursor: Point,
+        draw_box: bool,
+    },
     /// Ctrl+left: the zoom box (xfig's `init_zoombox_drawing`).
     ZoomBox { start: Point, cursor: Point },
     MoveObjs {
@@ -928,6 +942,9 @@ impl Engine {
         }
         if let ToolState::Paste { cursor, nw } = self.tool_state {
             return self.paste_event(ev, cursor, nw);
+        }
+        if matches!(self.tool_state, ToolState::Library { .. }) {
+            return self.library_event(ev);
         }
         if let ToolState::ZoomBox { start, .. } = self.tool_state {
             return self.zoom_box_event(ev, start);
@@ -3001,6 +3018,7 @@ impl Engine {
             (ToolState::Points { dimension: true, .. }, _) => ("del point", "", ""),
             (ToolState::Idle, ToolKind::Polyline) => ("dimension line", "", ""),
             (ToolState::Text { .. }, _) => ("", "paste text", ""),
+            (ToolState::Library { .. }, _) => ("place and edit", "change draw mode", "place at orig posn"),
             (ToolState::Points { freehand: false, .. }, _) => ("del point", "finish here", ""),
             (ToolState::Idle, ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture) => ("", "square at center", ""),
             (ToolState::Idle, ToolKind::AreaMeasure) => ("locate object", "", "reset to +-0"),
@@ -3029,6 +3047,7 @@ impl Engine {
         match &self.tool_state {
             ToolState::ZoomBox { .. } => h("final point", "", "cancel"),
             ToolState::Paste { .. } => h("place object", "place at orig posn", "cancel paste"),
+            ToolState::Library { .. } => h("place object", "new object", "cancel library"),
             ToolState::Points {
                 pts,
                 freehand,
@@ -3222,6 +3241,28 @@ impl Engine {
             ToolState::Paste { cursor, nw } => {
                 for o in self.clipboard() {
                     let mut c = o.clone();
+                    c.translate(cursor.x - nw.x, cursor.y - nw.y);
+                    ov.preview.push(c);
+                }
+            }
+            ToolState::Library {
+                hand,
+                nw,
+                cursor,
+                draw_box,
+                ..
+            } => {
+                if *draw_box {
+                    let b = hand.geometry_bbox();
+                    let (w, h) = (b.max.x - b.min.x, b.max.y - b.min.y);
+                    let r = Rect::new(*cursor, Point::new(cursor.x + w, cursor.y + h));
+                    let mut c = r.corners().to_vec();
+                    if let Some(f) = c.first().copied() {
+                        c.push(f);
+                    }
+                    ov.guides.push(c);
+                } else {
+                    let mut c = (**hand).clone();
                     c.translate(cursor.x - nw.x, cursor.y - nw.y);
                     ov.preview.push(c);
                 }

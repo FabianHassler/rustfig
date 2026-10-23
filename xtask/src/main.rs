@@ -37,7 +37,7 @@ const UI_ONLY: &[&str] = &[
 /// Asset file extensions that need an ASSETS.md row.
 const ASSET_EXTS: &[&str] = &[
     "png", "jpg", "jpeg", "gif", "svg", "ico", "icns", "bmp", "webp", "ttf", "otf", "woff", "woff2", "wav", "mp3",
-    "ogg",
+    "ogg", "xpm", "xbm", "ps", "eps",
 ];
 const FONT_EXTS: &[&str] = &["ttf", "otf", "woff", "woff2", "ttc", "pfb", "afm"];
 // `.claude` holds agent worktrees: copies of the repository, not part of it.
@@ -213,6 +213,25 @@ fn assets() -> Result<(), String> {
             errors.push(format!(
                 "{rel}: font files belong in storytold/craft-fonts, not this repository"
             ));
+            continue;
+        }
+        // xfig's figure libraries (D6): a `.fig` file under `libraries/` is an asset
+        // covered by the row of its library folder, `libraries/<Name>/`.
+        if ext == "fig" {
+            if let Some(top) = rel
+                .strip_prefix("libraries/")
+                .and_then(|r| r.split_once('/'))
+                .map(|(t, _)| t)
+            {
+                count += 1;
+                let key = format!("`libraries/{top}/`");
+                let listed = table
+                    .lines()
+                    .any(|l| l.trim_start().starts_with('|') && l.contains(&key));
+                if !listed {
+                    errors.push(format!("{rel}: no row for libraries/{top}/ in ASSETS.md"));
+                }
+            }
             continue;
         }
         if ASSET_EXTS.contains(&ext.as_str()) {

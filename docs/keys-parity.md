@@ -94,7 +94,7 @@ alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside: on mac
 | Message panel | Return, Escape | dismiss | ✅ |
 | File panel, directory browser | Return, double-click, right click (parent) | load/save/merge, change directory | ↻ the system's file dialogs |
 | Colour panel (`w_color.c`) | Return, double-click, lock toggles | set colour | ❌ E4 (colour editor) |
-| Library panel | Return, double-click, Escape | place object, dismiss | ❌ D6 (libraries) |
+| Library panel | Return, double-click, Escape | place object, dismiss | ✅ D6 (double-click an object; Escape closes the window; keys r l h v s S and Shift-l in library mode) |
 | Keyboard panel (`w_keyboard.c`) | Return, Escape, Up/Down, Ctrl-P/N | enter, ignore, history | ❌ D11 |
 | Spell check panel | Escape, u, v, x | close, update, convert, chop | ❌ D11 |
 | Mode panel | middle/right button on a mode | nothing (`notused_middle`, `notused_right`) | ✅ (nothing either) |

@@ -19,6 +19,7 @@ pub mod guard;
 mod history;
 pub mod import;
 mod indicator;
+pub mod library;
 mod links;
 pub mod picture;
 pub mod prefs;
@@ -70,6 +71,9 @@ pub enum UiRequest {
     /// Paste the system clipboard's text into the text being typed (xfig's
     /// Shift+middle "paste text" in Text mode); it comes back as text input.
     PasteText,
+    /// Open the library panel (xfig's library mode button, and the middle
+    /// button while a library object is in hand).
+    OpenLibrary,
 }
 
 /// The document session.
