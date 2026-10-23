@@ -585,7 +585,10 @@ impl App {
                 ctx.request_repaint();
                 continue;
             }
-            if matches!(r.method.as_str(), "ui.pointer" | "ui.key" | "ui.click_label") {
+            if matches!(
+                r.method.as_str(),
+                "ui.pointer" | "ui.key" | "ui.click_label" | "ui.modifiers"
+            ) {
                 let queued = control::input_steps(self, &r.method, &r.params)
                     .and_then(|(steps, result)| self.injector.push(steps).map(|seq| (seq, result)));
                 match queued {

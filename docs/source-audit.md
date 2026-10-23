@@ -1,6 +1,6 @@
 # Function-level source audit of xfig (S4)
 
-**Status:** 2026-10-22 (D5: the `e_measure.c` functions, the measure results and the angle `compute_*` functions are ported). 2026-10-22 (D4: the `e_tangent.c` functions, the Tangent/Norm Length button and `smart_next_{arc,ellipse,line,spline}_found` are ported). 2026-10-22 (S4 done: every function definition of `old/xfig-3.2.9a/src/*.c` has a status). Regenerate the table with `cargo xtask source-audit` (skips quietly when `old/` is absent; keeps the status, note and task columns of existing rows, merged by file, function name and occurrence).
+**Status:** 2026-10-23 (S4-7: `draw_shift_mousefun_canvas` and `_canvas2` ported). 2026-10-22 (D5: the `e_measure.c` functions, the measure results and the angle `compute_*` functions are ported). 2026-10-22 (D4: the `e_tangent.c` functions, the Tangent/Norm Length button and `smart_next_{arc,ellipse,line,spline}_found` are ported). 2026-10-22 (S4 done: every function definition of `old/xfig-3.2.9a/src/*.c` has a status). Regenerate the table with `cargo xtask source-audit` (skips quietly when `old/` is absent; keeps the status, note and task columns of existing rows, merged by file, function name and occurrence).
 
 S0 ([`source-map.md`](source-map.md)) maps C files to RustFig modules; this file goes one level down, to every function. It covers xfig only. fig2dev's functions were audited one by one in the fig2dev repository (<https://github.com/FabianHassler/fig2dev>, its audit passes; the inventory of the first rounds is `plan/fig2dev-audit.md` here, local and gitignored) and their hardening is task B11; they are not repeated here.
 
@@ -1970,8 +1970,8 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_mousefun.c` | `draw_mousefun_unitbox` | 260 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
 | `w_mousefun.c` | `draw_mousefun_topruler` | 266 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
 | `w_mousefun.c` | `draw_mousefun_sideruler` | 281 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
-| `w_mousefun.c` | `draw_shift_mousefun_canvas` | 296 | partial | the indicator's Shift and Ctrl variants while the key is held (Shift: del point, dimension line, ...; Ctrl: Zoom area, Pan to origin, Unzoom; Ctrl+Shift: More approx, Cycle shapes, More interp) | S4-7 |
-| `w_mousefun.c` | `draw_shift_mousefun_canvas2` | 302 | partial | the indicator's Shift and Ctrl variants while the key is held (Shift: del point, dimension line, ...; Ctrl: Zoom area, Pan to origin, Unzoom; Ctrl+Shift: More approx, Cycle shapes, More interp) | S4-7 |
+| `w_mousefun.c` | `draw_shift_mousefun_canvas` | 296 | ported | the indicator's Shift and Ctrl variants while the key is held (Shift: del point, dimension line, ...; Ctrl: Zoom area, Pan to origin, Unzoom; Ctrl+Shift: More approx, Cycle shapes, More interp) | S4-7 |
+| `w_mousefun.c` | `draw_shift_mousefun_canvas2` | 302 | ported | the indicator's Shift and Ctrl variants while the key is held (Shift: del point, dimension line, ...; Ctrl: Zoom area, Pan to origin, Unzoom; Ctrl+Shift: More approx, Cycle shapes, More interp) | S4-7 |
 | `w_mousefun.c` | `draw_mousefun_canvas` | 314 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
 | `w_mousefun.c` | `draw_mousefun_msg` | 320 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
 | `w_mousefun.c` | `draw_mousefun` | 334 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
@@ -2230,3 +2230,4 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `xfigmain.c` | `cancel_autorefresh` | 2075 | replaced | Autorefresh mode reloads a figure changed on disk, once a second, asking first with unsaved edits (`ui-egui/src/reload.rs`, S4-9) | S4-9 |
 | `xfigmain.c` | `toggle_refresh_mode` | 2092 | replaced | Autorefresh mode entry of the View menu (S4-9) | S4-9 |
 | `xfigmain.c` | `check_refresh` | 2109 | replaced | Autorefresh mode reloads a figure changed on disk, once a second, asking first with unsaved edits (`ui-egui/src/reload.rs`, S4-9) | S4-9 |
+| 2026-10-23 | S4-7: the two `w_mousefun.c` Shift functions ported (partial → ported). |

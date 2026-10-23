@@ -30,7 +30,7 @@ The three functions of each mode are listed in the mode's section ([shapes](draw
 
 ## Shift
 
-Holding Shift changes a button's job in some modes. While Shift is held, the mouse indicator shows the Shift meanings:
+Holding Shift changes a button's job in some modes. While Shift is held, the mouse indicator shows the Shift meanings (likewise Ctrl, and Ctrl+Shift, show those buttons' meanings):
 
 - While drawing a polyline, polygon, spline or arc: Shift+left removes the last point ("del point"). Shift+middle (not for arcs) finishes the object at the last point placed, without adding the clicked point ("finish here", a RustFig addition).
 - Box, Arc-box, Picture: Shift+middle draws a square from its centre.

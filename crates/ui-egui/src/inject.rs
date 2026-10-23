@@ -28,12 +28,17 @@ pub struct Step {
     pub events: Vec<Event>,
     /// Held modifiers during this frame (`None`: leave the real ones).
     pub modifiers: Option<Modifiers>,
+    /// Keep `modifiers` held in the frames after this one too, until a
+    /// later holding step changes them (`ui.modifiers`).
+    pub hold: bool,
 }
 
 /// The queue of steps and how many have been consumed.
 #[derive(Debug, Default)]
 pub struct Injector {
     queue: VecDeque<Step>,
+    /// Modifiers held across frames (`ui.modifiers`).
+    held: Option<Modifiers>,
     pushed: u64,
     consumed: u64,
 }
@@ -62,12 +67,24 @@ impl Injector {
 
     /// Feed the next step into this frame's raw input.
     pub fn feed(&mut self, raw: &mut RawInput) {
-        let Some(step) = self.queue.pop_front() else { return };
-        self.consumed += 1;
-        if let Some(m) = step.modifiers {
+        let step = self.queue.pop_front();
+        if let Some(step) = &step {
+            self.consumed += 1;
+            if step.hold {
+                self.held = step.modifiers.filter(|m| !m.is_none());
+            }
+        }
+        // A step's own modifiers add to the held ones.
+        let own = step.as_ref().and_then(|s| s.modifiers);
+        if let Some(m) = match (own, self.held) {
+            (Some(a), Some(b)) => Some(a | b),
+            (a, b) => a.or(b),
+        } {
             raw.modifiers = m;
         }
-        raw.events.extend(step.events);
+        if let Some(step) = step {
+            raw.events.extend(step.events);
+        }
     }
 }
 
@@ -79,6 +96,16 @@ fn num(p: &Value, key: &str) -> Result<Option<f32>, String> {
             _ => Err(format!("{key} must be a finite number within ±{MAX_COORD}")),
         },
     }
+}
+
+/// `ui.modifiers` {modifiers}: hold these modifiers from now on (an empty
+/// list releases them), as if the keys were kept down.
+pub fn modifier_steps(p: &Value) -> Result<Vec<Step>, String> {
+    Ok(vec![Step {
+        events: Vec::new(),
+        modifiers: Some(parse_modifiers(p)?),
+        hold: true,
+    }])
 }
 
 pub fn parse_button(p: &Value) -> Result<PointerButton, String> {
@@ -141,6 +168,7 @@ pub fn pointer_steps(p: &Value) -> Result<Vec<Step>, String> {
     let step = |events: Vec<Event>| Step {
         events,
         modifiers: Some(m),
+        hold: false,
     };
     let mv = || step(vec![Event::PointerMoved(pos)]);
     let click = |steps: &mut Vec<Step>| {
@@ -200,6 +228,7 @@ pub fn key_steps(p: &Value) -> Result<Vec<Step>, String> {
                     modifiers: m,
                 }],
                 modifiers: Some(m),
+                hold: false,
             });
         }
     }
@@ -212,6 +241,7 @@ pub fn key_steps(p: &Value) -> Result<Vec<Step>, String> {
             steps.push(Step {
                 events: vec![Event::Text(c.to_string())],
                 modifiers: Some(m),
+                hold: false,
             });
         }
     }
@@ -297,6 +327,26 @@ pub fn find_label(list: &[WidgetInfo], label: &str, index: usize) -> Option<Widg
 
 #[cfg(test)]
 mod tests {
+    /// `ui.modifiers` keeps the modifiers held in later frames until released.
+    #[test]
+    fn held_modifiers_last_until_released() {
+        let mut inj = Injector::default();
+        inj.push(modifier_steps(&json!({"modifiers": ["shift"]})).unwrap())
+            .unwrap();
+        for _ in 0..10 {
+            let mut raw = RawInput::default();
+            inj.feed(&mut raw);
+            assert!(raw.modifiers.shift);
+        }
+        inj.push(modifier_steps(&json!({"modifiers": []})).unwrap()).unwrap();
+        let mut raw = RawInput::default();
+        inj.feed(&mut raw);
+        assert!(!raw.modifiers.shift);
+        let mut raw = RawInput::default();
+        inj.feed(&mut raw);
+        assert!(!raw.modifiers.shift);
+    }
+
     use super::*;
     use serde_json::json;
 

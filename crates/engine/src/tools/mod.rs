@@ -3776,8 +3776,9 @@ mod tests {
     /// What a button press can change.
     fn snapshot(e: &Engine) -> String {
         format!(
-            "{} {:?} {:?} {:?} {:?} {} {} {}",
+            "{} {:?} {:?} {:?} {:?} {:?} {} {} {}",
             e.revision(),
+            e.locate,
             e.status(),
             e.selection(),
             e.tool_state,
@@ -3901,22 +3902,28 @@ mod tests {
                             continue;
                         }
                         let at = if prefix.is_some() { q } else { p };
-                        let h = base.mouse_hints();
-                        for (b, label) in BUTTONS.iter().zip([h.left, h.middle, h.right]) {
-                            let mut e = setup(prefix);
-                            let before = snapshot(&e);
-                            let _ = e.tool_event(ToolEvent::Press {
-                                pos: Point::new(at.0, at.1),
-                                button: *b,
-                                shift: false,
-                            });
-                            let changed = snapshot(&e) != before;
-                            let what = format!("{} after {prefix:?}, {b:?} ({label:?}) in fixture {n}", tool.id());
-                            if label.is_empty() {
-                                assert!(!changed, "{what}: no label, but the press changed something");
-                            } else {
-                                let key = (tool.id(), format!("{prefix:?}"), format!("{b:?}"), label);
-                                *acted.entry(key).or_default() |= changed;
+                        // Plain presses and Shift presses against the Shift labels (S4-7).
+                        for shift in [false, true] {
+                            let h = base.mouse_hints_with(shift);
+                            for (b, label) in BUTTONS.iter().zip([h.left, h.middle, h.right]) {
+                                let mut e = setup(prefix);
+                                let before = snapshot(&e);
+                                let _ = e.tool_event(ToolEvent::Press {
+                                    pos: Point::new(at.0, at.1),
+                                    button: *b,
+                                    shift,
+                                });
+                                let changed = snapshot(&e) != before;
+                                let what = format!(
+                                    "{} after {prefix:?}, shift {shift}, {b:?} ({label:?}) in fixture {n}",
+                                    tool.id()
+                                );
+                                if label.is_empty() {
+                                    assert!(!changed, "{what}: no label, but the press changed something");
+                                } else {
+                                    let key = (tool.id(), format!("{prefix:?} shift {shift}"), format!("{b:?}"), label);
+                                    *acted.entry(key).or_default() |= changed;
+                                }
                             }
                         }
                     }

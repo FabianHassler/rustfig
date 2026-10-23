@@ -12,7 +12,8 @@
 //! path as real events): `ui.pointer` {action: move|press|release|click|
 //! double_click|scroll, x, y (window points), button?, modifiers?, dx?, dy?},
 //! `ui.key` {key?, text?, modifiers?}, `ui.click_label` {label, button?,
-//! modifiers?, index?}. Each replies once the input has been processed.
+//! modifiers?, index?}, `ui.modifiers` {modifiers} (held until changed; an
+//! empty list releases them). Each replies once the input has been processed.
 //! `ui.state` lists `open` (pop-ups, menus, dialogs) and `widgets` (label,
 //! role, rect in points) so clients can target widgets by label.
 
@@ -210,6 +211,7 @@ pub fn input_steps(app: &App, method: &str, p: &Value) -> Result<(Vec<crate::inj
     match method {
         "ui.pointer" => Ok((inject::pointer_steps(p)?, json!({"queued": true}))),
         "ui.key" => Ok((inject::key_steps(p)?, json!({"queued": true}))),
+        "ui.modifiers" => Ok((inject::modifier_steps(p)?, json!({"queued": true}))),
         _ => {
             let label = p.get("label").and_then(Value::as_str).ok_or("label is required")?;
             let index = p.get("index").and_then(Value::as_u64).unwrap_or(0).min(10_000) as usize;
