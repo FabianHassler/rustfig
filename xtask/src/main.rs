@@ -211,7 +211,7 @@ fn assets() -> Result<(), String> {
         let rel = f.strip_prefix(&root).unwrap_or(&f).to_string_lossy().replace('\\', "/");
         if FONT_EXTS.contains(&ext.as_str()) && !is_allowed_font(&rel, &f) {
             errors.push(format!(
-                "{rel}: font files belong in storytold/craft-fonts, not this repository"
+                "{rel}: font files do not belong in this repository (only the key-symbol subset, listed in ASSETS.md)"
             ));
             continue;
         }
@@ -326,7 +326,8 @@ fn wasm() -> Result<(), String> {
 fn ci() -> Result<(), String> {
     run(cargo().args(["fmt", "--all", "--check"]))?;
     run(cargo().args(["clippy", "--workspace", "--all-targets", "--", "-D", "warnings"]))?;
-    run(cargo().args(["test", "--workspace"]))?;
+    // Tests must not depend on the fonts installed on the machine (F1).
+    run(cargo().env("FIG2DEV_BUILTIN_FONTS", "1").args(["test", "--workspace"]))?;
     layers()?;
     assets()?;
     licences()?;

@@ -2,8 +2,10 @@
 
 Every image, icon, font or other asset file in this repository needs a row
 here. `cargo xtask assets` (part of `cargo xtask ci`) fails on any asset file
-without a row, and on any font file except the one key-symbol font below: other
-fonts live in [storytold/craft-fonts](https://github.com/storytold/craft-fonts).
+without a row, and on any font file except the one key-symbol font below.
+RustFig otherwise ships no fonts: text uses the system's fonts, the TeX Gyre
+fonts a user installs from CTAN (Help menu), and the `epaint_default_fonts`
+fallback.
 
 | Path | Author | Source | Licence | Notes |
 |------|--------|--------|---------|-------|

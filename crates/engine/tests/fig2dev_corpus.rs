@@ -340,6 +340,8 @@ fn report(results: &[Outcome], images: &[(usize, String)], sum: &Value, versions
 #[test]
 #[ignore = "slow: compares the whole sample corpus with fig2dev (A10)"]
 fn corpus_matches_fig2dev() {
+    // Same glyphs on every machine, whatever fonts are installed (F1).
+    rustfig_engine::text::set_builtin_fonts(true);
     let (Some(f2d), Some(gs)) = (fig2dev::find(), fig2dev::ghostscript()) else {
         eprintln!("fig2dev or ghostscript not installed; skipping the corpus comparison");
         return;

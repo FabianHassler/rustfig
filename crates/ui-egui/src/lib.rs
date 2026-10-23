@@ -37,6 +37,8 @@ pub mod rulers;
 pub mod screen_pick;
 pub mod settings;
 pub mod styles;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod tex_gyre;
 pub mod theme;
 pub mod vector_icons;
 pub mod xfig_icons;
@@ -137,6 +139,9 @@ pub struct App {
     /// The Export panel's export running on its thread (W10-13).
     #[cfg(not(target_arch = "wasm32"))]
     pub export_bg: Option<export_bg::Running>,
+    /// "Install TeX Gyre fonts…" running on its thread (F1).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub tex_gyre: Option<tex_gyre::Running>,
     /// The file the last background export wrote ("Show in folder").
     #[cfg(not(target_arch = "wasm32"))]
     pub last_export: Option<String>,
@@ -201,6 +206,8 @@ impl App {
             #[cfg(not(target_arch = "wasm32"))]
             export_bg: None,
             #[cfg(not(target_arch = "wasm32"))]
+            tex_gyre: None,
+            #[cfg(not(target_arch = "wasm32"))]
             last_export: None,
             digitize: digitize::Digitize::default(),
             reload: reload::Reload::default(),
@@ -221,6 +228,9 @@ impl App {
         // Mutated only by the native control server below.
         #[cfg_attr(target_arch = "wasm32", allow(unused_mut))]
         let mut app = App::with_engine(engine);
+        // TeX Gyre fonts installed earlier (F1) join the font lookup.
+        #[cfg(not(target_arch = "wasm32"))]
+        tex_gyre::register_installed();
         // Copy as picture (E14) uses the system clipboard; tests and wasm have none.
         #[cfg(not(target_arch = "wasm32"))]
         app.engine
@@ -521,6 +531,8 @@ impl App {
         dialogs::show(self, ctx);
         #[cfg(not(target_arch = "wasm32"))]
         export_bg::tick(self, ctx);
+        #[cfg(not(target_arch = "wasm32"))]
+        tex_gyre::tick(self, ctx);
         digitize::show(self, ctx);
         charmap::show(self, ctx);
         keys_sheet::show(self, ctx);

@@ -9,7 +9,7 @@ lower layers; nothing below L6 may depend on egui, eframe, winit or rfd.
 
 | Layer | Crate | Role |
 |---|---|---|
-| ext | `figbase` (FabianHassler/fig2dev) | what fig2dev and RustFig share: points, X-splines, arcs, arrowheads, line widths; Fig font tables, metrics, glyph outlines (craft-fonts or fallback); colour tables |
+| ext | `figbase` (FabianHassler/fig2dev) | what fig2dev and RustFig share: points, X-splines, arcs, arrowheads, line widths; Fig font tables, metrics, glyph outlines (system fonts, TeX Gyre, or the built-in fallback); colour tables |
 | L0 | `rustfig-geom` | `figbase`'s geometry plus hit testing |
 | ext | `fig2dev` (FabianHassler/fig2dev) | fig2dev: reader (`read.c`, Fig 1.3–3.2), `bound.c`, `gendev` (`convert`), option and language tables, every ported driver; the scene drivers (EPS, PDF, SVG, bitmaps) draw a `Scene` with its rasteriser and fill patterns |
 | L1 | `rustfig-model` | document model: objects, styles, colours, ids, transforms, flattening |

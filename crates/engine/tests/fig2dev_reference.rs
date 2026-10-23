@@ -119,6 +119,8 @@ fn rustfig_png(fig: &[u8]) -> Vec<u8> {
 
 #[test]
 fn fixtures_match_fig2dev() {
+    // Same glyphs on every machine, whatever fonts are installed (F1).
+    rustfig_engine::text::set_builtin_fonts(true);
     let Some(tool) = fig2dev::find() else {
         eprintln!("fig2dev not installed; skipping the reference comparison");
         return;

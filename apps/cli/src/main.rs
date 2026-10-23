@@ -374,6 +374,8 @@ fn measure_doc(doc: &Document, report: &mut Report, scale_budget: f64) -> Result
 }
 
 fn perf(args: &[String]) -> Result<(), String> {
+    // Timings must not depend on the installed fonts (F1).
+    rustfig_engine::text::set_builtin_fonts(true);
     let n = opt(args, "--paths")
         .and_then(|v| v.parse().ok())
         .unwrap_or(50_000usize)
@@ -390,6 +392,7 @@ fn perf(args: &[String]) -> Result<(), String> {
 }
 
 fn bench(args: &[String]) -> Result<(), String> {
+    rustfig_engine::text::set_builtin_fonts(true); // see perf()
     let path = args.first().ok_or(USAGE)?;
     let (e, ms) = time(|| open(path));
     let e = e?;

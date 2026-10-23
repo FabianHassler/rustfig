@@ -86,9 +86,11 @@ The programs go into `~/.cargo/bin` (Windows: `%USERPROFILE%\.cargo\bin`),
 which rustup puts on your `PATH`. Update later with `git pull` and the same
 two `cargo install` lines (or rerun the `--git` line with `--force`); remove with `cargo uninstall rustfig rustfig-cli`.
 
-Optional: `CRAFT_FONTS_DIR=/abs/path/to/craft-fonts cargo install …` embeds the
-[craft-fonts](https://github.com/storytold/craft-fonts) collection for closer
-PostScript font metrics; without it RustFig uses built-in fallback fonts.
+Fonts: RustFig draws text with the fonts installed on your system (Times,
+Helvetica, Courier, Symbol, Palatino, … or their URW/TeX Gyre clones) and
+falls back to built-in fonts. Help > Install TeX Gyre fonts… downloads the
+metric-compatible TeX Gyre fonts from CTAN (checked by SHA-256, nothing is
+bundled). `FIG2DEV_BUILTIN_FONTS=1` forces the built-in fonts.
 
 ## Quick start
 

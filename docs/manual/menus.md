@@ -31,4 +31,5 @@ Commands that xfig has only as modes or keys: Group and Ungroup, Update, Convert
 
 - RustFig Manual: this manual (xfig's "Xfig Reference").
 - RustFig Reference (commands): every command with its id and shortcut, filterable. The same ids work in the [control channel and MCP](automation.md).
+- Install TeX Gyre fonts: downloads the TeX Gyre fonts from CTAN into RustFig's user data folder (native app; see [the font chooser](attributes.md)).
 - About RustFig: version and licence; the xfig copyright holders.

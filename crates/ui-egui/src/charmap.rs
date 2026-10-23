@@ -248,6 +248,35 @@ mod tests {
         assert!(drawable(0, true, 0, "E000").is_empty());
     }
 
+    /// Probe (F1): how many characters of each block the installed fonts
+    /// (and the built-in ones) can draw. Run with
+    /// `cargo test -p rustfig-ui-egui charmap_coverage -- --ignored --nocapture`.
+    #[test]
+    #[ignore = "prints the character-map coverage of the installed fonts"]
+    fn charmap_coverage_probe() {
+        for builtin in [false, true] {
+            rustfig_text::set_builtin_fonts(builtin);
+            println!("== {} fonts ==", if builtin { "built-in" } else { "system" });
+            for (font, name) in [(0, "Times"), (32, "Symbol"), (34, "ZapfDingbats")] {
+                if symbol_tables::table_for(font).is_some() {
+                    println!(
+                        "{name:14} {}/{}",
+                        drawable(font, true, 0, "").len(),
+                        table(font, 0).len()
+                    );
+                } else {
+                    for (b, (n, ..)) in BLOCKS.iter().enumerate() {
+                        println!(
+                            "{name:8} {n:24} {}/{}",
+                            drawable(font, true, b, "").len(),
+                            table(font, b).len()
+                        );
+                    }
+                }
+            }
+        }
+    }
+
     /// The superscripts block lists ¹²³ (Latin-1) with ⁰ and ⁴ to ⁹.
     #[test]
     fn superscripts_one_to_three_are_listed() {
