@@ -32,7 +32,7 @@ impl Engine {
     pub fn cursor_kind(&self) -> CursorKind {
         use ToolKind::*;
         match &self.tool_state {
-            ToolState::Paste { .. } => return CursorKind::Move,
+            ToolState::Paste { .. } | ToolState::Library { .. } => return CursorKind::Move,
             ToolState::MoveObjs { dragging: true, .. } | ToolState::PointDrag { .. } => return CursorKind::Grabbing,
             ToolState::MoveObjs { .. } => return CursorKind::Move,
             _ => {}

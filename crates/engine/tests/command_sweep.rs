@@ -98,7 +98,7 @@ fn hostile_values() -> Vec<Value> {
 #[test]
 fn every_command_with_hostile_params() {
     for c in cmd::all() {
-        if c.id == "file.save" || c.id == "file.export" || c.id == "file.digitize" {
+        if c.id == "file.save" || c.id == "file.export" || c.id == "file.digitize" || c.id == "library.save" {
             continue; // would write files
         }
         for p in hostile_values() {
@@ -151,7 +151,7 @@ fn digitize_with_hostile_params() {
 #[test]
 fn every_command_on_empty_document() {
     for c in cmd::all() {
-        if c.id == "file.save" || c.id == "file.export" || c.id == "file.digitize" {
+        if c.id == "file.save" || c.id == "file.export" || c.id == "file.digitize" || c.id == "library.save" {
             continue;
         }
         let mut e = Engine::new();
@@ -180,7 +180,7 @@ proptest! {
         let mut e = populated();
         for (i, a, b) in seq {
             let c = &all[i % all.len()];
-            if c.id == "file.save" || c.id == "file.export" || c.id == "file.digitize" || c.id.starts_with("file.open") {
+            if c.id == "file.save" || c.id == "file.export" || c.id == "file.digitize" || c.id == "library.save" || c.id.starts_with("file.open") {
                 continue;
             }
             let p = json!({"dx": a, "dy": b, "x": a, "y": b, "width": b, "height": a, "angle": a,

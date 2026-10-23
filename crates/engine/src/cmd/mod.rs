@@ -15,6 +15,7 @@ mod export_panel;
 pub(crate) mod file;
 mod indicator;
 mod joinsplit;
+mod library;
 pub(crate) mod measure;
 mod object;
 mod outline;
@@ -91,6 +92,7 @@ pub fn all() -> &'static [Command] {
         v.extend(measure::commands());
         v.extend(dimline::commands());
         v.extend(joinsplit::commands());
+        v.extend(library::commands());
         v.extend(region::commands());
         v.extend(doc::commands());
         v.extend(color::commands());

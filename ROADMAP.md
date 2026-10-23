@@ -1,6 +1,6 @@
 # RustFig roadmap
 
-**Status (2026-10-23):** Stage **Alpha**. Overall xfig parity **≈79 %**
+**Status (2026-10-23):** Stage **Alpha**. Overall xfig parity **≈84 %**
 ([assessment](docs/target-app-parity.md)). The native app draws, edits,
 saves and exports. The web build compiles; it is not yet packaged or tested in a browser.
 
@@ -17,10 +17,10 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 
 | Measure | Value |
 |---------|-------|
-| Overall parity (weighted) | ≈79 % |
-| Commands (all reachable from the control channel and MCP) | 216 engine (incl. 44 tool modes and "no mode") + 29 UI |
+| Overall parity (weighted) | ≈84 % |
+| Commands (all reachable from the control channel and MCP) | 223 engine (incl. 44 tool modes and "no mode") + 29 UI |
 | Interactive tools (xfig modes) | 44 (xfig's 43 + Trim/Split/Extend) |
-| Tests | 589 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
+| Tests | 598 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 1.3–3.2, write 3.2 |
 | Export formats | all through fig2dev's ported drivers (`convert`): PDF, SVG, EPS, PNG, GIF, JPEG, TIFF, PPM, PCX, XBM, XPM, EPS+PDF pair, LaTeX box from its scene writers (PostScript without page layout yet); LaTeX picture, epic/eepic/eepicemu, PiCTeX, TeXtyl, tpic, pic, pstex/pdftex, pict2e, CGM, HPGL, DXF, MetaPost, METAFONT, ge, image map, Gerber, shape, TikZ, PSTricks, EMF, Tk/Perl-Tk from ported fig2dev drivers (every fig2dev language except `sld`); fig2dev's own suite 79 pass / 9 fail / 1 skipped |
 | Perf, 50k paths (render fit / hit test / open / edit + undo) | 260 ms / 0.1 ms / 20 ms / 0.9 ms |
@@ -29,7 +29,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 
 | Dimension | Parity | Details |
 |-----------|--------|---------|
-| Drawing modes | 88 % | all xfig shapes except library objects; freehand and arc by centre |
+| Drawing modes | 95 % | all xfig shapes and library objects (D6); freehand and arc by centre |
 | Editing modes | 81 % | measure modes done; missing anchor point, array copy, align to canvas |
 | Attributes panel | 80 % | xfig's per-mode buttons; missing colour editor, latex/manhattan positioning |
 | File format | 92 % | Fig 1.3–3.2 read; exact pre-3.2 spline conversion missing |
@@ -37,7 +37,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Text | 55 % | fallback fonts, no character map or LaTeX special text |
 | View & navigation | 96 % | xfig's layout and three-button mouse (the only ones, W16/W17), depth panel, rulers and units box, object snaps; zoom box missing |
 | Undo | 100 % | multi-level (xfig: single level) |
-| Libraries | 0 % | not started |
+| Libraries | 85 % | 30 xfig libraries bundled, panel with thumbnails, placing, copy to library, user folder (D6); xfig's library list files and the web build missing |
 | Printing | 10 % | export PDF only |
 | Settings & styles | 15 % | no persistence, style manager |
 | Platforms | 50 % | macOS verified; web build compiles; Windows/Linux and the web app at run time unverified |
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-23 | D6: library mode. xfig's libraries in `libraries/` (30 libraries, 2,540 figures; Charts, house_plans and transit left out for their licences), `ASSETS.md` rows and an extended `cargo xtask assets`; `library.*` commands, library tool state with xfig's buttons and keys, the library panel with thumbnails, Copy to library, manual topic; parity ≈79 → ≈84 %. |
 | 2026-10-23 | E5 (character map lists only drawable characters), S4-7 (Shift/Ctrl meanings in the mouse-function indicator), D10 done (dimension-line lengths as fractions of an inch, example-line preview and arrow pictures in the Dimension line window), W10-14 (saved versions: `file.versions`, `file.restore_version`, File > Saved versions…), W9 fix (cap and join pictures redrawn as xfig's). 2 engine commands. |
 | 2026-10-23 | Parity ≈73 → ≈79 %: B5 printing with preview (Printing 10 → 85 %), C1 web packaging, C2 browser file I/O, P2 platform checks (Platforms 50 → 70 %); F1 system fonts (fig2dev v0.7.0). |
 | 2026-10-22 | Recount: parity ≈65 → ≈73 % (Text 55 → 65 %, Settings & styles 15 → 75 %). Since the last entry: D5 measure modes, S3 command line, W10 panels (picture, compound, edit panel live, point table, export panel), D10 mode options, S4 (locate, paste, cursors, convert, shape factor, relative pictures, Digitize, Autorefresh, New window), E3 zoom box, D16 Trim mode, D17 Escape levels, E10 text editing, E4/E4b colours and pick from screen, E6 styles, D18 no selection layer (xfig's mode-first way). 214 engine commands, 589 tests. |

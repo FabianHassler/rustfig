@@ -2,7 +2,7 @@
 
 **Paths written `fig2dev:crates/…` are in the fig2dev repository (<https://github.com/FabianHassler/fig2dev>), where figbase, the fig2dev library and the `fig2dev` program moved (B13).**
 
-**Status:** 2026-10-23 (S4-7: `w_mousefun.c` complete). 2026-10-22 (D5: `e_measure.c` ported); 2026-10-22 (D4: `e_tangent.c` ported with the curve search of `u_smartsearch.c`/`u_geom.c`); 2026-10-22 (D14: `engine/links.rs` generalised); 2026-10-22 (D7: `u_elastic.c`/`u_geom.c` constraints in `engine/anglegeom.rs`; D8: smart links, `u_list.c`'s linked move in `engine/links.rs`, the Smart Links button; D3: `e_chop.c` ported, `geom/intersect.rs` from `w_intersect.c`); 2026-10-21 (S4: the xfig file statuses corrected from the function-level audit, [`source-audit.md`](source-audit.md); DD9: sweep; DD7: `read.c`'s repairs as functions used by `format/bridge/export`); 2026-10-20 (DD3: `f_read.c` read through fig2dev's reader); 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
+**Status:** 2026-10-23 (D6: `e_placelib.c` and `w_library.c` ported). 2026-10-23 (S4-7: `w_mousefun.c` complete). 2026-10-22 (D5: `e_measure.c` ported); 2026-10-22 (D4: `e_tangent.c` ported with the curve search of `u_smartsearch.c`/`u_geom.c`); 2026-10-22 (D14: `engine/links.rs` generalised); 2026-10-22 (D7: `u_elastic.c`/`u_geom.c` constraints in `engine/anglegeom.rs`; D8: smart links, `u_list.c`'s linked move in `engine/links.rs`, the Smart Links button; D3: `e_chop.c` ported, `geom/intersect.rs` from `w_intersect.c`); 2026-10-21 (S4: the xfig file statuses corrected from the function-level audit, [`source-audit.md`](source-audit.md); DD9: sweep; DD7: `read.c`'s repairs as functions used by `format/bridge/export`); 2026-10-20 (DD3: `f_read.c` read through fig2dev's reader); 2026-10-18 (B9: emf, tk, ptk, tkpattern; B12: shared code in `figbase`, the scene writers in fig2dev's crate, every export through fig2dev; B3: pict2e; B1: tikz; B3: pstricks). First version, after the decision to port from xfig's
 sources (`LICENSE-xfig`). Nothing has been ported line by line yet: every
 "own" row was written from the manual and the format description and must be
 checked against the C file named in it.
@@ -93,7 +93,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `e_measure.c` | 514 | measure angle, length, area | `cmd/measure.rs`, `tools/measure.rs` | ported (S4) | D5 |
 | `e_move.c` | 135 | move (constrained) | tools | ported (S4) | — |
 | `e_movept.c` | 845 | move point (constrained, linked) | tools | ported; xfig does not link here, a box corner resizes the attached ends in RustFig (D14) | D14 |
-| `e_placelib.c` | 337 | place library object | — | missing (11 functions, S4) | D6 |
+| `e_placelib.c` | 337 | place library object | `library::Engine::{begin_library, library_event, library_transform}`, `ToolState::Library` | ported: place (stays in the mode), new object, cancel, place and edit, draw box, place at original position, keys r l h v s S; the keys act about the object's centre, not the pointer | D6 |
 | `e_rotate.c` | 575 | rotate, copy & rotate, anchor, copies count | tools | ported: centre, number of copies (D10); the Num Copies button missing | D10 |
 | `e_scale.c` | 1444 | scale box/edge/centre | tools | ported: edge scaling in one dimension, dimension lines (D10) | D10 |
 | `e_tangent.c` | 159 | tangent/normal lines | `cmd/tangent.rs`, `tools/tangent.rs`; curve search from `u_smartsearch.c`, `u_geom.c` | ported (S4) | D4 |
@@ -165,7 +165,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_export.c` | 2054 | export panel | `dialogs::export` (language menu in xfig's order), default suffixes in `fig2dev:crates/fig2dev/src/languages.rs` | ported: Export panel options (rows per language, preview, fit to page, kept per language; HPGL rows B9) (26 functions, S4) | W10-4, W10-10, W10-11 |
 | `w_print.c` | 1542 | print panel | `ui-egui/print_dialog`, `cmd/print` | replaced: Print panel with preview, PDF to the system print dialog; all options kept, printcap not needed (B5) | B5 |
 | `w_file.c`, `w_dir.c`, `w_browse.c`, `w_listwidget.c` | 3.5 k | file panel and browser with preview | native dialogs (`rfd`) | modern; Open of a missing name starts a new figure; preview and offset fields missing (S4) | W10-12 |
-| `w_library.c` | 1831 | library panel | — | missing | D6 |
+| `w_library.c` | 1831 | library panel | `engine::library`, `ui-egui/src/library.rs` | ported: library tree, object lists, comments, icon and list views, icon size, thumbnails, Select object; missing: library list files, Stop (loading is lazy) | D6 |
 | `w_srchrepl.c` | 966 | search/replace, spell check | `dialogs::search` | partial: spell check | F5 |
 | `w_style.c` | 1026 | style manager | `ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs` | replaced | E6 |
 | `w_fontpanel.c` | 424 | font menus | `attributes` Text Font panel | replaced by the Text Font pop-up (S4) | E11 |

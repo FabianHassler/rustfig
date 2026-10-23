@@ -9,7 +9,7 @@ P26-10-23 (D10 done: fractions of an inch landed; leftovers: preview arrowheads 
 | 25 | Exports hand fig2dev the objects the Fig 3.2 text would give (the bridge, DD7; the writer's rules, not the model, decide), which drop arrows on pie-wedge arcs and refits arc centres from the rounded points instead of keeping the file's centre; fig2dev draws both from the file (`fig2dev_reference` arcs, 2 corpus bounding boxes). Saving loses them too | Export/File format | Medium | 3 |
 | 26 | ✅ closed 2026-10-18 (audit pass 9): pictures get no frame in PS, EPS, PDF and bitmaps (genps strokes none; SVG keeps it) and transparent pixels stay transparent in EPS (colour-key `/ImageType 4`). Left: opaque pixels with the transparent colour are masked too (as fig2dev does for RGB images; for indexed GIFs it masks the index only), PNG with partial alpha is blended over white | Export | Low | 0 |
 | 3 | PostScript output: page layout done 2026-10-18 (B4a); EPS previews (`-A`/`-T`/`-C`) and `-B`/`-R` done 2026-10-18 (B4b); printing done 2026-10-23 (B5) | Export/Printing | Medium | 20 |
-| 4 | Library objects: browse a directory of .fig files and place them | Libraries | Medium | 40 |
+| 4 | ✅ closed 2026-10-23 (D6): library mode with the bundled libraries and the panel; left: xfig's library list files, the Stop button, the web build (no bundled libraries there yet) | Libraries | Low | 6 |
 | 5 | ✅ closed 2026-10-21 (D1): open compound; the dimension-line recomputation on close landed 2026-10-22 (D10); the save query landed 2026-10-21 | Editing | Low | 0 |
 | 6 | ✅ closed 2026-10-22 (D5): measure modes (join/split D2, chop D3, tangent/normal D4) | Editing | Low | 0 |
 | 7 | Settings persistence (units, grid, recent files) and a style manager | Settings | Medium | 30 |
