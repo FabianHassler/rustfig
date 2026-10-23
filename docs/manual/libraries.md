@@ -11,6 +11,8 @@ Library mode button (the wide button at the bottom of the drawing modes) or `Shi
 3. **Select object** (or double-click the object) closes the panel and puts the object in hand: it follows the pointer, its top-left corner at the pointer.
 4. Place it, as below.
 
+**Search**: type in the *Search* field to find figures in all libraries at once, not only the loaded one. Every word you type must occur in the figure's name or in its comments (upper and lower case do not matter); the results list each figure with its library, and those found by their comments say so. Click a result: its library is loaded and the figure picked, then proceed as above (double-click, or *Select object*). *Clear* returns to the library's own list. A long result list is cut; type more of the name.
+
 *View* switches between *Icon View* (thumbnails; *Icon size* 40 to 120) and *List View* (names). Both are remembered (preferences `icon_view`, `library_icon_size`). *Cancel* closes the panel.
 
 ## Placing
@@ -36,7 +38,7 @@ The bundled libraries are in the `libraries` folder next to the program (or in t
 
 ## Commands
 
-For scripts, the control channel and MCP: `library.list`, `library.objects` (`comments: true` adds each figure's comments), `library.place` (`library`, `name`, `x`, `y` or `orig`, `ops`), `library.hand` (put the object in hand as Select object does), `library.transform`, `library.save`, `library.panel`. See [Automation](automation.md).
+For scripts, the control channel and MCP: `library.list`, `library.search` (`query`, `limit`, `comments`: figures of all libraries by name and comments), `library.objects` (`comments: true` adds each figure's comments), `library.place` (`library`, `name`, `x`, `y` or `orig`, `ops`), `library.hand` (put the object in hand as Select object does), `library.transform`, `library.save`, `library.panel`. See [Automation](automation.md).
 
 ## Credits and licences
 
