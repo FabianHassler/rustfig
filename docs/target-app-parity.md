@@ -24,7 +24,7 @@ the score.
 | Attributes / indicator | 10 | 87 % | copy counts; mix memory and lock of xfig's colour panel (not built, recent colours instead) | 6 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
 | Export | 12 | 68 % | `sld`, texts with `\ooo` octal escapes (raw bytes, B11 pass 5), the audit's hardening passes (B11), arrows on pie-wedge arcs and file arc centres lost on the way through the Fig writer (gap #25), picture frames and GIF transparency (gap #26) | 90 |
-| Text | 10 | 70 % | LaTeX special-text export, exact PostScript font metrics, spell check (text editing on the canvas done 2026-10-22, E10; character map 2026-10-22, E5) | 40 |
+| Text | 10 | 70 % | exact PostScript font metrics, spell check (text editing on the canvas done 2026-10-22, E10; character map 2026-10-22, E5) | 40 |
 | View & navigation | 8 | 100 % | — (zoom box, pan to origin and unzoom with Ctrl+click done 2026-10-22, E3) | 0 |
 | Undo | 4 | 100 % | — | 0 |
 | Libraries | 5 | 85 % | xfig's library list files (a file naming several library folders), the Stop button while a big library loads, the web build (no file system: no bundled libraries yet) | 6 |
@@ -34,6 +34,8 @@ the score.
 | **Overall** | 100 | **≈84 %** | | **337** |
 
 ## Evidence of what ships
+
+- LaTeX special text (F2, 2026-10-23; Text, score unchanged, missing item removed): `crates/format/tests/special_text.rs` (special flag and raw text round-trip through `.fig` and `.rustfig`), `crates/engine/tests/special_text.rs` (canvas scene shows the raw source; latex, pstex, pdftex, pict2e, tikz, epic and eepic exports pass it unescaped).
 
 - Printing (B5, 2026-10-23; Printing 10 → 85 %): `crates/engine/src/print.rs` (settings, fig2dev PDF in page mode as `u_print.c` builds its options, `Spooler` trait with `RecordingSpooler`/`NoSpooler` (the app's `OsSpooler` calls `rustfig_os::print::print_pdf`, B5b: the OS print dialog on macOS, Windows, Linux portal, browser tab; no printer or job-parameter fields; `crates/os/src/print.rs`), page rendering with hayro), commands `print.*` in `cmd/print.rs`, panel `crates/ui-egui/src/print_dialog.rs`, manual `docs/manual/print.md`; tests `crates/engine/tests/print.rs` (paper, orientation, pages, grid, layers, spooler, batch, hostile params), `crates/ui-egui/tests/print_panel_ui.rs`. The macOS dialog is checked by hand; the Windows and Linux dialogs compile but are not tested on hardware; the batch is sent as one job per figure.
 
