@@ -251,6 +251,11 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
     let path = p.get("path").and_then(Value::as_str).map(str::to_string);
     match id {
         "app.new" => app.guard_unsaved(Pending::New),
+        // The browser asks for the file first, the unsaved changes after (web_io).
+        "app.open" if path.is_none() && app.file_dialogs.is_web() => {
+            app.file_dialogs
+                .pick_web("Figures", dialogs::FIGURE_EXTS, &app.web_inbox);
+        }
         "app.open" => app.guard_unsaved(Pending::Open(path)),
         "app.merge" => {
             if let Some(p) = path.or_else(|| app.file_dialogs.pick_file("Figures", dialogs::FIGURE_EXTS)) {
@@ -260,6 +265,8 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
                     .map_err(|e| e.message);
             }
         }
+        // The browser saves by download (C2).
+        "app.save" | "app.save_as" if path.is_none() && app.file_dialogs.is_web() => crate::web_io::save(app),
         "app.save" | "app.save_as" if asks_scope(app, p) => {
             // xfig asks before saving inside an open compound.
             app.dialogs.save_scope = Some(if id == "app.save" { "app.save" } else { "app.save_as" });

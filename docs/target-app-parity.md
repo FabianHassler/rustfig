@@ -30,10 +30,12 @@ the score.
 | Libraries | 5 | 0 % | library browser and placement | 40 |
 | Printing | 5 | 10 % | print dialog and printer output | 30 |
 | Settings & styles | 5 | 80 % | — (Global settings rows with effect, Unit/Scale panel, Arrow Size panel and number pop-ups done in W10-23, -24, -31, -32; preferences, recent files, styles with families E6, colours E4 done) | 0 |
-| Platforms | 7 | 55 % | Windows/Linux verification, browser check of the web build, file I/O on the web | 34 |
+| Platforms | 7 | 65 % | Windows/Linux verification, browser check of the web build, autosave in the browser (C3), pictures and Merge on the web | 22 |
 | **Overall** | 100 | **≈73 %** | | **371** |
 
 ## Evidence of what ships
+
+- Browser file I/O (C2, 2026-10-23; Platforms 55 → 65 %): `crates/ui-egui/src/web_io.rs`; `FileDialogs` gained `is_web`, `pick_web` (async `rfd::AsyncFileDialog`, answer through a `WebInbox`) and `download` (rfd's write starts the browser download); Open reads the picked bytes with `file.open_data {base64}` (also PDF/SVG/PNG exports with the figure embedded, which open as `NAME.fig`), dropped files take the same way (unsaved changes asked first), Save and Save As download `file.save_data`, the Export panel downloads `file.export_data` (several files for PostScript+PDF). Tests: `crates/ui-egui/tests/web_io.rs` (open, edit, save, reopen the download; drop; export; embedded PDF; hostile bytes) on `ScriptedDialogs::web`, `crates/engine/tests/open_data.rs`; `cargo xtask wasm` compiles it.
 
 - Web packaging (C1, 2026-10-23; Platforms 50 → 55 %): `cargo xtask web` runs trunk (`web/index.html`, built from `apps/rustfig`; finds `trunk` on PATH or in cargo's bin folder, prints the install line otherwise; `--debug`, `--serve`), checks that `dist/` holds index.html and the wasm; the page shows "Loading RustFig…" until the app starts. Built here: `dist/` = index.html, 14 MB wasm (release, wasm-opt), JS glue. Not opened in a browser (manual check in `docs/hardware-parity.md`).
 
@@ -96,6 +98,7 @@ the score.
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-23 | ≈73 % | C2: browser file I/O (open by picker and drop, save and export as downloads); Platforms 55 → 65 %. |
 | 2026-10-23 | ≈73 % | C1: web packaging with trunk (`cargo xtask web`); Platforms 50 → 55 %. |
 | 2026-10-23 | ≈73 % | D10, W10-13, W10-14, W9 fix: fractions of an inch and the dimension line preview; saved versions; cap/join pictures. Scores unchanged. |
 | 2026-10-22 | ≈73 % | W10-23, -24, -31, -32, -33, W10-3: Global settings rows with effect, Unit/Scale panel, Arrow Size panel, number pop-ups, seven align and nine grid choices; Settings & styles 75 → 80 %. |

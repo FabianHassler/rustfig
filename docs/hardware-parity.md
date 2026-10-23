@@ -19,5 +19,6 @@
 ## Revision history
 | Date | Note |
 |---|---|
+| 2026-10-23 | C2: browser open, drop, save and export. |
 | 2026-10-23 | C1: web build packaged with trunk. |
 | 2026-10-13 | First checklist. |

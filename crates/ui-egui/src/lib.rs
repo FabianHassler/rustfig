@@ -39,6 +39,7 @@ pub mod settings;
 pub mod styles;
 pub mod theme;
 pub mod vector_icons;
+pub mod web_io;
 pub mod xfig_icons;
 
 use rustfig_engine::{Engine, UiRequest};
@@ -59,6 +60,8 @@ pub struct Message {
 pub enum Pending {
     New,
     Open(Option<String>),
+    /// A file the browser picked or dropped (C2).
+    OpenWeb(web_io::WebPick),
     Quit,
 }
 
@@ -149,6 +152,8 @@ pub struct App {
     pub after_save: Option<Pending>,
     /// File pickers (native dialogs; replaced in tests).
     pub file_dialogs: Box<dyn dialogs::FileDialogs>,
+    /// Files the browser picked, waiting to be opened (C2).
+    pub web_inbox: web_io::WebInbox,
     quit_confirmed: bool,
     /// Open pop-ups, menus, windows and dialogs as of the last frame (for `ui.state`).
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
@@ -206,6 +211,7 @@ impl App {
             reload: reload::Reload::default(),
             after_save: None,
             file_dialogs: Box::new(dialogs::NativeDialogs),
+            web_inbox: web_io::WebInbox::default(),
             quit_confirmed: false,
             ui_open: Value::Null,
             #[cfg(not(target_arch = "wasm32"))]
@@ -391,6 +397,11 @@ impl App {
                 self.run("file.new", json!({}));
                 self.engine.set_modified(false);
             }
+            Pending::OpenWeb(pick) => web_io::open_pick(self, &pick),
+            Pending::Open(path) if path.is_none() && self.file_dialogs.is_web() => {
+                self.file_dialogs
+                    .pick_web("Figures", dialogs::FIGURE_EXTS, &self.web_inbox);
+            }
             Pending::Open(path) => {
                 let path = path.or_else(|| self.file_dialogs.pick_file("Figures", dialogs::FIGURE_EXTS));
                 if let Some(p) = path {
@@ -493,10 +504,27 @@ impl App {
         self.poll_control(ctx);
         // A figure, or a PDF/SVG/PNG export with the figure embedded (E16),
         // dropped on the window opens. The picture panel takes its own drops.
+        self.web_inbox.attach(ctx);
         if self.dialogs.edit.is_none() {
-            let dropped = ctx.input(|i| i.raw.dropped_files.iter().find_map(|f| f.path.clone()));
-            if let Some(p) = dropped.and_then(|p| p.to_str().map(str::to_string)) {
-                self.guard_unsaved(Pending::Open(Some(p)));
+            // A path on the desktop; the browser gives the bytes and a name (C2).
+            let dropped = ctx.input(|i| {
+                i.raw.dropped_files.iter().find_map(|f| match (&f.path, &f.bytes) {
+                    (Some(p), _) => p.to_str().map(|p| Pending::Open(Some(p.to_string()))),
+                    (None, Some(b)) => Some(Pending::OpenWeb(web_io::WebPick {
+                        name: f.name.clone(),
+                        bytes: b.to_vec(),
+                    })),
+                    (None, None) => None,
+                })
+            });
+            if let Some(action) = dropped {
+                self.guard_unsaved(action);
+            }
+            // The picker's answer; the unsaved changes are asked after it.
+            if self.pending.is_none() {
+                if let Some(p) = self.web_inbox.take().into_iter().next() {
+                    self.guard_unsaved(Pending::OpenWeb(p));
+                }
             }
         }
         let tokens = theme::Tokens::new(ctx.style().visuals.dark_mode, self.button_3d);

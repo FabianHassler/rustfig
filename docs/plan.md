@@ -174,7 +174,7 @@ covered by W2.
 | Id | Task | Acceptance | Hours |
 |----|------|------------|------:|
 | C1 | ✅ 2026-10-23 (`cargo xtask web` builds `dist/` with trunk; opening in the three browsers is a manual check, listed in `docs/hardware-parity.md`). `trunk` packaging (`web/index.html`), `cargo xtask web` builds `dist/`. | Opens in Chrome, Firefox, Safari. | 6 |
-| C2 | Browser file I/O: open via file picker or drag-and-drop, save/export via download (async `rfd`). | Open, edit, save and export round trip in the browser. | 10 |
+| C2 | ✅ 2026-10-23 (`web_io.rs`, `FileDialogs::{is_web, pick_web, download}`, `file.open_data` with `base64`; round trip tested on scripted dialogs, the real browser round trip is a manual check). Browser file I/O: open via file picker or drag-and-drop, save/export via download (async `rfd`). | Open, edit, save and export round trip in the browser. | 10 |
 | C3 | Autosave to browser storage; restore on reload. | Reload keeps the drawing. | 4 |
 | C4 | Touch and trackpad: pinch zoom, two-finger pan, long-press as right click. | Usable on an iPad (manual check). | 6 |
 | C5 | Publish a demo build (**user decision**: where and under which name). | — | 4 |

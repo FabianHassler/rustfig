@@ -6,6 +6,7 @@
 
 use crate::attributes::{arrow_menu, cap_menu, join_menu, line_menu};
 use crate::panels::{color_combo, fill_combo_for, font_combo, limit_fill, plain_fill_color};
+use crate::web_io::{WebInbox, WebPick};
 use crate::{menus, App};
 use rustfig_engine::export_panel::{figure_size, PanelSettings, TRANSP_BACKGROUND, TRANSP_NONE};
 use rustfig_engine::fig2dev::languages::{language, LANGUAGES};
@@ -658,14 +659,28 @@ pub const PICTURE_EXTS: &[&str] = &[
 ];
 
 /// File pickers. The app uses [`NativeDialogs`]; tests substitute a script.
+///
+/// The browser has no paths (C2): `is_web` is true there, Open goes through
+/// `pick_web` (the answer arrives later in a [`WebInbox`]) and Save and Export
+/// through `download` (see `web_io`).
 pub trait FileDialogs {
     /// Choose an existing file (`None` when cancelled or unavailable).
     fn pick_file(&self, what: &str, exts: &[&str]) -> Option<String>;
     /// Choose where to save.
     fn save_file(&self, default_name: &str, what: &str, exts: &[&str]) -> Option<String>;
+    /// Files are bytes in and downloads out, not paths (the browser).
+    fn is_web(&self) -> bool {
+        false
+    }
+    /// Browser: ask for a file; it arrives in `inbox` (not at all when cancelled).
+    fn pick_web(&self, _what: &str, _exts: &[&str], _inbox: &WebInbox) {}
+    /// Browser: give `bytes` to the user as a download named `name`.
+    fn download(&self, _name: &str, _bytes: Vec<u8>) -> Result<(), String> {
+        Err("downloads are only available in the browser".to_string())
+    }
 }
 
-/// The operating system's file dialogs (none on the web yet).
+/// The operating system's file dialogs; in the browser the file picker and downloads.
 pub struct NativeDialogs;
 
 impl FileDialogs for NativeDialogs {
@@ -699,19 +714,85 @@ impl FileDialogs for NativeDialogs {
             None
         }
     }
+
+    fn is_web(&self) -> bool {
+        cfg!(target_arch = "wasm32")
+    }
+
+    fn pick_web(&self, what: &str, exts: &[&str], inbox: &WebInbox) {
+        #[cfg(target_arch = "wasm32")]
+        {
+            let dialog = rfd::AsyncFileDialog::new().add_filter(what, exts);
+            let inbox = inbox.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                if let Some(handle) = dialog.pick_file().await {
+                    let bytes = handle.read().await;
+                    inbox.push(WebPick {
+                        name: handle.file_name(),
+                        bytes,
+                    });
+                }
+            });
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        let _ = (what, exts, inbox);
+    }
+
+    fn download(&self, name: &str, bytes: Vec<u8>) -> Result<(), String> {
+        #[cfg(target_arch = "wasm32")]
+        {
+            let dialog = rfd::AsyncFileDialog::new().set_file_name(name);
+            wasm_bindgen_futures::spawn_local(async move {
+                // On the web this makes no dialog: the handle's write starts the download.
+                if let Some(handle) = dialog.save_file().await {
+                    if let Err(e) = handle.write(&bytes).await {
+                        log::warn!("download failed: {e}");
+                    }
+                }
+            });
+            Ok(())
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let _ = (name, bytes);
+            Err("downloads are only available in the browser".to_string())
+        }
+    }
 }
 
-/// Dialogs that answer from a script, in order (for tests).
-#[derive(Default)]
+/// A download: name and bytes.
+pub type Download = (String, Vec<u8>);
+
+/// Dialogs that answer from a script, in order (for tests). Cloning shares the
+/// script, so a test keeps a handle to read the downloads.
+#[derive(Default, Clone)]
 pub struct ScriptedDialogs {
-    answers: std::cell::RefCell<std::collections::VecDeque<Option<String>>>,
+    answers: std::rc::Rc<std::cell::RefCell<std::collections::VecDeque<Option<String>>>>,
+    web: bool,
+    web_picks: std::rc::Rc<std::cell::RefCell<std::collections::VecDeque<WebPick>>>,
+    downloads: std::rc::Rc<std::cell::RefCell<Vec<Download>>>,
 }
 
 impl ScriptedDialogs {
     pub fn new(answers: impl IntoIterator<Item = Option<String>>) -> Self {
         ScriptedDialogs {
-            answers: std::cell::RefCell::new(answers.into_iter().collect()),
+            answers: std::rc::Rc::new(std::cell::RefCell::new(answers.into_iter().collect())),
+            ..Default::default()
         }
+    }
+
+    /// The browser: each `pick_web` delivers the next of `picks`; downloads are recorded.
+    pub fn web(picks: impl IntoIterator<Item = WebPick>) -> Self {
+        ScriptedDialogs {
+            web: true,
+            web_picks: std::rc::Rc::new(std::cell::RefCell::new(picks.into_iter().collect())),
+            ..Default::default()
+        }
+    }
+
+    /// What was downloaded so far: name and bytes.
+    pub fn downloads(&self) -> Vec<Download> {
+        self.downloads.borrow().clone()
     }
 
     fn next(&self) -> Option<String> {
@@ -725,6 +806,18 @@ impl FileDialogs for ScriptedDialogs {
     }
     fn save_file(&self, _default_name: &str, _what: &str, _exts: &[&str]) -> Option<String> {
         self.next()
+    }
+    fn is_web(&self) -> bool {
+        self.web
+    }
+    fn pick_web(&self, _what: &str, _exts: &[&str], inbox: &WebInbox) {
+        if let Some(p) = self.web_picks.borrow_mut().pop_front() {
+            inbox.push(p);
+        }
+    }
+    fn download(&self, name: &str, bytes: Vec<u8>) -> Result<(), String> {
+        self.downloads.borrow_mut().push((name.to_string(), bytes));
+        Ok(())
     }
 }
 
@@ -2486,12 +2579,26 @@ fn export_apply(app: &mut App, ctx: &egui::Context, act: ExportActions, open: bo
             .unwrap_or("figure")
             .to_string();
         let ext = language(st.format).map_or(st.format, |l| l.extension);
-        if let Some(path) = app.file_dialogs.save_file(&format!("{stem}.{ext}"), ext, &[ext]) {
+        let default_name = format!("{stem}.{ext}");
+        let web = app.file_dialogs.is_web();
+        let target = if web {
+            Some(default_name.clone())
+        } else {
+            app.file_dialogs.save_file(&default_name, ext, &[ext])
+        };
+        if let Some(path) = target {
             // The magnification is the figure's own setting (in the .fig file).
             if (st.magnification - app.engine.doc().settings.magnification).abs() > 1e-9 {
                 app.run("doc.set_magnification", json!({ "magnification": st.magnification }));
             }
             let p = export_params(app, &st, &path);
+            if web {
+                // The browser: the files are downloads (C2).
+                if crate::web_io::export(app, &p, &path) {
+                    app.dialogs.export.open = false;
+                }
+                return;
+            }
             // Native: convert on a thread, the UI keeps drawing (W10-13).
             #[cfg(not(target_arch = "wasm32"))]
             {
@@ -2503,15 +2610,6 @@ fn export_apply(app: &mut App, ctx: &egui::Context, act: ExportActions, open: bo
                 if let Err(m) = crate::export_bg::start(app, &p, after) {
                     app.error(m);
                 }
-            }
-            #[cfg(target_arch = "wasm32")]
-            if app.run("file.export", p.clone()).is_some() {
-                if st.export_on_save {
-                    app.run("file.export_on_save", p);
-                } else if app.engine.doc().export_on_save.is_some() {
-                    app.run("file.export_on_save", json!({ "off": true }));
-                }
-                app.dialogs.export.open = false;
             }
         }
     }
