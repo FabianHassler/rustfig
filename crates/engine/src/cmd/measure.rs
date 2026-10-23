@@ -15,6 +15,7 @@
 // LICENSE-xfig).
 
 use super::{opt_bool, opt_num, CmdResult, Command};
+use crate::view::length_string;
 use crate::{Engine, EngineError};
 use rustfig_geom::{Point, FIG_PER_CM, FIG_PER_INCH, FIG_PER_STYLE_UNIT};
 use rustfig_model::{Arc, Ellipse, Object, ObjectId, ObjectKind, PolyKind, Polyline, Units};
@@ -301,52 +302,7 @@ pub(crate) fn dimension_string(e: &Engine, value: f64, square: bool) -> String {
             "{:.prec$} square {unit}",
             value / (FIG_PER_INCH * FIG_PER_INCH) * scale * scale
         ),
-        Units::Inches => {
-            let ulen = value / FIG_PER_INCH * scale;
-            if e.unit_scale.decimal_inches {
-                format!("{ulen:.prec$} {unit}")
-            } else {
-                inch_fraction(ulen, unit, prec)
-            }
-        }
-    }
-}
-
-/// Inches as a whole number and a fraction of 1/64, with feet first when
-/// the unit is feet (the fractional branch of `make_dimension_string`).
-fn inch_fraction(mut ulen: f64, unit: &str, prec: usize) -> String {
-    let mut ilen = ulen as i64;
-    if ilen as f64 == ulen {
-        return format!("{ilen} {unit}");
-    }
-    let mut tmp = String::new();
-    let mut units = unit;
-    let mut ifeet = 0_i64;
-    if matches!(unit, "f" | "ft" | "feet") {
-        ifeet = ulen as i64;
-        if ifeet.abs() >= 1 {
-            tmp = format!("{ifeet} {unit} ");
-        }
-        ulen = (ulen - ifeet as f64) * 12.0;
-        ilen = ulen as i64;
-        units = "in";
-    }
-    let mut ifract = ((ulen - ilen as f64) * 64.0) as i64;
-    if ifract == 0 {
-        if ifeet < 0 {
-            ilen = ilen.abs();
-        }
-        return format!("{tmp}{ilen} {units}");
-    }
-    if ilen as f64 + ifract as f64 / 64.0 == ulen {
-        let mut iexp = 64_i64;
-        while iexp >= 2 && ifract % 2 == 0 {
-            ifract /= 2;
-            iexp /= 2;
-        }
-        format!("{tmp}{}-{}/{iexp} {units}", ilen.abs(), ifract.abs())
-    } else {
-        format!("{tmp}{ulen:.prec$} {units}")
+        Units::Inches => length_string(value, Units::Inches, &e.unit_scale, e.doc().unit_name(), prec as u32),
     }
 }
 
