@@ -24,6 +24,7 @@ pub mod latex_preview;
 pub mod library;
 mod links;
 pub mod picture;
+pub mod plot;
 pub mod prefs;
 pub mod print;
 #[cfg(not(target_arch = "wasm32"))]
@@ -78,6 +79,9 @@ pub enum UiRequest {
     /// Open the library panel (xfig's library mode button, and the middle
     /// button while a library object is in hand).
     OpenLibrary,
+    /// Open the Plot dialog (plan E12): for a new plot in `rect` (Fig units;
+    /// `None`: at the origin), or to edit the plot compound `edit`.
+    PlotDialog { rect: Option<Rect>, edit: Option<ObjectId> },
 }
 
 /// The document session.

@@ -256,6 +256,8 @@ pub fn attributes_for(tool: ToolKind) -> Vec<Attr> {
         ToolKind::RegularPolygon => &[MIN2, LINE1, &[NumSides]],
         ToolKind::Arc => &[MIN2, LINE1, ARROWS, &[ArcType]],
         ToolKind::Picture => &[MIN2, &[Depth, PenColor]],
+        // E12: the curve's line and the font of the numbers and labels.
+        ToolKind::Plot => &[MIN2, &[LineStyle, LineWidth, PenColor, Depth, Font, FontSize]],
         ToolKind::Text => &[MIN2, &[TextStep], TEXT0],
         ToolKind::Glue => &[MIN2],
         // D14: smart links follow every geometric operation, so the button is here too.

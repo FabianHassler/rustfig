@@ -27,7 +27,7 @@ enum Slot {
 /// xfig's drawing modes in its order (`mode_switches` in `w_modepanel.c`).
 /// The circle/ellipse modes are RustFig's circle tools, which draw ellipses
 /// with the middle button as xfig does.
-const DRAWING: [Slot; 15] = [
+const DRAWING: [Slot; 16] = [
     Slot::Tool(ToolKind::CircleRadius, &xfig_icons::ELLRAD),
     Slot::Tool(ToolKind::CircleDiameter, &xfig_icons::ELLDIA),
     Slot::Tool(ToolKind::SplineApproxClosed, &xfig_icons::C_SPL),
@@ -47,6 +47,8 @@ const DRAWING: [Slot; 15] = [
         "library.panel",
         "PLACE a library element   (Shift-l)",
     ),
+    // RustFig's own mode (E12), after xfig's drawing modes.
+    Slot::Tool(ToolKind::Plot, &xfig_icons::PLOT),
 ];
 
 /// xfig's editing modes in its order.
@@ -88,7 +90,7 @@ pub const MODE_PANEL_WIDTH: f32 = 2.0 * SLOT.x + 2.0 + 2.0 * MODE_PANEL_MARGIN +
 
 /// Rows of buttons in the mode panel: the drawing modes with the library row
 /// and the editing modes.
-const MODE_ROWS: f32 = 8.0 + 13.0;
+const MODE_ROWS: f32 = 9.0 + 13.0;
 
 /// The height of one mode button so that every row fits the panel (xfig's
 /// window is sized to fit); only a very short window falls back to
@@ -281,6 +283,7 @@ fn xfig_tip(t: ToolKind) -> Option<&'static str> {
         ToolKind::Chop => "Chop objects   (x)",
         ToolKind::Trim => "TRIM, split and extend lines   (w)",
         ToolKind::Tangent => "Add TANGENT/NORMAL to curve   (n)",
+        ToolKind::Plot => "PLOT a function or data   (y)",
         ToolKind::AngleMeasure => "MEASURE angle (specify three points or select object)   (Ctrl-g)",
         ToolKind::LengthMeasure => "Measure LENGTH of polylines, arcs and ellipses   (Ctrl-n)",
         ToolKind::AreaMeasure => "Measure AREA of polygons, arcs and ellipses   (Ctrl-m)",

@@ -84,6 +84,9 @@ pub enum ToolKind {
     LengthMeasure,
     /// Measure the area of polygons, arcs and ellipses (`F_AREAMEAS`).
     AreaMeasure,
+    /// Plot a function or data (plan E12): drag the plot's frame, then the
+    /// Plot dialog draws it.
+    Plot,
 }
 
 impl ToolKind {
@@ -126,7 +129,7 @@ impl ToolKind {
         )
     }
 
-    pub const ALL: [ToolKind; 45] = [
+    pub const ALL: [ToolKind; 46] = [
         ToolKind::CircleRadius,
         ToolKind::CircleDiameter,
         ToolKind::EllipseRadii,
@@ -172,6 +175,7 @@ impl ToolKind {
         ToolKind::AngleMeasure,
         ToolKind::LengthMeasure,
         ToolKind::AreaMeasure,
+        ToolKind::Plot,
     ];
 
     pub fn id(self) -> &'static str {
@@ -222,6 +226,7 @@ impl ToolKind {
             ToolKind::AngleMeasure => "tool.angle_measure",
             ToolKind::LengthMeasure => "tool.length_measure",
             ToolKind::AreaMeasure => "tool.area_measure",
+            ToolKind::Plot => "tool.plot",
         }
     }
 
@@ -277,6 +282,7 @@ impl ToolKind {
             ToolKind::AngleMeasure => "Measure angle",
             ToolKind::LengthMeasure => "Measure length",
             ToolKind::AreaMeasure => "Measure area",
+            ToolKind::Plot => "Plot",
         }
     }
 
@@ -327,6 +333,7 @@ impl ToolKind {
             ToolKind::Convert => "V",
             ToolKind::Arrow => "Shift+A",
             ToolKind::Tangent => "n",
+            ToolKind::Plot => "y",
             _ => "",
         }
     }
@@ -351,6 +358,7 @@ impl ToolKind {
                 | ToolKind::RegularPolygon
                 | ToolKind::Arc
                 | ToolKind::Picture
+                | ToolKind::Plot
                 | ToolKind::Text
         )
     }
@@ -383,6 +391,7 @@ impl ToolKind {
                 | ToolKind::ArcBox
                 | ToolKind::RegularPolygon
                 | ToolKind::Picture
+                | ToolKind::Plot
         )
     }
 }
@@ -1554,6 +1563,22 @@ impl Engine {
             }
             ToolEvent::Release { pos, button } => {
                 let p = self.snap(pos);
+                // Plot: a click without a drag places the plot at its
+                // default size, the clicked point being its upper left corner.
+                if let ToolState::Drag {
+                    start,
+                    dragged: false,
+                    kind: ToolKind::Plot,
+                    button: b,
+                    ..
+                } = self.tool_state
+                {
+                    if b == button {
+                        self.tool_state = ToolState::Idle;
+                        let size = Point::new(crate::cmd::plot::DEFAULT_W, crate::cmd::plot::DEFAULT_H);
+                        return self.finish_drag(ToolKind::Plot, start, start + size, false);
+                    }
+                }
                 if let ToolState::Drag {
                     start,
                     dragged: true,
@@ -1627,7 +1652,9 @@ impl Engine {
                     EllipseKind::EllipseDiameter,
                 )
             }
-            ToolKind::Box | ToolKind::Picture => Object::new(ObjectKind::Polyline(Polyline::rect(style, a, b))),
+            ToolKind::Box | ToolKind::Picture | ToolKind::Plot => {
+                Object::new(ObjectKind::Polyline(Polyline::rect(style, a, b)))
+            }
             ToolKind::ArcBox => {
                 let mut p = Polyline::rect(style, a, b);
                 p.kind = PolyKind::ArcBox;
@@ -1687,6 +1714,15 @@ impl Engine {
                 self.request(UiRequest::PickPicture {
                     rect: Rect::new(a, b),
                     keep_aspect,
+                });
+            }
+            return Ok(());
+        }
+        if kind == ToolKind::Plot {
+            if a.dist(b) > 1e-6 {
+                self.request(UiRequest::PlotDialog {
+                    rect: Some(Rect::new(a, b)),
+                    edit: None,
                 });
             }
             return Ok(());
@@ -2934,6 +2970,14 @@ impl Engine {
             }
             (ToolKind::Edit, Button::Left) => {
                 self.set_selection(vec![id]);
+                // A plot (E12) opens the Plot dialog, which redraws it.
+                if self.doc().get(id).is_some_and(crate::cmd::plot::is_plot) {
+                    self.request(UiRequest::PlotDialog {
+                        rect: None,
+                        edit: Some(id),
+                    });
+                    return Ok(());
+                }
                 self.request(UiRequest::EditObject { id });
             }
             (ToolKind::FlipV | ToolKind::FlipH, Button::Left | Button::Middle) => {
@@ -3085,6 +3129,7 @@ impl Engine {
                 ("del point", if ready { "finish here" } else { "" }, "")
             }
             (ToolState::Idle, ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture) => ("", "square at center", ""),
+            (ToolState::Idle, ToolKind::Plot) => ("corner point", "", ""),
             (ToolState::Idle, ToolKind::AreaMeasure) => ("locate object", "", "reset to +-0"),
             (ToolState::Idle, ToolKind::Edit) => ("locate object", "show comments", ""),
             (ToolState::Idle | ToolState::Chop { .. }, t) if t.locates() => ("locate object", "", ""),
@@ -3227,7 +3272,7 @@ impl Engine {
                     ToolKind::Arc => ("first point", "center point", ""),
                     ToolKind::CircleRadius | ToolKind::EllipseRadii => ("Circle center", "Ellipse center", ""),
                     ToolKind::CircleDiameter | ToolKind::EllipseDiameter => ("Circle diameter", "Ellipse corner", ""),
-                    ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture => ("corner point", "", ""),
+                    ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture | ToolKind::Plot => ("corner point", "", ""),
                     ToolKind::RegularPolygon => ("center point", "", ""),
                     ToolKind::Text => ("position cursor", "", ""),
                     ToolKind::Glue => ("tag object", "tag region", glue),

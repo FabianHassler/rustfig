@@ -476,6 +476,8 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Sep,
                 Own("edit.redo"),
                 Own("edit.copy_picture_pick"),
+                Own("plot.panel"),
+                Own("plot.edit"),
             ],
         ),
         (
@@ -1479,6 +1481,12 @@ mod tests {
             "Ctrl+Shift+click on a spline point (Cmd+Shift on macOS) in the editing modes",
         ),
         ("picture.", "the picture edit panel's buttons; scripting API"),
+        ("plot.get", "scripting API; the Plot dialog loads a plot with it"),
+        (
+            "plot.add",
+            "scripting API; the Plot dialog and the Plot mode place plots with it",
+        ),
+        ("plot.update", "scripting API; the Plot dialog redraws a plot with it"),
         (
             "library.",
             "the library mode button (Shift+L) and the library panel; scripting API",
