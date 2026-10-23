@@ -79,6 +79,26 @@ pub(super) fn commands() -> Vec<Command> {
             run: discard_recovery,
         },
         Command {
+            id: "file.versions",
+            label: "Saved versions",
+            menu: "",
+            shortcut: "",
+            params: "{\"path\"?: string}  — returns {\"versions\": [{\"id\", \"time_ms\", \"size\"}]}, newest first: the last saved versions of the file (default: the current one) kept in the recovery folder; how many is the save_versions preference (0 keeps none)",
+            mutates: false,
+            enabled: always,
+            run: versions,
+        },
+        Command {
+            id: "file.restore_version",
+            label: "Restore saved version",
+            menu: "",
+            shortcut: "",
+            params: "{\"id\": string, \"path\"?: string}  — open a saved version (see file.versions) of the file as an unsaved drawing under the file's name; saving writes it over the file",
+            mutates: false,
+            enabled: always,
+            run: restore_version,
+        },
+        Command {
             id: "file.merge",
             label: "Merge…",
             menu: "",
@@ -314,6 +334,61 @@ fn recoverable(_: &mut Engine, _: &Value) -> CmdResult {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+fn versions_target(e: &Engine, p: &Value) -> Result<(std::path::PathBuf, String), EngineError> {
+    let path = match opt_str(p, "path")? {
+        Some(s) => s.to_string(),
+        None => e
+            .path()
+            .map(str::to_string)
+            .ok_or_else(|| EngineError::bad_params("no file name: give a \"path\""))?,
+    };
+    let dir = e
+        .recovery_dir
+        .clone()
+        .ok_or_else(|| EngineError::io("no folder for recovery files"))?;
+    Ok((dir, path))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn versions(e: &mut Engine, p: &Value) -> CmdResult {
+    let Ok((dir, path)) = versions_target(e, p) else {
+        return Ok(json!({"versions": []}));
+    };
+    let list: Vec<Value> = crate::recovery::versions(&dir, &path)
+        .into_iter()
+        .map(|v| json!({"id": v.id, "time_ms": v.time_ms, "size": v.size}))
+        .collect();
+    Ok(json!({ "versions": list }))
+}
+
+#[cfg(target_arch = "wasm32")]
+fn versions(_: &mut Engine, _: &Value) -> CmdResult {
+    Ok(json!({"versions": []}))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn restore_version(e: &mut Engine, p: &Value) -> CmdResult {
+    let (dir, path) = versions_target(e, p)?;
+    let id = string(p, "id")?;
+    let file = crate::recovery::version_file(&dir, &path, &id)
+        .ok_or_else(|| EngineError::bad_params("no such saved version"))?;
+    let (mut doc, _) = parse(&read_file(&file.to_string_lossy())?)?;
+    let base = Path::new(&path).parent().map(Path::to_path_buf);
+    let warnings = import::load_all_pictures(&mut doc, base.as_deref());
+    e.replace_document(doc, Some(path.clone()));
+    e.set_modified(true);
+    let r = e.doc_bounds();
+    e.view.fit(&r);
+    e.set_status("Restored a saved version; save it to keep it");
+    Ok(json!({"path": path, "warnings": warnings}))
+}
+
+#[cfg(target_arch = "wasm32")]
+fn restore_version(_: &mut Engine, _: &Value) -> CmdResult {
+    Err(EngineError::bad_params("saved versions are not available on the web"))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 fn discard_recovery(e: &mut Engine, p: &Value) -> CmdResult {
     let (dir, id) = recovery_id(e, p)?;
     crate::recovery::discard(&dir, &id);
@@ -454,6 +529,18 @@ fn save(e: &mut Engine, p: &Value) -> CmdResult {
         backup_file(&path)
     } else {
         None
+    };
+    // W10-14: the version saved over stays in the recovery folder.
+    #[cfg(not(target_arch = "wasm32"))]
+    let backup_error = {
+        let keep = usize::try_from(e.prefs.int("save_versions").unwrap_or(5).max(0)).unwrap_or(0);
+        // Only where a recovery folder is set (the app's), so scripts and tests
+        // do not write into the user's own folder.
+        let version_error = e
+            .recovery_dir
+            .clone()
+            .and_then(|dir| crate::recovery::keep_version(&dir, &path, keep));
+        backup_error.or(version_error)
     };
     write_atomic(&path, text.as_bytes())?;
     if let Some(f) = &rebase {

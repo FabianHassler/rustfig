@@ -316,3 +316,52 @@ fn bak_on_save_and_new_file_on_open() {
     assert!(e.execute("file.open", &json!({"path": "a\u{0}b"})).is_err());
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn saved_versions_are_kept_pruned_and_restorable() {
+    let dir = std::env::temp_dir().join(format!("rustfig-versions-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let rec = dir.join("rec");
+    let path = dir.join("v.fig").to_string_lossy().to_string();
+    let mut e = Engine::new();
+    e.recovery_dir = Some(rec.clone());
+    e.execute("file.save", &json!({"path": path})).unwrap();
+    let mut contents = vec![std::fs::read(&path).unwrap()];
+    for i in 0..6 {
+        e.execute(
+            "shape.rectangle",
+            &json!({"x": i * 700, "y": 0, "width": 600, "height": 600}),
+        )
+        .unwrap();
+        e.execute("file.save", &json!({})).unwrap();
+        contents.push(std::fs::read(&path).unwrap());
+    }
+    // 7 saves, N = 5 (default): the 5 newest replaced versions (saves 2..=6).
+    let v = e.execute("file.versions", &json!({})).unwrap();
+    let list = v["versions"].as_array().unwrap().clone();
+    assert_eq!(list.len(), 5);
+    let id0 = list[0]["id"].as_str().unwrap().to_string();
+    assert!(list[0]["id"].as_str().unwrap() > list[4]["id"].as_str().unwrap());
+    // Newest version = the file before the last save.
+    e.execute("file.restore_version", &json!({"id": id0})).unwrap();
+    assert!(e.is_modified());
+    e.execute("file.save", &json!({"path": dir.join("r.fig").to_string_lossy()}))
+        .unwrap();
+    assert_eq!(std::fs::read(dir.join("r.fig")).unwrap(), contents[5]);
+    // The oldest kept is the file after save 1 (contents[1]).
+    let oldest = rustfig_engine::recovery::versions(&rec, &path).pop().unwrap();
+    assert_eq!(std::fs::read(oldest.file).unwrap(), contents[1]);
+
+    // N = 0 keeps none and removes the old ones.
+    e.execute("file.open", &json!({"path": path})).unwrap();
+    e.execute("prefs.set", &json!({"resource": "save_versions", "value": 0}))
+        .unwrap();
+    e.execute("file.save", &json!({})).unwrap();
+    let v = e.execute("file.versions", &json!({"path": path})).unwrap();
+    assert!(v["versions"].as_array().unwrap().is_empty());
+    assert!(e
+        .execute("file.restore_version", &json!({"id": "../x", "path": path}))
+        .is_err());
+    let _ = std::fs::remove_dir_all(&dir);
+}

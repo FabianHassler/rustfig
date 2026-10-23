@@ -48,6 +48,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}  — the shortcut sheet (E8): every command with its keys in the standard and in xfig's scheme, per system, searchable",
     },
     UiCommand {
+        id: "app.versions",
+        label: "Saved versions…",
+        shortcut: "",
+        params: "{}  — the older saved versions of the current file kept in the recovery folder (W10-14), each restorable; script: file.versions, file.restore_version",
+    },
+    UiCommand {
         id: "app.global_settings",
         label: "Global settings…",
         shortcut: "",
@@ -289,6 +295,7 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.unit_panel" => app.unit_panel_open = true,
         "app.keyboard_entry" => app.point_entry.open(),
         "app.global_settings" => app.dialogs.global_open = true,
+        "app.versions" => app.dialogs.versions_open = true,
         "app.styles" => app.styles.open = true,
         "app.character_map" => app.charmap.open = true,
         "app.keys" => app.keys_sheet.open = true,
@@ -395,6 +402,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Export...", "app.export"),
                 Own("app.import_picture"),
                 Own("app.new_window"),
+                Own("app.versions"),
                 Missing("Print...", "Alt+P", "B5"),
                 Cmd("Exit", "app.quit"),
             ],

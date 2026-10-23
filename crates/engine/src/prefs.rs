@@ -177,6 +177,7 @@ pub const RESOURCES: &[Resource] = &[
     r("showlengths", Bool, "false", "-showlengths, -dontshowlengths", Applied),
     r("shownums", Bool, "false", "-shownums, -dontshownums", Applied),
     r("showpageborder", Bool, "true", "-showpageborder, -dontshowpageborder", Applied),
+    r("save_versions", Int, "5", "-save_versions", Applied),
     r("smallicons", Bool, "false", "-smallicons", Planned("E9")),
     r("smooth_factor", Int, "0", "-smooth_factor", Planned("B6")),
     r("specialtext", Bool, "false", "-specialtext", Applied),
