@@ -61,7 +61,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | View: depth manager | right panel | ✅ |
 | View: character map | `app.character_map`, Ctrl+Shift+M | ✅ |
 | View: Manage Styles… (Ctrl+Y): style families as in xfig's panel (Family and Style lists, Add, Delete, Set), kept in the settings | ✅ E6 (`crates/ui-egui/src/styles.rs`); xfig's `~/.xfigrcstyle` file is replaced by settings.toml |
-| Indicator panel (line, colours, fill, depth, arrows, caps, joins, fonts, justification, angle, radius, sides, rotation, grid, positioning, arc type, text step, text flags, smart links) | xfig's buttons, per mode | 🟡 Angle Geom done (D7); no copy counts |
+| Indicator panel (line, colours, fill, depth, arrows, caps, joins, fonts, justification, angle, radius, sides, rotation, grid, positioning, arc type, text step, text flags, smart links) | xfig's buttons, per mode | ✅ Angle Geom (D7), copy counts (D10: Num Copies in the rotate modes, Num X / Y Copies in Copy) |
 | S4 editing functions | Ctrl+click zoom box, pan to origin and unzoom (E3), Ctrl+Shift+click shape factor (S4-6), `Engine::mouse_hints_for(shift, ctrl)`; Shift+click locate object (S4-1), Paste attached to the pointer (S4-2), system clipboard for the cut buffer and images (E7), a cursor per mode (S4-4), Convert box/arc-box (S4-5) | ✅ |
 | Object markers in editing modes | per-mode masks as xfig (`u_markers.c`, `w_modepanel.c`) | ✅ |
 | Rulers | top and side, xfig's ticks and labels, cursor marker, pan buttons | ✅ |
@@ -124,6 +124,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 ## Revision history
 | Date | Note |
 |---|---|
+| 2026-10-23 | Indicator row: copy counts (Num Copies, Num X / Y Copies) done. |
 | 2026-10-23 | W10-13 background export with progress, cancel, Show in folder. D10 settings window preview and arrow pictures; W10-14 Saved versions window; W9 cap and join pictures redrawn. |
 | 2026-10-23 | E5: character map hides characters the font cannot draw and draws each in the text's font. |
 | 2026-10-22 | E7 done: the cut buffer on the system clipboard (Fig text + pictures), Paste takes a figure from another window or an image. |
