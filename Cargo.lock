@@ -3358,6 +3358,7 @@ dependencies = [
  "rustfig-screenpick",
  "rustfig-text",
  "serde_json",
+ "ttf-parser",
  "web-sys",
 ]
 

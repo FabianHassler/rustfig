@@ -2,13 +2,14 @@
 
 Every image, icon, font or other asset file in this repository needs a row
 here. `cargo xtask assets` (part of `cargo xtask ci`) fails on any asset file
-without a row, and on any font file at all: fonts live in
-[storytold/craft-fonts](https://github.com/storytold/craft-fonts).
+without a row, and on any font file except the one key-symbol font below: other
+fonts live in [storytold/craft-fonts](https://github.com/storytold/craft-fonts).
 
 | Path | Author | Source | Licence | Notes |
 |------|--------|--------|---------|-------|
+| `assets/fonts/rustfig-key-symbols.ttf` | The Noto Project Authors (subset by RustFig) | Noto Sans Symbols 2 (⌘ ⇧ ⌥ ⌫), Noto Sans Symbols (⌃ ⎋), Noto Sans Math (↩ ⇥): `fonts/NotoSansSymbols2`, `NotoSansSymbols`, `NotoSansMath` (`hinted/ttf/*-Regular.ttf`) of https://notofonts.github.io | SIL OFL 1.1 (`assets/fonts/OFL.txt`) | 2 KB, 8 glyphs, family renamed "RustFig Key Symbols"; egui's last fallback font (`crates/ui-egui/src/key_font.rs`). Per source: `pyftsubset <font> --unicodes=… --no-hinting --layout-features= --drop-tables+=DSIG,GSUB,GPOS,GDEF,MATH,BASE,STAT,meta,vhea,vmtx,gasp`, then `fontTools.merge` and a rename (name IDs 1-4, 6). The only font file `cargo xtask assets` allows. |
 
-There are currently **no asset files** in the repository. Everything visual
+The only asset file in the repository is the key-symbol font above. Everything visual
 is generated in code:
 
 - Mode panel icons and attribute pictures: xfig's XBM bitmaps (36×32 mode icons, 32×32 attribute pictures) from xfig's `src/w_icons.c`, kept as byte arrays in `crates/ui-egui/src/xfig_icons.rs` (xfig licence, `LICENSE-xfig`).

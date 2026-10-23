@@ -168,6 +168,33 @@ fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
+/// The one font file the repository ships (decided 2026-10-22): the key-symbol subset
+/// (SIL OFL 1.1, `assets/fonts/OFL.txt`). Matched by path and a size cap, so any other
+/// font, or a bigger one under that name, still fails.
+const ALLOWED_FONT: &str = "assets/fonts/rustfig-key-symbols.ttf";
+const ALLOWED_FONT_MAX_BYTES: u64 = 16 * 1024;
+
+fn is_allowed_font(rel: &str, path: &Path) -> bool {
+    allowed_font(rel, std::fs::metadata(path).map(|m| m.len()).unwrap_or(u64::MAX))
+}
+
+fn allowed_font(rel: &str, len: u64) -> bool {
+    rel == ALLOWED_FONT && len <= ALLOWED_FONT_MAX_BYTES
+}
+
+#[cfg(test)]
+mod font_tests {
+    use super::allowed_font;
+
+    #[test]
+    fn only_the_key_symbol_font_is_allowed() {
+        assert!(allowed_font("assets/fonts/rustfig-key-symbols.ttf", 2000));
+        assert!(!allowed_font("assets/fonts/rustfig-key-symbols.ttf", 600_000));
+        assert!(!allowed_font("assets/fonts/other.ttf", 2000));
+        assert!(!allowed_font("crates/x/rustfig-key-symbols.ttf", 2000));
+    }
+}
+
 fn assets() -> Result<(), String> {
     let root = root();
     let table = std::fs::read_to_string(root.join("ASSETS.md")).map_err(|e| format!("ASSETS.md: {e}"))?;
@@ -182,7 +209,7 @@ fn assets() -> Result<(), String> {
             .unwrap_or("")
             .to_ascii_lowercase();
         let rel = f.strip_prefix(&root).unwrap_or(&f).to_string_lossy().replace('\\', "/");
-        if FONT_EXTS.contains(&ext.as_str()) {
+        if FONT_EXTS.contains(&ext.as_str()) && !is_allowed_font(&rel, &f) {
             errors.push(format!(
                 "{rel}: font files belong in storytold/craft-fonts, not this repository"
             ));
