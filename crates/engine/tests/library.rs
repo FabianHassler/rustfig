@@ -318,3 +318,58 @@ fn every_bundled_figure_reads() {
     assert!(failed.len() < 10, "{failed:?}");
     let _ = std::fs::remove_dir_all(&user);
 }
+
+#[test]
+fn search_finds_figures_in_all_libraries_by_name_and_comment() {
+    let user = scratch("search");
+    let sub = user.join("Mine");
+    std::fs::create_dir_all(&sub).unwrap();
+    std::fs::write(
+        sub.join("gizmo.fig"),
+        "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n# a Zorgblat for tests\n1200 2\n2 2 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 5\n\t0 0 600 0 600 600 0 600 0 0\n",
+    )
+    .unwrap();
+    let mut e = engine_with_user_dir(&user);
+    let search = |e: &mut Engine, p: Value| e.execute("library.search", &p).unwrap();
+    // By name, across libraries, case-insensitive, every word.
+    let r = search(&mut e, json!({"query": "FLOPPY lg"}));
+    let hits = r["hits"].as_array().unwrap();
+    assert!(
+        hits.iter()
+            .any(|h| h["library"] == "Computers" && h["name"] == "floppy_lg"),
+        "{hits:?}"
+    );
+    // By comment, in the user's library.
+    let r = search(&mut e, json!({"query": "zorgblat"}));
+    assert_eq!(r["hits"][0]["name"], "gizmo");
+    assert_eq!(r["hits"][0]["library"], "Mine");
+    assert_eq!(r["hits"][0]["user"], true);
+    assert_eq!(r["hits"][0]["comment"], true);
+    // Without comments it finds nothing; a name match is not a comment match.
+    let r = search(&mut e, json!({"query": "zorgblat", "comments": false}));
+    assert!(r["hits"].as_array().unwrap().is_empty());
+    let r = search(&mut e, json!({"query": "gizmo"}));
+    assert_eq!(r["hits"][0]["comment"], false);
+    // Limits, truncation, empty and hostile input.
+    let r = search(&mut e, json!({"query": "a", "limit": 3}));
+    assert_eq!(r["hits"].as_array().unwrap().len(), 3);
+    assert_eq!(r["truncated"], true);
+    assert!(search(&mut e, json!({"query": "  "}))["hits"]
+        .as_array()
+        .unwrap()
+        .is_empty());
+    let r = search(&mut e, json!({"query": "e", "limit": 1e6}));
+    assert!(r["hits"].as_array().unwrap().len() <= 1000);
+    assert!(e.execute("library.search", &json!({})).is_err());
+    assert!(e
+        .execute("library.search", &json!({"query": "a", "limit": -1}))
+        .is_err());
+    assert!(e.execute("library.search", &json!({"query": 5})).is_err());
+    // A hit is placeable.
+    e.execute(
+        "library.place",
+        &json!({"library": "Mine", "name": "gizmo", "x": 0, "y": 0}),
+    )
+    .unwrap();
+    let _ = std::fs::remove_dir_all(&user);
+}

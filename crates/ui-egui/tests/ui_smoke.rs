@@ -2668,3 +2668,38 @@ fn library_panel_places_an_object() {
     }
     let _ = std::fs::remove_dir_all(&user);
 }
+
+/// D6: the library panel's search field lists matching figures of all
+/// libraries with their library; picking one loads its library and selects
+/// it, Select object puts it in hand.
+#[test]
+fn library_panel_search_picks_a_result_from_another_library() {
+    let user = std::env::temp_dir().join(format!("rustfig-ui-library-search-{}", std::process::id()));
+    let mut h = harness(app());
+    h.state_mut().run(
+        "prefs.set",
+        json!({"resource": "library_dir", "value": user.to_string_lossy()}),
+    );
+    h.get_by_label("Library").scroll_to_me();
+    h.get_by_label("Library").click();
+    h.run_steps(3);
+    h.state_mut().library.load("Optics");
+    h.run_steps(2);
+    h.get_by_label("Search libraries").click();
+    h.get_by_label("Search libraries").type_text("floppy lg");
+    h.run_steps(4);
+    h.get_by_label("Search result floppy_lg in Computers").click();
+    h.run_steps(3);
+    assert_eq!(h.state().library.current.as_deref(), Some("Computers"));
+    assert!(h.state().library.selected.is_some());
+    h.get_by_label("Select object").click();
+    h.run_steps(3);
+    assert!(!h.state().library.open);
+    let hand = h
+        .state()
+        .engine
+        .library_in_hand()
+        .map(|(l, n, _)| (l.to_string(), n.to_string()));
+    assert_eq!(hand, Some(("Computers".to_string(), "floppy_lg".to_string())));
+    let _ = std::fs::remove_dir_all(&user);
+}
