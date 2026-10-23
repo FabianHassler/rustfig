@@ -114,6 +114,18 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}  — xfig's ExportFile: next to the figure, the export panel's language and settings",
     },
     UiCommand {
+        id: "app.cancel_export",
+        label: "Cancel the running export",
+        shortcut: "",
+        params: "{}  — the Export panel's background export (native); its result is discarded",
+    },
+    UiCommand {
+        id: "app.show_export_folder",
+        label: "Show the exported file in its folder",
+        shortcut: "",
+        params: "{}  — opens the folder of the last file the Export panel wrote (native)",
+    },
+    UiCommand {
         id: "app.quit",
         label: "Quit",
         shortcut: "Ctrl+Q",
@@ -289,6 +301,19 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         }
         "app.export" => app.dialogs.export.open = true,
         "app.export_now" => dialogs::export_now(app),
+        "app.cancel_export" => {
+            #[cfg(not(target_arch = "wasm32"))]
+            crate::export_bg::cancel(app);
+        }
+        "app.show_export_folder" => {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let path = app.last_export.clone().ok_or("No export to show")?;
+                crate::export_bg::show_in_folder(&path)?;
+            }
+            #[cfg(target_arch = "wasm32")]
+            return Err("Show in folder is not available on the web".into());
+        }
         "app.quit" => app.guard_unsaved(Pending::Quit),
         "app.search" => app.dialogs.search.open = true,
         "app.document_settings" => app.dialogs.settings_open = true,
@@ -1284,6 +1309,8 @@ mod tests {
         ("app.theme", "a choice in Global settings"),
         ("app.ui_scale", "a choice in Global settings"),
         ("app.export_now", "the Export panel's Export button and the E key"),
+        ("app.cancel_export", "the Cancel button of the export progress window"),
+        ("app.show_export_folder", "the Show in folder button after an export"),
         ("edit.select", "scripting API (xfig has no selection)"),
         ("edit.search_replace", "scripting API; Search/Replace... runs it"),
         ("edit.paste_text", "the middle button of the Text tool"),

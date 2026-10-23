@@ -2492,6 +2492,19 @@ fn export_apply(app: &mut App, ctx: &egui::Context, act: ExportActions, open: bo
                 app.run("doc.set_magnification", json!({ "magnification": st.magnification }));
             }
             let p = export_params(app, &st, &path);
+            // Native: convert on a thread, the UI keeps drawing (W10-13).
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let after = if st.export_on_save {
+                    crate::export_bg::After::Keep(p.clone())
+                } else {
+                    crate::export_bg::After::Off
+                };
+                if let Err(m) = crate::export_bg::start(app, &p, after) {
+                    app.error(m);
+                }
+            }
+            #[cfg(target_arch = "wasm32")]
             if app.run("file.export", p.clone()).is_some() {
                 if st.export_on_save {
                     app.run("file.export_on_save", p);

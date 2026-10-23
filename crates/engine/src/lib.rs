@@ -31,6 +31,7 @@ pub mod tools;
 mod view;
 
 pub use anglegeom::{constrain as constrain_angle, AngleGeom};
+pub use cmd::file::{export_job, ExportJob};
 pub use error::EngineError;
 pub use indicator::{arrow_choice, arrow_choice_of, GridMode, Indicator, LinkMode, SnapMode, UpdateFlag};
 pub use region::Region;
