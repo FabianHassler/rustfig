@@ -18,4 +18,4 @@ Help > Mouse buttons... (`app.mouse_sheet`) lists every mode with what its left,
 
 ## What's new
 
-Help > What's new... (`app.whats_new`) lists what changed in this version. The page opens by itself once after RustFig is updated; RustFig remembers the version it last showed it for in the settings file.
+Help > What's new... (`app.whats_new`) lists what changed in this version. The page opens by itself once after RustFig is updated (not on the very first start); RustFig remembers the version it last showed it for in the settings file.

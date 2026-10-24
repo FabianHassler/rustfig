@@ -839,10 +839,9 @@ pub fn snap_menu(app: &mut App, ui: &mut egui::Ui) {
     }
 }
 
-/// The keys a menu entry shows: xfig's accelerator and the platform's
-/// shortcut, both when both exist ("⌥ U / ⌘ Z"); both work. The platform's
-/// is left out where xfig's Ctrl keys take it (Linux and Windows, xfig's keys
-/// on).
+/// The one key a menu entry shows (both keys work; Help > Keys lists both):
+/// xfig's accelerator while xfig's keys are on, else the platform's
+/// shortcut where xfig's Ctrl keys leave it free (the user's choice, W20).
 pub(crate) fn entry_keys(id: &str, xfig_keys: bool, mac: bool) -> String {
     // Paste Text: xfig's F18/F20 (Sun Paste keys) are gone from keyboards;
     // while typing, the platform's paste key inserts the clipboard's text.
@@ -855,15 +854,14 @@ pub(crate) fn entry_keys(id: &str, xfig_keys: bool, mac: bool) -> String {
     }
     let (platform, xfig) = entry_key_pair(id, mac);
     let platform_shadowed = xfig_keys && shadowed_by_xfig(label_of(id).1, mac);
-    let mut v = Vec::new();
     // Mode letters are always on; xfig's other keys follow its switch.
     if !xfig.is_empty() && (xfig_keys || is_mode_letter(label_of(id).1)) {
-        v.push(xfig);
+        return xfig;
     }
-    if !platform.is_empty() && !platform_shadowed {
-        v.push(platform);
+    if platform_shadowed {
+        return String::new();
     }
-    v.join(" / ")
+    platform
 }
 
 /// A plain letter shortcut (`C`, `Shift+E`): xfig's mode key, not a system key.
@@ -1595,14 +1593,14 @@ mod tests {
     }
 
     #[test]
-    fn menus_show_the_platform_keys_xfig_leaves_free() {
+    fn menus_show_one_key_xfigs_first() {
         // macOS: Cmd never clashes with xfig's Ctrl and Option keys.
-        assert_eq!(entry_keys("edit.undo", true, true), "⌥\u{2009}U / ⌘\u{2009}Z");
-        assert_eq!(entry_keys("edit.paste", true, true), "⌥\u{2009}T / ⌘\u{2009}V");
+        assert_eq!(entry_keys("edit.undo", true, true), "⌥\u{2009}U");
+        assert_eq!(entry_keys("edit.paste", true, true), "⌥\u{2009}T");
         // Linux and Windows: xfig's Ctrl-Z (zoom fit) takes the key.
         assert_eq!(entry_keys("edit.undo", true, false), "Alt+U");
-        assert_eq!(entry_keys("edit.paste", true, false), "Alt+T / Ctrl+V");
-        assert_eq!(entry_keys("view.zoom_fit", true, false), "Ctrl+Z / Ctrl+0");
+        assert_eq!(entry_keys("edit.paste", true, false), "Alt+T");
+        assert_eq!(entry_keys("view.zoom_fit", true, false), "Ctrl+Z");
         // Without xfig's keys, the platform's shortcuts.
         assert_eq!(entry_keys("edit.undo", false, false), "Ctrl+Z");
     }

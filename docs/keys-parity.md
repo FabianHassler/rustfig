@@ -10,7 +10,7 @@ Legend: ✅ works as in xfig · 🟡 partly · ❌ missing (task) · ↻ replace
 modern equivalent. Meta is Alt (Option on macOS); xfig binds Meta and Alt
 alike. RustFig's own platform shortcuts (Ctrl/Cmd+S, …) work alongside: on macOS always (Cmd), on Linux and Windows wherever xfig's Ctrl keys leave them free (W20); a menu entry shows xfig's key, or the platform's where xfig has none.
 
-How keys are written (W21): macOS ⌃ ⌥ ⇧ ⌘ plus a thin space ("⌥ U"), Windows and Linux Ctrl+Alt+Shift+Key; punctuation keys spelled (Quote, Minus, Equals). Menus show xfig's and the system's key side by side ("⌥ U / ⌘ Z"); Help > Keys shows both columns for the current system only. No platform key was added for xfig-keyed commands that have none; both schemes work.
+How keys are written (W21): macOS ⌃ ⌥ ⇧ ⌘ plus a thin space ("⌥ U"), Windows and Linux Ctrl+Alt+Shift+Key; punctuation keys spelled (Quote, Minus, Equals). Menus show one key per entry (2026-10-24, the user: two get messy): xfig's while xfig's keys are on, else the system's; Help > Keys shows both columns for the current system only. No platform key was added for xfig-keyed commands that have none; both schemes work.
 
 ## Accelerators (`Fig*accelerators`)
 

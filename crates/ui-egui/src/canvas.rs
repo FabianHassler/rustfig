@@ -974,8 +974,11 @@ mod tests {
     fn canvas_description_names_the_objects_and_is_capped() {
         let mut e = rustfig_engine::Engine::new();
         assert_eq!(describe_drawing(e.doc()), "Canvas: empty drawing");
-        e.execute("shape.rectangle", &serde_json::json!({"x":0,"y":0,"width":100,"height":50}))
-            .unwrap();
+        e.execute(
+            "shape.rectangle",
+            &serde_json::json!({"x":0,"y":0,"width":100,"height":50}),
+        )
+        .unwrap();
         assert_eq!(describe_drawing(e.doc()), "Canvas: 1 object: box");
         e.execute("shape.text", &serde_json::json!({"x":0,"y":0,"text":"Hello"}))
             .unwrap();
@@ -984,8 +987,11 @@ mod tests {
         e.execute("shape.text", &serde_json::json!({"x":0,"y":0,"text":long}))
             .unwrap();
         for _ in 0..10 {
-            e.execute("shape.rectangle", &serde_json::json!({"x":0,"y":0,"width":10,"height":10}))
-                .unwrap();
+            e.execute(
+                "shape.rectangle",
+                &serde_json::json!({"x":0,"y":0,"width":10,"height":10}),
+            )
+            .unwrap();
         }
         let d = describe_drawing(e.doc());
         assert!(d.starts_with("Canvas: 13 objects: box, text 'Hello', text 'xxxxxxxxxxxxxxxxxxxxxxxx...'"));

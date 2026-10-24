@@ -116,20 +116,23 @@ Help > Mouse buttons lists what the left, middle and right buttons do in every m
 Help > What's new shows this page again.";
 
 /// Whether the page is shown at start: when the version last seen is not
-/// the running one (also on the first start, when none is stored).
+/// the running one. Not on the first start (none stored): there is nothing
+/// new yet, and scratch settings folders would show it on every launch.
 pub fn should_show(seen: Option<&str>, current: &str) -> bool {
-    seen != Some(current)
+    seen.is_some_and(|s| s != current)
 }
 
 /// At start: open the page if the version changed and remember it, so it
 /// shows once per version.
 pub fn check_version(app: &mut App) {
     let current = env!("CARGO_PKG_VERSION");
-    if should_show(app.engine.prefs.rustfig.whats_new_seen.as_deref(), current) {
-        app.whats_new_open = true;
-        app.engine.prefs.rustfig.whats_new_seen = Some(current.to_string());
-        app.engine.prefs_dirty = true;
+    let seen = app.engine.prefs.rustfig.whats_new_seen.as_deref();
+    if seen == Some(current) {
+        return;
     }
+    app.whats_new_open = should_show(seen, current);
+    app.engine.prefs.rustfig.whats_new_seen = Some(current.to_string());
+    app.engine.prefs_dirty = true;
 }
 
 /// Show the "What's new" window when it is open.
@@ -157,7 +160,7 @@ mod tests {
 
     #[test]
     fn shows_once_per_version() {
-        assert!(should_show(None, "1.2.0"));
+        assert!(!should_show(None, "1.2.0"));
         assert!(should_show(Some("1.1.0"), "1.2.0"));
         assert!(!should_show(Some("1.2.0"), "1.2.0"));
     }
@@ -166,11 +169,14 @@ mod tests {
     fn check_version_marks_the_version_seen() {
         let mut app = App::with_engine(Engine::new());
         check_version(&mut app);
-        assert!(app.whats_new_open);
+        assert!(!app.whats_new_open, "not on the first start");
         assert_eq!(
             app.engine.prefs.rustfig.whats_new_seen.as_deref(),
             Some(env!("CARGO_PKG_VERSION"))
         );
+        app.engine.prefs.rustfig.whats_new_seen = Some("0.0.1".into());
+        check_version(&mut app);
+        assert!(app.whats_new_open);
         app.whats_new_open = false;
         check_version(&mut app);
         assert!(!app.whats_new_open);
