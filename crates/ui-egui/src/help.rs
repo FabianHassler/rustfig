@@ -57,6 +57,7 @@ pub const TOPICS: &[Topic] = &[
     topic!("print.md"),
     topic!("preferences.md"),
     topic!("automation.md"),
+    topic!("help-tools.md"),
 ];
 
 /// The title of a topic: its first `# ` heading.

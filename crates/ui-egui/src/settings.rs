@@ -272,6 +272,7 @@ pub fn load_and_apply(app: &mut App) {
     }
     apply_ui(app);
     app.engine.prefs_dirty = false;
+    crate::help_pages::check_version(app);
 }
 
 /// Values for this run only (S3): `defaults` (X resource files) fill in

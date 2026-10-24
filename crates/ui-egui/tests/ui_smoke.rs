@@ -2507,6 +2507,22 @@ fn keys_sheet_lists_and_filters_commands() {
     assert!(h.query_by_label("edit.redo").is_none());
 }
 
+/// W18: the command search finds a command by typing and Enter runs it.
+#[test]
+fn command_search_runs_the_typed_command() {
+    let mut h = harness(App::with_engine(Engine::new()));
+    h.state_mut().run("help.command_search", json!({}));
+    h.run_steps(3);
+    assert!(h.state().command_search.open);
+    h.get_by_role_and_label(egui::accesskit::Role::TextInput, "Command search")
+        .type_text("keys");
+    h.run_steps(3);
+    press_key(&mut h, egui::Key::Enter, egui::Modifiers::NONE);
+    h.run_steps(3);
+    assert!(h.state().keys_sheet.open, "Enter ran the first match (Keys...)");
+    assert!(!h.state().command_search.open);
+}
+
 /// W10-24: the Unit/Scale panel has Cancel and Set; the figure unit name and
 /// scale factor are only open for "User defined".
 #[test]
