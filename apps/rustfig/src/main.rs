@@ -17,6 +17,20 @@ fn main() -> eframe::Result<()> {
         args.drain(..1.min(args.len()));
         std::process::exit(i32::from(rustfig_engine::fig2dev::run_cli(args)));
     }
+    // `--dump-icon SIZE`: the app icon as raw RGBA on stdout (used by `cargo xtask package`).
+    {
+        let a = rustfig_engine::fig2dev::process_args();
+        if a.first().map(String::as_str) == Some("--dump-icon") {
+            use std::io::Write;
+            let size = a.get(1).and_then(|s| s.parse().ok()).unwrap_or(256);
+            let Some(px) = rustfig_ui_egui::app_icon::rgba(size) else {
+                eprintln!("rustfig: could not render the icon");
+                std::process::exit(1);
+            };
+            let ok = std::io::stdout().write_all(&px).is_ok();
+            std::process::exit(i32::from(!ok));
+        }
+    }
     // xfig's command line (S3), plus RustFig's --control and --background.
     let opts = match rustfig_engine::cmdline::parse(rustfig_engine::fig2dev::process_args()) {
         Ok(o) => o,

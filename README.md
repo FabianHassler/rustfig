@@ -42,8 +42,11 @@ an object's comment, with a plain Fig fallback), never extend or break it.
 
 ## Installation
 
-There are no installers or prebuilt binaries yet; RustFig is built from source,
-either by Homebrew or with Rust's own tools.
+Release builds (unsigned) come as `RustFig-VERSION-macos.dmg` (drag the app to
+Applications; the first start needs right-click > Open), `.deb` and `.tar.gz`
+with `install.sh` (Linux, registers the `.fig` MIME type) and a Windows zip
+(with `fig-association.reg`). `cargo xtask package` builds the one for your
+system. Or build from source, by Homebrew or with Rust's own tools.
 
 ### Homebrew (macOS, Linux)
 

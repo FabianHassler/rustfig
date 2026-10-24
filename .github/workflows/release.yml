@@ -42,7 +42,9 @@ jobs:
         run: cargo xtask ci
       - name: Release build
         run: cargo build --release -p rustfig -p rustfig-cli
-      - name: Package
+      - name: Package (cargo xtask package)
+        run: cargo xtask package
+      - name: Archive of the plain binaries
         shell: bash
         run: |
           dir="rustfig-${GITHUB_REF_NAME}-${{ matrix.name }}"
@@ -57,7 +59,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: rustfig-${{ matrix.name }}
-          path: rustfig-*.*z*
+          path: |
+            rustfig-*.*z*
+            target/package/*.dmg
+            target/package/*.deb
+            target/package/*.tar.gz
+            target/package/*.zip
 
   release:
     name: GitHub release
