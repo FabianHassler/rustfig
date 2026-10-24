@@ -86,7 +86,12 @@ fn non_ascii_file_names_open_and_save() {
         "図面 日本語.fig",
         "emoji 😀 drawing.fig",
         "decomposed a\u{308}.fig",
-        "with 'quotes' & \"double\" #hash %percent.fig",
+        // Windows forbids `"` in file names.
+        if cfg!(windows) {
+            "with 'quotes' & #hash %percent.fig"
+        } else {
+            "with 'quotes' & \"double\" #hash %percent.fig"
+        },
         &format!("{}.fig", "n".repeat(120)),
     ];
     for name in names {
