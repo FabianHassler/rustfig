@@ -247,11 +247,65 @@ pub fn raster_scale(ppp: f32, longest_side: f32, max_side: usize) -> f32 {
     }
 }
 
+/// Most objects named in the canvas description.
+const MAX_DESCRIBED: usize = 8;
+/// Longest text quoted in the description, in characters.
+const MAX_QUOTED: usize = 24;
+
+/// What a screen reader says for the canvas (G3): the object count and the
+/// first few objects by kind, e.g. `Canvas: 3 objects: polyline, box, text 'Hello'`.
+pub fn describe_drawing(doc: &Document) -> String {
+    use rustfig_model::{EllipseKind, ObjectKind, PolyKind};
+    let n = doc.objects.len();
+    if n == 0 {
+        return "Canvas: empty drawing".to_string();
+    }
+    let names: Vec<String> = doc
+        .objects
+        .iter()
+        .take(MAX_DESCRIBED)
+        .map(|o| match &o.kind {
+            ObjectKind::Ellipse(e) => match e.kind {
+                EllipseKind::CircleRadius | EllipseKind::CircleDiameter => "circle".to_string(),
+                _ => "ellipse".to_string(),
+            },
+            ObjectKind::Polyline(p) => match p.kind {
+                PolyKind::Polyline => "polyline",
+                PolyKind::Box => "box",
+                PolyKind::Polygon => "polygon",
+                PolyKind::ArcBox => "arc-box",
+                PolyKind::Picture => "picture",
+            }
+            .to_string(),
+            ObjectKind::Spline(_) => "spline".to_string(),
+            ObjectKind::Arc(_) => "arc".to_string(),
+            ObjectKind::Compound(c) => format!("compound of {}", c.objects.len()),
+            ObjectKind::Text(t) => {
+                let line = t.text.lines().next().unwrap_or("");
+                let quoted: String = line.chars().take(MAX_QUOTED).collect();
+                let dots = if line.chars().count() > MAX_QUOTED { "..." } else { "" };
+                format!("text '{quoted}{dots}'")
+            }
+        })
+        .collect();
+    let more = if n > MAX_DESCRIBED {
+        format!(", and {} more", n - MAX_DESCRIBED)
+    } else {
+        String::new()
+    };
+    let noun = if n == 1 { "object" } else { "objects" };
+    format!("Canvas: {n} {noun}: {}{more}", names.join(", "))
+}
+
 pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     let area = ui.available_rect_before_wrap();
     // xfig's rulers: top, right side, and the units box in the corner.
     let (rect, top, side, unit_box) = crate::rulers::layout(area);
     let resp = ui.allocate_rect(rect, Sense::click_and_drag());
+    // G3: screen readers get a summary of the drawing (the picture itself is
+    // a texture).
+    let description = describe_drawing(app.engine.doc());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, description.clone()));
     let painter = ui.painter_at(rect);
     // Physical pixels per point for the raster, lowered when the canvas would
     // be larger than the graphics driver's biggest texture (a big window on
@@ -914,7 +968,29 @@ pub(crate) fn cursor_icon(kind: rustfig_engine::CursorKind) -> egui::CursorIcon 
 
 #[cfg(test)]
 mod tests {
-    use super::{grid_spacing, LongPress};
+    use super::{describe_drawing, grid_spacing, LongPress};
+
+    #[test]
+    fn canvas_description_names_the_objects_and_is_capped() {
+        let mut e = rustfig_engine::Engine::new();
+        assert_eq!(describe_drawing(e.doc()), "Canvas: empty drawing");
+        e.execute("shape.rectangle", &serde_json::json!({"x":0,"y":0,"width":100,"height":50}))
+            .unwrap();
+        assert_eq!(describe_drawing(e.doc()), "Canvas: 1 object: box");
+        e.execute("shape.text", &serde_json::json!({"x":0,"y":0,"text":"Hello"}))
+            .unwrap();
+        assert_eq!(describe_drawing(e.doc()), "Canvas: 2 objects: box, text 'Hello'");
+        let long = "x".repeat(100);
+        e.execute("shape.text", &serde_json::json!({"x":0,"y":0,"text":long}))
+            .unwrap();
+        for _ in 0..10 {
+            e.execute("shape.rectangle", &serde_json::json!({"x":0,"y":0,"width":10,"height":10}))
+                .unwrap();
+        }
+        let d = describe_drawing(e.doc());
+        assert!(d.starts_with("Canvas: 13 objects: box, text 'Hello', text 'xxxxxxxxxxxxxxxxxxxxxxxx...'"));
+        assert!(d.ends_with(", and 5 more"), "{d}");
+    }
 
     #[test]
     fn long_press_fires_once_after_half_a_second() {

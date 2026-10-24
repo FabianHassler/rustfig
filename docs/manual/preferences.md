@@ -49,3 +49,7 @@ RustFig starts like xfig: `rustfig [options] [file]`, and every option of xfig's
 - `-update file.fig ...` rewrites old files in the current Fig format (the original stays as `file.fig.bak`) and quits without opening a window.
 - Options that only make sense on X11 (`-display`, `-visual`, `-iconic`, colours and fonts of the toolkit) are accepted and ignored; RustFig prints a note to the terminal. An unknown option stops the start with a message.
 - Resources in `~/.Xresources` or `~/.Xdefaults` (`Fig.startfontsize: 14`) are read too, and fill in settings your preferences file does not have.
+
+## Accessibility
+
+Every button, check box, field and ruler has a name that screen readers (VoiceOver, Narrator, Orca) announce through AccessKit; the mode and attribute buttons read as their xfig tooltips, the colour swatches by colour name. The canvas reads as a summary of the drawing, for example "Canvas: 3 objects: polyline, box, text 'Hello'" (the first eight objects, then "and N more"). A test checks that no interactive widget of the main window has an empty name; the check with a real screen reader is manual.

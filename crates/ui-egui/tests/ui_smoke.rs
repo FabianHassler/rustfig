@@ -3013,3 +3013,47 @@ fn library_panel_uses_a_library_list_file() {
     h.get_by_label("Library object x");
     let _ = std::fs::remove_dir_all(&d);
 }
+
+/// G3: every interactive widget of the main window has an accessible label
+/// (screen readers), and the canvas describes the drawing.
+#[test]
+fn every_interactive_widget_has_an_accessible_label() {
+    use egui_kittest::kittest::NodeT;
+    let mut a = app();
+    a.engine
+        .execute("shape.rectangle", &json!({"x":600,"y":600,"width":1200,"height":600}))
+        .unwrap();
+    a.engine.execute("tool.box", &json!({})).unwrap();
+    let h = harness(a);
+    let interactive = [
+        "Button",
+        "CheckBox",
+        "ComboBox",
+        "TextInput",
+        "MultilineTextInput",
+        "Slider",
+        "SpinButton",
+        "RadioButton",
+        "Switch",
+        "MenuItem",
+        "Link",
+        "Tab",
+    ];
+    let mut checked = 0;
+    let mut missing = Vec::new();
+    for n in h.root().children_recursive() {
+        let node = n.accesskit_node();
+        let role = format!("{:?}", node.role());
+        if !interactive.contains(&role.as_str()) {
+            continue;
+        }
+        checked += 1;
+        let label = node.label().or_else(|| node.value()).unwrap_or_default();
+        if label.trim().is_empty() {
+            missing.push(format!("{role} at {:?}", node.raw_bounds()));
+        }
+    }
+    assert!(checked > 30, "only {checked} interactive widgets found");
+    assert!(missing.is_empty(), "widgets without a label: {missing:?}");
+    h.get_by_label_contains("Canvas: 1 object: box");
+}
