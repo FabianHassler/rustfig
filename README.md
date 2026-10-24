@@ -63,7 +63,6 @@ brew install --HEAD rustfig
 Update with `brew upgrade --fetch-HEAD rustfig`, remove with
 `brew uninstall rustfig`. Homebrew's own `fig2dev` formula (the C program)
 installs the same command name: `brew unlink fig2dev` first if you have it.
-While the repository is private, git needs your GitHub login (as below).
 
 ### Cargo
 
@@ -97,10 +96,7 @@ While the repository is private, git needs your GitHub login (as below).
    (add `--branch`, `--tag` or `--rev` to pick a version; the default is the
    latest `main`).
 
-   The repository is private for now, so both ways need your GitHub login
-   (`gh auth login`, or an SSH key; for `cargo install --git` also set
-   `CARGO_NET_GIT_FETCH_WITH_CLI=true` so Cargo uses git's login). Cargo
-   fetches fig2dev, the converter RustFig exports through, from its own public
+   Cargo fetches fig2dev, the converter RustFig exports through, from its own public
    repository ([FabianHassler/fig2dev](https://github.com/FabianHassler/fig2dev))
    by itself.
 

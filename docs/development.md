@@ -41,9 +41,9 @@ it fail instead.
 
 GitHub Actions (plans A2, P1): `.github/workflows/ci.yml` runs `cargo xtask ci`
 on Linux, Windows and macOS (matrix, fail-fast off, one rust-cache per OS). It
-runs only when started by hand (Actions tab or `gh workflow run ci.yml`), to
-save Actions minutes: run it before a release; `cargo xtask ci` runs locally
-before every commit. Linux alone installs the system packages (with
+runs on every push to main and every pull request (the repository is public
+since 2026-10-24), and by hand (`gh workflow run ci.yml`); `cargo xtask ci`
+still runs locally before every commit. Linux alone installs the system packages (with
 fig2dev, so the A8 reference tests run; the other runners skip them), runs the
 wasm check (`RUSTFIG_REQUIRE_WASM=1`) and the perf budgets (tuned there). The
 other runners set `RUSTFIG_SKIP_WASM=1`, which makes `cargo xtask ci|wasm` skip
