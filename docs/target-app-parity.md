@@ -23,15 +23,15 @@ the score.
 | Attributes / indicator | 10 | 90 % | mix memory and lock of xfig's colour panel (not built, recent colours instead) | 3 |
 | Drawing modes | 12 | 98 % | none known | 0 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
-| Export | 12 | 73 % | the audit's remaining hardening passes (B11), picture frames and GIF transparency (gap #26), local fonts (F7) embedded in PDF, SVG and EPS (`sld` checked 2026-10-23: fig2dev has no `gensld`, the port reproduces `ppmtoacad`; `\ooo` escapes byte-identical to C fig2dev, fig2dev branch `b11-export-hardening`) | 79 |
-| Text | 10 | 84 % | exact PostScript font metrics (text editing on the canvas done 2026-10-22, E10; spell check 2026-10-23, F5; character map 2026-10-22, E5); installed fonts per text drawn on the canvas (F7, 2026-10-23), their embedding in PDF/SVG/EPS exports is still to do (fig2dev repo) | 14 |
+| Export | 12 | 73 % | the audit's remaining hardening passes (B11), picture frames and GIF transparency (gap #26)(`sld` checked 2026-10-23: fig2dev has no `gensld`, the port reproduces `ppmtoacad`; `\ooo` escapes byte-identical to C fig2dev, fig2dev branch `b11-export-hardening`) | 79 |
+| Text | 10 | 84 % | exact PostScript font metrics (text editing on the canvas done 2026-10-22, E10; spell check 2026-10-23, F5; character map 2026-10-22, E5); installed fonts per text (F7, 2026-10-23), embedded in PDF/PS/SVG exports by fig2dev v0.8.0 | 14 |
 | View & navigation | 8 | 100 % | — (zoom box, pan to origin and unzoom with Ctrl+click done 2026-10-22, E3) | 0 |
 | Undo | 4 | 100 % | — | 0 |
 | Libraries | 5 | 95 % | the web build (no file system: no bundled libraries yet) | 3 |
 | Printing | 5 | 85 % | verification of the printer hand-off on Windows and Linux, browser print dialog not yet checked in a real browser | 4 |
 | Settings & styles | 5 | 80 % | — (Global settings rows with effect, Unit/Scale panel, Arrow Size panel and number pop-ups done in W10-23, -24, -31, -32; preferences, recent files, styles with families E6, colours E4 done) | 0 |
-| Platforms | 7 | 72 % | Windows/Linux manual checks (checklist in hardware-parity.md), browser check of the web build (C3 browser autosave done 2026-10-23, not yet run in a browser), pictures and Merge on the web | 12 |
-| **Overall** | 100 | **≈87 %** | | **296** |
+| Platforms | 7 | 76 % | code signing (user decision), Windows/Linux manual checks of the packages (P3, `cargo xtask package` 2026-10-24) and the platforms (checklist in hardware-parity.md), browser check of the web build (C3 browser autosave done 2026-10-23, not yet run in a browser), pictures and Merge on the web | 10 |
+| **Overall** | 100 | **≈87 %** | | **294** |
 
 ## Evidence of what ships
 
@@ -114,6 +114,7 @@ the score.
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-24 | ≈87 % | P3 packaging (macOS .app/.dmg, Linux .deb/tarball, Windows zip), G3 accessible labels, C4 touch (long press, two-finger pan), F3 dead keys, W18 modern help (command search, F1, mouse sheet, what's new); Platforms 72 → 76 %, 296 → 294 h. |
 | 2026-10-23 | ≈85 % | F7 (RustFig side): installed fonts per text, Text 78 → 80 %, 30 → 26 h; embedding in exports still to do. |
 | 2026-10-23 | ≈85 % | Recount after step 1 towards beta: D11 click-to-close rules (Drawing 95 → 98 %), figure comments from Edit mode (Editing 83 → 86 %), F2 LaTeX special text (Text 70 → 72 %); 337 → 314 h. |
 | 2026-10-23 | ≈84 % | D10: copy counts (Attributes 87 → 90 %, 6 → 3 h). |
