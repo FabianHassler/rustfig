@@ -246,7 +246,7 @@ covered by W2.
 | G1 | ✅ 2026-10-16. Read Fig 1.x/2.x: the app opens Fig 1.3–2.1 through fig2dev's ported reader (`crates/engine/src/fig2dev.rs`, since B12 `crates/engine/src/fig2dev/`), showing the reader's repairs as warnings. | Sample files from the format docs load. | 24 |
 | G2 | Picture objects: XPM, XBM, PCX via code; PDF via a pure-Rust renderer; EPS preview (TIFF/WMF preview section) or a labelled box. Adding a PDF renderer dependency is a **user decision**. | Each format shows in the canvas and exports. | 20 |
 | G3 | ✅ 2026-10-24 (AccessKit already on in eframe; `canvas::describe_drawing` names the drawing for the canvas widget, unit test `canvas_description_names_the_objects_and_is_capped`; `every_interactive_widget_has_an_accessible_label` in `ui_smoke.rs` fails on any unlabelled button, check box, combo or text field; manual: Preferences > Accessibility; VoiceOver check stays manual). Accessibility: AccessKit labels for panels and dialogs; object list for screen readers. | VoiceOver reads the tool panel. | 10 |
-| G4 | **Beta review**: re-score parity, aim for ≥ 85 %; fix the top regressions. | Updated `target-app-parity.md`. | 6 |
+| G4 | 🟡 2026-10-24 (part 1: gaps.md and target-app-parity.md checked against code, no score moved). **Beta review**: re-score parity, aim for ≥ 85 %; fix the top regressions. | Updated `target-app-parity.md`. | 6 |
 
 ## fig2dev: design notes for A8 and B0
 
