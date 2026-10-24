@@ -1085,6 +1085,32 @@ fn arrow_types_up_to_14() {
     }
 }
 
+/// W10: the edit panel's arrow row is a pictorial button; it opens the
+/// arrow choices, and a choice sets the arrow type.
+#[test]
+fn edit_panel_arrow_row_is_a_picture_button() {
+    let mut h = harness(app());
+    h.state_mut()
+        .engine
+        .execute(
+            "shape.polyline",
+            &json!({"points": [[0, 0], [600, 0]], "forward_arrow": true}),
+        )
+        .unwrap();
+    h.state_mut().engine.execute("edit.select_all", &json!({})).unwrap();
+    open_edit(&mut h);
+    h.run_steps(3);
+    let before = h.state().dialogs.edit.as_ref().unwrap().fwd.choice;
+    assert!(h.query_by_label("type 3 filled").is_none(), "choices closed");
+    // The button carries the current type's name; clicking it lists the choices.
+    h.get_all_by_label_contains("type ").next().unwrap().click();
+    h.run_steps(3);
+    h.get_by_label("type 3 filled").click();
+    h.run_steps(3);
+    let after = h.state().dialogs.edit.as_ref().unwrap().fwd.choice;
+    assert_ne!(before, after, "a choice changes the arrow type");
+}
+
 /// A6: a drawing left by an instance that stopped is offered at the next
 /// start and restored unsaved, under the name of its file.
 #[test]

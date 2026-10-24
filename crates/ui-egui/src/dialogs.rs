@@ -1647,12 +1647,20 @@ fn figure_comments_dialog(app: &mut App, ctx: &egui::Context) {
         .resizable(false)
         .collapsible(false)
         .show(ctx, |ui| {
-            ui.label("Comments");
-            ui.add(
-                egui::TextEdit::multiline(&mut st.text)
-                    .desired_rows(4)
-                    .desired_width(300.0),
-            );
+            ui.spacing_mut().interact_size.y = crate::attributes::PIC_BTN;
+            egui::Grid::new("figure_comments_grid")
+                .num_columns(2)
+                .spacing([10.0, 4.0])
+                .show(ui, |ui| {
+                    rl(ui, "Comments");
+                    ui.add(
+                        egui::TextEdit::multiline(&mut st.text)
+                            .desired_rows(4)
+                            .desired_width(300.0),
+                    );
+                    ui.end_row();
+                });
+            ui.separator();
             ui.horizontal(|ui| {
                 done = ui.button("Done").clicked();
                 cancel = ui.button("Cancel").clicked();
@@ -1678,7 +1686,15 @@ fn spline_point_dialog(app: &mut App, ctx: &egui::Context) {
         .show(ctx, |ui| {
             ui.label("Edit the behavior\nof the control point");
             if let Some(v) = st.shapes.get_mut(st.index) {
-                ui.add(egui::Slider::new(v, -1.0..=1.0).text("shape factor"));
+                ui.spacing_mut().interact_size.y = crate::attributes::PIC_BTN;
+                egui::Grid::new("spline_point_grid")
+                    .num_columns(2)
+                    .spacing([10.0, 4.0])
+                    .show(ui, |ui| {
+                        rl(ui, "Shape factor");
+                        ui.add(egui::Slider::new(v, -1.0..=1.0));
+                        ui.end_row();
+                    });
                 ui.horizontal(|ui| {
                     // xfig's three buttons: approximated, angular, interpolated.
                     if ui.button("Approximated").clicked() {
@@ -1756,7 +1772,7 @@ fn point_table(ui: &mut egui::Ui, st: &mut EditState, scale: f64) {
         ..
     } = st;
     let Geo::Points(pts) = geo else { return };
-    ui.label("Points");
+    rl(ui, "Points");
     ui.vertical(|ui| {
         #[derive(Clone, Copy)]
         enum Act {
@@ -1765,25 +1781,49 @@ fn point_table(ui: &mut egui::Ui, st: &mut EditState, scale: f64) {
         }
         let mut act = None;
         let n = pts.len();
+        let row_h = ui.spacing().interact_size.y;
+        // Up to six rows show at once, the rest scroll.
+        let shown = (row_h + ui.spacing().item_spacing.y) * n.min(6) as f32;
+        // Column headings, each over its column (same widths as the rows).
+        ui.horizontal(|ui| {
+            let h = ui.spacing().interact_size.y;
+            let head = |ui: &mut egui::Ui, w: f32, t: &str| {
+                ui.add_sized([w, h], egui::Label::new(egui::RichText::new(t).strong()));
+            };
+            head(ui, IDX_W, "#");
+            head(ui, COORD_W, "X");
+            head(ui, COORD_W, "Y");
+            if *xspline {
+                head(ui, SHAPE_W, "Shape");
+            }
+        });
         egui::ScrollArea::vertical()
             .id_salt("edit_points")
-            .max_height(200.0)
+            .max_height(shown)
+            .min_scrolled_height(shown)
             .auto_shrink([true, true])
-            .show_rows(ui, 24.0, n, |ui, range| {
+            .show_rows(ui, row_h, n, |ui, range| {
                 for i in range {
                     ui.horizontal(|ui| {
-                        ui.label(egui::RichText::new(format!("{i:>3}")).monospace());
+                        ui.add_sized(
+                            [IDX_W, ui.spacing().interact_size.y],
+                            egui::Label::new(egui::RichText::new(format!("{i}")).monospace()),
+                        );
                         if let Some(p) = pts.get_mut(i) {
-                            ui.label("X =");
                             coord(ui, &mut p[0], scale);
-                            ui.label("Y =");
                             coord(ui, &mut p[1], scale);
                         }
                         if *xspline {
                             if let Some(v) = shapes.get_mut(i) {
-                                ui.label("Shape");
-                                ui.add(egui::DragValue::new(v).range(-1.0..=1.0).speed(0.05).max_decimals(2))
-                                    .on_hover_text("X-spline shape factor: -1 interpolated, 0 angular, 1 approximated");
+                                ui.add_sized(
+                                    [SHAPE_W, ui.spacing().interact_size.y],
+                                    egui::DragValue::new(v)
+                                        .range(-1.0..=1.0)
+                                        .speed(0.05)
+                                        .min_decimals(2)
+                                        .max_decimals(2),
+                                )
+                                .on_hover_text("X-spline shape factor: -1 interpolated, 0 angular, 1 approximated");
                             }
                         }
                         if ui
@@ -1880,11 +1920,31 @@ fn point_table(ui: &mut egui::Ui, st: &mut EditState, scale: f64) {
 }
 
 /// A coordinate field: shown in the panel's units (`scale` Fig units each).
+/// A row label of the edit panel: vertically centred in a row of the common
+/// height, so it lines up with the controls next to it.
+fn rl(ui: &mut egui::Ui, text: impl Into<egui::WidgetText>) {
+    ui.horizontal(|ui| {
+        ui.label(text);
+    });
+}
+
+/// Width of a coordinate field in the edit panel.
+const COORD_W: f32 = 78.0;
+/// Widths of the point table's index and shape columns.
+const IDX_W: f32 = 30.0;
+const SHAPE_W: f32 = 56.0;
+
 fn coord(ui: &mut egui::Ui, v: &mut f64, scale: f64) {
     let mut d = *v / scale;
     let step = if scale > 100.0 { 0.01 } else { 1.0 };
     if ui
-        .add(egui::DragValue::new(&mut d).speed(step).max_decimals(4))
+        .add_sized(
+            [COORD_W, ui.spacing().interact_size.y],
+            egui::DragValue::new(&mut d)
+                .speed(step)
+                .min_decimals(if scale > 100.0 { 2 } else { 0 })
+                .max_decimals(4),
+        )
         .changed()
     {
         *v = d * scale;
@@ -1892,7 +1952,7 @@ fn coord(ui: &mut egui::Ui, v: &mut f64, scale: f64) {
 }
 
 fn xy_row(ui: &mut egui::Ui, label: &str, p: &mut [f64; 2], scale: f64) {
-    ui.label(label);
+    rl(ui, label);
     ui.horizontal(|ui| {
         ui.label("X =");
         coord(ui, &mut p[0], scale);
@@ -1903,33 +1963,24 @@ fn xy_row(ui: &mut egui::Ui, label: &str, p: &mut [f64; 2], scale: f64) {
 }
 
 fn arrow_rows(ui: &mut egui::Ui, id: &str, label: &str, a: &mut ArrowRows) {
-    ui.label(label);
+    rl(ui, label);
     ui.horizontal(|ui| {
+        let h = ui.spacing().interact_size.y;
         ui.checkbox(&mut a.on, "on");
         if let Some(n) = arrow_menu(ui, id, a.choice) {
             a.choice = n;
         }
-        ui.label("Thick");
-        ui.add(
-            egui::DragValue::new(&mut a.thick)
-                .range(0.0..=10000.0)
-                .speed(0.1)
-                .max_decimals(2),
-        );
-        ui.label("Width");
-        ui.add(
-            egui::DragValue::new(&mut a.width)
-                .range(0.0..=10000.0)
-                .speed(0.1)
-                .max_decimals(2),
-        );
-        ui.label("Length");
-        ui.add(
-            egui::DragValue::new(&mut a.length)
-                .range(0.0..=10000.0)
-                .speed(0.1)
-                .max_decimals(2),
-        );
+        for (name, v) in [
+            ("Thick", &mut a.thick),
+            ("Width", &mut a.width),
+            ("Length", &mut a.length),
+        ] {
+            ui.label(name);
+            ui.add_sized(
+                [SHAPE_W, h],
+                egui::DragValue::new(v).range(0.0..=10000.0).speed(0.1).max_decimals(2),
+            );
+        }
     });
     ui.end_row();
 }
@@ -1972,12 +2023,14 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
         .resizable(false)
         .collapsible(false)
         .show(ctx, |ui| {
+            // One row height for labels, fields and pictorial buttons.
+            ui.spacing_mut().interact_size.y = crate::attributes::PIC_BTN;
             egui::Grid::new("edit_grid")
                 .num_columns(2)
-                .spacing([8.0, 6.0])
+                .spacing([10.0, 4.0])
                 .show(ui, |ui| {
                     if st.is_arc {
-                        ui.label("Arc type");
+                        rl(ui, "Arc type");
                         ui.horizontal(|ui| {
                             ui.radio_value(&mut st.pie, false, "Open");
                             ui.radio_value(&mut st.pie, true, "Pie wedge");
@@ -1985,18 +2038,18 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                         ui.end_row();
                     }
                     if st.is_text {
-                        ui.label("Size");
+                        rl(ui, "Size");
                         ui.add(egui::DragValue::new(&mut st.size).range(1.0..=500.0).suffix(" pt"));
                         ui.end_row();
-                        ui.label("Pen colour");
+                        rl(ui, "Pen colour");
                         if let Some(c) = color_combo(ui, "edit_tcolor", app.engine.doc(), st.pen) {
                             st.pen = c;
                         }
                         ui.end_row();
-                        ui.label("Angle");
+                        rl(ui, "Angle");
                         ui.add(egui::DragValue::new(&mut st.angle).range(-360.0..=360.0).suffix("°"));
                         ui.end_row();
-                        ui.label("Justification");
+                        rl(ui, "Justification");
                         ui.horizontal(|ui| {
                             for (j, n) in [
                                 (Justify::Left, "Left justified"),
@@ -2007,14 +2060,14 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             }
                         });
                         ui.end_row();
-                        ui.label("Flags");
+                        rl(ui, "Flags");
                         ui.horizontal(|ui| {
                             ui.checkbox(&mut st.hidden, "Hidden");
                             ui.checkbox(&mut st.rigid, "Rigid");
                             ui.checkbox(&mut st.special, "TeX");
                         });
                         ui.end_row();
-                        ui.label("Font");
+                        rl(ui, "Font");
                         if let Some(out) = font_combo(ui, "edit_font", st.font, st.postscript, st.local_font.as_deref())
                         {
                             if let Some((f, ps)) = out.font {
@@ -2026,7 +2079,7 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             }
                         }
                         ui.end_row();
-                        ui.label("Text");
+                        rl(ui, "Text");
                         ui.add(
                             egui::TextEdit::multiline(&mut st.text)
                                 .desired_rows(3)
@@ -2035,10 +2088,10 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                         ui.end_row();
                     }
                     if st.has_style && !st.is_picture {
-                        ui.label("Width");
+                        rl(ui, "Width");
                         ui.add(egui::DragValue::new(&mut st.thickness).range(0..=1000));
                         ui.end_row();
-                        ui.label("Line style");
+                        rl(ui, "Line style");
                         ui.horizontal(|ui| {
                             if let Some(k) = line_menu(ui, "edit_line", st.line) {
                                 st.line = k;
@@ -2054,17 +2107,17 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             }
                         });
                         ui.end_row();
-                        ui.label("Pen colour");
+                        rl(ui, "Pen colour");
                         if let Some(c) = color_combo(ui, "edit_pen", app.engine.doc(), st.pen) {
                             st.pen = c;
                         }
                         ui.end_row();
-                        ui.label("Fill colour");
+                        rl(ui, "Fill colour");
                         if let Some(c) = color_combo(ui, "edit_fill", app.engine.doc(), st.fill) {
                             st.fill = c;
                         }
                         ui.end_row();
-                        ui.label("Fill style");
+                        rl(ui, "Fill style");
                         // xfig offers no tints for black, white and default.
                         st.area = limit_fill(st.area, st.fill);
                         if let Some(f) = crate::attributes::fill_menu(ui, app.engine.doc(), (st.pen, st.fill), st.area)
@@ -2077,11 +2130,14 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                         let cap_ok = st.is_arc || st.kind == "polyline" || (st.kind == "spline" && st.has_arrows);
                         let join_ok = matches!(st.kind.as_str(), "polyline" | "polygon" | "box");
                         if cap_ok || join_ok {
-                            ui.label(match (cap_ok, join_ok) {
-                                (true, true) => "Cap / join style",
-                                (true, false) => "Cap style",
-                                _ => "Join style",
-                            });
+                            rl(
+                                ui,
+                                match (cap_ok, join_ok) {
+                                    (true, true) => "Cap / join style",
+                                    (true, false) => "Cap style",
+                                    _ => "Join style",
+                                },
+                            );
                             ui.horizontal(|ui| {
                                 if cap_ok {
                                     if let Some(c) = cap_menu(ui, "edit_cap", st.cap) {
@@ -2102,7 +2158,7 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                         arrow_rows(ui, "edit_barrow", "Backward arrow", &mut st.back);
                     }
                     if st.is_arcbox {
-                        ui.label("Corner radius");
+                        rl(ui, "Corner radius");
                         ui.add(egui::DragValue::new(&mut st.radius).range(0..=1000));
                         ui.end_row();
                     }
@@ -2112,7 +2168,7 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                     if st.is_compound {
                         // xfig: the smallest and largest depth inside, and a
                         // button that gives every object the smallest.
-                        ui.label("Depths");
+                        rl(ui, "Depths");
                         ui.horizontal(|ui| {
                             ui.label(format!("Minimum: {}", st.min_depth));
                             ui.label(format!("Maximum: {}", st.max_depth));
@@ -2123,15 +2179,15 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             }
                         });
                         ui.end_row();
-                        ui.label("Number of objects");
-                        ui.label(st.members.to_string());
+                        rl(ui, "Number of objects");
+                        rl(ui, st.members.to_string());
                         ui.end_row();
                         if !st.texts.is_empty() {
-                            ui.label("Text objects in this compound");
+                            rl(ui, "Text objects in this compound");
                             ui.end_row();
                         }
                         for (i, t) in st.texts.iter_mut().enumerate() {
-                            ui.label("Text");
+                            rl(ui, "Text");
                             ui.add(egui::TextEdit::singleline(t).desired_width(240.0))
                                 .widget_info(|| {
                                     egui::WidgetInfo::text_edit(
@@ -2144,12 +2200,12 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             ui.end_row();
                         }
                     } else {
-                        ui.label("Depth");
+                        rl(ui, "Depth");
                         ui.add(egui::DragValue::new(&mut st.depth).range(0..=999));
                         ui.end_row();
                     }
                     if !matches!(st.geo, Geo::None) {
-                        ui.label("Units");
+                        rl(ui, "Units");
                         egui::ComboBox::from_id_salt("edit_units")
                             .selected_text(if st.fig_units { "Fig units" } else { doc_unit })
                             .show_ui(ui, |ui| {
@@ -2181,13 +2237,13 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             angle,
                         } => {
                             if !*circle {
-                                ui.label("Angle (degrees)");
+                                rl(ui, "Angle (degrees)");
                                 ui.add(egui::DragValue::new(angle).range(-360.0..=360.0).speed(1.0));
                                 ui.end_row();
                             }
                             xy_row(ui, "Center", center, scale);
                             if *circle {
-                                ui.label("Radius");
+                                rl(ui, "Radius");
                                 coord(ui, &mut radii[0], scale);
                                 ui.end_row();
                             } else {
@@ -2204,7 +2260,7 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             let size0 = size;
                             xy_row(ui, "Top left corner", nw, scale);
                             xy_row(ui, "Bottom right corner", se, scale);
-                            ui.label("Dimensions");
+                            rl(ui, "Dimensions");
                             ui.horizontal(|ui| {
                                 ui.label("Width =");
                                 coord(ui, &mut size[0], scale);
@@ -2221,7 +2277,7 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             }
                         }
                     }
-                    ui.label("Comments");
+                    rl(ui, "Comments");
                     ui.add(
                         egui::TextEdit::multiline(&mut st.comment)
                             .desired_rows(2)
@@ -2624,7 +2680,7 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
                             .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, current));
                         ui.end_row();
                     }
-                    ui.label("Depths");
+                    rl(ui, "Depths");
                     ui.vertical(|ui| {
                         ui.add_enabled_ui(some_hidden, |ui| {
                             ui.checkbox(&mut st.active_layers_only, "active layers only")
@@ -3317,7 +3373,7 @@ fn picture_thumb(ctx: &egui::Context, st: &mut EditState) -> Option<egui::Textur
 fn picture_rows(ui: &mut egui::Ui, ctx: &egui::Context, app: &mut App, st: &mut EditState, scale: f64) {
     use rustfig_engine::cmd::picture::{resize_corner, rotation_of, with_rotation, Resize};
     let info = st.picture_info.clone();
-    ui.label("Picture filename");
+    rl(ui, "Picture filename");
     ui.horizontal(|ui| {
         ui.add(egui::TextEdit::singleline(&mut st.picture_file).desired_width(220.0))
             .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Picture filename"));
@@ -3335,29 +3391,29 @@ fn picture_rows(ui: &mut egui::Ui, ctx: &egui::Context, app: &mut App, st: &mut 
     ui.end_row();
     if let Some(i) = &info {
         if !i.exists {
-            ui.label("");
+            rl(ui, "");
             ui.colored_label(egui::Color32::RED, "File not found: use Relink, or drop a file here");
             ui.end_row();
         }
-        ui.label("Type");
-        ui.label(&i.kind);
+        rl(ui, "Type");
+        rl(ui, &i.kind);
         ui.end_row();
-        ui.label("Size (pixels)");
-        ui.label(format!("{} x {}", i.width, i.height));
+        rl(ui, "Size (pixels)");
+        rl(ui, format!("{} x {}", i.width, i.height));
         ui.end_row();
-        ui.label("Colours");
+        rl(ui, "Colours");
         ui.label(if i.colours > 256 {
             "more than 256".to_string()
         } else {
             i.colours.to_string()
         });
         ui.end_row();
-        ui.label("Transparent colour");
-        ui.label(if i.transparent { "yes" } else { "none" });
+        rl(ui, "Transparent colour");
+        rl(ui, if i.transparent { "yes" } else { "none" });
         ui.end_row();
     }
     if let Some(tex) = picture_thumb(ctx, st) {
-        ui.label("Preview");
+        rl(ui, "Preview");
         let s = tex.size_vec2();
         ui.image((tex.id(), s))
             .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, "Picture thumbnail"));
@@ -3387,7 +3443,7 @@ fn picture_rows(ui: &mut egui::Ui, ctx: &egui::Context, app: &mut App, st: &mut 
             b[0] = a[0] + if b[0] < a[0] { -wd } else { wd };
         }
         ui.end_row();
-        ui.label("Rotation");
+        rl(ui, "Rotation");
         let rot0 = rot;
         egui::ComboBox::from_id_salt("edit_pic_rotation")
             .selected_text(format!("{rot}"))
@@ -3409,7 +3465,7 @@ fn picture_rows(ui: &mut egui::Ui, ctx: &egui::Context, app: &mut App, st: &mut 
             0.0
         };
         ui.label("h/w ratio");
-        ui.label(format!("{orig:.1} (original), {cur:.1} (now)"));
+        rl(ui, format!("{orig:.1} (original), {cur:.1} (now)"));
         ui.end_row();
         // Two grid rows: a wrapping row inside a grid cell spills into the
         // next row's label.
@@ -3427,7 +3483,7 @@ fn picture_rows(ui: &mut egui::Ui, ctx: &egui::Context, app: &mut App, st: &mut 
             }
         });
         ui.end_row();
-        ui.label("");
+        rl(ui, "");
         ui.horizontal(|ui| {
             if ui.button("Scale by %").clicked() {
                 mode = Some(Resize::Percent(st.picture_percent));
@@ -3453,7 +3509,7 @@ fn picture_rows(ui: &mut egui::Ui, ctx: &egui::Context, app: &mut App, st: &mut 
     ui.checkbox(&mut st.flipped, "Flipped about diagonal");
     ui.end_row();
     if info.as_ref().is_some_and(|i| i.kind == "XBM") {
-        ui.label("XBM pen colour");
+        rl(ui, "XBM pen colour");
         if let Some(c) = color_combo(ui, "edit_xbm_pen", app.engine.doc(), st.pen) {
             st.pen = c;
         }
