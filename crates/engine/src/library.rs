@@ -5,20 +5,23 @@
 //! of their own, named `Outer / Inner`. RustFig bundles xfig's libraries
 //! (`libraries/` in the source tree, next to the program when installed, or
 //! the folders in `RUSTFIG_LIBRARIES`) and reads the user's own from the
-//! `library_dir` preference. The web build has no file system, so it lists
-//! none.
+//! `library_dir` preference. The web build has no file system: it reads the
+//! bundle from the served `libraries/` folder through an index ([`web`]).
 //
 // Ported from xfig src/w_library.c and src/e_placelib.c (xfig licence, see LICENSE-xfig).
 
 use crate::tools::{Button, Key, ToolEvent, ToolKind, ToolState};
 use crate::{Engine, EngineError, UiRequest};
 use rustfig_geom::{Affine, Point, Rect};
-#[cfg(not(target_arch = "wasm32"))]
 use rustfig_model::{Compound, ObjectKind};
 use rustfig_model::{Document, Object, ObjectId};
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
+
+/// The bundled libraries in the browser (C2).
+#[path = "library_web.rs"]
+pub mod web;
 
 /// Most libraries listed.
 pub const MAX_LIBRARIES: usize = 5_000;
@@ -150,9 +153,11 @@ pub fn bundled_roots() -> Vec<PathBuf> {
     out
 }
 
+/// The browser: the bundle is the `libraries/` folder next to the page; its
+/// figures come from the index and the fetch cache of [`web`].
 #[cfg(target_arch = "wasm32")]
 pub fn bundled_roots() -> Vec<PathBuf> {
-    Vec::new()
+    vec![PathBuf::from(web::ROOT)]
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -384,14 +389,17 @@ fn scan_dir(dir: &Path, name: &str, user: bool, top: bool, depth: usize, cancel:
 
 #[cfg(target_arch = "wasm32")]
 fn scan_dir(
-    _dir: &Path,
+    dir: &Path,
     _name: &str,
-    _user: bool,
+    user: bool,
     _top: bool,
     _depth: usize,
     _cancel: &AtomicBool,
-    _out: &mut Vec<Library>,
+    out: &mut Vec<Library>,
 ) {
+    if !user && dir == Path::new(web::ROOT) {
+        out.extend(web::libraries());
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -419,8 +427,8 @@ pub fn object_names(dir: &Path) -> Vec<String> {
 }
 
 #[cfg(target_arch = "wasm32")]
-pub fn object_names(_dir: &Path) -> Vec<String> {
-    Vec::new()
+pub fn object_names(dir: &Path) -> Vec<String> {
+    web::figure_names(dir)
 }
 
 /// Whether `name` can be a figure's file name without the extension: no
@@ -445,11 +453,30 @@ pub fn object_comments(dir: &Path, name: &str) -> Vec<String> {
     let Ok(f) = std::fs::File::open(dir.join(format!("{name}.fig"))) else {
         return Vec::new();
     };
+    let lines: Vec<String> = BufReader::new(f).lines().map_while(Result::ok).take(200).collect();
+    comments_of_lines(lines)
+}
+
+/// The browser: from the figure's fetched bytes (none before it is fetched).
+#[cfg(target_arch = "wasm32")]
+pub fn object_comments(dir: &Path, name: &str) -> Vec<String> {
+    match web::cached(dir, name) {
+        Some(b) => comments_of_bytes(&b),
+        None => Vec::new(),
+    }
+}
+
+/// The comment lines at the top of a figure's bytes.
+pub fn comments_of_bytes(bytes: &[u8]) -> Vec<String> {
+    let text = String::from_utf8_lossy(bytes.get(..bytes.len().min(64 * 1024)).unwrap_or_default());
+    comments_of_lines(text.lines().take(200).map(str::to_string).collect())
+}
+
+fn comments_of_lines(lines: Vec<String>) -> Vec<String> {
     let mut out = Vec::new();
     // The `#FIG` line (and `#encoding`), then seven header lines (orientation,
     // justification, units, paper size, magnification, pages, transparent
     // colour); the figure's comment lines follow.
-    let lines: Vec<String> = BufReader::new(f).lines().map_while(Result::ok).take(200).collect();
     let first = lines.iter().take_while(|l| l.starts_with('#')).count();
     for l in lines.into_iter().skip(first + 7) {
         let Some(c) = l.strip_prefix('#') else { break };
@@ -459,11 +486,6 @@ pub fn object_comments(dir: &Path, name: &str) -> Vec<String> {
         }
     }
     out
-}
-
-#[cfg(target_arch = "wasm32")]
-pub fn object_comments(_dir: &Path, _name: &str) -> Vec<String> {
-    Vec::new()
 }
 
 /// Read a library figure as one drawing whose only object is one compound:
@@ -482,10 +504,17 @@ pub fn read_figure(dir: &Path, name: &str) -> Result<Document, String> {
         return Err(format!("{}: too large", path.display()));
     }
     let bytes = std::fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))?;
-    let (mut doc, _) = rustfig_format::read_any_messages(&bytes).map_err(|e| format!("{name}.fig: {e}"))?;
-    // A picture that fails to load draws as its empty frame, as in xfig.
-    let _ = crate::import::load_all_pictures(&mut doc, Some(dir));
+    let mut doc = figure_from_bytes(&bytes, name, Some(dir))?;
     absolutize_pictures(&mut doc.objects, dir);
+    Ok(doc)
+}
+
+/// A library figure's bytes as [`read_figure`]'s one-compound drawing
+/// (pictures it names are loaded from `dir` where there is one).
+pub fn figure_from_bytes(bytes: &[u8], name: &str, dir: Option<&Path>) -> Result<Document, String> {
+    let (mut doc, _) = rustfig_format::read_any_messages(bytes).map_err(|e| format!("{name}.fig: {e}"))?;
+    // A picture that fails to load draws as its empty frame, as in xfig.
+    let _ = crate::import::load_all_pictures(&mut doc, dir);
     let comments = std::mem::take(&mut doc.comments);
     let objects: Vec<Object> = std::mem::take(&mut doc.objects)
         .into_iter()
@@ -506,9 +535,15 @@ pub fn read_figure(dir: &Path, name: &str) -> Result<Document, String> {
     Ok(doc)
 }
 
+/// The browser: from the fetch cache; a figure not fetched yet is an error
+/// that says so (the panel fetches before it asks).
 #[cfg(target_arch = "wasm32")]
-pub fn read_figure(_dir: &Path, _name: &str) -> Result<Document, String> {
-    Err("libraries are not available here".into())
+pub fn read_figure(dir: &Path, name: &str) -> Result<Document, String> {
+    if !valid_name(name) {
+        return Err(format!("bad object name {name:?}"));
+    }
+    let bytes = web::cached(dir, name).ok_or_else(|| format!("{name}.fig is still loading, try again"))?;
+    figure_from_bytes(&bytes, name, None)
 }
 
 /// Picture names in library figures are relative to the library folder;

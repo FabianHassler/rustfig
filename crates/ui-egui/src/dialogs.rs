@@ -2017,6 +2017,27 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
             st.picture_file = path;
             picture_set_file(app, &mut st);
         }
+        // The browser gives the bytes, not a path: kept in memory under the
+        // file name (C2), as the picker's answer for Browse/Relink is.
+        let dropped_bytes = ctx.input(|i| {
+            i.raw.dropped_files.iter().find_map(|f| match (&f.path, &f.bytes) {
+                (None, Some(b)) => Some(crate::web_io::WebPick {
+                    name: f.name.clone(),
+                    bytes: b.to_vec(),
+                }),
+                _ => None,
+            })
+        });
+        if let Some(pick) = dropped_bytes {
+            let name = crate::web_io::base_name(&pick.name);
+            if crate::web_io::keep_picture(app, &name, &pick) {
+                app.web_relink_name = Some(name);
+            }
+        }
+        if let Some(name) = app.web_relink_name.take() {
+            st.picture_file = name;
+            picture_set_file(app, &mut st);
+        }
     }
     egui::Window::new(&st.title)
         .open(&mut open)
@@ -3382,7 +3403,10 @@ fn picture_rows(ui: &mut egui::Ui, ctx: &egui::Context, app: &mut App, st: &mut 
         }
         let missing = info.as_ref().is_some_and(|i| !i.exists);
         if ui.button(if missing { "Relink" } else { "Browse" }).clicked() {
-            if let Some(f) = app.file_dialogs.pick_file("Pictures", PICTURE_EXTS) {
+            if app.file_dialogs.is_web() {
+                // The picker answers later; the panel takes the file then.
+                app.web_pick(crate::web_io::WebPurpose::PictureRelink, "Pictures", PICTURE_EXTS);
+            } else if let Some(f) = app.file_dialogs.pick_file("Pictures", PICTURE_EXTS) {
                 st.picture_file = f;
                 picture_set_file(app, st);
             }

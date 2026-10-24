@@ -114,7 +114,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Merge from data",
             menu: "",
             shortcut: "",
-            params: "{\"data\": string, \"offset_x\"?: number, \"offset_y\"?: number}",
+            params: "{\"data\": string | \"base64\": string, \"offset_x\"?: number, \"offset_y\"?: number}  — Merge from the file's text or its bytes in base64 (a Fig file, or a PDF, SVG or PNG export with the figure embedded); the browser's Merge uses this. Pictures it names load from memory (`picture.store`)",
             mutates: true,
             enabled: always,
             run: merge_data,
@@ -500,8 +500,17 @@ fn merge(e: &mut Engine, p: &Value) -> CmdResult {
 }
 
 fn merge_data(e: &mut Engine, p: &Value) -> CmdResult {
-    let data = string(p, "data")?;
-    merge_doc(e, parse(data.as_bytes())?.0, offset(p)?)
+    let bytes = match opt_str(p, "base64")? {
+        Some(b) => base64_decode(b),
+        None => string(p, "data")?.into_bytes(),
+    };
+    if bytes.len() > rustfig_format::MAX_FILE_BYTES {
+        return Err(EngineError::io("the file is too large"));
+    }
+    let mut doc = parse(&bytes)?.0;
+    // Pictures the figure names load from the in-memory store (the browser) or the current folder.
+    let _ = import::load_all_pictures(&mut doc, None);
+    merge_doc(e, doc, offset(p)?)
 }
 
 /// What a save or export writes: the whole figure, or with `part: true`

@@ -21,11 +21,29 @@ pub struct WebPick {
     pub bytes: Vec<u8>,
 }
 
+/// What a pick is for: the picker is one dialog, the request says what to do
+/// with the file when it arrives.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub enum WebPurpose {
+    /// Open it as the figure.
+    #[default]
+    Open,
+    /// File > Merge.
+    Merge,
+    /// Picture mode: a picture in the box the user drew.
+    PictureBox { rect: [f64; 4], keep_aspect: bool },
+    /// Import a picture at the centre of the view.
+    PictureImport,
+    /// The picture panel's Browse / Relink.
+    PictureRelink,
+}
+
 /// Where asynchronous picks arrive: the browser's file picker answers some
 /// frames after the request. Cloning shares the queue.
 #[derive(Clone, Default)]
 pub struct WebInbox {
-    queue: Rc<RefCell<Vec<WebPick>>>,
+    queue: Rc<RefCell<Vec<(WebPurpose, WebPick)>>>,
+    purpose: Rc<RefCell<WebPurpose>>,
     ctx: Rc<RefCell<Option<egui::Context>>>,
 }
 
@@ -40,10 +58,18 @@ impl WebInbox {
         }
     }
 
-    /// A pick arrived.
+    /// What the next pick is for (set just before the picker opens).
+    pub fn request(&self, purpose: WebPurpose) {
+        if let Ok(mut p) = self.purpose.try_borrow_mut() {
+            *p = purpose;
+        }
+    }
+
+    /// A pick arrived, for what was requested last.
     pub fn push(&self, pick: WebPick) {
+        let purpose = self.purpose.try_borrow().map(|p| p.clone()).unwrap_or_default();
         if let Ok(mut q) = self.queue.try_borrow_mut() {
-            q.push(pick);
+            q.push((purpose, pick));
         }
         if let Ok(c) = self.ctx.try_borrow() {
             if let Some(c) = c.as_ref() {
@@ -52,8 +78,15 @@ impl WebInbox {
         }
     }
 
+    /// Put a pick back to deal with later.
+    pub fn requeue(&self, purpose: WebPurpose, pick: WebPick) {
+        if let Ok(mut q) = self.queue.try_borrow_mut() {
+            q.push((purpose, pick));
+        }
+    }
+
     /// The picks that arrived since the last call.
-    pub fn take(&self) -> Vec<WebPick> {
+    pub fn take(&self) -> Vec<(WebPurpose, WebPick)> {
         self.queue
             .try_borrow_mut()
             .map(|mut q| std::mem::take(&mut *q))
@@ -99,6 +132,55 @@ pub fn open_pick(app: &mut App, pick: &WebPick) {
         app.engine.set_modified(embedded);
         app.info(format!("Opened {name}"));
     }
+}
+
+/// What a pick that arrived is used for (C2): Merge adds the figure, a
+/// picture is kept in memory under its file name (the figure keeps only the
+/// name, as on the desktop; the bytes live until the session ends) and placed.
+pub fn handle_pick(app: &mut App, purpose: WebPurpose, pick: &WebPick) {
+    let name = base_name(&pick.name);
+    match purpose {
+        WebPurpose::Open => {}
+        WebPurpose::Merge => {
+            let r = app.run(
+                "file.merge_data",
+                json!({"base64": rustfig_engine::base64(&pick.bytes)}),
+            );
+            if r.is_some() {
+                app.info(format!("Merged {name}"));
+            }
+        }
+        WebPurpose::PictureBox { rect, keep_aspect } => {
+            if keep_picture(app, &name, pick) {
+                let [x, y, w, h] = rect;
+                app.add_picture(&name, [x, y, w, h], keep_aspect);
+            }
+        }
+        WebPurpose::PictureImport => {
+            if keep_picture(app, &name, pick) {
+                let c = app.engine.view.visible().center();
+                app.run("shape.picture", json!({"path": name, "x": c.x, "y": c.y}));
+            }
+        }
+        WebPurpose::PictureRelink => {
+            if keep_picture(app, &name, pick) {
+                app.web_relink_name = Some(name);
+            }
+        }
+    }
+}
+
+/// Keep a picked picture's bytes under its file name for the session.
+pub fn keep_picture(app: &mut App, name: &str, pick: &WebPick) -> bool {
+    if name.is_empty() {
+        app.error("The picture has no file name");
+        return false;
+    }
+    app.run(
+        "picture.store",
+        json!({"name": name, "base64": rustfig_engine::base64(&pick.bytes)}),
+    )
+    .is_some()
 }
 
 /// Save: the figure as a download named after the open file (`figure.fig`

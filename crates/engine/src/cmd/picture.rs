@@ -32,9 +32,16 @@ pub struct PictureInfo {
 pub fn picture_type(path: &str) -> String {
     use std::io::Read;
     let mut head = [0u8; 8];
-    let n = std::fs::File::open(path)
+    let mut n = std::fs::File::open(path)
         .and_then(|mut f| f.read(&mut head))
         .unwrap_or(0);
+    // A picture kept in memory (the browser, C2).
+    if n == 0 {
+        if let Some(b) = import::stored_picture(path) {
+            n = b.len().min(8);
+            head[..n].copy_from_slice(b.get(..n).unwrap_or_default());
+        }
+    }
     let h = head.get(..n).unwrap_or(&[]);
     if h.starts_with(b"\x89PNG") {
         "PNG".into()
@@ -57,7 +64,7 @@ pub fn picture_type(path: &str) -> String {
 
 /// Information about a picture (read-only).
 pub fn info(pic: &Picture) -> PictureInfo {
-    let exists = std::path::Path::new(&pic.file).is_file();
+    let exists = std::path::Path::new(&pic.file).is_file() || import::stored_picture(&pic.file).is_some();
     let (mut width, mut height, mut colours, mut transparent) = (0, 0, 0, false);
     if let Some(img) = &pic.image {
         width = img.width;
@@ -220,6 +227,13 @@ pub(super) fn commands() -> Vec<Command> {
             info_cmd,
         ),
         cmd(
+            "picture.store",
+            "Keep a picture in memory",
+            "{\"name\": string, \"base64\": string} — keeps the picture's bytes under its file name for the session; pictures with that file name (Picture mode, Reread, Relink, a merged or opened figure) then load from memory when the file is not on disk. The browser has no files, so its Picture mode uses this",
+            false,
+            store,
+        ),
+        cmd(
             "picture.edit_image",
             "Edit picture's image",
             "{\"id\"} — opens the picture's file in the system's default application (native only)",
@@ -281,6 +295,17 @@ fn rotate(e: &mut Engine, p: &Value) -> CmdResult {
     let q = with_rotation(a, b, deg).ok_or_else(|| EngineError::bad_params("rotation must be 0, 90, 180 or 270"))?;
     set_corners(e, id, a, q);
     Ok(json!({"id": id.0, "rotation": deg}))
+}
+
+fn store(_e: &mut Engine, p: &Value) -> CmdResult {
+    let name = string(p, "name")?;
+    let bytes = crate::base64_decode(&string(p, "base64")?);
+    // Only what the image crate or readpics can read is worth keeping.
+    if bytes.is_empty() {
+        return Err(EngineError::bad_params("no picture data"));
+    }
+    import::store_picture(&name, bytes).map_err(EngineError::bad_params)?;
+    Ok(json!({"name": name}))
 }
 
 fn set_file(e: &mut Engine, p: &Value) -> CmdResult {

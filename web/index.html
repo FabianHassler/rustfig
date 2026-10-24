@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RustFig</title>
   <link data-trunk rel="rust" data-bin="rustfig" data-wasm-opt="z" href="../apps/rustfig/Cargo.toml">
+  <!-- The bundled figure libraries, fetched lazily by Library mode (C2); libraries.json is the index `cargo xtask web` writes. -->
+  <link data-trunk rel="copy-dir" href="../libraries">
+  <link data-trunk rel="copy-file" href="libraries.json">
   <style>
     html, body { margin: 0; height: 100%; overflow: hidden; background: #3a3c42; }
     canvas { width: 100%; height: 100%; display: block; }

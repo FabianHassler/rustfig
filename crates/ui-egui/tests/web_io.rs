@@ -162,5 +162,53 @@ fn hostile_picks_are_errors_not_panics() {
         let mut h = harness(app);
         h.state_mut().run("app.open", json!({}));
         h.run_steps(3);
+        // The same bytes as a merge or a picture are errors too.
+        h.state_mut().run("app.merge", json!({}));
+        h.state_mut().run("app.import_picture", json!({}));
+        h.run_steps(3);
     }
+}
+
+#[test]
+fn merge_through_the_browser_picker_adds_a_compound() {
+    let (app, _) = web_app(vec![WebPick {
+        name: "more.fig".into(),
+        bytes: fig_bytes(2),
+    }]);
+    let mut h = harness(app);
+    h.state_mut()
+        .run("shape.rectangle", json!({"x": 0, "y": 0, "width": 300, "height": 300}));
+    h.state_mut().run("app.merge", json!({}));
+    h.run_steps(3);
+    // The rectangle and one compound holding the two merged ones; the file keeps its name.
+    assert_eq!(count(h.state()), 2);
+    assert!(h.state().engine.is_modified());
+    assert_eq!(h.state().engine.path(), None);
+}
+
+/// A 1 x 1 PNG.
+const PNG_1X1: &str =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+#[test]
+fn picture_through_the_browser_picker_is_kept_by_name() {
+    let (app, _) = web_app(vec![WebPick {
+        name: "C:\\fakepath\\web-ui-test-pixel.png".into(),
+        bytes: rustfig_engine::base64_decode(PNG_1X1),
+    }]);
+    let mut h = harness(app);
+    h.state_mut().run("app.import_picture", json!({}));
+    h.run_steps(3);
+    assert_eq!(count(h.state()), 1);
+    let id = h.state().engine.doc().objects[0].id.0;
+    let r = h
+        .state_mut()
+        .engine
+        .execute("picture.info", &json!({"id": id}))
+        .unwrap();
+    assert_eq!(r["width"], 1);
+    assert_eq!(r["exists"], true);
+    // The figure keeps the file name only.
+    let saved = h.state_mut().engine.execute("file.save_data", &json!({})).unwrap();
+    assert!(saved["data"].as_str().unwrap().contains("web-ui-test-pixel.png"));
 }

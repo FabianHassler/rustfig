@@ -5,11 +5,11 @@
 | # | Gap | Area | Impact | Hours |
 |---|-----|------|--------|------:|
 | 1 | LaTeX exports closed: TikZ, PSTricks, pict2e, pstex/pdftex ported (B1, B2, B3); text bytes now as C (#27 closed 2026-10-18) | Export | High | 0 |
-| 2 | Web build: compiles; trunk packaging (C1), browser open/save/export (C2) and browser autosave (C3) landed 2026-10-23; left: the manual browser check (nothing has run in a real browser yet), pictures and Merge in the browser, no bundled libraries | Platforms | High | 6 |
+| 2 | Web build: compiles; trunk packaging (C1), browser open/save/export (C2) and browser autosave (C3) landed 2026-10-23; Merge, pictures (kept in memory by file name) and the bundled libraries (served files, lazy fetch) landed 2026-10-24; left: the manual browser check (nothing has run in a real browser yet), exports in the browser without in-memory pictures, EPS/PDF pictures, no user library or comment search there | Platforms | High | 6 |
 | 25 | ✅ 2026-10-23: the Fig writer and the bridge keep arrows on pie-wedge arcs and the arc centre as read (floats, `%.3f` as xfig's `write_arcobject`; `to_model` no longer refits it from the rounded points); tests `bridge.rs::arcs_keep_centre_and_pie_arrows`. | Export/File format | Done | 0 |
 | 26 | ✅ closed 2026-10-18 (audit pass 9): pictures get no frame in PS, EPS, PDF and bitmaps (genps strokes none; SVG keeps it) and transparent pixels stay transparent in EPS (colour-key `/ImageType 4`). Left: opaque pixels with the transparent colour are masked too (as fig2dev does for RGB images; for indexed GIFs it masks the index only), PNG with partial alpha is blended over white | Export | Low | 0 |
 | 3 | ✅ mostly closed 2026-10-23 (B4a, B4b, B5, B5b: page layout, EPS previews, `-B`/`-R`, printing with the native dialog); left: the printer hand-off checked on Windows and Linux, the browser print tab in a real browser | Export/Printing | Low | 4 |
-| 4 | ✅ closed 2026-10-23 (D6): library mode with the bundled libraries and the panel; left: xfig's library list files, the Stop button, the web build (no bundled libraries there yet) | Libraries | Low | 6 |
+| 4 | ✅ closed 2026-10-23 (D6): library mode with the bundled libraries and the panel; the web build serves the bundled libraries since 2026-10-24 (C2; browser check left) | Libraries | Low | 6 |
 | 5 | ✅ closed 2026-10-21 (D1): open compound; the dimension-line recomputation on close landed 2026-10-22 (D10); the save query landed 2026-10-21 | Editing | Low | 0 |
 | 6 | ✅ closed 2026-10-22 (D5): measure modes (join/split D2, chop D3, tangent/normal D4) | Editing | Low | 0 |
 | 7 | ✅ 2026-10-22 (E1, E6; E9 theme and scale 2026-10-23): settings persistence (units, grid, recent files, export options per format) and the style manager with families | Settings | Done | 0 |
@@ -82,4 +82,5 @@
 | 2026-10-23 | #34: S4-7 done. |
 | 2026-10-23 | #2: C1 done (trunk packaging, `cargo xtask web`). |
 | 2026-10-23 | #2: C2 done (browser file I/O); pictures, Merge and Export on save are desktop-only for now. |
+| 2026-10-24 | #2 shrank (C2): Merge, pictures in memory and the bundled libraries on the web; browser check and exports with pictures left. |
 | 2026-10-23 | P2: macOS checks done, two bugs fixed (huge canvas texture, non-UTF-8 arguments); Windows and Linux rows are manual checks in `docs/hardware-parity.md`. |
