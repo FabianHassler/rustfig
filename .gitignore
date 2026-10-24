@@ -6,3 +6,4 @@
 *.swp
 .DS_Store
 /old
+/web/libraries.json

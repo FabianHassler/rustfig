@@ -291,10 +291,13 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.new" => app.guard_unsaved(Pending::New),
         // The browser asks for the file first, the unsaved changes after (web_io).
         "app.open" if path.is_none() && app.file_dialogs.is_web() => {
-            app.file_dialogs
-                .pick_web("Figures", dialogs::FIGURE_EXTS, &app.web_inbox);
+            app.web_pick(crate::web_io::WebPurpose::Open, "Figures", dialogs::FIGURE_EXTS);
         }
         "app.open" => app.guard_unsaved(Pending::Open(path)),
+        // The browser's Merge: the picked file's bytes go to file.merge_data.
+        "app.merge" if path.is_none() && app.file_dialogs.is_web() => {
+            app.web_pick(crate::web_io::WebPurpose::Merge, "Figures", dialogs::FIGURE_EXTS);
+        }
         "app.merge" => {
             if let Some(p) = path.or_else(|| app.file_dialogs.pick_file("Figures", dialogs::FIGURE_EXTS)) {
                 return app
@@ -440,6 +443,13 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
             return Err("Installing fonts is not available on the web".into());
         }
         "help.open" => app.dialogs.help.show(p.get("topic").and_then(Value::as_str))?,
+        "app.import_picture" if path.is_none() && app.file_dialogs.is_web() => {
+            app.web_pick(
+                crate::web_io::WebPurpose::PictureImport,
+                "Pictures",
+                dialogs::PICTURE_EXTS,
+            );
+        }
         "app.import_picture" => {
             let file = path.or_else(|| app.file_dialogs.pick_file("Pictures", dialogs::PICTURE_EXTS));
             if let Some(f) = file {

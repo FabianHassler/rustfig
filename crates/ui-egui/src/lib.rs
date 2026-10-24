@@ -55,6 +55,8 @@ pub mod tex_gyre;
 pub mod theme;
 pub mod vector_icons;
 pub mod web_autosave;
+#[cfg(target_arch = "wasm32")]
+pub mod web_fetch;
 pub mod web_io;
 pub mod xfig_icons;
 
@@ -192,6 +194,9 @@ pub struct App {
     pub file_dialogs: Box<dyn dialogs::FileDialogs>,
     /// Files the browser picked, waiting to be opened (C2).
     pub web_inbox: web_io::WebInbox,
+    /// A picture the browser picked for the picture panel's Browse/Relink
+    /// (kept in memory under this file name); the panel takes it.
+    pub web_relink_name: Option<String>,
     quit_confirmed: bool,
     /// Open pop-ups, menus, windows and dialogs as of the last frame (for `ui.state`).
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
@@ -262,6 +267,7 @@ impl App {
             after_save: None,
             file_dialogs: Box::new(dialogs::NativeDialogs),
             web_inbox: web_io::WebInbox::default(),
+            web_relink_name: None,
             quit_confirmed: false,
             ui_open: Value::Null,
             #[cfg(not(target_arch = "wasm32"))]
@@ -441,19 +447,48 @@ impl App {
                 },
                 UiRequest::EditFigureComments => self.dialogs.open_figure_comments(&self.engine),
                 UiRequest::EditSplinePoint { id, index } => self.dialogs.open_spline_point(&self.engine, id, index),
+                // The browser has no paths: its picker answers later (web_io).
+                UiRequest::PickPicture { rect, keep_aspect } if self.file_dialogs.is_web() => {
+                    self.web_pick(
+                        web_io::WebPurpose::PictureBox {
+                            rect: [rect.min.x, rect.min.y, rect.width(), rect.height()],
+                            keep_aspect,
+                        },
+                        "Pictures",
+                        dialogs::PICTURE_EXTS,
+                    );
+                }
                 UiRequest::PickPicture { rect, keep_aspect } => {
                     if let Some(path) = self.file_dialogs.pick_file("Pictures", dialogs::PICTURE_EXTS) {
-                        let added = self.run(
-                            "shape.picture",
-                            json!({"path": path, "x": rect.min.x, "y": rect.min.y, "width": rect.width(), "height": rect.height(), "keep_aspect": keep_aspect}),
+                        self.add_picture(
+                            &path,
+                            [rect.min.x, rect.min.y, rect.width(), rect.height()],
+                            keep_aspect,
                         );
-                        // xfig opens the picture's edit panel after the box is drawn.
-                        if let Some(id) = added.and_then(|v| v.get("id").and_then(serde_json::Value::as_u64)) {
-                            self.dialogs.open_edit(&self.engine, rustfig_model::ObjectId(id));
-                        }
                     }
                 }
             }
+        }
+    }
+
+    /// Open the browser's file picker for `purpose`; the file arrives some
+    /// frames later in the inbox (C2).
+    pub fn web_pick(&mut self, purpose: web_io::WebPurpose, what: &str, exts: &[&str]) {
+        self.web_inbox.request(purpose);
+        self.file_dialogs.pick_web(what, exts, &self.web_inbox);
+    }
+
+    /// Picture mode's result: the picture in the box drawn (`[x, y, w, h]`),
+    /// then xfig's edit panel for it.
+    pub fn add_picture(&mut self, path: &str, rect: [f64; 4], keep_aspect: bool) {
+        let [x, y, w, h] = rect;
+        let added = self.run(
+            "shape.picture",
+            json!({"path": path, "x": x, "y": y, "width": w, "height": h, "keep_aspect": keep_aspect}),
+        );
+        // xfig opens the picture's edit panel after the box is drawn.
+        if let Some(id) = added.and_then(|v| v.get("id").and_then(serde_json::Value::as_u64)) {
+            self.dialogs.open_edit(&self.engine, rustfig_model::ObjectId(id));
         }
     }
 
@@ -479,8 +514,7 @@ impl App {
             }
             Pending::OpenWeb(pick) => web_io::open_pick(self, &pick),
             Pending::Open(path) if path.is_none() && self.file_dialogs.is_web() => {
-                self.file_dialogs
-                    .pick_web("Figures", dialogs::FIGURE_EXTS, &self.web_inbox);
+                self.web_pick(web_io::WebPurpose::Open, "Figures", dialogs::FIGURE_EXTS);
             }
             Pending::Open(path) => {
                 let path = path.or_else(|| self.file_dialogs.pick_file("Figures", dialogs::FIGURE_EXTS));
@@ -593,6 +627,8 @@ impl App {
         // A figure, or a PDF/SVG/PNG export with the figure embedded (E16),
         // dropped on the window opens. The picture panel takes its own drops.
         self.web_inbox.attach(ctx);
+        #[cfg(target_arch = "wasm32")]
+        web_fetch::attach(ctx);
         if self.dialogs.edit.is_none() {
             // A path on the desktop; the browser gives the bytes and a name (C2).
             let dropped = ctx.input(|i| {
@@ -621,10 +657,20 @@ impl App {
             if let Some(action) = dropped {
                 self.guard_unsaved(action);
             }
-            // The picker's answer; the unsaved changes are asked after it.
-            if self.pending.is_none() {
-                if let Some(p) = self.web_inbox.take().into_iter().next() {
-                    self.guard_unsaved(Pending::OpenWeb(p));
+        }
+        // The picker's answer; for Open the unsaved changes are asked after it,
+        // and an open edit panel waits (its own Relink pick is for it).
+        if self.pending.is_none() {
+            let edit_open = self.dialogs.edit.is_some();
+            for (purpose, pick) in self.web_inbox.take() {
+                if purpose == web_io::WebPurpose::Open {
+                    if edit_open || self.pending.is_some() {
+                        self.web_inbox.requeue(purpose, pick);
+                    } else {
+                        self.guard_unsaved(Pending::OpenWeb(pick));
+                    }
+                } else {
+                    web_io::handle_pick(self, purpose, &pick);
                 }
             }
         }

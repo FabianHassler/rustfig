@@ -40,6 +40,47 @@ pub fn resolve(file: &str, base: Option<&Path>) -> PathBuf {
     }
 }
 
+/// Pictures kept in memory by file name (C2): the browser has no files, so a
+/// picture the user picked (Picture mode, Relink, Merge of a figure that names
+/// it) lives here for the session; the `.fig` keeps the file name as usual.
+/// Native builds look here first too (`picture.store`, scripts and MCP).
+fn picture_store() -> &'static std::sync::Mutex<std::collections::HashMap<String, Arc<Vec<u8>>>> {
+    static S: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, Arc<Vec<u8>>>>> =
+        std::sync::OnceLock::new();
+    S.get_or_init(Default::default)
+}
+
+/// The part of a path after the last `/` or `\`.
+fn store_key(file: &str) -> &str {
+    file.rsplit(['/', '\\']).next().unwrap_or(file)
+}
+
+/// Keep a picture's bytes under its file name (folders dropped).
+pub fn store_picture(name: &str, bytes: Vec<u8>) -> Result<(), String> {
+    let key = store_key(name);
+    if key.is_empty() {
+        return Err("the picture has no file name".into());
+    }
+    if bytes.len() as u64 > MAX_PICTURE_BYTES {
+        return Err(format!("{key}: file too large"));
+    }
+    let mut s = picture_store()
+        .lock()
+        .map_err(|_| "picture store is poisoned".to_string())?;
+    // At most 64 pictures and 512 MB; the oldest names go first by clearing all (a session rarely holds more).
+    let total: usize = s.values().map(|b| b.len()).sum();
+    if s.len() >= 64 || total + bytes.len() > (512 << 20) {
+        s.clear();
+    }
+    s.insert(key.to_string(), Arc::new(bytes));
+    Ok(())
+}
+
+/// The bytes stored under the file name of `file`.
+pub fn stored_picture(file: &str) -> Option<Arc<Vec<u8>>> {
+    picture_store().lock().ok()?.get(store_key(file)).cloned()
+}
+
 /// Read and decode a picture file as fig2dev's `readpics` does (PNG
 /// gamma and transparency, GIF transparent colour, XBM, XPM, PCX, `name.gz`
 /// for `name`), so the canvas shows the pixels the exports show; what
@@ -48,6 +89,12 @@ pub fn resolve(file: &str, base: Option<&Path>) -> PathBuf {
 /// ghostscript's rendering when `gs` is installed, else its preview image,
 /// else a box. Exports use the files themselves.
 pub fn load_picture(path: &Path) -> Result<RasterImage, String> {
+    // A file that is not on disk but was stored in memory (the browser).
+    if !path.is_file() {
+        if let Some(b) = stored_picture(&path.to_string_lossy()) {
+            return decode_picture(&b).map_err(|e| format!("{}: {e}", path.display()));
+        }
+    }
     if let Ok(meta) = std::fs::metadata(path) {
         if meta.len() > MAX_PICTURE_BYTES {
             return Err(format!("{}: file too large", path.display()));

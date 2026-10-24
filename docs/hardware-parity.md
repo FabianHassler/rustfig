@@ -49,6 +49,9 @@ Build with `cargo xtask web`, serve `dist/` (`cd dist && python3 -m http.server 
 | Edit, then File > Save: a download named like the file arrives; opening it again gives the edit | [ ] | [ ] | [ ] |
 | File > Export (PDF, SVG, EPS): a download arrives and opens in a viewer | [ ] | [ ] | [ ] |
 | File > Print… > Print FIGURE opens the browser print dialog for the PDF (hidden iframe; fallback: new tab, pop-ups allowed) (B5b); Print Batch gives one multi-page job | [ ] | [ ] | [ ] |
+| File > Merge picks a `.fig` and adds it as one compound (C2) | [ ] | [ ] | [ ] |
+| Picture mode (draw a box): the picker offers a PNG, the picture appears and its panel opens; Relink with the same name works (C2) | [ ] | [ ] | [ ] |
+| Library mode: the panel lists the libraries ("libraries.json" loads), icons fill in, a figure can be selected and placed; no 404 for `libraries/…` in the network tab (C2) | [ ] | [ ] | [ ] |
 | Draw, wait 5 s, reload: "Restore unsaved drawing" appears and Restore brings the drawing back; after Save and reload there is no offer (C3) | [ ] | [ ] | [ ] |
 | Retina: the canvas is sharp; resizing the window works | [ ] | [ ] | [ ] |
 | Downloads are not blocked (Safari may ask once) | [ ] | [ ] | [ ] |

@@ -358,6 +358,67 @@ fn find_trunk() -> Option<PathBuf> {
     dirs.into_iter().map(|d| d.join(exe)).find(|p| p.is_file())
 }
 
+/// JSON string with the escapes a file name can need.
+fn json_str(s: &str) -> String {
+    let mut o = String::from("\"");
+    for c in s.chars() {
+        match c {
+            '"' => o.push_str("\\\""),
+            '\\' => o.push_str("\\\\"),
+            c if (c as u32) < 0x20 => o.push_str(&format!("\\u{:04x}", c as u32)),
+            c => o.push(c),
+        }
+    }
+    o.push('"');
+    o
+}
+
+/// The index of the bundled figure libraries for the web build (C2): every
+/// folder under `root` with `.fig` files is a library named `Outer / Inner`
+/// (as the engine's scan names them), with its figures' names. The browser
+/// fetches `libraries.json` and then the figures it draws, lazily.
+fn libraries_index(root: &Path) -> Result<String, String> {
+    fn walk(dir: &Path, rel: &[String], out: &mut Vec<String>) -> Result<(), String> {
+        let mut figs: Vec<String> = Vec::new();
+        let mut subs: Vec<(String, PathBuf)> = Vec::new();
+        for e in std::fs::read_dir(dir)
+            .map_err(|e| format!("{}: {e}", dir.display()))?
+            .flatten()
+        {
+            let name = e.file_name().to_string_lossy().into_owned();
+            if name.starts_with('.') {
+                continue;
+            }
+            if e.path().is_dir() {
+                subs.push((name, e.path()));
+            } else if name.len() > 4 && name.to_ascii_lowercase().ends_with(".fig") {
+                figs.push(name[..name.len() - 4].to_string());
+            }
+        }
+        // (figures directly in `libraries/` itself are not part of the bundle)
+        if !figs.is_empty() && !rel.is_empty() {
+            figs.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()).then(a.cmp(b)));
+            let list: Vec<String> = figs.iter().map(|f| json_str(f)).collect();
+            out.push(format!(
+                "{{\"name\":{},\"dir\":{},\"figures\":[{}]}}",
+                json_str(&rel.join(" / ")),
+                json_str(&rel.join("/")),
+                list.join(",")
+            ));
+        }
+        subs.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()).then(a.0.cmp(&b.0)));
+        for (name, path) in subs {
+            let mut r = rel.to_vec();
+            r.push(name);
+            walk(&path, &r, out)?;
+        }
+        Ok(())
+    }
+    let mut libs = Vec::new();
+    walk(root, &[], &mut libs)?;
+    Ok(format!("{{\"libraries\":[{}]}}\n", libs.join(",")))
+}
+
 /// `cargo xtask web [--debug] [--serve]`: the web app (C1), built by trunk
 /// from `web/index.html` into `dist/` (index.html, the wasm, its JS glue).
 /// `--serve` runs trunk's dev server instead (http://127.0.0.1:8080).
@@ -374,6 +435,13 @@ fn web() -> Result<(), String> {
     if !wasm_target_installed() {
         return Err("wasm32-unknown-unknown is not installed (rustup target add wasm32-unknown-unknown)".into());
     }
+    // The bundled libraries' index, which `web/index.html` copies into dist/
+    // beside the `libraries/` folder (the Library mode in the browser, C2).
+    std::fs::write(
+        root().join("web/libraries.json"),
+        libraries_index(&root().join("libraries"))?,
+    )
+    .map_err(|e| format!("web/libraries.json: {e}"))?;
     let (html, dist) = (root().join("web/index.html"), root().join("dist"));
     let mut cmd = Command::new(trunk);
     if args.iter().any(|a| a == "--serve") {
@@ -450,6 +518,26 @@ fn main() -> ExitCode {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn libraries_index_lists_folders_with_figures() {
+        let t = std::env::temp_dir().join(format!("rustfig-libidx-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&t);
+        std::fs::create_dir_all(t.join("Outer/In ner")).unwrap();
+        std::fs::create_dir_all(t.join("Empty")).unwrap();
+        std::fs::write(t.join("Outer/b.fig"), "x").unwrap();
+        std::fs::write(t.join("Outer/A.fig"), "x").unwrap();
+        std::fs::write(t.join("Outer/In ner/q\"x.fig"), "x").unwrap();
+        std::fs::write(t.join("Outer/README"), "x").unwrap();
+        std::fs::write(t.join("top.fig"), "x").unwrap();
+        let s = libraries_index(&t).unwrap();
+        let _ = std::fs::remove_dir_all(&t);
+        assert_eq!(
+            s,
+            "{\"libraries\":[{\"name\":\"Outer\",\"dir\":\"Outer\",\"figures\":[\"A\",\"b\"]},\
+             {\"name\":\"Outer / In ner\",\"dir\":\"Outer/In ner\",\"figures\":[\"q\\\"x\"]}]}\n"
+        );
+    }
 
     #[test]
     fn parses_dependencies() {

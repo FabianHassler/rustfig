@@ -39,6 +39,9 @@ pub struct LibraryPanel {
     pub open: bool,
     #[cfg(not(target_arch = "wasm32"))]
     scan: Option<ScanJob>,
+    /// The browser: the roots to scan once the served index is in (C2).
+    #[cfg(target_arch = "wasm32")]
+    web_wait: Option<Vec<LibRoot>>,
     /// Stop was pressed: the icons not yet drawn stay blank until Resume.
     pub stopped: bool,
     /// The folder or list file field (preference `library_dir`).
@@ -98,6 +101,14 @@ impl LibraryPanel {
                 return;
             }
         }
+        // The browser: the bundle's index is fetched first (C2).
+        #[cfg(target_arch = "wasm32")]
+        if !library::web::index_loaded() {
+            crate::web_fetch::request_index();
+            self.web_wait = Some(roots);
+            self.show_panel(Vec::new());
+            return;
+        }
         self.show_panel(library::scan(&roots));
     }
 
@@ -114,12 +125,25 @@ impl LibraryPanel {
         }
         #[cfg(target_arch = "wasm32")]
         {
-            false
+            self.web_wait.is_some()
         }
     }
 
     /// Take the scan's result once it is in.
     fn poll_scan(&mut self) {
+        #[cfg(target_arch = "wasm32")]
+        {
+            if library::web::index_loaded() {
+                if let Some(roots) = self.web_wait.take() {
+                    self.show_panel(library::scan(&roots));
+                }
+            } else if self.web_wait.is_some() {
+                if let Some(e) = crate::web_fetch::take_index_error() {
+                    self.web_wait = None;
+                    self.message = format!("The libraries could not be loaded: {e}");
+                }
+            }
+        }
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(job) = &self.scan {
             match job.rx.try_recv() {
@@ -234,10 +258,24 @@ fn render(doc: &Document, px: usize) -> Option<egui::ColorImage> {
     Some(egui::ColorImage::from_rgba_premultiplied([px, px], pm.data()))
 }
 
-fn thumbnail(ctx: &egui::Context, lib: &Library, name: &str, px: usize, label: &str) -> Option<egui::TextureHandle> {
-    let doc = library::read_figure(&lib.path, name).ok()?;
-    let img = render(&doc, px)?;
-    Some(ctx.load_texture(label, img, TextureOptions::LINEAR))
+/// The figure's texture: `None` while the browser still fetches the figure
+/// (ask again later), `Some(None)` when it can't be drawn.
+fn thumbnail(
+    ctx: &egui::Context,
+    lib: &Library,
+    name: &str,
+    px: usize,
+    label: &str,
+) -> Option<Option<egui::TextureHandle>> {
+    #[cfg(target_arch = "wasm32")]
+    if !crate::web_fetch::figure_ready(&lib.path, name) {
+        return None;
+    }
+    let tex = library::read_figure(&lib.path, name)
+        .ok()
+        .and_then(|doc| render(&doc, px))
+        .map(|img| ctx.load_texture(label, img, TextureOptions::LINEAR));
+    Some(tex)
 }
 
 /// Show the window when it is open.
@@ -450,8 +488,13 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                                                 // Stop was pressed: leave it blank.
                                             } else if budget.get() > 0 {
                                                 budget.set(budget.get() - 1);
-                                                let t = thumbnail(ui.ctx(), &lib, &name, px, &format!("lib-{name}"));
-                                                p.thumbs.insert(key.clone(), t);
+                                                match thumbnail(ui.ctx(), &lib, &name, px, &format!("lib-{name}")) {
+                                                    Some(t) => {
+                                                        p.thumbs.insert(key.clone(), t);
+                                                    }
+                                                    // Still being fetched (the browser).
+                                                    None => pending.set(true),
+                                                }
                                             } else {
                                                 pending.set(true);
                                             }
@@ -534,8 +577,16 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                     if let Some(name) = p.objects.get(i).cloned() {
                         let key = (lib.name.clone(), name.clone());
                         if p.preview.as_ref().map(|(k, _)| k) != Some(&key) {
-                            let t = thumbnail(ui.ctx(), &lib, &name, PREVIEW, "lib-preview");
-                            p.preview = Some((key, t));
+                            if let Some(t) = thumbnail(ui.ctx(), &lib, &name, PREVIEW, "lib-preview") {
+                                // The browser reads the comments once the figure is in.
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    p.comments = library::object_comments(&lib.path, &name).join("\n");
+                                }
+                                p.preview = Some((key, t));
+                            } else {
+                                ui.ctx().request_repaint_after(std::time::Duration::from_millis(50));
+                            }
                         }
                         if let Some((_, Some(tex))) = &p.preview {
                             ui.painter().image(
