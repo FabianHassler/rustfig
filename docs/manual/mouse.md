@@ -51,4 +51,4 @@ Most placing operations work either way: press, drag and release, or click once 
 
 ## Wheel and trackpad
 
-Scrolling pans the canvas, Ctrl+scroll or pinching zooms, and holding Space while dragging pans.
+Scrolling pans the canvas, Ctrl+scroll or pinching zooms, and holding Space while dragging pans. On a touch screen, two fingers pan and pinch zooms, and holding one finger still for half a second acts as the right mouse button.

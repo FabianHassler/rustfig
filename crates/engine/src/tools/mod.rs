@@ -4666,6 +4666,17 @@ mod tests {
     }
 
     #[test]
+    fn text_dead_key_preedit_then_commit_leaves_no_stray_accent() {
+        let mut e = Engine::new();
+        typing(&mut e, "a");
+        e.tool_event(ToolEvent::Preedit("\u{b4}".into())).unwrap();
+        assert_eq!(e.overlay().text.unwrap().preedit.1, 1);
+        e.tool_event(ToolEvent::Text("\u{e9}".into())).unwrap();
+        assert_eq!(state(&e).0, "a\u{e9}");
+        assert_eq!(e.overlay().text.unwrap().preedit.1, 0);
+    }
+
+    #[test]
     fn text_unicode_edit_helpers_never_split_chars() {
         use super::textedit::*;
         let s = "\u{1F600}x \u{e9}\u{e9}";

@@ -68,6 +68,58 @@ pub struct CanvasState {
     panning: bool,
     /// Milliseconds the last document render took.
     pub render_ms: f64,
+    /// A touch held down, waiting to become a right click.
+    long_press: LongPress,
+}
+
+/// Seconds a touch must stay put to count as a right click.
+const LONG_PRESS_SECS: f64 = 0.5;
+/// Points a touch may drift and still be a long press.
+const LONG_PRESS_SLOP: f32 = 8.0;
+
+/// Touch long-press detector: a touch held for `LONG_PRESS_SECS` without
+/// moving more than `LONG_PRESS_SLOP` points acts as the right button.
+#[derive(Default, Clone, Copy, Debug, PartialEq)]
+pub(crate) struct LongPress {
+    start: Option<(Pos2, f64)>,
+    fired: bool,
+}
+
+impl LongPress {
+    pub(crate) fn begin(&mut self, pos: Pos2, now: f64) {
+        self.start = Some((pos, now));
+        self.fired = false;
+    }
+    pub(crate) fn moved(&mut self, pos: Pos2) {
+        if let Some((p0, _)) = self.start {
+            if (pos - p0).length() > LONG_PRESS_SLOP {
+                self.start = None;
+            }
+        }
+    }
+    /// The touch ended; true if the long press had fired (the lift must
+    /// then not count as a left click).
+    pub(crate) fn end(&mut self) -> bool {
+        let f = self.fired;
+        *self = Self::default();
+        f
+    }
+    pub(crate) fn cancel(&mut self) {
+        self.start = None;
+    }
+    /// The press position once, when the hold time has passed.
+    pub(crate) fn poll(&mut self, now: f64) -> Option<Pos2> {
+        let (p, t) = self.start?;
+        if now - t >= LONG_PRESS_SECS {
+            self.start = None;
+            self.fired = true;
+            return Some(p);
+        }
+        None
+    }
+    pub(crate) fn pending(&self) -> bool {
+        self.start.is_some()
+    }
 }
 
 impl CanvasState {
@@ -699,6 +751,41 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
     let to_fig = |p: Pos2| view0.to_fig(Point::new(f64::from(p.x - rect.min.x), f64::from(p.y - rect.min.y)));
     app.canvas.cursor = if over { hover.map(to_fig) } else { None };
 
+    // Touch: a long press is the right button; two fingers pan (pinch zoom
+    // comes through `zoom_delta`).
+    let (touches, now, mt_pan) = ui.input(|i| {
+        let t: Vec<(egui::TouchPhase, Pos2)> = i
+            .events
+            .iter()
+            .filter_map(|e| match e {
+                egui::Event::Touch { phase, pos, .. } => Some((*phase, *pos)),
+                _ => None,
+            })
+            .collect();
+        (t, i.time, i.multi_touch().map(|m| m.translation_delta))
+    });
+    for (phase, pos) in touches {
+        match phase {
+            egui::TouchPhase::Start if rect.contains(pos) => app.canvas.long_press.begin(pos, now),
+            egui::TouchPhase::Move => app.canvas.long_press.moved(pos),
+            egui::TouchPhase::End | egui::TouchPhase::Cancel if app.canvas.long_press.end() => {
+                app.canvas.pressing = None;
+            }
+            egui::TouchPhase::End | egui::TouchPhase::Cancel => {}
+            _ => {}
+        }
+    }
+    if let Some(d) = mt_pan {
+        app.canvas.long_press.cancel();
+        if d != egui::Vec2::ZERO && hover.is_some_and(|p| rect.contains(p)) {
+            app.engine.view.pan_pixels(f64::from(d.x), f64::from(d.y));
+        }
+    }
+    if app.canvas.long_press.pending() {
+        ui.ctx().request_repaint_after(std::time::Duration::from_millis(100));
+    }
+    let long_press = app.canvas.long_press.poll(now);
+
     // Zoom (pinch or Ctrl+scroll) and pan (scroll, space drag, and the
     // middle button when it isn't a tool button).
     if over {
@@ -736,6 +823,26 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
     };
     if let Some(p) = hover {
         let fp = to_fig(p);
+        if let Some(p) = long_press {
+            // Cancel the pending left press, then press and release right.
+            app.canvas.pressing = None;
+            let fp = to_fig(p);
+            send(
+                app,
+                ToolEvent::Press {
+                    pos: fp,
+                    button: Button::Right,
+                    shift: false,
+                },
+            );
+            send(
+                app,
+                ToolEvent::Release {
+                    pos: fp,
+                    button: Button::Right,
+                },
+            );
+        }
         for (phys, m) in pressed.iter().filter(|_| over) {
             // xfig's Ctrl key (zoom box, shape factor); Cmd on macOS, where
             // Ctrl+click is the right button.
@@ -807,7 +914,31 @@ pub(crate) fn cursor_icon(kind: rustfig_engine::CursorKind) -> egui::CursorIcon 
 
 #[cfg(test)]
 mod tests {
-    use super::grid_spacing;
+    use super::{grid_spacing, LongPress};
+
+    #[test]
+    fn long_press_fires_once_after_half_a_second() {
+        let p = egui::pos2(10.0, 10.0);
+        let mut l = LongPress::default();
+        l.begin(p, 1.0);
+        assert_eq!(l.poll(1.3), None);
+        assert_eq!(l.poll(1.5), Some(p));
+        assert_eq!(l.poll(2.0), None);
+        assert!(l.end());
+    }
+
+    #[test]
+    fn long_press_cancelled_by_movement_or_early_lift() {
+        let p = egui::pos2(10.0, 10.0);
+        let mut l = LongPress::default();
+        l.begin(p, 0.0);
+        l.moved(egui::pos2(30.0, 10.0));
+        assert_eq!(l.poll(1.0), None);
+        l.begin(p, 0.0);
+        l.moved(egui::pos2(12.0, 11.0));
+        assert!(!l.end());
+        assert_eq!(l.poll(1.0), None);
+    }
 
     #[test]
     fn metric_pages_use_450_units_per_cm() {

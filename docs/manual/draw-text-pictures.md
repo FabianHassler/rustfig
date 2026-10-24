@@ -9,6 +9,7 @@ Key `T`. Text objects hold one line each.
 - Right: cancels the text being typed; an edited text keeps its old string.
 - Enter finishes the line and starts the next one below it, spaced by the indicator's Text Step. Left, Right, Home, End, Backspace and Delete move and edit.
 - Clicking in existing text puts the caret at the clicked character (in the text being typed too). Drag to select; double-click selects a word, triple-click the line; Shift+click extends the selection. Shift+Left, Right, Home and End select with the keys.
+- Dead keys and input methods work: on macOS Option+E then E types é, on Linux the compose or dead keys do the same; the pending accent is shown at the caret and replaced by the finished character.
 <!-- os: mac -->
 - Option+Left and Option+Right jump by words, Option+Backspace and Option+Delete delete a word; Cmd+Left and Cmd+Right go to the start and end; Cmd+A selects all, Cmd+C, Cmd+X and Cmd+V copy, cut and paste through the system clipboard. (A lone tap of Option is still xfig's compose key.)
 <!-- os: linux windows -->
