@@ -414,7 +414,9 @@ fn ci() -> Result<(), String> {
     run(cargo().args(["fmt", "--all", "--check"]))?;
     run(cargo().args(["clippy", "--workspace", "--all-targets", "--", "-D", "warnings"]))?;
     // Tests must not depend on the fonts installed on the machine (F1).
-    run(cargo().env("FIG2DEV_BUILTIN_FONTS", "1").args(["test", "--workspace"]))?;
+    run(cargo()
+        .env("FIG2DEV_BUILTIN_FONTS", "1")
+        .args(["test", "--workspace", "--no-fail-fast"]))?;
     layers()?;
     assets()?;
     licences()?;

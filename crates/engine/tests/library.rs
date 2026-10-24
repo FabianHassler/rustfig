@@ -391,10 +391,8 @@ fn parse_list_follows_xfigs_format() {
     let base = std::path::Path::new("/base");
     let t = "# comment\n/abs/one\n\n  /abs/two  My Two  \nrel/three/\n#/abs/skipped\n/abs/four\tTab Name\n";
     let v = parse_list(t, base);
-    let got: Vec<(String, String)> = v
-        .iter()
-        .map(|e| (e.name.clone(), e.path.to_string_lossy().into_owned()))
-        .collect();
+    // Paths compare by component, so Windows' `\\` after the base matches.
+    let got: Vec<(String, std::path::PathBuf)> = v.iter().map(|e| (e.name.clone(), e.path.clone())).collect();
     assert_eq!(
         got,
         vec![
