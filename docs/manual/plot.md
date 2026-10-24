@@ -23,7 +23,18 @@ Choose what to draw:
 
 The ranges of x and y can be left empty to fit the curve (the y range of a curve with poles ignores a few extreme values, so 1/x does not flatten everything else); the numbers are rounded to tick values. Numbers may be expressions such as `2*pi`.
 
-**Axes with ticks and numbers** draws the frame, ticks and numbers; **Grid** adds dotted lines at the numbered ticks; **Logarithmic x** and **y** put the axis in powers of ten (the range must be positive). The x and y labels are plain text, or LaTeX special text when **Labels are LaTeX** is on (they are then typeset when you export to LaTeX or turn on View > Typeset LaTeX text). The line style, thickness, colour, depth and the font of the numbers and labels are the current ones in the attribute panel; set them before you plot.
+**Axes with ticks and numbers** draws the frame, ticks and numbers; **Grid** adds dotted lines at the numbered ticks; **Logarithmic x** and **y** put the axis in powers of ten (the range must be positive). The x and y labels are plain text, or LaTeX special text when **Labels are LaTeX** is on (they are then typeset when you export to LaTeX or turn on View > Typeset LaTeX text). **Numbers as LaTeX** writes the tick numbers as `$...$` special texts too (a power of ten as `$10^{-5}$`, multiples of pi as `$\pi$`). LaTeX labels and numbers are special texts with the LaTeX font, as xfig's text with the Special flag: the canvas typesets them when TeX is installed (View > Typeset LaTeX text), and the LaTeX, pstex and pdftex exports pass them on unchanged.
+
+**x ticks** and **y ticks** (collapsible sections of the dialog) set the ticks of each axis:
+
+- **Manual**: the first tick, the step (or a count of intervals); empty fields stay automatic. Without Manual the ticks are chosen for you, as in plots made earlier.
+- **Minor per major** (0 to 9) and the **length** of the ticks (Fig units, 1200 per inch; minor ticks are half as long), their **direction** (in, out or both).
+- **Numbers**: shown or not; automatic, a fixed number of **decimals**, **scientific**, or **multiples of pi** (0, pi/2, pi, 3pi/2; the automatic step is then pi/2).
+- On a logarithmic axis the step counts decades and the minor ticks stand at 2 to n+1 times a decade.
+
+Too many ticks, a step of zero or less, and similar values are refused with an error. The settings are kept in the plot's comment like the rest.
+
+The line style, thickness, colour, depth and the font of the numbers and labels are the current ones in the attribute panel; set them before you plot.
 
 Expressions use `+ - * / ^` (also × ÷ and `**`), parentheses, the constants `pi` and `e`, and the functions sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, exp, ln (also log: natural), log10, log2, sqrt, abs, floor, ceil, sign, and with two arguments atan2(y, x), min(a, b), max(a, b), pow(a, b). `-x^2` means -(x^2) and `2^3^2` is 2^(3^2). An expression of up to 500 characters and nested up to 64 deep is accepted; an error names the position.
 

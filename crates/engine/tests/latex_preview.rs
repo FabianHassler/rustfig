@@ -294,3 +294,65 @@ fn real_tex_typesets_an_integral() {
         img.save(path).unwrap();
     }
 }
+
+/// E12: a plot with LaTeX labels and numbers makes special texts, which the
+/// canvas hands to the typesetter like any other special text.
+#[test]
+fn plot_labels_and_numbers_are_special_texts_the_typesetter_is_asked_for() {
+    use rustfig_model::{ObjectKind, Text};
+    let dir = scratch("plot");
+    let pdf = dir.join("in.pdf");
+    std::fs::write(&pdf, some_pdf()).unwrap();
+    let tex = fake_tex(&dir, &pdf, true);
+    let mut e = Engine::new();
+    e.execute("view.set_latex_program", &json!({"program": tex.to_str().unwrap()}))
+        .unwrap();
+    let r = e
+        .execute(
+            "plot.add",
+            &json!({"expr": "sin(x)", "xlabel": "$x$", "ylabel": "$\\sin x$", "latex": true, "latex_numbers": true}),
+        )
+        .unwrap();
+    let o = e.doc().get(rustfig_model::ObjectId(r["id"].as_u64().unwrap())).unwrap();
+    let ObjectKind::Compound(c) = &o.kind else { panic!() };
+    let all: Vec<Text> = c
+        .objects
+        .iter()
+        .filter_map(|m| match &m.kind {
+            ObjectKind::Text(t) => Some(t.clone()),
+            _ => None,
+        })
+        .collect();
+    assert!(all.len() > 8);
+    for t in &all {
+        assert!(t.is_special() && !t.is_postscript() && t.font == 0, "{t:?}");
+        assert!(t.text.starts_with('$') && t.text.ends_with('$'), "{t:?}");
+    }
+    assert!(all.iter().any(|t| t.text == "$-1$" || t.text == "$0$"));
+    // The canvas shows the sources, then one picture per text.
+    let n = all.len();
+    assert_eq!(count(&scene_of(&e)), (n, n, 0));
+    wait(&e);
+    assert_eq!(count(&scene_of(&e)), (0, 0, n));
+    assert!(e.latex.take_messages().is_empty());
+    // Labels only: the numbers stay plain texts.
+    let mut e2 = Engine::new();
+    let r2 = e2
+        .execute("plot.add", &json!({"expr": "x", "xlabel": "x", "latex": true}))
+        .unwrap();
+    let o = e2
+        .doc()
+        .get(rustfig_model::ObjectId(r2["id"].as_u64().unwrap()))
+        .unwrap();
+    let ObjectKind::Compound(c) = &o.kind else { panic!() };
+    let special = c
+        .objects
+        .iter()
+        .filter(|m| matches!(&m.kind, ObjectKind::Text(t) if t.is_special()))
+        .count();
+    assert_eq!(special, 1);
+    // Numbers as LaTeX: powers of ten.
+    assert_eq!(rustfig_engine::plot::latex_number("1e-5"), "$10^{-5}$");
+    assert_eq!(rustfig_engine::plot::latex_number("2e6"), "$2\\times10^{6}$");
+    let _ = std::fs::remove_dir_all(&dir);
+}

@@ -396,6 +396,100 @@ pub enum PlotMode {
     Data,
 }
 
+/// Where the ticks stand relative to the axis.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TickDir {
+    In,
+    Out,
+    Both,
+}
+
+/// How tick numbers are written.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NumFormat {
+    Auto,
+    /// A fixed number of decimals (`decimals`).
+    Fixed,
+    Scientific,
+    /// Multiples of pi: 0, pi/2, pi, 3pi/2.
+    Pi,
+}
+
+/// The ticks of one axis. The default is the automatic ticks of plots made
+/// before this setting existed.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct TickSpec {
+    /// Manual ticks: `first`, `step` or `count` apply (else automatic).
+    pub manual: bool,
+    /// Position of the first major tick (default: the first multiple of the step in range).
+    pub first: Option<f64>,
+    /// Distance of major ticks (log axes: decades).
+    pub step: Option<f64>,
+    /// Number of intervals, instead of a step.
+    pub count: Option<usize>,
+    /// Minor ticks between two majors, 0-9; `None` is automatic (none on a
+    /// linear axis, 2-9 on a log axis with a decade step). On a log axis
+    /// n gives the minors at 2..n+1 times the decade.
+    pub minor: Option<u8>,
+    /// Length of a major tick in Fig units (minor ticks are half).
+    pub length: f64,
+    pub dir: TickDir,
+    pub format: NumFormat,
+    pub decimals: u8,
+    /// Numbers at the major ticks.
+    pub numbers: bool,
+}
+
+impl Default for TickSpec {
+    fn default() -> Self {
+        TickSpec {
+            manual: false,
+            first: None,
+            step: None,
+            count: None,
+            minor: None,
+            length: 105.0,
+            dir: TickDir::In,
+            format: NumFormat::Auto,
+            decimals: 2,
+            numbers: true,
+        }
+    }
+}
+
+impl TickSpec {
+    fn check(&self, axis: &str) -> Result<(), String> {
+        if let Some(v) = self.first {
+            if !v.is_finite() || v.abs() > BIG {
+                return Err(format!("{axis} ticks: the first tick must be a finite number"));
+            }
+        }
+        if let Some(v) = self.step {
+            if !v.is_finite() || v <= 0.0 || v > BIG {
+                return Err(format!("{axis} ticks: the step must be a positive number"));
+            }
+        }
+        if let Some(n) = self.count {
+            if !(1..=MAX_TICKS as usize).contains(&n) {
+                return Err(format!("{axis} ticks: the count must be between 1 and {MAX_TICKS}"));
+            }
+        }
+        if self.minor.is_some_and(|m| m > 9) {
+            return Err(format!("{axis} ticks: minor ticks per major are 0 to 9"));
+        }
+        if !self.length.is_finite() || !(0.0..=3000.0).contains(&self.length) {
+            return Err(format!("{axis} ticks: the length must be between 0 and 3000"));
+        }
+        if self.decimals > 9 {
+            return Err(format!("{axis} ticks: at most 9 decimals"));
+        }
+        Ok(())
+    }
+}
+
 /// The parameters of a plot, as the dialog and `plot.add` give them and as
 /// the compound's comment keeps them.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -430,6 +524,10 @@ pub struct PlotSpec {
     pub ylabel: String,
     /// Axis labels are LaTeX (special text).
     pub latex: bool,
+    /// The tick numbers are LaTeX too: special texts in `$...$`.
+    pub latex_numbers: bool,
+    pub xticks: TickSpec,
+    pub yticks: TickSpec,
     /// The plot's frame in Fig units (min x, min y, max x, max y); written
     /// by the command, used by "Edit plot" when the frame is missing.
     pub rect: Option<[f64; 4]>,
@@ -459,6 +557,9 @@ impl Default for PlotSpec {
             xlabel: String::new(),
             ylabel: String::new(),
             latex: false,
+            latex_numbers: false,
+            xticks: TickSpec::default(),
+            yticks: TickSpec::default(),
             rect: None,
         }
     }
@@ -473,6 +574,8 @@ impl PlotSpec {
     }
 
     fn check(&self) -> Result<(), String> {
+        self.xticks.check("x")?;
+        self.yticks.check("y")?;
         let nums = [self.xmin, self.xmax, self.ymin, self.ymax, self.tmin, self.tmax];
         if nums.iter().flatten().any(|v| !v.is_finite() || v.abs() > BIG) {
             return Err("ranges must be finite numbers".into());
@@ -938,55 +1041,191 @@ pub fn format_tick(v: f64) -> String {
     }
 }
 
+/// How far a tick of length `len` reaches outside and inside the frame.
+fn tick_reach(dir: TickDir, len: f64) -> (f64, f64) {
+    match dir {
+        TickDir::In => (0.0, len),
+        TickDir::Out => (len, 0.0),
+        TickDir::Both => (len, len),
+    }
+}
+
+/// A tick number as LaTeX math: `-2.5` is `$-2.5$`, `1e-5` is `$10^{-5}$`
+/// and `2e6` is `$2\\times10^{6}$`.
+pub fn latex_number(l: &str) -> String {
+    match l.split_once('e') {
+        Some(("1", exp)) => format!("$10^{{{exp}}}$"),
+        Some(("-1", exp)) => format!("$-10^{{{exp}}}$"),
+        Some((m, exp)) => format!("${m}\\times10^{{{exp}}}$"),
+        None if l.contains('\u{3c0}') => format!("${}$", l.replace('\u{3c0}', "\\pi{}")),
+        None => format!("${l}$"),
+    }
+}
+
 /// A tick: the position in plot coordinates, its number (major ticks only).
 struct Tick {
     at: f64,
+    major: bool,
     label: Option<String>,
 }
 
-fn ticks(lo: f64, hi: f64, log: bool) -> Vec<Tick> {
+fn pi_label(v: f64) -> String {
+    let r = v / std::f64::consts::PI;
+    for d in 1..=12i64 {
+        let n = (r * d as f64).round();
+        if (r * d as f64 - n).abs() < 1e-9 && n.abs() < 1e6 {
+            let n = n as i64;
+            if n == 0 {
+                return "0".into();
+            }
+            let g = {
+                let (mut a, mut b) = (n.abs(), d);
+                while b != 0 {
+                    (a, b) = (b, a % b);
+                }
+                a.max(1)
+            };
+            let (n, d) = (n / g, d / g);
+            let coef = match n {
+                1 => String::new(),
+                -1 => "-".into(),
+                n => n.to_string(),
+            };
+            return if d == 1 {
+                format!("{coef}\u{3c0}")
+            } else {
+                format!("{coef}\u{3c0}/{d}")
+            };
+        }
+    }
+    format!("{}\u{3c0}", format_tick(r))
+}
+
+fn format_with(spec: &TickSpec, v: f64) -> String {
+    match spec.format {
+        NumFormat::Auto => format_tick(v),
+        NumFormat::Fixed => {
+            let s = format!("{:.*}", spec.decimals as usize, v);
+            if s.trim_start_matches('-').chars().all(|c| c == '0' || c == '.') {
+                s.trim_start_matches('-').to_string()
+            } else {
+                s
+            }
+        }
+        NumFormat::Scientific => {
+            if v == 0.0 || !v.is_finite() {
+                "0".into()
+            } else {
+                format!("{v:e}")
+            }
+        }
+        NumFormat::Pi => pi_label(v),
+    }
+}
+
+fn ticks(lo: f64, hi: f64, log: bool, spec: &TickSpec) -> Result<Vec<Tick>, String> {
     let mut out = Vec::new();
+    let label = |v: f64| spec.numbers.then(|| format_with(spec, v));
+    if !(lo.is_finite() && hi.is_finite()) {
+        return Ok(out);
+    }
     if log {
         let (a, b) = (lo.floor() as i64, hi.ceil() as i64);
-        let step = ((b - a) / 10 + 1).max(1);
+        let step = match (spec.manual, spec.step) {
+            (true, Some(s)) => (s.round() as i64).max(1),
+            _ => ((b - a) / 10 + 1).max(1),
+        };
+        if (b - a) / step > MAX_TICKS {
+            return Err("too many ticks on the logarithmic axis: use a larger step".into());
+        }
+        let minors = match spec.minor {
+            Some(n) => i64::from(n.min(8)),
+            None if step == 1 => 8,
+            None => 0,
+        };
         let mut e = a;
-        let mut n = 0;
-        while e <= b && n < MAX_TICKS {
+        while e <= b {
             let v = e as f64;
             if v >= lo - 1e-9 && v <= hi + 1e-9 {
                 out.push(Tick {
                     at: v,
-                    label: Some(format_tick(10f64.powf(v))),
+                    major: true,
+                    label: label(10f64.powf(v)),
                 });
             }
-            if step == 1 {
-                for m in 2..10 {
-                    let w = v + (m as f64).log10();
-                    if w >= lo && w <= hi {
-                        out.push(Tick { at: w, label: None });
-                    }
+            for m in 2..(2 + minors) {
+                let w = v + (m as f64).log10();
+                if w >= lo && w <= hi {
+                    out.push(Tick {
+                        at: w,
+                        major: false,
+                        label: None,
+                    });
                 }
             }
             e += step;
-            n += 1;
+        }
+        return Ok(out);
+    }
+    let span = hi - lo;
+    let auto_step = if spec.format == NumFormat::Pi {
+        if span <= 4.0 * std::f64::consts::PI {
+            std::f64::consts::FRAC_PI_2
+        } else {
+            std::f64::consts::PI
         }
     } else {
-        let step = nice_step(hi - lo, 6.0);
-        let (k0, k1) = ((lo / step - 1e-9).ceil(), (hi / step + 1e-9).floor());
-        if !(k0.is_finite() && k1.is_finite()) || k1 - k0 > MAX_TICKS as f64 {
-            return out;
-        }
-        let mut k = k0 as i64;
-        while k <= k1 as i64 {
-            let v = k as f64 * step;
+        nice_step(span, 6.0)
+    };
+    let step = match (spec.manual, spec.step, spec.count) {
+        (true, Some(s), _) => s,
+        (true, None, Some(n)) => span / n as f64,
+        _ => auto_step,
+    };
+    if !(step.is_finite() && step > 0.0) {
+        return Err("the tick step must be positive".into());
+    }
+    let first = match (spec.manual, spec.first) {
+        (true, Some(f)) => f,
+        _ => (lo / step - 1e-9).ceil() * step,
+    };
+    let minor = i64::from(spec.minor.unwrap_or(0));
+    // Majors k with first + k*step in range (also one before, for minors).
+    let k0 = ((lo - first) / step).floor() - 1.0;
+    let k1 = ((hi - first) / step).ceil() + 1.0;
+    if !(k0.is_finite() && k1.is_finite()) || k1 - k0 > (MAX_TICKS + 2) as f64 {
+        return Err(format!("too many ticks (more than {MAX_TICKS}): use a larger step"));
+    }
+    let eps = 1e-9 * span.abs().max(1e-300);
+    // A manual first tick starts the series.
+    let lo = if spec.manual && spec.first.is_some() {
+        lo.max(first)
+    } else {
+        lo
+    };
+    let mut k = k0 as i64;
+    while k <= k1 as i64 {
+        let v = first + k as f64 * step;
+        if v >= lo - eps && v <= hi + eps {
             out.push(Tick {
                 at: v,
-                label: Some(format_tick(v)),
+                major: true,
+                label: label(if v.abs() < eps { 0.0 } else { v }),
             });
-            k += 1;
         }
+        for j in 1..=minor {
+            let w = v + j as f64 * step / (minor + 1) as f64;
+            if w >= lo - eps && w <= hi + eps {
+                out.push(Tick {
+                    at: w,
+                    major: false,
+                    label: None,
+                });
+            }
+        }
+        k += 1;
     }
-    out
+    Ok(out)
 }
 
 // ---- the compound ------------------------------------------------------------
@@ -1086,15 +1325,29 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
         }))
     };
 
+    // A tick number as typed on the canvas, or as math for LaTeX.
+    let tick_text = |l: &str| {
+        if spec.latex_numbers {
+            latex_number(l)
+        } else {
+            l.to_string()
+        }
+    };
     let mut left_width = 0.0f64;
     if spec.axes {
-        let tick_len = 105.0; // about 0.09 inch
         let tick_h = tick_size * unit * 0.75;
         let gap = 0.5 * tick_h;
-        for t in ticks(r.x0, r.x1, spec.log_x) {
+        let xout = tick_reach(spec.xticks.dir, spec.xticks.length).0;
+        let yout = tick_reach(spec.yticks.dir, spec.yticks.length).0;
+        for t in ticks(r.x0, r.x1, spec.log_x, &spec.xticks)? {
             let x = fig(mx(t.at));
-            let len = if t.label.is_some() { tick_len } else { 0.5 * tick_len };
-            if spec.grid && t.label.is_some() {
+            let len = if t.major {
+                spec.xticks.length
+            } else {
+                0.5 * spec.xticks.length
+            };
+            let (o, i) = tick_reach(spec.xticks.dir, len);
+            if spec.grid && t.major {
                 let g = thin(LineKind::Dotted, depth + 1);
                 push_part(
                     &mut members,
@@ -1107,7 +1360,7 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
                 "tick",
                 line(
                     thin(LineKind::Solid, depth),
-                    vec![Point::new(x, fig(rect.max.y)), Point::new(x, fig(rect.max.y - len))],
+                    vec![Point::new(x, fig(rect.max.y + o)), Point::new(x, fig(rect.max.y - i))],
                 ),
             );
             if let Some(l) = &t.label {
@@ -1115,20 +1368,25 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
                     &mut members,
                     "number",
                     text(
-                        l,
+                        &tick_text(l),
                         Justify::Center,
-                        Point::new(x, fig(rect.max.y + gap + tick_h)),
+                        Point::new(x, fig(rect.max.y + xout + gap + tick_h)),
                         0.0,
                         tick_size,
-                        false,
+                        spec.latex_numbers,
                     ),
                 );
             }
         }
-        for t in ticks(r.y0, r.y1, spec.log_y) {
+        for t in ticks(r.y0, r.y1, spec.log_y, &spec.yticks)? {
             let y = fig(my(t.at));
-            let len = if t.label.is_some() { tick_len } else { 0.5 * tick_len };
-            if spec.grid && t.label.is_some() {
+            let len = if t.major {
+                spec.yticks.length
+            } else {
+                0.5 * spec.yticks.length
+            };
+            let (o, i) = tick_reach(spec.yticks.dir, len);
+            if spec.grid && t.major {
                 let g = thin(LineKind::Dotted, depth + 1);
                 push_part(
                     &mut members,
@@ -1141,7 +1399,7 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
                 "tick",
                 line(
                     thin(LineKind::Solid, depth),
-                    vec![Point::new(fig(rect.min.x), y), Point::new(fig(rect.min.x + len), y)],
+                    vec![Point::new(fig(rect.min.x - o), y), Point::new(fig(rect.min.x + i), y)],
                 ),
             );
             if let Some(l) = &t.label {
@@ -1150,12 +1408,12 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
                     &mut members,
                     "number",
                     text(
-                        l,
+                        &tick_text(l),
                         Justify::Right,
-                        Point::new(fig(rect.min.x - gap), fig(y + 0.35 * tick_h)),
+                        Point::new(fig(rect.min.x - yout - gap), fig(y + 0.35 * tick_h)),
                         0.0,
                         tick_size,
-                        false,
+                        spec.latex_numbers,
                     ),
                 );
             }
@@ -1179,7 +1437,7 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
         }
         if !spec.ylabel.trim().is_empty() {
             // Reads upwards; the baseline lies right of the glyphs.
-            let x = rect.min.x - gap - left_width - gap;
+            let x = rect.min.x - yout - gap - left_width - gap;
             push_part(
                 &mut members,
                 "label",
@@ -1387,7 +1645,7 @@ mod tests {
             log_x: true,
             ..spec("x", -1.0, 1.0)
         }));
-        let t = ticks(0.0, 2.0, true);
+        let t = ticks(0.0, 2.0, true, &TickSpec::default()).unwrap();
         assert_eq!(t.iter().filter(|t| t.label.is_some()).count(), 3);
     }
 
@@ -1440,6 +1698,104 @@ mod tests {
         assert!(PlotSpec::from_comment("rustfig-plot: {").is_none());
     }
 
+    fn labels(t: &[Tick]) -> Vec<String> {
+        t.iter().filter_map(|t| t.label.clone()).collect()
+    }
+
+    #[test]
+    fn manual_ticks() {
+        let mut ts = TickSpec {
+            manual: true,
+            first: Some(1.0),
+            step: Some(2.5),
+            minor: Some(4),
+            ..TickSpec::default()
+        };
+        let t = ticks(0.0, 10.0, false, &ts).unwrap();
+        let majors: Vec<f64> = t.iter().filter(|t| t.major).map(|t| t.at).collect();
+        assert_eq!(majors, vec![1.0, 3.5, 6.0, 8.5]);
+        assert!(t.iter().filter(|t| !t.major).count() >= 14);
+        // A count of intervals.
+        ts = TickSpec {
+            manual: true,
+            count: Some(4),
+            ..TickSpec::default()
+        };
+        let t = ticks(0.0, 8.0, false, &ts).unwrap();
+        assert_eq!(labels(&t), ["0", "2", "4", "6", "8"]);
+        // No numbers, fixed decimals.
+        ts.numbers = false;
+        assert!(labels(&ticks(0.0, 8.0, false, &ts).unwrap()).is_empty());
+        ts.numbers = true;
+        ts.format = NumFormat::Fixed;
+        ts.decimals = 1;
+        assert_eq!(labels(&ticks(0.0, 8.0, false, &ts).unwrap())[1], "2.0");
+        // Log: decades only.
+        let ts = TickSpec {
+            minor: Some(0),
+            ..TickSpec::default()
+        };
+        assert_eq!(ticks(0.0, 3.0, true, &ts).unwrap().len(), 4);
+    }
+
+    #[test]
+    fn pi_ticks() {
+        let ts = TickSpec {
+            manual: true,
+            first: Some(std::f64::consts::FRAC_PI_2),
+            step: Some(std::f64::consts::FRAC_PI_2),
+            format: NumFormat::Pi,
+            ..TickSpec::default()
+        };
+        let t = ticks(0.0, 2.0 * std::f64::consts::PI, false, &ts).unwrap();
+        assert_eq!(labels(&t), ["\u{3c0}/2", "\u{3c0}", "3\u{3c0}/2", "2\u{3c0}"]);
+        let auto = TickSpec {
+            format: NumFormat::Pi,
+            ..TickSpec::default()
+        };
+        let t = ticks(0.0, std::f64::consts::TAU, false, &auto).unwrap();
+        assert_eq!(labels(&t)[0], "0");
+        assert_eq!(labels(&t)[2], "\u{3c0}");
+        assert_eq!(latex_number("3\u{3c0}/2"), "$3\\pi{}/2$");
+    }
+
+    #[test]
+    fn hostile_ticks_are_errors() {
+        let d = TickSpec::default;
+        for ts in [
+            TickSpec { step: Some(0.0), ..d() },
+            TickSpec {
+                step: Some(-1.0),
+                ..d()
+            },
+            TickSpec {
+                step: Some(f64::NAN),
+                ..d()
+            },
+            TickSpec {
+                first: Some(f64::INFINITY),
+                ..d()
+            },
+            TickSpec { count: Some(0), ..d() },
+            TickSpec {
+                count: Some(1_000_000),
+                ..d()
+            },
+            TickSpec { minor: Some(10), ..d() },
+            TickSpec { length: -5.0, ..d() },
+            TickSpec { decimals: 50, ..d() },
+        ] {
+            assert!(ts.check("x").is_err(), "{ts:?}");
+        }
+        // Valid but too many ticks for the range.
+        let ts = TickSpec {
+            manual: true,
+            step: Some(1e-9),
+            ..d()
+        };
+        assert!(ticks(0.0, 10.0, false, &ts).is_err());
+    }
+
     #[test]
     fn nice_numbers() {
         assert_eq!(format_tick(0.5), "0.5");
@@ -1447,7 +1803,7 @@ mod tests {
         assert_eq!(format_tick(1e-5), "1e-5");
         assert_eq!(format_tick(100.0), "100");
         assert_eq!(nice_range(0.0, 0.93, false), (0.0, 1.0));
-        let t = ticks(0.0, 6.5, false);
+        let t = ticks(0.0, 6.5, false, &TickSpec::default()).unwrap();
         assert!(t.len() >= 5 && t.len() <= 12);
     }
 
