@@ -716,10 +716,36 @@ impl Engine {
         let mut best: Option<(i32, u8, usize)> = None;
         for (i, o) in self.doc.objects.iter().enumerate() {
             let Some((_, bb, _)) = boxes.get(i) else { break };
-            if !self.pick_bbox(o, bb).expand(tol).contains(p) || !self.is_visible(o) || !accept(o) {
+            if !self.is_visible(o) || !accept(o) {
                 continue;
             }
-            let d = self.pick_distance(o, p);
+            let in_box = self.pick_bbox(o, bb).expand(tol).contains(p);
+            // Only splines (control points) and arcs (centre) have markers
+            // outside their box: skip the rest early (big drawings).
+            if !in_box && !matches!(o.kind, ObjectKind::Spline(_) | ObjectKind::Arc(_)) {
+                continue;
+            }
+            let mut d = if in_box {
+                self.pick_distance(o, p)
+            } else {
+                f64::INFINITY
+            };
+            // xfig (`next_compound_found`): a compound is also hit on the
+            // outline of its box, where its corner markers sit.
+            if matches!(o.kind, ObjectKind::Compound(_)) && !bb.is_empty() {
+                let (a, b) = (bb.min, bb.max);
+                let outline = [a, Point::new(b.x, a.y), b, Point::new(a.x, b.y)];
+                d = d.min(rustfig_geom::dist_to_polyline(p, &outline, true));
+            }
+            // Every object is also hit on its markers (spline control points
+            // off the curve, an ellipse's or arc's markers, text corners).
+            if d > tol {
+                let mut marks = Vec::new();
+                tools::markers::object_markers(o, bb, &mut marks);
+                if let Some(m) = marks.iter().map(|m| m.dist(p)).reduce(f64::min) {
+                    d = d.min(m);
+                }
+            }
             if d > tol {
                 continue;
             }
@@ -1050,5 +1076,45 @@ mod tests {
         let front = ObjectId(r["id"].as_u64().unwrap());
         assert_eq!(e.hit_test(Point::new(0.0, 50.0), 5.0), Some(front));
         assert_eq!(e.hit_test(Point::new(500.0, 500.0), 5.0), None);
+    }
+
+    /// xfig picks a compound on the outline of its box (its corner
+    /// markers), also where no member lies.
+    #[test]
+    fn a_compound_is_hit_on_its_box_outline() {
+        let mut e = Engine::new();
+        let a = e
+            .execute("shape.polyline", &json!({"points": [[0, 0], [1000, 0]]}))
+            .unwrap();
+        let b = e
+            .execute("shape.polyline", &json!({"points": [[0, 2000], [1000, 2000]]}))
+            .unwrap();
+        let g = e.execute("object.group", &json!({"ids": [a["id"], b["id"]]})).unwrap();
+        let id = ObjectId(g["id"].as_u64().unwrap());
+        // The middle of the box's left and right sides: no member is there.
+        assert_eq!(e.hit_test(Point::new(0.0, 1000.0), 20.0), Some(id));
+        assert_eq!(e.hit_test(Point::new(1000.0, 1000.0), 20.0), Some(id));
+        // Inside the box, away from members and outline: nothing.
+        assert_eq!(e.hit_test(Point::new(500.0, 1000.0), 20.0), None);
+    }
+
+    /// Every object is hit on its markers: an approximated spline's control
+    /// points lie off the curve.
+    #[test]
+    fn an_object_is_hit_on_its_markers() {
+        let mut e = Engine::new();
+        let r = e
+            .execute(
+                "shape.spline",
+                &json!({"points": [[0, 0], [1000, 2000], [2000, 0]], "kind": "approximated"}),
+            )
+            .unwrap();
+        let id = ObjectId(r["id"].as_u64().unwrap());
+        let o = e.doc().get(id).unwrap().clone();
+        assert!(
+            o.distance(Point::new(1000.0, 2000.0)) > 5.0,
+            "the control point is off the curve"
+        );
+        assert_eq!(e.hit_test(Point::new(1000.0, 2000.0), 5.0), Some(id));
     }
 }

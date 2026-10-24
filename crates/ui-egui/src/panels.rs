@@ -330,10 +330,14 @@ fn command_button(
     let sunk = matches!(state, crate::bevel::State::Selected | crate::bevel::State::Pressed) && tk.bevel;
     let mut inner = if sunk { rect.translate(vec2(1.0, 1.0)) } else { rect };
     // The library picture is twice as wide as the others: keep its
-    // proportions in a normal sized button.
+    // proportions in a normal sized button, and let its drawing (columns
+    // 11–61 of 73, rows 3–28 of 32) rather than the whole bitmap fill the
+    // button; the blank margin may reach past the button's edge.
     if icon.width > 40 {
-        let h = inner.width() * icon.height as f32 / icon.width as f32;
-        inner = egui::Rect::from_center_size(inner.center(), vec2(inner.width(), h));
+        const INK_WIDTH: f32 = 51.0;
+        let w = inner.width() * 0.9 * icon.width as f32 / INK_WIDTH;
+        let h = w * icon.height as f32 / icon.width as f32;
+        inner = egui::Rect::from_center_size(inner.center(), vec2(w, h));
     }
     paint_mode_icon(ui, icon, inner, ink);
     let label = rustfig_engine::cmd::find(id).map_or("Library", |c| c.label);

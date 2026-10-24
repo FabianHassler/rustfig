@@ -14,7 +14,7 @@ mod cursor;
 mod textedit;
 pub use cursor::CursorKind;
 mod compound;
-mod markers;
+pub(crate) mod markers;
 mod measure;
 mod tangent;
 use crate::Region;
