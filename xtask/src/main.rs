@@ -454,6 +454,14 @@ fn web() -> Result<(), String> {
     if !args.iter().any(|a| a == "--debug" || a == "--serve") {
         cmd.arg("--release");
     }
+    // Where the site is served from, e.g. `/rustfig/` on GitHub Pages.
+    if let Some(url) = args
+        .iter()
+        .position(|a| a == "--public-url")
+        .and_then(|i| args.get(i + 1))
+    {
+        cmd.arg("--public-url").arg(url);
+    }
     if std::env::var_os("RUSTC").is_none() {
         if let Some(r) = sibling_rustc() {
             cmd.env("RUSTC", r);

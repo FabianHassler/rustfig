@@ -24,56 +24,25 @@ in Rust for macOS, Windows, Linux and the web, with fig2dev built in.
   (⌘⇧K / Ctrl+Shift+K), F1 help everywhere, the system's keys next to
   xfig's, and automation through a JSON control channel and MCP.
 
-```sh
-brew tap fabianhassler/rustfig https://github.com/FabianHassler/rustfig
-brew install --HEAD rustfig
-```
-
-Other systems and ways: see [Installation](#installation). The drawing above
-is [`docs/images/rustfig-window.fig`](docs/images/rustfig-window.fig).
-
-## Aim
-
-RustFig keeps what makes xfig good: its **simplicity** and its **full
-functionality**. Every xfig mode, button and option stays, and works the way
-xfig users expect.
-
-Additions must respect xfig. They fit into xfig's way of working (its modes,
-its three mouse buttons, its panels) and don't change what an existing xfig
-action does. Departing from xfig needs a good reason, for example printing,
-which no longer works the old way on today's systems. A modern look is fine;
-a different program is not.
-
-The Fig file format stays **fully backward compatible**. RustFig reads every
-Fig version xfig reads and saves Fig 3.2 that xfig and fig2dev open
-unchanged. A feature RustFig adds must fit inside the format (for example in
-an object's comment, with a plain Fig fallback), never extend or break it.
-
-## Status
-
-**Alpha. Overall xfig parity ≈87 %** (see [ROADMAP.md](ROADMAP.md) and the
-[parity assessment](docs/target-app-parity.md)).
-
-- Draw: circles, ellipses, approximated/interpolated/X-splines, polylines,
-  polygons, boxes, rounded boxes, regular polygons, arcs, text, pictures.
-- Edit (xfig's modes, no selection layer): move, copy, delete, scale, rotate,
-  flip, edit attributes with live panels, update, add/move/delete points,
-  glue/break/open compounds, join/split, chop, trim/split/extend, align,
-  convert, open/close, arrows, tangent/normal, measure, multi-level undo.
-- Settings: preferences, xfig's command line, styles with families, colours
-  (picker, user colours, pick from screen).
-- Files: reads Fig 1.3–3.2, writes Fig 3.2 and a native JSON format.
-- Export (every format through fig2dev's drivers, ported to Rust): PDF, SVG, EPS, PNG, GIF, JPEG, TIFF, PPM, PCX, XBM, XPM, LaTeX box (all 22 xfig fill patterns, arrowheads and dashes as fig2dev draws them); from fig2dev's ported drivers LaTeX picture, epic/eepic/eepicemu, PiCTeX, TeXtyl, tpic, pic, pstex/pdftex, pict2e, CGM, HPGL, DXF, MetaPost, METAFONT, ge, image map, Gerber, shape, TikZ, PSTricks, EMF, Tk/Perl-Tk and AutoCAD slides (every fig2dev language).
-- Automation: every action is a command, reachable from a JSON control
-  channel, an MCP server and the command line.
+**[Download RustFig](https://github.com/FabianHassler/rustfig/releases/latest)**
+for macOS, Windows or Linux, or install it with Homebrew; see
+[Installation](#installation). Or **[try it in your browser](https://fabianhassler.github.io/rustfig/)**,
+nothing to install (a preview: drawings stay in your browser until you save
+them as a download, and a few exports need the desktop app). The drawing above is
+[`docs/images/rustfig-window.fig`](docs/images/rustfig-window.fig).
 
 ## Installation
 
-Release builds (unsigned) come as `RustFig-VERSION-macos.dmg` (drag the app to
-Applications; the first start needs right-click > Open), `.deb` and `.tar.gz`
-with `install.sh` (Linux, registers the `.fig` MIME type) and a Windows zip
-(with `fig-association.reg`). `cargo xtask package` builds the one for your
-system. Or build from source, by Homebrew or with Rust's own tools.
+### Download the app
+
+Each release on the [Releases page](https://github.com/FabianHassler/rustfig/releases)
+has ready-made apps (not yet signed by Apple or Microsoft):
+
+| System | File | How |
+|--------|------|-----|
+| macOS | `RustFig-VERSION-macos.dmg` | Drag RustFig to Applications. The first start needs right-click > Open (the app is not notarized yet). `.fig` files then open with a double-click. |
+| Windows | `rustfig-VERSION-windows.zip` | Unpack anywhere and start `rustfig.exe`. `fig-association.reg` makes `.fig` files open in RustFig. |
+| Linux | `.deb` or `.tar.gz` | `sudo apt install ./rustfig_VERSION_amd64.deb`, or unpack the `.tar.gz` and run `install.sh`; both register the `.fig` file type. |
 
 ### Homebrew (macOS, Linux)
 
@@ -91,7 +60,7 @@ Update with `brew upgrade --fetch-HEAD rustfig`, remove with
 `brew uninstall rustfig`. Homebrew's own `fig2dev` formula (the C program)
 installs the same command name: `brew unlink fig2dev` first if you have it.
 
-### Cargo
+### From source (Cargo)
 
 1. **Rust 1.92 or newer** from [rustup](https://rustup.rs) (`rustup update`
    brings an older one up to date).
@@ -131,13 +100,7 @@ The programs go into `~/.cargo/bin` (Windows: `%USERPROFILE%\.cargo\bin`),
 which rustup puts on your `PATH`. Update later with `git pull` and the same
 two `cargo install` lines (or rerun the `--git` line with `--force`); remove with `cargo uninstall rustfig rustfig-cli`.
 
-Fonts: RustFig draws text with the fonts installed on your system (Times,
-Helvetica, Courier, Symbol, Palatino, … or their URW/TeX Gyre clones) and
-falls back to built-in fonts. Help > Install TeX Gyre fonts… downloads the
-metric-compatible TeX Gyre fonts from CTAN (checked by SHA-256, nothing is
-bundled). `FIG2DEV_BUILTIN_FONTS=1` forces the built-in fonts.
-
-## Quick start
+## Getting started
 
 ```sh
 rustfig drawing.fig                         # draw
@@ -146,14 +109,36 @@ rustfig-cli formats                         # list the export languages
 rustfig-cli mcp                             # MCP server for AI assistants
 ```
 
-From the source tree without installing: `cargo run --release -p rustfig -- drawing.fig`.
-
 Tool shortcuts follow xfig: `C` circle, `E` ellipse, `L` polyline,
 `P` polygon, `B` box, `I` spline, `R` arc, `T` text, `M` move, `D` delete,
 `S` select. Left click adds points; double click, right click or Enter
 finishes; Esc cancels. Without a three-button mouse: Option/Alt + click is the
 middle button, and on macOS Ctrl + click the right one (on Linux and Windows,
 left and right pressed together also give the middle button).
+
+Fonts: RustFig draws text with the fonts installed on your system (Times,
+Helvetica, Courier, Symbol, Palatino, … or their URW/TeX Gyre clones) and
+falls back to built-in fonts. Help > Install TeX Gyre fonts… downloads the
+metric-compatible TeX Gyre fonts from CTAN (checked by SHA-256, nothing is
+bundled). `FIG2DEV_BUILTIN_FONTS=1` forces the built-in fonts.
+
+## What RustFig can do
+
+**Alpha. Overall xfig parity ≈87 %** (see [ROADMAP.md](ROADMAP.md) and the
+[parity assessment](docs/target-app-parity.md)).
+
+- Draw: circles, ellipses, approximated/interpolated/X-splines, polylines,
+  polygons, boxes, rounded boxes, regular polygons, arcs, text, pictures.
+- Edit (xfig's modes, no selection layer): move, copy, delete, scale, rotate,
+  flip, edit attributes with live panels, update, add/move/delete points,
+  glue/break/open compounds, join/split, chop, trim/split/extend, align,
+  convert, open/close, arrows, tangent/normal, measure, multi-level undo.
+- Settings: preferences, xfig's command line, styles with families, colours
+  (picker, user colours, pick from screen).
+- Files: reads Fig 1.3–3.2, writes Fig 3.2 and a native JSON format.
+- Export (every format through fig2dev's drivers, ported to Rust): PDF, SVG, EPS, PNG, GIF, JPEG, TIFF, PPM, PCX, XBM, XPM, LaTeX box (all 22 xfig fill patterns, arrowheads and dashes as fig2dev draws them); from fig2dev's ported drivers LaTeX picture, epic/eepic/eepicemu, PiCTeX, TeXtyl, tpic, pic, pstex/pdftex, pict2e, CGM, HPGL, DXF, MetaPost, METAFONT, ge, image map, Gerber, shape, TikZ, PSTricks, EMF, Tk/Perl-Tk and AutoCAD slides (every fig2dev language).
+- Automation: every action is a command, reachable from a JSON control
+  channel, an MCP server and the command line.
 
 ## fig2dev
 
@@ -204,6 +189,32 @@ also be installed on its own, without RustFig: see
 EPS output. EPS pictures are copied into PostScript/EPS output; for PDF and
 bitmap output they need ghostscript (`gs`) installed, otherwise their preview
 image is used.
+
+## Aim: xfig, kept as it is
+
+RustFig keeps what makes xfig good: its **simplicity** and its **full
+functionality**. Every xfig mode, button and option stays, and works the way
+xfig users expect.
+
+Additions must respect xfig. They fit into xfig's way of working (its modes,
+its three mouse buttons, its panels) and don't change what an existing xfig
+action does. Departing from xfig needs a good reason, for example printing,
+which no longer works the old way on today's systems. A modern look is fine;
+a different program is not.
+
+The Fig file format stays **fully backward compatible**. RustFig reads every
+Fig version xfig reads and saves Fig 3.2 that xfig and fig2dev open
+unchanged. A feature RustFig adds must fit inside the format (for example in
+an object's comment, with a plain Fig fallback), never extend or break it.
+
+## Development
+
+From the source tree without installing:
+`cargo run --release -p rustfig -- drawing.fig`. `cargo xtask ci` runs the
+quality gates (format, lints, tests, layering, asset and licence checks, the
+web build); `cargo xtask package` builds the app bundle for your system;
+`cargo xtask web` builds the web version. See [Development](docs/development.md)
+and [Architecture](docs/architecture.md).
 
 ## Documentation
 

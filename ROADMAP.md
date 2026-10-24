@@ -73,6 +73,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-10-24 | First public pre-release **v0.9.0-beta.1**: the repository is public, CI runs on every push (Linux, Windows, macOS), release builds attach the apps (macOS .dmg, Windows zip, Linux .deb/.tar.gz), the web version goes to GitHub Pages (C5, preview). Web: Merge, pictures and bundled libraries (C2). F1 help per attribute button. README with a hero section. |
 | 2026-10-24 | Edit panels aligned with pictorial arrows, line, cap and join (W10); one key per menu entry; W18 modern help (command search ⌘⇧K / Ctrl+Shift+K, F1 context help, mouse sheet, What's new); G3 accessible labels and a canvas description; C4 long press and two-finger pan; F3 dead keys tested; P3 `cargo xtask package` (macOS .app/.dmg, Linux .deb/tarball, Windows zip). Perf budgets all met. Parity ≈87 %. |
 | 2026-10-23 | F5 spell check (`text.spell_check`: `spellcheckcommand` through the shell, hunspell fallback; Edit > Spell Check... opens xfig's Misspelled words window) and the F8 leftover (zoom to fit and region selection use the typeset box). Text 80 → 84 %. |
 | 2026-10-23 | F8 WYSIWYG LaTeX text (typeset by the installed TeX, vector on the canvas, preamble in Global settings), F7 installed fonts per text (exports pending), arc centres and pie-wedge arrows kept (gap 25), C3 browser autosave, library list files and Stop (D6); a test that every menu command is in the help; parity ≈85 → ≈87 %. |

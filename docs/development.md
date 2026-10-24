@@ -64,6 +64,10 @@ it, so `cargo +toolchain xtask …` stays on that toolchain.
 
 `cargo xtask package` builds `rustfig` in release mode and writes `target/package/` for the host system, without code signing: macOS `RustFig.app` (icon from the app's own drawing through `rustfig --dump-icon` and `iconutil`, `Info.plist` with the `.fig` document type, a `fig2dev` symlink) and `RustFig-VERSION-macos.dmg` (`hdiutil`); Linux `rustfig-VERSION-linux.tar.gz` (binary, `.desktop`, MIME XML for `image/x-xfig`, icon, `install.sh`) and `rustfig_VERSION_ARCH.deb` (needs `dpkg-deb`); Windows `rustfig-VERSION-windows.zip` (exes, `fig-association.reg`, `INSTALL.txt`). All files are generated in `xtask/src/package.rs`. `release.yml` runs it on each OS and uploads the artifacts. `iconutil` and `hdiutil` fail inside some sandboxes. Not done: signing and notarization, an AppImage, a Windows installer.
 
+## Web version on GitHub Pages (C5)
+
+`cargo xtask web` builds the browser version with trunk into `dist/` (`--serve` serves it locally, `--public-url /PATH/` sets the address it is served from). `.github/workflows/pages.yml` builds it with `--public-url /rustfig/` on every release tag (or by hand: `gh workflow run pages.yml`) and publishes it at https://fabianhassler.github.io/rustfig/ (the repository's Pages source is "GitHub Actions").
+
 ## Homebrew
 
 `Formula/rustfig.rb` makes the repository its own tap (`brew tap fabianhassler/rustfig https://github.com/FabianHassler/rustfig`, then `brew install --HEAD rustfig`). It builds `rustfig` and `rustfig-cli` and links `fig2dev` to `rustfig` (no separate fig2dev build: started as `fig2dev`, `rustfig` runs fig2dev's command line); it conflicts with Homebrew's C `fig2dev` formula. Once RustFig has release tags, add a stable `url` with the tag.

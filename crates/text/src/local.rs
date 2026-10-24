@@ -206,6 +206,8 @@ fn built(g: &mut State) -> &Built {
     }
     let extra = g.extra.clone();
     g.built.get_or_insert_with(|| {
+        // Only the native build adds the system's fonts.
+        #[cfg_attr(target_arch = "wasm32", allow(unused_mut))]
         let mut db = Database::new();
         if !builtin {
             #[cfg(not(target_arch = "wasm32"))]
