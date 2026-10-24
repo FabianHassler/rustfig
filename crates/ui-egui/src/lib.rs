@@ -42,6 +42,12 @@ pub mod reload;
 pub mod rulers;
 pub mod screen_pick;
 pub mod settings;
+
+/// Listen for the system's "open this file" requests (Finder double-click, `open -a`); call
+/// before the event loop starts (P3). A no-op except on macOS.
+pub fn install_open_handler() {
+    rustfig_os::open_docs::install_open_handler();
+}
 pub mod spell_dialog;
 pub mod styles;
 #[cfg(not(target_arch = "wasm32"))]
@@ -162,6 +168,8 @@ pub struct App {
     /// The override set during the previous frame, shown in this one.
     pub hint_shown: Option<(&'static str, &'static str, &'static str)>,
     pub pending: Option<Pending>,
+    /// Files the system asked us to open that wait their turn (P3).
+    system_open_queue: Vec<std::path::PathBuf>,
     /// The Export panel's export running on its thread (W10-13).
     #[cfg(not(target_arch = "wasm32"))]
     pub export_bg: Option<export_bg::Running>,
@@ -241,6 +249,7 @@ impl App {
             xfig_keys: true,
             open_menu: None,
             pending: None,
+            system_open_queue: Vec::new(),
             #[cfg(not(target_arch = "wasm32"))]
             export_bg: None,
             #[cfg(not(target_arch = "wasm32"))]
@@ -595,6 +604,18 @@ impl App {
                     })),
                     (None, None) => None,
                 })
+            });
+            // Asked by the system (Finder, `open -a`, P3): the first one now, the rest after.
+            let dropped = dropped.or_else(|| {
+                if self.pending.is_some() {
+                    return None;
+                }
+                self.system_open_queue.extend(rustfig_os::open_docs::take_opened_files());
+                if self.system_open_queue.is_empty() {
+                    return None;
+                }
+                let p = self.system_open_queue.remove(0);
+                p.to_str().map(|p| Pending::Open(Some(p.to_string())))
             });
             if let Some(action) = dropped {
                 self.guard_unsaved(action);
