@@ -1,9 +1,36 @@
 # RustFig
 
-An open-source, Rust-native reimplementation of the vector drawing program
-[xfig](https://mcj.sourceforge.net/), close to the original in look and
-behaviour. It runs natively on macOS, Windows
-and Linux, with a web (WASM) build on the way.
+**xfig for today's computers.** The classic vector drawing program, rebuilt
+in Rust for macOS, Windows, Linux and the web, with fig2dev built in.
+
+[![CI](https://github.com/FabianHassler/rustfig/actions/workflows/ci.yml/badge.svg)](https://github.com/FabianHassler/rustfig/actions/workflows/ci.yml)
+[![Licence: MIT OR Apache-2.0](https://img.shields.io/badge/licence-MIT%20OR%20Apache--2.0-blue)](#license)
+![Status: alpha](https://img.shields.io/badge/status-alpha%2C%20%E2%89%8887%25%20xfig%20parity-orange)
+
+![RustFig's window: a plot with LaTeX labels, LaTeX formulas typeset on the canvas, and a block diagram, in xfig's layout](docs/images/rustfig-window.png)
+
+- **It is xfig.** The same modes, mouse buttons, panels and keys, and the
+  same `.fig` files: RustFig opens every Fig version and saves Fig 3.2 that
+  xfig and fig2dev read unchanged.
+- **It runs everywhere.** Native on macOS, Windows and Linux, no X11
+  needed; a web build for the browser is in testing.
+- **LaTeX on the canvas.** Special text is typeset by your TeX installation
+  and shown as it will print, formulas included; plots of functions and
+  data with LaTeX labels.
+- **Every fig2dev export, built in.** PDF, SVG, EPS, PNG, pstex/pdftex,
+  TikZ, PSTricks, pict2e and all of fig2dev's other languages, through
+  fig2dev's drivers ported to Rust. The `fig2dev` command line comes along.
+- **Modern where it helps.** Native printing, undo, command search
+  (⌘⇧K / Ctrl+Shift+K), F1 help everywhere, the system's keys next to
+  xfig's, and automation through a JSON control channel and MCP.
+
+```sh
+brew tap fabianhassler/rustfig https://github.com/FabianHassler/rustfig
+brew install --HEAD rustfig
+```
+
+Other systems and ways: see [Installation](#installation). The drawing above
+is [`docs/images/rustfig-window.fig`](docs/images/rustfig-window.fig).
 
 ## Aim
 
