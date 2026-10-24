@@ -36,11 +36,11 @@ fn norm(doc: &Document) -> Document {
             ObjectKind::Spline(s) => s.style.join = join,
             ObjectKind::Arc(a) => {
                 a.style.join = join;
-                // The file has the centre to three decimals.
-                a.center = Point::new(
-                    (a.center.x * 1000.0).round() / 1000.0,
-                    (a.center.y * 1000.0).round() / 1000.0,
-                );
+                // The file has the centre to three decimals, rounded as the
+                // writer's `{:.3}` rounds (an exact half goes to even, which
+                // `f64::round` would not do: -7876.8125).
+                let r = |v: f64| format!("{v:.3}").parse().unwrap_or(v);
+                a.center = Point::new(r(a.center.x), r(a.center.y));
             }
             _ => {}
         }
