@@ -50,6 +50,24 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}  — the shortcut sheet (E8): every command with its keys in the standard and in xfig's scheme, per system, searchable",
     },
     UiCommand {
+        id: "help.command_search",
+        label: "Command search…",
+        shortcut: "Ctrl+Shift+K",
+        params: "{}  — W18: a small window to find any command or menu entry by label, id or menu path; shows its keys, greys out the ones not available now, Enter runs it (Ctrl+K is xfig's Enter point)",
+    },
+    UiCommand {
+        id: "app.mouse_sheet",
+        label: "Mouse buttons…",
+        shortcut: "",
+        params: "{}  — W18: the mouse cheat sheet: what the left, middle and right buttons do in every mode (from the mouse-function indicator) and how to press them without a three-button mouse",
+    },
+    UiCommand {
+        id: "app.whats_new",
+        label: "What's new…",
+        shortcut: "",
+        params: "{}  — W18: what changed in this version (shown once after an update)",
+    },
+    UiCommand {
         id: "app.versions",
         label: "Saved versions…",
         shortcut: "",
@@ -358,6 +376,9 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.styles" => app.styles.open = true,
         "app.character_map" => app.charmap.open = true,
         "app.keys" => app.keys_sheet.open = true,
+        "help.command_search" => app.command_search.show(),
+        "app.mouse_sheet" => app.mouse_sheet.show(),
+        "app.whats_new" => app.whats_new_open = true,
         "app.colors" => {
             let current = p
                 .get("color")
@@ -527,6 +548,9 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("RustFig Manual...", "help.open"),
                 Cmd("RustFig Reference (commands)...", "app.commands"),
                 Cmd("Keys...", "app.keys"),
+                Own("help.command_search"),
+                Own("app.mouse_sheet"),
+                Own("app.whats_new"),
                 Cmd("Install TeX Gyre fonts...", "app.install_tex_gyre"),
                 Cmd("About RustFig...", "app.about"),
             ],

@@ -237,6 +237,9 @@ pub struct RustFigPrefs {
     /// F8: extra preamble lines for the typeset texts.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub latex_preamble: Option<String>,
+    /// W18: the version whose "What's new" page was shown last.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub whats_new_seen: Option<String>,
     pub recent_files: Vec<String>,
     pub user_colors: Vec<NamedColor>,
     /// Colours used lately (`#rrggbb`, newest first), offered in the colour pop-ups (E4).

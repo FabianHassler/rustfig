@@ -221,6 +221,9 @@ fn tool_button(
     };
     let label = t.label();
     resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, active, label));
+    if resp.hovered() {
+        app.context_help.hovered = crate::context_help::mode_topic(t);
+    }
     let tip = tip_for_os(&tip, crate::platform::Os::current(ui.ctx()) == crate::platform::Os::Mac);
     if resp.on_hover_text(tip).clicked() {
         app.run(t.id(), json!({}));
@@ -342,6 +345,9 @@ fn command_button(
     paint_mode_icon(ui, icon, inner, ink);
     let label = rustfig_engine::cmd::find(id).map_or("Library", |c| c.label);
     resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, active, label));
+    if resp.hovered() {
+        app.context_help.hovered = Some(crate::context_help::LIBRARY_TOPIC);
+    }
     let tip = tip_for_os(tip, crate::platform::Os::current(ui.ctx()) == crate::platform::Os::Mac);
     if resp.on_hover_text(tip).clicked() {
         app.run(id, json!({}));

@@ -14,6 +14,8 @@ pub mod charmap;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod clipboard;
 pub mod color_dialog;
+pub mod command_search;
+pub mod context_help;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod control;
 pub mod dialogs;
@@ -23,6 +25,7 @@ pub mod dimline_panel;
 pub mod export_bg;
 pub mod font_chooser;
 pub mod help;
+pub mod help_pages;
 pub mod inject;
 pub mod input;
 pub mod key_font;
@@ -146,6 +149,14 @@ pub struct App {
     pub library: library::LibraryPanel,
     /// The shortcut sheet (E8).
     pub keys_sheet: keys_sheet::KeysSheet,
+    /// Command search (W18).
+    pub command_search: command_search::CommandSearch,
+    /// F1 context help notes (W18).
+    pub context_help: context_help::ContextHelp,
+    /// The mouse cheat sheet (W18).
+    pub mouse_sheet: help_pages::MouseSheet,
+    /// The "What's new" window (W18).
+    pub whats_new_open: bool,
     /// The typed-coordinates window (xfig's keyboard panel, Ctrl+K).
     pub point_entry: point_entry::PointEntry,
     /// The override set during the previous frame, shown in this one.
@@ -222,6 +233,10 @@ impl App {
             charmap: charmap::CharMap::default(),
             library: library::LibraryPanel::default(),
             keys_sheet: keys_sheet::KeysSheet::default(),
+            command_search: command_search::CommandSearch::default(),
+            context_help: context_help::ContextHelp::default(),
+            mouse_sheet: help_pages::MouseSheet::default(),
+            whats_new_open: false,
             point_entry: point_entry::PointEntry::default(),
             xfig_keys: true,
             open_menu: None,
@@ -594,9 +609,14 @@ impl App {
         let tokens = theme::Tokens::new(ctx.style().visuals.dark_mode, self.button_3d);
         // Panels set the hint override while hovered; show last frame's.
         self.hint_shown = self.hint_override.take();
+        context_help::frame(self, ctx);
         menus::handle_shortcuts(self, ctx);
         egui::TopBottomPanel::top("xfig_top").show(ctx, |ui| panels::classic_top(self, ui, &tokens));
-        egui::TopBottomPanel::bottom("indicator").show(ctx, |ui| attributes::attribute_panel(self, ui, &tokens));
+        let ind =
+            egui::TopBottomPanel::bottom("indicator").show(ctx, |ui| attributes::attribute_panel(self, ui, &tokens));
+        self.context_help
+            .zones
+            .push((ind.response.rect, context_help::INDICATOR_TOPIC));
         egui::SidePanel::left("modes")
             .resizable(false)
             .exact_width(panels::MODE_PANEL_WIDTH)
@@ -620,6 +640,9 @@ impl App {
         charmap::show(self, ctx);
         library::show(self, ctx);
         keys_sheet::show(self, ctx);
+        command_search::show(self, ctx);
+        help_pages::show_mouse_sheet(self, ctx);
+        help_pages::show_whats_new(self, ctx);
         reload::tick(self, ctx);
         reload::ask(self, ctx);
         panels::mode_popup(self, ctx, &tokens);
