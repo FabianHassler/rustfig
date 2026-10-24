@@ -66,7 +66,9 @@ pub fn data_dir(os: HostOs, env: &dyn Fn(&str) -> Option<PathBuf>) -> Option<Pat
 
 fn xdg(env: &dyn Fn(&str) -> Option<PathBuf>, var: &str, home_sub: &str) -> Option<PathBuf> {
     env(var)
-        .filter(|p| Path::new(p).is_absolute())
+        // XDG wants an absolute path; `has_root`, not `is_absolute`, so the
+        // Linux rules give the same answer when tested on Windows (no drive).
+        .filter(|p| Path::new(p).has_root())
         .or_else(|| env("HOME").map(|h| h.join(home_sub)))
 }
 
