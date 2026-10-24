@@ -1213,21 +1213,24 @@ fn pic_menu(
     per_row: usize,
 ) -> Option<usize> {
     let mut chosen = None;
-    ui.horizontal(|ui| {
-        let (r, _) = ui.allocate_exact_size(vec2(32.0, 32.0), Sense::hover());
-        current.paint(ui, r, ui.visuals().text_color());
-        let combo = egui::ComboBox::from_id_salt(id)
-            .selected_text(name)
-            .width(90.0)
-            .show_ui(ui, |ui| {
-                chosen = icon_choices(ui, id, items, per_row);
-            });
-        combo
-            .response
-            .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, name));
-    });
+    // One framed picture button; its pop-up is the indicator's choice grid.
+    let (r, resp) = ui.allocate_exact_size(vec2(PIC_BTN * 1.5, PIC_BTN), Sense::click());
+    let v = ui.style().interact(&resp);
+    ui.painter()
+        .rect(r, 3.0, v.weak_bg_fill, v.bg_stroke, egui::StrokeKind::Inside);
+    current.paint(ui, r.shrink(2.0), ui.visuals().text_color());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, name));
+    let resp = resp.on_hover_text(name);
+    egui::Popup::from_toggle_button_response(&resp)
+        .close_behavior(egui::PopupCloseBehavior::CloseOnClick)
+        .show(|ui| {
+            chosen = icon_choices(ui, id, items, per_row);
+        });
     chosen
 }
+
+/// Height of a pictorial button and of every row of the edit panel.
+pub(crate) const PIC_BTN: f32 = 28.0;
 
 /// Line style menu with pictures (edit panel).
 pub(crate) fn line_menu(ui: &mut Ui, id: &str, cur: LineKind) -> Option<LineKind> {
@@ -1479,7 +1482,7 @@ pub(crate) fn fill_menu(ui: &mut Ui, doc: &Document, (pen, fill): (i32, i32), cu
     let tk = Tokens::for_dark(ui.visuals().dark_mode);
     let mut chosen = None;
     ui.horizontal(|ui| {
-        let (r, resp) = ui.allocate_exact_size(vec2(32.0, 32.0), Sense::click());
+        let (r, resp) = ui.allocate_exact_size(vec2(PIC_BTN * 1.5, PIC_BTN), Sense::click());
         fill_swatch(
             ui.painter(),
             r,

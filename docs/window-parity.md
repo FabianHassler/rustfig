@@ -350,3 +350,4 @@ Nothing in group 1 needed an in-place fix: labels, order, accelerators and defau
 | 2026-10-21 | Group 4 (settings and tool windows) compared with captures of the real X11 xfig; Search and Replace, About, Messages and the Global settings view rows fixed; W10-23 and W10-24 added; six proposed modernisations. |
 | 2026-10-21 | W16, W17: one mouse scheme and one layout; Edit, View and File extras and the Object menu in the classic menu bar; the Save All / Save Part query. |
 | 2026-10-21 | W13, W14: mouse box per mode with the new free-button functions, screenshots `target/window-parity/w14-*.png` (update band, circle by three points, centre box). |
+| 2026-10-24 | W10: edit panels aligned (one row height, labels centred, fixed-width coordinate fields, headed point table), arrows, line, cap and join styles as one picture button with a pop-up of drawn choices; figure comments and spline point panels in the same grid. |
