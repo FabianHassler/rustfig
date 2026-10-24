@@ -29,6 +29,11 @@ pub const LIBRARY_TOPIC: &str = "libraries.md";
 /// Topic of the indicator panel's attribute buttons.
 pub const INDICATOR_TOPIC: &str = "attributes.md";
 
+/// Topic of the depth manager (right panel).
+pub const DEPTH_TOPIC: &str = "window.md";
+/// Topic of the rulers and the units box.
+pub const RULER_TOPIC: &str = "window.md";
+
 /// The topic of the open dialog (the first that is open), if any.
 pub fn dialog_topic(app: &App) -> Option<&'static str> {
     let d = &app.dialogs;
@@ -88,7 +93,7 @@ mod tests {
 
     #[test]
     fn fixed_topics_exist() {
-        for f in [LIBRARY_TOPIC, INDICATOR_TOPIC] {
+        for f in [LIBRARY_TOPIC, INDICATOR_TOPIC, DEPTH_TOPIC, RULER_TOPIC] {
             assert!(crate::help::find_topic(f).is_some(), "{f}");
         }
     }

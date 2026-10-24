@@ -153,6 +153,23 @@ impl Attr {
         })
     }
 
+    /// The manual topic (file name) that explains this button (F1).
+    pub fn help_topic(self) -> &'static str {
+        match self {
+            Attr::Zoom => "view.md",
+            Attr::Grid | Attr::PointPosn => "snap-grid.md",
+            Attr::NumSides => "draw-shapes.md",
+            Attr::RotnAngle | Attr::NumCopies | Attr::NumXCopies | Attr::NumYCopies => "transform.md",
+            Attr::VAlign | Attr::HAlign => "transform.md",
+            Attr::AngleGeom => "angle-geom.md",
+            Attr::SmartLinks => "smart-links.md",
+            Attr::LineStyle => "line-styles.md",
+            Attr::TangentLength => "tangent-normal.md",
+            Attr::DimLine => "measure.md",
+            _ => "attributes.md",
+        }
+    }
+
     /// One-line name for menus, tooltips and accessibility.
     pub fn name(self) -> String {
         match self.label() {
@@ -407,6 +424,9 @@ fn update_box(app: &mut App, ui: &mut Ui, button: Rect, a: Attr, flag: UpdateFla
 fn button(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) -> bool {
     let (rect, resp) = ui.allocate_exact_size(vec2(a.width(), BUTTON_HEIGHT), Sense::click());
     let open = egui::Popup::is_id_open(ui.ctx(), egui::Popup::default_response_id(&resp));
+    if resp.hovered() {
+        app.context_help.hovered = Some(a.help_topic());
+    }
     crate::bevel::paint(ui.painter(), rect, tk, crate::bevel::State::of(&resp, false, open));
     let p = ui.painter();
     let text = ui.visuals().text_color();
@@ -2111,6 +2131,13 @@ fn nval_buttons(ui: &mut Ui) -> (bool, bool) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_attribute_button_has_an_existing_topic() {
+        for a in Attr::ORDER {
+            assert!(crate::help::find_topic(a.help_topic()).is_some(), "{}", a.name());
+        }
+    }
 
     #[test]
     fn angle_geom_shows_in_xfigs_modes() {
