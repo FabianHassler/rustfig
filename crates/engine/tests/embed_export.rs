@@ -62,7 +62,18 @@ fn other_programs_still_read_the_files() {
 
     let pdf = std::fs::read(export(&mut e, &dir, "a.pdf", true)).unwrap();
     let plain = std::fs::read(export(&mut e, &dir, "b.pdf", false)).unwrap();
-    assert!(pdf.starts_with(&plain), "the update only appends");
+    // The two exports may fall in different seconds (slow runners): mask
+    // the creation date before comparing.
+    let undated = |b: &[u8]| -> Vec<u8> {
+        let mut b = b.to_vec();
+        if let Some(i) = b.windows(17).position(|w| w == b"/CreationDate (D:") {
+            for c in b.iter_mut().skip(i + 17).take_while(|c| c.is_ascii_digit()) {
+                *c = b'0';
+            }
+        }
+        b
+    };
+    assert!(undated(&pdf).starts_with(&undated(&plain)), "the update only appends");
     let doc = hayro_syntax::Pdf::new(Arc::new(pdf.clone())).expect("PDF parses");
     assert_eq!(doc.pages().len(), 1);
     let text = String::from_utf8_lossy(&pdf);
