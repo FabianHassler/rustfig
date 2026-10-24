@@ -108,6 +108,8 @@ fn main() -> eframe::Result<()> {
                 .with_activate_ignoring_other_apps(false);
         }));
     }
+    // Finder double-click and `open -a` arrive as an Apple Event (P3); listen before the loop starts.
+    rustfig_ui_egui::install_open_handler();
     eframe::run_native(
         "RustFig",
         options,

@@ -4,6 +4,8 @@
 //!
 //! - [`screen`]: pick a colour from the screen.
 //! - [`print`]: the platform's native print dialog for a PDF.
+//! - [`open_docs`]: files the system asks the program to open (macOS Apple Event `odoc`).
 
+pub mod open_docs;
 pub mod print;
 pub mod screen;

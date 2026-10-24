@@ -27,6 +27,10 @@ In the browser the copy goes to the browser's local storage (as Fig text, drawin
 
 Running `rustfig FILE.fig` opens a file at start. See [Automation](automation.md).
 
+## Opening from the file manager (macOS)
+
+Double-clicking a `.fig` file in Finder, choosing Open With > RustFig, `open -a RustFig FILE.fig` or dropping a file on the Dock icon opens it, whether RustFig is already running or is started by it. As with File > Open, RustFig asks before it discards unsaved changes; several files sent at once open one after the other.
+
 ## The web version
 
 RustFig also runs in a browser (WebAssembly). Build it with `cargo xtask web` (needs `trunk`: `cargo install --locked trunk`) and serve the `dist/` folder with any static web server, or run `cargo xtask web --serve` and open http://127.0.0.1:8080. The page shows "Loading RustFig…" until the program has started.

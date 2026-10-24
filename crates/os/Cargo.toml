@@ -29,7 +29,7 @@ objc2 = "0.6"
 objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSColor", "NSColorSampler", "NSColorSpace", "NSPrintInfo", "NSPrintOperation", "NSPrintPanel", "block2", "objc2-core-foundation"] }
 block2 = "0.6"
 # The print dialog: PDFKit's print operation (NSPrintOperation) on the main thread.
-objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSData", "NSString"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSData", "NSString", "NSURL"] }
 objc2-pdf-kit = { version = "0.3", default-features = false, features = ["std", "PDFDocument", "objc2-app-kit"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
