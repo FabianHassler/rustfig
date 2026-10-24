@@ -3073,3 +3073,17 @@ fn every_interactive_widget_has_an_accessible_label() {
     assert!(missing.is_empty(), "widgets without a label: {missing:?}");
     h.get_by_label_contains("Canvas: 1 object: box");
 }
+
+/// W18: Escape closes the command search, also while its field has focus.
+#[test]
+fn escape_closes_the_command_search() {
+    let mut h = harness(app());
+    h.state_mut().run("help.command_search", json!({}));
+    h.run_steps(3);
+    h.get_by_role_and_label(egui::accesskit::Role::TextInput, "Command search")
+        .type_text("undo");
+    h.run_steps(2);
+    press_key(&mut h, egui::Key::Escape, egui::Modifiers::NONE);
+    h.run_steps(2);
+    assert!(!h.state().command_search.open);
+}

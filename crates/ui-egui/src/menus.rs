@@ -1240,6 +1240,12 @@ fn text_key(os: crate::platform::Os, key: egui::Key, m: egui::Modifiers) -> Opti
 
 /// Keyboard handling: typing goes to the text tool; otherwise shortcuts run commands.
 pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
+    // Escape closes the command search first: egui drops the field's focus
+    // on Escape before this runs, so it would reach `tool.escape` instead.
+    if app.command_search.open && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
+        app.command_search.open = false;
+        return;
+    }
     if ctx.wants_keyboard_input() {
         return;
     }
