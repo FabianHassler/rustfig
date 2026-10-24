@@ -535,15 +535,23 @@ mod tests {
         std::fs::create_dir_all(t.join("Empty")).unwrap();
         std::fs::write(t.join("Outer/b.fig"), "x").unwrap();
         std::fs::write(t.join("Outer/A.fig"), "x").unwrap();
-        std::fs::write(t.join("Outer/In ner/q\"x.fig"), "x").unwrap();
+        // Windows forbids `"` in file names; elsewhere it tests the escaping.
+        let (quoted, escaped) = if cfg!(windows) {
+            ("q'x", "q'x")
+        } else {
+            ("q\"x", "q\\\"x")
+        };
+        std::fs::write(t.join(format!("Outer/In ner/{quoted}.fig")), "x").unwrap();
         std::fs::write(t.join("Outer/README"), "x").unwrap();
         std::fs::write(t.join("top.fig"), "x").unwrap();
         let s = libraries_index(&t).unwrap();
         let _ = std::fs::remove_dir_all(&t);
         assert_eq!(
             s,
-            "{\"libraries\":[{\"name\":\"Outer\",\"dir\":\"Outer\",\"figures\":[\"A\",\"b\"]},\
-             {\"name\":\"Outer / In ner\",\"dir\":\"Outer/In ner\",\"figures\":[\"q\\\"x\"]}]}\n"
+            format!(
+                "{{\"libraries\":[{{\"name\":\"Outer\",\"dir\":\"Outer\",\"figures\":[\"A\",\"b\"]}},\
+                 {{\"name\":\"Outer / In ner\",\"dir\":\"Outer/In ner\",\"figures\":[\"{escaped}\"]}}]}}\n"
+            )
         );
     }
 
