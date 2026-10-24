@@ -10,7 +10,7 @@ Help > Command search... (`help.command_search`, `Ctrl+Shift+K`; on macOS `âŒ˜ â
 
 ## F1: help for what is under the pointer
 
-Press `F1` while the pointer is over a mode button, over the indicator panel (the attribute buttons at the bottom), or with a dialog open. The manual opens at the page that explains it. Elsewhere F1 opens the manual's first page.
+Press `F1` while the pointer is over a mode button, over an attribute button in the indicator panel (each opens the page of its own topic, for example Line Style opens Line styles and Zoom opens Zoom and view), over the depth manager, the rulers or the units box (The window), or with a dialog open. The manual opens at the page that explains it. Elsewhere F1 opens the manual's first page.
 
 ## Mouse buttons
 

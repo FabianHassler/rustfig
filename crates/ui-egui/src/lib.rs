@@ -645,9 +645,12 @@ impl App {
             .frame(egui::Frame::side_top_panel(&ctx.style()).inner_margin(panels::MODE_PANEL_MARGIN))
             .show(ctx, |ui| panels::mode_panel(self, ui, &tokens));
         if self.show_depths {
-            egui::SidePanel::right("depths")
+            let depths = egui::SidePanel::right("depths")
                 .default_width(140.0)
                 .show(ctx, |ui| panels::depth_panel(self, ui, &tokens));
+            self.context_help
+                .zones
+                .push((depths.response.rect, context_help::DEPTH_TOPIC));
         }
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE)
