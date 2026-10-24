@@ -610,7 +610,8 @@ impl App {
                 if self.pending.is_some() {
                     return None;
                 }
-                self.system_open_queue.extend(rustfig_os::open_docs::take_opened_files());
+                self.system_open_queue
+                    .extend(rustfig_os::open_docs::take_opened_files());
                 if self.system_open_queue.is_empty() {
                     return None;
                 }
