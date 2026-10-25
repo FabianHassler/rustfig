@@ -57,8 +57,19 @@ Build with `cargo xtask web`, serve `dist/` (`cd dist && python3 -m http.server 
 | Retina: the canvas is sharp; resizing the window works | [ ] | [ ] | [ ] |
 | Downloads are not blocked (Safari may ask once) | [ ] | [ ] | [ ] |
 
+## Linux findings (2026-10-25, Debian 13, Xfce on X11, ARM64 VM)
+
+- ✅ Installs from the `.deb` (ARM64 build added to the release); starts, panels, rulers and text fonts right; the control channel works.
+- ✅ Save and reopen in a folder and file named with accents and CJK; settings in `~/.config/rustfig/settings.toml`, recovery in `~/.local/share/rustfig/recovery`.
+- ✅ Export PDF, SVG, PNG, EPS: valid files (`file` identifies them).
+- ❌→fixed: the `.deb` shipped `/usr/bin/fig2dev` and collided with Debian's `fig2dev` package (xfig depends on it); the package no longer installs that link, `install.sh` adds it only where no fig2dev exists.
+- ❌ CJK characters in the file-name box show as boxes (the UI font has no CJK; no system CJK fallback).
+- ❌ On a 1280×712 screen the last row of mode buttons is cut off; the mode panel needs to scroll or shrink.
+- Open: three mouse buttons and the left+right chord, xfig and Ctrl keys, print dialog (portal), clipboard, double-click in the file manager, HiDPI, crash recovery, Wayland session, screen capture.
+
 ## Revision history
 | Date | Note |
+| 2026-10-25 | First Linux check on Debian 13 (Xfce, X11, ARM64): findings listed above. |
 |---|---|
 | 2026-10-25 | D11: screen capture row in the per-OS checklist (macOS screencapture, Linux portal, Windows whole screen). |
 | 2026-10-23 | C3: browser autosave row in the web checklist. |

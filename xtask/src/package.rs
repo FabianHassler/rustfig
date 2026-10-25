@@ -153,7 +153,8 @@ fn install_script() -> String {
     "#!/bin/sh\n# Installs RustFig for the current user (or system-wide with PREFIX=/usr/local, as root).\n\
      set -e\nPREFIX=${PREFIX:-$HOME/.local}\nd=$(dirname \"$0\")\n\
      install -Dm755 \"$d/rustfig\" \"$PREFIX/bin/rustfig\"\n\
-     ln -sf rustfig \"$PREFIX/bin/fig2dev\"\n\
+     # fig2dev under its own name only where no fig2dev is installed\n\
+     command -v fig2dev >/dev/null 2>&1 || ln -sf rustfig \"$PREFIX/bin/fig2dev\"\n\
      install -Dm644 \"$d/rustfig.desktop\" \"$PREFIX/share/applications/rustfig.desktop\"\n\
      install -Dm644 \"$d/rustfig.xml\" \"$PREFIX/share/mime/packages/rustfig.xml\"\n\
      [ -f \"$d/rustfig.png\" ] && install -Dm644 \"$d/rustfig.png\" \"$PREFIX/share/icons/hicolor/256x256/apps/rustfig.png\"\n\
@@ -425,8 +426,8 @@ fn linux(root: &Path, rel: &Path, out: &Path, version: &str) -> Result<(), Strin
     let bin = pkg.join("usr/bin");
     fs::create_dir_all(&bin).map_err(|e| e.to_string())?;
     fs::copy(&exe, bin.join("rustfig")).map_err(|e| e.to_string())?;
-    #[cfg(unix)]
-    std::os::unix::fs::symlink("rustfig", bin.join("fig2dev")).map_err(|e| e.to_string())?;
+    // No /usr/bin/fig2dev: Debian's fig2dev package owns that name (and
+    // xfig depends on it); `rustfig fig2dev …` runs the built-in one.
     write(&pkg.join("usr/share/applications/rustfig.desktop"), &desktop_file())?;
     write(&pkg.join("usr/share/mime/packages/rustfig.xml"), &mime_xml())?;
     if let Some(p) = png {
