@@ -64,7 +64,11 @@ pub fn picture_type(path: &str) -> String {
 
 /// Information about a picture (read-only).
 pub fn info(pic: &Picture) -> PictureInfo {
-    let exists = std::path::Path::new(&pic.file).is_file() || import::stored_picture(&pic.file).is_some();
+    // A relative name resolves against the figure's folder, not the working directory `is_file`
+    // looks in: a loaded image then proves the file was found. An absolute name is checked on disk.
+    let path = std::path::Path::new(&pic.file);
+    let exists =
+        path.is_file() || import::stored_picture(&pic.file).is_some() || (pic.image.is_some() && path.is_relative());
     let (mut width, mut height, mut colours, mut transparent) = (0, 0, 0, false);
     if let Some(img) = &pic.image {
         width = img.width;
