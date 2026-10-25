@@ -19,8 +19,8 @@ the score.
 
 | Area | Weight | Score | Missing | Hours |
 |------|-------:|------:|---------|------:|
-| Editing modes | 12 | 86 % | in-app Open/Merge panel with preview and offset (W10-6/12, gap #30), the optional W10 extras (search options, live pop-ups, hover preview), the function audit's leftovers (gap #34) | 12 |
-| Attributes / indicator | 10 | 90 % | mix memory and lock of xfig's colour panel (not built, recent colours instead) | 3 |
+| Editing modes | 12 | 95 % | screen capture into a picture (D11, w_capture.c); two minor message texts (arc rubber band, Unit/Scale panel title). Checked against the real xfig in two rounds (W22, 216 scenarios: every mode, its three buttons, dialogs, compounds; 30 real differences fixed, 2026-10-25); the audit lists no other missing function | 8 |
+| Attributes / indicator | 10 | 93 % | mix memory and lock of xfig's colour panel (recent colours instead); depth pop-up, labels and text flags as xfig since W22 | 3 |
 | Drawing modes | 12 | 98 % | none known | 0 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
 | Export | 12 | 73 % | the audit's remaining hardening passes (B11), picture frames and GIF transparency (gap #26)(`sld` checked 2026-10-23: fig2dev has no `gensld`, the port reproduces `ppmtoacad`; `\ooo` escapes byte-identical to C fig2dev, fig2dev branch `b11-export-hardening`) | 79 |
@@ -29,9 +29,13 @@ the score.
 | Undo | 4 | 100 % | — | 0 |
 | Libraries | 5 | 95 % | the web build now serves the bundled libraries (C2, not yet checked in a real browser); no user library or comment search there | 3 |
 | Printing | 5 | 85 % | verification of the printer hand-off on Windows and Linux, browser print dialog not yet checked in a real browser | 4 |
-| Settings & styles | 5 | 80 % | — (Global settings rows with effect, Unit/Scale panel, Arrow Size panel and number pop-ups done in W10-23, -24, -31, -32; preferences, recent files, styles with families E6, colours E4 done) | 0 |
+| Settings & styles | 5 | 90 % | little known: preferences, recent files, styles with families, colours, Global settings, Unit/Scale and Arrow Size panels, number pop-ups; checked in W22 round 2 (dialogs behind the menus) | 2 |
 | Platforms | 7 | 76 % | screen-reader check per OS (G3 labels done), code signing (user decision), Windows/Linux manual checks of the packages (P3, `cargo xtask package` 2026-10-24) and the platforms (checklist in hardware-parity.md), browser check of the web build (C3 browser autosave done 2026-10-23; Merge, pictures in memory and the bundled libraries added 2026-10-24, none yet run in a browser), exports of figures with pictures in the browser | 10 |
-| **Overall** | 100 | **≈87 %** | | **294** |
+| **Overall** | 100 | **≈90 %** | | **210** |
+
+## Re-score 2026-10-25
+
+After the two side-by-side rounds with the real xfig (W22: 216 scenarios, 45 differences; 30 real fixed, 14 intended with reasons, 1 left), the refreshed function audit (S4: one function left, screen capture) and the user's correction that text widths with the fallback fonts are an environment limit (Text 84 → 92 %): Editing 86 → 95 %, Attributes 90 → 93 %, Settings 80 → 90 %; overall ≈87 → ≈90 % (weighted 90.4). What keeps it from the high 90s: the export hardening against fig2dev's C sources (B11, Export 73 %) and the Windows, Linux and browser checks by hand (Platforms 76 %).
 
 ## Evidence of what ships
 
@@ -115,6 +119,7 @@ the score.
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-25 | ≈90 % | Re-score after W22 rounds 1 and 2 (30 real differences fixed), the refreshed function audit (only screen capture missing) and the font-width correction: Editing 86 → 95 %, Attributes 90 → 93 %, Text 84 → 92 %, Settings 80 → 90 %; 294 → 210 h. |
 | 2026-10-24 | ≈87 % | P3 packaging (macOS .app/.dmg, Linux .deb/tarball, Windows zip), G3 accessible labels, C4 touch (long press, two-finger pan), F3 dead keys, W18 modern help (command search, F1, mouse sheet, what's new); Platforms 72 → 76 %, 296 → 294 h. |
 | 2026-10-23 | ≈85 % | F7 (RustFig side): installed fonts per text, Text 78 → 80 %, 30 → 26 h; embedding in exports still to do. |
 | 2026-10-23 | ≈85 % | Recount after step 1 towards beta: D11 click-to-close rules (Drawing 95 → 98 %), figure comments from Edit mode (Editing 83 → 86 %), F2 LaTeX special text (Text 70 → 72 %); 337 → 314 h. |
