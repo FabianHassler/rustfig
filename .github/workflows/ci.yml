@@ -42,7 +42,7 @@ jobs:
       RUSTFIG_REQUIRE_WASM: ${{ matrix.os == 'ubuntu-24.04' && '1' || '' }}
       RUSTFIG_SKIP_WASM: ${{ matrix.os != 'ubuntu-24.04' && '1' || '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Free disk space (preinstalled toolsets RustFig doesn't use)
         if: runner.os == 'Linux'
         run: |
@@ -71,7 +71,7 @@ jobs:
         run: cargo run --release -p rustfig-cli -- perf
       - name: fig2dev comparison images
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fig2dev-reference-${{ matrix.name }}
           path: target/fig2dev-reference
