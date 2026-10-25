@@ -311,3 +311,27 @@ fn fields(app: &App, ui: &mut Ui, d: &mut DimlineSettings) {
         d.precision = u32::try_from(p).unwrap_or(1);
     });
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `draw_cur_dimline`: the example is drawn with the chosen arrow types.
+    #[test]
+    fn preview_draws_the_chosen_arrow_types() {
+        let app = App::with_engine(rustfig_engine::Engine::new());
+        let image = |left: i32, right: i32| {
+            let d = DimlineSettings {
+                left_arrow: left,
+                right_arrow: right,
+                ..DimlineSettings::default()
+            };
+            render_example(&app, &d, 1.0, [255, 255, 255]).map(|i| i.pixels)
+        };
+        let base = image(2, 2);
+        assert!(base.is_some());
+        assert_ne!(base, image(-1, -1), "no arrows differ from triangles");
+        assert_ne!(base, image(1, 2), "open and filled triangle differ");
+        assert_ne!(base, image(6, 2), "another arrow type differs");
+    }
+}

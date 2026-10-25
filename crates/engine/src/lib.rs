@@ -15,6 +15,7 @@ pub mod dirs;
 mod error;
 pub mod export_panel;
 pub mod fig2dev;
+pub mod file_panel;
 mod globals;
 pub mod guard;
 mod history;
@@ -120,6 +121,8 @@ pub struct Engine {
     locate_pick: Option<ObjectId>,
     tool: ToolKind,
     tool_state: tools::ToolState,
+    /// Super/subscript state of the text being typed.
+    text_sub: tools::TextSub,
     /// Rotate's centre or Flip's anchor set with the right button (xfig's
     /// `setcenter` / `setanchor`).
     set_point: Option<Point>,
@@ -156,6 +159,9 @@ pub struct Engine {
     pub show_page_border: bool,
     /// Show Lengths: the dx / dy triangle of the segment being drawn.
     pub show_lengths: bool,
+    /// The `crosshair` resource: full-window lines through the pointer while
+    /// drawing or editing.
+    pub crosshair: bool,
     requests: Vec<UiRequest>,
     status: String,
     /// Set by [`Engine::doc_mut`] while a command runs.
@@ -193,6 +199,7 @@ impl Engine {
             locate_pick: None,
             tool: ToolKind::None,
             tool_state: tools::ToolState::Idle,
+            text_sub: tools::TextSub::default(),
             set_point: None,
             clipboard: Vec::new(),
             picture_clipboard: None,
@@ -211,6 +218,7 @@ impl Engine {
             gray_hidden_depths: true,
             show_page_border: true,
             show_lengths: false,
+            crosshair: false,
             requests: Vec::new(),
             status: "READY. Select a mode or load a file".to_string(),
             changed: false,

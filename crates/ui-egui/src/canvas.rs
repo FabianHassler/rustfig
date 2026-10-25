@@ -584,6 +584,13 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
             }
         }
     }
+    // The crosshair resource: full-window red lines through the pointer.
+    if let Some(c) = overlay.crosshair {
+        let (p, clip) = (to_screen(c), painter.clip_rect());
+        let stroke = egui::Stroke::new(1.0_f32, Color32::from_rgb(255, 0, 0));
+        painter.line_segment([egui::pos2(clip.min.x, p.y), egui::pos2(clip.max.x, p.y)], stroke);
+        painter.line_segment([egui::pos2(p.x, clip.min.y), egui::pos2(p.x, clip.max.y)], stroke);
+    }
     // Show Lengths: the sides' lengths in red (xfig draws them in RED).
     for (p, s) in &overlay.lengths {
         painter.text(

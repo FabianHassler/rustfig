@@ -3074,6 +3074,49 @@ fn every_interactive_widget_has_an_accessible_label() {
     h.get_by_label_contains("Canvas: 1 object: box");
 }
 
+/// W10-12: the Merge panel lists the folder, previews the selected figure
+/// with its comments, and merges it moved by the Figure Offset.
+#[test]
+fn merge_panel_previews_and_merges_with_the_offset() {
+    let dir = std::env::temp_dir().join(format!("rustfig-merge-panel-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let mut src = Engine::new();
+    src.execute("doc.set_comments", &json!({"comments": "a small box"}))
+        .unwrap();
+    src.execute(
+        "shape.rectangle",
+        &json!({"x": 0, "y": 0, "width": 2400, "height": 1200}),
+    )
+    .unwrap();
+    src.execute("file.save", &json!({"path": dir.join("box.fig").to_str().unwrap()}))
+        .unwrap();
+    std::fs::write(dir.join("other.txt"), b"x").unwrap();
+
+    let mut h = harness(App::with_engine(Engine::new()));
+    h.state_mut().file_panel.dir = dir.to_str().unwrap().to_string();
+    h.state_mut().run("app.merge_panel", json!({}));
+    h.run_steps(3);
+    assert!(h.state().file_panel.open);
+    assert!(h.query_by_label("other.txt").is_none(), "the mask hides it");
+    h.get_by_label("box.fig").click();
+    h.run_steps(3);
+    assert_eq!(h.state().file_panel.name, "box.fig");
+    h.get_by_label("Figure preview");
+    h.get_by_label("Figure comments");
+    h.state_mut().file_panel.x = 1.0;
+    h.state_mut().file_panel.y = 2.0;
+    h.run_steps(2);
+    h.get_by_label("Merge").click();
+    h.run_steps(3);
+    assert!(!h.state().file_panel.open);
+    let b = h.state().engine.doc_bounds();
+    assert!(
+        (b.min.x - 1200.0).abs() < 100.0 && (b.min.y - 2400.0).abs() < 100.0,
+        "{b:?}"
+    );
+    std::fs::remove_dir_all(&dir).ok();
+}
+
 /// W18: Escape closes the command search, also while its field has focus.
 #[test]
 fn escape_closes_the_command_search() {

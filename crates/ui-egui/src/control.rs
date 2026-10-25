@@ -184,6 +184,7 @@ pub fn open_state(app: &App, ctx: &egui::Context) -> Value {
         ("units", app.unit_panel_open),
         ("styles", app.styles.open),
         ("character_map", app.charmap.open),
+        ("file_panel", app.file_panel.open),
         ("keys", app.keys_sheet.open),
         ("unsaved_changes", app.pending.is_some()),
     ];

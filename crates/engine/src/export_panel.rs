@@ -55,6 +55,11 @@ pub struct PanelSettings {
     pub quality: u32,
     /// PDF, SVG, PNG: store the figure's Fig text in the file (plan E16).
     pub embed: bool,
+    /// HPGL: "Issue PCL Command to use HPGL" (`print_hpgl_pcl_switch`,
+    /// fig2dev's `-k`).
+    pub hpgl_pcl: bool,
+    /// HPGL: "Use Specified Font" (`hpgl_specified_font`, fig2dev's `-F`).
+    pub hpgl_font: bool,
 }
 
 impl Default for PanelSettings {
@@ -89,6 +94,8 @@ impl PanelSettings {
             smoothing: Some(1),
             quality: 75,
             embed: false,
+            hpgl_pcl: false,
+            hpgl_font: false,
         }
     }
 
@@ -152,6 +159,9 @@ pub struct Rows {
     pub multiple: bool,
     /// Bitmaps: smoothing and resolution.
     pub bitmap: bool,
+    /// HPGL: the PCL command and specified font switches
+    /// (`toggle_hpgl_pcl_switch`, `toggle_hpgl_font`).
+    pub hpgl: bool,
 }
 
 /// The rows of language `id`.
@@ -171,9 +181,10 @@ pub fn rows(id: &str) -> Rows {
         grid: ps || bitmap,
         preview: matches!(id, "ps" | "eps"),
         pdf_page_mode: id == "pdf",
-        page: matches!(id, "ps" | "pdf"),
+        page: matches!(id, "ps" | "pdf" | "ibmgl"),
         multiple: matches!(id, "ps" | "pdf"),
         bitmap,
+        hpgl: id == "ibmgl",
     }
 }
 
@@ -292,6 +303,19 @@ pub fn params(e: &Engine, id: &str, s: &PanelSettings) -> Map<String, Value> {
             if s.overlap {
                 options.insert("O".into(), json!(true));
             }
+        }
+    }
+    if r.hpgl {
+        // `print_export` for LANG_IBMGL: -F, -k, then the paper size and -P.
+        if s.hpgl_font {
+            options.insert("F".into(), json!(true));
+        }
+        if s.hpgl_pcl {
+            options.insert("k".into(), json!(true));
+        }
+        options.insert("z".into(), json!(e.doc().settings.paper.name()));
+        if e.doc().settings.orientation != rustfig_model::Orientation::Landscape {
+            options.insert("P".into(), json!(true));
         }
     }
     if r.bitmap {
@@ -446,6 +470,34 @@ mod tests {
         assert!(rows("eps").preview && !rows("pdf").preview);
         assert!(rows("tk").background && !rows("tk").grid && !rows("svg").background);
         assert!(!rows("box").border);
+    }
+
+    #[test]
+    fn hpgl_rows_and_options() {
+        let r = rows("ibmgl");
+        assert!(r.hpgl && r.page && !r.multiple && !r.preview);
+        assert!(!rows("ps").hpgl);
+        let e = Engine::new();
+        let off = params(&e, "ibmgl", &PanelSettings::xfig());
+        let opts = off
+            .get("options")
+            .and_then(Value::as_object)
+            .cloned()
+            .unwrap_or_default();
+        assert!(opts.get("F").is_none() && opts.get("k").is_none());
+        assert!(opts.get("z").is_some(), "the paper size goes along like xfig's -z");
+        let on = PanelSettings {
+            hpgl_pcl: true,
+            hpgl_font: true,
+            ..PanelSettings::xfig()
+        };
+        let opts = params(&e, "ibmgl", &on)
+            .get("options")
+            .and_then(Value::as_object)
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(opts.get("k"), Some(&json!(true)));
+        assert_eq!(opts.get("F"), Some(&json!(true)));
     }
 
     #[test]

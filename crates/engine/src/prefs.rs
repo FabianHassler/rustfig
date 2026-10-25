@@ -127,7 +127,7 @@ pub const RESOURCES: &[Resource] = &[
     r("canvasbackground", Str, "white", "-cbg", Planned("E9")),
     r("canvasforeground", Str, "black", "-cfg", Planned("E9")),
     r("correctfontsize", Bool, "false", "-correctfontsize", Applied),
-    r("crosshair", Bool, "false", "-crosshair", Planned("E9")),
+    r("crosshair", Bool, "false", "-crosshair", Applied),
     r("encoding", Int, "1", "-encoding", Planned("D11")),
     r("exportLanguage", Str, "eps", "-exportLanguage", Applied),
     r("export_margin", Int, "0", "-export_margin", Applied),
@@ -488,6 +488,9 @@ impl Prefs {
         }
         if let Some(b) = self.bool("showlengths") {
             e.show_lengths = b;
+        }
+        if let Some(b) = self.bool("crosshair") {
+            e.crosshair = b;
         }
         if let Some(b) = self.bool("showpageborder") {
             e.show_page_border = b;

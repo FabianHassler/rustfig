@@ -1,6 +1,6 @@
 # Function-level source audit of xfig (S4)
 
-**Status:** 2026-10-25 (refreshed: statuses after D8, E4, F5, E5, D10, D11, S4-1 to S4-4, W10-2, W10-3, W10-36, W22; 1,098 ported, 773 replaced, 224 not needed, 6 partial, 21 missing; the table was already ahead of the summary, which now agrees with it). 2026-10-23 (S4-7: `draw_shift_mousefun_canvas` and `_canvas2` ported). 2026-10-22 (D5: the `e_measure.c` functions, the measure results and the angle `compute_*` functions are ported). 2026-10-22 (D4: the `e_tangent.c` functions, the Tangent/Norm Length button and `smart_next_{arc,ellipse,line,spline}_found` are ported). 2026-10-22 (S4 done: every function definition of `old/xfig-3.2.9a/src/*.c` has a status). Regenerate the table with `cargo xtask source-audit` (skips quietly when `old/` is absent; keeps the status, note and task columns of existing rows, merged by file, function name and occurrence).
+**Status:** 2026-10-25 (S4, the last missing functions: drawing messages, crosshair, dimension preview, Open/Merge panel, text Ctrl keys and super/subscripts, HPGL rows; 1,116 ported, 775 replaced, 224 not needed, 0 partial, 7 missing: Capture only). 2026-10-25 (refreshed: statuses after D8, E4, F5, E5, D10, D11, S4-1 to S4-4, W10-2, W10-3, W10-36, W22; 1,098 ported, 773 replaced, 224 not needed, 6 partial, 21 missing; the table was already ahead of the summary, which now agrees with it). 2026-10-23 (S4-7: `draw_shift_mousefun_canvas` and `_canvas2` ported). 2026-10-22 (D5: the `e_measure.c` functions, the measure results and the angle `compute_*` functions are ported). 2026-10-22 (D4: the `e_tangent.c` functions, the Tangent/Norm Length button and `smart_next_{arc,ellipse,line,spline}_found` are ported). 2026-10-22 (S4 done: every function definition of `old/xfig-3.2.9a/src/*.c` has a status). Regenerate the table with `cargo xtask source-audit` (skips quietly when `old/` is absent; keeps the status, note and task columns of existing rows, merged by file, function name and occurrence).
 
 S0 ([`source-map.md`](source-map.md)) maps C files to RustFig modules; this file goes one level down, to every function. It covers xfig only. fig2dev's functions were audited one by one in the fig2dev repository (<https://github.com/FabianHassler/fig2dev>, its audit passes; the inventory of the first rounds is `plan/fig2dev-audit.md` here, local and gitignored) and their hardening is task B11; they are not repeated here.
 
@@ -23,21 +23,16 @@ S0 ([`source-map.md`](source-map.md)) maps C files to RustFig modules; this file
 
 | Status | Functions |
 |---|---:|
-| ported | 1098 |
-| replaced | 773 |
+| ported | 1116 |
+| replaced | 775 |
 | not needed | 224 |
-| partial | 6 |
-| missing | 21 |
+| partial | 0 |
+| missing | 7 |
 | **total** | **2122** (of which 14 in `xfigmain.c`, a generated copy of `main.c`) |
 
 Missing and partial functions by task (a function counts under each task it names; 2026-10-25):
 
 - **D11** (7): `w_capture.c`: `captureImage`, `rshift`, `getImageData`, `selectedRootArea`, `drawRect`, `getCurrentColors`, `canHandleCapture`
-- **W10-12** (7): `w_file.c`: `file_getxyoff`, `file_xoff_unit_select`, `file_yoff_unit_select`, `check_cancel`, `clear_preview`, `file_preview_stop`, `preview_figure`
-- **E10** (5): `d_text.c`: `new_text_down`, `new_text_up`, `initialize_char_handler`, `terminate_char_handler`, `char_handler`
-- **D10** (5): `w_indpanel.c`: `draw_cur_dimline`, `dimline_panel_preview`; `w_msgpanel.c`: `boxsize_scale_msg`, `length_msg2`, `arc_msg`
-- **B9** (2): `w_export.c`: `toggle_hpgl_pcl_switch`, `toggle_hpgl_font`
-- **E9** (1): `w_canvas.c`: `canvas_selected`
 
 <!-- /audit-counts -->
 
@@ -70,21 +65,20 @@ These are visible to users and proposed as **not needed**; they stay open until 
 
 ## Missing, by area (2026-10-25)
 
-What is still missing or partial after the refresh (21 functions missing, 6 partial), as user-visible functions. Hours are estimates.
+What is still missing or partial (7 functions missing, none partial; 2026-10-25 after S4: the audit's last missing functions), as user-visible functions. Hours are estimates.
 
 | Area | Function | Functions | Task | Hours |
 |---|---|---|---|---:|
-| Editing | Show arc radius and angle, and the scale box size, in the message panel while drawing or scaling | `arc_msg`, `length_msg2`, `boxsize_scale_msg` | D10 | 3 |
-| Editing | Full-window crosshair (resource `crosshair`) | `canvas_selected` | E9 | 2 |
-| Attributes | Dimension-line panel preview draws the chosen arrow types (now plain triangles) | `draw_cur_dimline`, `dimline_panel_preview` | D10 | 2 |
-| Files | Open/Merge panel with figure preview, comments, object count and Figure Offset X/Y with units | `w_file.c` (7) | W10-12 | 4 |
+| Editing | none (arc radius, neighbour lengths and scale box size messages, and the crosshair, are done) | | | 0 |
+| Attributes | none (the dimension-line preview already draws the chosen arrow types) | | | 0 |
+| Files | none besides Capture (the Open/Merge panel with preview, comments, object count and Figure Offset is done) | | | 0 |
 | Files | Capture: grab a screen area into a picture object (through the OS screenshot facilities) | `w_capture.c` (7) | D11 | 6 |
-| Text | Up/Down arrows start the next text above or below; xfig's Ctrl-key line editing (kill line, begin/end of line) | `new_text_up`, `new_text_down`, `char_handler` (3) | E10 | 4 |
+| Text | none (Ctrl-key line editing, super- and subscripts are done) | | | 0 |
 | View | none (Unzoom, vertex numbers, cursors, highlights are done) | | | 0 |
 | Help | none (the bundled manual replaces the launchers) | | | 0 |
-| Export | HPGL/PCL rows of the export panel (pen/colour switch, font) | `toggle_hpgl_pcl_switch`, `toggle_hpgl_font` | B9, W10-4 | 2 |
+| Export | none (HPGL/PCL rows are done) | | | 0 |
 
-Total about 23 h. Everything else in xfig's 2,122 function definitions is ported, replaced by a modern equivalent or X11/Xt plumbing.
+Total about 6 h (Capture). Everything else in xfig's 2,122 function definitions is ported, replaced by a modern equivalent or X11/Xt plumbing.
 
 ## Revision history
 
@@ -163,8 +157,8 @@ Total about 23 h. Everything else in xfig's 2,122 function definitions is ported
 | `d_text.c` | `finish_text_input` | 221 | ported | tools: `ToolKind::Text` (`text_event`, `finish_text`) |  |
 | `d_text.c` | `cancel_text_input` | 241 | ported | tools: `ToolKind::Text` (`text_event`, `finish_text`) |  |
 | `d_text.c` | `new_text_line` | 276 | ported | Enter finishes the line and starts the next text below (`text_event`, text step) |  |
-| `d_text.c` | `new_text_down` | 303 | missing | Up/Down arrows moving to the previous/next text line | E10 |
-| `d_text.c` | `new_text_up` | 329 | missing | Up/Down arrows moving to the previous/next text line | E10 |
+| `d_text.c` | `new_text_down` | 303 | ported | Ctrl-_ starts a subscript, or steps out of a superscript (`Key::Subscript`, `Engine::text_supersub`, three quarters of the size, a quarter line lower; four levels) | E10 |
+| `d_text.c` | `new_text_up` | 329 | ported | Ctrl-^ starts a superscript, or steps out of a subscript (`Key::Superscript`, `Engine::text_supersub`) | E10 |
 | `d_text.c` | `set_ascentdescent` | 356 | ported | tools: `ToolKind::Text` (`text_event`, `finish_text`) |  |
 | `d_text.c` | `overlay_text_input` | 391 | ported | tools: `ToolKind::Text` (`text_event`, `finish_text`) |  |
 | `d_text.c` | `init_text_input` | 450 | ported | tools: `ToolKind::Text` (`text_event`, `finish_text`) |  |
@@ -173,9 +167,9 @@ Total about 23 h. Everything else in xfig's 2,122 function definitions is ported
 | `d_text.c` | `begin_utf8char` | 727 | replaced | UTF-8 composition and input methods come from egui/winit (IME); compose key is `rustfig_text::compose` |  |
 | `d_text.c` | `end_utf8char` | 740 | replaced | UTF-8 composition and input methods come from egui/winit (IME); compose key is `rustfig_text::compose` |  |
 | `d_text.c` | `draw_cursor` | 776 | replaced | the caret is drawn by the canvas from the overlay text; egui repaints, so no blink timer |  |
-| `d_text.c` | `initialize_char_handler` | 786 | partial | Left/Right/Home/End/Backspace/Delete, word jumps, selection, select all, clipboard and IME ported (`tools/textedit.rs`); xfig's Ctrl-key editing (kill line, begin/end of line keys) is not | E10 |
-| `d_text.c` | `terminate_char_handler` | 799 | partial | Left/Right/Home/End/Backspace/Delete, word jumps, selection, select all, clipboard and IME ported (`tools/textedit.rs`); xfig's Ctrl-key editing (kill line, begin/end of line keys) is not | E10 |
-| `d_text.c` | `char_handler` | 807 | partial | Left/Right/Home/End/Backspace/Delete, word jumps, selection, select all, clipboard and IME ported (`tools/textedit.rs`); xfig's Ctrl-key editing (kill line, begin/end of line keys) is not | E10 |
+| `d_text.c` | `initialize_char_handler` | 786 | ported | the typing state (`ToolState::Text`) starts at the click; Left/Right/Home/End/Backspace/Delete, word jumps, selection, clipboard, IME and xfig's Ctrl keys (`menus::text_key`, `tools/textedit.rs`) | E10 |
+| `d_text.c` | `terminate_char_handler` | 799 | ported | leaving Text mode (`finish_text`, Escape) ends the typing state; super/subscript level reset | E10 |
+| `d_text.c` | `char_handler` | 807 | ported | all of `char_handler`: Ctrl-A/E/B/F/D/H/K/X/W, Ctrl-^ and Ctrl-_ (`Key::*`, `menus::text_key`, `tool.event`) | E10 |
 | `d_text.c` | `turn_on_blinking_cursor` | 1109 | replaced | the caret is drawn by the canvas from the overlay text; egui repaints, so no blink timer |  |
 | `d_text.c` | `turn_off_blinking_cursor` | 1128 | replaced | the caret is drawn by the canvas from the overlay text; egui repaints, so no blink timer |  |
 | `d_text.c` | `blink` | 1136 | replaced | the caret is drawn by the canvas from the overlay text; egui repaints, so no blink timer |  |
@@ -1381,7 +1375,7 @@ Total about 23 h. Everything else in xfig's 2,122 function definitions is ported
 | `w_canvas.c` | `setup_canvas` | 220 | replaced | canvas events (`canvas.rs`, `input.rs`): expose, init, actions, input dispatch and keystrokes feed `Engine::tool_event` |  |
 | `w_canvas.c` | `get_input` | 231 | replaced | canvas events (`canvas.rs`, `input.rs`): expose, init, actions, input dispatch and keystrokes feed `Engine::tool_event` |  |
 | `w_canvas.c` | `process_keystroke` | 270 | replaced | canvas events (`canvas.rs`, `input.rs`): expose, init, actions, input dispatch and keystrokes feed `Engine::tool_event` |  |
-| `w_canvas.c` | `canvas_selected` | 327 | partial | button and motion handling ported (snap, Alt+right = middle, wheel pans, arrows pan, Ctrl+click zoom, Ctrl+Shift+click shape factor, typed coordinates through `tool.point`); missing: the full-window crosshair (resource `crosshair`, listed in `prefs.rs` as planned) | E9 |
+| `w_canvas.c` | `canvas_selected` | 327 | ported | button and motion handling (snap, Alt+right = middle, wheel pans, arrows pan, Ctrl+click zoom, Ctrl+Shift+click shape factor, typed coordinates through `tool.point`) and the full-window crosshair (`view.toggle_crosshair`, resource `crosshair`, `Overlay::crosshair`) | E9 |
 | `w_canvas.c` | `clear_canvas` | 662 | not needed | clearing the X window |  |
 | `w_canvas.c` | `clear_region` | 678 | not needed | clearing the X window |  |
 | `w_canvas.c` | `get_canvas_clipboard` | 685 | replaced | the system clipboard pastes into the text tool through egui text events |  |
@@ -1596,13 +1590,13 @@ Total about 23 h. Everything else in xfig's 2,122 function definitions is ported
 | `w_export.c` | `popup_export_panel` | 985 | replaced | export dialog `dialogs::export_dialog` with the language menu in xfig's order; command `file.export` |  |
 | `w_export.c` | `exp_xoff_unit_select` | 1064 | replaced | Export panel `dialogs::export_dialog` and `export_panel` (rows per language as `manage_optional`, values as fig2dev options); commands `export.settings`, `export.fit_page`, `export.figure_size`, `doc.set_page` | W10-4, W10-10, W10-11 |
 | `w_export.c` | `exp_yoff_unit_select` | 1073 | replaced | Export panel `dialogs::export_dialog` and `export_panel` (rows per language as `manage_optional`, values as fig2dev options); commands `export.settings`, `export.fit_page`, `export.figure_size`, `doc.set_page` | W10-4, W10-10, W10-11 |
-| `w_export.c` | `toggle_hpgl_pcl_switch` | 1083 | missing | Export panel options: Fit to Page and figure size, orientation, justification, paper size, multiple pages and overlap, offsets with units, background, grid, smoothing, transparent colour, PS/PDF options, HPGL/PCL options, quality, magnification | B9 |
-| `w_export.c` | `toggle_hpgl_font` | 1106 | missing | Export panel options: Fit to Page and figure size, orientation, justification, paper size, multiple pages and overlap, offsets with units, background, grid, smoothing, transparent colour, PS/PDF options, HPGL/PCL options, quality, magnification | B9 |
+| `w_export.c` | `toggle_hpgl_pcl_switch` | 1083 | ported | HPGL row "Issue PCL Command to use HPGL" (`PanelSettings::hpgl_pcl`, fig2dev `-k`) | B9 |
+| `w_export.c` | `toggle_hpgl_font` | 1106 | ported | HPGL row "Use Specified Font" (`PanelSettings::hpgl_font`, fig2dev `-F`) | B9 |
 | `w_export.c` | `toggle_pdf_pagemode` | 1129 | replaced | Export panel `dialogs::export_dialog` and `export_panel` (rows per language as `manage_optional`, values as fig2dev options); commands `export.settings`, `export.fit_page`, `export.figure_size`, `doc.set_page` | W10-4, W10-10, W10-11 |
 | `w_export.c` | `create_export_panel` | 1151 | replaced | export dialog `dialogs::export_dialog` with the language menu in xfig's order; command `file.export` |  |
 | `w_export.c` | `update_def_filename` | 2021 | replaced | export dialog `dialogs::export_dialog` with the language menu in xfig's order; command `file.export` |  |
 | `w_file.c` | `file_panel_dismiss` | 199 | replaced | Open, Save As and Merge use the native dialogs; commands `file.open`, `file.save`, `file.merge`, `file.rename` |  |
-| `w_file.c` | `file_getxyoff` | 230 | missing | Figure Offset X/Y fields with units in the Open/Merge panel | W10-12 |
+| `w_file.c` | `file_getxyoff` | 230 | ported | Figure Offset X/Y of the Merge panel, converted by unit (`file_panel::offset_in_fig_units`, `file.merge` `offset_x`, `offset_y`, `unit`) | W10-12 |
 | `w_file.c` | `merge_request` | 246 | replaced | Open, Save As and Merge use the native dialogs; commands `file.open`, `file.save`, `file.merge`, `file.rename` |  |
 | `w_file.c` | `do_merge` | 260 | replaced | Open, Save As and Merge use the native dialogs; commands `file.open`, `file.save`, `file.merge`, `file.rename` |  |
 | `w_file.c` | `load_request` | 317 | replaced | Open, Save As and Merge use the native dialogs; commands `file.open`, `file.save`, `file.merge`, `file.rename` |  |
@@ -1619,13 +1613,13 @@ Total about 23 h. Everything else in xfig's 2,122 function definitions is ported
 | `w_file.c` | `popup_open_panel` | 731 | replaced | Open, Save As and Merge use the native dialogs; commands `file.open`, `file.save`, `file.merge`, `file.rename` |  |
 | `w_file.c` | `popup_merge_panel` | 737 | replaced | Open, Save As and Merge use the native dialogs; commands `file.open`, `file.save`, `file.merge`, `file.rename` |  |
 | `w_file.c` | `popup_file_panel` | 743 | replaced | Open, Save As and Merge use the native dialogs; commands `file.open`, `file.save`, `file.merge`, `file.rename` |  |
-| `w_file.c` | `file_xoff_unit_select` | 851 | missing | Figure Offset X/Y fields with units in the Open/Merge panel | W10-12 |
-| `w_file.c` | `file_yoff_unit_select` | 860 | missing | Figure Offset X/Y fields with units in the Open/Merge panel | W10-12 |
+| `w_file.c` | `file_xoff_unit_select` | 851 | ported | the X offset's unit menu (Inches, cm, Fig units) in `ui-egui/file_panel.rs` | W10-12 |
+| `w_file.c` | `file_yoff_unit_select` | 860 | ported | the Y offset's unit menu in `ui-egui/file_panel.rs` | W10-12 |
 | `w_file.c` | `create_file_panel` | 868 | replaced | Open, Save As and Merge use the native dialogs; commands `file.open`, `file.save`, `file.merge`, `file.rename` |  |
-| `w_file.c` | `check_cancel` | 1334 | missing | preview of the selected figure in the file panel, with size and comments | W10-12 |
-| `w_file.c` | `clear_preview` | 1345 | missing | preview of the selected figure in the file panel, with size and comments | W10-12 |
-| `w_file.c` | `file_preview_stop` | 1368 | missing | preview of the selected figure in the file panel, with size and comments | W10-12 |
-| `w_file.c` | `preview_figure` | 1379 | missing | preview of the selected figure in the file panel, with size and comments | W10-12 |
+| `w_file.c` | `check_cancel` | 1334 | replaced | the preview is drawn synchronously and capped in size; there is nothing to stop (`FigurePreview::render`) | W10-12 |
+| `w_file.c` | `clear_preview` | 1345 | ported | the panel clears its preview when the file name changes (`FilePanel`) | W10-12 |
+| `w_file.c` | `file_preview_stop` | 1368 | replaced | no Stop Preview button: the preview is synchronous and capped | W10-12 |
+| `w_file.c` | `preview_figure` | 1379 | ported | `file_panel::preview_figure` (size, object count, comments, picture) and `file.preview`; the panel is `app.open_panel` and `app.merge_panel` | W10-12 |
 | `w_file.c` | `save_user_colors` | 1677 | not needed | saving user colours around a preview (the preview will use its own document) |  |
 | `w_file.c` | `save_nuser_colors` | 1701 | not needed | saving user colours around a preview (the preview will use its own document) |  |
 | `w_file.c` | `restore_user_colors` | 1722 | not needed | saving user colours around a preview (the preview will use its own document) |  |
@@ -1693,13 +1687,13 @@ Total about 23 h. Everything else in xfig's 2,122 function definitions is ported
 | `w_indpanel.c` | `text_color_select` | 2908 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `set_fixed_text` | 2923 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `set_actual_text` | 2939 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
-| `w_indpanel.c` | `draw_cur_dimline` | 2955 | partial | `ui-egui/dimline_panel.rs` has the example-line preview; its arrowheads are plain triangles, not the chosen arrow type | D10 |
+| `w_indpanel.c` | `draw_cur_dimline` | 2955 | ported | the example line is the engine's own dimension line, drawn by the renderer with the chosen arrow types (`dimline_panel::render_example`, test `preview_draws_the_chosen_arrow_types`) | D10 |
 | `w_indpanel.c` | `dimline_style_select` | 3060 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `left_arrow_type_select` | 3075 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `right_arrow_type_select` | 3089 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `dimline_font_popup` | 3105 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `dimline_set_font_image` | 3113 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
-| `w_indpanel.c` | `dimline_panel_preview` | 3126 | partial | `ui-egui/dimline_panel.rs` has the example-line preview; its arrowheads are plain triangles, not the chosen arrow type | D10 |
+| `w_indpanel.c` | `dimline_panel_preview` | 3126 | ported | the preview redraws live from the draft (`dimline_panel::preview`) | D10 |
 | `w_indpanel.c` | `dimline_panel_ok` | 3177 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `dimline_panel_cancel` | 3187 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `get_dimline_values` | 3200 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
@@ -1978,13 +1972,13 @@ Total about 23 h. Everything else in xfig's 2,122 function definitions is ported
 | `w_msgpanel.c` | `setup_msg` | 113 | ported | message panel `panels::message_panel`, `Engine::set_status` |  |
 | `w_msgpanel.c` | `put_msg` | 125 | ported | message panel `panels::message_panel`, `Engine::set_status` |  |
 | `w_msgpanel.c` | `boxsize_msg` | 154 | ported | `tools/lengths.rs`: message and Show Lengths labels | D10 |
-| `w_msgpanel.c` | `boxsize_scale_msg` | 240 | missing | lengths, sizes and angles shown while drawing (Show lengths), dimension strings | D10 |
+| `w_msgpanel.c` | `boxsize_scale_msg` | 240 | ported | "Width = ..., Length = ..., Factor = ..." while scaling a box or compound (`tools/lengths.rs`) | D10 |
 | `w_msgpanel.c` | `erase_box_lengths` | 264 | ported | not needed: the overlay is redrawn each frame | D10 |
 | `w_msgpanel.c` | `erase_lengths` | 276 | ported | not needed: the overlay is redrawn each frame | D10 |
 | `w_msgpanel.c` | `length_msg` | 295 | ported | `tools/lengths.rs`: message and Show Lengths triangle | D10 |
 | `w_msgpanel.c` | `altlength_msg` | 306 | ported | `tools/lengths.rs`: message and Show Lengths triangle | D10 |
-| `w_msgpanel.c` | `length_msg2` | 483 | missing | lengths, sizes and angles shown while drawing (Show lengths), dimension strings | D10 |
-| `w_msgpanel.c` | `arc_msg` | 521 | missing | lengths, sizes and angles shown while drawing (Show lengths), dimension strings | D10 |
+| `w_msgpanel.c` | `length_msg2` | 483 | ported | "Len 1 = ..., Len 2 = ..., dx1 = ..." while a line point or arc is reshaped or scaled (`tools/lengths.rs`) | D10 |
+| `w_msgpanel.c` | `arc_msg` | 521 | ported | "Len 1 ..., Rad = ..." while an arc's middle point moves (`tools/lengths.rs`) | D10 |
 | `w_msgpanel.c` | `lenmeas_msg` | 550 | ported | `cmd/measure.rs` (`length_message`, `area_message`, `dimension_string`) | |
 | `w_msgpanel.c` | `areameas_msg` | 566 | ported | `cmd/measure.rs` (`length_message`, `area_message`, `dimension_string`) | |
 | `w_msgpanel.c` | `free_filename` | 582 | ported | file name message and the message history (`file_msg`, `dialogs::messages_dialog`; filter and copy W10-29) |  |
@@ -2223,3 +2217,4 @@ Total about 23 h. Everything else in xfig's 2,122 function definitions is ported
 | `xfigmain.c` | `toggle_refresh_mode` | 2092 | replaced | Autorefresh mode entry of the View menu (S4-9) | S4-9 |
 | `xfigmain.c` | `check_refresh` | 2109 | replaced | Autorefresh mode reloads a figure changed on disk, once a second, asking first with unsaved edits (`ui-egui/src/reload.rs`, S4-9) | S4-9 |
 | 2026-10-23 | S4-7: the two `w_mousefun.c` Shift functions ported (partial → ported). |
+| 2026-10-25 | S4: the audit's last missing functions (all but Capture): `arc_msg`, `length_msg2`, `boxsize_scale_msg` (D10), the crosshair in `canvas_selected` (E9), the dimension preview with real arrows (`draw_cur_dimline`, `dimline_panel_preview`, found already done), the Open/Merge panel (W10-12; `check_cancel` and `file_preview_stop` replaced), `new_text_up`/`new_text_down` (these are Ctrl-^ and Ctrl-_ super/subscripts, not the arrow keys) and the `char_handler` Ctrl keys (E10), the HPGL rows (B9, W10-4). Counts: 1,116 ported, 775 replaced, 224 not needed, 0 partial, 7 missing (Capture, D11). |

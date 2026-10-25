@@ -412,7 +412,38 @@ pub enum Key {
     End,
     /// Select the whole text being typed (E10).
     SelectAll,
+    /// Control-K: delete from the caret to the end of the text (`d_text.c`).
+    KillToEnd,
+    /// Control-X: delete from the start of the text to the caret.
+    KillToStart,
+    /// Control-W: delete the selected text.
+    KillSelection,
+    /// Control-^: start a superscript or end a subscript.
+    Superscript,
+    /// Control-_: start a subscript or end a superscript.
+    Subscript,
 }
+
+/// xfig's nested super- and subscripts while text is typed (`supersub`,
+/// `heights`, `work_fontsize`, `orig_x/orig_y` in `d_text.c`).
+#[derive(Debug, Clone, Default)]
+pub(crate) struct TextSub {
+    /// Positive: superscript depth; negative: subscript depth.
+    level: i32,
+    /// The line height of each level left, for coming back.
+    heights: [f64; MAX_SUPSUB],
+    /// The font size of the piece being typed after super/subscripting.
+    size: Option<f64>,
+    /// Where the text line began (a new line returns there).
+    line_origin: Option<Point>,
+}
+
+/// Nested super/subscripts at most (xfig's `MAX_SUPSUB`).
+const MAX_SUPSUB: usize = 4;
+/// A sub/superscript is this fraction of the current size (`CSUB_FRAC`).
+const CSUB_FRAC: f64 = 0.75;
+/// The shift of a sub/superscript, in line heights (`PSUB_FRAC`).
+const PSUB_FRAC: f64 = 1.0 - CSUB_FRAC;
 
 /// A mouse button as the tools see it. The UI maps two-button mice and
 /// trackpads onto these (Alt+left is the middle button, Ctrl+left the right).
@@ -525,6 +556,9 @@ pub struct Overlay {
     /// Show Lengths: the two sides' lengths (ruler units) with the position
     /// of their text, in red.
     pub lengths: Vec<(Point, String)>,
+    /// The `crosshair` resource: the pointer position through which the UI
+    /// draws full-window red lines while an operation is in progress.
+    pub crosshair: Option<Point>,
     pub text: Option<OverlayText>,
 }
 
@@ -893,6 +927,10 @@ impl Engine {
     /// Feed an event to the active tool.
     pub fn tool_event(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
         let moving = matches!(ev, ToolEvent::Move { .. });
+        if !self.is_typing() {
+            // Left Text mode some other way (Escape, another mode).
+            self.text_sub = TextSub::default();
+        }
         let r = self.tool_event_inner(ev);
         // Snapped points belong to the operation in progress.
         if !self.tool_busy() {
@@ -1960,6 +1998,13 @@ impl Engine {
                 };
                 let mut buf = textedit::Buf { text, cursor, anchor };
                 match key {
+                    Key::Superscript => return self.text_supersub(true),
+                    Key::Subscript => return self.text_supersub(false),
+                    Key::KillToEnd => buf.kill_to_end(),
+                    Key::KillToStart => buf.kill_to_start(),
+                    Key::KillSelection => {
+                        buf.delete_selection();
+                    }
                     Key::Backspace => buf.backspace(word),
                     Key::Delete => buf.delete(word),
                     Key::Left => buf.left(shift, word),
@@ -1978,7 +2023,9 @@ impl Engine {
                 let ToolState::Text { origin, .. } = &self.tool_state else {
                     return Ok(());
                 };
-                let origin = *origin;
+                // After super/subscripts a new line goes below where the line
+                // began, at the original size (`new_text_line`).
+                let origin = self.text_sub.line_origin.unwrap_or(*origin);
                 match k {
                     Key::Enter => {
                         // Finish this line and start a new text object below it.
@@ -2031,6 +2078,9 @@ impl Engine {
         {
             t = orig.clone();
             t.text = text.clone();
+        } else if let Some(size) = self.text_sub.size {
+            // A super/subscript piece is smaller (`work_fontsize`).
+            t.size = size;
         }
         crate::fix_text_metrics(&mut t);
         Some(t)
@@ -2101,6 +2151,14 @@ impl Engine {
 
     /// Commit the text being typed, if any.
     pub fn finish_text(&mut self) -> Result<(), EngineError> {
+        let r = self.commit_text();
+        // The size and super/subscript level start over (`finish_text_input`).
+        self.text_sub = TextSub::default();
+        r
+    }
+
+    /// Commit the text being typed as an object (`commit_current_text`).
+    fn commit_text(&mut self) -> Result<(), EngineError> {
         let ToolState::Text {
             origin, text, editing, ..
         } = std::mem::take(&mut self.tool_state)
@@ -2123,10 +2181,90 @@ impl Engine {
             }
             None => {
                 if !text.is_empty() {
-                    self.execute("shape.text", &json!({"x": origin.x, "y": origin.y, "text": text}))?;
+                    let mut p = json!({"x": origin.x, "y": origin.y, "text": text});
+                    if let Some(size) = self.text_sub.size {
+                        p["size"] = json!(size);
+                    }
+                    self.execute("shape.text", &p)?;
                 }
             }
         }
+        Ok(())
+    }
+
+    /// Control-^ and Control-_ while text is typed (`new_text_up`,
+    /// `new_text_down` in `d_text.c`): commit the text so far and start the
+    /// next piece at the caret, a quarter of a line higher or lower and at
+    /// three quarters of the size; the opposite key steps back out.
+    fn text_supersub(&mut self, up: bool) -> Result<(), EngineError> {
+        let Some(t) = self.typing_text() else {
+            return Ok(());
+        };
+        let ToolState::Text { text, cursor, .. } = &self.tool_state else {
+            return Ok(());
+        };
+        let level = self.text_sub.level;
+        // Only so deep.
+        if (up && level >= MAX_SUPSUB as i32) || (!up && level <= -(MAX_SUPSUB as i32)) {
+            return Ok(());
+        }
+        // The caret: the text origin plus the width of the text before it.
+        let mut before = t.clone();
+        before.text = text.chars().take(*cursor).collect();
+        crate::fix_text_metrics(&mut before);
+        let left = match t.justify {
+            Justify::Left => 0.0,
+            Justify::Center => -t.length / 2.0,
+            Justify::Right => -t.length,
+        };
+        let rot = Affine::rotate(t.angle);
+        let caret = t.origin + rot.apply_vec(Point::new(left + before.length, 0.0));
+        let size = self.text_sub.size.unwrap_or(t.size);
+        let line_height = size * rustfig_geom::FIG_PER_POINT * rustfig_text::LINE_SPACING;
+        let line_origin = self.text_sub.line_origin.unwrap_or(t.origin);
+        let mut sub = self.text_sub.clone();
+        let slot = |l: i32| usize::try_from(l.unsigned_abs()).unwrap_or(0).min(MAX_SUPSUB - 1);
+        if let Some(h) = sub.heights.get_mut(slot(level)) {
+            *h = line_height;
+        }
+        // Positive shifts go down the line, negative up.
+        let (shift, scale) = if up {
+            sub.level += 1;
+            if level < 0 {
+                // Back out of a subscript.
+                (
+                    -sub.heights.get(slot(sub.level)).copied().unwrap_or(line_height) * PSUB_FRAC,
+                    1.0 / CSUB_FRAC,
+                )
+            } else {
+                (-line_height * PSUB_FRAC, CSUB_FRAC)
+            }
+        } else {
+            sub.level -= 1;
+            if level > 0 {
+                // Back out of a superscript.
+                (
+                    sub.heights.get(slot(sub.level)).copied().unwrap_or(line_height) * PSUB_FRAC,
+                    1.0 / CSUB_FRAC,
+                )
+            } else {
+                (line_height * PSUB_FRAC, CSUB_FRAC)
+            }
+        };
+        let origin = caret + rot.apply_vec(Point::new(0.0, shift));
+        sub.size = Some((size * scale).clamp(1.0, 2000.0));
+        sub.line_origin = Some(line_origin);
+        self.commit_text()?;
+        self.text_sub = sub;
+        self.tool_state = ToolState::Text {
+            origin,
+            text: String::new(),
+            cursor: 0,
+            editing: None,
+            anchor: 0,
+            preedit: String::new(),
+            drag: false,
+        };
         Ok(())
     }
 
@@ -3656,6 +3794,7 @@ impl Engine {
             _ => {}
         }
         self.length_overlay(&mut ov);
+        ov.crosshair = self.crosshair_point();
         // The set centre/anchor of Rotate/Flip (xfig's `center_marker`).
         if let Some(c) = self.set_point.filter(|_| self.tool.uses_set_point()) {
             ov.handles.push(c);

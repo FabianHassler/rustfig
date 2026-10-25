@@ -253,6 +253,19 @@ pub(super) fn commands() -> Vec<Command> {
             },
         },
         Command {
+            id: "view.toggle_crosshair",
+            label: "Show Crosshair",
+            menu: "",
+            shortcut: "",
+            params: "{\"on\"?: bool}: draw full-window red lines through the pointer while drawing or editing (xfig's `crosshair` resource, option -crosshair)",
+            mutates: false,
+            enabled: always,
+            run: |e, p| {
+                e.crosshair = super::opt_bool(p, "on")?.unwrap_or(!e.crosshair);
+                Ok(json!({"crosshair": e.crosshair}))
+            },
+        },
+        Command {
             id: "view.toggle_vertex_numbers",
             label: "Show vertex numbers",
             menu: "",

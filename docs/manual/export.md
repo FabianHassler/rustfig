@@ -12,6 +12,7 @@ File > Export (Meta+X, Ctrl+E) writes the drawing in another format. To print, u
   - **EPS/PS preview** (EPS and PostScript): none, ASCII (EPSI), colour TIFF or monochrome TIFF.
   - **PDF page mode** (PDF): a whole page of the paper size instead of a figure-sized PDF. The paper rows below are greyed unless it is on.
   - **Paper size**, **Orientation**, **Justification**, **Pages** (single or multiple, with **Overlap**) and the **Offset** X and Y (in, cm or Fig units): the figure's page settings (PostScript and PDF page mode). They are stored in the .fig file, as in xfig.
+  - **HPGL** (language HPGL/2 or IBM-GL): **Issue PCL Command to use HPGL** (fig2dev `-k`) and **Use Specified Font** (`-F`, xfig's `toggle_hpgl_pcl_switch` and `toggle_hpgl_font`) with the paper size, orientation and justification rows; the export passes the figure's paper size and orientation as xfig does (`-z`, `-P`).
   - **GIF transparent color**: none, the background, or a colour of the figure. **Image quality** (JPEG). **Resolution** and **Smoothing** (bitmaps).
 - **Preview** shows a small picture of the result, made again when you change the figure or an option (not for very large figures).
 - The values of these rows are kept for each language in the settings file (`[rustfig.export.<language>]`, see [Preferences](preferences.md)), never in the drawing; **Reset to xfig defaults** puts the language's values back (no border, no grid, no preview, no smoothing).

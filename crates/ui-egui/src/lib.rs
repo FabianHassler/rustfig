@@ -23,6 +23,7 @@ pub mod digitize;
 pub mod dimline_panel;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod export_bg;
+pub mod file_panel;
 pub mod font_chooser;
 pub mod help;
 pub mod help_pages;
@@ -153,6 +154,8 @@ pub struct App {
     pub styles: styles::StylesWindow,
     /// The Character Map window (E5).
     pub charmap: charmap::CharMap,
+    /// Open/Merge with preview (W10-12).
+    pub file_panel: file_panel::FilePanel,
     /// The library panel (D6).
     pub library: library::LibraryPanel,
     /// The shortcut sheet (E8).
@@ -247,6 +250,7 @@ impl App {
             unit_panel_open: false,
             styles: styles::StylesWindow::default(),
             charmap: charmap::CharMap::default(),
+            file_panel: file_panel::FilePanel::default(),
             library: library::LibraryPanel::default(),
             keys_sheet: keys_sheet::KeysSheet::default(),
             command_search: command_search::CommandSearch::default(),
@@ -714,6 +718,7 @@ impl App {
         digitize::show(self, ctx);
         plot_dialog::show(self, ctx);
         charmap::show(self, ctx);
+        file_panel::show(self, ctx);
         library::show(self, ctx);
         keys_sheet::show(self, ctx);
         command_search::show(self, ctx);

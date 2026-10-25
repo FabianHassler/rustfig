@@ -1196,6 +1196,7 @@ struct GlobalDraft {
     balloon_delay: i64,
     lengths: bool,
     vertex_numbers: bool,
+    crosshair: bool,
     negative_coords: bool,
     axis_lines: bool,
     freehand: i64,
@@ -1222,6 +1223,7 @@ impl GlobalDraft {
             balloon_delay: int("balloon_delay", 500),
             lengths: e.show_lengths,
             vertex_numbers: e.show_vertex_numbers(),
+            crosshair: e.crosshair,
             negative_coords: e.allow_negative_coords(),
             axis_lines: e.show_axis_lines(),
             freehand: int("freehand_resolution", 25),
@@ -1266,6 +1268,7 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
             });
             ui.checkbox(&mut d.lengths, "Show line lengths");
             ui.checkbox(&mut d.vertex_numbers, "Show vertex numbers");
+            ui.checkbox(&mut d.crosshair, "Show crosshair");
             ui.checkbox(&mut d.negative_coords, "Allow negative coords");
             ui.checkbox(&mut d.axis_lines, "Draw axis lines");
             ui.horizontal(|ui| {
@@ -1397,6 +1400,7 @@ fn apply_global(app: &mut App, was: &GlobalDraft, now: &GlobalDraft) {
     for (id, a, b) in [
         ("view.toggle_lengths", was.lengths, now.lengths),
         ("view.toggle_vertex_numbers", was.vertex_numbers, now.vertex_numbers),
+        ("view.toggle_crosshair", was.crosshair, now.crosshair),
     ] {
         if a != b {
             app.run(id, json!({ "on": b }));
@@ -2631,6 +2635,9 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
                             });
                         });
                         ui.end_row();
+                    }
+                    if rows.multiple {
+                        let page_on = st.format != "pdf" || st.settings.pdf_page_mode;
                         ui.label("Pages");
                         ui.add_enabled_ui(page_on, |ui| {
                             ui.horizontal(|ui| {
@@ -2668,6 +2675,17 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
                                         OFFSET_UNITS.iter().position(|n| *n == c).map_or(0, |i| i as u8);
                                 }
                             });
+                        });
+                        ui.end_row();
+                    }
+                    if rows.hpgl {
+                        // `toggle_hpgl_pcl_switch` and `toggle_hpgl_font`.
+                        ui.label("HPGL");
+                        ui.vertical(|ui| {
+                            ui.checkbox(&mut st.settings.hpgl_pcl, "Issue PCL Command to use HPGL")
+                                .on_hover_text("fig2dev -k: precede the output with the PCL switch to HP-GL/2");
+                            ui.checkbox(&mut st.settings.hpgl_font, "Use Specified Font")
+                                .on_hover_text("fig2dev -F: select the figure's font with the SD command");
                         });
                         ui.end_row();
                     }

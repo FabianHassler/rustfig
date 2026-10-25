@@ -205,6 +205,21 @@ impl Buf<'_> {
         self.delete_selection();
     }
 
+    /// Control-K: delete from the caret to the end of the text.
+    pub fn kill_to_end(&mut self) {
+        let b = byte_of(self.text, *self.cursor);
+        self.text.truncate(b);
+        *self.anchor = *self.cursor;
+    }
+
+    /// Control-X: delete from the start of the text to the caret.
+    pub fn kill_to_start(&mut self) {
+        let b = byte_of(self.text, *self.cursor);
+        self.text.replace_range(..b, "");
+        *self.cursor = 0;
+        *self.anchor = 0;
+    }
+
     pub fn delete(&mut self, word: bool) {
         if self.delete_selection() {
             return;

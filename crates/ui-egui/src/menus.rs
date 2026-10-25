@@ -110,6 +110,18 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{\"path\"?: string}",
     },
     UiCommand {
+        id: "app.open_panel",
+        label: "Open with preview…",
+        shortcut: "",
+        params: "{}  — xfig's Open panel (W10-12): the files of a folder under a filename mask, the selected figure's preview with size, number of objects and comments; Open runs app.open (script: file.list_dir, file.preview)",
+    },
+    UiCommand {
+        id: "app.merge_panel",
+        label: "Merge with preview…",
+        shortcut: "",
+        params: "{}  — xfig's Merge panel (W10-12): as Open with preview, plus the Figure Offset X and Y with their units; Merge runs file.merge with the offset",
+    },
+    UiCommand {
         id: "app.save",
         label: "Save",
         shortcut: "Ctrl+S",
@@ -306,6 +318,12 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
                     .map_err(|e| e.message);
             }
         }
+        "app.open_panel" | "app.merge_panel" => {
+            if app.file_dialogs.is_web() {
+                return Err("The file panel needs folders; the browser's Open and Merge pick a file".into());
+            }
+            app.file_panel.show(id == "app.merge_panel");
+        }
         // The browser saves by download (C2).
         "app.save" | "app.save_as" if path.is_none() && app.file_dialogs.is_web() => crate::web_io::save(app),
         "app.save" | "app.save_as" if asks_scope(app, p) => {
@@ -492,6 +510,8 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("New", "app.new"),
                 Cmd("Open...", "app.open"),
                 Cmd("Merge...", "app.merge"),
+                Own("app.open_panel"),
+                Own("app.merge_panel"),
                 Cmd("Digitize...", "app.digitize"),
                 Cmd("Save", "app.save"),
                 Cmd("Save As...", "app.save_as"),
@@ -547,6 +567,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Show info balloons", "app.toggle_balloons"),
                 Cmd("Show line lengths", "view.toggle_lengths"),
                 Cmd("Show vertex numbers", "view.toggle_vertex_numbers"),
+                Cmd("Show crosshair", "view.toggle_crosshair"),
                 Cmd("Autorefresh mode", "app.toggle_autorefresh"),
                 Own("view.toggle_grid"),
                 Own("depth.show_all"),
@@ -607,6 +628,7 @@ pub const XFIG_MENU_LETTERS: &[(&str, char, &str)] = &[
     ("View", 'x', "view.toggle_latex_preview"),
     ("View", 'l', "view.toggle_lengths"),
     ("View", 'v', "view.toggle_vertex_numbers"),
+    ("View", 'h', "view.toggle_crosshair"),
     ("View", 'a', "app.toggle_autorefresh"),
     ("Help", 'x', "help.open"),
     ("Help", 'c', "app.commands"),
@@ -731,6 +753,7 @@ const MENU_LABELS: &[(&str, &str)] = &[
     ("view.toggle_grid", "Show grid"),
     ("view.toggle_lengths", "Show line lengths"),
     ("view.toggle_vertex_numbers", "Show vertex numbers"),
+    ("view.toggle_crosshair", "Show crosshair"),
     ("app.document_settings", "Units and Page…"),
 ];
 
@@ -745,6 +768,7 @@ fn checked(app: &App, id: &str) -> Option<bool> {
         "view.toggle_grid" => Some(app.engine.indicator.grid.is_some()),
         "view.toggle_lengths" => Some(app.engine.show_lengths),
         "view.toggle_vertex_numbers" => Some(app.engine.show_vertex_numbers()),
+        "view.toggle_crosshair" => Some(app.engine.crosshair),
         "app.toggle_xfig_keys" => Some(app.xfig_keys),
         _ => None,
     }
@@ -1243,6 +1267,22 @@ fn text_key(os: crate::platform::Os, key: egui::Key, m: egui::Modifiers) -> Opti
         egui::Key::ArrowRight => nav(Key::Right, m.shift, word),
         egui::Key::Home => nav(Key::Home, m.shift, false),
         egui::Key::End => nav(Key::End, m.shift, false),
+        // xfig's Control keys (`char_handler` in `d_text.c`). On macOS the
+        // Control key is its own (Cmd has the platform's shortcuts), so all
+        // of them work; elsewhere Ctrl+A, Ctrl+X and Ctrl+C/V are Select all
+        // and the clipboard, so those keep their usual meaning.
+        egui::Key::A if mac && m.ctrl && !m.mac_cmd => nav(Key::Home, false, false),
+        egui::Key::X if mac && m.ctrl && !m.mac_cmd => nav(Key::KillToStart, false, false),
+        egui::Key::E if m.ctrl && !m.mac_cmd => nav(Key::End, false, false),
+        egui::Key::B if m.ctrl && !m.mac_cmd => nav(Key::Left, false, false),
+        egui::Key::F if m.ctrl && !m.mac_cmd => nav(Key::Right, false, false),
+        egui::Key::D if m.ctrl && !m.mac_cmd => nav(Key::Delete, false, false),
+        egui::Key::H if m.ctrl && !m.mac_cmd => nav(Key::Backspace, false, false),
+        egui::Key::K if m.ctrl && !m.mac_cmd => nav(Key::KillToEnd, false, false),
+        egui::Key::W if m.ctrl && !m.mac_cmd => nav(Key::KillSelection, false, false),
+        // Control-^ and Control-_: start a super- or subscript.
+        egui::Key::Num6 if m.ctrl && m.shift => nav(Key::Superscript, false, false),
+        egui::Key::Minus if m.ctrl && m.shift => nav(Key::Subscript, false, false),
         egui::Key::A if m.command => nav(Key::SelectAll, false, false),
         _ => None,
     }
@@ -1606,6 +1646,37 @@ mod tests {
         assert_eq!(key_label("PhysCtrl+L", true), "⌃\u{2009}L");
         assert_eq!(xfig_key_label("Z"), "z");
         assert_eq!(xfig_accelerator("edit.undo"), Some("Alt+U"));
+    }
+
+    #[test]
+    fn text_control_keys_follow_xfig() {
+        use crate::platform::Os;
+        let ctrl = egui::Modifiers::CTRL;
+        let key = |os, k, m| match text_key(os, k, m) {
+            Some(ToolEvent::Nav { key, .. }) => Some(key),
+            _ => None,
+        };
+        assert_eq!(key(Os::Mac, egui::Key::A, ctrl), Some(Key::Home));
+        assert_eq!(key(Os::Mac, egui::Key::E, ctrl), Some(Key::End));
+        assert_eq!(key(Os::Mac, egui::Key::K, ctrl), Some(Key::KillToEnd));
+        assert_eq!(key(Os::Mac, egui::Key::X, ctrl), Some(Key::KillToStart));
+        assert_eq!(key(Os::Mac, egui::Key::W, ctrl), Some(Key::KillSelection));
+        // Cmd keeps the platform's meaning on macOS.
+        let cmd = egui::Modifiers {
+            mac_cmd: true,
+            command: true,
+            ..egui::Modifiers::NONE
+        };
+        assert_eq!(key(Os::Mac, egui::Key::A, cmd), Some(Key::SelectAll));
+        assert_eq!(key(Os::Mac, egui::Key::K, cmd), None);
+        // Elsewhere Ctrl+A selects all and Ctrl+X is Cut.
+        let ctrl_cmd = egui::Modifiers::CTRL | egui::Modifiers::COMMAND;
+        assert_eq!(key(Os::Linux, egui::Key::A, ctrl_cmd), Some(Key::SelectAll));
+        assert_eq!(key(Os::Linux, egui::Key::X, ctrl_cmd), None);
+        assert_eq!(key(Os::Linux, egui::Key::K, ctrl_cmd), Some(Key::KillToEnd));
+        let shift_ctrl = egui::Modifiers::CTRL | egui::Modifiers::SHIFT;
+        assert_eq!(key(Os::Mac, egui::Key::Num6, shift_ctrl), Some(Key::Superscript));
+        assert_eq!(key(Os::Mac, egui::Key::Minus, shift_ctrl), Some(Key::Subscript));
     }
 
     #[test]

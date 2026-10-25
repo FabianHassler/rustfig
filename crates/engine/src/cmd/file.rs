@@ -104,10 +104,30 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Merge…",
             menu: "",
             shortcut: "",
-            params: "{\"path\": string, \"offset_x\"?: number, \"offset_y\"?: number}  — add the objects of another file as one compound (a file that is one compound is added as it is), moved by the optional offset in Fig units, as xfig's Merge",
+            params: "{\"path\": string, \"offset_x\"?: number, \"offset_y\"?: number, \"unit\"?: fig|inches|cm}  — add the objects of another file as one compound (a file that is one compound is added as it is), moved by the optional Figure Offset (in Fig units, or in the `unit` given), as xfig's Merge",
             mutates: true,
             enabled: always,
             run: merge,
+        },
+        Command {
+            id: "file.preview",
+            label: "Preview figure",
+            menu: "",
+            shortcut: "",
+            params: "{\"path\": string}  — what xfig's Open/Merge panel shows of a figure file without loading it: {objects, width, height (Fig units), size (\"3.2x3.2 in\"), comments}",
+            mutates: false,
+            enabled: always,
+            run: preview,
+        },
+        Command {
+            id: "file.list_dir",
+            label: "List folder",
+            menu: "",
+            shortcut: "",
+            params: "{\"dir\"?: string (default: the file's folder, else the working folder), \"mask\"?: string (blank-separated globs, default \"*.fig *.rustfig *.xfig *.fig.gz *.fig.Z\"), \"hidden\"?: bool}  — the file list of xfig's Open/Merge panel: {dir, dirs (first \"..\"), files}",
+            mutates: false,
+            enabled: always,
+            run: list_dir,
         },
         Command {
             id: "file.merge_data",
@@ -435,9 +455,47 @@ fn open_data(e: &mut Engine, p: &Value) -> CmdResult {
     Ok(json!({"objects": count, "warnings": warnings}))
 }
 
-/// xfig's Figure Offset of Open and Merge, in Fig units.
+/// xfig's Figure Offset of Open and Merge, in Fig units, or in the `unit`
+/// given (`inches`, `cm`, `fig`; `file_getxyoff`).
 fn offset(p: &Value) -> Result<(f64, f64), EngineError> {
-    Ok((num_or(p, "offset_x", 0.0)?, num_or(p, "offset_y", 0.0)?))
+    let (x, y) = (num_or(p, "offset_x", 0.0)?, num_or(p, "offset_y", 0.0)?);
+    let unit = match opt_str(p, "unit")? {
+        None | Some("fig") => 2,
+        Some("inches" | "in") => 0,
+        Some("cm") => 1,
+        Some(o) => return Err(EngineError::bad_params(format!("unknown unit {o:?} (inches, cm, fig)"))),
+    };
+    Ok((
+        crate::file_panel::offset_in_fig_units(x, unit),
+        crate::file_panel::offset_in_fig_units(y, unit),
+    ))
+}
+
+/// A figure file read with its pictures (the Open/Merge panel's preview).
+pub(crate) fn read_figure(path: &str) -> Result<(Document, Vec<String>), EngineError> {
+    let (mut doc, warnings) = parse(&read_file(path)?)?;
+    let base = Path::new(path).parent().map(Path::to_path_buf);
+    import::load_all_pictures(&mut doc, base.as_deref());
+    Ok((doc, warnings))
+}
+
+fn preview(e: &mut Engine, p: &Value) -> CmdResult {
+    let path = string(p, "path")?;
+    Ok(crate::file_panel::preview_figure(e.doc().settings.units, &path)?.json())
+}
+
+fn list_dir(e: &mut Engine, p: &Value) -> CmdResult {
+    let dir = match opt_str(p, "dir")? {
+        Some(d) => std::path::PathBuf::from(d),
+        None => e
+            .path()
+            .and_then(|f| Path::new(f).parent().map(Path::to_path_buf))
+            .filter(|d| !d.as_os_str().is_empty())
+            .unwrap_or_else(|| std::path::PathBuf::from(".")),
+    };
+    let mask = opt_str(p, "mask")?.unwrap_or(crate::file_panel::DEFAULT_MASK);
+    let l = crate::file_panel::list_dir(&dir, mask, opt_bool(p, "hidden")?.unwrap_or(false))?;
+    Ok(json!({"dir": l.dir, "dirs": l.dirs, "files": l.files}))
 }
 
 /// The objects of `other` with its user colours mapped into the document
