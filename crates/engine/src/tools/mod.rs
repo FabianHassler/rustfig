@@ -697,6 +697,9 @@ pub(crate) enum ToolState {
         /// The fixed point (opposite corner, or the centre).
         center: Point,
         start: Point,
+        /// xfig's `from_x`/`from_y`: the corner (box scale) or the object
+        /// point (centre scale) the factors are measured from.
+        from: Point,
         cursor: Point,
         button: Button,
         /// Which sizes change: both, or one for a click on an edge's middle
@@ -715,19 +718,35 @@ pub enum ScaleAxis {
     Y,
 }
 
-/// The scale factors of a drag from `start` to `cursor` about `center`.
-fn scale_factors(center: Point, start: Point, cursor: Point, axis: ScaleAxis) -> Option<(f64, f64)> {
+/// The scale factors of a drag to `cursor` about `center`, measured from
+/// `start` (xfig's `from`). Both axes: as `adjust_box_pos` with `BOX_SCALE`
+/// puts the cursor on the diagonal, the factor is the larger of the two axis
+/// ratios (W22-19). A box scale (`signed`, the left button) keeps the side of
+/// the cursor per axis as `fix_boxscale_*` does, so a drag across the fixed
+/// corner mirrors; the centre scale (`prescale_compound`) uses the distance.
+fn scale_factors(center: Point, start: Point, cursor: Point, axis: ScaleAxis, signed: bool) -> Option<(f64, f64)> {
     let ratio = |a: f64, b: f64, c: f64| {
         let d = b - a;
         (d.abs() > 1e-6).then(|| ((c - a) / d).clamp(1e-3, 1e3))
     };
     match axis {
         ScaleAxis::Both => {
-            let d0 = start.dist(center);
-            (d0 > 1e-6).then(|| {
-                let f = (cursor.dist(center) / d0).clamp(1e-3, 1e3);
-                (f, f)
-            })
+            let rx = (start.x - center.x).abs() > 1e-6;
+            let ry = (start.y - center.y).abs() > 1e-6;
+            let fx = (cursor.x - center.x) / (start.x - center.x);
+            let fy = (cursor.y - center.y) / (start.y - center.y);
+            let mag = match (rx, ry) {
+                (true, true) => fx.abs().max(fy.abs()),
+                (true, false) => fx.abs(),
+                (false, true) => fy.abs(),
+                (false, false) => return None,
+            };
+            let mag = mag.clamp(1e-3, 1e3);
+            if !signed {
+                return Some((mag, mag));
+            }
+            let side = |f: f64, known: bool| if known && f < 0.0 { -1.0 } else { 1.0 };
+            Some((mag * side(fx, rx), mag * side(fy, ry)))
         }
         ScaleAxis::X => Some((ratio(center.x, start.x, cursor.x)?, 1.0)),
         ScaleAxis::Y => Some((1.0, ratio(center.y, start.y, cursor.y)?)),
@@ -804,8 +823,10 @@ fn side_polygon_center(a: Point, b: Point, sides: usize) -> Option<Point> {
     })
 }
 
+/// xfig's `adjust_pos`: horizontal only when the x distance is strictly
+/// larger, a tie goes vertical (W22-21).
 fn constrain_delta(d: Point) -> Point {
-    if d.x.abs() >= d.y.abs() {
+    if d.x.abs() > d.y.abs() {
         Point::new(d.x, 0.0)
     } else {
         Point::new(0.0, d.y)
@@ -2175,7 +2196,10 @@ impl Engine {
                         Some(ObjectKind::Text(t)) if t.text == text
                     );
                     if !unchanged {
-                        self.execute("object.set_attributes", &json!({"ids": [id.0], "text": text}))?;
+                        self.execute(
+                            "object.set_attributes",
+                            &json!({"ids": [id.0], "text": text, "reappend": true}),
+                        )?;
                     }
                 }
             }
@@ -2387,12 +2411,14 @@ impl Engine {
                     id,
                     center,
                     start,
+                    from,
                     axis,
+                    button,
                     ..
                 } => {
                     if start.dist(pos) > tol {
                         self.tool_state = ToolState::Idle;
-                        return self.commit_scale(id, center, start, pos, axis);
+                        return self.commit_scale(id, center, from, pos, axis, button == Button::Left);
                     }
                     Ok(())
                 }
@@ -2607,11 +2633,12 @@ impl Engine {
         &mut self,
         id: ObjectId,
         center: Point,
-        start: Point,
+        from: Point,
         end: Point,
         axis: ScaleAxis,
+        signed: bool,
     ) -> Result<(), EngineError> {
-        let Some((sx, sy)) = scale_factors(center, start, end, axis) else {
+        let Some((sx, sy)) = scale_factors(center, from, end, axis, signed) else {
             return Ok(());
         };
         self.execute(
@@ -2831,6 +2858,15 @@ impl Engine {
 
     // ---- scale -----------------------------------------------------------
 
+    /// The point of the object a click found, as xfig's search gives it
+    /// (`next_*_found`: a vertex within the tolerance, else the click).
+    fn object_point(&self, o: &Object, pos: Point, tol: f64) -> Point {
+        let pts = edit_points(o);
+        nearest_vertex(&pts, pos, tol)
+            .and_then(|i| pts.get(i).copied())
+            .unwrap_or(pos)
+    }
+
     fn scale_event(&mut self, ev: ToolEvent) -> Result<(), EngineError> {
         if let ToolEvent::Press { pos, button, .. } = ev {
             if button == Button::Right {
@@ -2840,7 +2876,7 @@ impl Engine {
             if let ToolState::Scale {
                 id,
                 center,
-                start,
+                from,
                 button: b,
                 axis,
                 ..
@@ -2850,7 +2886,7 @@ impl Engine {
                     return Ok(());
                 }
                 self.tool_state = ToolState::Idle;
-                return self.commit_scale(id, center, start, pos, axis);
+                return self.commit_scale(id, center, from, pos, axis, b == Button::Left);
             }
             let tol = self.pick_tol();
             if let Some(id) = self.pick(pos, tol) {
@@ -2863,10 +2899,29 @@ impl Engine {
                     } else {
                         scale_handle(&bb, pos)
                     };
+                    let from = if button == Button::Middle {
+                        // `init_center_scale`: the object point the click found.
+                        self.object_point(o, pos, tol)
+                    } else {
+                        // `init_boxscale_*`: the corner or edge being dragged.
+                        Point::new(
+                            if axis == ScaleAxis::Y {
+                                pos.x
+                            } else {
+                                bb.min.x + bb.max.x - center.x
+                            },
+                            if axis == ScaleAxis::X {
+                                pos.y
+                            } else {
+                                bb.min.y + bb.max.y - center.y
+                            },
+                        )
+                    };
                     self.set_selection(vec![id]);
                     self.tool_state = ToolState::Scale {
                         id,
                         center,
+                        from,
                         start: pos,
                         cursor: pos,
                         button,
@@ -3122,7 +3177,7 @@ impl Engine {
         match (tool, button) {
             (ToolKind::Break, Button::Left | Button::Middle) if is_compound => {
                 self.set_selection(vec![id]);
-                self.execute("object.ungroup", &json!({ "ids": ids }))?;
+                self.execute("object.ungroup", &json!({ "ids": ids, "reappend": true }))?;
                 // Middle: "break and tag" keeps the parts tagged (selected).
                 if button == Button::Left {
                     self.set_selection(Vec::new());
@@ -3130,7 +3185,7 @@ impl Engine {
             }
             (ToolKind::Break, Button::Right) if is_compound => {
                 self.set_selection(vec![id]);
-                self.execute("object.break_all", &json!({ "ids": ids }))?;
+                self.execute("object.break_all", &json!({ "ids": ids, "reappend": true }))?;
             }
             (ToolKind::Arrow, Button::Right) => {
                 let has = matches!(
@@ -3185,7 +3240,10 @@ impl Engine {
                 // The anchor, when set, is the axis instead of the click.
                 let at = self.set_point.unwrap_or(pos);
                 self.set_selection(vec![id]);
-                self.execute(cmd, &json!({ "ids": ids, "cx": at.x, "cy": at.y, "copy": copy }))?;
+                self.execute(
+                    cmd,
+                    &json!({ "ids": ids, "cx": at.x, "cy": at.y, "copy": copy, "reappend": true }),
+                )?;
             }
             (ToolKind::RotateCcw | ToolKind::RotateCw, Button::Left | Button::Middle) => {
                 let mut a = self.indicator.rotate_angle;
@@ -3193,7 +3251,7 @@ impl Engine {
                     a = -a;
                 }
                 self.set_selection(vec![id]);
-                let mut params = json!({ "ids": ids, "angle": a, "copy": copy });
+                let mut params = json!({ "ids": ids, "angle": a, "copy": copy, "reappend": true });
                 if copy {
                     params["copies"] = json!(self.indicator.num_copies);
                 }
@@ -3210,7 +3268,22 @@ impl Engine {
                 self.set_selection(vec![id]);
                 self.execute("object.convert", &json!({ "ids": ids }))?;
             }
-            (ToolKind::Convert, Button::Right) | (ToolKind::OpenClose, Button::Left) => {
+            (ToolKind::Convert, Button::Right) => {
+                // `point_search_right`: the click must hit a vertex of a line
+                // or spline, and a polygon opens at it (W22-30).
+                if let Some((vid, index)) = self.find_vertex(pos, tol) {
+                    let ok = match self.doc().get(vid).map(|o| &o.kind) {
+                        Some(ObjectKind::Polyline(pl)) => matches!(pl.kind, PolyKind::Polyline | PolyKind::Polygon),
+                        Some(ObjectKind::Spline(_)) => true,
+                        _ => false,
+                    };
+                    if ok {
+                        self.set_selection(vec![vid]);
+                        self.execute("object.toggle_closed", &json!({ "ids": [vid.0], "index": index }))?;
+                    }
+                }
+            }
+            (ToolKind::OpenClose, Button::Left) => {
                 self.set_selection(vec![id]);
                 self.execute("object.toggle_closed", &json!({ "ids": ids }))?;
             }
@@ -3759,13 +3832,14 @@ impl Engine {
             ToolState::Scale {
                 id,
                 center,
-                start,
+                from,
                 cursor,
                 axis,
+                button,
                 ..
             } => {
                 if let Some(o) = self.doc().get(*id) {
-                    if let Some((fx, fy)) = scale_factors(*center, *start, *cursor, *axis) {
+                    if let Some((fx, fy)) = scale_factors(*center, *from, *cursor, *axis, *button == Button::Left) {
                         let mut c = o.clone();
                         let t = Affine::about(Affine::scale(fx, fy), *center);
                         c.transform(&t, true);

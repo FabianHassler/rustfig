@@ -416,7 +416,19 @@ impl Indicator {
                 el.angle = self.text_angle.to_radians();
             }
         }
+        // xfig's `update_line`: a picture takes only the line width and the
+        // depth (W22-24).
+        let picture = matches!(&o.kind, ObjectKind::Polyline(pl) if pl.kind == PolyKind::Picture);
         if let Some(s) = o.style_mut() {
+            if picture {
+                if self.updates(F::LineWidth) {
+                    s.thickness = style.thickness;
+                }
+                if self.updates(F::Depth) {
+                    s.depth = style.depth;
+                }
+                return;
+            }
             if self.updates(F::LineStyle) {
                 s.line = style.line;
                 s.style_val = style.style_val;
@@ -444,8 +456,15 @@ impl Indicator {
             }
         }
         if let ObjectKind::Polyline(pl) = &mut o.kind {
-            if pl.kind == PolyKind::ArcBox && self.updates(F::BoxRadius) {
-                pl.radius = self.box_radius;
+            // `update_line` sets the radius of a plain box too, which makes it
+            // an arc-box (W22-24).
+            if matches!(pl.kind, PolyKind::ArcBox | PolyKind::Box) && self.updates(F::BoxRadius) {
+                if pl.kind == PolyKind::Box && self.box_radius > 0 {
+                    pl.kind = PolyKind::ArcBox;
+                }
+                if pl.kind == PolyKind::ArcBox {
+                    pl.radius = self.box_radius;
+                }
             }
         }
         if let ObjectKind::Arc(a) = &mut o.kind {

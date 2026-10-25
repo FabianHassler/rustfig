@@ -82,22 +82,22 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `e_break.c` | 92 | break compound (and tag) | tools | ported (S4) | — |
 | `e_chop.c` | 890 | chop objects at intersections | `cmd/chop.rs`, `tools/chop.rs`, extended by `cmd/outline.rs`, `cmd/chop_ext.rs` (D15) | ported (S4) | D3, D15 |
 | `e_compound.c` | 294 | open/close compound | `model::Document::open_compound`, `cmd/compound.rs`, `tools/compound.rs`, `panels::close_compound_popup` | ported (dimension-line recomputation on close: D10) | D1 |
-| `e_convert.c` | 420 | line↔spline, box↔arc-box | `cmd/object` | partial: box ↔ arc-box (S4) | S4-5 |
+| `e_convert.c` | 420 | line↔spline, box↔arc-box | `cmd/object` | partial: box ↔ arc-box (S4); right button is a vertex search that opens a polygon at the vertex (W22-30) | S4-5 |
 | `e_copy.c` | 185 | copy, array copy, copy to cut buffer | tools | ported: array copy (D10) | D10 |
 | `e_delete.c` | 307 | delete object/region, cut buffer | tools | ported (S4) | — |
 | `e_deletept.c` | 214 | delete point | tools | ported (S4) | — |
 | `e_edit.c` | 5996 | the Edit panel for every object type, figure comments, spline point shapes | `ui-egui/dialogs` | partial: compound and picture rows, point table, shape factor on the canvas, live panel (S4) | W10-15, W10-16 (done), W10-19, S4-6 |
-| `e_flip.c` | 452 | flip, copy & flip, anchor | tools, `cmd/transform` | ported: anchor (D10) | D10 |
+| `e_flip.c` | 452 | flip, copy & flip, anchor | tools, `cmd/transform` | ported: anchor (D10); points mirrored in place, ellipse direction/angle, re-append (W22-22, 23) | D10 |
 | `e_glue.c` | 521 | tag and glue compounds | tools | ported (S4) | — |
 | `e_joinsplit.c` | 714 | join/split lines and splines | `cmd/joinsplit.rs`, `tools/compound.rs` | ported | D2 |
 | `e_measure.c` | 514 | measure angle, length, area | `cmd/measure.rs`, `tools/measure.rs` | ported (S4) | D5 |
-| `e_move.c` | 135 | move (constrained) | tools | ported (S4); a moved object goes last (W22-3) | — |
+| `e_move.c` | 135 | move (constrained) | tools | ported (S4); a moved object goes last (W22-3); a tie in the constrained move goes vertical (W22-21) | — |
 | `e_movept.c` | 845 | move point (constrained, linked) | tools | ported; xfig does not link here, a box corner resizes the attached ends in RustFig (D14) | D14 |
 | `e_placelib.c` | 337 | place library object | `library::Engine::{begin_library, library_event, library_transform}`, `ToolState::Library` | ported: place (stays in the mode), new object, cancel, place and edit, draw box, place at original position, keys r l h v s S; the keys act about the object's centre, not the pointer | D6 |
-| `e_rotate.c` | 575 | rotate, copy & rotate, anchor, copies count | tools | ported: centre, number of copies (D10); the Num Copies button missing | D10 |
-| `e_scale.c` | 1444 | scale box/edge/centre | tools | ported: edge scaling in one dimension, dimension lines (D10) | D10 |
-| `e_tangent.c` | 159 | tangent/normal lines | `cmd/tangent.rs`, `tools/tangent.rs`; curve search from `u_smartsearch.c`, `u_geom.c` | ported (S4) | D4 |
-| `e_update.c` | 827 | update object / settings, update mask | tools, `indicator.take_from` | ported: update flags (`UpdateFlag`, `Indicator::update_object`, `take_from`) | W10-1 |
+| `e_rotate.c` | 575 | rotate, copy & rotate, anchor, copies count | tools | ported: centre, number of copies (D10); points turned in place, ellipse angle as xfig (W22-23); the Num Copies button missing | D10 |
+| `e_scale.c` | 1444 | scale box/edge/centre | tools | ported: edge scaling in one dimension, dimension lines (D10); factor as `fix_boxscale_*` / `init_center_scale` (W22-19) | D10 |
+| `e_tangent.c` | 159 | tangent/normal lines | `cmd/tangent.rs`, `tools/tangent.rs`; curve search from `u_smartsearch.c`, `u_geom.c` | ported (S4); spline points as `compute_open_spline` at HIGH_PRECISION (W22-25) | D4 |
+| `e_update.c` | 827 | update object / settings, update mask | tools, `indicator.take_from` | ported: update flags (`UpdateFlag`, `Indicator::update_object`, `take_from`); box radius, pictures (W22-24) | W10-1 |
 
 ## xfig: files (`f_*`, 9.9 k lines)
 
@@ -244,3 +244,4 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | 2026-10-22 | D3: `e_chop.c` ported (`cmd/chop.rs`, `tools/chop.rs`); `w_intersect.c`'s intersection math in `geom/intersect.rs`. |
 | 2026-10-23 | S4-7: `w_mousefun.c` Shift/Ctrl variants done. |
 | 2026-10-24 | W22: `w_modepanel.c` (button order) and `w_indpanel.c` (button columns) read for `cargo xtask xfig-compare`; no code ported. |
+| 2026-10-25 | W22-19, 21 to 25, 30: `e_scale.c`, `e_flip.c`, `e_rotate.c`, `e_update.c`, `e_convert.c`, `e_tangent.c`/`u_geom.c` (`close_to_spline`), `u_elastic.c` (`adjust_pos`, `adjust_box_pos`) re-read against the tools. |

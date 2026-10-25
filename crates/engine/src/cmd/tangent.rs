@@ -263,15 +263,38 @@ fn close_to_polyline(l: &Polyline, xp: f64, yp: f64, d: f64) -> Option<CurvePoin
     None
 }
 
+/// The spline's points as xfig computes them for hit tests (integer points,
+/// closed splines end on their first point), through fig2dev's port.
+fn xfig_spline_points(o: &Object) -> Option<Vec<Point>> {
+    use fig2dev::trans_spline::{compute_closed_spline, compute_open_spline, HIGH_PRECISION};
+    use rustfig_format::bridge::{object_to_fig2dev, FigObject};
+    let mut ctx = fig2dev::Ctx::default();
+    let FigObject::Spline(sp) = object_to_fig2dev(o, &ctx) else {
+        return None;
+    };
+    let pts = if sp.open_spline() {
+        compute_open_spline(&mut ctx, &sp, HIGH_PRECISION)?
+    } else {
+        compute_closed_spline(&mut ctx, &sp, HIGH_PRECISION)?
+    };
+    Some(pts.iter().map(|q| Point::new(f64::from(q.x), f64::from(q.y))).collect())
+}
+
 /// `close_to_spline`: the first side of the flattened curve within `d`
 /// (`close_to_float_vector`).
 fn close_to_spline(o: &Object, xp: f64, yp: f64, d: f64) -> Option<CurvePoint> {
     let ObjectKind::Spline(s) = &o.kind else { return None };
-    let flat = flatten_object(o);
-    let path = flat.first()?;
-    let mut pts = path.pts.clone();
+    // xfig walks the points of its own spline computation at HIGH_PRECISION
+    // (`compute_open_spline` / `compute_closed_spline`), whose steps are
+    // fine enough for the tangent: use fig2dev's port of it (W22-25).
+    let mut pts: Vec<Point> = xfig_spline_points(o).unwrap_or_else(|| {
+        let flat = flatten_object(o);
+        flat.first().map(|p| p.pts.clone()).unwrap_or_default()
+    });
     if s.closed && pts.len() > 2 && pts.first() != pts.last() {
-        pts.push(*pts.first()?);
+        if let Some(f) = pts.first().copied() {
+            pts.push(f);
+        }
     }
     for w in pts.windows(2) {
         let (a, b) = (*w.first()?, *w.get(1)?);

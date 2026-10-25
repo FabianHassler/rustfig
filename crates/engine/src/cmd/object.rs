@@ -27,7 +27,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Break Compound",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id]}",
+            params: "{\"ids\"?: [id], \"reappend\"?: bool (the parts go to the end of the list and draw on top, as xfig's Break)}",
             mutates: true,
             enabled: always,
             run: ungroup,
@@ -127,7 +127,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Open/Close",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id]}",
+            params: "{\"ids\"?: [id], \"index\"?: vertex (opening a polygon or closed spline: the object opens there, as xfig's Convert right button; a polygon clicked on its first vertex opens at the second)}",
             mutates: true,
             enabled: always,
             run: toggle_closed,
@@ -240,6 +240,10 @@ fn ungroup(e: &mut Engine, p: &Value) -> CmdResult {
     if broke == 0 {
         return Err(EngineError::bad_params("no compound selected"));
     }
+    if opt_bool(p, "reappend")?.unwrap_or(false) {
+        // `break_comp` adds the parts to the lists again (W22-22).
+        super::transform::move_to_end(e, &freed);
+    }
     e.set_selection(freed.clone());
     Ok(json!({"ids": ids_value(&freed)}))
 }
@@ -347,6 +351,13 @@ fn local_fonts(_e: &mut Engine, p: &Value) -> CmdResult {
 }
 
 fn set_attributes(e: &mut Engine, p: &Value) -> CmdResult {
+    let r = set_attributes_inner(e, p)?;
+    // A text edited with the keys is taken out and added again (`change_text`).
+    super::transform::reappend(e, p);
+    Ok(r)
+}
+
+fn set_attributes_inner(e: &mut Engine, p: &Value) -> CmdResult {
     // The edit panel's position rows travel with its attributes, so one
     // Apply is one undo step.
     if let Some(g) = p.get("geometry") {
@@ -726,8 +737,23 @@ fn convert(e: &mut Engine, p: &Value) -> CmdResult {
 }
 
 fn toggle_closed(e: &mut Engine, p: &Value) -> CmdResult {
+    // `toggle_polyline_polygon` / `toggle_open_closed_spline`: opening at a
+    // vertex starts the open object there and ends it on the vertex before.
+    let at = opt_num(p, "index")?
+        .filter(|v| v.is_finite() && *v >= 0.0)
+        .map(|v| v as usize);
     let n = for_targets(e, p, &mut |o| match &mut o.kind {
         ObjectKind::Polyline(pl) => match pl.kind {
+            PolyKind::Polygon if at.is_some() => {
+                // The first vertex is stored twice in xfig (closing point),
+                // so a click on it cuts the edge to the second one.
+                let start = at.map_or(0, |i| if i == 0 { 1 } else { i });
+                let n = pl.points.len();
+                if n > 0 {
+                    pl.points.rotate_left(start % n);
+                }
+                pl.kind = PolyKind::Polyline;
+            }
             PolyKind::Polyline if pl.points.len() >= 3 => {
                 pl.kind = PolyKind::Polygon;
                 pl.forward_arrow = None;
@@ -753,6 +779,15 @@ fn toggle_closed(e: &mut Engine, p: &Value) -> CmdResult {
                         *l = d;
                     }
                 } else {
+                    if let Some(i) = at {
+                        if !s.points.is_empty() {
+                            let k = i % s.points.len();
+                            s.points.rotate_left(k);
+                            if s.shapes.len() == s.points.len() {
+                                s.shapes.rotate_left(k);
+                            }
+                        }
+                    }
                     if let Some(f) = s.shapes.first_mut() {
                         *f = 0.0;
                     }
