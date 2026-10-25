@@ -1,6 +1,7 @@
 //! `cargo xtask libraries`: writes the libraries RustFig makes itself (plan
 //! D13) as `.fig` files under `libraries/`, from code, so the parts stay
-//! consistent and can be changed in one place. Today: `libraries/Feynman/`.
+//! consistent and can be changed in one place. Today: `libraries/Feynman/` and
+//! `libraries/QuantumCircuits/`.
 //! The output is deterministic (the same bytes on every run); a test checks
 //! that the committed files equal what the generator writes.
 //!
@@ -525,6 +526,443 @@ pub fn feynman() -> Vec<Part> {
     v
 }
 
+// ---------------------------------------------------------------------------
+// QuantumCircuits: wires, gates, controls, measurement and example circuits
+// in the look of Qcircuit / quantikz. Qubit wires are horizontal lines 1 inch
+// long (x 300..1500, ends on the 1/4-inch grid); wires of multi-wire parts are
+// 1/2 inch apart (y 600, 1200, 1800), so parts stack on the 1/2-inch grid.
+// ---------------------------------------------------------------------------
+
+/// Half the side of a single-qubit gate box.
+const GATE: f64 = 180.0;
+/// Half the distance between the two lines of a classical wire.
+const CGAP: f64 = 30.0;
+
+fn solid(thickness: i32, depth: i32) -> Style {
+    style(LineKind::Solid, thickness, depth)
+}
+
+fn white_box(a: Point, b: Point) -> Object {
+    let mut s = solid(THICK, 40);
+    s.fill_color = ColorRef::WHITE;
+    s.area_fill = 20;
+    Object::new(ObjectKind::Polyline(Polyline::rect(s, a, b)))
+}
+
+/// Gate box centred at (`x`, `y`), `half_w` wide on each side, with a LaTeX
+/// label (none for the empty gate).
+fn gate_box(x: f64, y: f64, half_w: f64, tex: &str) -> Vec<Object> {
+    let mut v = vec![white_box(p(x - half_w, y - GATE), p(x + half_w, y + GATE))];
+    if !tex.is_empty() {
+        v.push(label(x, y + 60.0, tex));
+    }
+    v
+}
+
+fn qwire(x0: f64, x1: f64, y: f64) -> Object {
+    polyline(solid(THICK, 50), vec![p(x0, y), p(x1, y)], None)
+}
+
+/// Classical wire: two parallel lines.
+fn cwire(x0: f64, x1: f64, y: f64) -> Vec<Object> {
+    let s = solid(1, 50);
+    vec![
+        polyline(s, vec![p(x0, y - CGAP), p(x1, y - CGAP)], None),
+        polyline(s, vec![p(x0, y + CGAP), p(x1, y + CGAP)], None),
+    ]
+}
+
+/// Classical control line (vertical, double).
+fn cvline(x: f64, y0: f64, y1: f64) -> Vec<Object> {
+    let s = solid(1, 50);
+    vec![
+        polyline(s, vec![p(x - CGAP, y0), p(x - CGAP, y1)], None),
+        polyline(s, vec![p(x + CGAP, y0), p(x + CGAP, y1)], None),
+    ]
+}
+
+fn vline(x: f64, y0: f64, y1: f64) -> Object {
+    polyline(solid(THICK, 50), vec![p(x, y0), p(x, y1)], None)
+}
+
+fn ctrl(x: f64, y: f64) -> Object {
+    dot(p(x, y), 60.0)
+}
+
+fn ctrl_open(x: f64, y: f64) -> Object {
+    let mut s = solid(THICK, 40);
+    s.fill_color = ColorRef::WHITE;
+    s.area_fill = 20;
+    circle(p(x, y), 75.0, s)
+}
+
+/// Target: circle with a cross (the CNOT's plus in a circle).
+fn target(x: f64, y: f64) -> Vec<Object> {
+    let mut s = solid(THICK, 40);
+    s.fill_color = ColorRef::WHITE;
+    s.area_fill = 20;
+    let r = 120.0;
+    vec![
+        circle(p(x, y), r, s),
+        polyline(solid(THICK, 39), vec![p(x - r, y), p(x + r, y)], None),
+        polyline(solid(THICK, 39), vec![p(x, y - r), p(x, y + r)], None),
+    ]
+}
+
+/// SWAP end: a cross.
+fn swap_x(x: f64, y: f64) -> Vec<Object> {
+    let d = 90.0;
+    let s = solid(THICK, 40);
+    vec![
+        polyline(s, vec![p(x - d, y - d), p(x + d, y + d)], None),
+        polyline(s, vec![p(x - d, y + d), p(x + d, y - d)], None),
+    ]
+}
+
+/// Measurement meter: gate box with an arc and a needle.
+fn meter(x: f64, y: f64) -> Vec<Object> {
+    let mut v = gate_box(x, y, GATE, "");
+    if let Some(a) = arc_obj(
+        solid(1, 39),
+        p(x - 120.0, y + 60.0),
+        p(x, y - 60.0),
+        p(x + 120.0, y + 60.0),
+        None,
+    ) {
+        v.push(a);
+    }
+    v.push(polyline(
+        solid(1, 39),
+        vec![p(x, y + 90.0), p(x + 90.0, y - 60.0)],
+        Some(Arrow {
+            kind: 1,
+            style: 1,
+            thickness: 1.0,
+            width: 45.0,
+            height: 75.0,
+        }),
+    ));
+    v
+}
+
+fn barrier(x: f64, y0: f64, y1: f64) -> Object {
+    polyline(style(LineKind::Dashed, 1, 45), vec![p(x, y0), p(x, y1)], None)
+}
+
+fn qc_part(name: &str, what: &str, how: &str, objs: Vec<Object>, ends: Vec<Point>) -> Part {
+    let c1 = format!("Quantum circuit: {what}");
+    let c2 = format!("{how} Keywords: quantum circuit qubit gate qcircuit quantikz");
+    part(name, objs, &[&c1, &c2], ends)
+}
+
+const Y0: f64 = 600.0;
+const Y1: f64 = 1200.0;
+const Y2: f64 = 1800.0;
+
+fn qc_parts(out: &mut Vec<Part>) {
+    let wends = |ys: &[f64]| -> Vec<Point> { ys.iter().flat_map(|&y| [p(300.0, y), p(1500.0, y)]).collect() };
+    let w1 = wends(&[Y0]);
+    let w2 = wends(&[Y0, Y1]);
+    let w3 = wends(&[Y0, Y1, Y2]);
+    let with_wire = |mut objs: Vec<Object>, ys: &[f64]| -> Vec<Object> {
+        let mut v: Vec<Object> = ys.iter().map(|&y| qwire(300.0, 1500.0, y)).collect();
+        v.append(&mut objs);
+        v
+    };
+    out.push(qc_part(
+        "wire",
+        "qubit wire, 1 inch",
+        "Horizontal line; ends on the 1/4-inch grid. Wires of a circuit are 1/2 inch apart.",
+        vec![qwire(300.0, 1500.0, Y0)],
+        w1.clone(),
+    ));
+    out.push(qc_part(
+        "wire_classical",
+        "classical wire (double line), 1 inch",
+        "Carries a measurement result; ends on the 1/4-inch grid.",
+        cwire(300.0, 1500.0, Y0),
+        w1.clone(),
+    ));
+    for (name, tex, what) in [
+        ("gate_h", "$H$", "Hadamard gate H"),
+        ("gate_x", "$X$", "Pauli X gate (NOT)"),
+        ("gate_y", "$Y$", "Pauli Y gate"),
+        ("gate_z", "$Z$", "Pauli Z gate"),
+        ("gate_s", "$S$", "phase gate S"),
+        ("gate_t", "$T$", "T gate (pi/8 gate)"),
+        ("gate_empty", "", "empty gate box for any single-qubit gate"),
+    ] {
+        out.push(qc_part(
+            name,
+            &format!("{what}, single-qubit gate on a wire"),
+            "Square box centred on the wire. The label is LaTeX special text; edit it with the Text mode.",
+            with_wire(gate_box(900.0, Y0, GATE, tex), &[Y0]),
+            w1.clone(),
+        ));
+    }
+    out.push(qc_part(
+        "gate_rx",
+        "rotation gate R_x(theta), single-qubit gate on a wire",
+        "Wide box centred on the wire; LaTeX special text, change x and the angle as needed.",
+        with_wire(gate_box(900.0, Y0, 330.0, "$R_x(\\theta)$"), &[Y0]),
+        w1.clone(),
+    ));
+    out.push(qc_part(
+        "measure",
+        "measurement (meter: box with arc and needle) on a wire",
+        "Projective measurement in the computational basis; continue with a classical wire.",
+        with_wire(meter(900.0, Y0), &[Y0]),
+        w1.clone(),
+    ));
+    out.push(qc_part(
+        "control_dot",
+        "control (filled dot) on a wire",
+        "Draw a vertical line to the target.",
+        with_wire(vec![ctrl(900.0, Y0)], &[Y0]),
+        w1.clone(),
+    ));
+    out.push(qc_part(
+        "control_open",
+        "open control (hollow circle) on a wire, acts when the control qubit is 0",
+        "Draw a vertical line to the target.",
+        with_wire(vec![ctrl_open(900.0, Y0)], &[Y0]),
+        w1.clone(),
+    ));
+    out.push(qc_part(
+        "target",
+        "target (circle with a cross) on a wire, the target of a CNOT",
+        "Draw a vertical line to the control.",
+        with_wire(target(900.0, Y0), &[Y0]),
+        w1.clone(),
+    ));
+    let mut v = vec![vline(900.0, Y0, Y1), ctrl(900.0, Y0)];
+    v.extend(target(900.0, Y1));
+    out.push(qc_part(
+        "cnot",
+        "CNOT (controlled NOT), control above, target below, two wires",
+        "Complete part on two wires 1/2 inch apart. Flip it vertically for the other direction.",
+        with_wire(v, &[Y0, Y1]),
+        w2.clone(),
+    ));
+    let v = vec![vline(900.0, Y0, Y1), ctrl(900.0, Y0), ctrl(900.0, Y1)];
+    out.push(qc_part(
+        "cz",
+        "CZ (controlled Z, two filled dots), two wires",
+        "Complete part on two wires 1/2 inch apart; symmetric in the two qubits.",
+        with_wire(v, &[Y0, Y1]),
+        w2.clone(),
+    ));
+    let mut v = vec![vline(900.0, Y0, Y1)];
+    v.extend(swap_x(900.0, Y0));
+    v.extend(swap_x(900.0, Y1));
+    out.push(qc_part(
+        "swap",
+        "SWAP gate (two crosses joined by a line), two wires",
+        "Complete part on two wires 1/2 inch apart.",
+        with_wire(v, &[Y0, Y1]),
+        w2.clone(),
+    ));
+    let mut v = gate_box(900.0, (Y0 + Y1) / 2.0, GATE, "$U$");
+    v[0] = white_box(p(720.0, Y0 - 150.0), p(1080.0, Y1 + 150.0));
+    out.push(qc_part(
+        "gate_multi2",
+        "multi-qubit gate box spanning 2 wires",
+        "Tall box over two wires; label in the middle (LaTeX special text).",
+        with_wire(v, &[Y0, Y1]),
+        w2.clone(),
+    ));
+    let mut v = gate_box(900.0, Y1, GATE, "$U$");
+    v[0] = white_box(p(720.0, Y0 - 150.0), p(1080.0, Y2 + 150.0));
+    out.push(qc_part(
+        "gate_multi3",
+        "multi-qubit gate box spanning 3 wires",
+        "Tall box over three wires; label in the middle (LaTeX special text).",
+        with_wire(v, &[Y0, Y1, Y2]),
+        w3.clone(),
+    ));
+    for (name, tex, what) in [
+        ("init_0", "$|0\\rangle$", "initial state |0> at the left end of a wire"),
+        ("init_1", "$|1\\rangle$", "initial state |1> at the left end of a wire"),
+        (
+            "ket_in",
+            "$|\\psi\\rangle$",
+            "input ket |psi> at the left end of a wire",
+        ),
+    ] {
+        out.push(qc_part(
+            name,
+            what,
+            "Label left of the wire (LaTeX special text); the wire starts on the grid.",
+            vec![label(360.0, Y0 + 60.0, tex), qwire(600.0, 1500.0, Y0)],
+            vec![p(600.0, Y0), p(1500.0, Y0)],
+        ));
+    }
+    out.push(qc_part(
+        "ket_out",
+        "output ket |psi'> at the right end of a wire",
+        "Label right of the wire (LaTeX special text).",
+        vec![label(1440.0, Y0 + 60.0, "$|\\psi'\\rangle$"), qwire(300.0, 1200.0, Y0)],
+        vec![p(300.0, Y0), p(1200.0, Y0)],
+    ));
+    out.push(qc_part(
+        "barrier",
+        "barrier (dashed vertical line) across two wires",
+        "Separates stages of a circuit; scale it to span more wires.",
+        vec![barrier(900.0, Y0 - 150.0, Y1 + 150.0)],
+        Vec::new(),
+    ));
+    out.push(qc_part(
+        "control_classical",
+        "classical control line (double vertical line) between two wires",
+        "Runs from a measurement down to a gate that is controlled by the result.",
+        cvline(900.0, Y0, Y1),
+        vec![p(900.0, Y0), p(900.0, Y1)],
+    ));
+}
+
+/// A circuit under construction.
+struct Circuit {
+    objs: Vec<Object>,
+}
+
+impl Circuit {
+    fn new() -> Circuit {
+        Circuit { objs: Vec::new() }
+    }
+    fn q(&mut self, x0: f64, x1: f64, y: f64) {
+        self.objs.push(qwire(x0, x1, y));
+    }
+    fn c(&mut self, x0: f64, x1: f64, y: f64) {
+        self.objs.extend(cwire(x0, x1, y));
+    }
+    fn gate(&mut self, x: f64, y: f64, tex: &str) {
+        self.objs.extend(gate_box(x, y, GATE, tex));
+    }
+    fn cnot(&mut self, x: f64, c: f64, t: f64) {
+        self.objs.push(vline(x, c, t));
+        self.objs.push(ctrl(x, c));
+        self.objs.extend(target(x, t));
+    }
+    fn ctrl_gate(&mut self, x: f64, c: f64, t: f64, tex: &str) {
+        self.objs.push(vline(x, c, t));
+        self.objs.push(ctrl(x, c));
+        self.gate(x, t, tex);
+    }
+    fn meter(&mut self, x: f64, y: f64) {
+        self.objs.extend(meter(x, y));
+    }
+    fn text(&mut self, x: f64, y: f64, tex: &str) {
+        self.objs.push(label(x, y + 60.0, tex));
+    }
+}
+
+fn qc_examples(out: &mut Vec<Part>) {
+    let mut ex = |name: &str, what: &str, c: Circuit| {
+        let c1 = format!("Quantum circuit example: {what}");
+        out.push(part(
+            name,
+            c.objs,
+            &[
+                &c1,
+                "Made from the library's parts; edit the labels (LaTeX text). Keywords: quantum circuit example qubit gate",
+            ],
+            Vec::new(),
+        ));
+    };
+
+    // Bell state: H, CNOT, measurement of both qubits.
+    let mut c = Circuit::new();
+    c.q(600.0, 2100.0, Y0);
+    c.q(600.0, 2100.0, Y1);
+    c.c(2100.0, 2700.0, Y0);
+    c.c(2100.0, 2700.0, Y1);
+    c.text(330.0, Y0, "$|0\\rangle$");
+    c.text(330.0, Y1, "$|0\\rangle$");
+    c.gate(900.0, Y0, "$H$");
+    c.cnot(1500.0, Y0, Y1);
+    c.meter(2100.0, Y0);
+    c.meter(2100.0, Y1);
+    ex(
+        "example_bell",
+        "Bell-state preparation (Hadamard, CNOT) and measurement of both qubits",
+        c,
+    );
+
+    // GHZ on three qubits.
+    let mut c = Circuit::new();
+    for y in [Y0, Y1, Y2] {
+        c.q(600.0, 2400.0, y);
+        c.text(330.0, y, "$|0\\rangle$");
+    }
+    c.gate(900.0, Y0, "$H$");
+    c.cnot(1500.0, Y0, Y1);
+    c.cnot(2100.0, Y1, Y2);
+    ex(
+        "example_ghz",
+        "GHZ-state preparation on 3 qubits (Hadamard, two CNOTs)",
+        c,
+    );
+
+    // Teleportation of |psi> from the top qubit to the bottom one.
+    let mut c = Circuit::new();
+    c.q(600.0, 3600.0, Y0);
+    c.c(3600.0, 4800.0, Y0);
+    c.q(600.0, 3600.0, Y1);
+    c.c(3600.0, 4200.0, Y1);
+    c.q(600.0, 5100.0, Y2);
+    c.text(330.0, Y0, "$|\\psi\\rangle$");
+    c.text(330.0, Y1, "$|0\\rangle$");
+    c.text(330.0, Y2, "$|0\\rangle$");
+    c.gate(900.0, Y1, "$H$");
+    c.cnot(1500.0, Y1, Y2);
+    c.objs.push(barrier(1950.0, Y0 - 150.0, Y2 + 150.0));
+    c.cnot(2400.0, Y0, Y1);
+    c.gate(3000.0, Y0, "$H$");
+    c.meter(3600.0, Y0);
+    c.meter(3600.0, Y1);
+    c.objs.extend(cvline(4200.0, Y1, Y2 - GATE));
+    c.gate(4200.0, Y2, "$X$");
+    c.objs.extend(cvline(4800.0, Y0, Y2 - GATE));
+    c.gate(4800.0, Y2, "$Z$");
+    c.text(5460.0, Y2, "$|\\psi\\rangle$");
+    ex(
+        "example_teleportation",
+        "quantum teleportation of |psi> (Bell pair, Bell measurement, classical wires, controlled X and Z)",
+        c,
+    );
+
+    // QFT on 3 qubits.
+    let mut c = Circuit::new();
+    for (i, y) in [Y0, Y1, Y2].into_iter().enumerate() {
+        c.q(600.0, 4800.0, y);
+        c.text(330.0, y, &format!("$|x_{i}\\rangle$"));
+        c.text(5100.0, y, &format!("$|y_{i}\\rangle$"));
+    }
+    c.gate(900.0, Y0, "$H$");
+    c.ctrl_gate(1500.0, Y1, Y0, "$R_2$");
+    c.ctrl_gate(2100.0, Y2, Y0, "$R_3$");
+    c.gate(2700.0, Y1, "$H$");
+    c.ctrl_gate(3300.0, Y2, Y1, "$R_2$");
+    c.gate(3900.0, Y2, "$H$");
+    c.objs.push(vline(4500.0, Y0, Y2));
+    c.objs.extend(swap_x(4500.0, Y0));
+    c.objs.extend(swap_x(4500.0, Y2));
+    ex(
+        "example_qft",
+        "quantum Fourier transform on 3 qubits (Hadamards, controlled phase rotations, SWAP)",
+        c,
+    );
+}
+
+/// Every figure of the QuantumCircuits library, in file-name order.
+pub fn quantum_circuits() -> Vec<Part> {
+    let mut v = Vec::new();
+    qc_parts(&mut v);
+    qc_examples(&mut v);
+    v.sort_by(|a, b| a.name.cmp(&b.name));
+    v
+}
+
 /// The `.fig` text of a part.
 pub fn render(part: &Part) -> Result<String, String> {
     let mut doc = Document::new();
@@ -534,16 +972,18 @@ pub fn render(part: &Part) -> Result<String, String> {
     write(&doc, FileFormat::Fig).map_err(|e| format!("{}: {e:?}", part.name))
 }
 
-/// Write `libraries/Feynman/*.fig`.
+/// Write the generated libraries: `libraries/Feynman/*.fig` and
+/// `libraries/QuantumCircuits/*.fig`.
 pub fn run(root: &Path) -> Result<(), String> {
-    let dir = root.join("libraries").join("Feynman");
-    std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
-    let parts = feynman();
-    for part in &parts {
-        let path = dir.join(format!("{}.fig", part.name));
-        std::fs::write(&path, render(part)?).map_err(|e| format!("{}: {e}", path.display()))?;
+    for (name, parts) in [("Feynman", feynman()), ("QuantumCircuits", quantum_circuits())] {
+        let dir = root.join("libraries").join(name);
+        std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+        for part in &parts {
+            let path = dir.join(format!("{}.fig", part.name));
+            std::fs::write(&path, render(part)?).map_err(|e| format!("{}: {e}", path.display()))?;
+        }
+        println!("libraries: wrote {} figures to {}", parts.len(), dir.display());
     }
-    println!("libraries: wrote {} figures to {}", parts.len(), dir.display());
     Ok(())
 }
 
@@ -604,6 +1044,67 @@ mod tests {
     fn committed_files_match_the_generator() {
         let dir = crate::root().join("libraries").join("Feynman");
         for part in feynman() {
+            let path = dir.join(format!("{}.fig", part.name));
+            let on_disk = std::fs::read_to_string(&path).unwrap_or_default();
+            assert_eq!(
+                on_disk.replace("\r\n", "\n"),
+                render(&part).unwrap(),
+                "{} is stale: run cargo xtask libraries",
+                path.display()
+            );
+        }
+    }
+
+    #[test]
+    fn quantum_circuits_are_deterministic_and_plain() {
+        let a: Vec<String> = quantum_circuits().iter().map(|p| render(p).unwrap()).collect();
+        let b: Vec<String> = quantum_circuits().iter().map(|p| render(p).unwrap()).collect();
+        assert_eq!(a, b);
+        assert!(a.len() > 25);
+        let parts = quantum_circuits();
+        let mut names: Vec<&str> = parts.iter().map(|p| p.name.as_str()).collect();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(names.len(), parts.len());
+        assert!(names
+            .iter()
+            .all(|n| n.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')));
+    }
+
+    #[test]
+    fn quantum_figures_read_back_as_one_compound_with_a_comment() {
+        for part in quantum_circuits() {
+            let text = render(&part).unwrap();
+            let doc = rustfig_format::read_any(text.as_bytes()).unwrap();
+            assert_eq!(doc.objects.len(), 1, "{}", part.name);
+            let o = &doc.objects[0];
+            assert!(matches!(o.kind, ObjectKind::Compound(_)), "{}", part.name);
+            assert!(
+                o.comments.first().is_some_and(|c| c.starts_with("Quantum circuit")),
+                "{}",
+                part.name
+            );
+            assert!(o.comments.iter().any(|c| c.contains("Keywords: quantum circuit")));
+        }
+    }
+
+    #[test]
+    fn quantum_part_ends_lie_on_the_quarter_inch_grid() {
+        for part in quantum_circuits() {
+            for e in &part.ends {
+                assert!(
+                    (e.x / 300.0).fract() == 0.0 && (e.y / 300.0).fract() == 0.0,
+                    "{} {e:?}",
+                    part.name
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn committed_quantum_files_match_the_generator() {
+        let dir = crate::root().join("libraries").join("QuantumCircuits");
+        for part in quantum_circuits() {
             let path = dir.join(format!("{}.fig", part.name));
             let on_disk = std::fs::read_to_string(&path).unwrap_or_default();
             assert_eq!(

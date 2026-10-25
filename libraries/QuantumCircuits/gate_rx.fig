@@ -1,0 +1,19 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Quantum circuit: rotation gate R_x(theta), single-qubit gate on a wire
+# Wide box centred on the wire; LaTeX special text, change x and the angle as needed. Keywords: quantum circuit qubit gate qcircuit quantikz
+6 120 420 1680 780
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	300 600 1500 600
+2 2 0 2 0 7 40 -1 20 0.000 0 0 -1 0 0 5
+	570 420 1230 420 1230 780 570 780 570 420
+4 1 0 30 -1 0 12 0.0000 2 135 1560 900 660 $R_x(\\theta)$\001
+-6

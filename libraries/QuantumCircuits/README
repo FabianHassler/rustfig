@@ -1,0 +1,15 @@
+Quantum-circuit library, made for RustFig (original work, MIT OR Apache-2.0).
+
+Parts in the look of Qcircuit / quantikz: qubit wire and classical wire (double
+line), single-qubit gate boxes (H, X, Y, Z, S, T, R_x(theta), empty), measurement
+meter, control dot, open control, target, CNOT, CZ, SWAP, multi-qubit gate boxes
+over 2 and 3 wires, initial-state and ket labels, barrier, classical control
+line, and four complete circuits (example_*.fig: Bell state, GHZ, teleportation,
+quantum Fourier transform).
+
+Qubit wires are 1 inch long and end on the 1/4-inch grid; wires of a circuit are
+1/2 inch apart, so parts stack. Labels are LaTeX special text ($H$,
+$|0\rangle$): edit them with the Text mode.
+
+The files are written by `cargo xtask libraries` (xtask/src/libraries.rs);
+change the generator, not the files.

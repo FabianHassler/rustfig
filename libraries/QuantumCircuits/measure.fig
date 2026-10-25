@@ -1,0 +1,22 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Quantum circuit: measurement (meter: box with arc and needle) on a wire
+# Projective measurement in the computational basis; continue with a classical wire. Keywords: quantum circuit qubit gate qcircuit quantikz
+6 300 420 1500 780
+5 1 0 1 0 7 39 -1 -1 0.000 0 0 0 0 900.000 660.000 780 660 900 540 1020 660
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	300 600 1500 600
+2 2 0 2 0 7 40 -1 20 0.000 0 0 -1 0 0 5
+	720 420 1080 420 1080 780 720 780 720 420
+2 1 0 1 0 7 39 -1 -1 0.000 0 0 -1 1 0 2
+	1 1 1.00 45.00 75.00
+	900 690 990 540
+-6

@@ -1,0 +1,18 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Quantum circuit: classical control line (double vertical line) between two wires
+# Runs from a measurement down to a gate that is controlled by the result. Keywords: quantum circuit qubit gate qcircuit quantikz
+6 870 600 930 1200
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	870 600 870 1200
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	930 600 930 1200
+-6

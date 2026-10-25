@@ -1,0 +1,16 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Quantum circuit: qubit wire, 1 inch
+# Horizontal line; ends on the 1/4-inch grid. Wires of a circuit are 1/2 inch apart. Keywords: quantum circuit qubit gate qcircuit quantikz
+6 300 600 1500 600
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	300 600 1500 600
+-6

@@ -1,0 +1,17 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Quantum circuit: output ket |psi'> at the right end of a wire
+# Label right of the wire (LaTeX special text). Keywords: quantum circuit qubit gate qcircuit quantikz
+6 300 525 2340 694
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	300 600 1200 600
+4 1 0 30 -1 0 12 0.0000 2 135 1800 1440 660 $|\\psi'\\rangle$\001
+-6

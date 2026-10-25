@@ -1,0 +1,17 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Quantum circuit: control (filled dot) on a wire
+# Draw a vertical line to the target. Keywords: quantum circuit qubit gate qcircuit quantikz
+6 300 540 1500 660
+1 3 0 1 0 0 40 -1 20 0.000 1 0.0000 900 600 60 60 900 600 960 600
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	300 600 1500 600
+-6
