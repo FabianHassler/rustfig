@@ -78,7 +78,13 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+      # The packages arrive under target/package/: flatten, so the release
+      # carries the .dmg, .deb, .tar.gz and .zip next to the plain archives.
+      - name: Collect the files
+        run: find dist -mindepth 2 -type f -exec mv -f {} dist/ \; && ls -la dist
       - uses: softprops/action-gh-release@v2
         with:
           files: dist/*
           generate_release_notes: true
+          # v0.9.0-beta.1 and the like are pre-releases.
+          prerelease: ${{ contains(github.ref_name, '-') }}
