@@ -2,6 +2,7 @@
 
 mod audit;
 mod package;
+mod xfig_compare;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -512,7 +513,11 @@ fn main() -> ExitCode {
         "web" => web(),
         "package" => package::run(&root(), cargo()),
         "source-audit" => audit::run(&root()),
-        _ => Err("usage: cargo xtask ci | layers | assets | licences | wasm | web | package | source-audit".into()),
+        "xfig-compare" => xfig_compare::run(&root(), cargo()),
+        _ => Err(
+            "usage: cargo xtask ci | layers | assets | licences | wasm | web | package | source-audit | xfig-compare"
+                .into(),
+        ),
     };
     match r {
         Ok(()) => ExitCode::SUCCESS,

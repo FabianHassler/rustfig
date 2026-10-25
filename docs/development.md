@@ -98,6 +98,12 @@ Methods: `engine.execute`, `engine.commands`, `ui.run`, `ui.screenshot`,
 with `tool.<name>` followed by `tool.event` (`press`, `move`, `release`,
 `double_click`, `key`, `text`; coordinates in Fig units).
 
+## Side-by-side check against the real xfig (W22)
+
+`cargo xtask xfig-compare` runs the real xfig (`/opt/homebrew/bin/xfig`, default options, `HOME` in a scratch folder) headless under `Xvfb :77` and RustFig (control channel, scratch settings and recovery folders, light theme, zoom 1, Fig (0,0) at the canvas corner) through the same steps for every scenario in the table in `xtask/src/xfig_compare.rs`: each mode selected, one object drawn per drawing mode, the editing modes on a small fixture, the five menus open, the indicator panel's pop-ups. xdotool drives xfig, `xwd | xwdtopnm | pnmtopng` captures it. After each scenario both apps save the `.fig` and the object lines are compared (text height/length ignored: they depend on fonts). Output: `target/xfig-compare/index.html` (window and canvas crops side by side with a difference image, RMSE scores, worst first, the object diff, notes); the reviewed result is `docs/xfig-compare.md`.
+
+Needs `Xvfb`, `xdotool`, `xwd` (XQuartz: `/opt/X11/bin`), `xwdtopnm`, `pnmtopng` (netpbm) and `magick` (ImageMagick); it skips with a message when one is missing. It is not part of `ci`. Narrow it with `XFIG_COMPARE_FILTER=draw-` (scenario ids contain the text), `XFIG_COMPARE_DISPLAY=:77`, `XFIG_COMPARE_PORT=8031`, `XFIG_BIN`. Run it on a machine with no other X server on that display; the RustFig window opens behind others (`--background`) and is as high as the screen allows (the report notes the clipped height).
+
 ## Performance
 
 `rustfig-cli perf` checks budgets on a synthetic 50 000-path document;
@@ -111,3 +117,4 @@ format or geometry changes, on an idle machine.
 | 2026-10-16 | B12: exports through fig2dev; `RUSTFIG_CORPUS_LIST`. |
 | 2026-10-23 | Homebrew formula. |
 | 2026-10-24 | P3: `cargo xtask package`. |
+| 2026-10-24 | W22: `cargo xtask xfig-compare`. |
