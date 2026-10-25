@@ -1,6 +1,6 @@
 # RustFig roadmap
 
-**Status (2026-10-25):** Stage **Beta** (public pre-releases 0.9.0-beta.N). Overall xfig parity **≈90 %**
+**Status (2026-10-25):** Stage **Beta** (public pre-releases 0.9.0-beta.N). Overall xfig parity **≈91 %**
 ([assessment](docs/target-app-parity.md)). The native app draws, edits,
 saves and exports. The web build compiles; it is not yet packaged or tested in a browser.
 
@@ -17,7 +17,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 
 | Measure | Value |
 |---------|-------|
-| Overall parity (weighted) | ≈90 % |
+| Overall parity (weighted) | ≈91 % |
 | Commands (all reachable from the control channel and MCP) | 223 engine (incl. 44 tool modes and "no mode") + 29 UI |
 | Interactive tools (xfig modes) | 44 (xfig's 43 + Trim/Split/Extend) |
 | Tests | 598 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |

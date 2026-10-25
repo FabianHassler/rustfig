@@ -65,7 +65,8 @@ Build with `cargo xtask web`, serve `dist/` (`cd dist && python3 -m http.server 
 - ❌→fixed: the `.deb` shipped `/usr/bin/fig2dev` and collided with Debian's `fig2dev` package (xfig depends on it); the package no longer installs that link, `install.sh` adds it only where no fig2dev exists.
 - ❌ CJK characters in the file-name box show as boxes (the UI font has no CJK; no system CJK fallback).
 - ❌ On a 1280×712 screen the last row of mode buttons is cut off; the mode panel needs to scroll or shrink.
-- Open: three mouse buttons and the left+right chord, xfig and Ctrl keys, print dialog (portal), clipboard, double-click in the file manager, HiDPI, crash recovery, Wayland session, screen capture.
+- ✅ Checked by the user (2026-10-25, X11): three mouse buttons and the left+right chord with matching hints, xfig's and the Ctrl keys, the print dialog (portal), Copy as picture into another program, double-click in Thunar opens the file, screen capture through the portal, crash recovery after `kill -9`.
+- Open on Linux: HiDPI scaling, the Wayland session.
 
 ## Revision history
 | Date | Note |

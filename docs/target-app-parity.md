@@ -28,10 +28,10 @@ the score.
 | View & navigation | 8 | 100 % | — (zoom box, pan to origin and unzoom with Ctrl+click done 2026-10-22, E3) | 0 |
 | Undo | 4 | 100 % | — | 0 |
 | Libraries | 5 | 95 % | the web build now serves the bundled libraries (C2, not yet checked in a real browser); no user library or comment search there | 3 |
-| Printing | 5 | 85 % | verification of the printer hand-off on Windows and Linux, browser print dialog not yet checked in a real browser | 4 |
+| Printing | 5 | 90 % | Linux print dialog checked (2026-10-25); left: the Windows print hand-off | 2 |
 | Settings & styles | 5 | 90 % | little known: preferences, recent files, styles with families, colours, Global settings, Unit/Scale and Arrow Size panels, number pop-ups; checked in W22 round 2 (dialogs behind the menus) | 2 |
-| Platforms | 7 | 76 % | screen-reader check per OS (G3 labels done), code signing (user decision), Windows/Linux manual checks of the packages (P3, `cargo xtask package` 2026-10-24) and the platforms (checklist in hardware-parity.md), browser check of the web build (C3 browser autosave done 2026-10-23; Merge, pictures in memory and the bundled libraries added 2026-10-24, none yet run in a browser), exports of figures with pictures in the browser | 10 |
-| **Overall** | 100 | **≈90 %** | | **210** |
+| Platforms | 7 | 82 % | Linux checked on Debian 13 (Xfce, X11, ARM64; 2026-10-25): install, files with Unicode names, exports, mouse, keys, print, clipboard, file manager, capture, recovery all work; left: Linux Wayland and HiDPI, Windows by hand, the browsers, a screen reader, code signing (user decision) | 7 |
+| **Overall** | 100 | **≈91 %** | | **195** |
 
 ## Re-score 2026-10-25
 
@@ -120,6 +120,7 @@ After the two side-by-side rounds with the real xfig (W22: 216 scenarios, 45 dif
 | Date | Overall | Note |
 |------|--------:|------|
 | 2026-10-25 | ≈90 % | D11 screen capture and the last two message texts: Editing 95 → 97 % (weighted 90.4 → 90.6); the audit has no missing function. |
+| 2026-10-25 | ≈91 % | Linux check on Debian 13 (Xfce, X11, ARM64) by the user and over SSH: all items work after the .deb fix; Platforms 76 → 82 %, Printing 85 → 90 %; D11 capture and the two messages: Editing 95 → 97 %. |
 | 2026-10-25 | ≈90 % | Re-score after W22 rounds 1 and 2 (30 real differences fixed), the refreshed function audit (only screen capture missing) and the font-width correction: Editing 86 → 95 %, Attributes 90 → 93 %, Text 84 → 92 %, Settings 80 → 90 %; 294 → 210 h. |
 | 2026-10-24 | ≈87 % | P3 packaging (macOS .app/.dmg, Linux .deb/tarball, Windows zip), G3 accessible labels, C4 touch (long press, two-finger pan), F3 dead keys, W18 modern help (command search, F1, mouse sheet, what's new); Platforms 72 → 76 %, 296 → 294 h. |
 | 2026-10-23 | ≈85 % | F7 (RustFig side): installed fonts per text, Text 78 → 80 %, 30 → 26 h; embedding in exports still to do. |
