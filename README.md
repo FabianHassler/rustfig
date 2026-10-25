@@ -24,7 +24,7 @@ in Rust for macOS, Windows, Linux and the web, with fig2dev built in.
   (⌘⇧K / Ctrl+Shift+K), F1 help everywhere, the system's keys next to
   xfig's, and automation through a JSON control channel and MCP.
 
-**[Download RustFig](https://github.com/FabianHassler/rustfig/releases/latest)**
+**[Download RustFig](https://github.com/FabianHassler/rustfig/releases)**
 for macOS, Windows or Linux, or install it with Homebrew; see
 [Installation](#installation). Or **[try it in your browser](https://fabianhassler.github.io/rustfig/)**,
 nothing to install (a preview: drawings stay in your browser until you save
