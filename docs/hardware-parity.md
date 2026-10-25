@@ -68,6 +68,18 @@ Build with `cargo xtask web`, serve `dist/` (`cd dist && python3 -m http.server 
 - ✅ Checked by the user (2026-10-25, X11): three mouse buttons and the left+right chord with matching hints, xfig's and the Ctrl keys, the print dialog (portal), Copy as picture into another program, double-click in Thunar opens the file, screen capture through the portal, crash recovery after `kill -9`.
 - Open on Linux: HiDPI scaling, the Wayland session.
 
+## Web findings (2026-10-25, Chrome 1xx headless, beta.3 on GitHub Pages)
+
+- ✅ The page loads, "Loading RustFig…" goes away, no console errors; `libraries.json` and the library icons load.
+- ✅ Drawing with the mouse (box by drag, polygon closed with the middle button); mode keys; live messages; the File menu with the Mac browser's ⌥ keys.
+- ✅ File > Save gives a `figure.fig` download (a valid Fig 3.2 file).
+- ✅ Library mode lists the bundled libraries with icons.
+- ✅ Unsaved drawing + reload: "Restore unsaved drawing" appears; after Save and reload no offer.
+- ❌ Save first shows an extra "click here to download your file / Ok / Cancel" box (rfd's web save dialog) instead of downloading at once.
+- ❌ The File menu lists desktop-only entries on the web without greying them out (Open/Merge with preview, Digitize, New window, Saved versions, Exit).
+- ❌ Library mode shows the desktop path `~/xfiglib` as Source on the web.
+- Not driven headless: the file picker (Open, Merge, Picture), drop, Export downloads, the print iframe; Firefox and Safari.
+
 ## Revision history
 | Date | Note |
 | 2026-10-25 | First Linux check on Debian 13 (Xfce, X11, ARM64): findings listed above. |
