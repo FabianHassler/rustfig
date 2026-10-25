@@ -214,7 +214,12 @@ mod win {
                         DIB_RGB_COLORS,
                     );
                     if lines != 0 {
-                        let rgb = bgra.chunks_exact(4).flat_map(|p| [p[2], p[1], p[0]]).collect();
+                        let rgb = bgra
+                            .as_chunks::<4>()
+                            .0
+                            .iter()
+                            .flat_map(|p| [p[2], p[1], p[0]])
+                            .collect();
                         out = Ok((wu, hu, rgb));
                     }
                 }
