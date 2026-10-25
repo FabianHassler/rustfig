@@ -139,23 +139,19 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
             if !key.0.is_empty() {
                 p["dir"] = json!(key.0);
             }
-            let r = app
-                .engine
-                .execute("file.list_dir", &p)
-                .map_err(|e| e.message)
-                .map(|v| {
-                    let strs = |k: &str| -> Vec<String> {
-                        v.get(k)
-                            .and_then(|a| a.as_array())
-                            .map(|a| a.iter().filter_map(|s| s.as_str().map(str::to_string)).collect())
-                            .unwrap_or_default()
-                    };
-                    DirListing {
-                        dir: v.get("dir").and_then(|d| d.as_str()).unwrap_or("").to_string(),
-                        dirs: strs("dirs"),
-                        files: strs("files"),
-                    }
-                });
+            let r = app.engine.execute("file.list_dir", &p).map_err(|e| e.message).map(|v| {
+                let strs = |k: &str| -> Vec<String> {
+                    v.get(k)
+                        .and_then(|a| a.as_array())
+                        .map(|a| a.iter().filter_map(|s| s.as_str().map(str::to_string)).collect())
+                        .unwrap_or_default()
+                };
+                DirListing {
+                    dir: v.get("dir").and_then(|d| d.as_str()).unwrap_or("").to_string(),
+                    dirs: strs("dirs"),
+                    files: strs("files"),
+                }
+            });
             let fp = &mut app.file_panel;
             if let Ok(l) = &r {
                 fp.dir = l.dir.clone();
