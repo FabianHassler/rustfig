@@ -3,7 +3,7 @@
 
 use super::{num, num_or, opt_bool, opt_num, opt_str, points, string, CmdResult, Command};
 use crate::{import, Engine, EngineError};
-use rustfig_geom::{regular_polygon, Point, Rect};
+use rustfig_geom::{Point, Rect};
 use rustfig_model::{
     Arc, ColorRef, Ellipse, EllipseKind, Justify, LineKind, Object, ObjectKind, Picture, PolyKind, Polyline, Spline,
     SplineKind, Style, Text,
@@ -148,6 +148,26 @@ fn rectangle(e: &mut Engine, p: &Value) -> CmdResult {
     added(e, Object::new(ObjectKind::Polyline(pl)))
 }
 
+/// The vertices of xfig's regular polygon (`create_regpoly`, `d_regpoly.c`):
+/// the point clicked last first, then one vertex per step of `2 pi / sides`
+/// against the angle of that point seen from the centre (y down), each
+/// rounded to whole Fig units like xfig's integers.
+pub(crate) fn xfig_regular_polygon(center: Point, first: Point, sides: usize) -> Vec<Point> {
+    let n = sides.clamp(3, 1000);
+    let d = first - center;
+    let mag = d.x.hypot(d.y);
+    let init = d.y.atan2(d.x).rem_euclid(std::f64::consts::TAU);
+    let mut pts = vec![first];
+    for i in 1..n {
+        let angle = (init - std::f64::consts::TAU * i as f64 / n as f64).rem_euclid(std::f64::consts::TAU);
+        pts.push(Point::new(
+            center.x + (mag * angle.cos()).round(),
+            center.y + (mag * angle.sin()).round(),
+        ));
+    }
+    pts
+}
+
 pub(crate) fn make_ellipse(style: Style, center: Point, rx: f64, ry: f64, angle: f64, kind: EllipseKind) -> Object {
     Object::new(ObjectKind::Ellipse(Ellipse {
         kind,
@@ -260,7 +280,12 @@ fn regpoly(e: &mut Engine, p: &Value) -> CmdResult {
     let sides = num_or(p, "sides", e.indicator.sides as f64)?.round().clamp(3.0, 1000.0) as usize;
     let a = num_or(p, "angle", -90.0)?.to_radians();
     let first = Point::new(c.x + r * a.cos(), c.y + r * a.sin());
-    let pl = Polyline::new(PolyKind::Polygon, style_from(e, p)?, regular_polygon(c, first, sides));
+    let mut pl = Polyline::new(
+        PolyKind::Polygon,
+        style_from(e, p)?,
+        xfig_regular_polygon(c, first, sides),
+    );
+    pl.radius = 0;
     added(e, Object::new(ObjectKind::Polyline(pl)))
 }
 

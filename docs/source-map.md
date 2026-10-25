@@ -62,12 +62,12 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | File | Lines | What it does | RustFig | Status | Task |
 |---|---:|---|---|---|---|
 | `d_arc.c` | 359 | arc by three points or by centre | `engine/tools` (Arc) | ported (S4) | — |
-| `d_arcbox.c` | 132 | rounded box | `engine/tools` (ArcBox) | ported (S4) | — |
+| `d_arcbox.c` | 132 | rounded box | `engine/tools` (ArcBox) | ported (S4); point order as xfig (W22-7) | — |
 | `d_box.c` | 133 | box | `engine/tools` (Box) | ported (S4) | — |
-| `d_ellipse.c` | 345 | circles/ellipses by radius or diameter | `engine/tools` | ported (S4) | — |
+| `d_ellipse.c` | 345 | circles/ellipses by radius or diameter | `engine/tools` | ported (S4); clicked start/end, truncated centre (W22-5) | — |
 | `d_line.c` | 318 | polylines, polygons, freehand, dimension lines | `engine/tools` | partial: dimension lines ported (D10, `dimline.rs`); latex/manhattan/mountain constraints ported (D7) | D10 |
 | `d_picobj.c` | 136 | picture box | `engine/tools` (Picture) | ported (S4) | — |
-| `d_regpoly.c` | 149 | regular polygon | `engine/tools` | ported (S4) | — |
+| `d_regpoly.c` | 149 | regular polygon | `engine/tools` | ported (S4); vertex order, rounding and radius 0 as xfig (W22-6) | — |
 | `d_spline.c` | 195 | splines | `engine/tools` | ported (S4) | — |
 | `d_subspline.c` | 179 | spline helpers | `fig2dev:crates/figbase/src/geom` (via `geom`) | replaced: the overlay evaluates the whole curve (S4) | — |
 | `d_text.c` | 1477 | text entry, cursor, compose keys, paste | `engine/tools` (Text) | partial: Up/Down, caret by mouse, Ctrl-key editing, paste into text (S4) | E10, F3 |
@@ -91,7 +91,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `e_glue.c` | 521 | tag and glue compounds | tools | ported (S4) | — |
 | `e_joinsplit.c` | 714 | join/split lines and splines | `cmd/joinsplit.rs`, `tools/compound.rs` | ported | D2 |
 | `e_measure.c` | 514 | measure angle, length, area | `cmd/measure.rs`, `tools/measure.rs` | ported (S4) | D5 |
-| `e_move.c` | 135 | move (constrained) | tools | ported (S4) | — |
+| `e_move.c` | 135 | move (constrained) | tools | ported (S4); a moved object goes last (W22-3) | — |
 | `e_movept.c` | 845 | move point (constrained, linked) | tools | ported; xfig does not link here, a box corner resizes the attached ends in RustFig (D14) | D14 |
 | `e_placelib.c` | 337 | place library object | `library::Engine::{begin_library, library_event, library_transform}`, `ToolState::Library` | ported: place (stays in the mode), new object, cancel, place and edit, draw box, place at original position, keys r l h v s S; the keys act about the object's centre, not the pointer | D6 |
 | `e_rotate.c` | 575 | rotate, copy & rotate, anchor, copies count | tools | ported: centre, number of copies (D10); the Num Copies button missing | D10 |

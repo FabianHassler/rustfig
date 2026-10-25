@@ -23,7 +23,7 @@ pub use markers::{mode_mask, object_markers, ObjMask};
 use crate::cmd::shape::make_ellipse;
 use crate::{Engine, EngineError, UiRequest};
 mod lengths;
-use rustfig_geom::{dist_to_segment, regular_polygon, Affine, Point, Rect};
+use rustfig_geom::{dist_to_segment, Affine, Point, Rect};
 use rustfig_model::{Arc, EllipseKind, Justify, Object, ObjectId, ObjectKind, PolyKind, Polyline, Spline, SplineKind};
 use serde_json::json;
 
@@ -738,6 +738,20 @@ fn region_points(o: &Object, r: &Region) -> Option<usize> {
 
 /// The centre of a regular polygon of `sides` sides that has the side from
 /// `a` to `b`, on the side where `b` follows `a` in `regular_polygon`'s order.
+/// The centre of a diameter drag: xfig's integer `(fix + x) / 2` truncates.
+fn xfig_center(a: Point, b: Point) -> Point {
+    Point::new(((a.x + b.x) / 2.0).trunc(), ((a.y + b.y) / 2.0).trunc())
+}
+
+/// An ellipse that remembers the clicked start and end points.
+fn clicked_ellipse(mut o: Object, a: Point, b: Point) -> Object {
+    if let ObjectKind::Ellipse(e) = &mut o.kind {
+        e.start = a;
+        e.end = b;
+    }
+    o
+}
+
 fn side_polygon_center(a: Point, b: Point, sides: usize) -> Option<Point> {
     let n = sides.clamp(3, 1000);
     let s = a.dist(b);
@@ -749,9 +763,9 @@ fn side_polygon_center(a: Point, b: Point, sides: usize) -> Option<Point> {
     let dir = (b - a) * (1.0 / s);
     let normal = Point::new(-dir.y, dir.x);
     [1.0, -1.0].into_iter().map(|k| mid + normal * (apothem * k)).find(|c| {
-        regular_polygon(*c, a, n)
+        crate::cmd::shape::xfig_regular_polygon(*c, a, n)
             .get(1)
-            .is_some_and(|q| q.dist(b) < s * 1e-6 + 1e-6)
+            .is_some_and(|q| q.dist(b) < s * 1e-6 + 1.5)
     })
 }
 
@@ -1641,40 +1655,66 @@ impl Engine {
             return None;
         }
         let o = match kind {
-            ToolKind::CircleRadius => make_ellipse(style, a, a.dist(b), a.dist(b), 0.0, EllipseKind::CircleRadius),
+            // xfig keeps the clicked points in start and end and rounds
+            // like its integer arithmetic (`d_ellipse.c`, W22-5).
+            ToolKind::CircleRadius => {
+                let r = a.dist(b).round();
+                clicked_ellipse(make_ellipse(style, a, r, r, 0.0, EllipseKind::CircleRadius), a, b)
+            }
             ToolKind::CircleDiameter => {
-                let r = a.dist(b) / 2.0;
-                make_ellipse(style, a.lerp(b, 0.5), r, r, 0.0, EllipseKind::CircleDiameter)
+                let c = xfig_center(a, b);
+                let r = c.dist(b).round();
+                clicked_ellipse(make_ellipse(style, c, r, r, 0.0, EllipseKind::CircleDiameter), a, b)
             }
             ToolKind::EllipseRadii => {
                 let d = b - a;
-                make_ellipse(style, a, d.x.abs(), d.y.abs(), 0.0, EllipseKind::EllipseRadii)
-            }
-            ToolKind::EllipseDiameter => {
-                let d = b - a;
-                make_ellipse(
-                    style,
-                    a.lerp(b, 0.5),
-                    d.x.abs() / 2.0,
-                    d.y.abs() / 2.0,
-                    0.0,
-                    EllipseKind::EllipseDiameter,
+                clicked_ellipse(
+                    make_ellipse(style, a, d.x.abs(), d.y.abs(), 0.0, EllipseKind::EllipseRadii),
+                    a,
+                    b,
                 )
             }
-            ToolKind::Box | ToolKind::Picture | ToolKind::Plot => {
-                Object::new(ObjectKind::Polyline(Polyline::rect(style, a, b)))
+            ToolKind::EllipseDiameter => {
+                let c = xfig_center(a, b);
+                clicked_ellipse(
+                    make_ellipse(
+                        style,
+                        c,
+                        (c.x - a.x).abs(),
+                        (c.y - a.y).abs(),
+                        0.0,
+                        EllipseKind::EllipseDiameter,
+                    ),
+                    a,
+                    b,
+                )
             }
+            ToolKind::Picture | ToolKind::Plot => Object::new(ObjectKind::Polyline(Polyline::rect(style, a, b))),
+            // Corner order of `create_boxobject` and `create_arcbox`.
+            ToolKind::Box => Object::new(ObjectKind::Polyline(Polyline::new(
+                PolyKind::Box,
+                style,
+                vec![a, Point::new(b.x, a.y), b, Point::new(a.x, b.y)],
+            ))),
             ToolKind::ArcBox => {
-                let mut p = Polyline::rect(style, a, b);
-                p.kind = PolyKind::ArcBox;
+                let mut p = Polyline::new(
+                    PolyKind::ArcBox,
+                    style,
+                    vec![b, Point::new(b.x, a.y), a, Point::new(a.x, b.y)],
+                );
                 p.radius = self.indicator.box_radius;
                 Object::new(ObjectKind::Polyline(p))
             }
-            ToolKind::RegularPolygon => Object::new(ObjectKind::Polyline(Polyline::new(
-                PolyKind::Polygon,
-                style,
-                regular_polygon(a, b, self.indicator.sides),
-            ))),
+            ToolKind::RegularPolygon => {
+                let mut p = Polyline::new(
+                    PolyKind::Polygon,
+                    style,
+                    crate::cmd::shape::xfig_regular_polygon(a, b, self.indicator.sides),
+                );
+                // `create_regpoly` sets radius 0.
+                p.radius = 0;
+                Object::new(ObjectKind::Polyline(p))
+            }
             _ => return None,
         };
         Some(o)
@@ -2325,6 +2365,9 @@ impl Engine {
         if d.len() < 1e-9 && !copy {
             return Ok(());
         }
+        // xfig deletes and re-adds one clicked object (`e_move.c`); a region
+        // of several objects stays in place.
+        let reappend = ids.len() == 1;
         let ids = crate::cmd::ids_value(ids);
         if copy && array {
             // Array placement (xfig's Num X / Num Y Copies).
@@ -2332,7 +2375,10 @@ impl Engine {
         } else if copy {
             self.execute("edit.duplicate", &json!({"ids": ids, "dx": d.x, "dy": d.y}))?;
         } else {
-            self.execute("transform.move", &json!({"ids": ids, "dx": d.x, "dy": d.y}))?;
+            self.execute(
+                "transform.move",
+                &json!({"ids": ids, "dx": d.x, "dy": d.y, "reappend": reappend}),
+            )?;
         }
         Ok(())
     }
@@ -2430,7 +2476,7 @@ impl Engine {
         };
         self.execute(
             "transform.scale",
-            &json!({"ids": [id.0], "sx": sx, "sy": sy, "cx": center.x, "cy": center.y}),
+            &json!({"ids": [id.0], "sx": sx, "sy": sy, "cx": center.x, "cy": center.y, "reappend": true}),
         )?;
         Ok(())
     }
@@ -3011,8 +3057,10 @@ impl Engine {
                 if copy {
                     params["copies"] = json!(self.indicator.num_copies);
                 }
-                // The centre set with the right button replaces the object's own.
-                if let (Some(c), Some(m)) = (self.set_point, params.as_object_mut()) {
+                // About the clicked point unless a centre was set with the
+                // right button (`init_rotate`, W22-2).
+                let c = self.set_point.unwrap_or(pos);
+                if let Some(m) = params.as_object_mut() {
                     m.insert("cx".into(), json!(c.x));
                     m.insert("cy".into(), json!(c.y));
                 }

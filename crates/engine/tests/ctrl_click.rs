@@ -40,8 +40,8 @@ fn left_is_more_approximating_and_makes_an_xspline() {
     ctrl(&mut e, 1200.0, 1200.0, Button::Left, true).unwrap();
     let (kind, s) = shapes(&e);
     assert_eq!(kind, SplineKind::X);
-    assert!((s[1] - (-1.0 + 0.04)).abs() < 1e-9, "{s:?}");
-    assert!((s[2] - -1.0).abs() < 1e-9);
+    assert!((s[1] - (-0.5 + 0.04)).abs() < 1e-9, "{s:?}");
+    assert!((s[2] - -0.5).abs() < 1e-9);
     assert!(e.undo());
     assert_eq!(shapes(&e).0, SplineKind::Interpolated);
 }

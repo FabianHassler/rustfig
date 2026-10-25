@@ -1101,14 +1101,17 @@ fn set_geometry(e: &mut Engine, p: &Value) -> CmdResult {
                 // xfig: a factor that is not the kind's own makes it an X-spline.
                 let own = match s.kind {
                     SplineKind::Approximated => Some(1.0),
-                    SplineKind::Interpolated => Some(-1.0),
+                    SplineKind::Interpolated => Some(-0.5),
                     SplineKind::X => None,
                 };
                 if let Some(own) = own {
                     let n = sh.len();
                     let differs = sh.iter().enumerate().any(|(i, v)| {
                         let end = !s.closed && (i == 0 || i + 1 == n);
-                        !end && (*v - own).abs() > 1e-9
+                        // Files from before W22-1 hold -1 for an interpolated spline.
+                        let is_own = (*v - own).abs() <= 1e-9
+                            || (s.kind == SplineKind::Interpolated && (*v + 1.0).abs() <= 1e-9);
+                        !end && !is_own
                     });
                     if differs {
                         s.kind = SplineKind::X;

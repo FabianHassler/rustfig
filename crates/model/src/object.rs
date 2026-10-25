@@ -204,7 +204,7 @@ pub struct Picture {
 pub struct Polyline {
     pub kind: PolyKind,
     pub style: Style,
-    /// Corner radius of arc-boxes in 1/80 inch.
+    /// Corner radius of arc-boxes in 1/80 inch; -1 for lines that have none.
     pub radius: i32,
     pub forward_arrow: Option<Arrow>,
     pub backward_arrow: Option<Arrow>,
@@ -218,7 +218,8 @@ impl Polyline {
         Polyline {
             kind,
             style,
-            radius: 7,
+            // xfig: -1 for everything but arc-boxes (`u_create.c`).
+            radius: -1,
             forward_arrow: None,
             backward_arrow: None,
             points,
@@ -246,7 +247,7 @@ impl SplineKind {
     pub fn default_shape(self) -> f64 {
         match self {
             SplineKind::Approximated => 1.0,
-            SplineKind::Interpolated => -1.0,
+            SplineKind::Interpolated => -0.5,
             SplineKind::X => 0.5,
         }
     }
@@ -709,7 +710,7 @@ impl Object {
             ObjectKind::Polyline(p) => {
                 if p.kind == PolyKind::ArcBox && !preserves_axes(t) {
                     let r = Rect::from_points(p.points.iter().copied());
-                    p.points = flatten_round_rect(&r, p.radius as f64 * rustfig_geom::FIG_PER_STYLE_UNIT);
+                    p.points = flatten_round_rect(&r, p.radius.max(0) as f64 * rustfig_geom::FIG_PER_STYLE_UNIT);
                     p.kind = PolyKind::Polygon;
                 }
                 p.points.iter_mut().for_each(f);

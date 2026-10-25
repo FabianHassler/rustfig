@@ -13,7 +13,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Move by",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id], \"dx\", \"dy\", \"copy\"?: bool}  — Fig units; with smart links on (indicator linkmode move|slide), the end points of lines attached to the objects follow, and a copy copies the attached lines (xfig's linked move/copy)",
+            params: "{\"ids\"?: [id], \"dx\", \"dy\", \"copy\"?: bool, \"reappend\"?: bool}  — Fig units; reappend moves the objects to the end of the list so they draw on top of their depth, as xfig's Move mode does; with smart links on (indicator linkmode move|slide), the end points of lines attached to the objects follow, and a copy copies the attached lines (xfig's linked move/copy)",
             mutates: true,
             enabled: has_selection_or_ids,
             run: move_by,
@@ -33,7 +33,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Scale",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id], \"sx\", \"sy\"?, \"cx\"?, \"cy\"?, \"scale_text\"?: bool}  — about the centre of the objects by default",
+            params: "{\"ids\"?: [id], \"sx\", \"sy\"?, \"cx\"?, \"cy\"?, \"scale_text\"?: bool, \"reappend\"?: bool}  — (reappend as for transform.move) about the centre of the objects by default",
             mutates: true,
             enabled: has_selection_or_ids,
             run: scale,
@@ -145,7 +145,23 @@ fn center(e: &Engine, p: &Value) -> Result<Point, EngineError> {
 
 fn move_by(e: &mut Engine, p: &Value) -> CmdResult {
     let (dx, dy) = (num(p, "dx")?, num(p, "dy")?);
-    apply(e, p, Affine::translate(dx, dy), false)
+    let r = apply(e, p, Affine::translate(dx, dy), false);
+    reappend(e, p);
+    r
+}
+
+/// xfig deletes a moved or scaled object and adds it again (`e_move.c`,
+/// `e_scale.c`), so it ends up last in the list and draws on top of the
+/// others of its depth (W22-3). Copies are already new objects at the end.
+fn reappend(e: &mut Engine, p: &Value) {
+    if opt_bool(p, "copy").ok().flatten().unwrap_or(false) || !opt_bool(p, "reappend").ok().flatten().unwrap_or(false) {
+        return;
+    }
+    let Ok(ids) = e.target_ids(p) else { return };
+    let objs = &mut e.doc_mut().objects;
+    let (moved, mut rest): (Vec<_>, Vec<_>) = std::mem::take(objs).into_iter().partition(|o| ids.contains(&o.id));
+    rest.extend(moved);
+    *objs = rest;
 }
 
 /// Nudge by `steps` (default 1) times `distance` (default 15 Fig units, one
@@ -179,6 +195,7 @@ fn scale(e: &mut Engine, p: &Value) -> CmdResult {
     let text = opt_bool(p, "scale_text")?.unwrap_or(true);
     let ids = e.target_ids(p)?;
     let r = apply(e, p, Affine::about(Affine::scale(sx, sy), c), text);
+    reappend(e, p);
     // A scaled dimension line shows its new length (`rescale_dimension_line`).
     super::dimline::recompute_objects(e, &ids);
     r
