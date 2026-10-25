@@ -1,0 +1,16 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Optics lab: laser beam, red line, 1 inch
+# Ends on the 1/4-inch grid. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+6 300 900 1500 900
+2 1 0 2 4 7 45 -1 -1 0.000 0 0 -1 0 0 2
+	300 900 1500 900
+-6

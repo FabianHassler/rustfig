@@ -1,0 +1,16 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Optics lab: beam splitter plate at 45 degrees
+# Thin plate; a beam from the left goes on and upwards. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+6 693 693 1107 1107
+2 3 0 2 0 11 50 -1 20 0.000 0 0 -1 0 0 6
+	693 1075 1075 693 1107 725 725 1107 693 1075 693 1075
+-6

@@ -1,0 +1,22 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Optics lab: optical isolator (one-way symbol)
+# Box with a triangle and a bar; light passes from left to right only. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+6 600 660 1200 1140
+2 2 0 2 0 7 50 -1 20 0.000 0 0 -1 0 0 5
+	600 660 1200 660 1200 1140 600 1140 600 660
+2 3 0 2 0 0 50 -1 20 0.000 0 0 -1 0 0 5
+	720 780 720 1020 900 900 720 780 720 780
+2 1 0 3 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	900 780 900 1020
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	990 900 1110 900
+-6

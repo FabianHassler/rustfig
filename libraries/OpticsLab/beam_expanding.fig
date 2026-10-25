@@ -1,0 +1,20 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Optics lab: diverging beam (red cone), 1 inch
+# Narrow at the left, 3/4 inch wide at the right. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+6 300 540 1500 1260
+2 3 0 1 0 4 50 -1 35 0.000 0 0 -1 0 0 6
+	300 870 1500 540 1500 1260 300 930 300 870 300 870
+2 1 0 2 4 7 45 -1 -1 0.000 0 0 -1 0 0 2
+	300 870 1500 540
+2 1 0 2 4 7 45 -1 -1 0.000 0 0 -1 0 0 2
+	300 930 1500 1260
+-6

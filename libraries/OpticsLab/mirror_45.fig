@@ -1,0 +1,16 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Optics lab: flat mirror at 45 degrees (turns a beam from the left upwards)
+# Rotate it with the editing modes for other directions. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+6 645 645 1155 1155
+2 1 0 3 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	645 1155 1155 645
+-6

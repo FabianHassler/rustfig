@@ -1,0 +1,20 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Optics lab: reflection grating (blazed)
+# The grooved surface is on the axis. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+6 660 870 1140 1050
+2 3 0 2 0 0 50 -1 36 0.000 0 0 -1 0 0 28
+	660 900 720 870 720 900 720 900 780 870 780 900
+	780 900 840 870 840 900 840 900 900 870 900 900
+	900 900 960 870 960 900 960 900 1020 870 1020 900
+	1020 900 1080 870 1080 900 1080 900 1140 870 1140 900
+	1140 1050 660 1050 660 900 660 900
+-6

@@ -1,0 +1,20 @@
+Optics-lab library, made for RustFig (original work, MIT OR Apache-2.0).
+
+Parts drawn the way physics papers draw optical setups, beyond xfig's own
+Optics library: laser, red beams (solid, with arrow, dashed, expanded band,
+diverging cone), convex, concave and cylindrical lens, flat mirrors (plain and
+with hatched back, perpendicular and at 45 degrees), concave mirror, dichroic
+mirror, beam splitter cube and plate, polarizing beam splitter, half- and
+quarter-wave plate, polarizers, iris, coiled fibre and fibre coupler,
+photodiode, detector, CCD camera, acousto- and electro-optic modulator,
+optical isolator, prism, grating, cavity, vacuum chamber, cryostat, viewport,
+flange pair, sample holder, and three examples (example_*.fig: Michelson and
+Mach-Zehnder interferometer, fibre-coupled laser to detector).
+
+Every part is one compound with the optical axis through its centre, on the
+1/4-inch grid (axis at y = 3/4 inch in the figure); parts in the beam have
+their beam ports 1 inch apart on the grid, so they line up at the same height.
+Beams are xfig's red. Labels are LaTeX special text ($\lambda/2$).
+
+The files are written by `cargo xtask libraries` (xtask/src/libraries/optics.rs);
+change the generator, not the files.

@@ -1,0 +1,22 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Optics lab: sample holder: sample plate on a rod with a base
+# The (gold) sample is on the axis. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+6 780 750 1020 1380
+2 2 0 2 0 31 50 -1 20 0.000 0 0 -1 0 0 5
+	870 750 930 750 930 1050 870 1050 870 750
+2 2 0 2 0 0 50 -1 36 0.000 0 0 -1 0 0 5
+	840 1050 960 1050 960 1110 840 1110 840 1050
+2 2 0 2 0 0 50 -1 36 0.000 0 0 -1 0 0 5
+	885 1110 915 1110 915 1320 885 1320 885 1110
+2 2 0 2 0 0 50 -1 20 0.000 0 0 -1 0 0 5
+	780 1320 1020 1320 1020 1380 780 1380 780 1320
+-6

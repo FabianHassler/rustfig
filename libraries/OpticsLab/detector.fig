@@ -1,0 +1,18 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Optics lab: photodetector (grey box, sensitive face at the centre)
+# The beam hits the face from the left. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+6 900 675 1200 1125
+2 2 0 2 0 0 50 -1 36 0.000 0 0 -1 0 0 5
+	900 675 1200 675 1200 1125 900 1125 900 675
+2 1 0 4 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	900 675 900 1125
+-6

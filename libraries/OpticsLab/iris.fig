@@ -1,0 +1,18 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Optics lab: iris (aperture)
+# Two jaws around the axis. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+6 870 540 930 1260
+2 2 0 2 0 0 50 -1 20 0.000 0 0 -1 0 0 5
+	870 540 930 540 930 750 870 750 870 540
+2 2 0 2 0 0 50 -1 20 0.000 0 0 -1 0 0 5
+	870 1050 930 1050 930 1260 870 1260 870 1050
+-6

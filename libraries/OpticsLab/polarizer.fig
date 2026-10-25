@@ -1,0 +1,20 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Optics lab: linear polarizer, transmission axis in the plane (arrow)
+# Grey plate with a double arrow. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+6 840 600 960 1200
+2 2 0 2 0 0 50 -1 36 0.000 0 0 -1 0 0 5
+	840 600 960 600 960 1200 840 1200 840 600
+2 1 0 1 0 7 48 -1 -1 0.000 0 0 -1 1 1 2
+	1 1 1.00 54.00 90.00
+	1 1 1.00 54.00 90.00
+	900 660 900 1140
+-6

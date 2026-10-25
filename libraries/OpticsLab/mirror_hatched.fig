@@ -1,0 +1,36 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Optics lab: flat mirror with hatched back, perpendicular to the beam
+# Reflecting side to the left. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+6 900 600 960 1200
+2 1 0 3 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	900 600 900 1200
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	900 660 960 600
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	900 720 960 660
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	900 780 960 720
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	900 840 960 780
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	900 900 960 840
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	900 960 960 900
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	900 1020 960 960
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	900 1080 960 1020
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	900 1140 960 1080
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	900 1200 960 1140
+-6

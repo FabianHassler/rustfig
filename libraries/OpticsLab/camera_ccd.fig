@@ -1,0 +1,22 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Optics lab: camera (CCD or CMOS) with lens barrel
+# The beam enters on the left. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+6 720 675 1260 1125
+2 2 0 2 0 0 50 -1 36 0.000 0 0 -1 0 0 5
+	900 675 1260 675 1260 1125 900 1125 900 675
+2 2 0 2 0 0 50 -1 20 0.000 0 0 -1 0 0 5
+	720 780 900 780 900 1020 720 1020 720 780
+2 1 0 4 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	930 720 930 1080
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 5
+	1020 735 1200 735 1200 1065 1020 1065 1020 735
+-6
