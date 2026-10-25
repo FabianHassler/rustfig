@@ -8,7 +8,7 @@
 //! and indicator buttons come from xfig's `w_modepanel.c` / `w_indpanel.c` (button order) and from
 //! a calibration screenshot of the 1400x1000 window; RustFig is driven through its control channel.
 //!
-//! Environment: `XFIG_COMPARE_FILTER=substring` runs the scenarios whose id contains it;
+//! Environment: `XFIG_COMPARE_FILTER=substring[,substring...]` runs the scenarios whose id contains one;
 //! `XFIG_COMPARE_DISPLAY=:77`; `XFIG_COMPARE_PORT=8031`; `XFIG_BIN` (default `/opt/homebrew/bin/xfig`).
 
 use std::io::{BufRead, BufReader, Write};
@@ -36,10 +36,34 @@ const FIXTURE: &str =
 2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 3\n\t 1200 3600 2400 4800 3600 3600\n\
 4 0 0 50 -1 0 12 0.0000 4 135 480 6000 4200 Hello\\001\n";
 
+/// Round 2 fixture: a compound (box + circle), two lines to join, a line to split, a polygon,
+/// an approximated spline, an arc, two texts, a picture and a compound of two boxes.
+const FIXTURE2: &str =
+    "#FIG 3.2  Produced by xfig version 3.2.9a\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+6 1200 1200 5400 2400\n\
+2 2 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 5\n\t 1200 1200 3600 1200 3600 2400 1200 2400 1200 1200\n\
+1 3 0 1 0 7 50 -1 -1 0.000 1 0.0000 4800 1800 600 600 4800 1800 5400 1800\n\
+-6\n\
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2\n\t 1200 3600 2400 3600\n\
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2\n\t 3000 3600 4200 3600\n\
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 4\n\t 1200 4800 2400 4800 3600 5400 4800 4800\n\
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2\n\t 1800 4500 1800 5100\n\
+2 3 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 5\n\t 6000 1200 7500 1200 7500 2400 6000 2400 6000 1200\n\
+3 0 0 1 0 7 50 -1 -1 0.000 0 0 0 4\n\t 6000 3600 7200 4500 8400 3600 9600 4500\n\t 0.000 1.000 1.000 0.000\n\
+5 1 0 1 0 7 50 -1 -1 0.000 0 0 0 0 11400.000 3000.000 10200 3000 11400 1800 12600 3000\n\
+4 0 0 50 -1 0 12 0.0000 4 135 480 1200 7200 Hello\\001\n\
+4 0 0 50 -1 0 12 0.0000 4 135 480 3600 7200 World\\001\n\
+2 5 0 1 0 -1 50 -1 -1 0.000 0 0 -1 0 0 5\n\t0 pic.png\n\t 9000 6000 10500 6000 10500 7200 9000 7200 9000 6000\n\
+6 6000 6000 8400 7500\n\
+2 2 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 5\n\t 6000 6000 7200 6000 7200 7200 6000 7200 6000 6000\n\
+2 2 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 5\n\t 7800 6600 8400 6600 8400 7500 7800 7500 7800 6600\n\
+-6\n";
+
 #[derive(Clone, Copy, PartialEq)]
 enum Btn {
     L,
     M,
+    R,
 }
 
 impl Btn {
@@ -47,12 +71,14 @@ impl Btn {
         match self {
             Btn::L => "1",
             Btn::M => "2",
+            Btn::R => "3",
         }
     }
     fn name(self) -> &'static str {
         match self {
             Btn::L => "left",
             Btn::M => "middle",
+            Btn::R => "right",
         }
     }
 }
@@ -75,10 +101,22 @@ enum Step {
     Shot(&'static str),
     /// Close what is open (menu release / Escape).
     Close,
+    /// A key: (xdotool key name, egui key name), e.g. ("Left", "ArrowLeft").
+    Key(&'static str, &'static str),
+    /// Click a dialog button: xfig pixel (x < 0: xfig is not touched), RustFig accessible label
+    /// ("": RustFig is not touched).
+    Dlg(i32, i32, &'static str),
+    /// Pick a menu entry: (menu x, entry y in xfig, menu label, entry label in RustFig; "" leaves
+    /// RustFig alone: its entry opens a native OS dialog).
+    Item(i32, i32, &'static str, &'static str),
+    /// Press at the first Fig point, drag to the second, release (button).
+    Drag(f64, f64, f64, f64, Btn),
 }
 
 struct Scenario {
     id: String,
+    /// 0: `FIXTURE`; 1: `FIXTURE2` (compounds, joins, picture) with `pic.png` beside it.
+    fixture: u8,
     group: &'static str,
     steps: Vec<Step>,
     save: bool,
@@ -143,12 +181,929 @@ fn xfig_mode_xy(draw: bool, idx: usize) -> (i32, i32) {
     (x, (y0 + row as f64 * 32.8).round() as i32)
 }
 
+/// Round 2 of the check (W22): dialogs behind the menu entries, compounds, align, join/split, chop,
+/// tangent, measure, picture objects, text editing keys and the middle and right buttons of the
+/// editing and drawing modes, all on `FIXTURE2`.
+fn scenarios_r2() -> Vec<Scenario> {
+    use Btn::{L, M, R};
+    let mut v: Vec<Scenario> = Vec::new();
+    let mut add = |id: &str, group: &'static str, steps: Vec<Step>, save: bool, note: &'static str| {
+        v.push(Scenario {
+            id: id.into(),
+            fixture: 1,
+            group,
+            steps,
+            save,
+            note,
+        });
+    };
+
+    // Dialogs behind the menu entries. xfig: File x=30, Edit 91, View 152, Help 274; entries 16 px apart.
+    for (id, x, y, menu, item, wait) in [
+        ("file-open", 30, 50, "File", "", 900),
+        ("file-merge", 30, 66, "File", "", 900),
+        ("file-saveas", 30, 98, "File", "", 900),
+        ("file-export", 30, 114, "File", "Export", 900),
+        ("file-print", 30, 130, "File", "Print", 900),
+        ("edit-paste-empty", 91, 50, "Edit", "Paste", 400),
+        ("edit-search", 91, 82, "Edit", "Search", 700),
+        ("edit-spell", 91, 98, "Edit", "Spell", 700),
+        ("edit-global", 91, 130, "Edit", "Global", 700),
+        ("edit-units", 91, 146, "Edit", "units", 700),
+        ("view-styles", 152, 34, "View", "Styles", 700),
+        ("view-zoom-in", 152, 82, "View", "Zoom In", 500),
+        ("view-zoom-fit", 152, 114, "View", "Zoom to Fit", 500),
+        ("view-charmap", 152, 162, "View", "Character", 700),
+        ("view-line-lengths", 152, 228, "View", "line lengths", 500),
+        ("view-vertex-numbers", 152, 244, "View", "vertex numbers", 500),
+        ("help-about", 274, 98, "Help", "About", 700),
+    ] {
+        add(
+            &format!("dlg-{id}"),
+            "dialogs",
+            vec![Step::Item(x, y, menu, item), Step::Wait(wait), Step::Shot("dialog")],
+            false,
+            if item.is_empty() {
+                "RustFig opens the operating system's file dialog (rfd): not driven"
+            } else {
+                ""
+            },
+        );
+    }
+    add(
+        "dlg-edit-delete-all",
+        "dialogs",
+        vec![
+            Step::Item(91, 114, "Edit", "Delete All"),
+            Step::Wait(500),
+            Step::Shot("after"),
+        ],
+        true,
+        "",
+    );
+    add(
+        "dlg-view-zoom-in-click",
+        "dialogs",
+        vec![
+            Step::Item(152, 82, "View", "Zoom In"),
+            Step::Mode("box"),
+            Step::Click(9000.0, 2000.0, L),
+            Step::Click(12000.0, 3000.0, L),
+            Step::Shot("zoomed"),
+        ],
+        false,
+        "zoom 2, then a box",
+    );
+
+    // Compounds.
+    let comp = (1200.0, 1800.0);
+    add(
+        "comp-glue",
+        "compound",
+        vec![
+            Step::Mode("glue"),
+            Step::Click(1800.0, 3600.0, L),
+            Step::Click(3600.0, 3600.0, L),
+            Step::Shot("tagged"),
+            Step::Click(1800.0, 3600.0, R),
+            Step::Shot("glued"),
+        ],
+        true,
+        "tag two lines, right button makes the compound",
+    );
+    add(
+        "comp-glue-region",
+        "compound",
+        vec![
+            Step::Mode("glue"),
+            Step::Click(900.0, 3300.0, M),
+            Step::Move(2700.0, 3600.0),
+            Step::Shot("region"),
+            Step::Click(4500.0, 3900.0, M),
+            Step::Shot("tagged"),
+            Step::Click(1800.0, 3600.0, R),
+            Step::Shot("glued"),
+        ],
+        true,
+        "tag by region: middle click at the first corner, middle click at the final corner",
+    );
+    add(
+        "comp-glue-region-drag",
+        "compound",
+        vec![
+            Step::Mode("glue"),
+            Step::Drag(900.0, 3300.0, 4500.0, 3900.0, M),
+            Step::Shot("region"),
+            Step::Click(1800.0, 3600.0, R),
+            Step::Shot("glued"),
+        ],
+        true,
+        "region by press, drag and release of the middle button",
+    );
+    add(
+        "comp-break",
+        "compound",
+        vec![
+            Step::Mode("break"),
+            Step::Click(comp.0, comp.1, L),
+            Step::Shot("broken"),
+        ],
+        true,
+        "",
+    );
+    add(
+        "comp-break-tag",
+        "compound",
+        vec![
+            Step::Mode("break"),
+            Step::Click(comp.0, comp.1, M),
+            Step::Shot("broken"),
+        ],
+        true,
+        "middle: break and tag",
+    );
+    add(
+        "comp-open-move-close",
+        "compound",
+        vec![
+            Step::Mode("open_compound"),
+            Step::Click(comp.0, comp.1, L),
+            Step::Shot("opened"),
+            Step::Mode("move"),
+            Step::Click(5400.0, 1800.0, L),
+            Step::Click(5400.0, 3000.0, L),
+            Step::Shot("moved-inside"),
+            Step::Dlg(187, 103, "Close This Compound"),
+            Step::Shot("closed"),
+        ],
+        true,
+        "open, move the circle inside, close with the pop-up button",
+    );
+    add(
+        "comp-open-keep",
+        "compound",
+        vec![
+            Step::Mode("open_compound"),
+            Step::Click(comp.0, comp.1, M),
+            Step::Shot("opened-keep"),
+            Step::Dlg(336, 103, "Close All Compounds"),
+        ],
+        true,
+        "middle: open, keep visible; closed with the pop-up before saving",
+    );
+    for (id, mode) in [
+        ("move", "move"),
+        ("copy", "copy"),
+        ("delete", "delete"),
+        ("flip-lr", "flip_lr"),
+        ("rotate-cw", "rotate_cw"),
+        ("update", "update"),
+    ] {
+        let steps = if id == "move" || id == "copy" {
+            vec![
+                Step::Mode(mode),
+                Step::Click(comp.0, comp.1, L),
+                Step::Click(comp.0 + 6000.0, comp.1 + 3000.0, L),
+                Step::Shot("done"),
+            ]
+        } else {
+            vec![Step::Mode(mode), Step::Click(comp.0, comp.1, L), Step::Shot("done")]
+        };
+        add(&format!("comp-{id}"), "compound", steps, true, "on the compound");
+    }
+    add(
+        "comp-scale",
+        "compound",
+        vec![
+            Step::Mode("scale"),
+            Step::Click(5400.0, 2400.0, L),
+            Step::Click(6600.0, 3000.0, L),
+            Step::Shot("scaled"),
+        ],
+        true,
+        "corner of the compound",
+    );
+    add(
+        "comp-edit-panel",
+        "compound",
+        vec![
+            Step::Mode("edit"),
+            Step::Click(comp.0, comp.1, L),
+            Step::Wait(800),
+            Step::Shot("popup"),
+        ],
+        false,
+        "",
+    );
+    // Align: compound of two boxes at (6000,6000)-(7200,7200) and (7800,6600)-(8400,7500).
+    add(
+        "align-compound",
+        "align",
+        vec![
+            Step::Mode("align"),
+            Step::Click(6000.0, 6600.0, L),
+            Step::Shot("aligned"),
+        ],
+        true,
+        "left button on the compound, default alignment",
+    );
+    add(
+        "align-canvas",
+        "align",
+        vec![
+            Step::Mode("align"),
+            Step::Click(6000.0, 6600.0, M),
+            Step::Shot("aligned"),
+        ],
+        true,
+        "middle button: align to the canvas",
+    );
+    // Join / split.
+    add(
+        "join-lines",
+        "joinsplit",
+        vec![
+            Step::Mode("join_split"),
+            Step::Click(1800.0, 3600.0, L),
+            Step::Shot("first"),
+            Step::Click(3600.0, 3600.0, L),
+            Step::Shot("joined"),
+        ],
+        true,
+        "",
+    );
+    add(
+        "split-line",
+        "joinsplit",
+        vec![
+            Step::Mode("join_split"),
+            Step::Click(3600.0, 5400.0, M),
+            Step::Shot("split"),
+        ],
+        true,
+        "middle on the vertex of the 4-point line",
+    );
+    add(
+        "split-line-segment",
+        "joinsplit",
+        vec![
+            Step::Mode("join_split"),
+            Step::Click(3000.0, 5100.0, M),
+            Step::Shot("split"),
+        ],
+        true,
+        "middle on a segment",
+    );
+    // Chop: axe = the vertical line (left), log = the 4-point line (middle).
+    add(
+        "chop-axe",
+        "chop",
+        vec![
+            Step::Mode("chop"),
+            Step::Click(1800.0, 4800.0, L),
+            Step::Click(3000.0, 5100.0, M),
+            Step::Shot("chopped"),
+        ],
+        true,
+        "",
+    );
+    add(
+        "chop-clear",
+        "chop",
+        vec![
+            Step::Mode("chop"),
+            Step::Click(1800.0, 4800.0, L),
+            Step::Click(1800.0, 4800.0, R),
+            Step::Click(3000.0, 5100.0, M),
+            Step::Shot("after"),
+        ],
+        true,
+        "right clears the axe list, so nothing is chopped",
+    );
+    // Tangent / normal on the spline and on the arc.
+    for (id, x, y, b) in [
+        ("tangent-spline", 7200.0, 4200.0, L),
+        ("normal-spline", 7200.0, 4200.0, M),
+        ("tangent-arc", 11400.0, 1800.0, L),
+        ("normal-arc", 11400.0, 1800.0, M),
+    ] {
+        add(
+            id,
+            "tangent",
+            vec![Step::Mode("tangent"), Step::Click(x, y, b), Step::Shot("done")],
+            true,
+            "",
+        );
+    }
+    // Measure.
+    add(
+        "measure-length",
+        "measure",
+        vec![
+            Step::Mode("length_measure"),
+            Step::Click(1800.0, 4800.0, L),
+            Step::Shot("one"),
+            Step::Click(1800.0, 4800.0, M),
+            Step::Shot("added"),
+            Step::Click(1800.0, 4800.0, R),
+            Step::Shot("reset"),
+        ],
+        false,
+        "left picks, middle adds, right resets",
+    );
+    add(
+        "measure-length-points",
+        "measure",
+        vec![
+            Step::Mode("length_measure"),
+            Step::Click(9000.0, 9000.0, L),
+            Step::Click(10500.0, 9600.0, L),
+            Step::Shot("points"),
+        ],
+        false,
+        "two free points",
+    );
+    add(
+        "measure-area",
+        "measure",
+        vec![
+            Step::Mode("area_measure"),
+            Step::Click(7500.0, 1800.0, L),
+            Step::Shot("area"),
+        ],
+        false,
+        "the polygon",
+    );
+    add(
+        "measure-area-points",
+        "measure",
+        vec![
+            Step::Mode("area_measure"),
+            Step::Click(9000.0, 9000.0, L),
+            Step::Click(10500.0, 9000.0, L),
+            Step::Click(10500.0, 10200.0, L),
+            Step::Click(10500.0, 10200.0, M),
+            Step::Shot("area"),
+        ],
+        false,
+        "three points, middle closes",
+    );
+    add(
+        "measure-angle",
+        "measure",
+        vec![
+            Step::Mode("angle_measure"),
+            Step::Click(9000.0, 9000.0, L),
+            Step::Click(10500.0, 9000.0, L),
+            Step::Click(10500.0, 10200.0, L),
+            Step::Shot("angle"),
+        ],
+        false,
+        "three points",
+    );
+    add(
+        "measure-angle-object",
+        "measure",
+        vec![
+            Step::Mode("angle_measure"),
+            Step::Click(3600.0, 5400.0, R),
+            Step::Shot("angle"),
+        ],
+        false,
+        "right: select the line's angle",
+    );
+    // Picture objects (the picture is part of the fixture; drawing one opens a file dialog).
+    let pic = (9000.0, 6600.0);
+    add(
+        "pic-dialog",
+        "picture",
+        vec![Step::Mode("picture"), Step::Move(9000.0, 3000.0), Step::Shot("mode")],
+        false,
+        "mode only; the click opens a file dialog in both",
+    );
+    for (id, mode) in [
+        ("move", "move"),
+        ("copy", "copy"),
+        ("delete", "delete"),
+        ("flip-lr", "flip_lr"),
+        ("rotate-cw", "rotate_cw"),
+        ("update", "update"),
+    ] {
+        let steps = if id == "move" || id == "copy" {
+            vec![
+                Step::Mode(mode),
+                Step::Click(pic.0, pic.1, L),
+                Step::Click(pic.0 + 1500.0, pic.1 + 1500.0, L),
+                Step::Shot("done"),
+            ]
+        } else {
+            vec![Step::Mode(mode), Step::Click(pic.0, pic.1, L), Step::Shot("done")]
+        };
+        add(&format!("pic-{id}"), "picture", steps, true, "picture object");
+    }
+    add(
+        "pic-scale",
+        "picture",
+        vec![
+            Step::Mode("scale"),
+            Step::Click(10500.0, 7200.0, L),
+            Step::Click(12000.0, 8100.0, L),
+            Step::Shot("scaled"),
+        ],
+        true,
+        "",
+    );
+    add(
+        "pic-edit-panel",
+        "picture",
+        vec![
+            Step::Mode("edit"),
+            Step::Click(pic.0, pic.1, L),
+            Step::Wait(800),
+            Step::Shot("popup"),
+        ],
+        false,
+        "",
+    );
+    // Text editing keys: click the text "Hello" (1200,7200), edit, leave by choosing a mode.
+    let hello = (1275.0, 7200.0);
+    add(
+        "text-keys-edit",
+        "text",
+        vec![
+            Step::Mode("text"),
+            Step::Click(hello.0, hello.1, L),
+            Step::Wait(300),
+            Step::Shot("start"),
+            Step::Key("Left", "ArrowLeft"),
+            Step::Key("Left", "ArrowLeft"),
+            Step::Type("X"),
+            Step::Key("Home", "Home"),
+            Step::Type(">"),
+            Step::Key("End", "End"),
+            Step::Type("<"),
+            Step::Key("BackSpace", "Backspace"),
+            Step::Key("BackSpace", "Backspace"),
+            Step::Shot("edited"),
+            Step::Mode("move"),
+            Step::Shot("done"),
+        ],
+        true,
+        "arrows, Home/End, Backspace",
+    );
+    add(
+        "text-keys-return",
+        "text",
+        vec![
+            Step::Mode("text"),
+            Step::Click(hello.0, hello.1, L),
+            Step::Key("End", "End"),
+            Step::Key("Return", "Enter"),
+            Step::Type("two"),
+            Step::Shot("two-lines"),
+            Step::Mode("move"),
+        ],
+        true,
+        "Return inside a text",
+    );
+    add(
+        "text-keys-ctrl",
+        "text",
+        vec![
+            Step::Mode("text"),
+            Step::Click(hello.0, hello.1, L),
+            Step::Key("ctrl+a", "A"),
+            Step::Type("A"),
+            Step::Key("ctrl+e", "E"),
+            Step::Type("E"),
+            Step::Key("ctrl+k", "K"),
+            Step::Shot("ctrl"),
+            Step::Mode("move"),
+        ],
+        true,
+        "emacs keys: xfig w_keyboard/d_text (ctrl-a, ctrl-e, ctrl-k)",
+    );
+    add(
+        "text-keys-delete-word",
+        "text",
+        vec![
+            Step::Mode("text"),
+            Step::Click(hello.0, hello.1, L),
+            Step::Key("End", "End"),
+            Step::Key("ctrl+w", "W"),
+            Step::Shot("ctrlw"),
+            Step::Mode("move"),
+        ],
+        true,
+        "ctrl-w deletes a word in xfig",
+    );
+    add(
+        "text-middle-right",
+        "text",
+        vec![
+            Step::Mode("text"),
+            Step::Click(9000.0, 9000.0, M),
+            Step::Type("mid"),
+            Step::Shot("mid"),
+            Step::Mode("move"),
+            Step::Mode("text"),
+            Step::Click(9000.0, 10000.0, R),
+            Step::Type("right"),
+            Step::Shot("right"),
+            Step::Mode("move"),
+        ],
+        true,
+        "middle and right button in text mode on empty canvas",
+    );
+    // Middle and right buttons of the editing modes (box (1200,1200)-(3600,2400) is in the compound,
+    // so most use the line (1200,3600)-(2400,3600) and the polygon).
+    let on_a = (1800.0, 3600.0);
+    let on_poly = (7500.0, 1800.0);
+    for (id, mode, steps_fn) in [
+        ("scale-M", "scale", 0),
+        ("move-M", "move", 1),
+        ("move-R", "move", 2),
+        ("copy-M", "copy", 1),
+        ("copy-R", "copy", 2),
+        ("delete-M", "delete", 3),
+        ("delete-R", "delete", 2),
+        ("update-M", "update", 2),
+        ("flip-M", "flip_ud", 2),
+        ("flip-R", "flip_ud", 4),
+        ("rotate-M", "rotate_cw", 2),
+        ("rotate-R", "rotate_cw", 4),
+        ("convert-R", "convert", 5),
+        ("autoarrow-M", "autoarrow", 2),
+        ("move-point-M", "move_point", 6),
+        ("move-point-R", "move_point", 7),
+        ("add-point-M", "add_point", 2),
+        ("add-point-R", "add_point", 7),
+        ("delete-point-M", "delete_point", 8),
+        ("edit-M", "edit", 9),
+    ] {
+        let (b, base) = match id.rsplit('-').next() {
+            Some("M") => (M, true),
+            _ => (R, true),
+        };
+        let _ = base;
+        let steps = match steps_fn {
+            // scale about the centre
+            0 => vec![
+                Step::Mode(mode),
+                Step::Click(on_poly.0, on_poly.1, M),
+                Step::Click(9000.0, 3000.0, M),
+                Step::Shot("done"),
+            ],
+            // press the button on the object, then place with the same button (horiz/vert)
+            1 => vec![
+                Step::Mode(mode),
+                Step::Click(on_poly.0, on_poly.1, M),
+                Step::Click(on_poly.0 + 1500.0, on_poly.1 + 600.0, M),
+                Step::Shot("done"),
+            ],
+            2 => vec![
+                Step::Mode(mode),
+                Step::Click(on_poly.0, on_poly.1, b),
+                Step::Shot("done"),
+            ],
+            3 => vec![
+                Step::Mode(mode),
+                Step::Click(5700.0, 900.0, M),
+                Step::Click(7800.0, 2700.0, M),
+                Step::Shot("done"),
+            ],
+            4 => vec![
+                Step::Mode(mode),
+                Step::Click(on_poly.0, on_poly.1, R),
+                Step::Click(on_poly.0, on_poly.1, L),
+                Step::Shot("done"),
+            ],
+            5 => vec![Step::Mode(mode), Step::Click(7500.0, 1800.0, R), Step::Shot("done")],
+            6 => vec![
+                Step::Mode(mode),
+                Step::Click(7500.0, 2400.0, M),
+                Step::Click(8100.0, 3000.0, M),
+                Step::Shot("done"),
+            ],
+            7 => vec![
+                Step::Mode(mode),
+                Step::Click(7500.0, 2400.0, L),
+                Step::Click(8100.0, 3000.0, R),
+                Step::Shot("done"),
+            ],
+            8 => vec![Step::Mode(mode), Step::Click(7500.0, 2400.0, M), Step::Shot("done")],
+            _ => vec![
+                Step::Mode(mode),
+                Step::Click(on_poly.0, on_poly.1, M),
+                Step::Wait(800),
+                Step::Shot("done"),
+            ],
+        };
+        add(
+            &format!("btn-{id}"),
+            "buttons",
+            steps,
+            id != "edit-M",
+            "middle/right button of an editing mode on the polygon",
+        );
+    }
+    let _ = on_a;
+    // Drawing modes: right button cancels / ends, middle button ends or is unused.
+    add(
+        "btn-box-cancel",
+        "buttons",
+        vec![
+            Step::Mode("box"),
+            Step::Click(9000.0, 9000.0, L),
+            Step::Click(10500.0, 10200.0, R),
+            Step::Shot("cancelled"),
+        ],
+        true,
+        "right cancels the box in progress",
+    );
+    add(
+        "btn-box-middle",
+        "buttons",
+        vec![
+            Step::Mode("box"),
+            Step::Click(9000.0, 9000.0, M),
+            Step::Click(10500.0, 10200.0, L),
+            Step::Shot("middle"),
+        ],
+        true,
+        "middle button in box mode",
+    );
+    add(
+        "btn-polyline-undo",
+        "buttons",
+        vec![
+            Step::Mode("polyline"),
+            Step::Click(9000.0, 9000.0, L),
+            Step::Click(10500.0, 9000.0, L),
+            Step::Click(10500.0, 10200.0, L),
+            Step::Click(10500.0, 10200.0, R),
+            Step::Shot("undone"),
+            Step::Click(12000.0, 10200.0, M),
+            Step::Shot("ended"),
+        ],
+        true,
+        "right removes the last point, middle ends",
+    );
+    add(
+        "btn-polyline-first-middle",
+        "buttons",
+        vec![
+            Step::Mode("polyline"),
+            Step::Click(9000.0, 9000.0, M),
+            Step::Click(10500.0, 9000.0, L),
+            Step::Click(10500.0, 10200.0, M),
+            Step::Shot("done"),
+        ],
+        true,
+        "middle as the first point",
+    );
+    add(
+        "btn-circle-cancel",
+        "buttons",
+        vec![
+            Step::Mode("ellipse_radius"),
+            Step::Click(9000.0, 9000.0, L),
+            Step::Click(10500.0, 10200.0, R),
+            Step::Shot("cancelled"),
+        ],
+        true,
+        "",
+    );
+    add(
+        "btn-arc-cancel",
+        "buttons",
+        vec![
+            Step::Mode("arc"),
+            Step::Click(9000.0, 9000.0, L),
+            Step::Click(10500.0, 8400.0, L),
+            Step::Click(12000.0, 9000.0, R),
+            Step::Shot("cancelled"),
+        ],
+        true,
+        "",
+    );
+    add(
+        "btn-spline-undo",
+        "buttons",
+        vec![
+            Step::Mode("spline"),
+            Step::Click(9000.0, 9000.0, L),
+            Step::Click(10500.0, 8400.0, L),
+            Step::Click(12000.0, 9000.0, L),
+            Step::Click(12000.0, 9000.0, R),
+            Step::Click(13000.0, 10000.0, M),
+            Step::Shot("done"),
+        ],
+        true,
+        "",
+    );
+    // Hints and messages in the middle of an operation (xfig `set_mousefun` calls in e_*.c, d_*.c):
+    // one shot per state, compared in the top strip (message panel and Mouse Buttons box).
+    let on_poly = (7500.0, 1800.0);
+    for (id, mode, first_btn) in [
+        ("move", "move", L),
+        ("copy", "copy", L),
+        ("scale", "scale", L),
+        ("move-point", "move_point", L),
+        ("add-point", "add_point", L),
+        ("rotate", "rotate_cw", R),
+        ("flip", "flip_ud", R),
+    ] {
+        add(
+            &format!("hint-{id}"),
+            "hints",
+            vec![
+                Step::Mode(mode),
+                Step::Move(on_poly.0 + 600.0, on_poly.1 + 3000.0),
+                Step::Shot("start"),
+                Step::Move(on_poly.0, on_poly.1),
+                Step::Shot("over-object"),
+                Step::Click(on_poly.0, on_poly.1, first_btn),
+                Step::Move(on_poly.0 + 900.0, on_poly.1 + 900.0),
+                Step::Shot("after-first"),
+                Step::Click(on_poly.0 + 900.0, on_poly.1 + 900.0, R),
+                Step::Shot("after-right"),
+            ],
+            false,
+            "hint and message per state",
+        );
+    }
+    add(
+        "hint-move-middle",
+        "hints",
+        vec![
+            Step::Mode("move"),
+            Step::Click(on_poly.0, on_poly.1, M),
+            Step::Move(on_poly.0 + 900.0, on_poly.1 + 900.0),
+            Step::Shot("after-middle"),
+            Step::Click(on_poly.0 + 900.0, on_poly.1 + 900.0, R),
+            Step::Shot("after-right"),
+        ],
+        false,
+        "",
+    );
+    add(
+        "hint-glue-region",
+        "hints",
+        vec![
+            Step::Mode("glue"),
+            Step::Click(1800.0, 3600.0, L),
+            Step::Shot("tagged-one"),
+            Step::Click(1800.0, 3600.0, R),
+            Step::Shot("compound-made"),
+        ],
+        false,
+        "",
+    );
+    add(
+        "hint-join",
+        "hints",
+        vec![
+            Step::Mode("join_split"),
+            Step::Click(1800.0, 3600.0, L),
+            Step::Move(3000.0, 4200.0),
+            Step::Shot("after-first"),
+            Step::Click(3000.0, 4200.0, R),
+            Step::Shot("after-right"),
+        ],
+        false,
+        "",
+    );
+    add(
+        "hint-chop",
+        "hints",
+        vec![
+            Step::Mode("chop"),
+            Step::Click(1800.0, 4800.0, L),
+            Step::Shot("axe-selected"),
+            Step::Click(1800.0, 4800.0, R),
+            Step::Shot("cleared"),
+        ],
+        false,
+        "",
+    );
+    add(
+        "hint-angle",
+        "hints",
+        vec![
+            Step::Mode("angle_measure"),
+            Step::Click(9000.0, 9000.0, L),
+            Step::Move(10000.0, 9000.0),
+            Step::Shot("after-first"),
+            Step::Click(10500.0, 9000.0, L),
+            Step::Move(10500.0, 9900.0),
+            Step::Shot("after-second"),
+        ],
+        false,
+        "",
+    );
+    for (id, mode, pts) in [
+        ("box", "box", 1usize),
+        ("circle", "ellipse_radius", 1),
+        ("polyline", "polyline", 2),
+        ("polygon", "polygon", 2),
+        ("spline", "spline", 2),
+        ("closed-interp", "closed_interp_spline", 2),
+        ("arc", "arc", 2),
+        ("regpoly", "regpoly", 1),
+        ("arcbox", "arcbox", 1),
+    ] {
+        let mut steps = vec![Step::Mode(mode), Step::Shot("start")];
+        let path = [(9000.0, 9000.0), (10500.0, 8400.0), (12000.0, 9000.0)];
+        for p in path.iter().take(pts) {
+            steps.push(Step::Click(p.0, p.1, L));
+        }
+        steps.push(Step::Move(10500.0, 10200.0));
+        steps.push(Step::Shot("in-progress"));
+        steps.push(Step::Click(10500.0, 10200.0, R));
+        steps.push(Step::Shot("after-right"));
+        add(&format!("hint-draw-{id}"), "hints", steps, false, "hints while drawing");
+    }
+    add(
+        "hint-text",
+        "hints",
+        vec![
+            Step::Mode("text"),
+            Step::Shot("start"),
+            Step::Click(9000.0, 9000.0, L),
+            Step::Type("ab"),
+            Step::Shot("typing"),
+            Step::Mode("move"),
+        ],
+        false,
+        "",
+    );
+    add(
+        "hint-pic-xfig",
+        "hints",
+        vec![
+            Step::Mode("picture"),
+            Step::Shot("start"),
+            Step::Dlg(675, 274, ""),
+            Step::Dlg(875, 407, ""),
+            Step::Wait(900),
+            Step::Shot("dialog"),
+        ],
+        false,
+        "xfig's Picture dialog after the second corner (RustFig opens a native file dialog, not driven)",
+    );
+    add(
+        "text-keys-ctrl-bf",
+        "text",
+        vec![
+            Step::Mode("text"),
+            Step::Click(hello.0, hello.1, L),
+            Step::Key("ctrl+a", "A"),
+            Step::Key("ctrl+f", "F"),
+            Step::Key("ctrl+f", "F"),
+            Step::Type("Z"),
+            Step::Key("ctrl+b", "B"),
+            Step::Key("ctrl+d", "D"),
+            Step::Shot("ctrl"),
+            Step::Mode("move"),
+        ],
+        true,
+        "ctrl-f, ctrl-b, ctrl-d (xfig d_text.c)",
+    );
+    add(
+        "key-zoom-out",
+        "keys",
+        vec![
+            Step::Mode("move"),
+            Step::Move(9000.0, 9000.0),
+            Step::Key("z", "Z"),
+            Step::Shot("zoomed-out"),
+        ],
+        false,
+        "xfig: z zooms out by sqrt 2",
+    );
+    add(
+        "key-shift-z",
+        "keys",
+        vec![
+            Step::Mode("move"),
+            Step::Move(9000.0, 9000.0),
+            Step::Key("shift+z", "Z"),
+            Step::Shot("zoomed-in"),
+        ],
+        false,
+        "xfig: Shift-Z zooms in by sqrt 2",
+    );
+    v
+}
+
 fn scenarios() -> Vec<Scenario> {
     use Btn::{L, M};
     let mut v: Vec<Scenario> = Vec::new();
     let mut add = |id: &str, group: &'static str, steps: Vec<Step>, save: bool, note: &'static str| {
         v.push(Scenario {
             id: id.into(),
+            fixture: 0,
             group,
             steps,
             save,
@@ -554,6 +1509,7 @@ fn scenarios() -> Vec<Scenario> {
             "text mode",
         );
     }
+    v.extend(scenarios_r2());
     v
 }
 
@@ -797,7 +1753,8 @@ impl Drop for Rf {
 
 // ---------------------------------------------------------------- .fig comparison
 
-/// The object lines of a .fig file (header, comments and blank lines dropped, whitespace normalised).
+/// The objects of a .fig file as one string each (object line, then its point lines after " / ";
+/// header, comments and blank lines dropped, whitespace and number formats normalised).
 fn fig_objects(text: &str) -> Vec<String> {
     let mut lines = text.lines().map(str::trim_end);
     // header: up to the "<resolution> <coord system>" line
@@ -807,10 +1764,23 @@ fn fig_objects(text: &str) -> Vec<String> {
             break;
         }
     }
-    lines
-        .filter(|l| !l.starts_with('#') && !l.trim().is_empty())
-        .map(normalise)
-        .collect()
+    let mut out: Vec<String> = Vec::new();
+    for l in lines.filter(|l| !l.starts_with('#') && !l.trim().is_empty()) {
+        if l.starts_with(char::is_whitespace) {
+            // point or picture-file line of the object before
+            let nums: Vec<String> = l
+                .split_whitespace()
+                .map(|w| w.parse::<f64>().map_or_else(|_| w.to_string(), |n| format!("{n}")))
+                .collect();
+            if let Some(last) = out.last_mut() {
+                last.push_str(" / ");
+                last.push_str(&nums.join(" "));
+            }
+        } else {
+            out.push(normalise(l));
+        }
+    }
+    out
 }
 
 /// Numbers printed alike ("12.00" = "12"); a text's height and length (fields 9 and 10) depend on
@@ -850,19 +1820,44 @@ fn kind(line: &str) -> &'static str {
     }
 }
 
-/// Differences between two object lists as readable lines (empty when equal).
+/// Differences between two object lists as readable lines (empty when equal): the objects only
+/// one app has, or a note when both have the same objects in another order (xfig re-appends moved
+/// objects, so the order matters for drawing).
 fn fig_diff(a: &[String], b: &[String]) -> Vec<String> {
-    let mut out = Vec::new();
-    for i in 0..a.len().max(b.len()) {
-        let (x, y) = (a.get(i), b.get(i));
-        if x != y {
-            let k = x.or(y).map_or("", |l| kind(l));
-            out.push(format!(
-                "[{i}] {k}\n  xfig:    {}\n  RustFig: {}",
-                x.map_or("(none)", String::as_str),
-                y.map_or("(none)", String::as_str)
-            ));
+    if a == b {
+        return Vec::new();
+    }
+    let short = |l: &str| -> String {
+        let t: String = l.chars().take(170).collect();
+        format!("{}: {t}", kind(l))
+    };
+    let mut only_a: Vec<&String> = Vec::new();
+    let mut rest_b: Vec<&String> = b.iter().collect();
+    for x in a {
+        if let Some(i) = rest_b.iter().position(|y| *y == x) {
+            rest_b.remove(i);
+        } else {
+            only_a.push(x);
         }
+    }
+    let mut out = Vec::new();
+    if only_a.is_empty() && rest_b.is_empty() {
+        let first = a.iter().zip(b).position(|(x, y)| x != y).unwrap_or(0);
+        out.push(format!(
+            "same objects, other order from position {first}:\n  xfig:    {}\n  RustFig: {}",
+            a.get(first).map_or(String::new(), |l| short(l)),
+            b.get(first).map_or(String::new(), |l| short(l))
+        ));
+        return out;
+    }
+    for x in only_a {
+        out.push(format!("xfig only:    {}", short(x)));
+    }
+    for y in rest_b {
+        out.push(format!("RustFig only: {}", short(y)));
+    }
+    if a.len() != b.len() {
+        out.push(format!("({} objects in xfig, {} in RustFig)", a.len(), b.len()));
     }
     out
 }
@@ -940,8 +1935,21 @@ fn run_scenario(env: &Env, sc: &Scenario) -> Result<Outcome, String> {
         std::fs::create_dir_all(d).map_err(|e| format!("{}: {e}", d.display()))?;
     }
     let (xf_fig, rf_fig) = (dir.join("xfig.fig"), dir.join("rustfig.fig"));
-    std::fs::write(&xf_fig, FIXTURE).map_err(|e| e.to_string())?;
-    std::fs::write(&rf_fig, FIXTURE).map_err(|e| e.to_string())?;
+    let fixture = if sc.fixture == 1 { FIXTURE2 } else { FIXTURE };
+    std::fs::write(&xf_fig, fixture).map_err(|e| e.to_string())?;
+    std::fs::write(&rf_fig, fixture).map_err(|e| e.to_string())?;
+    if sc.fixture == 1 {
+        // a small picture beside each .fig (relative path in the figure)
+        let png = env.out.join("pic.png");
+        if !png.is_file() {
+            magick(&["-size", "120x80", "gradient:red-blue", &png.display().to_string()])?;
+        }
+        for f in [&xf_fig, &rf_fig] {
+            if let Some(parent) = f.parent() {
+                std::fs::copy(&png, parent.join("pic.png")).map_err(|e| e.to_string())?;
+            }
+        }
+    }
 
     let d = env.display.as_str();
     let mut xfig = Command::new(&env.xfig)
@@ -1044,6 +2052,63 @@ fn drive(env: &Env, sc: &Scenario, rf: &mut Rf, dir: &Path, img: &Path) -> Resul
                 rf.click_label(label)?;
             }
             Step::Wait(ms) => sleep_ms(*ms),
+            Step::Key(xk, rk) => {
+                xdo(d, &["key", xk]);
+                let mods = if xk.starts_with("ctrl+") {
+                    r#","modifiers":["ctrl"]"#
+                } else if xk.starts_with("shift+") {
+                    r#","modifiers":["shift"]"#
+                } else {
+                    ""
+                };
+                rf.call("ui.key", &format!(r#"{{"key":{}{mods}}}"#, json_str(rk)))?;
+                sleep_ms(300);
+            }
+            Step::Drag(x0, y0, x1, y1, b) => {
+                let (x0, y0, x1, y1) = (snap(*x0), snap(*y0), snap(*x1), snap(*y1));
+                pointer_to(d, rf, x0, y0, fx(x0), fy(y0))?;
+                xdo(d, &["mousedown", b.xdo()]);
+                rf.pointer("press", x0, y0, *b)?;
+                sleep_ms(200);
+                for k in 1..=4 {
+                    let t = f64::from(k) / 4.0;
+                    let (mx, my) = (x0 + (x1 - x0) * t, y0 + (y1 - y0) * t);
+                    xdo(d, &["mousemove", &fx(mx).to_string(), &fy(my).to_string()]);
+                    rf.pointer("move", mx, my, *b)?;
+                    sleep_ms(150);
+                }
+                xdo(d, &["mouseup", b.xdo()]);
+                rf.pointer("release", x1, y1, *b)?;
+                sleep_ms(300);
+            }
+            Step::Dlg(x, y, label) => {
+                if *x >= 0 {
+                    xdo(d, &["mousemove", &x.to_string(), &y.to_string()]);
+                    sleep_ms(150);
+                    xdo(d, &["click", "1"]);
+                }
+                if !label.is_empty() {
+                    rf.click_label(label)?;
+                }
+                sleep_ms(400);
+            }
+            Step::Item(x, y, menu, item) => {
+                xdo(d, &["mousemove", &x.to_string(), "12"]);
+                sleep_ms(150);
+                xdo(d, &["mousedown", "1"]);
+                sleep_ms(300);
+                xdo(d, &["mousemove", &(x - 4).to_string(), &(y - 12).to_string()]);
+                sleep_ms(150);
+                xdo(d, &["mousemove", &(x - 5).to_string(), &y.to_string()]);
+                sleep_ms(300);
+                xdo(d, &["mouseup", "1"]);
+                if !item.is_empty() {
+                    rf.click_label(menu)?;
+                    sleep_ms(400);
+                    rf.click_label(item)?;
+                }
+                sleep_ms(700);
+            }
             Step::Close => {
                 xdo(d, &["mousemove", "700", "500"]);
                 xdo(d, &["mouseup", "1"]);
@@ -1135,7 +2200,7 @@ fn drive(env: &Env, sc: &Scenario, rf: &mut Rf, dir: &Path, img: &Path) -> Resul
         let a = std::fs::read_to_string(dir.join("xfig.fig")).map_err(|e| e.to_string())?;
         let b = std::fs::read_to_string(dir.join("rustfig.fig")).map_err(|e| e.to_string())?;
         diff = fig_diff(&fig_objects(&a), &fig_objects(&b));
-        fig_note = if a.trim() == FIXTURE.trim() {
+        fig_note = if a.trim() == (if sc.fixture == 1 { FIXTURE2 } else { FIXTURE }).trim() {
             "xfig file unchanged (save may not have run)".into()
         } else {
             String::new()
@@ -1269,8 +2334,10 @@ pub fn run(root: &Path, cargo: Command) -> Result<(), String> {
     let mut rows = Vec::new();
     let mut failed = Vec::new();
     let all = scenarios();
-    let total = all.iter().filter(|s| s.id.contains(&filter)).count();
-    for (n, sc) in all.iter().filter(|s| s.id.contains(&filter)).enumerate() {
+    // comma-separated substrings: any match runs
+    let pick = |id: &str| filter.split(',').any(|f| id.contains(f));
+    let total = all.iter().filter(|s| pick(&s.id)).count();
+    for (n, sc) in all.iter().filter(|s| pick(&s.id)).enumerate() {
         eprintln!("[{}/{total}] {}", n + 1, sc.id);
         match run_scenario(&env, sc) {
             Ok(o) => rows.push(o),
@@ -1325,11 +2392,15 @@ mod tests {
     #[test]
     fn fig_objects_skip_header_and_comments() {
         let o = fig_objects(FIXTURE);
-        assert_eq!(o.len(), 6);
+        assert_eq!(o.len(), 4);
+        assert!(o.first().is_some_and(|l| l.contains(" / 1200 1200 3600 1200")));
         assert!(fig_diff(&o, &o).is_empty());
         let mut p = o.clone();
         p[1] = "x".into();
-        assert_eq!(fig_diff(&o, &p).len(), 1);
+        assert_eq!(fig_diff(&o, &p).len(), 2);
+        let mut q = o.clone();
+        q.swap(0, 1);
+        assert!(fig_diff(&o, &q).iter().all(|l| !l.contains("only")));
     }
 
     #[test]
