@@ -335,7 +335,8 @@ impl Conv<'_> {
                 l.cap_style,
                 l.join_style,
             ),
-            radius: self.thickness(l.radius).clamp(0, 100_000),
+            // xfig writes -1 for a line without rounded corners.
+            radius: self.thickness(l.radius).clamp(-1, 100_000),
             forward_arrow: self.arrow(&l.for_arrow),
             backward_arrow: self.arrow(&l.back_arrow),
             points,
