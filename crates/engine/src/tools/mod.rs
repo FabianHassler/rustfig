@@ -11,6 +11,7 @@
 mod chop;
 mod ctrl;
 mod cursor;
+mod mode_messages;
 mod textedit;
 pub use cursor::CursorKind;
 mod compound;
@@ -801,7 +802,8 @@ impl Engine {
         // Choosing Rotate or Flip erases any centre / anchor (`rotate_cw_selected`).
         self.set_point = None;
         self.tool = kind;
-        self.set_status(kind.label());
+        // xfig puts the mode button's sentence in the message panel.
+        self.set_status(kind.xfig_message().unwrap_or_else(|| kind.label()));
     }
 
     /// Escape, one level per press (decided 2026-10-22; xfig has no Escape
@@ -3317,11 +3319,8 @@ impl Engine {
             }
             ToolState::Scale { button, .. } => on(*button, "new posn", "cancel"),
             ToolState::Idle => {
-                let glue = if self.selection().len() >= 2 {
-                    "compound tagged"
-                } else {
-                    ""
-                };
+                // xfig shows "compound tagged" from the start.
+                let glue = "compound tagged";
                 let (l, m, r) = match tool {
                     ToolKind::Polyline => ("first point", "freehand", "single point"),
                     ToolKind::Polygon => ("first point", "freehand", ""),
@@ -4231,7 +4230,13 @@ mod tests {
                 }
             }
         }
-        let silent: Vec<_> = acted.iter().filter(|(_, a)| !**a).map(|(k, _)| k).collect();
+        // Glue's "compound tagged" shows from the start, as in xfig, and acts
+        // once two objects are tagged (the fixtures tag nothing).
+        let silent: Vec<_> = acted
+            .iter()
+            .filter(|(k, a)| !**a && !(k.0 == "tool.glue" && k.3 == "compound tagged"))
+            .map(|(k, _)| k)
+            .collect();
         assert!(silent.is_empty(), "labelled buttons that did nothing: {silent:#?}");
     }
 

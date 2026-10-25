@@ -2050,6 +2050,14 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                 .num_columns(2)
                 .spacing([10.0, 4.0])
                 .show(ui, |ui| {
+                    // xfig's edit panels start with Comments (`e_edit.c`).
+                    rl(ui, "Comments");
+                    ui.add(
+                        egui::TextEdit::multiline(&mut st.comment)
+                            .desired_rows(2)
+                            .desired_width(240.0),
+                    );
+                    ui.end_row();
                     if st.is_arc {
                         rl(ui, "Arc type");
                         ui.horizontal(|ui| {
@@ -2298,13 +2306,6 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             }
                         }
                     }
-                    rl(ui, "Comments");
-                    ui.add(
-                        egui::TextEdit::multiline(&mut st.comment)
-                            .desired_rows(2)
-                            .desired_width(240.0),
-                    );
-                    ui.end_row();
                 });
             ui.separator();
             ui.horizontal(|ui| {

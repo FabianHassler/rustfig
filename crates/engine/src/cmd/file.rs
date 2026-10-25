@@ -282,7 +282,14 @@ fn open(e: &mut Engine, p: &Value) -> CmdResult {
         e.set_status(format!("Opened the figure embedded in {export_path} as {path}"));
         return Ok(json!({"objects": count, "warnings": warnings, "embedded": true, "path": path}));
     }
-    e.set_status(format!("Opened {path}"));
+    // xfig's message after loading (`load_file`, `f_load.c`): the file name
+    // only, not the path.
+    let shown = std::path::Path::new(&path)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or(&path)
+        .to_string();
+    e.set_status(format!("Current figure \"{shown}\" ({count} objects)"));
     Ok(json!({"objects": count, "warnings": warnings}))
 }
 

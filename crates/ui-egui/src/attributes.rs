@@ -694,24 +694,16 @@ fn value_text(app: &App, a: Attr) -> String {
         Attr::BoxRadius => ind.box_radius.to_string(),
         Attr::TextJust => format!("{:?}", ind.justify).to_lowercase(),
         Attr::TextAngle => format!("{:.1}", ind.text_angle),
+        // xfig's `show_flags`: one flag at a time, "hidden=off".
         Attr::TextFlags => {
-            let mut f = Vec::new();
-            if ind.hidden_text {
-                f.push("hidden");
-            }
-            if ind.rigid_text {
-                f.push("rigid");
-            }
-            if ind.special_text {
-                f.push("TeX");
-            }
-            if f.is_empty() {
-                "normal".into()
-            } else {
-                f.join(", ")
+            let on = |b: bool| if b { "on" } else { "off" };
+            match app.flag_shown % 3 {
+                0 => format!("hidden={}", on(ind.hidden_text)),
+                1 => format!("TeX={}", on(ind.special_text)),
+                _ => format!("rigid={}", on(ind.rigid_text)),
             }
         }
-        Attr::FontSize => format!("{}", ind.font_size),
+        Attr::FontSize => format!("{:.2}", ind.font_size),
         Attr::TextStep => format!("{:.1}", ind.text_step),
         Attr::TangentLength => format!("{:.2}", ind.tangent_length),
         Attr::Font => match &ind.local_font {
@@ -847,8 +839,10 @@ fn step(app: &mut App, a: Attr, dir: i32) {
             };
             set(app, json!({"font": (ind.font + dir).rem_euclid(count.max(1))}));
         }
-        // These open panels only.
-        Attr::ArrowSize | Attr::TextFlags => {}
+        // `inc_flags` / `dec_flags`: show the next / previous flag.
+        Attr::TextFlags => app.flag_shown = (app.flag_shown + 3).wrapping_add_signed(dir as isize) % 3,
+        // Opens a panel only.
+        Attr::ArrowSize => {}
     }
 }
 
@@ -2048,7 +2042,13 @@ fn value_entry(app: &mut App, ui: &mut Ui, ind: &Indicator, a: Attr) {
     if integer {
         dv = dv.fixed_decimals(0);
     }
-    let resp = ui.add(dv);
+    // xfig's panel: a "Value" label before the field.
+    let resp = ui
+        .horizontal(|ui| {
+            ui.label("Value");
+            ui.add(dv)
+        })
+        .inner;
     let mut changed = resp.changed();
     if resp.hovered() {
         // xfig's spinners (`Fig*spinner_form*Text.translations`): wheel up
