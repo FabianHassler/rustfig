@@ -374,7 +374,15 @@ fn macos(root: &Path, rel: &Path, out: &Path, version: &str) -> Result<(), Strin
 
 fn linux(root: &Path, rel: &Path, out: &Path, version: &str) -> Result<(), String> {
     let exe = rel.join("rustfig");
-    let name = format!("rustfig-{version}-linux");
+    // The architecture in the name: x86-64 and ARM64 builds go into one release.
+    let name = format!(
+        "rustfig-{version}-linux-{}",
+        if cfg!(target_arch = "aarch64") {
+            "arm64"
+        } else {
+            "x86_64"
+        }
+    );
     let dir = out.join(&name);
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     fs::copy(&exe, dir.join("rustfig")).map_err(|e| format!("rustfig: {e}"))?;
