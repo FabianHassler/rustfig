@@ -1,0 +1,23 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Physics circuits: inductor (coil), horizontal; pins 1 inch apart on the grid
+# Keywords: circuit physics electronics resistor capacitor inductor Josephson ground source
+6 300 810 1500 900
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 43
+	300 900 540 900 544 872 557 847 577 827 602 814
+	630 810 658 814 683 827 703 847 716 872 720 900
+	724 872 737 847 757 827 782 814 810 810 838 814
+	863 827 883 847 896 872 900 900 904 872 917 847
+	937 827 962 814 990 810 1018 814 1043 827 1063 847
+	1076 872 1080 900 1084 872 1097 847 1117 827 1142 814
+	1170 810 1198 814 1223 827 1243 847 1256 872 1260 900
+	1500 900
+-6

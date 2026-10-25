@@ -1,0 +1,28 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Physics circuits: chassis or frame ground (hatched bar), pin on top
+# Keywords: circuit physics electronics resistor capacitor inductor Josephson ground source
+6 630 300 1140 720
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	900 300 900 600
+2 1 0 3 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	660 600 1140 600
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	720 600 630 720
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	810 600 720 720
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	900 600 810 720
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	990 600 900 720
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	1080 600 990 720
+-6

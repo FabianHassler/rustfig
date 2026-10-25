@@ -1,0 +1,18 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Physics circuits: digital ground (filled triangle), pin on the left
+# Keywords: circuit physics electronics resistor capacitor inductor Josephson ground source
+6 300 660 900 1140
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	300 900 600 900
+2 3 0 2 0 0 50 -1 20 0.000 0 0 -1 0 0 5
+	600 1140 600 660 900 900 600 1140 600 1140
+-6

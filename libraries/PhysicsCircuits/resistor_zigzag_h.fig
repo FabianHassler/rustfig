@@ -1,0 +1,17 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Physics circuits: resistor, zigzag, horizontal; pins 1 inch apart on the grid
+# Keywords: circuit physics electronics resistor capacitor inductor Josephson ground source
+6 300 780 1500 1020
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 10
+	300 900 540 900 600 780 720 1020 840 780 960 1020
+	1080 780 1200 1020 1260 900 1500 900
+-6

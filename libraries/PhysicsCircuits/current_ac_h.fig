@@ -1,0 +1,26 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Physics circuits: AC current source, horizontal; pins 1 inch apart on the grid
+# Keywords: circuit physics electronics resistor capacitor inductor Josephson ground source
+6 300 630 1500 1170
+1 3 0 2 0 7 50 -1 -1 0.000 1 0.0000 900 900 270 270 900 900 1170 900
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	300 900 630 900
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	1170 900 1500 900
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 17
+	780 810 795 793 810 778 825 768 840 765 855 768
+	870 778 885 793 900 810 915 827 930 842 945 852
+	960 855 975 852 990 842 1005 827 1020 810
+2 1 0 1 0 7 48 -1 -1 0.000 0 0 -1 1 0 2
+	1 1 1.00 72.00 120.00
+	750 1000 1050 1000
+-6

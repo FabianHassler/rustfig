@@ -1,7 +1,8 @@
 //! `cargo xtask libraries`: writes the libraries RustFig makes itself (plan
 //! D13) as `.fig` files under `libraries/`, from code, so the parts stay
 //! consistent and can be changed in one place. Today: `libraries/Feynman/`,
-//! `libraries/QuantumCircuits/` and `libraries/OpticsLab/`.
+//! `libraries/QuantumCircuits/`, `libraries/OpticsLab/` and
+//! `libraries/PhysicsCircuits/`.
 //! The output is deterministic (the same bytes on every run); a test checks
 //! that the committed files equal what the generator writes.
 //!
@@ -11,6 +12,7 @@
 //! standard attributes (thickness 2, black, depth 50; vertices and blobs in
 //! front at depth 40).
 
+mod circuits;
 mod optics;
 
 use rustfig_format::{write, FileFormat};
@@ -965,6 +967,7 @@ pub fn quantum_circuits() -> Vec<Part> {
     v
 }
 
+pub use circuits::physics_circuits;
 pub use optics::optics_lab;
 
 /// The `.fig` text of a part.
@@ -977,12 +980,13 @@ pub fn render(part: &Part) -> Result<String, String> {
 }
 
 /// Write the generated libraries: `libraries/Feynman/*.fig` and
-/// `libraries/QuantumCircuits/*.fig` and `libraries/OpticsLab/*.fig`.
+/// `libraries/QuantumCircuits/*.fig` `libraries/OpticsLab/*.fig` and `libraries/PhysicsCircuits/*.fig`.
 pub fn run(root: &Path) -> Result<(), String> {
     for (name, parts) in [
         ("Feynman", feynman()),
         ("QuantumCircuits", quantum_circuits()),
         ("OpticsLab", optics_lab()),
+        ("PhysicsCircuits", physics_circuits()),
     ] {
         let dir = root.join("libraries").join(name);
         std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
@@ -1174,6 +1178,116 @@ mod tests {
     fn committed_optics_lab_files_match_the_generator() {
         let dir = crate::root().join("libraries").join("OpticsLab");
         for part in optics_lab() {
+            let path = dir.join(format!("{}.fig", part.name));
+            let on_disk = std::fs::read_to_string(&path).unwrap_or_default();
+            assert_eq!(
+                on_disk.replace("\r\n", "\n"),
+                render(&part).unwrap(),
+                "{} is stale: run cargo xtask libraries",
+                path.display()
+            );
+        }
+    }
+
+    #[test]
+    fn physics_circuits_are_deterministic_and_plain() {
+        let a: Vec<String> = physics_circuits().iter().map(|p| render(p).unwrap()).collect();
+        let b: Vec<String> = physics_circuits().iter().map(|p| render(p).unwrap()).collect();
+        assert_eq!(a, b);
+        assert!(a.len() > 50);
+        let parts = physics_circuits();
+        let mut names: Vec<&str> = parts.iter().map(|p| p.name.as_str()).collect();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(names.len(), parts.len());
+        assert!(names
+            .iter()
+            .all(|n| n.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')));
+    }
+
+    #[test]
+    fn physics_circuits_read_back_as_one_compound_with_a_comment() {
+        for part in physics_circuits() {
+            let text = render(&part).unwrap();
+            let doc = rustfig_format::read_any(text.as_bytes()).unwrap();
+            assert_eq!(doc.objects.len(), 1, "{}", part.name);
+            let o = &doc.objects[0];
+            assert!(matches!(o.kind, ObjectKind::Compound(_)), "{}", part.name);
+            assert!(
+                o.comments.first().is_some_and(|c| c.starts_with("Physics circuits")),
+                "{}",
+                part.name
+            );
+            assert!(o.comments.iter().any(|c| c.contains("Keywords: circuit")));
+        }
+    }
+
+    #[test]
+    fn physics_circuit_pins_lie_on_the_quarter_inch_grid() {
+        for part in physics_circuits() {
+            for e in &part.ends {
+                assert!(
+                    (e.x / 300.0).fract() == 0.0 && (e.y / 300.0).fract() == 0.0,
+                    "{} {e:?}",
+                    part.name
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn two_terminal_parts_have_pins_one_inch_apart_horizontal_and_vertical() {
+        let parts = physics_circuits();
+        for name in circuits::TWO_TERMINAL {
+            for (suffix, horizontal) in [("h", true), ("v", false)] {
+                let full = format!("{name}_{suffix}");
+                let part = parts.iter().find(|p| p.name == full).unwrap();
+                assert_eq!(part.ends.len(), 2, "{full}");
+                let (a, b) = (part.ends[0], part.ends[1]);
+                if horizontal {
+                    assert_eq!(a.y, b.y, "{full}");
+                    assert_eq!((a.x - b.x).abs(), 1200.0, "{full}");
+                } else {
+                    assert_eq!(a.x, b.x, "{full}");
+                    assert_eq!((a.y - b.y).abs(), 1200.0, "{full}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn drawn_leads_reach_the_pins() {
+        for part in physics_circuits() {
+            if part.ends.is_empty() {
+                continue;
+            }
+            let ObjectKind::Compound(c) = &part.object.kind else {
+                panic!("{}", part.name);
+            };
+            let pts: Vec<Point> = c
+                .objects
+                .iter()
+                .filter_map(|o| match &o.kind {
+                    ObjectKind::Polyline(l) => Some(l.points.clone()),
+                    ObjectKind::Ellipse(e) => Some(vec![e.center]),
+                    _ => None,
+                })
+                .flatten()
+                .collect();
+            for e in &part.ends {
+                assert!(
+                    pts.iter().any(|q| (q.x - e.x).abs() < 1.5 && (q.y - e.y).abs() < 1.5),
+                    "{}: nothing is drawn at pin {e:?}",
+                    part.name
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn committed_physics_circuit_files_match_the_generator() {
+        let dir = crate::root().join("libraries").join("PhysicsCircuits");
+        for part in physics_circuits() {
             let path = dir.join(format!("{}.fig", part.name));
             let on_disk = std::fs::read_to_string(&path).unwrap_or_default();
             assert_eq!(

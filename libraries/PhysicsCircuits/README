@@ -1,0 +1,20 @@
+Physics-circuits library, made for RustFig (original work, MIT OR Apache-2.0).
+
+Lumped circuit elements the way physics papers draw them, filling the gaps of
+xfig's Electronic library: resistor (rectangle IEC and zigzag), capacitor,
+inductor, Josephson junction (cross in a box, plain cross), SQUID loop, DC and
+AC voltage and current sources, battery, transmission-line segment, variable
+(arrow) resistor, capacitor, inductor and Josephson junction, grounds (earth
+with three bars, chassis, protective earth, analog and digital ground),
+transformer and mutual inductance, port, terminal, wire junction dot, and three
+examples (example_rlc, example_transmon, example_resonator).
+
+Every part is one compound, in a horizontal (_h) and a vertical (_v) version.
+All two-terminal parts have their pins exactly 1 inch apart on the 1/4-inch
+grid (horizontal: (1/4 in, 3/4 in) and (1 1/4 in, 3/4 in)), so a circuit
+joins with grid snapping on. Grounds have one pin (_v: on top, _h: on the
+left); transformers four pins on the grid. Labels in the examples are LaTeX
+special text ($C_c$, $E_J$).
+
+The files are written by `cargo xtask libraries` (xtask/src/libraries/circuits.rs);
+change the generator, not the files.

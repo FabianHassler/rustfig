@@ -1,0 +1,15 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Physics circuits: terminal: open circle, the pin is its centre
+# Keywords: circuit physics electronics resistor capacitor inductor Josephson ground source
+6 810 810 990 990
+1 3 0 2 0 7 50 -1 -1 0.000 1 0.0000 900 900 90 90 900 900 990 900
+-6

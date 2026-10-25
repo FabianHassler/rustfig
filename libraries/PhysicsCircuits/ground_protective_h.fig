@@ -1,0 +1,23 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Physics circuits: protective earth (earth bars in a circle), pin on the left
+# Keywords: circuit physics electronics resistor capacitor inductor Josephson ground source
+6 300 690 990 1110
+1 3 0 2 0 7 50 -1 -1 0.000 1 1.5703 780 900 210 210 780 900 780 690
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	300 900 570 900
+2 1 0 3 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	720 1050 720 750
+2 1 0 3 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	780 1000 780 800
+2 1 0 3 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	840 950 840 850
+-6

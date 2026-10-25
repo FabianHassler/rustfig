@@ -1,0 +1,22 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Physics circuits: earth ground (three bars), pin on top
+# Keywords: circuit physics electronics resistor capacitor inductor Josephson ground source
+6 660 300 1140 780
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	900 300 900 600
+2 1 0 3 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	660 600 1140 600
+2 1 0 3 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	750 690 1050 690
+2 1 0 3 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	840 780 960 780
+-6

@@ -1,0 +1,22 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Physics circuits: Josephson junction, plain cross, horizontal; pins 1 inch apart on the grid
+# Keywords: circuit physics electronics resistor capacitor inductor Josephson ground source
+6 300 780 1500 1020
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	300 900 780 900
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	1020 900 1500 900
+2 1 0 3 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	780 780 1020 1020
+2 1 0 3 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
+	780 1020 1020 780
+-6
