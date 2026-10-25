@@ -710,8 +710,32 @@ fn xfig_menu(app: &mut App, ui: &mut egui::Ui, menu: &str, items: &[XfigItem]) {
     }
 }
 
+/// Commands that do nothing in the browser (desktop windows, folders,
+/// screen capture, quitting): the web menus leave them out.
+pub const DESKTOP_ONLY: &[&str] = &[
+    "app.open_panel",
+    "app.merge_panel",
+    "app.digitize",
+    "app.new_window",
+    "app.versions",
+    "app.capture",
+    "app.quit",
+];
+
+/// Whether a menu entry shows: every entry on the desktop, all but
+/// [`DESKTOP_ONLY`] on the web.
+pub fn entry_visible(item: &XfigItem, web: bool) -> bool {
+    match item {
+        XfigItem::Cmd(_, id) | XfigItem::Own(id) => !(web && DESKTOP_ONLY.contains(id)),
+        _ => true,
+    }
+}
+
 fn xfig_items(app: &mut App, ui: &mut egui::Ui, items: &[XfigItem]) {
     for item in items {
+        if !entry_visible(item, cfg!(target_arch = "wasm32")) {
+            continue;
+        }
         match *item {
             XfigItem::Sep => {
                 ui.separator();
@@ -1472,6 +1496,38 @@ mod tests {
                 XfigItem::Missing(..) | XfigItem::Sep => {}
             }
         }
+    }
+
+    #[test]
+    fn web_menu_omits_desktop_only_entries() {
+        let mut shown_web = Vec::new();
+        let mut shown_desktop = Vec::new();
+        for (_, items) in XFIG_MENUS {
+            for item in items.iter() {
+                if let XfigItem::Cmd(_, id) | XfigItem::Own(id) = item {
+                    if entry_visible(item, true) {
+                        shown_web.push(*id);
+                    }
+                    if entry_visible(item, false) {
+                        shown_desktop.push(*id);
+                    }
+                }
+            }
+        }
+        for id in DESKTOP_ONLY {
+            assert!(!shown_web.contains(id), "{id} shown on the web");
+        }
+        for id in [
+            "app.digitize",
+            "app.new_window",
+            "app.versions",
+            "app.quit",
+            "app.open_panel",
+            "app.merge_panel",
+        ] {
+            assert!(shown_desktop.contains(&id), "{id} missing on the desktop");
+        }
+        assert!(shown_web.contains(&"app.save"));
     }
 
     #[test]

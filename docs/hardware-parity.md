@@ -75,9 +75,9 @@ Build with `cargo xtask web`, serve `dist/` (`cd dist && python3 -m http.server 
 - ✅ File > Save gives a `figure.fig` download (a valid Fig 3.2 file).
 - ✅ Library mode lists the bundled libraries with icons.
 - ✅ Unsaved drawing + reload: "Restore unsaved drawing" appears; after Save and reload no offer.
-- ❌ Save first shows an extra "click here to download your file / Ok / Cancel" box (rfd's web save dialog) instead of downloading at once.
-- ❌ The File menu lists desktop-only entries on the web without greying them out (Open/Merge with preview, Digitize, New window, Saved versions, Exit).
-- ❌ Library mode shows the desktop path `~/xfiglib` as Source on the web.
+- ✅ Fixed 2026-10-25 (C2): Save, Save As and Export download at once (Blob and an a-download element through web-sys, no rfd dialog).
+- ✅ Fixed 2026-10-25 (C2): the web File menu hides the desktop-only entries (Open/Merge with preview, Digitize, New window, Saved versions, Capture, Exit).
+- ✅ Fixed 2026-10-25 (C2): Library mode on the web shows "bundled libraries" as Source (no path field, no Use button).
 - Not driven headless: the file picker (Open, Merge, Picture), drop, Export downloads, the print iframe; Firefox and Safari.
 
 ## Revision history

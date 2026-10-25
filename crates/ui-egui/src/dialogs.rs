@@ -759,16 +759,7 @@ impl FileDialogs for NativeDialogs {
     fn download(&self, name: &str, bytes: Vec<u8>) -> Result<(), String> {
         #[cfg(target_arch = "wasm32")]
         {
-            let dialog = rfd::AsyncFileDialog::new().set_file_name(name);
-            wasm_bindgen_futures::spawn_local(async move {
-                // On the web this makes no dialog: the handle's write starts the download.
-                if let Some(handle) = dialog.save_file().await {
-                    if let Err(e) = handle.write(&bytes).await {
-                        log::warn!("download failed: {e}");
-                    }
-                }
-            });
-            Ok(())
+            crate::web_io::browser_download(name, &bytes)
         }
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -2860,6 +2851,7 @@ fn export_apply(app: &mut App, ctx: &egui::Context, act: ExportActions, open: bo
                 if crate::web_io::export(app, &p, &path) {
                     app.dialogs.export.open = false;
                 }
+                #[cfg_attr(target_arch = "wasm32", allow(clippy::needless_return))]
                 return;
             }
             // Native: convert on a thread, the UI keeps drawing (W10-13).

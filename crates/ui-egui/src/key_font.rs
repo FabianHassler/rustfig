@@ -27,6 +27,7 @@ pub fn add_to(fonts: &mut egui::FontDefinitions) {
 
 /// Installed families that cover CJK, best first: Noto and Source Han, then the
 /// macOS, Windows and Linux system fonts.
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 const FALLBACK_FAMILIES: &[&str] = &[
     "Noto Sans CJK SC",
     "Noto Sans CJK JP",
@@ -51,6 +52,7 @@ const FALLBACK_FAMILIES: &[&str] = &[
 ];
 
 /// Symbol and emoji families, tried after the CJK one.
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 const EMOJI_FAMILIES: &[&str] = &["Noto Sans Symbols 2", "Segoe UI Symbol", "Apple Symbols"];
 
 /// The first of `wanted` that is in `installed` (case-insensitive), as installed.

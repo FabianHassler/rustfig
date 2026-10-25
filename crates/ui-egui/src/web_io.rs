@@ -183,6 +183,40 @@ pub fn keep_picture(app: &mut App, name: &str, pick: &WebPick) -> bool {
     .is_some()
 }
 
+/// Gives `bytes` to the user as a download at once: a Blob, an `<a download>`
+/// element, a click (no dialog).
+#[cfg(target_arch = "wasm32")]
+pub fn browser_download(name: &str, bytes: &[u8]) -> Result<(), String> {
+    use wasm_bindgen::JsCast;
+    let err = |what: &str| format!("download failed: {what}");
+    let array = js_sys::Uint8Array::from(bytes);
+    let parts = js_sys::Array::new();
+    parts.push(&array);
+    let opts = web_sys::BlobPropertyBag::new();
+    opts.set_type("application/octet-stream");
+    let blob = web_sys::Blob::new_with_u8_array_sequence_and_options(&parts, &opts).map_err(|_| err("blob"))?;
+    let url = web_sys::Url::create_object_url_with_blob(&blob).map_err(|_| err("url"))?;
+    let document = web_sys::window()
+        .and_then(|w| w.document())
+        .ok_or_else(|| err("no document"))?;
+    let a = document
+        .create_element("a")
+        .map_err(|_| err("element"))?
+        .dyn_into::<web_sys::HtmlAnchorElement>()
+        .map_err(|_| err("anchor"))?;
+    a.set_href(&url);
+    a.set_download(name);
+    if let Some(body) = document.body() {
+        body.append_child(&a).map_err(|_| err("append"))?;
+        a.click();
+        body.remove_child(&a).ok(); // the click has already started the download
+    } else {
+        a.click();
+    }
+    web_sys::Url::revoke_object_url(&url).ok(); // the browser has the data by now
+    Ok(())
+}
+
 /// Save: the figure as a download named after the open file (`figure.fig`
 /// for a new one; a `.rustfig` name keeps the native format).
 pub fn save(app: &mut App) {

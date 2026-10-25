@@ -363,6 +363,10 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
             });
             ui.horizontal(|ui| {
                 ui.label("Source:");
+                if cfg!(target_arch = "wasm32") {
+                    ui.label(source_text(true, &p.source));
+                    return;
+                }
                 let r = ui.add(
                     egui::TextEdit::singleline(&mut p.source)
                         .hint_text("folder, or a list file naming several folders")
@@ -709,5 +713,26 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     }
     if cancel || !open {
         app.library.open = false;
+    }
+}
+
+/// The library "Source" line: on the web the bundled libraries (there is no
+/// folder to choose), on the desktop the folder as typed.
+pub fn source_text(web: bool, source: &str) -> String {
+    if web {
+        "bundled libraries".to_string()
+    } else {
+        source.to_string()
+    }
+}
+
+#[cfg(test)]
+mod source_tests {
+    use super::source_text;
+
+    #[test]
+    fn web_source_is_bundled() {
+        assert_eq!(source_text(true, "~/xfiglib"), "bundled libraries");
+        assert_eq!(source_text(false, "~/xfiglib"), "~/xfiglib");
     }
 }
