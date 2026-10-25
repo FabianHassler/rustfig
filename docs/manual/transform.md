@@ -6,8 +6,8 @@ All of these act on the object you click; a compound is one object. With [Smart 
 
 No key (xfig key Ctrl+S). Resizes an object in proportion.
 
-- Left, “scale box”: press on the object, drag, release. The click picks the nearest of the eight handles of the bounding box. At a corner the fixed point is the opposite corner and the object grows in proportion with the pointer's distance from it. At the middle of an edge only the size across that edge changes (the width for the left and right edges, the height for the top and bottom edges), about the opposite edge (xfig's one-dimension box scale).
-- Middle, “scale about center”: the same around the centre of the object.
+- Left, “scale box”: press on the object, drag, release. The click picks the nearest of the eight handles of the bounding box. At a corner the fixed point is the opposite corner and the object grows in proportion: the factor is the larger of the width and height ratios of the drag (xfig's `adjust_box_pos`), so the corner may end up away from the pointer on the shorter side. At the middle of an edge only the size across that edge changes (the width for the left and right edges, the height for the top and bottom edges), about the opposite edge (xfig's one-dimension box scale).
+- Middle, “scale about center”: the same around the centre of the object, with the factor from the point you pressed on (a vertex when the press is near one) to the pointer, again the larger of the two axis ratios.
 - Right: cancels.
 
 ## Align
@@ -24,7 +24,7 @@ The seven choices (each of the two indicators): **none**; **start**, **centre**,
 
 Key `F`. Mirrors an object about a horizontal line through the clicked point.
 
-- Left, “flip”: flips the object.
+- Left, “flip”: flips the object. As in xfig, the points are mirrored in place (the first point stays the first, a box is not renumbered from its top left corner) and the changed object is put last in the file, so it draws on top of the others of its depth. Rotating works the same way.
 - Middle, “copy & flip”: leaves the original and adds the flipped copy.
 - Right, “set anchor”: marks a point; flips then mirror about the anchor instead of the clicked point. Right again, “unset anchor”, removes it. Choosing a mode also removes it.
 

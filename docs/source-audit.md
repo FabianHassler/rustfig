@@ -255,7 +255,7 @@ Total about 6 h (Capture). Everything else in xfig's 2,122 function definitions 
 | `e_convert.c` | `box_2_box` | 120 | ported | box <-> arc-box conversion with the left button on a box (RustFig turns a box into a spline instead); the spline kind (approximated or interpolated) is not remembered across the round trip | S4-5 |
 | `e_convert.c` | `line_spline` | 149 | ported | tools: `ToolKind::Convert` (left: `object.convert`, right: `object.toggle_closed`) |  |
 | `e_convert.c` | `spline_line` | 218 | ported | tools: `ToolKind::Convert` (left: `object.convert`, right: `object.toggle_closed`) |  |
-| `e_convert.c` | `toggle_polyline_polygon` | 285 | ported | tools: `ToolKind::Convert` (left: `object.convert`, right: `object.toggle_closed`) |  |
+| `e_convert.c` | `toggle_polyline_polygon` | 285 | ported | tools: `ToolKind::Convert` (left: `object.convert`, right: `object.toggle_closed` at the clicked vertex, W22-30) |  |
 | `e_convert.c` | `toggle_open_closed_spline` | 337 | ported | tools: `ToolKind::Convert` (left: `object.convert`, right: `object.toggle_closed`) |  |
 | `e_copy.c` | `copy_selected` | 52 | ported | tools: `ToolKind::Copy` (`move_event` with copy), constrained copy with the middle button |  |
 | `e_copy.c` | `init_arb_copy` | 71 | ported | tools: `ToolKind::Copy` (`move_event` with copy), constrained copy with the middle button |  |
@@ -985,8 +985,8 @@ Total about 6 h (Capture). Everything else in xfig's 2,122 function definitions 
 | `u_elastic.c` | `elastic_movetext` | 907 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
 | `u_elastic.c` | `moving_spline` | 918 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
 | `u_elastic.c` | `elastic_movenewspline` | 927 | replaced | rubber bands are drawn from `Engine::overlay()` for every tool: boxes, lines, polygons, ellipses, circles, arcs, moves, scales |  |
-| `u_elastic.c` | `adjust_box_pos` | 935 | ported | positioning magnet and grid snap (`Engine::snap`, `view.set_snap`) |  |
-| `u_elastic.c` | `adjust_pos` | 990 | ported | positioning magnet and grid snap (`Engine::snap`, `view.set_snap`) |  |
+| `u_elastic.c` | `adjust_box_pos` | 935 | ported | `tools::scale_factors`: the larger axis ratio, signed for box scale (W22-19) |  |
+| `u_elastic.c` | `adjust_pos` | 990 | ported | positioning magnet and grid snap (`Engine::snap`, `view.set_snap`); `constrain_delta` (strict `>`, a tie goes vertical, W22-21) |  |
 | `u_error.c` | `error_handler` | 45 | not needed | X and Xt error handlers (no X); panics are caught by `engine::guard` |  |
 | `u_error.c` | `X_error_handler` | 70 | not needed | X and Xt error handlers (no X); panics are caught by `engine::guard` |  |
 | `u_error.c` | `emergency_quit` | 93 | replaced | crash handling: `engine::guard` plus the recovery files of `engine::recovery` (A6) |  |
@@ -1039,7 +1039,7 @@ Total about 6 h (Capture). Everything else in xfig's 2,122 function definitions 
 | `u_geom.c` | `init_point_array` | 554 | not needed | point array helpers and `atan2` |  |
 | `u_geom.c` | `add_point` | 559 | not needed | point array helpers and `atan2` |  |
 | `u_geom.c` | `add_closepoint` | 586 | not needed | point array helpers and `atan2` |  |
-| `u_geom.c` | `close_to_spline` | 591 | ported | `rustfig_geom` `Affine::rotate`, hit tests (`geom::hit`: distance to segment, arc, ellipse, polyline, spline) |  |
+| `u_geom.c` | `close_to_spline` | 591 | ported | `cmd/tangent.rs` `close_to_spline` on fig2dev's `compute_open_spline`/`compute_closed_spline` points at HIGH_PRECISION (W22-25); hit tests (`geom::hit`) |  |
 | `u_geom.c` | `compute_angle` | 625 | ported | `cmd/measure.rs` (`angle_3p`, `line_angle`, `arc_angle`, `poly_length`, `arc_length`, `poly_area`, `arc_area`) | |
 | `u_geom.c` | `compute_direction` | 663 | ported | `cmd/measure.rs` (`angle_3p`, `line_angle`, `arc_angle`, `poly_length`, `arc_length`, `poly_area`, `arc_area`) | |
 | `u_geom.c` | `compute_3p_angle` | 692 | ported | `cmd/measure.rs` (`angle_3p`, `line_angle`, `arc_angle`, `poly_length`, `arc_length`, `poly_area`, `arc_area`) | |

@@ -43,7 +43,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Rotate",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id], \"angle\": degrees counter-clockwise, \"cx\"?, \"cy\"?, \"copy\"?: bool, \"copies\"?: 1..99}  — copy: rotate copies, keep the originals; copies: that many copies, turned by 1x, 2x, ... the angle",
+            params: "{\"ids\"?: [id], \"angle\": degrees counter-clockwise, \"cx\"?, \"cy\"?, \"copy\"?: bool, \"copies\"?: 1..99, \"reappend\"?: bool (as transform.move)}  — copy: rotate copies, keep the originals; copies: that many copies, turned by 1x, 2x, ... the angle",
             mutates: true,
             enabled: has_selection_or_ids,
             run: rotate,
@@ -79,7 +79,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Flip Left/Right",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id], \"cx\"?, \"copy\"?: bool}  — copy: flip copies, keep the originals",
+            params: "{\"ids\"?: [id], \"cx\"?, \"copy\"?: bool, \"reappend\"?: bool}  — copy: flip copies, keep the originals; reappend as for transform.move",
             mutates: true,
             enabled: always,
             run: |e, p| flip(e, p, true),
@@ -153,11 +153,16 @@ fn move_by(e: &mut Engine, p: &Value) -> CmdResult {
 /// xfig deletes a moved or scaled object and adds it again (`e_move.c`,
 /// `e_scale.c`), so it ends up last in the list and draws on top of the
 /// others of its depth (W22-3). Copies are already new objects at the end.
-fn reappend(e: &mut Engine, p: &Value) {
+pub(super) fn reappend(e: &mut Engine, p: &Value) {
     if opt_bool(p, "copy").ok().flatten().unwrap_or(false) || !opt_bool(p, "reappend").ok().flatten().unwrap_or(false) {
         return;
     }
     let Ok(ids) = e.target_ids(p) else { return };
+    move_to_end(e, &ids);
+}
+
+/// Move the objects to the end of the list, keeping their order.
+pub(super) fn move_to_end(e: &mut Engine, ids: &[rustfig_model::ObjectId]) {
     let objs = &mut e.doc_mut().objects;
     let (moved, mut rest): (Vec<_>, Vec<_>) = std::mem::take(objs).into_iter().partition(|o| ids.contains(&o.id));
     rest.extend(moved);
@@ -210,7 +215,9 @@ fn rotate_by(e: &mut Engine, p: &Value, deg: f64) -> CmdResult {
         1
     };
     if n <= 1 {
-        return apply(e, p, Affine::about(Affine::rotate(deg.to_radians()), c), false);
+        let r = apply(e, p, Affine::about(Affine::rotate(deg.to_radians()), c), false);
+        reappend(e, p);
+        return r;
     }
     // xfig's copy & rotate (`init_copynrotate`, `e_rotate.c`): `n` copies of
     // the originals, the k-th turned by k times the angle about one centre.
@@ -245,5 +252,8 @@ fn flip(e: &mut Engine, p: &Value, horizontal: bool) -> CmdResult {
     } else {
         Affine::scale(1.0, -1.0)
     };
-    apply(e, p, Affine::about(t, c), false)
+    let r = apply(e, p, Affine::about(t, c), false);
+    // `change_*` deletes and adds the object again (W22-22).
+    reappend(e, p);
+    r
 }

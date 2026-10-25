@@ -30,7 +30,7 @@ No key (xfig key Ctrl+E). Opens the edit panel for an object with all of its att
 Key `V`. Turns a polyline into a spline through its points, or a spline into a polyline. Polygons and closed splines go with it. A spline that was turned into a line comes back as the same kind (approximated, interpolated or X-spline) when the next line is turned into a spline; the first conversion makes an interpolated spline. A box becomes a rounded box (arc-box) with the radius of the indicator's Box Curve, and a rounded box becomes a plain box.
 
 - Left, “line/spline, box/arc-box”: click the object.
-- Right, “open/closed”: opens a closed object or closes an open one.
+- Right, “open/closed”: click a point (vertex) of a line, polygon or spline: a closed object opens there, an open one closes. A polygon opens at the clicked point: the open line starts at that point and ends at the point before it (clicking the first point of a polygon opens it at the second, as xfig does). A click on an edge between points does nothing.
 
 ## Open/close
 

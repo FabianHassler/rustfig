@@ -10,7 +10,7 @@
 
 use super::object::{insert_point, remove_point};
 use super::shape::{added, make_ellipse, make_text, style_from};
-use super::{has_objects, ids_value, num, opt_str, point_value, CmdResult, Command};
+use super::{has_objects, ids_value, num, opt_bool, opt_str, point_value, CmdResult, Command};
 use crate::tools::{mode_mask, ToolKind};
 use crate::{Engine, EngineError, Region};
 use rustfig_geom::{Affine, Point, Rect};
@@ -75,7 +75,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Break All Levels",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id]}  — break compounds and the compounds inside them down to single objects; Break mode, right button",
+            params: "{\"ids\"?: [id], \"reappend\"?: bool (as object.ungroup)}  — break compounds and the compounds inside them down to single objects; Break mode, right button",
             mutates: true,
             enabled: |e| !e.selection().is_empty(),
             run: break_all,
@@ -309,6 +309,9 @@ fn break_all(e: &mut Engine, p: &Value) -> CmdResult {
     doc.objects = out;
     if broke == 0 {
         return Err(EngineError::bad_params("no compound selected"));
+    }
+    if opt_bool(p, "reappend")?.unwrap_or(false) {
+        super::transform::move_to_end(e, &freed);
     }
     e.set_selection(freed.clone());
     Ok(json!({"ids": ids_value(&freed)}))

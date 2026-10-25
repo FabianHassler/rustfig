@@ -693,6 +693,25 @@ impl Object {
     pub fn transform(&mut self, t: &Affine, scale_text: bool) {
         let f = |p: &mut Point| *p = t.apply(*p);
         match &mut self.kind {
+            ObjectKind::Ellipse(e) if similarity_angle(t).is_some() => {
+                // xfig's `flip_ellipse`, `rotate_ellipse` and scale: the radii
+                // scale, the angle turns (flip negates it and flips the
+                // direction); circles keep their kind (W22-23).
+                let Some((s, phi, mirror)) = similarity_angle(t) else {
+                    return;
+                };
+                e.center = t.apply(e.center);
+                f(&mut e.start);
+                f(&mut e.end);
+                e.radii = Point::new(e.radii.x * s, e.radii.y * s);
+                if mirror {
+                    e.direction ^= 1;
+                    e.angle = -e.angle;
+                } else if phi != 0.0 {
+                    let a = (e.angle - phi).rem_euclid(std::f64::consts::TAU);
+                    e.angle = (a * 1024.0).round() / 1024.0;
+                }
+            }
             ObjectKind::Ellipse(e) => {
                 let (rx, ry, angle) = transform_ellipse(t, e.radii.x, e.radii.y, e.angle);
                 e.center = t.apply(e.center);
@@ -716,7 +735,8 @@ impl Object {
                 p.points.iter_mut().for_each(f);
                 if p.kind.is_rect() {
                     if preserves_axes(t) {
-                        let r = Rect::from_points(p.points.iter().copied());
+                        // xfig turns and mirrors the points in place (`flip_line`,
+                        // `rotate_line`): the first point stays the first (W22-23).
                         if p.kind == PolyKind::Picture {
                             if let Some(pic) = &mut p.picture {
                                 if t.is_mirroring() {
@@ -724,7 +744,6 @@ impl Object {
                                 }
                             }
                         }
-                        p.points = r.corners().to_vec();
                     } else if p.kind == PolyKind::Box {
                         p.kind = PolyKind::Polygon;
                     }
@@ -804,6 +823,26 @@ impl Object {
             }
         }
     }
+}
+
+/// For a rotation, uniform scale or axis flip (what xfig's modes produce):
+/// the scale factor, the visual turn (clockwise, y down) and whether it
+/// mirrors. `None` for shears and skews.
+fn similarity_angle(t: &Affine) -> Option<(f64, f64, bool)> {
+    let eps = 1e-9;
+    let sc = (t.a * t.a + t.b * t.b).sqrt();
+    if !sc.is_finite() || sc < eps {
+        return None;
+    }
+    let tol = 1e-6 * sc;
+    if (t.a - t.d).abs() < tol && (t.b + t.c).abs() < tol {
+        let phi = t.b.atan2(t.a);
+        return Some((sc, if phi.abs() < eps { 0.0 } else { phi }, false));
+    }
+    if t.b.abs() < tol && t.c.abs() < tol && (t.a + t.d).abs() < tol {
+        return Some((sc, 0.0, true));
+    }
+    None
 }
 
 /// True for transforms that keep axis-aligned rectangles axis-aligned.
