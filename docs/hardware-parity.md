@@ -63,8 +63,8 @@ Build with `cargo xtask web`, serve `dist/` (`cd dist && python3 -m http.server 
 - ✅ Save and reopen in a folder and file named with accents and CJK; settings in `~/.config/rustfig/settings.toml`, recovery in `~/.local/share/rustfig/recovery`.
 - ✅ Export PDF, SVG, PNG, EPS: valid files (`file` identifies them).
 - ❌→fixed: the `.deb` shipped `/usr/bin/fig2dev` and collided with Debian's `fig2dev` package (xfig depends on it); the package no longer installs that link, `install.sh` adds it only where no fig2dev exists.
-- ❌ CJK characters in the file-name box show as boxes (the UI font has no CJK; no system CJK fallback).
-- ❌ On a 1280×712 screen the last row of mode buttons is cut off; the mode panel needs to scroll or shrink.
+- ✅ CJK characters in the file-name box showed as boxes; fixed 2026-10-25: the UI appends an installed CJK font (Noto Sans CJK, Source Han, PingFang, YaHei, WenQuanYi, ...) and a symbol font as last fallbacks (`key_font.rs`; no font is bundled).
+- ✅ On a 1280×712 screen the last row of mode buttons was cut off; fixed 2026-10-25: the mode panel keeps xfig's button size and scrolls vertically (floating scroll bar, no gap).
 - ✅ Checked by the user (2026-10-25, X11): three mouse buttons and the left+right chord with matching hints, xfig's and the Ctrl keys, the print dialog (portal), Copy as picture into another program, double-click in Thunar opens the file, screen capture through the portal, crash recovery after `kill -9`.
 - Open on Linux: HiDPI scaling, the Wayland session.
 
