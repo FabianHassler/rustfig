@@ -37,6 +37,8 @@ If `cargo` cannot write to `~/.cargo` (sandboxed agents), set
 skipped with a warning; set `RUSTFIG_REQUIRE_WASM=1` (as CI does) to make
 it fail instead.
 
+`cargo xtask libraries` writes the libraries RustFig makes itself (`libraries/Feynman/*.fig`, plan D13) from `xtask/src/libraries.rs`: edit the generator, rerun it and commit the files (a test fails when they differ from the generator's output).
+
 `cargo xtask source-audit` (not part of `ci`) lists every function of `old/xfig-3.2.9a/src/*.c` into `docs/source-audit.md`, keeping the status, note and task columns by file and name; run it after porting a function and set the row's status; without `old/` it skips.
 
 GitHub Actions (plans A2, P1): `.github/workflows/ci.yml` runs `cargo xtask ci`

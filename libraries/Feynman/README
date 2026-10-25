@@ -1,0 +1,13 @@
+Feynman-diagram library, made for RustFig (original work, MIT OR Apache-2.0).
+
+Parts for Feynman diagrams: straight fermion and anti-fermion lines (arrow in
+the middle), scalar (dashed), ghost (dotted), photon (wavy), W/Z boson (heavy
+wavy), gluon (curly) and graviton lines, each horizontal (1 inch) and at 45
+degrees, half-circle arcs for loops, vertex dot, hatched and grey blobs,
+momentum arrows, and four complete example diagrams (example_*.fig).
+
+Every line part ends on the 1/4-inch grid: with grid snapping on, join parts
+end to end. Labels are LaTeX special text: type $e^-$ with the Text mode.
+
+The files are written by `cargo xtask libraries` (xtask/src/libraries.rs);
+change the generator, not the files.

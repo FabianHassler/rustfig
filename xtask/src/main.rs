@@ -1,6 +1,7 @@
-//! Project automation: `cargo xtask ci | layers | assets | licences | wasm | web | source-audit`.
+//! Project automation: `cargo xtask ci | layers | assets | licences | wasm | web | source-audit | libraries`.
 
 mod audit;
+mod libraries;
 mod package;
 mod xfig_compare;
 
@@ -514,8 +515,9 @@ fn main() -> ExitCode {
         "package" => package::run(&root(), cargo()),
         "source-audit" => audit::run(&root()),
         "xfig-compare" => xfig_compare::run(&root(), cargo()),
+        "libraries" => libraries::run(&root()),
         _ => Err(
-            "usage: cargo xtask ci | layers | assets | licences | wasm | web | package | source-audit | xfig-compare"
+            "usage: cargo xtask ci | layers | assets | licences | wasm | web | package | source-audit | xfig-compare | libraries"
                 .into(),
         ),
     };
