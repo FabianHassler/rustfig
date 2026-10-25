@@ -279,21 +279,19 @@ fn part(name: &str, objects: Vec<Object>, comments: &[&str], ends: Vec<Point>) -
     }
 }
 
-/// The line parts: horizontal (1 inch, four periods), at 45 degrees, and
-/// the half-circle arcs for loops.
+/// The line parts: horizontal (1 inch, four periods), in one orientation
+/// (the user's decision, 2026-10-25: turning is one click in xfig), and the
+/// half-circle arcs for loops.
 fn line_parts(out: &mut Vec<Part>) {
     let h = Route::Line(p(300.0, 900.0), p(1500.0, 900.0));
-    let d = Route::Line(p(300.0, 1200.0), p(1200.0, 300.0));
-    for (suffix, path, size) in [
-        ("h", h, "horizontal, 1 inch"),
-        ("45", d, "at 45 degrees, up to the right"),
-    ] {
+    {
+        let (path, size) = (h, "horizontal, 1 inch");
         let ends = vec![path.ends().0, path.ends().1];
         let mk = |name: &str, what: &str, how: &str, objs: Vec<Object>| {
             let c1 = format!("Feynman diagram: {what}, {size}");
             let c2 =
                 format!("{how} Ends on the 1/4-inch grid; join parts end to end. Keywords: feynman particle physics");
-            part(&format!("{name}_{suffix}"), objs, &[&c1, &c2], ends.clone())
+            part(name, objs, &[&c1, &c2], ends.clone())
         };
         out.push(mk(
             "fermion",
@@ -1008,7 +1006,7 @@ mod tests {
         let a: Vec<String> = feynman().iter().map(|p| render(p).unwrap()).collect();
         let b: Vec<String> = feynman().iter().map(|p| render(p).unwrap()).collect();
         assert_eq!(a, b);
-        assert!(a.len() > 30);
+        assert!(a.len() >= 20);
     }
 
     #[test]
