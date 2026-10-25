@@ -28,14 +28,16 @@ fn equal_depth_picks_the_first_object_shift_the_last() {
     let at = Point::new(1200.0, 600.0);
     assert_eq!(e.hit_test(at, 30.0), Some(first));
     // Shift on a press that picks (Text mode) takes the last one.
-    let mut e = Engine::new();
-    for t in ["A", "B"] {
-        e.execute("shape.text", &json!({"x": 600, "y": 600, "text": t, "depth": 50}))
-            .unwrap();
-    }
-    e.set_tool(ToolKind::Text);
+    // A fresh drawing per case: an edited text goes to the end of the
+    // list, as in xfig (W22-22), which would change "the last" one.
     let p = Point::new(610.0, 590.0);
     for (shift, want) in [(false, "A"), (true, "B")] {
+        let mut e = Engine::new();
+        for t in ["A", "B"] {
+            e.execute("shape.text", &json!({"x": 600, "y": 600, "text": t, "depth": 50}))
+                .unwrap();
+        }
+        e.set_tool(ToolKind::Text);
         e.tool_event(ToolEvent::Press {
             pos: p,
             button: Button::Left,
