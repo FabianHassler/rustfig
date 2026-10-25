@@ -70,6 +70,49 @@ impl View {
         self.origin = Point::new(fixed.x - anchor.x / s, fixed.y - anchor.y / s);
     }
 
+    /// One Zoom In (`up`) or Zoom Out step as xfig's `inc_zoom`/`dec_zoom`
+    /// followed by `show_zoom`'s rounding (Ported from xfig w_indpanel.c):
+    /// 1, 1.41, 2, 2.83, 4 ... with the same corrections of rounding errors.
+    pub fn zoom_step(zoom: f64, up: bool) -> f64 {
+        const STEP: f32 = std::f32::consts::SQRT_2; // xfig's ZOOM_STEP 1.41421356f
+        let z = zoom as f32;
+        if !z.is_finite() {
+            return zoom;
+        }
+        let n = if up {
+            if z >= MAX_ZOOM as f32 {
+                z
+            } else if z == 1.41 {
+                2.0
+            } else if z == 45.3 {
+                64.0
+            } else if z == 0.35 {
+                0.5
+            } else if z == 0.06 {
+                0.09
+            } else if z == 0.01 {
+                0.02
+            } else {
+                z * STEP
+            }
+        } else if z <= MIN_ZOOM as f32 {
+            z
+        } else if z == 11.3 {
+            8.0
+        } else {
+            z / STEP
+        };
+        let n = n.clamp(MIN_ZOOM as f32, MAX_ZOOM as f32);
+        let r = if n < 10.0 {
+            (n * 100.0 + 0.5).trunc() / 100.0
+        } else if n < 100.0 {
+            (n * 10.0 + 0.5).trunc() / 10.0
+        } else {
+            (n + 0.5).trunc()
+        };
+        f64::from(r)
+    }
+
     /// Fit `r` into the canvas with a small border.
     pub fn fit(&mut self, r: &Rect) {
         if r.is_empty() {
@@ -135,6 +178,23 @@ mod tests {
         assert!(v.to_fig(anchor).dist(before) < 1e-6);
         v.zoom_about(f64::NAN, anchor);
         assert_eq!(v.zoom, 4.0);
+    }
+
+    #[test]
+    fn zoom_steps_follow_xfig() {
+        let mut z = 1.0;
+        let mut up = vec![];
+        for _ in 0..7 {
+            z = View::zoom_step(z, true);
+            up.push(z);
+        }
+        for (got, want) in up.iter().zip([1.41, 2.0, 2.83, 4.0, 5.66, 8.0, 11.3]) {
+            assert!((got - want).abs() < 0.011, "{got} vs {want}");
+        }
+        assert_eq!(View::zoom_step(1.41, true), 2.0);
+        assert_eq!(View::zoom_step(11.3, false), 8.0);
+        assert!((View::zoom_step(1.0, false) - 0.71).abs() < 1e-6);
+        assert_eq!(View::zoom_step(MAX_ZOOM, true), MAX_ZOOM);
     }
 }
 

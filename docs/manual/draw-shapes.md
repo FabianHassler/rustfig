@@ -58,7 +58,7 @@ The length in the dimension line follows xfig: in inches it is a whole number wi
 
 ### Lengths while drawing
 
-While a line, box, circle or ellipse is being drawn, or an object moved or copied, the message panel shows the length, dx, dy and angle of the segment from the fixed point, for example “2 points, Length = 1.0 in, dx = 1.0 in, dy = 0.0 in (0.0 deg)”. With Show Lengths on (command `view.toggle_lengths`, resource `showlengths`) the triangle of dx and dy is drawn at the segment and its two sides are labelled in red.
+While a line, box, circle or ellipse is being drawn, or an object moved or copied, the message panel shows the length, dx, dy and angle of the segment from the fixed point, for example “2 points, Length = 1.0 in, dx = 1.0 in, dy = 0.0 in (0.0 deg)”. While a box or rounded box is drawn the message reads “Width = …, Height = …, Factor = …”, and a regular polygon “Length = …, dx = …, dy = … (angle) deg”. With Show Lengths on (command `view.toggle_lengths`, resource `showlengths`) the triangle of dx and dy is drawn at the segment and its two sides are labelled in red.
 
 Other messages follow xfig as well. Moving or adding a point of a line or spline shows both neighbour lengths and offsets (“Len 1 = ..., Len 2 = ..., dx1 = ...”); moving the middle point of an arc adds its radius (“Rad = ...”); scaling a box or a compound shows “Width = ..., Length = ..., Factor = ...”. **Show crosshair** (View menu, Edit > Global settings, command `view.toggle_crosshair`, resource `crosshair`, option `-crosshair`) draws full-window red lines through the pointer while a shape is being drawn or an object moved, scaled or reshaped.
 

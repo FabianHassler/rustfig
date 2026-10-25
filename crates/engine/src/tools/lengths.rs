@@ -16,6 +16,7 @@ use rustfig_model::{Arc, ObjectKind, PolyKind};
 enum Msg {
     PntsLength(usize),
     Dist,
+    Length,
     Radius,
     Diameter,
     Radius2,
@@ -48,7 +49,8 @@ impl Engine {
             } => {
                 let msg = match kind {
                     ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture | ToolKind::Plot => Msg::Box,
-                    ToolKind::CircleRadius | ToolKind::RegularPolygon => Msg::Radius,
+                    ToolKind::CircleRadius => Msg::Radius,
+                    ToolKind::RegularPolygon => Msg::Length,
                     ToolKind::CircleDiameter | ToolKind::EllipseDiameter => Msg::Diameter,
                     ToolKind::EllipseRadii => Msg::Radius2,
                     _ => return None,
@@ -94,7 +96,26 @@ impl Engine {
             Msg::Radius => format!("Radius = {l}, dx = {x}, dy = {y}"),
             Msg::Diameter => format!("Diameter = {l}, dx = {x}, dy = {y}"),
             Msg::Radius2 => format!("Radius1 = {x}, Radius2 = {y}"),
-            Msg::Box => format!("Width = {}, Height = {}", fmt(dx.abs()), fmt(dy.abs())),
+            Msg::Length => format!("Length = {l}, dx = {x}, dy = {y} ({ang:.1}) deg"),
+            // `boxsize_msg`: the factor compares with `from_x`/`from_y`,
+            // which xfig leaves at 0 unless a move-point or scale mode set
+            // them.
+            Msg::Box => {
+                let (od_x, od_y) = (s.fix.x.abs(), s.fix.y.abs());
+                let (nd_x, nd_y) = (dx.abs(), dy.abs());
+                let factor = if od_x != 0.0 && nd_x != 0.0 {
+                    nd_x / od_x
+                } else if od_y != 0.0 && nd_y != 0.0 {
+                    nd_y / od_y
+                } else {
+                    0.0
+                };
+                format!(
+                    "Width = {}, Height = {}, Factor = {factor:.3}",
+                    fmt(dx.abs()),
+                    fmt(dy.abs())
+                )
+            }
         };
         self.set_status(text);
     }

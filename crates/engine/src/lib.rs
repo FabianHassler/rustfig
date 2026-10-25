@@ -119,6 +119,9 @@ pub struct Engine {
     convert_kind: rustfig_model::SplineKind,
     /// While a plain click acts on a located object, the one it must pick.
     locate_pick: Option<ObjectId>,
+    /// Shift is down on this press: pick the last matching object of a depth
+    /// (xfig's `shift` in `u_search.c` searches from the end of each list).
+    pick_last: bool,
     tool: ToolKind,
     tool_state: tools::ToolState,
     /// Super/subscript state of the text being typed.
@@ -197,6 +200,7 @@ impl Engine {
             locate: None,
             convert_kind: rustfig_model::SplineKind::Interpolated,
             locate_pick: None,
+            pick_last: false,
             tool: ToolKind::None,
             tool_state: tools::ToolState::Idle,
             text_sub: tools::TextSub::default(),
@@ -720,7 +724,8 @@ impl Engine {
             return Some(o.id);
         }
         let boxes = self.object_bboxes();
-        // (depth, xfig type rank, index): the front-most is the one drawn last.
+        // (depth, xfig type rank, index): at equal depth xfig takes the first
+        // match (type order, then file order), with Shift the last.
         let mut best: Option<(i32, u8, usize)> = None;
         for (i, o) in self.doc.objects.iter().enumerate() {
             let Some((_, bb, _)) = boxes.get(i) else { break };
@@ -760,7 +765,15 @@ impl Engine {
             let key = (o.depth(), o.xfig_type_rank(), i);
             let better = match best {
                 None => true,
-                Some((bd, br, bi)) => key.0 < bd || (key.0 == bd && (key.1, key.2) > (br, bi)),
+                Some((bd, br, bi)) => {
+                    key.0 < bd
+                        || (key.0 == bd
+                            && if self.pick_last {
+                                (key.1, key.2) > (br, bi)
+                            } else {
+                                (key.1, key.2) < (br, bi)
+                            })
+                }
             };
             if better {
                 best = Some(key);

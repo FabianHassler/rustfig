@@ -2149,6 +2149,9 @@ fn compound_panel_repositions_rescales_collapses_and_edits_texts() {
         rustfig_ui_egui::dialogs::Geo::Compound { nw, se } => (*nw, *se),
         g => panic!("{g:?}"),
     };
+    // W22-26: the corners are the geometry's own (no line width), as xfig's.
+    let g = first_of(&h, "compound").geometry_bbox();
+    assert_eq!((nw, se), ([g.min.x, g.min.y], [g.max.x, g.max.y]));
     let st = h.state().dialogs.edit.as_ref().unwrap();
     assert_eq!((st.min_depth, st.max_depth), (40, 70));
     assert_eq!(st.texts, ["One"]);

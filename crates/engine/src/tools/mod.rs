@@ -1036,7 +1036,11 @@ impl Engine {
                 self.locate = None;
             }
         }
-        self.dispatch_tool(ev)
+        let shift_press = matches!(ev, ToolEvent::Press { shift: true, .. });
+        self.pick_last = shift_press;
+        let r = self.dispatch_tool(ev);
+        self.pick_last = false;
+        r
     }
 
     /// Start Edit > Paste: the cut buffer is attached to the pointer, its
@@ -1906,6 +1910,8 @@ impl Engine {
                             preedit: String::new(),
                             drag: false,
                         };
+                        // `d_text.c`: the message once the text is ready.
+                        self.set_status("Ready for text input (from keyboard)".to_string());
                         return Ok(());
                     }
                 }
@@ -1918,6 +1924,7 @@ impl Engine {
                     preedit: String::new(),
                     drag: false,
                 };
+                self.set_status("Ready for text input (from keyboard)".to_string());
                 Ok(())
             }
             ToolEvent::Move { pos } => {

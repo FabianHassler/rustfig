@@ -579,7 +579,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
                     egui::Align2::LEFT_BOTTOM,
                     n.to_string(),
                     egui::FontId::monospace(10.0),
-                    Color32::from_rgb(0, 0, 255),
+                    Color32::from_rgb(255, 0, 0), // xfig draws them in red
                 );
             }
         }

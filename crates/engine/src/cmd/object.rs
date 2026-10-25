@@ -1031,13 +1031,10 @@ fn set_geometry(e: &mut Engine, p: &Value) -> CmdResult {
     };
     let resize = opt_bool(p, "resize")?.unwrap_or(false);
     let bad = |m: &str| EngineError::bad_params(m.to_string());
-    // A compound's corners are its fig2dev bounds (xfig's `nwcorner` and
-    // `secorner`).
+    // A compound's corners are those of its geometry, without line widths
+    // (xfig's `nwcorner` and `secorner`, which the panel shows).
     let old_bounds = match e.doc().get(id) {
-        Some(o) if matches!(o.kind, ObjectKind::Compound(_)) => {
-            let mut ctx = rustfig_format::bridge::from_model::context(e.doc());
-            Some(rustfig_format::bridge::object_bounds(o, &mut ctx))
-        }
+        Some(o) if matches!(o.kind, ObjectKind::Compound(_)) => Some(o.geometry_bbox()),
         _ => None,
     };
     let o = e

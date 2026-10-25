@@ -252,9 +252,9 @@ fn compound_corners_reposition_and_rescale_like_xfig() {
     )
     .unwrap();
     let v = first_poly_points(&e);
-    // (the corners are fig2dev's bounds, which include the line width)
-    assert!((v.iter().map(|q| q.0).fold(f64::MAX, f64::min) - 1000.0).abs() < 20.0);
-    assert!((v.iter().map(|q| q.1).fold(f64::MAX, f64::min) - 2000.0).abs() < 20.0);
+    // (the corners are the geometry's, without line width)
+    assert!((v.iter().map(|q| q.0).fold(f64::MAX, f64::min) - 1000.0).abs() < 1.0);
+    assert!((v.iter().map(|q| q.1).fold(f64::MAX, f64::min) - 2000.0).abs() < 1.0);
     // Rescale about the top-left corner (width and height, Return).
     e.execute(
         "object.set_geometry",

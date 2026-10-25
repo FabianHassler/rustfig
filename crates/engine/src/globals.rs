@@ -73,8 +73,8 @@ impl Engine {
 
 fn collect_numbers(o: &Object, out: &mut Vec<(Point, usize)>) {
     match &o.kind {
-        ObjectKind::Polyline(l) => out.extend(l.points.iter().enumerate().map(|(i, p)| (*p, i + 1))),
-        ObjectKind::Spline(s) => out.extend(s.points.iter().enumerate().map(|(i, p)| (*p, i + 1))),
+        ObjectKind::Polyline(l) => out.extend(l.points.iter().enumerate().map(|(i, p)| (*p, i))),
+        ObjectKind::Spline(s) => out.extend(s.points.iter().enumerate().map(|(i, p)| (*p, i))),
         ObjectKind::Compound(c) => {
             for m in &c.objects {
                 if out.len() >= MAX_VERTEX_NUMBERS {
@@ -120,6 +120,8 @@ mod tests {
             .unwrap();
         let n = e.vertex_numbers();
         assert_eq!(n.len(), 3);
-        assert_eq!(n.last().map(|x| x.1), Some(3));
+        // xfig numbers from 0 (W22-28).
+        assert_eq!(n.first().map(|x| x.1), Some(0));
+        assert_eq!(n.last().map(|x| x.1), Some(2));
     }
 }

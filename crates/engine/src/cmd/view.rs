@@ -15,7 +15,7 @@ pub(super) fn commands() -> Vec<Command> {
             params: "{}",
             mutates: false,
             enabled: always,
-            run: |e, _| zoom_by(e, 2.0),
+            run: |e, _| zoom_by(e, true),
         },
         Command {
             id: "view.zoom_out",
@@ -25,7 +25,7 @@ pub(super) fn commands() -> Vec<Command> {
             params: "{}",
             mutates: false,
             enabled: always,
-            run: |e, _| zoom_by(e, 0.5),
+            run: |e, _| zoom_by(e, false),
         },
         Command {
             id: "view.zoom_fit",
@@ -369,9 +369,10 @@ fn parse_mode(s: &str) -> Result<SnapMode, EngineError> {
         .map_err(|_| EngineError::bad_params(format!("unknown positioning mode {s:?}")))
 }
 
-fn zoom_by(e: &mut Engine, f: f64) -> CmdResult {
+fn zoom_by(e: &mut Engine, up: bool) -> CmdResult {
     let c = Point::new(e.view.size.0 / 2.0, e.view.size.1 / 2.0);
-    let z = e.view.zoom * f;
+    let z = crate::view::View::zoom_step(e.view.zoom, up);
     e.view.zoom_about(z, c);
+    e.view.apply_integer_zoom(false);
     Ok(json!({"zoom": e.view.zoom}))
 }

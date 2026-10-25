@@ -8,7 +8,7 @@ The upper part is xfig's panel, with the same rows. **Ok** applies every row you
 - **Track mouse in rulers**: the markers in the rulers follow the pointer (resource `trackCursor`).
 - **Show page borders**, **Show depth manager**, **Show info balloons** and the **balloon delay**: the View menu's switches.
 - **Show line lengths**: the length triangle while drawing lines (View > Show line lengths).
-- **Show vertex numbers**: numbers the points of lines, polygons and splines on the canvas (View > Show vertex numbers, resource `shownums`).
+- **Show vertex numbers**: numbers the points of lines, polygons and splines on the canvas (in red, from 0) (View > Show vertex numbers, resource `shownums`).
 - **Allow negative coords**: when off, points are kept right of and below the origin and the view moves to the origin (`allownegcoords`).
 - **Draw axis lines**: pink lines through the origin (`showaxislines`).
 - **Freehand drawing resolution**: the least distance, in Fig units (1/1200 inch), between two points of a freehand stroke (`freehand_resolution`, default 25).

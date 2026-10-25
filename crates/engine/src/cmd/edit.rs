@@ -125,6 +125,8 @@ pub(super) fn commands() -> Vec<Command> {
                 e.doc_mut().close_all();
                 e.doc_mut().objects.clear();
                 e.set_selection(Vec::new());
+                // `w_cmdpanel.c`: the hint after Delete All.
+                e.set_status("Immediate Undo will restore the figure".to_string());
                 Ok(json!({}))
             },
         },

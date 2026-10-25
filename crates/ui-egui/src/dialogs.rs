@@ -497,7 +497,10 @@ impl Dialogs {
                         _ => None,
                     })
                     .collect();
-                if let Some(b) = engine.object_fig_bounds(id).filter(|b| !b.is_empty()) {
+                // xfig shows the compound's own corners, not its drawn extent
+                // with line widths (`nwcorner`/`secorner`, four decimals).
+                let b = o.geometry_bbox();
+                if !b.is_empty() {
                     st.geo = Geo::Compound {
                         nw: [b.min.x, b.min.y],
                         se: [b.max.x, b.max.y],
@@ -1939,6 +1942,12 @@ const IDX_W: f32 = 30.0;
 const SHAPE_W: f32 = 56.0;
 
 fn coord(ui: &mut egui::Ui, v: &mut f64, scale: f64) {
+    coord_dec(ui, v, scale, 2);
+}
+
+/// `coord` with `min_dec` decimals for inch/cm units (a compound's corners
+/// show four, as xfig's).
+fn coord_dec(ui: &mut egui::Ui, v: &mut f64, scale: f64, min_dec: usize) {
     let mut d = *v / scale;
     let step = if scale > 100.0 { 0.01 } else { 1.0 };
     if ui
@@ -1946,7 +1955,7 @@ fn coord(ui: &mut egui::Ui, v: &mut f64, scale: f64) {
             [COORD_W, ui.spacing().interact_size.y],
             egui::DragValue::new(&mut d)
                 .speed(step)
-                .min_decimals(if scale > 100.0 { 2 } else { 0 })
+                .min_decimals(if scale > 100.0 { min_dec } else { 0 })
                 .max_decimals(4),
         )
         .changed()
@@ -1956,12 +1965,16 @@ fn coord(ui: &mut egui::Ui, v: &mut f64, scale: f64) {
 }
 
 fn xy_row(ui: &mut egui::Ui, label: &str, p: &mut [f64; 2], scale: f64) {
+    xy_row_dec(ui, label, p, scale, 2);
+}
+
+fn xy_row_dec(ui: &mut egui::Ui, label: &str, p: &mut [f64; 2], scale: f64, min_dec: usize) {
     rl(ui, label);
     ui.horizontal(|ui| {
         ui.label("X =");
-        coord(ui, &mut p[0], scale);
+        coord_dec(ui, &mut p[0], scale, min_dec);
         ui.label("Y =");
-        coord(ui, &mut p[1], scale);
+        coord_dec(ui, &mut p[1], scale, min_dec);
     });
     ui.end_row();
 }
@@ -2291,14 +2304,14 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             let (nw0, se0) = (*nw, *se);
                             let mut size = [se0[0] - nw0[0], se0[1] - nw0[1]];
                             let size0 = size;
-                            xy_row(ui, "Top left corner", nw, scale);
-                            xy_row(ui, "Bottom right corner", se, scale);
+                            xy_row_dec(ui, "Top left corner", nw, scale, 4);
+                            xy_row_dec(ui, "Bottom right corner", se, scale, 4);
                             rl(ui, "Dimensions");
                             ui.horizontal(|ui| {
                                 ui.label("Width =");
-                                coord(ui, &mut size[0], scale);
+                                coord_dec(ui, &mut size[0], scale, 4);
                                 ui.label("Height =");
-                                coord(ui, &mut size[1], scale);
+                                coord_dec(ui, &mut size[1], scale, 4);
                             });
                             ui.end_row();
                             if *nw != nw0 {
