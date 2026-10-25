@@ -1,6 +1,6 @@
 # Function-level source audit of xfig (S4)
 
-**Status:** 2026-10-23 (S4-7: `draw_shift_mousefun_canvas` and `_canvas2` ported). 2026-10-22 (D5: the `e_measure.c` functions, the measure results and the angle `compute_*` functions are ported). 2026-10-22 (D4: the `e_tangent.c` functions, the Tangent/Norm Length button and `smart_next_{arc,ellipse,line,spline}_found` are ported). 2026-10-22 (S4 done: every function definition of `old/xfig-3.2.9a/src/*.c` has a status). Regenerate the table with `cargo xtask source-audit` (skips quietly when `old/` is absent; keeps the status, note and task columns of existing rows, merged by file, function name and occurrence).
+**Status:** 2026-10-25 (refreshed: statuses after D8, E4, F5, E5, D10, D11, S4-1 to S4-4, W10-2, W10-3, W10-36, W22; 1,098 ported, 773 replaced, 224 not needed, 6 partial, 21 missing; the table was already ahead of the summary, which now agrees with it). 2026-10-23 (S4-7: `draw_shift_mousefun_canvas` and `_canvas2` ported). 2026-10-22 (D5: the `e_measure.c` functions, the measure results and the angle `compute_*` functions are ported). 2026-10-22 (D4: the `e_tangent.c` functions, the Tangent/Norm Length button and `smart_next_{arc,ellipse,line,spline}_found` are ported). 2026-10-22 (S4 done: every function definition of `old/xfig-3.2.9a/src/*.c` has a status). Regenerate the table with `cargo xtask source-audit` (skips quietly when `old/` is absent; keeps the status, note and task columns of existing rows, merged by file, function name and occurrence).
 
 S0 ([`source-map.md`](source-map.md)) maps C files to RustFig modules; this file goes one level down, to every function. It covers xfig only. fig2dev's functions were audited one by one in the fig2dev repository (<https://github.com/FabianHassler/fig2dev>, its audit passes; the inventory of the first rounds is `plan/fig2dev-audit.md` here, local and gitignored) and their hardening is task B11; they are not repeated here.
 
@@ -23,48 +23,21 @@ S0 ([`source-map.md`](source-map.md)) maps C files to RustFig modules; this file
 
 | Status | Functions |
 |---|---:|
-| ported | 868 |
-| replaced | 584 |
-| not needed | 218 |
-| partial | 58 |
-| missing | 384 |
-| **total** | **2112** (plus 14 in `xfigmain.c`, a generated copy of `main.c`) |
+| ported | 1098 |
+| replaced | 773 |
+| not needed | 224 |
+| partial | 6 |
+| missing | 21 |
+| **total** | **2122** (of which 14 in `xfigmain.c`, a generated copy of `main.c`) |
 
-Missing and partial functions by task (a function counts under each task it names):
+Missing and partial functions by task (a function counts under each task it names; 2026-10-25):
 
-- **D10** (67): `d_line.c`: `init_trace_drawing`; `e_align.c`: `init_align_canvas`; `e_compound.c`: `close_compound`; `e_flip.c`: `set_unset_anchor`; `e_rotate.c`: `set_unset_center`; `e_scale.c`: `rescale_dimension_line`; `f_util.c`: `dimline_components`; `u_create.c`: `create_dimension_line`, `create_tick`, `create_dimline_ticks`, `backward_dim_arrow`, `forward_dim_arrow`; `u_drag.c`: `array_place_ellipse`, `array_place_arc`, `array_place_line`, `array_place_text`, `array_place_spline`, `array_place_compound`; `w_canvas.c`: `canvas_selected`, `toggle_show_lengths`; `w_indpanel.c`: `popup_dimline_panel`, `line_color_select`, `box_color_select`, `text_color_select`, `set_fixed_text`, `set_actual_text`, `draw_cur_dimline`, `dimline_style_select`, `left_arrow_type_select`, `right_arrow_type_select`, `dimline_font_popup`, `dimline_set_font_image`, `dimline_panel_preview`, `dimline_panel_ok`, `dimline_panel_cancel`, `get_dimline_values`, `inc_dimline`, `dec_dimline`, `show_dimline`, `inc_numcopies`, `dec_numcopies`, `show_numcopies`, `inc_numxcopies`, `dec_numxcopies`, `show_numxcopies`, `inc_numycopies`, `dec_numycopies`, `show_numycopies`; `w_keyboard.c`: `next_keyboard_history`, `prior_keyboard_history`, `ignore_keyboard_input`, `handle_keyboard_input`, `create_keyboard_panel`, `popup_keyboard_panel`, `popdown_keyboard_panel`; `w_mousefun.c`: `draw_mousefun_kbd`, `clear_mousefun_kbd`, `init_kbd_actions`; `w_msgpanel.c`: `boxsize_msg`, `boxsize_scale_msg`, `erase_box_lengths`, `erase_lengths`, `length_msg`, `altlength_msg`, `length_msg2`, `arc_msg`, `make_dimension_string`
-- **D6** (43): `e_placelib.c`: `put_selected`, `transform_lib_obj`, `sel_place_lib_obj_proc`, `sel_place_lib_obj`, `put_draw`, `change_draw_mode`, `place_lib_object_orig`, `place_lib_object`, `move_object`, `init_move_object`, `cancel_place_lib_obj`; `w_library.c`: `SPComp`, `LRComp`, `put_selected_request`, `library_stop`, `library_dismiss`, `library_cancel`, `load_library`, `put_object_sel`, `load_lib_obj`, `NewObjectSel`, `popup_library_panel`, `create_library_panel`, `make_library_menu`, `sel_view`, `change_icon_size`, `set_preview_name`, `set_cur_obj_name`, `erase_pixmap`, `PutLibraryEntry`, `ScanLibraryDirectory`, `MakeLibrary`, `MakeObjectLibrary`, `MakeLibraryFileList`, `libraryStatus`, `preview_libobj`, `update_preview`, `set_comments`, `sel_item_icon`, `unsel_icon`, `sel_icon`, `copy_icon_to_preview`; `w_modepanel.c`: `stub_popup_library`
-- **E4** (37): `w_color.c`: `create_color_panel`, `pen_fill_activate`, `restore_mixed_colors`, `set_mixed_color`, `set_user_color`, `pick_contrast`, `set_mixed_name`, `cancel_color_popup`, `del_color`, `undel_color`, `switch_edit`, `set_slider_sensitivity`, `set_color_ok`, `_set_std_color`, `set_std_color`, `_pick_memory`, `pick_memory`, `lock_toggle`, `draw_boxed`, `erase_boxed`, `color_borders`, `WhichButton`, `update_from_triple`, `update_scrl_triple`, `update_triple`, `move_scroll`, `StoreMix_and_Mem`, `Scrolled`, `Update_HSV`, `ThumbHSV`, `Thumbed`, `move_lock`, `HSVToRGB`, `RGBToHSV`, `PctToRGB`, `DoGrabPixel`, `doGrab`
-- **E6** (34): `w_style.c`: `construct_style`, `set_style`, `print_indent`, `print_style`, `print_style_family`, `print_family_set`, `get_nstyle_line`, `trim`, `parse_style`, `parse_family_style`, `parse_family_set`, `load_family_set`, `save_family_set`, `add_family_to_family_set`, `add_style_to_family`, `delete_family_from_family_set`, `delete_style_from_family`, `build_family_text`, `build_style_text`, `style_update`, `family_select`, `style_select`, `add_family`, `delete_family`, `add_style`, `delete_style`, `save_style`, `load_style`, `confirm_close_style`, `close_style`, `init_manage_style_panel`, `add_style_actions`, `setup_manage_style_panel`, `popup_manage_style_panel`
-- **B5** (33): `u_print.c`: `cmdlinetoargarray`, `start_argumentlist`, `print_to_printer`, `print_to_batchfile`, `strsub`, `pass_environment`, `print_spawn_printcmd`; `w_print.c`: `print_panel_dismiss`, `do_print`, `fit_page`, `get_magnif`, `update_mag`, `update_figure_size`, `do_print_batch`, `do_clear_batch`, `update_batch_count`, `orient_select`, `just_select`, `papersize_select`, `multiple_select`, `overlap_select`, `background_select`, `print_grid_minor_select`, `print_grid_major_select`, `print_command_select`, `printer_select`, `print_update_figure_size`, `popup_print_panel`, `create_print_panel`, `switch_print_layers`, `switch_bound`, `parse_printcap`, `make_layer_choice`
-- **D8** (32): `e_movept.c`: `init_arcpointmoving`, `cancel_movedarcpoint`, `fix_movedarcpoint`, `init_splinepointmoving`, `cancel_movedsplinepoint`, `fix_movedsplinepoint`, `init_linepointmoving`, `cancel_movedlinepoint`, `fix_movedlinepoint`; `u_create.c`: `new_link`; `u_elastic.c`: `elastic_linelink`, `elastic_links`, `elastic_arclink`; `u_smartsearch.c`: `init_smart_searchproc_left`, `init_smart_searchproc_middle`, `init_smart_searchproc_right`, `smart_object_search_left`, `smart_object_search_middle`, `smart_object_search_right`, `set_smart_points`, `init_smart_search`, `do_smart_object_search`, `smart_next_arc_found`, `smart_next_ellipse_found`, `smart_next_line_found`, `smart_next_spline_found`, `smart_next_text_found`, `smart_next_compound_found`, `smart_show_objecthighlight`, `smart_erase_objecthighlight`, `smart_toggle_objecthighlight`, `smart_null_proc`
-- **W10-10** (26): `w_export.c`: `exp_getxyoff`, `preview_select`, `orient_select`, `just_select`, `papersize_select`, `multiple_select`, `overlap_select`, `set_postscript_pdf_options`, `set_export_mask`, `smooth_select`, `background_select`, `transp_select`, `export_grid_minor_select`, `export_grid_major_select`, `manage_optional`, `export_update_figure_size`, `fit_page`, `get_magnif`, `update_mag`, `update_figure_size`, `get_quality`, `exp_xoff_unit_select`, `exp_yoff_unit_select`, `toggle_hpgl_pcl_switch`, `toggle_hpgl_font`, `toggle_pdf_pagemode`
-- **W10-4** (26): `w_export.c`: `exp_getxyoff`, `preview_select`, `orient_select`, `just_select`, `papersize_select`, `multiple_select`, `overlap_select`, `set_postscript_pdf_options`, `set_export_mask`, `smooth_select`, `background_select`, `transp_select`, `export_grid_minor_select`, `export_grid_major_select`, `manage_optional`, `export_update_figure_size`, `fit_page`, `get_magnif`, `update_mag`, `update_figure_size`, `get_quality`, `exp_xoff_unit_select`, `exp_yoff_unit_select`, `toggle_hpgl_pcl_switch`, `toggle_hpgl_font`, `toggle_pdf_pagemode`
-- **D11** (14): `w_capture.c`: `captureImage`, `rshift`, `getImageData`, `selectedRootArea`, `drawRect`, `getCurrentColors`, `canHandleCapture`; `w_digitize.c`: `popup_digitize_panel`, `create_digitize_panel`, `digitize_panel_done`, `digitize_panel_cancel`, `update_example`, `switch_file_mode`; `w_zoom.c`: `unzoom`
-- **W10-16** (12): `e_edit.c`: `reread_picfile`, `expand_pic`, `shrink_pic`, `origsize_pic`, `scale_percent_pic`, `reposition_picture`, `resize_picture`, `flip_pic_select`, `rotation_select`, `image_edit_button`, `browse_button`, `what_rotation`
-- **S4-1** (10): `u_markers.c`: `toggle_csrhighlight`, `toggle_ellipsehighlight`, `toggle_archighlight`, `toggle_texthighlight`, `toggle_compoundhighlight`, `toggle_linehighlight`, `toggle_splinehighlight`; `u_search.c`: `show_objecthighlight`, `erase_objecthighlight`, `toggle_objecthighlight`
-- **W10-15** (10): `e_edit.c`: `make_window_compound`, `modify_compound`, `reposition_top`, `reposition_bottom`, `rescale_compound`, `get_new_compound_values`, `done_compound`, `check_depth`, `collapse_depth`, `collapse_depths`
-- **D4** (9): `e_tangent.c`: `tangent_selected`, `init_tangent_adding`, `init_normal_adding`, `tangent_or_normal`, `tangent_normal_line`; `w_indpanel.c`: `inc_tangnormlen`, `dec_tangnormlen`, `show_tangnormlen`; `w_modepanel.c`: `stub_tangent_selected`
-- **E10** (9): `d_text.c`: `new_text_down`, `new_text_up`, `split_at_cursor`, `initialize_char_handler`, `terminate_char_handler`, `char_handler`; `w_canvas.c`: `get_canvas_clipboard`, `paste_primary_selection`, `canvas_paste`
-- **W10-2** (8): `w_help.c`: `launch_refman`, `launch_refpdf_en`, `launch_refpdf_jp`, `launch_howto`, `launch_man`, `launch_viewer`, `check_docfile`, `help_ok`
-- **W10-31** (8): `w_indpanel.c`: `arrowsize_panel_dismiss`, `arrowsize_panel_cancel`, `arrowsize_panel_set`, `set_arrow_size_state`, `popup_arrowsize_panel`, `inc_arrowsize`, `dec_arrowsize`, `show_arrowsize`
-- **E3** (7): `w_canvas.c`: `canvas_selected`; `w_zoom.c`: `zoom_selected`, `my_box`, `elastic_mybox`, `init_zoombox_drawing`, `do_zoom`, `cancel_zoom`
-- **F5** (7): `w_srchrepl.c`: `popup_spell_check_panel`, `spell_panel_dismiss`, `spell_check`, `write_text_from_compound`, `spell_select_word`, `spell_correct_word`, `show_spell_msg`
-- **S4-2** (7): `w_cmdpanel.c`: `paste`, `cancel_paste`, `paste_draw`, `move_paste_object`, `init_move_paste_object`, `place_object`, `place_object_orig_posn`
+- **D11** (7): `w_capture.c`: `captureImage`, `rshift`, `getImageData`, `selectedRootArea`, `drawRect`, `getCurrentColors`, `canHandleCapture`
 - **W10-12** (7): `w_file.c`: `file_getxyoff`, `file_xoff_unit_select`, `file_yoff_unit_select`, `check_cancel`, `clear_preview`, `file_preview_stop`, `preview_figure`
-- **E5** (6): `w_cmdpanel.c`: `charmap_font_dimensions`, `refresh_character_panel`, `character_panel_close`, `popup_character_map`, `paste_character`, `redraw_character`
-- **S4-3** (5): `f_picobj.c`: `internal_path`, `xf_relpath`, `relative_path`, `xf_external_path`, `external_path`
-- **S4-4** (5): `w_cursor.c`: `init_cursor`, `recolor_cursors`, `reset_cursor`, `set_temp_cursor`, `set_cursor`
-- **W10-32** (5): `w_indpanel.c`: `nval_panel_dismiss`, `toggle_int_zoom`, `nval_panel_cancel`, `nval_panel_set`, `popup_nval_panel`
-- **F3** (3): `d_text.c`: `initialize_char_handler`, `terminate_char_handler`, `char_handler`
-- **S3** (2): `f_util.c`: `update_fig_files`; `main.c`: `main`
-- **S4-5** (2): `e_convert.c`: `init_convert_line_spline`, `box_2_box`
-- **S4-6** (2): `e_edit.c`: `change_sfactor`; `w_canvas.c`: `canvas_selected`
-- **S4-7** (2): `w_mousefun.c`: `draw_shift_mousefun_canvas`, `draw_shift_mousefun_canvas2`
-- **W10-36** (2): `w_color.c`: `DoGrabPixel`, `doGrab`
+- **E10** (5): `d_text.c`: `new_text_down`, `new_text_up`, `initialize_char_handler`, `terminate_char_handler`, `char_handler`
+- **D10** (5): `w_indpanel.c`: `draw_cur_dimline`, `dimline_panel_preview`; `w_msgpanel.c`: `boxsize_scale_msg`, `length_msg2`, `arc_msg`
+- **B9** (2): `w_export.c`: `toggle_hpgl_pcl_switch`, `toggle_hpgl_font`
 - **E9** (1): `w_canvas.c`: `canvas_selected`
-- **W10-3** (1): `w_canvas.c`: `toggle_show_vertexnums`
-- **W10-33** (1): `w_indpanel.c`: `show_gridmode`
 
 <!-- /audit-counts -->
 
@@ -95,12 +68,31 @@ These are visible to users and proposed as **not needed**; they stay open until 
 5. **Print batch list and printcap parsing** (`do_print_batch`, `do_clear_batch`, `update_batch_count`, `print_to_batchfile`, `parse_printcap`): not carried into the modern print dialog (B5): the OS print dialog chooses the printer and queues jobs.
 6. **Digitize** (6 functions of `w_digitize.c`, a tablet pen against a scanned figure): D11 keeps it as xfig's function; proposal: replace by clicking on a picture (pictures are already placed with coordinates) or drop it, tablets being rare. **Capture** (`w_capture.c`): through the OS screenshot facilities and E7's image paste.
 
+## Missing, by area (2026-10-25)
+
+What is still missing or partial after the refresh (21 functions missing, 6 partial), as user-visible functions. Hours are estimates.
+
+| Area | Function | Functions | Task | Hours |
+|---|---|---|---|---:|
+| Editing | Show arc radius and angle, and the scale box size, in the message panel while drawing or scaling | `arc_msg`, `length_msg2`, `boxsize_scale_msg` | D10 | 3 |
+| Editing | Full-window crosshair (resource `crosshair`) | `canvas_selected` | E9 | 2 |
+| Attributes | Dimension-line panel preview draws the chosen arrow types (now plain triangles) | `draw_cur_dimline`, `dimline_panel_preview` | D10 | 2 |
+| Files | Open/Merge panel with figure preview, comments, object count and Figure Offset X/Y with units | `w_file.c` (7) | W10-12 | 4 |
+| Files | Capture: grab a screen area into a picture object (through the OS screenshot facilities) | `w_capture.c` (7) | D11 | 6 |
+| Text | Up/Down arrows start the next text above or below; xfig's Ctrl-key line editing (kill line, begin/end of line) | `new_text_up`, `new_text_down`, `char_handler` (3) | E10 | 4 |
+| View | none (Unzoom, vertex numbers, cursors, highlights are done) | | | 0 |
+| Help | none (the bundled manual replaces the launchers) | | | 0 |
+| Export | HPGL/PCL rows of the export panel (pen/colour switch, font) | `toggle_hpgl_pcl_switch`, `toggle_hpgl_font` | B9, W10-4 | 2 |
+
+Total about 23 h. Everything else in xfig's 2,122 function definitions is ported, replaced by a modern equivalent or X11/Xt plumbing.
+
 ## Revision history
 
 | Date | Note |
 |------|------|
 | 2026-10-21 | First version (S4): 2,126 function definitions of xfig 3.2.9a listed by `cargo xtask source-audit`, each with a status; S4-1 to S4-7 added; `source-map.md` statuses corrected. |
 | 2026-10-22 | D3: `e_chop.c`'s 14 functions and `w_modepanel.c`'s `stub_chop_selected` marked ported. |
+| 2026-10-25 | Refresh: 74 rows of `missing`/`partial` verified against the code and set to ported, replaced, not needed or kept (D8 smart links, E4 colours, F5 spell check, E5 character map, S4-1 highlights, S4-4 cursors, W10-2 help, W10-3 vertex numbers, D10 typed coordinates); summary counts regenerated (384 missing and 58 partial before; 21 and 6 now); section "Missing, by area". |
 
 ## Table
 
@@ -177,13 +169,13 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `d_text.c` | `overlay_text_input` | 391 | ported | tools: `ToolKind::Text` (`text_event`, `finish_text`) |  |
 | `d_text.c` | `init_text_input` | 450 | ported | tools: `ToolKind::Text` (`text_event`, `finish_text`) |  |
 | `d_text.c` | `new_text` | 583 | ported | tools: `ToolKind::Text` (`text_event`, `finish_text`) |  |
-| `d_text.c` | `split_at_cursor` | 618 | missing | placing the caret inside an existing text by clicking at a character (RustFig puts the caret at the end) | E10 |
+| `d_text.c` | `split_at_cursor` | 618 | ported | `tools/textedit.rs`: the caret is placed by clicking in existing text (by line and character) | E10 |
 | `d_text.c` | `begin_utf8char` | 727 | replaced | UTF-8 composition and input methods come from egui/winit (IME); compose key is `rustfig_text::compose` |  |
 | `d_text.c` | `end_utf8char` | 740 | replaced | UTF-8 composition and input methods come from egui/winit (IME); compose key is `rustfig_text::compose` |  |
 | `d_text.c` | `draw_cursor` | 776 | replaced | the caret is drawn by the canvas from the overlay text; egui repaints, so no blink timer |  |
-| `d_text.c` | `initialize_char_handler` | 786 | partial | Left/Right/Home/End/Backspace/Delete ported; the Ctrl-key editing (kill line, word, begin/end) and paste into the text are not | E10, F3 |
-| `d_text.c` | `terminate_char_handler` | 799 | partial | Left/Right/Home/End/Backspace/Delete ported; the Ctrl-key editing (kill line, word, begin/end) and paste into the text are not | E10, F3 |
-| `d_text.c` | `char_handler` | 807 | partial | Left/Right/Home/End/Backspace/Delete ported; the Ctrl-key editing (kill line, word, begin/end) and paste into the text are not | E10, F3 |
+| `d_text.c` | `initialize_char_handler` | 786 | partial | Left/Right/Home/End/Backspace/Delete, word jumps, selection, select all, clipboard and IME ported (`tools/textedit.rs`); xfig's Ctrl-key editing (kill line, begin/end of line keys) is not | E10 |
+| `d_text.c` | `terminate_char_handler` | 799 | partial | Left/Right/Home/End/Backspace/Delete, word jumps, selection, select all, clipboard and IME ported (`tools/textedit.rs`); xfig's Ctrl-key editing (kill line, begin/end of line keys) is not | E10 |
+| `d_text.c` | `char_handler` | 807 | partial | Left/Right/Home/End/Backspace/Delete, word jumps, selection, select all, clipboard and IME ported (`tools/textedit.rs`); xfig's Ctrl-key editing (kill line, begin/end of line keys) is not | E10 |
 | `d_text.c` | `turn_on_blinking_cursor` | 1109 | replaced | the caret is drawn by the canvas from the overlay text; egui repaints, so no blink timer |  |
 | `d_text.c` | `turn_off_blinking_cursor` | 1128 | replaced | the caret is drawn by the canvas from the overlay text; egui repaints, so no blink timer |  |
 | `d_text.c` | `blink` | 1136 | replaced | the caret is drawn by the canvas from the overlay text; egui repaints, so no blink timer |  |
@@ -1185,18 +1177,18 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `u_markers.c` | `toggle_markers_in_compound` | 157 | ported | `engine/tools/markers.rs` (`mode_mask`, `object_markers`, masks per mode, W12) and the canvas |  |
 | `u_markers.c` | `update_markers` | 210 | ported | `engine/tools/markers.rs` (`mode_mask`, `object_markers`, masks per mode, W12) and the canvas |  |
 | `u_markers.c` | `toggle_ellipsemarker` | 268 | ported | `engine/tools/markers.rs` (`mode_mask`, `object_markers`, masks per mode, W12) and the canvas |  |
-| `u_markers.c` | `toggle_ellipsehighlight` | 277 | missing | highlight of the object found by a Shift-click and of the cursor position when nothing is found | S4-1 |
+| `u_markers.c` | `toggle_ellipsehighlight` | 277 | replaced | the shift-click highlight is the overlay of `Engine::locate_press` (`tools/markers.rs`, S4-1), redrawn each frame | S4-1 |
 | `u_markers.c` | `toggle_arcmarker` | 286 | ported | `engine/tools/markers.rs` (`mode_mask`, `object_markers`, masks per mode, W12) and the canvas |  |
-| `u_markers.c` | `toggle_archighlight` | 296 | missing | highlight of the object found by a Shift-click and of the cursor position when nothing is found | S4-1 |
+| `u_markers.c` | `toggle_archighlight` | 296 | replaced | the shift-click highlight is the overlay of `Engine::locate_press` (`tools/markers.rs`, S4-1), redrawn each frame | S4-1 |
 | `u_markers.c` | `toggle_textmarker` | 307 | ported | `engine/tools/markers.rs` (`mode_mask`, `object_markers`, masks per mode, W12) and the canvas |  |
-| `u_markers.c` | `toggle_texthighlight` | 323 | missing | highlight of the object found by a Shift-click and of the cursor position when nothing is found | S4-1 |
+| `u_markers.c` | `toggle_texthighlight` | 323 | replaced | the shift-click highlight is the overlay of `Engine::locate_press` (`tools/markers.rs`, S4-1), redrawn each frame | S4-1 |
 | `u_markers.c` | `toggle_all_compoundmarkers` | 342 | ported | `engine/tools/markers.rs` (`mode_mask`, `object_markers`, masks per mode, W12) and the canvas |  |
 | `u_markers.c` | `toggle_compoundmarker` | 349 | ported | `engine/tools/markers.rs` (`mode_mask`, `object_markers`, masks per mode, W12) and the canvas |  |
-| `u_markers.c` | `toggle_compoundhighlight` | 360 | missing | highlight of the object found by a Shift-click and of the cursor position when nothing is found | S4-1 |
+| `u_markers.c` | `toggle_compoundhighlight` | 360 | replaced | the shift-click highlight is the overlay of `Engine::locate_press` (`tools/markers.rs`, S4-1), redrawn each frame | S4-1 |
 | `u_markers.c` | `toggle_linemarker` | 373 | ported | `engine/tools/markers.rs` (`mode_mask`, `object_markers`, masks per mode, W12) and the canvas |  |
-| `u_markers.c` | `toggle_linehighlight` | 395 | missing | highlight of the object found by a Shift-click and of the cursor position when nothing is found | S4-1 |
+| `u_markers.c` | `toggle_linehighlight` | 395 | replaced | the shift-click highlight is the overlay of `Engine::locate_press` (`tools/markers.rs`, S4-1), redrawn each frame | S4-1 |
 | `u_markers.c` | `toggle_splinemarker` | 417 | ported | `engine/tools/markers.rs` (`mode_mask`, `object_markers`, masks per mode, W12) and the canvas |  |
-| `u_markers.c` | `toggle_splinehighlight` | 438 | missing | highlight of the object found by a Shift-click and of the cursor position when nothing is found | S4-1 |
+| `u_markers.c` | `toggle_splinehighlight` | 438 | replaced | the shift-click highlight is the overlay of `Engine::locate_press` (`tools/markers.rs`, S4-1), redrawn each frame | S4-1 |
 | `u_markers.c` | `toggle_pointmarker` | 459 | ported | `engine/tools/markers.rs` (`mode_mask`, `object_markers`, masks per mode, W12) and the canvas |  |
 | `u_pan.c` | `pan_left` | 34 | ported | `ui-egui/rulers.rs` `pan_step`, commands `view.pan`, `view.pan_origin` |  |
 | `u_pan.c` | `pan_right` | 42 | ported | `ui-egui/rulers.rs` `pan_step`, commands `view.pan`, `view.pan_origin` |  |
@@ -1272,8 +1264,8 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `u_search.c` | `next_text_found` | 316 | ported | `Engine::pick` / `hit_test` with `geom::hit` per object kind; nearest object under the cursor in the mode's mask |  |
 | `u_search.c` | `next_compound_found` | 348 | ported | `Engine::pick` / `hit_test` with `geom::hit` per object kind; nearest object under the cursor in the mode's mask |  |
 | `u_search.c` | `show_objecthighlight` | 383 | ported | Shift-click: highlight the object found and, with Shift held, the next overlapping one, before acting | S4-1 |
-| `u_search.c` | `erase_objecthighlight` | 391 | missing | Shift-click: highlight the object found and, with Shift held, the next overlapping one, before acting | S4-1 |
-| `u_search.c` | `toggle_objecthighlight` | 403 | missing | Shift-click: highlight the object found and, with Shift held, the next overlapping one, before acting | S4-1 |
+| `u_search.c` | `erase_objecthighlight` | 391 | replaced | the shift-click highlight is the overlay of `Engine::locate_press` (`tools/markers.rs`, S4-1), redrawn each frame | S4-1 |
+| `u_search.c` | `toggle_objecthighlight` | 403 | replaced | the shift-click highlight is the overlay of `Engine::locate_press` (`tools/markers.rs`, S4-1), redrawn each frame | S4-1 |
 | `u_search.c` | `init_search` | 430 | ported | `Engine::pick` / `hit_test` with `geom::hit` per object kind; nearest object under the cursor in the mode's mask |  |
 | `u_search.c` | `do_object_search` | 463 | ported | `Engine::pick` / `hit_test` with `geom::hit` per object kind; nearest object under the cursor in the mode's mask |  |
 | `u_search.c` | `object_search_left` | 556 | ported | `Engine::pick` / `hit_test` with `geom::hit` per object kind; nearest object under the cursor in the mode's mask |  |
@@ -1296,25 +1288,25 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `u_search.c` | `compound_search` | 944 | ported | `Engine::pick` / `hit_test` with `geom::hit` per object kind; nearest object under the cursor in the mode's mask |  |
 | `u_search.c` | `compound_point_search` | 969 | ported | point search: `find_vertex`, `find_segment` (tools) for Move point, Add point, Delete point |  |
 | `u_search.c` | `get_spline_point` | 1013 | ported | `Engine::pick` / `hit_test` with `geom::hit` per object kind; nearest object under the cursor in the mode's mask |  |
-| `u_smartsearch.c` | `init_smart_searchproc_left` | 85 | missing | object search for smart links (find the box and line end to move together) | D8 |
-| `u_smartsearch.c` | `init_smart_searchproc_middle` | 91 | missing | object search for smart links (find the box and line end to move together) | D8 |
-| `u_smartsearch.c` | `init_smart_searchproc_right` | 97 | missing | object search for smart links (find the box and line end to move together) | D8 |
-| `u_smartsearch.c` | `smart_object_search_left` | 104 | missing | object search for smart links (find the box and line end to move together) | D8 |
-| `u_smartsearch.c` | `smart_object_search_middle` | 112 | missing | object search for smart links (find the box and line end to move together) | D8 |
-| `u_smartsearch.c` | `smart_object_search_right` | 119 | missing | object search for smart links (find the box and line end to move together) | D8 |
-| `u_smartsearch.c` | `set_smart_points` | 128 | missing | object search for smart links (find the box and line end to move together) | D8 |
-| `u_smartsearch.c` | `init_smart_search` | 137 | missing | object search for smart links (find the box and line end to move together) | D8 |
-| `u_smartsearch.c` | `do_smart_object_search` | 170 | missing | object search for smart links (find the box and line end to move together) | D8 |
+| `u_smartsearch.c` | `init_smart_searchproc_left` | 85 | replaced | the smart-links search is `engine/links.rs` (`get_links`, `point_on_perim`) behind the Link Mode button (D8); the curve search of Tangent mode is `cmd/tangent.rs` (D4) | D8 |
+| `u_smartsearch.c` | `init_smart_searchproc_middle` | 91 | replaced | the smart-links search is `engine/links.rs` (`get_links`, `point_on_perim`) behind the Link Mode button (D8); the curve search of Tangent mode is `cmd/tangent.rs` (D4) | D8 |
+| `u_smartsearch.c` | `init_smart_searchproc_right` | 97 | replaced | the smart-links search is `engine/links.rs` (`get_links`, `point_on_perim`) behind the Link Mode button (D8); the curve search of Tangent mode is `cmd/tangent.rs` (D4) | D8 |
+| `u_smartsearch.c` | `smart_object_search_left` | 104 | replaced | the smart-links search is `engine/links.rs` (`get_links`, `point_on_perim`) behind the Link Mode button (D8); the curve search of Tangent mode is `cmd/tangent.rs` (D4) | D8 |
+| `u_smartsearch.c` | `smart_object_search_middle` | 112 | replaced | the smart-links search is `engine/links.rs` (`get_links`, `point_on_perim`) behind the Link Mode button (D8); the curve search of Tangent mode is `cmd/tangent.rs` (D4) | D8 |
+| `u_smartsearch.c` | `smart_object_search_right` | 119 | replaced | the smart-links search is `engine/links.rs` (`get_links`, `point_on_perim`) behind the Link Mode button (D8); the curve search of Tangent mode is `cmd/tangent.rs` (D4) | D8 |
+| `u_smartsearch.c` | `set_smart_points` | 128 | replaced | the smart-links search is `engine/links.rs` (`get_links`, `point_on_perim`) behind the Link Mode button (D8); the curve search of Tangent mode is `cmd/tangent.rs` (D4) | D8 |
+| `u_smartsearch.c` | `init_smart_search` | 137 | replaced | the smart-links search is `engine/links.rs` (`get_links`, `point_on_perim`) behind the Link Mode button (D8); the curve search of Tangent mode is `cmd/tangent.rs` (D4) | D8 |
+| `u_smartsearch.c` | `do_smart_object_search` | 170 | replaced | the smart-links search is `engine/links.rs` (`get_links`, `point_on_perim`) behind the Link Mode button (D8); the curve search of Tangent mode is `cmd/tangent.rs` (D4) | D8 |
 | `u_smartsearch.c` | `smart_next_arc_found` | 266 | ported | the curve point and tangent for Tangent mode (`cmd/tangent.rs`, D4); the smart-links search is `engine/links.rs` | |
 | `u_smartsearch.c` | `smart_next_ellipse_found` | 293 | ported | the curve point and tangent for Tangent mode (`cmd/tangent.rs`, D4); the smart-links search is `engine/links.rs` | |
 | `u_smartsearch.c` | `smart_next_line_found` | 328 | ported | the curve point and tangent for Tangent mode (`cmd/tangent.rs`, D4); the smart-links search is `engine/links.rs` | |
 | `u_smartsearch.c` | `smart_next_spline_found` | 358 | ported | the curve point and tangent for Tangent mode (`cmd/tangent.rs`, D4); the smart-links search is `engine/links.rs` | |
-| `u_smartsearch.c` | `smart_next_text_found` | 388 | missing | object search for smart links (find the box and line end to move together) | D8 |
-| `u_smartsearch.c` | `smart_next_compound_found` | 417 | missing | object search for smart links (find the box and line end to move together) | D8 |
-| `u_smartsearch.c` | `smart_show_objecthighlight` | 455 | missing | object search for smart links (find the box and line end to move together) | D8 |
-| `u_smartsearch.c` | `smart_erase_objecthighlight` | 463 | missing | object search for smart links (find the box and line end to move together) | D8 |
-| `u_smartsearch.c` | `smart_toggle_objecthighlight` | 475 | missing | object search for smart links (find the box and line end to move together) | D8 |
-| `u_smartsearch.c` | `smart_null_proc` | 502 | missing | object search for smart links (find the box and line end to move together) | D8 |
+| `u_smartsearch.c` | `smart_next_text_found` | 388 | replaced | the smart-links search is `engine/links.rs` (`get_links`, `point_on_perim`) behind the Link Mode button (D8); the curve search of Tangent mode is `cmd/tangent.rs` (D4) | D8 |
+| `u_smartsearch.c` | `smart_next_compound_found` | 417 | replaced | the smart-links search is `engine/links.rs` (`get_links`, `point_on_perim`) behind the Link Mode button (D8); the curve search of Tangent mode is `cmd/tangent.rs` (D4) | D8 |
+| `u_smartsearch.c` | `smart_show_objecthighlight` | 455 | not needed | the highlight is an overlay redrawn each frame | D8 |
+| `u_smartsearch.c` | `smart_erase_objecthighlight` | 463 | not needed | the highlight is an overlay redrawn each frame | D8 |
+| `u_smartsearch.c` | `smart_toggle_objecthighlight` | 475 | not needed | the highlight is an overlay redrawn each frame | D8 |
+| `u_smartsearch.c` | `smart_null_proc` | 502 | not needed | Xt callback stub | D8 |
 | `u_spawn.c` | `add_info` | 58 | replaced | no external programs for exports (ported fig2dev); the image editor and help viewer use `std::process::Command` / the OS opener (W10-16, W10-2) | W10-16, W10-2 |
 | `u_spawn.c` | `retrieve_info` | 85 | replaced | no external programs for exports (ported fig2dev); the image editor and help viewer use `std::process::Command` / the OS opener (W10-16, W10-2) | W10-16, W10-2 |
 | `u_spawn.c` | `full_command` | 129 | replaced | no external programs for exports (ported fig2dev); the image editor and help viewer use `std::process::Command` / the OS opener (W10-16, W10-2) | W10-16, W10-2 |
@@ -1389,17 +1381,17 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_canvas.c` | `setup_canvas` | 220 | replaced | canvas events (`canvas.rs`, `input.rs`): expose, init, actions, input dispatch and keystrokes feed `Engine::tool_event` |  |
 | `w_canvas.c` | `get_input` | 231 | replaced | canvas events (`canvas.rs`, `input.rs`): expose, init, actions, input dispatch and keystrokes feed `Engine::tool_event` |  |
 | `w_canvas.c` | `process_keystroke` | 270 | replaced | canvas events (`canvas.rs`, `input.rs`): expose, init, actions, input dispatch and keystrokes feed `Engine::tool_event` |  |
-| `w_canvas.c` | `canvas_selected` | 327 | partial | button and motion handling ported (snap, Alt+right = middle, wheel pans, arrows pan, Ctrl+click zoom, Ctrl+Shift+click shape factor); missing: the full-window crosshair (resource `crosshair`, E9), coordinates typed on the keyboard panel (D10) | E9, D10 |
+| `w_canvas.c` | `canvas_selected` | 327 | partial | button and motion handling ported (snap, Alt+right = middle, wheel pans, arrows pan, Ctrl+click zoom, Ctrl+Shift+click shape factor, typed coordinates through `tool.point`); missing: the full-window crosshair (resource `crosshair`, listed in `prefs.rs` as planned) | E9 |
 | `w_canvas.c` | `clear_canvas` | 662 | not needed | clearing the X window |  |
 | `w_canvas.c` | `clear_region` | 678 | not needed | clearing the X window |  |
-| `w_canvas.c` | `get_canvas_clipboard` | 685 | partial | text paste: the system clipboard pastes into the text tool through egui text events; middle-button paste of the primary selection is not | E10 |
-| `w_canvas.c` | `paste_primary_selection` | 720 | partial | text paste: the system clipboard pastes into the text tool through egui text events; middle-button paste of the primary selection is not | E10 |
-| `w_canvas.c` | `canvas_paste` | 728 | partial | text paste: the system clipboard pastes into the text tool through egui text events; middle-button paste of the primary selection is not | E10 |
+| `w_canvas.c` | `get_canvas_clipboard` | 685 | replaced | the system clipboard pastes into the text tool through egui text events |  |
+| `w_canvas.c` | `paste_primary_selection` | 720 | not needed | X11 primary selection; the text tool's middle button finishes the text as the mouse indicator says |  |
+| `w_canvas.c` | `canvas_paste` | 728 | replaced | the system clipboard pastes into the text tool through egui text events |  |
 | `w_canvas.c` | `getComposeKey` | 751 | ported | compose key: `menus::Compose`, `rustfig_text::compose` (CompKeyDB; W8) |  |
 | `w_canvas.c` | `readComposeKey` | 769 | ported | compose key: `menus::Compose`, `rustfig_text::compose` (CompKeyDB; W8) |  |
 | `w_canvas.c` | `setCompLED` | 878 | not needed | compose-key LED in the X window (RustFig has none) |  |
 | `w_canvas.c` | `toggle_show_lengths` | 890 | ported | `view.toggle_lengths`, resource `showlengths` | D10 |
-| `w_canvas.c` | `toggle_show_vertexnums` | 900 | missing | View > Show vertex numbers | W10-3 |
+| `w_canvas.c` | `toggle_show_vertexnums` | 900 | ported | `view.toggle_vertex_numbers` (View > Show vertex numbers) | W10-3 |
 | `w_canvas.c` | `toggle_show_borders` | 919 | ported | View > Show page borders (`view.toggle_page_border`) |  |
 | `w_canvas.c` | `toggle_show_balloons` | 938 | ported | View > Show info balloons (`app.toggle_balloons`) |  |
 | `w_canvas.c` | `popdown_mode_panel` | 958 | ported | Alt+wheel pop-up of the mode panel (`panels::mode_panel`) |  |
@@ -1449,12 +1441,12 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_cmdpanel.c` | `locate_menu` | 1357 | replaced | menu bar and menu items from `menus::XFIG_MENUS` and `LAYOUT` (egui menus) |  |
 | `w_cmdpanel.c` | `load_recent_file` | 1376 | ported | File menu recent files 1 to 9 (`prefs::recent_files`) |  |
 | `w_cmdpanel.c` | `acc_load_recent_file` | 1408 | ported | File menu recent files 1 to 9 (`prefs::recent_files`) |  |
-| `w_cmdpanel.c` | `charmap_font_dimensions` | 1431 | missing | Character map panel inserting into the text being typed | E5 |
-| `w_cmdpanel.c` | `refresh_character_panel` | 1458 | missing | Character map panel inserting into the text being typed | E5 |
-| `w_cmdpanel.c` | `character_panel_close` | 1545 | missing | Character map panel inserting into the text being typed | E5 |
-| `w_cmdpanel.c` | `popup_character_map` | 1564 | missing | Character map panel inserting into the text being typed | E5 |
-| `w_cmdpanel.c` | `paste_character` | 1712 | missing | Character map panel inserting into the text being typed | E5 |
-| `w_cmdpanel.c` | `redraw_character` | 1731 | missing | Character map panel inserting into the text being typed | E5 |
+| `w_cmdpanel.c` | `charmap_font_dimensions` | 1431 | replaced | `ui-egui/src/charmap.rs` (View > Character map) with `text.insert_char`: lists the characters the font can draw (E5) | E5 |
+| `w_cmdpanel.c` | `refresh_character_panel` | 1458 | replaced | `ui-egui/src/charmap.rs` (View > Character map) with `text.insert_char`: lists the characters the font can draw (E5) | E5 |
+| `w_cmdpanel.c` | `character_panel_close` | 1545 | replaced | `ui-egui/src/charmap.rs` (View > Character map) with `text.insert_char`: lists the characters the font can draw (E5) | E5 |
+| `w_cmdpanel.c` | `popup_character_map` | 1564 | replaced | `ui-egui/src/charmap.rs` (View > Character map) with `text.insert_char`: lists the characters the font can draw (E5) | E5 |
+| `w_cmdpanel.c` | `paste_character` | 1712 | replaced | `ui-egui/src/charmap.rs` (View > Character map) with `text.insert_char`: lists the characters the font can draw (E5) | E5 |
+| `w_cmdpanel.c` | `redraw_character` | 1731 | replaced | `ui-egui/src/charmap.rs` (View > Character map) with `text.insert_char`: lists the characters the font can draw (E5) | E5 |
 | `w_cmdpanel.c` | `redraw_all` | 1749 | replaced | redraw is automatic every frame (A7) |  |
 | `w_cmdpanel.c` | `refresh_view_menu_item` | 1793 | replaced | menu bar and menu items from `menus::XFIG_MENUS` and `LAYOUT` (egui menus) |  |
 | `w_cmdpanel.c` | `refresh_view_menu` | 1828 | replaced | menu bar and menu items from `menus::XFIG_MENUS` and `LAYOUT` (egui menus) |  |
@@ -1463,15 +1455,15 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_color.c` | `create_color_panel` | 314 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
 | `w_color.c` | `pen_fill_activate` | 872 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
 | `w_color.c` | `xftcolor_fromcolor` | 884 | not needed | X colormap cell allocation and private colormaps |  |
-| `w_color.c` | `restore_mixed_colors` | 893 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
-| `w_color.c` | `set_mixed_color` | 943 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
+| `w_color.c` | `restore_mixed_colors` | 893 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
+| `w_color.c` | `set_mixed_color` | 943 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
 | `w_color.c` | `set_user_color` | 957 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `pick_contrast` | 973 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
-| `w_color.c` | `set_mixed_name` | 989 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
+| `w_color.c` | `pick_contrast` | 973 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
+| `w_color.c` | `set_mixed_name` | 989 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
 | `w_color.c` | `cancel_color_popup` | 1014 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
 | `w_color.c` | `add_color` | 1026 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colours created, listed, counted and pruned when unused |  |
 | `w_color.c` | `del_color` | 1047 | ported | `color.delete` (refused while an object uses the colour; undo restores it) | |
-| `w_color.c` | `undel_color` | 1089 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
+| `w_color.c` | `undel_color` | 1089 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
 | `w_color.c` | `count_user_colors` | 1112 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colours created, listed, counted and pruned when unused |  |
 | `w_color.c` | `c_user_colors` | 1139 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colours created, listed, counted and pruned when unused |  |
 | `w_color.c` | `count_one` | 1174 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colours created, listed, counted and pruned when unused |  |
@@ -1488,9 +1480,9 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_color.c` | `set_color_ok` | 1550 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
 | `w_color.c` | `_set_std_color` | 1569 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
 | `w_color.c` | `set_std_color` | 1577 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `_pick_memory` | 1631 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
-| `w_color.c` | `pick_memory` | 1646 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
-| `w_color.c` | `lock_toggle` | 1697 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
+| `w_color.c` | `_pick_memory` | 1631 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
+| `w_color.c` | `pick_memory` | 1646 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
+| `w_color.c` | `lock_toggle` | 1697 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
 | `w_color.c` | `draw_boxed` | 1739 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
 | `w_color.c` | `erase_boxed` | 1751 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
 | `w_color.c` | `color_borders` | 1765 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
@@ -1499,12 +1491,12 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_color.c` | `update_scrl_triple` | 1834 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
 | `w_color.c` | `update_triple` | 1842 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
 | `w_color.c` | `move_scroll` | 1868 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `StoreMix_and_Mem` | 1940 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
+| `w_color.c` | `StoreMix_and_Mem` | 1940 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
 | `w_color.c` | `Scrolled` | 1965 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
 | `w_color.c` | `Update_HSV` | 2017 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
 | `w_color.c` | `ThumbHSV` | 2037 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
 | `w_color.c` | `Thumbed` | 2060 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `move_lock` | 2106 | missing | mix memory, lock and contrast pick not built: recent colours (E4) cover the use | E4 |
+| `w_color.c` | `move_lock` | 2106 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
 | `w_color.c` | `next_pencolor` | 2119 | ported | stepping the pen/fill colour with the wheel on the indicator button (`attributes`) |  |
 | `w_color.c` | `prev_pencolor` | 2131 | ported | stepping the pen/fill colour with the wheel on the indicator button (`attributes`) |  |
 | `w_color.c` | `show_pencolor` | 2144 | ported | stepping the pen/fill colour with the wheel on the indicator button (`attributes`) |  |
@@ -1518,11 +1510,11 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_color.c` | `DoGrabPixel` | 2451 | replaced | the eyedropper: `color.eyedropper`, the next canvas click takes an object's colour (engine `eyedropper.rs`) | W10-36 |
 | `w_color.c` | `doGrab` | 2496 | replaced | the eyedropper: `color.eyedropper`, the next canvas click takes an object's colour (engine `eyedropper.rs`) | W10-36 |
 | `w_color.c` | `xyToWindowCmap` | 2558 | not needed | X colormap cell allocation and private colormaps |  |
-| `w_cursor.c` | `init_cursor` | 44 | partial | egui cursor icons: default and crosshair only; xfig uses a cursor per mode | S4-4 |
-| `w_cursor.c` | `recolor_cursors` | 90 | partial | egui cursor icons: default and crosshair only; xfig uses a cursor per mode | S4-4 |
-| `w_cursor.c` | `reset_cursor` | 116 | partial | egui cursor icons: default and crosshair only; xfig uses a cursor per mode | S4-4 |
-| `w_cursor.c` | `set_temp_cursor` | 126 | partial | egui cursor icons: default and crosshair only; xfig uses a cursor per mode | S4-4 |
-| `w_cursor.c` | `set_cursor` | 136 | partial | egui cursor icons: default and crosshair only; xfig uses a cursor per mode | S4-4 |
+| `w_cursor.c` | `init_cursor` | 44 | replaced | `Engine::cursor_kind` (`tools/cursor.rs`) per mode and state, mapped to egui cursor icons by `canvas::cursor_icon` (S4-4) |  |
+| `w_cursor.c` | `recolor_cursors` | 90 | replaced | `Engine::cursor_kind` (`tools/cursor.rs`) per mode and state, mapped to egui cursor icons by `canvas::cursor_icon` (S4-4) |  |
+| `w_cursor.c` | `reset_cursor` | 116 | replaced | `Engine::cursor_kind` (`tools/cursor.rs`) per mode and state, mapped to egui cursor icons by `canvas::cursor_icon` (S4-4) |  |
+| `w_cursor.c` | `set_temp_cursor` | 126 | replaced | `Engine::cursor_kind` (`tools/cursor.rs`) per mode and state, mapped to egui cursor icons by `canvas::cursor_icon` (S4-4) |  |
+| `w_cursor.c` | `set_cursor` | 136 | replaced | `Engine::cursor_kind` (`tools/cursor.rs`) per mode and state, mapped to egui cursor icons by `canvas::cursor_icon` (S4-4) |  |
 | `w_digitize.c` | `popup_digitize_panel` | 76 | replaced | Digitize window (`ui-egui/src/digitize.rs`) and `file.digitize`: the points of selected lines saved as numbered files, S4-8 | S4-8 |
 | `w_digitize.c` | `create_digitize_panel` | 100 | replaced | Digitize window (`ui-egui/src/digitize.rs`) and `file.digitize`: the points of selected lines saved as numbered files, S4-8 | S4-8 |
 | `w_digitize.c` | `digitize_panel_done` | 372 | replaced | Digitize window (`ui-egui/src/digitize.rs`) and `file.digitize`: the points of selected lines saved as numbered files, S4-8 | S4-8 |
@@ -1646,14 +1638,14 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_fontpanel.c` | `fontpane_swap` | 409 | replaced | font menus: the font chooser `font_chooser` (E11: PostScript/LaTeX lists, search, size, preview) in the Text Font pop-up and the edit panel | E11 |
 | `w_grid.c` | `init_grid` | 45 | ported | grid drawing in the canvas, `view.toggle_grid`, `view.set_grid` |  |
 | `w_grid.c` | `setup_grid` | 62 | ported | grid drawing in the canvas (square and isometric), `view.toggle_grid`, `view.set_grid` |  |
-| `w_help.c` | `launch_refman` | 48 | missing | Help menu entries that open the reference manual, PDF manuals, how-to and man page, and external viewer launching | W10-2 |
-| `w_help.c` | `launch_refpdf_en` | 65 | missing | Help menu entries that open the reference manual, PDF manuals, how-to and man page, and external viewer launching | W10-2 |
-| `w_help.c` | `launch_refpdf_jp` | 75 | missing | Help menu entries that open the reference manual, PDF manuals, how-to and man page, and external viewer launching | W10-2 |
-| `w_help.c` | `launch_howto` | 86 | missing | Help menu entries that open the reference manual, PDF manuals, how-to and man page, and external viewer launching | W10-2 |
-| `w_help.c` | `launch_man` | 96 | missing | Help menu entries that open the reference manual, PDF manuals, how-to and man page, and external viewer launching | W10-2 |
-| `w_help.c` | `launch_viewer` | 106 | missing | Help menu entries that open the reference manual, PDF manuals, how-to and man page, and external viewer launching | W10-2 |
-| `w_help.c` | `check_docfile` | 131 | missing | Help menu entries that open the reference manual, PDF manuals, how-to and man page, and external viewer launching | W10-2 |
-| `w_help.c` | `help_ok` | 140 | missing | Help menu entries that open the reference manual, PDF manuals, how-to and man page, and external viewer launching | W10-2 |
+| `w_help.c` | `launch_refman` | 48 | replaced | Help > RustFig Manual (`help.open`, `ui-egui/src/help.rs`): the manual is bundled and searchable, no external viewer | W10-2 |
+| `w_help.c` | `launch_refpdf_en` | 65 | replaced | Help > RustFig Manual (`help.open`, `ui-egui/src/help.rs`): the manual is bundled and searchable, no external viewer | W10-2 |
+| `w_help.c` | `launch_refpdf_jp` | 75 | replaced | Help > RustFig Manual (`help.open`, `ui-egui/src/help.rs`): the manual is bundled and searchable, no external viewer | W10-2 |
+| `w_help.c` | `launch_howto` | 86 | replaced | Help > RustFig Manual (`help.open`, `ui-egui/src/help.rs`): the manual is bundled and searchable, no external viewer | W10-2 |
+| `w_help.c` | `launch_man` | 96 | replaced | Help > RustFig Manual (`help.open`, `ui-egui/src/help.rs`): the manual is bundled and searchable, no external viewer | W10-2 |
+| `w_help.c` | `launch_viewer` | 106 | replaced | Help > RustFig Manual (`help.open`, `ui-egui/src/help.rs`): the manual is bundled and searchable, no external viewer | W10-2 |
+| `w_help.c` | `check_docfile` | 131 | not needed | no external document files: the manual is compiled in |  |
+| `w_help.c` | `help_ok` | 140 | not needed | Help dialog plumbing (the manual window has its own close) |  |
 | `w_help.c` | `launch_about` | 149 | ported | About dialog (`dialogs::about_dialog`) |  |
 | `w_i18n.c` | `setlocale` | 401 | not needed | Xt locale initialisation; RustFig's localisation is F4 | F4 |
 | `w_icons.c` | `populate_icons_big` | 2156 | ported | all 107 bitmaps verbatim in `ui-egui/xfig_icons.rs`, vector versions in `vector_icons.rs`/`mode_icons.rs` (W9) |  |
@@ -1701,13 +1693,13 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_indpanel.c` | `text_color_select` | 2908 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `set_fixed_text` | 2923 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `set_actual_text` | 2939 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
-| `w_indpanel.c` | `draw_cur_dimline` | 2955 | partial | `ui-egui/dimline_panel.rs` has no example-line preview yet | D10 |
+| `w_indpanel.c` | `draw_cur_dimline` | 2955 | partial | `ui-egui/dimline_panel.rs` has the example-line preview; its arrowheads are plain triangles, not the chosen arrow type | D10 |
 | `w_indpanel.c` | `dimline_style_select` | 3060 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `left_arrow_type_select` | 3075 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `right_arrow_type_select` | 3089 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `dimline_font_popup` | 3105 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `dimline_set_font_image` | 3113 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
-| `w_indpanel.c` | `dimline_panel_preview` | 3126 | partial | `ui-egui/dimline_panel.rs` has no example-line preview yet | D10 |
+| `w_indpanel.c` | `dimline_panel_preview` | 3126 | partial | `ui-egui/dimline_panel.rs` has the example-line preview; its arrowheads are plain triangles, not the chosen arrow type | D10 |
 | `w_indpanel.c` | `dimline_panel_ok` | 3177 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `dimline_panel_cancel` | 3187 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
 | `w_indpanel.c` | `get_dimline_values` | 3200 | ported | `ui-egui/dimline_panel.rs` (window, OK/Cancel) and the indicator button "Dimension line" in Polyline mode | D10 |
@@ -1963,8 +1955,8 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_mousefun.c` | `mouse_title` | 185 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
 | `w_mousefun.c` | `resize_mousefun` | 197 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
 | `w_mousefun.c` | `set_mousefun` | 204 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
-| `w_mousefun.c` | `draw_mousefun_kbd` | 218 | missing | mouse-function text for the keyboard coordinate panel | D10 |
-| `w_mousefun.c` | `clear_mousefun_kbd` | 236 | missing | mouse-function text for the keyboard coordinate panel | D10 |
+| `w_mousefun.c` | `draw_mousefun_kbd` | 218 | replaced | typed coordinates window `ui-egui/src/point_entry.rs` (Ctrl+K) with its own buttons for the three mouse functions (`tool.point`) | D10 |
+| `w_mousefun.c` | `clear_mousefun_kbd` | 236 | replaced | typed coordinates window `ui-egui/src/point_entry.rs` (Ctrl+K) with its own buttons for the three mouse functions (`tool.point`) | D10 |
 | `w_mousefun.c` | `draw_mousefun_mode` | 248 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
 | `w_mousefun.c` | `draw_mousefun_ind` | 254 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
 | `w_mousefun.c` | `draw_mousefun_unitbox` | 260 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
@@ -1981,7 +1973,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_mousefun.c` | `notused_right` | 386 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
 | `w_mousefun.c` | `clear_right` | 396 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
 | `w_mousefun.c` | `clear_mousefun` | 406 | ported | mouse-function indicator `panels::mouse_indicator`, `Engine::mouse_hints` (layout and wording, S2) |  |
-| `w_mousefun.c` | `init_kbd_actions` | 426 | missing | mouse-function text for the keyboard coordinate panel | D10 |
+| `w_mousefun.c` | `init_kbd_actions` | 426 | replaced | typed coordinates window `ui-egui/src/point_entry.rs` (Ctrl+K) with its own buttons for the three mouse functions (`tool.point`) | D10 |
 | `w_msgpanel.c` | `init_msg` | 92 | ported | message panel `panels::message_panel`, `Engine::set_status` |  |
 | `w_msgpanel.c` | `setup_msg` | 113 | ported | message panel `panels::message_panel`, `Engine::set_status` |  |
 | `w_msgpanel.c` | `put_msg` | 125 | ported | message panel `panels::message_panel`, `Engine::set_status` |  |
@@ -2114,13 +2106,13 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_srchrepl.c` | `search_text_in_compound` | 379 | ported | `edit.search_replace` and `dialogs::search_dialog` (search, replace, replace all, case); extras W10-26 |  |
 | `w_srchrepl.c` | `search_panel_dismiss` | 415 | ported | `edit.search_replace` and `dialogs::search_dialog` (search, replace, replace all, case); extras W10-26 |  |
 | `w_srchrepl.c` | `popup_search_panel` | 427 | ported | `edit.search_replace` and `dialogs::search_dialog` (search, replace, replace all, case); extras W10-26 |  |
-| `w_srchrepl.c` | `popup_spell_check_panel` | 633 | missing | spell check panel | F5 |
-| `w_srchrepl.c` | `spell_panel_dismiss` | 810 | missing | spell check panel | F5 |
-| `w_srchrepl.c` | `spell_check` | 822 | missing | spell check panel | F5 |
-| `w_srchrepl.c` | `write_text_from_compound` | 904 | missing | spell check panel | F5 |
-| `w_srchrepl.c` | `spell_select_word` | 919 | missing | spell check panel | F5 |
-| `w_srchrepl.c` | `spell_correct_word` | 940 | missing | spell check panel | F5 |
-| `w_srchrepl.c` | `show_spell_msg` | 955 | missing | spell check panel | F5 |
+| `w_srchrepl.c` | `popup_spell_check_panel` | 633 | ported | `engine/src/cmd/spell.rs` and `ui-egui/src/spell_dialog.rs`: spell check of the text objects through an external checker command (F5) | F5 |
+| `w_srchrepl.c` | `spell_panel_dismiss` | 810 | ported | `engine/src/cmd/spell.rs` and `ui-egui/src/spell_dialog.rs`: spell check of the text objects through an external checker command (F5) | F5 |
+| `w_srchrepl.c` | `spell_check` | 822 | ported | `engine/src/cmd/spell.rs` and `ui-egui/src/spell_dialog.rs`: spell check of the text objects through an external checker command (F5) | F5 |
+| `w_srchrepl.c` | `write_text_from_compound` | 904 | ported | `engine/src/cmd/spell.rs` and `ui-egui/src/spell_dialog.rs`: spell check of the text objects through an external checker command (F5) | F5 |
+| `w_srchrepl.c` | `spell_select_word` | 919 | ported | `engine/src/cmd/spell.rs` and `ui-egui/src/spell_dialog.rs`: spell check of the text objects through an external checker command (F5) | F5 |
+| `w_srchrepl.c` | `spell_correct_word` | 940 | ported | `engine/src/cmd/spell.rs` and `ui-egui/src/spell_dialog.rs`: spell check of the text objects through an external checker command (F5) | F5 |
+| `w_srchrepl.c` | `show_spell_msg` | 955 | ported | `engine/src/cmd/spell.rs` and `ui-egui/src/spell_dialog.rs`: spell check of the text objects through an external checker command (F5) | F5 |
 | `w_style.c` | `construct_style` | 103 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
 | `w_style.c` | `set_style` | 139 | replaced | Manage Styles window and `style.*` commands (`ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs`) | E6 |
 | `w_style.c` | `print_indent` | 165 | replaced | styles kept in settings.toml through prefs (serde), no `.xfigrcstyle` file | E6 |
@@ -2210,7 +2202,7 @@ These are visible to users and proposed as **not needed**; they stay open until 
 | `w_util.c` | `InstallScrollParent` | 1996 | not needed | X scroll-wheel handlers on widgets |  |
 | `w_util.c` | `_installscroll` | 2002 | not needed | X scroll-wheel handlers on widgets |  |
 | `w_zoom.c` | `zoom_selected` | 66 | ported | `tools/ctrl.rs` zoom box (Ctrl+left, Cmd on macOS), command `view.zoom_box`, rubber box in the overlay | |
-| `w_zoom.c` | `unzoom` | 101 | partial | Unzoom (back to the previous view) exists as zoom out only; the previous-view semantics are D11 | D11 |
+| `w_zoom.c` | `unzoom` | 101 | replaced | Unzoom is `view.zoom_actual` (zoom 1.0); the toolbar button and menu entry do it | D11 |
 | `w_zoom.c` | `my_box` | 108 | ported | `tools/ctrl.rs` zoom box (Ctrl+left, Cmd on macOS), command `view.zoom_box`, rubber box in the overlay | |
 | `w_zoom.c` | `elastic_mybox` | 117 | ported | `tools/ctrl.rs` zoom box (Ctrl+left, Cmd on macOS), command `view.zoom_box`, rubber box in the overlay | |
 | `w_zoom.c` | `init_zoombox_drawing` | 123 | ported | `tools/ctrl.rs` zoom box (Ctrl+left, Cmd on macOS), command `view.zoom_box`, rubber box in the overlay | |
