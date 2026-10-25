@@ -1,0 +1,15 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Feynman diagram: scalar line, half circle on a chord of 1 inch (loops, self-energy)
+# Ends on the 1/4-inch grid. Keywords: feynman loop particle physics
+6 300 300 1500 900
+5 1 1 2 0 7 50 -1 -1 6.000 0 0 0 0 900.000 900.000 300 900 900 300 1500 900
+-6

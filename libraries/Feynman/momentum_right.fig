@@ -1,0 +1,17 @@
+#FIG 3.2  Produced by RustFig
+#encoding: UTF-8
+Landscape
+Center
+Inches
+Letter
+100.00
+Single
+-2
+1200 2
+# Feynman diagram: momentum arrow to the right
+# Short arrow of 1/2 inch to place beside a line; add the label k or p as LaTeX text. Keywords: feynman momentum
+6 300 300 900 300
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 1 0 2
+	1 1 1.00 75.00 120.00
+	300 300 900 300
+-6
