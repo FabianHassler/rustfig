@@ -243,3 +243,4 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | 2026-10-22 | D15: `e_chop.c` extended beyond xfig (`cmd/outline.rs`, `cmd/chop_ext.rs`). |
 | 2026-10-22 | D3: `e_chop.c` ported (`cmd/chop.rs`, `tools/chop.rs`); `w_intersect.c`'s intersection math in `geom/intersect.rs`. |
 | 2026-10-23 | S4-7: `w_mousefun.c` Shift/Ctrl variants done. |
+| 2026-10-24 | W22: `w_modepanel.c` (button order) and `w_indpanel.c` (button columns) read for `cargo xtask xfig-compare`; no code ported. |
