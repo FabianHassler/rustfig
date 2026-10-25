@@ -40,7 +40,7 @@ has ready-made apps (not yet signed by Apple or Microsoft):
 
 | System | File | How |
 |--------|------|-----|
-| macOS | `RustFig-VERSION-macos.dmg` | Drag RustFig to Applications. The first start needs right-click > Open (the app is not notarized yet). `.fig` files then open with a double-click. |
+| macOS (Apple silicon) | `RustFig-VERSION-macos.dmg` | Drag RustFig to Applications. The app is not notarized by Apple yet, so the first start is refused: open System Settings > Privacy & Security and click **Open Anyway** (or run `xattr -dr com.apple.quarantine /Applications/RustFig.app` once). `.fig` files then open with a double-click. |
 | Windows | `rustfig-VERSION-windows.zip` | Unpack anywhere and start `rustfig.exe`. `fig-association.reg` makes `.fig` files open in RustFig. |
 | Linux | `.deb` or `.tar.gz` | `sudo apt install ./rustfig_VERSION_amd64.deb`, or unpack the `.tar.gz` and run `install.sh`; both register the `.fig` file type. |
 
