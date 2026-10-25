@@ -1,6 +1,6 @@
 # RustFig roadmap
 
-**Status (2026-10-23):** Stage **Alpha**. Overall xfig parity **≈87 %**
+**Status (2026-10-25):** Stage **Beta** (public pre-releases 0.9.0-beta.N). Overall xfig parity **≈87 %**
 ([assessment](docs/target-app-parity.md)). The native app draws, edits,
 saves and exports. The web build compiles; it is not yet packaged or tested in a browser.
 
@@ -9,8 +9,8 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Stage | Meaning | State |
 |-------|---------|-------|
 | Prototype | Core model, file format, rendering | done |
-| **Alpha** | Usable for everyday figures; gaps in export formats, libraries, print | **current** |
-| Beta | every everyday xfig function; preferences; native LaTeX exports; Windows, Linux and web verified | next |
+| Alpha | Usable for everyday figures; gaps in export formats, libraries, print | done |
+| **Beta** | every everyday xfig function; preferences; native LaTeX exports; Windows, Linux and web verified | **current**: public pre-releases since 2026-10-24; left: the Windows, Linux and browser checks by hand |
 | 1.0 | every xfig function available (libraries, digitize, print, all exports), plus web, MCP and automation polish | later |
 
 ## Headline numbers
