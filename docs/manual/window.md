@@ -12,7 +12,7 @@ RustFig keeps xfig's arrangement of the main window.
 
 ## Mode panel (left)
 
-One button per mode: drawing modes first, then editing modes. Hover for the name and key. The same modes are available as keys, see [Keys](keys.md). The mode is highlighted while it is active.
+One button per mode: drawing modes first, then editing modes. Hover for the name and key. The same modes are available as keys, see [Keys](keys.md). The mode is highlighted while it is active. On a small screen the panel scrolls vertically (mouse wheel over it); the buttons keep their size.
 
 ## Canvas
 

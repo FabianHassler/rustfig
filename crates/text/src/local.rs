@@ -241,6 +241,17 @@ pub fn find_local_face(name: &str) -> Option<LocalFace> {
     local_faces().into_iter().find(|f| f.name.to_lowercase() == name)
 }
 
+/// The file bytes and face index of the regular face of an installed family
+/// (case-insensitive), for hosts that need the font itself (the UI's
+/// fallback fonts). `None` with the built-in fonts or an unknown family.
+pub fn local_font_bytes(family: &str) -> Option<(Vec<u8>, u32)> {
+    let mut g = lock();
+    let key = family.trim().to_lowercase();
+    let b = built(&mut g);
+    let id = b.faces.iter().find(|(f, _)| f.name.to_lowercase() == key)?.1;
+    b.db.with_face_data(id, |data, index| (data.to_vec(), index))
+}
+
 /// Whether text in `name` can be drawn: the face is installed.
 pub fn local_font_available(name: &str) -> bool {
     let mut g = lock();

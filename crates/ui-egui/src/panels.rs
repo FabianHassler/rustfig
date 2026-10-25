@@ -99,23 +99,12 @@ pub fn editing_tools() -> Vec<ToolKind> {
 pub const MODE_PANEL_MARGIN: f32 = 3.0;
 pub const MODE_PANEL_WIDTH: f32 = 2.0 * SLOT.x + 2.0 + 2.0 * MODE_PANEL_MARGIN + 2.0;
 
-/// Rows of buttons in the mode panel: the drawing modes with the library row
-/// and the editing modes.
-const MODE_ROWS: f32 = 8.0 + 13.0;
-
-/// The height of one mode button so that every row fits the panel (xfig's
-/// window is sized to fit); only a very short window falls back to
-/// scrolling.
-fn slot_height(available: f32) -> f32 {
-    // Two captions, the gap between the groups and the grid spacing.
-    let overhead = 2.0 * 16.0 + 6.0 + 2.0 * MODE_ROWS + 4.0;
-    ((available - overhead) / MODE_ROWS).floor().clamp(26.0, SLOT.y)
-}
-
 /// xfig's mode panel: its icons (`w_icons.c`, 36×32), two columns, the
 /// active mode shown sunken.
 pub fn mode_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
-    let size = vec2(SLOT.x, slot_height(ui.available_height()));
+    let size = SLOT;
+    // A floating scroll bar takes no width from the 2-column grid.
+    ui.spacing_mut().scroll = egui::style::ScrollStyle::floating();
     egui::ScrollArea::vertical()
         .auto_shrink([false, false])
         .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::VisibleWhenNeeded)

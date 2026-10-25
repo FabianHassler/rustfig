@@ -1528,6 +1528,29 @@ fn mode_panel_is_not_clipped() {
     }
 }
 
+/// P2: on a 1280x712 screen the mode buttons keep xfig's size and the panel
+/// scrolls: the last button comes into the window by scrolling over the panel.
+#[test]
+fn mode_panel_scrolls_on_a_small_screen() {
+    let mut h = Harness::builder()
+        .with_size(vec2(1280.0, 712.0))
+        .build_state(|ctx, app: &mut App| app.ui(ctx), app());
+    h.run_steps(3);
+    let first = h.get_by_label(ToolKind::CircleRadius.label()).rect();
+    assert!((first.height() - 34.0).abs() < 0.5, "{first:?}");
+    let mid = egui::pos2(first.center().x, 300.0);
+    for _ in 0..6 {
+        wheel_at(&mut h, mid, -400.0, egui::Modifiers::NONE);
+    }
+    let last = h.get_by_label(ToolKind::RotateCw.label()).rect();
+    let ind = h.get_by_label("Snap Mode: None").rect();
+    assert!(last.top() >= 0.0 && last.bottom() <= 712.0, "{last:?}");
+    assert!(
+        last.bottom() <= ind.top() || ind.left() > last.right(),
+        "{last:?} vs {ind:?}"
+    );
+}
+
 /// W11: the Snap Mode box is a chooser with the same modes as the Snap menu.
 #[test]
 fn snap_box_chooses_a_mode() {
