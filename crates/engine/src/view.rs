@@ -1,4 +1,7 @@
 //! Canvas view: zoom and pan.
+//
+// Ported from xfig src/w_indpanel.c (`inc_zoom`, `dec_zoom`, `show_zoom`)
+// (xfig licence, see LICENSE-xfig).
 
 use rustfig_geom::{Affine, Point, Rect};
 
