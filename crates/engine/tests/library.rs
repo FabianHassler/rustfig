@@ -534,3 +534,20 @@ fn a_scan_can_be_stopped() {
     assert!(scan_cancellable(&roots, &stop).is_empty(), "stopped before it began");
     let _ = std::fs::remove_dir_all(&d);
 }
+
+/// D13: a library part whose description sits on its compound (after the
+/// resolution line) shows it as the object's comments.
+#[test]
+fn comments_after_the_resolution_line_are_the_objects() {
+    use rustfig_engine::library::comments_of_bytes;
+    let part = "#FIG 3.2  Produced by RustFig\n#encoding: UTF-8\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n# Photon line\n# Keywords: feynman\n6 0 0 1200 0\n-6\n";
+    assert_eq!(
+        comments_of_bytes(part.as_bytes()),
+        vec!["Photon line", "Keywords: feynman"]
+    );
+    let figure =
+        "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n# Figure comment\n1200 2\n# object comment\n";
+    assert_eq!(comments_of_bytes(figure.as_bytes()), vec!["Figure comment"]);
+    let bare = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2\n";
+    assert!(comments_of_bytes(bare.as_bytes()).is_empty());
+}

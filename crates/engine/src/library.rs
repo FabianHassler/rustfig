@@ -477,15 +477,30 @@ fn comments_of_lines(lines: Vec<String>) -> Vec<String> {
     // The `#FIG` line (and `#encoding`), then seven header lines (orientation,
     // justification, units, paper size, magnification, pages, transparent
     // colour); the figure's comment lines follow.
+    // When the figure has none, the comments of its first object (after the
+    // resolution line, e.g. a library part's compound) are shown instead.
     let first = lines.iter().take_while(|l| l.starts_with('#')).count();
+    let mut past_resolution = false;
     for l in lines.into_iter().skip(first + 7) {
-        let Some(c) = l.strip_prefix('#') else { break };
+        let Some(c) = l.strip_prefix('#') else {
+            if out.is_empty() && !past_resolution && is_resolution_line(&l) {
+                past_resolution = true;
+                continue;
+            }
+            break;
+        };
         out.push(c.strip_prefix(' ').unwrap_or(c).to_string());
         if out.len() >= 100 {
             break;
         }
     }
     out
+}
+
+/// The Fig 3.2 resolution line: "1200 2" (resolution and coordinate system).
+fn is_resolution_line(l: &str) -> bool {
+    let mut it = l.split_whitespace();
+    matches!((it.next(), it.next(), it.next()), (Some(a), Some(b), None) if a.parse::<u32>().is_ok() && b.parse::<u8>().is_ok())
 }
 
 /// Read a library figure as one drawing whose only object is one compound:
