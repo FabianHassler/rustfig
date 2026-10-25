@@ -439,6 +439,8 @@ pub struct TickSpec {
     pub dir: TickDir,
     pub format: NumFormat,
     pub decimals: u8,
+    /// Tick marks on this axis.
+    pub ticks: bool,
     /// Numbers at the major ticks.
     pub numbers: bool,
 }
@@ -455,6 +457,7 @@ impl Default for TickSpec {
             dir: TickDir::In,
             format: NumFormat::Auto,
             decimals: 2,
+            ticks: true,
             numbers: true,
         }
     }
@@ -515,8 +518,12 @@ pub struct PlotSpec {
     pub tmax: Option<f64>,
     /// Samples before adaptive refinement.
     pub samples: usize,
-    /// Frame with ticks and numbers.
-    pub axes: bool,
+    /// The box around the plot.
+    pub frame: bool,
+    /// Old plots' all-in-one switch: `false` turns the frame, ticks and
+    /// numbers off when read (`from_value`), then it is cleared. Never written.
+    #[serde(skip_serializing)]
+    pub axes: Option<bool>,
     pub grid: bool,
     pub log_x: bool,
     pub log_y: bool,
@@ -550,7 +557,8 @@ impl Default for PlotSpec {
             tmin: None,
             tmax: None,
             samples: 400,
-            axes: true,
+            frame: true,
+            axes: None,
             grid: false,
             log_x: false,
             log_y: false,
@@ -570,7 +578,19 @@ impl PlotSpec {
     pub fn from_value(v: &Value) -> Result<PlotSpec, String> {
         let spec: PlotSpec = serde_json::from_value(v.clone()).map_err(|e| format!("bad plot parameters: {e}"))?;
         spec.check()?;
-        Ok(spec)
+        Ok(spec.migrate())
+    }
+
+    /// Old comments' `axes: false` means no frame, ticks or numbers.
+    fn migrate(mut self) -> PlotSpec {
+        if self.axes.take() == Some(false) {
+            self.frame = false;
+            for t in [&mut self.xticks, &mut self.yticks] {
+                t.ticks = false;
+                t.numbers = false;
+            }
+        }
+        self
     }
 
     fn check(&self) -> Result<(), String> {
@@ -1285,7 +1305,7 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
     let depth = look.curve.depth;
     let mut members: Vec<Object> = Vec::new();
 
-    if spec.axes {
+    if spec.frame {
         let a = Point::new(fig(rect.min.x), fig(rect.min.y));
         let b = Point::new(fig(rect.max.x), fig(rect.max.y));
         let mut frame = thin(LineKind::Solid, depth);
@@ -1334,11 +1354,20 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
         }
     };
     let mut left_width = 0.0f64;
-    if spec.axes {
+    {
         let tick_h = tick_size * unit * 0.75;
         let gap = 0.5 * tick_h;
-        let xout = tick_reach(spec.xticks.dir, spec.xticks.length).0;
-        let yout = tick_reach(spec.yticks.dir, spec.yticks.length).0;
+        // Ticks start on the frame's edges whether or not the box is drawn.
+        let xout = if spec.xticks.ticks {
+            tick_reach(spec.xticks.dir, spec.xticks.length).0
+        } else {
+            0.0
+        };
+        let yout = if spec.yticks.ticks {
+            tick_reach(spec.yticks.dir, spec.yticks.length).0
+        } else {
+            0.0
+        };
         for t in ticks(r.x0, r.x1, spec.log_x, &spec.xticks)? {
             let x = fig(mx(t.at));
             let len = if t.major {
@@ -1355,14 +1384,16 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
                     line(g, vec![Point::new(x, fig(rect.min.y)), Point::new(x, fig(rect.max.y))]),
                 );
             }
-            push_part(
-                &mut members,
-                "tick",
-                line(
-                    thin(LineKind::Solid, depth),
-                    vec![Point::new(x, fig(rect.max.y + o)), Point::new(x, fig(rect.max.y - i))],
-                ),
-            );
+            if spec.xticks.ticks {
+                push_part(
+                    &mut members,
+                    "tick",
+                    line(
+                        thin(LineKind::Solid, depth),
+                        vec![Point::new(x, fig(rect.max.y + o)), Point::new(x, fig(rect.max.y - i))],
+                    ),
+                );
+            }
             if let Some(l) = &t.label {
                 push_part(
                     &mut members,
@@ -1394,14 +1425,16 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
                     line(g, vec![Point::new(fig(rect.min.x), y), Point::new(fig(rect.max.x), y)]),
                 );
             }
-            push_part(
-                &mut members,
-                "tick",
-                line(
-                    thin(LineKind::Solid, depth),
-                    vec![Point::new(fig(rect.min.x - o), y), Point::new(fig(rect.min.x + i), y)],
-                ),
-            );
+            if spec.yticks.ticks {
+                push_part(
+                    &mut members,
+                    "tick",
+                    line(
+                        thin(LineKind::Solid, depth),
+                        vec![Point::new(fig(rect.min.x - o), y), Point::new(fig(rect.min.x + i), y)],
+                    ),
+                );
+            }
             if let Some(l) = &t.label {
                 left_width = left_width.max(l.chars().count() as f64 * tick_size * unit * 0.55);
                 push_part(
@@ -1421,7 +1454,8 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
         let label_size = size;
         let label_h = label_size * unit * 0.75;
         if !spec.xlabel.trim().is_empty() {
-            let y = rect.max.y + gap + tick_h + gap + label_h * 1.1;
+            let below = if spec.xticks.numbers { gap + tick_h } else { xout };
+            let y = rect.max.y + below + gap + label_h * 1.1;
             push_part(
                 &mut members,
                 "label",
@@ -1839,5 +1873,87 @@ mod tests {
         assert!(PlotSpec::of_object(&p.object).is_some());
         // A frame too small is an error.
         assert!(build(&s, Rect::new(Point::ZERO, Point::new(1.0, 1.0)), None, &look).is_err());
+    }
+
+    fn kinds(s: &PlotSpec) -> std::collections::BTreeMap<String, usize> {
+        let look = PlotLook {
+            curve: Style::default(),
+            text_color: ColorRef::BLACK,
+            font: 0,
+            font_size: 12.0,
+            postscript: true,
+            grid_gap: 3.0,
+        };
+        let r = Rect::new(Point::new(0.0, 0.0), Point::new(4800.0, 3000.0));
+        let p = build(s, r, None, &look).unwrap();
+        let ObjectKind::Compound(c) = &p.object.kind else {
+            panic!()
+        };
+        let mut m = std::collections::BTreeMap::new();
+        for o in &c.objects {
+            *m.entry(part_kind(o).unwrap_or("").to_string()).or_insert(0) += 1;
+        }
+        m
+    }
+
+    #[test]
+    fn switches_are_independent() {
+        let base = spec("sin(x)", 0.0, 6.0);
+        let all = kinds(&base);
+        assert!(all.contains_key("frame") && all.contains_key("tick") && all.contains_key("number"));
+
+        let mut s = base.clone();
+        s.frame = false;
+        let m = kinds(&s);
+        assert!(!m.contains_key("frame") && m.contains_key("tick") && m.contains_key("number"));
+
+        let mut s = base.clone();
+        s.xticks.ticks = false;
+        s.yticks.ticks = false;
+        let m = kinds(&s);
+        assert!(m.contains_key("frame") && !m.contains_key("tick") && m.contains_key("number"));
+
+        let mut s = base.clone();
+        s.xticks.ticks = false;
+        let m = kinds(&s);
+        assert!(m["tick"] < all["tick"] && m["tick"] > 0);
+
+        let mut s = base.clone();
+        s.xticks.numbers = false;
+        s.yticks.numbers = false;
+        let m = kinds(&s);
+        assert!(m.contains_key("tick") && !m.contains_key("number"));
+
+        let mut s = base.clone();
+        s.yticks.numbers = false;
+        assert!(kinds(&s)["number"] < all["number"]);
+
+        // Grid and labels do not depend on the others.
+        let mut s = base;
+        s.frame = false;
+        s.xticks.ticks = false;
+        s.yticks.ticks = false;
+        s.xticks.numbers = false;
+        s.yticks.numbers = false;
+        s.grid = true;
+        s.xlabel = "x".into();
+        let m = kinds(&s);
+        assert!(m.contains_key("grid") && m.contains_key("label") && !m.contains_key("frame"));
+    }
+
+    #[test]
+    fn old_axes_switch_is_read() {
+        let off = PlotSpec::from_comment(&format!("{PLOT_COMMENT} {{\"axes\":false}}")).unwrap();
+        assert!(!off.frame && !off.xticks.ticks && !off.yticks.numbers && off.axes.is_none());
+        let on = PlotSpec::from_comment(&format!("{PLOT_COMMENT} {{\"axes\":true}}")).unwrap();
+        assert!(on.frame && on.xticks.ticks && on.yticks.numbers);
+        let none = PlotSpec::from_comment(&format!("{PLOT_COMMENT} {{}}")).unwrap();
+        assert!(none.frame && none.xticks.ticks && none.xticks.numbers);
+        // Written with the new fields only.
+        let mut s = PlotSpec::default();
+        s.frame = false;
+        let c = s.comment().unwrap();
+        assert!(c.contains("\"frame\":false") && !c.contains("axes"));
+        assert!(!PlotSpec::from_comment(&c).unwrap().frame);
     }
 }

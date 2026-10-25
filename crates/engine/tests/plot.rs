@@ -83,7 +83,7 @@ fn reciprocal_has_no_line_across_zero() {
     let r = e
         .execute(
             "plot.add",
-            &json!({"expr": "1/x", "xmin": -2, "xmax": 2, "ymin": -4, "ymax": 4, "axes": false}),
+            &json!({"expr": "1/x", "xmin": -2, "xmax": 2, "ymin": -4, "ymax": 4, "frame": false}),
         )
         .unwrap();
     assert_eq!(r["curves"], 2);
