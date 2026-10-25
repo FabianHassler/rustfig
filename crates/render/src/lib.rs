@@ -73,6 +73,9 @@ pub struct SceneOptions {
     /// 76.2/80 so text keeps its point size while the drawing is magnified
     /// by 80/76.2 (fig2dev with xfig's `-F`, `genps.c` `PSFONTMAG`).
     pub text_scale: Option<f64>,
+    /// Show special (LaTeX) texts as a Unicode approximation of their source
+    /// (library icons and preview: fast, no TeX). Never saved.
+    pub approx_latex: bool,
 }
 
 /// The scene of a document: its objects back to front, as xfig draws them.
@@ -305,6 +308,8 @@ fn object_prims(doc: &Document, o: &Object, opts: &SceneOptions, out: &mut Vec<P
         ObjectKind::Text(t) => {
             let text = if opts.screen && t.is_hidden() {
                 "<<>>".to_string()
+            } else if opts.approx_latex && t.is_special() {
+                rustfig_text::latex_approx(&t.text)
             } else {
                 t.text.clone()
             };
@@ -430,6 +435,43 @@ mod tests {
     use super::*;
     use rustfig_geom::Point;
     use rustfig_model::{Polyline, Style};
+
+    #[test]
+    fn approx_latex_applies_to_special_text_only_when_asked() {
+        use rustfig_model::{text_flags, Justify, Text};
+        let mut doc = Document::new();
+        doc.objects.push(std::sync::Arc::new(Object::new(ObjectKind::Text(Text {
+            justify: Justify::Left,
+            color: ColorRef::BLACK,
+            depth: 50,
+            pen_style: -1,
+            font: 0,
+            size: 12.0,
+            angle: 0.0,
+            flags: text_flags::SPECIAL,
+            height: 100.0,
+            length: 300.0,
+            origin: Point::new(100.0, 100.0),
+            text: r"$\lambda/2$".into(),
+            local_font: None,
+        }))));
+        let text_of = |opts: &SceneOptions| {
+            let sc = build_scene(&doc, opts);
+            sc.prims
+                .iter()
+                .find_map(|p| match p {
+                    Prim::Text(t) => Some(t.text.clone()),
+                    _ => None,
+                })
+                .unwrap_or_default()
+        };
+        assert_eq!(text_of(&SceneOptions::default()), r"$\lambda/2$");
+        let opts = SceneOptions {
+            approx_latex: true,
+            ..SceneOptions::default()
+        };
+        assert_eq!(text_of(&opts), "λ/2");
+    }
 
     #[test]
     fn depth_order() {

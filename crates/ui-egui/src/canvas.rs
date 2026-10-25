@@ -454,6 +454,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         gray_hidden: app.engine.gray_hidden_depths,
         screen: true,
         text_scale: None,
+        approx_latex: false,
     };
     // The scene: rebuilt only when the drawing changes, not on pan or zoom.
     let scene = match &app.canvas.scene {

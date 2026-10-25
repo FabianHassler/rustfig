@@ -244,7 +244,13 @@ fn render(doc: &Document, px: usize) -> Option<egui::ColorImage> {
     let t = Affine::translate(-bb.min.x, -bb.min.y)
         .then(&Affine::scale(s, s))
         .then(&Affine::translate(ox, oy));
-    let scene = rustfig_render::build_scene(doc, &SceneOptions::default());
+    let scene = rustfig_render::build_scene(
+        doc,
+        &SceneOptions {
+            approx_latex: true,
+            ..SceneOptions::default()
+        },
+    );
     let mut pm = rustfig_render::raster::Pixmap::new(px as u32, px as u32)?;
     rasterize(
         &scene,
