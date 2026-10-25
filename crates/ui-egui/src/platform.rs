@@ -5,6 +5,24 @@
 //! The system is egui's (`Context::os`): fixed at compile time in the
 //! native builds, read from the browser on the web.
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// Whether the keys follow macOS (⌘, Ctrl+click as the right button): the
+/// build's system natively, the browser's system on the web, where a build
+/// for `wasm32` knows nothing about the machine. `App::ui` refreshes it from
+/// egui every frame.
+static MAC: AtomicBool = AtomicBool::new(cfg!(target_os = "macos"));
+
+/// The keys follow macOS (see `MAC`).
+pub fn is_mac() -> bool {
+    MAC.load(Ordering::Relaxed)
+}
+
+/// Record the system egui reports (each frame).
+pub fn note_os(ctx: &egui::Context) {
+    MAC.store(Os::current(ctx) == Os::Mac, Ordering::Relaxed);
+}
+
 /// The systems whose texts differ.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Os {

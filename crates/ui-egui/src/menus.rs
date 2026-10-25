@@ -710,7 +710,7 @@ fn menu_entry(app: &mut App, ui: &mut egui::Ui, label: &str, id: &str) {
         Some(false) => format!("    {label}"),
         None => label.to_string(),
     };
-    let shortcut = entry_keys(id, app.xfig_keys, cfg!(target_os = "macos"));
+    let shortcut = entry_keys(id, app.xfig_keys, crate::platform::is_mac());
     let mut b = egui::Button::new(text);
     if !shortcut.is_empty() {
         b = b.shortcut_text(shortcut);
@@ -980,7 +980,7 @@ fn shortcut_text(s: &str, mac: bool) -> String {
 
 /// Human-readable shortcut ("Ctrl" shows as ⌘ on macOS).
 pub fn display_shortcut(s: &str) -> String {
-    shortcut_text(s, cfg!(target_os = "macos"))
+    shortcut_text(s, crate::platform::is_mac())
 }
 
 /// Parse "Ctrl+Shift+Z" into an egui shortcut.
@@ -1078,7 +1078,7 @@ fn parse_xfig_key(spec: &str) -> Option<(bool, bool, bool, egui::Key)> {
 /// name; the ⌥ symbol is missing from the fallback fonts) and Linux and
 /// Windows "Alt+N", "Shift+Alt+X", "Ctrl+L".
 pub fn xfig_key_label(spec: &str) -> String {
-    key_label(spec, cfg!(target_os = "macos"))
+    key_label(spec, crate::platform::is_mac())
 }
 
 pub(crate) fn key_label_for(spec: &str, mac: bool) -> String {
@@ -1124,7 +1124,7 @@ fn take_xfig_key(ctx: &egui::Context, spec: &str) -> bool {
                     && m.alt == alt
                     && m.shift == shift
                     && m.ctrl == ctrl
-                    && !(cfg!(target_os = "macos") && m.mac_cmd)
+                    && !(crate::platform::is_mac() && m.mac_cmd)
             }
             _ => false,
         });

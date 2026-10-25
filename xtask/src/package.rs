@@ -344,7 +344,9 @@ fn macos(root: &Path, rel: &Path, out: &Path, version: &str) -> Result<(), Strin
     // Sign the whole bundle ad hoc (no certificate): the linker signed only
     // the binary, and a bundle whose signature misses its resources is
     // reported as "damaged" by Gatekeeper after a download.
-    sh(Command::new("codesign").args(["--force", "--deep", "--sign", "-"]).arg(&app))?;
+    sh(Command::new("codesign")
+        .args(["--force", "--deep", "--sign", "-"])
+        .arg(&app))?;
     let dmg = out.join(format!("RustFig-{version}-macos.dmg"));
     let stage = out.join("dmg");
     fs::create_dir_all(&stage).map_err(|e| e.to_string())?;

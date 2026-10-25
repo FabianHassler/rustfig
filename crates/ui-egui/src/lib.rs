@@ -581,8 +581,8 @@ impl App {
     /// platform conventions (what `raw_input_hook` does for every frame).
     pub fn feed_input(&mut self, raw: &mut egui::RawInput) {
         self.injector.feed(raw);
-        self.ctrl_click.apply(raw, cfg!(target_os = "macos"));
-        if !cfg!(target_os = "macos") {
+        self.ctrl_click.apply(raw, platform::is_mac());
+        if !platform::is_mac() {
             self.chord.apply(raw);
         }
     }
@@ -590,6 +590,7 @@ impl App {
     /// Run one UI frame (guarded against panics).
     pub fn ui(&mut self, ctx: &egui::Context) {
         key_font::install(ctx);
+        platform::note_os(ctx);
         #[cfg(not(target_arch = "wasm32"))]
         let start = std::time::Instant::now();
         let frame_result = rustfig_engine::guard::catch(|| self.frame(ctx));
