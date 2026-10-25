@@ -25,3 +25,5 @@ Buttons for the attributes that new objects get and that the current mode needs:
 ## Depth manager (right, optional)
 
 Lists the depths in use with check boxes to show or hide them (View > Show depth manager).
+
+Choosing a mode puts xfig's sentence for it, with its key, in the message panel (for example “Rectangular BOX drawing   (b)”). After opening a file the message reads `Current figure "name" (N objects)`. RustFig's own Trim button is the last of the editing buttons, so every xfig button keeps its place in the grid.

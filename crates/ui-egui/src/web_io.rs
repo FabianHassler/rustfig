@@ -130,7 +130,7 @@ pub fn open_pick(app: &mut App, pick: &WebPick) {
         .is_some()
     {
         app.engine.set_modified(embedded);
-        app.info(format!("Opened {name}"));
+        app.info(format!("Current figure \"{name}\""));
     }
 }
 

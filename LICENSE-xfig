@@ -91,6 +91,7 @@ drivers as fig2dev/dev/...); app-defaults/Fig is xfig's resource file.
 - crates/engine/src/library.rs: xfig src/w_library.c, src/e_placelib.c
 - crates/engine/src/cmd/library.rs: xfig src/w_library.c, src/e_placelib.c
 - crates/ui-egui/src/library.rs: xfig src/w_library.c
+- crates/engine/src/tools/mode_messages.rs: xfig src/w_modepanel.c
 
 Documentation: the bundled manual (docs/manual/*.md, shown in Help > RustFig Manual) is written for RustFig and adapts parts of xfig's HTML manual (doc/html/); it carries the notice above.
 - crates/text/src/symbol_tables.rs: fig2dev dev/gensvg.c (Symbol and ZapfDingbats code tables)

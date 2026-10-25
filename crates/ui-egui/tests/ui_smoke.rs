@@ -367,7 +367,7 @@ fn attribute_panel_shows_the_modes_attributes() {
     h.get_by_label_contains("Zoom: ");
     assert!(h.query_by_label_contains("Text Size").is_none());
     select(&mut h, ToolKind::Text);
-    h.get_by_label("Text Size: 12");
+    h.get_by_label("Text Size: 12.00");
     h.get_by_label("Text Step: 1.0");
     assert!(h.query_by_label_contains("Line Style").is_none());
     // Delete has only Zoom and Grid Mode, as in xfig.

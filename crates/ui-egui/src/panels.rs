@@ -58,9 +58,6 @@ const EDITING: [Slot; 26] = [
     Slot::Tool(ToolKind::OpenCompound, &xfig_icons::OPEN_COMP),
     Slot::Tool(ToolKind::JoinSplit, &xfig_icons::JOIN_SPLIT),
     Slot::Tool(ToolKind::Chop, &xfig_icons::CHOP),
-    // RustFig's own mode (D16), next to Chop: both cut lines (decided
-    // 2026-10-22, though the later buttons move one slot).
-    Slot::Tool(ToolKind::Trim, &xfig_icons::TRIM),
     Slot::Tool(ToolKind::Scale, &xfig_icons::SCALE),
     Slot::Tool(ToolKind::Align, &xfig_icons::ALIGN),
     Slot::Tool(ToolKind::MovePoint, &xfig_icons::MOVEPT),
@@ -81,7 +78,21 @@ const EDITING: [Slot; 26] = [
     Slot::Tool(ToolKind::AngleMeasure, &xfig_icons::ANGLEMEAS),
     Slot::Tool(ToolKind::LengthMeasure, &xfig_icons::LENMEAS),
     Slot::Tool(ToolKind::AreaMeasure, &xfig_icons::AREAMEAS),
+    // RustFig's own mode (D16), after xfig's buttons so that all of them keep
+    // their grid positions (W22-12).
+    Slot::Tool(ToolKind::Trim, &xfig_icons::TRIM),
 ];
+
+/// The editing modes in the panel's order (Trim, RustFig's own, last).
+pub fn editing_tools() -> Vec<ToolKind> {
+    EDITING
+        .iter()
+        .filter_map(|s| match s {
+            Slot::Tool(t, _) => Some(*t),
+            Slot::Command(..) => None,
+        })
+        .collect()
+}
 
 /// Width of the mode panel: two columns of buttons, the frame's margin and
 /// stroke (nothing is clipped).
@@ -257,50 +268,7 @@ fn tip_for_os(tip: &str, mac: bool) -> String {
 }
 
 fn xfig_tip(t: ToolKind) -> Option<&'static str> {
-    Some(match t {
-        ToolKind::CircleRadius => "CIRCLE/ELLIPSE drawing: specify RADII   (c or e)",
-        ToolKind::CircleDiameter => "CIRCLE/ELLIPSE drawing: specify DIAMETER(S)   (Shift-c or e)",
-        ToolKind::SplineApproxClosed => "CLOSED APPROXIMATED SPLINE drawing: specify control points   (Shift-s)",
-        ToolKind::SplineApprox => "APPROXIMATED SPLINE drawing: specify control points   (s)",
-        ToolKind::SplineInterpClosed => "CLOSED INTERPOLATED SPLINE drawing: specify control points   (Shift-i)",
-        ToolKind::SplineInterp => "INTERPOLATED SPLINE drawing: specify control points   (i)",
-        ToolKind::Polygon => "POLYGON drawing   (p)",
-        ToolKind::Polyline => "POLYLINE drawing   (l)",
-        ToolKind::Box => "Rectangular BOX drawing   (b)",
-        ToolKind::ArcBox => "Rectangular BOX drawing with ROUNDED CORNERS   (Shift-b)",
-        ToolKind::RegularPolygon => "Regular Polygon   (Shift-p)",
-        ToolKind::Arc => "ARC drawing: specify three points on the arc   (r)",
-        ToolKind::Picture => "Picture Object   (Ctrl-p)",
-        ToolKind::Text => "TEXT input from keyboard   (t)",
-        ToolKind::Glue => "GLUE objects into COMPOUND object   (g)",
-        ToolKind::Break => "BREAK COMPOUND object   (Shift-g)",
-        ToolKind::OpenCompound => "OPEN COMPOUND object   (o)",
-        ToolKind::JoinSplit => "Join or Split lines/splines   (j)",
-        ToolKind::Chop => "Chop objects   (x)",
-        ToolKind::Trim => "TRIM, split and extend lines   (w)",
-        ToolKind::Tangent => "Add TANGENT/NORMAL to curve   (n)",
-        ToolKind::Plot => "PLOT a function or data   (y)",
-        ToolKind::AngleMeasure => "MEASURE angle (specify three points or select object)   (Ctrl-g)",
-        ToolKind::LengthMeasure => "Measure LENGTH of polylines, arcs and ellipses   (Ctrl-n)",
-        ToolKind::AreaMeasure => "Measure AREA of polygons, arcs and ellipses   (Ctrl-m)",
-        ToolKind::Scale => "SCALE objects   (Ctrl-s)",
-        ToolKind::Align => "ALIGN objects within a COMPOUND or to CANVAS   (a)",
-        ToolKind::MovePoint => "MOVE POINTs   (Shift-m)",
-        ToolKind::Move => "MOVE objects   (m)",
-        ToolKind::AddPoint => "ADD POINTs to lines, polygons and splines   (Ctrl-a)",
-        ToolKind::Copy => "COPY objects  (Ctrl-c)",
-        ToolKind::DeletePoint => "DELETE POINTs from lines, polygons and splines   (Shift-d)",
-        ToolKind::Delete => "DELETE objects   (d)",
-        ToolKind::Update => "UPDATE object <-> current settings   (u)",
-        ToolKind::Edit => "CHANGE OBJECT via EDIT panel   (Ctrl-e)",
-        ToolKind::FlipV => "FLIP objects up or down   (f)",
-        ToolKind::FlipH => "FLIP objects left or right   (Shift-f)",
-        ToolKind::RotateCw => "ROTATE objects clockwise   (Ctrl-r)",
-        ToolKind::RotateCcw => "ROTATE objects counter-clockwise   (Shift-r)",
-        ToolKind::Convert => "CONVERSION between lines, polygons and splines   (v)",
-        ToolKind::Arrow => "ADD/DELETE ARROWHEADS   (Shift-a)",
-        _ => return None,
-    })
+    t.xfig_message()
 }
 
 /// A mode icon: the vector redraw when the icon has been traced (W9), else
@@ -831,7 +799,14 @@ fn message_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         ),
         // xfig's start-up message until a mode is chosen.
         None if app.engine.tool() == ToolKind::None => ("READY. Select a mode or load a file".to_string(), tk.muted),
-        None => (format!("{} mode", app.engine.tool().label()), tk.muted),
+        None => {
+            let t = app.engine.tool();
+            (
+                t.xfig_message()
+                    .map_or_else(|| format!("{} mode", t.label()), str::to_string),
+                tk.muted,
+            )
+        }
     };
     let fill = if tk.bevel {
         tk.inset_bg

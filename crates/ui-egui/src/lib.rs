@@ -161,6 +161,9 @@ pub struct App {
     pub command_search: command_search::CommandSearch,
     /// F1 context help notes (W18).
     pub context_help: context_help::ContextHelp,
+    /// Which text flag the Text Flags button shows (xfig's `cur_flagshown`:
+    /// hidden, TeX, rigid; the right and middle buttons cycle).
+    pub flag_shown: usize,
     /// The mouse cheat sheet (W18).
     pub mouse_sheet: help_pages::MouseSheet,
     /// The "What's new" window (W18).
@@ -248,6 +251,7 @@ impl App {
             keys_sheet: keys_sheet::KeysSheet::default(),
             command_search: command_search::CommandSearch::default(),
             context_help: context_help::ContextHelp::default(),
+            flag_shown: 0,
             mouse_sheet: help_pages::MouseSheet::default(),
             whats_new_open: false,
             point_entry: point_entry::PointEntry::default(),
