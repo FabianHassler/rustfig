@@ -229,6 +229,21 @@ fn scale_one_edge() {
 }
 
 #[test]
+fn arc_shows_the_length_of_the_last_rubber_band() {
+    // d_arc.c: after each point the arc's rubber band is `unconstrained_line`: MSG_PNTS_LENGTH.
+    let mut e = Engine::new();
+    e.set_tool(ToolKind::Arc);
+    press(&mut e, 0.0, 0.0, Button::Left, false);
+    press(&mut e, 1200.0, 0.0, Button::Left, false);
+    e.tool_event(ToolEvent::Move {
+        pos: rustfig_engine::geom::Point::new(1200.0, 1200.0),
+    })
+    .unwrap();
+    let s = e.status().to_string();
+    assert!(s.starts_with("2 points, Length = 1 in, dx = 0 in, dy = 1 in"), "{s}");
+}
+
+#[test]
 fn lengths_in_the_message_panel_and_on_the_canvas() {
     let mut e = Engine::new();
     e.set_tool(ToolKind::Polyline);

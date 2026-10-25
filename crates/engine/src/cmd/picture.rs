@@ -28,6 +28,18 @@ pub struct PictureInfo {
     pub transparent: bool,
 }
 
+/// D11 (`w_capture.c`): the default file name of a screen capture: the figure's name and the
+/// time in seconds since 1970 (xfig's `figure1_828065129.pcx`), as PNG; `capture_<secs>.png`
+/// while the figure has no name.
+pub fn capture_file_name(figure: Option<&str>, secs: u64) -> String {
+    let stem = figure
+        .and_then(|f| std::path::Path::new(f).file_stem())
+        .and_then(|s| s.to_str())
+        .filter(|s| !s.is_empty())
+        .unwrap_or("capture");
+    format!("{stem}_{secs}.png")
+}
+
 /// Type of a picture file: its first bytes, else its extension.
 pub fn picture_type(path: &str) -> String {
     use std::io::Read;
@@ -411,7 +423,7 @@ fn open_external(_file: &str, _editor: &str) -> Result<(), EngineError> {
 
 #[cfg(test)]
 mod editor_tests {
-    use super::editor_command;
+    use super::{capture_file_name, editor_command};
 
     #[test]
     fn image_editor_command_takes_the_file_for_percent_f() {
@@ -426,5 +438,15 @@ mod editor_tests {
             editor_command("xv -quit", "a.png"),
             Some(vec!["xv".to_string(), "-quit".to_string(), "a.png".to_string()])
         );
+    }
+
+    #[test]
+    fn capture_file_name_follows_xfig() {
+        assert_eq!(
+            capture_file_name(Some("/a/b/figure1.fig"), 828_065_129),
+            "figure1_828065129.png"
+        );
+        assert_eq!(capture_file_name(None, 7), "capture_7.png");
+        assert_eq!(capture_file_name(Some(""), 7), "capture_7.png");
     }
 }

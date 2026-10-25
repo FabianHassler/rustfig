@@ -266,6 +266,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}",
     },
     UiCommand {
+        id: "app.capture",
+        label: "Capture Screen…",
+        shortcut: "",
+        params: "{}  — D11, xfig's Screen Capture: the window steps aside, the system's selector picks a window or an area of the screen (Windows: the whole screen), then Save asks for the PNG file name (default <figure>_<seconds>.png) and the image becomes a picture object; not in the browser",
+    },
+    UiCommand {
         id: "app.import_picture",
         label: "Import Picture…",
         shortcut: "",
@@ -461,6 +467,12 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
             return Err("Installing fonts is not available on the web".into());
         }
         "help.open" => app.dialogs.help.show(p.get("topic").and_then(Value::as_str))?,
+        "app.capture" => {
+            if !rustfig_os::capture::available() {
+                return Err(rustfig_os::capture::unavailable_reason().to_string());
+            }
+            app.capture.requested = true;
+        }
         "app.import_picture" if path.is_none() && app.file_dialogs.is_web() => {
             app.web_pick(
                 crate::web_io::WebPurpose::PictureImport,
@@ -517,6 +529,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Save As...", "app.save_as"),
                 Cmd("Export...", "app.export"),
                 Own("app.import_picture"),
+                Own("app.capture"),
                 Own("app.new_window"),
                 Own("app.versions"),
                 Cmd("Print...", "app.print"),

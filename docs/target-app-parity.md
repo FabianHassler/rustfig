@@ -19,7 +19,7 @@ the score.
 
 | Area | Weight | Score | Missing | Hours |
 |------|-------:|------:|---------|------:|
-| Editing modes | 12 | 95 % | screen capture into a picture (D11, w_capture.c); two minor message texts (arc rubber band, Unit/Scale panel title). Checked against the real xfig in two rounds (W22, 216 scenarios: every mode, its three buttons, dialogs, compounds; 30 real differences fixed, 2026-10-25); the audit lists no other missing function | 8 |
+| Editing modes | 12 | 97 % | none known (screen capture, D11, and the arc and Unit/Scale messages are done). Checked against the real xfig in two rounds (W22, 216 scenarios: every mode, its three buttons, dialogs, compounds; 30 real differences fixed, 2026-10-25); the audit lists no other missing function | 8 |
 | Attributes / indicator | 10 | 93 % | mix memory and lock of xfig's colour panel (recent colours instead); depth pop-up, labels and text flags as xfig since W22 | 3 |
 | Drawing modes | 12 | 98 % | none known | 0 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
@@ -119,6 +119,7 @@ After the two side-by-side rounds with the real xfig (W22: 216 scenarios, 45 dif
 
 | Date | Overall | Note |
 |------|--------:|------|
+| 2026-10-25 | ≈90 % | D11 screen capture and the last two message texts: Editing 95 → 97 % (weighted 90.4 → 90.6); the audit has no missing function. |
 | 2026-10-25 | ≈90 % | Re-score after W22 rounds 1 and 2 (30 real differences fixed), the refreshed function audit (only screen capture missing) and the font-width correction: Editing 86 → 95 %, Attributes 90 → 93 %, Text 84 → 92 %, Settings 80 → 90 %; 294 → 210 h. |
 | 2026-10-24 | ≈87 % | P3 packaging (macOS .app/.dmg, Linux .deb/tarball, Windows zip), G3 accessible labels, C4 touch (long press, two-finger pan), F3 dead keys, W18 modern help (command search, F1, mouse sheet, what's new); Platforms 72 → 76 %, 296 → 294 h. |
 | 2026-10-23 | ≈85 % | F7 (RustFig side): installed fonts per text, Text 78 → 80 %, 30 → 26 h; embedding in exports still to do. |

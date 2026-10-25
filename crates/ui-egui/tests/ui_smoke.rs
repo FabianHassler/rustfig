@@ -141,7 +141,7 @@ fn dialogs_open() {
         ("app.commands", "Commands"),
         ("app.about", "About RustFig"),
         ("app.global_settings", "Global settings"),
-        ("app.unit_panel", "Unit menu"),
+        ("app.unit_panel", "Unit/Scale settings"),
     ] {
         h.state_mut().run(cmd, json!({}));
         h.run_steps(2);
@@ -3132,4 +3132,37 @@ fn escape_closes_the_command_search() {
     press_key(&mut h, egui::Key::Escape, egui::Modifiers::NONE);
     h.run_steps(2);
     assert!(!h.state().command_search.open);
+}
+
+/// D11: a finished screen capture asks for the file name, writes the PNG and adds a picture
+/// object; cancelling the capture or the file dialog adds nothing. (The OS selector itself is
+/// a manual check, see docs/hardware-parity.md.)
+#[test]
+fn screen_capture_becomes_a_picture() {
+    let dir = std::env::temp_dir().join(format!("rustfig-capture-ui-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("shot.png");
+    let png = rustfig_os::capture::encode_png_rgb(2, 2, &[200; 12]).unwrap();
+    let mut a = app();
+    a.file_dialogs = Box::new(ScriptedDialogs::new([None, Some(path.to_string_lossy().into_owned())]));
+    let mut h = harness(a);
+    // The user cancelled the selector.
+    h.state_mut().capture.inject(Ok(None));
+    h.run_steps(2);
+    assert!(h.state().engine.doc().objects.is_empty());
+    // The selector failed.
+    h.state_mut().capture.inject(Err("no screen".into()));
+    h.run_steps(2);
+    assert!(h.state().engine.doc().objects.is_empty());
+    // An image, but the file dialog is cancelled.
+    h.state_mut().capture.inject(Ok(Some(png.clone())));
+    h.run_steps(2);
+    assert!(h.state().engine.doc().objects.is_empty());
+    assert!(!path.exists());
+    // An image and a file name.
+    h.state_mut().capture.inject(Ok(Some(png.clone())));
+    h.run_steps(2);
+    assert_eq!(std::fs::read(&path).unwrap(), png);
+    assert_eq!(h.state().engine.doc().objects.len(), 1);
+    let _ = std::fs::remove_dir_all(&dir);
 }

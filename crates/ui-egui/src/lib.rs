@@ -10,6 +10,7 @@ pub mod attributes;
 pub mod autosave;
 pub mod bevel;
 pub mod canvas;
+pub mod capture;
 pub mod charmap;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod clipboard;
@@ -98,6 +99,8 @@ pub struct App {
     pub show_balloons: bool,
     /// A theme to switch to on the next frame (`app.theme`).
     pub theme_request: Option<egui::ThemePreference>,
+    /// The screen capture command and its thread (D11).
+    pub capture: capture::Capture,
     /// E9: the theme setting, "system", "light" or "dark" (persisted).
     pub theme: String,
     /// E9: the UI scale, 1.0 = 100 % (persisted).
@@ -225,6 +228,7 @@ impl App {
             show_depths: true,
             show_balloons: true,
             theme_request: None,
+            capture: capture::Capture::default(),
             theme: "system".to_string(),
             ui_scale: 1.0,
             button_3d: true,
@@ -633,6 +637,7 @@ impl App {
         }
         #[cfg(not(target_arch = "wasm32"))]
         self.poll_control(ctx);
+        self.poll_capture(ctx);
         // A figure, or a PDF/SVG/PNG export with the figure embedded (E16),
         // dropped on the window opens. The picture panel takes its own drops.
         self.web_inbox.attach(ctx);

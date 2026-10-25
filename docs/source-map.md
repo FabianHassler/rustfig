@@ -170,7 +170,7 @@ them are `w_*` widget code for the X toolkit, which can't be ported as is) and
 | `w_style.c` | 1026 | style manager | `ui-egui/src/styles.rs`, `engine/src/cmd/styles.rs` | replaced | E6 |
 | `w_fontpanel.c` | 424 | font menus | `attributes` Text Font panel | replaced by the Text Font pop-up (S4) | E11 |
 | `w_help.c` | 219 | Help menu | menus | partial: reference/how-to entries (S4) | W10-2 |
-| `w_capture.c` | 676 | screen capture into a picture | — | missing (through the OS screenshot facilities) | D11 |
+| `w_capture.c` | 676 | screen capture into a picture | `os/capture`, `ui-egui/capture`, `app.capture` | replaced: the system's own selector (macOS screencapture, Linux portal, Windows whole screen) writes a PNG, `shape.picture` adds it (2026-10-25) | D11 |
 | `w_digitize.c` | 471 | digitising tablet | `ui-egui/src/digitize.rs`, `engine/cmd/digitize.rs` | replaced: exports the points of lines as numbered files (S4-8); tablet input not planned | S4-8 |
 | `w_drawprim.c`, `w_fontbits.c`, `w_rottext.c`, `w_i18n.c` | 4.6 k | X drawing primitives, bitmap fonts, rotated X text, X input methods | renderer, `figbase/text` (via `text`) | n/a | — |
 | `w_setup.c`, `w_util.c` | 2.1 k | X widget plumbing | — | n/a | — |

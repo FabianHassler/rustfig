@@ -1,6 +1,6 @@
 # Function-level source audit of xfig (S4)
 
-**Status:** 2026-10-25 (S4, the last missing functions: drawing messages, crosshair, dimension preview, Open/Merge panel, text Ctrl keys and super/subscripts, HPGL rows; 1,116 ported, 775 replaced, 224 not needed, 0 partial, 7 missing: Capture only). 2026-10-25 (refreshed: statuses after D8, E4, F5, E5, D10, D11, S4-1 to S4-4, W10-2, W10-3, W10-36, W22; 1,098 ported, 773 replaced, 224 not needed, 6 partial, 21 missing; the table was already ahead of the summary, which now agrees with it). 2026-10-23 (S4-7: `draw_shift_mousefun_canvas` and `_canvas2` ported). 2026-10-22 (D5: the `e_measure.c` functions, the measure results and the angle `compute_*` functions are ported). 2026-10-22 (D4: the `e_tangent.c` functions, the Tangent/Norm Length button and `smart_next_{arc,ellipse,line,spline}_found` are ported). 2026-10-22 (S4 done: every function definition of `old/xfig-3.2.9a/src/*.c` has a status). Regenerate the table with `cargo xtask source-audit` (skips quietly when `old/` is absent; keeps the status, note and task columns of existing rows, merged by file, function name and occurrence).
+**Status:** 2026-10-25 (D11: screen capture, `w_capture.c` replaced; 1,116 ported, 782 replaced, 224 not needed, 0 partial, 0 missing). 2026-10-25 (S4, the last missing functions: drawing messages, crosshair, dimension preview, Open/Merge panel, text Ctrl keys and super/subscripts, HPGL rows; 1,116 ported, 775 replaced, 224 not needed, 0 partial, 7 missing: Capture only). 2026-10-25 (refreshed: statuses after D8, E4, F5, E5, D10, D11, S4-1 to S4-4, W10-2, W10-3, W10-36, W22; 1,098 ported, 773 replaced, 224 not needed, 6 partial, 21 missing; the table was already ahead of the summary, which now agrees with it). 2026-10-23 (S4-7: `draw_shift_mousefun_canvas` and `_canvas2` ported). 2026-10-22 (D5: the `e_measure.c` functions, the measure results and the angle `compute_*` functions are ported). 2026-10-22 (D4: the `e_tangent.c` functions, the Tangent/Norm Length button and `smart_next_{arc,ellipse,line,spline}_found` are ported). 2026-10-22 (S4 done: every function definition of `old/xfig-3.2.9a/src/*.c` has a status). Regenerate the table with `cargo xtask source-audit` (skips quietly when `old/` is absent; keeps the status, note and task columns of existing rows, merged by file, function name and occurrence).
 
 S0 ([`source-map.md`](source-map.md)) maps C files to RustFig modules; this file goes one level down, to every function. It covers xfig only. fig2dev's functions were audited one by one in the fig2dev repository (<https://github.com/FabianHassler/fig2dev>, its audit passes; the inventory of the first rounds is `plan/fig2dev-audit.md` here, local and gitignored) and their hardening is task B11; they are not repeated here.
 
@@ -24,15 +24,15 @@ S0 ([`source-map.md`](source-map.md)) maps C files to RustFig modules; this file
 | Status | Functions |
 |---|---:|
 | ported | 1116 |
-| replaced | 775 |
+| replaced | 782 |
 | not needed | 224 |
 | partial | 0 |
-| missing | 7 |
+| missing | 0 |
 | **total** | **2122** (of which 14 in `xfigmain.c`, a generated copy of `main.c`) |
 
 Missing and partial functions by task (a function counts under each task it names; 2026-10-25):
 
-- **D11** (7): `w_capture.c`: `captureImage`, `rshift`, `getImageData`, `selectedRootArea`, `drawRect`, `getCurrentColors`, `canHandleCapture`
+- none (D11's screen capture is done)
 
 <!-- /audit-counts -->
 
@@ -61,24 +61,23 @@ These are visible to users and proposed as **not needed**; they stay open until 
 3. **Splash screen** (`splash_screen`, `clear_splash`): the About box carries the credits.
 4. **Terminal bell** (`beep`, 83 calls): errors reach the message panel; no sound.
 5. **Print batch list and printcap parsing** (`do_print_batch`, `do_clear_batch`, `update_batch_count`, `print_to_batchfile`, `parse_printcap`): not carried into the modern print dialog (B5): the OS print dialog chooses the printer and queues jobs.
-6. **Digitize** (6 functions of `w_digitize.c`, a tablet pen against a scanned figure): D11 keeps it as xfig's function; proposal: replace by clicking on a picture (pictures are already placed with coordinates) or drop it, tablets being rare. **Capture** (`w_capture.c`): through the OS screenshot facilities and E7's image paste.
+6. **Digitize** (6 functions of `w_digitize.c`, a tablet pen against a scanned figure): D11 keeps it as xfig's function; proposal: replace by clicking on a picture (pictures are already placed with coordinates) or drop it, tablets being rare. **Capture** (`w_capture.c`): done (D11): the OS screenshot facilities, `rustfig_os::capture` and File > Capture Screen.
 
 ## Missing, by area (2026-10-25)
 
-What is still missing or partial (7 functions missing, none partial; 2026-10-25 after S4: the audit's last missing functions), as user-visible functions. Hours are estimates.
+What is still missing or partial (nothing: 0 functions missing, none partial; 2026-10-25 after D11: screen capture, the last one), as user-visible functions. Hours are estimates.
 
 | Area | Function | Functions | Task | Hours |
 |---|---|---|---|---:|
 | Editing | none (arc radius, neighbour lengths and scale box size messages, and the crosshair, are done) | | | 0 |
 | Attributes | none (the dimension-line preview already draws the chosen arrow types) | | | 0 |
-| Files | none besides Capture (the Open/Merge panel with preview, comments, object count and Figure Offset is done) | | | 0 |
-| Files | Capture: grab a screen area into a picture object (through the OS screenshot facilities) | `w_capture.c` (7) | D11 | 6 |
+| Files | none (the Open/Merge panel with preview, comments, object count and Figure Offset is done; Capture is done: D11, `app.capture`) | | | 0 |
 | Text | none (Ctrl-key line editing, super- and subscripts are done) | | | 0 |
 | View | none (Unzoom, vertex numbers, cursors, highlights are done) | | | 0 |
 | Help | none (the bundled manual replaces the launchers) | | | 0 |
 | Export | none (HPGL/PCL rows are done) | | | 0 |
 
-Total about 6 h (Capture). Everything else in xfig's 2,122 function definitions is ported, replaced by a modern equivalent or X11/Xt plumbing.
+Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is ported, replaced by a modern equivalent or X11/Xt plumbing.
 
 ## Revision history
 
@@ -1397,13 +1396,13 @@ Total about 6 h (Capture). Everything else in xfig's 2,122 function definitions 
 | `w_canvas.c` | `round_coords` | 1102 | ported | grid and positioning-magnet rounding of points, also the isometric grid (`Engine::snap`, `indicator::snap_iso`) |  |
 | `w_canvas.c` | `floor_coords` | 1158 | ported | grid and positioning-magnet rounding of points (`Engine::snap`, `view.set_snap`) |  |
 | `w_canvas.c` | `ceil_coords` | 1189 | ported | grid and positioning-magnet rounding of points (`Engine::snap`, `view.set_snap`) |  |
-| `w_capture.c` | `captureImage` | 71 | missing | Capture: grab a screen area into a picture object | D11 |
-| `w_capture.c` | `rshift` | 149 | missing | Capture: grab a screen area into a picture object | D11 |
-| `w_capture.c` | `getImageData` | 162 | missing | Capture: grab a screen area into a picture object | D11 |
-| `w_capture.c` | `selectedRootArea` | 410 | missing | Capture: grab a screen area into a picture object | D11 |
-| `w_capture.c` | `drawRect` | 527 | missing | Capture: grab a screen area into a picture object | D11 |
-| `w_capture.c` | `getCurrentColors` | 584 | missing | Capture: grab a screen area into a picture object | D11 |
-| `w_capture.c` | `canHandleCapture` | 660 | missing | Capture: grab a screen area into a picture object | D11 |
+| `w_capture.c` | `captureImage` | 71 | replaced | Capture: the system's selector (`rustfig_os::capture`: macOS screencapture, Linux portal, Windows whole screen) and `app.capture` (File menu) write a PNG and add a picture object | D11 |
+| `w_capture.c` | `rshift` | 149 | replaced | Capture: the system's selector (`rustfig_os::capture`: macOS screencapture, Linux portal, Windows whole screen) and `app.capture` (File menu) write a PNG and add a picture object | D11 |
+| `w_capture.c` | `getImageData` | 162 | replaced | Capture: the system's selector (`rustfig_os::capture`: macOS screencapture, Linux portal, Windows whole screen) and `app.capture` (File menu) write a PNG and add a picture object | D11 |
+| `w_capture.c` | `selectedRootArea` | 410 | replaced | Capture: the system's selector (`rustfig_os::capture`: macOS screencapture, Linux portal, Windows whole screen) and `app.capture` (File menu) write a PNG and add a picture object | D11 |
+| `w_capture.c` | `drawRect` | 527 | replaced | Capture: the system's selector (`rustfig_os::capture`: macOS screencapture, Linux portal, Windows whole screen) and `app.capture` (File menu) write a PNG and add a picture object | D11 |
+| `w_capture.c` | `getCurrentColors` | 584 | replaced | Capture: the system's selector (`rustfig_os::capture`: macOS screencapture, Linux portal, Windows whole screen) and `app.capture` (File menu) write a PNG and add a picture object | D11 |
+| `w_capture.c` | `canHandleCapture` | 660 | replaced | Capture: the system's selector (`rustfig_os::capture`: macOS screencapture, Linux portal, Windows whole screen) and `app.capture` (File menu) write a PNG and add a picture object | D11 |
 | `w_cmdpanel.c` | `num_main_menus` | 306 | replaced | menu bar and menu items from `menus::XFIG_MENUS` and `LAYOUT` (egui menus) |  |
 | `w_cmdpanel.c` | `init_main_menus` | 313 | replaced | menu bar and menu items from `menus::XFIG_MENUS` and `LAYOUT` (egui menus) |  |
 | `w_cmdpanel.c` | `add_cmd_actions` | 355 | replaced | menu bar and menu items from `menus::XFIG_MENUS` and `LAYOUT` (egui menus) |  |
@@ -2218,3 +2217,4 @@ Total about 6 h (Capture). Everything else in xfig's 2,122 function definitions 
 | `xfigmain.c` | `check_refresh` | 2109 | replaced | Autorefresh mode reloads a figure changed on disk, once a second, asking first with unsaved edits (`ui-egui/src/reload.rs`, S4-9) | S4-9 |
 | 2026-10-23 | S4-7: the two `w_mousefun.c` Shift functions ported (partial → ported). |
 | 2026-10-25 | S4: the audit's last missing functions (all but Capture): `arc_msg`, `length_msg2`, `boxsize_scale_msg` (D10), the crosshair in `canvas_selected` (E9), the dimension preview with real arrows (`draw_cur_dimline`, `dimline_panel_preview`, found already done), the Open/Merge panel (W10-12; `check_cancel` and `file_preview_stop` replaced), `new_text_up`/`new_text_down` (these are Ctrl-^ and Ctrl-_ super/subscripts, not the arrow keys) and the `char_handler` Ctrl keys (E10), the HPGL rows (B9, W10-4). Counts: 1,116 ported, 775 replaced, 224 not needed, 0 partial, 7 missing (Capture, D11). |
+| 2026-10-25 | D11: `w_capture.c` (7 functions) replaced by `rustfig_os::capture` (macOS `screencapture -i`, Linux portal Screenshot, Windows whole screen) and the File menu's Capture Screen (`app.capture`). Counts: 1,116 ported, 782 replaced, 224 not needed, 0 partial, 0 missing. |

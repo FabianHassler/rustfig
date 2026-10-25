@@ -39,7 +39,7 @@ impl Engine {
                 freehand: false,
                 center: None,
                 ..
-            } if self.tool != ToolKind::Arc => Some(Source {
+            } => Some(Source {
                 msg: Msg::PntsLength(pts.len()),
                 fix: *pts.last()?,
                 cur: *cursor,

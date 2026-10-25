@@ -500,7 +500,7 @@ fn units_box(app: &mut App, ui: &mut Ui, tk: &Tokens, r: Rect) {
     }
     if app.unit_panel_open {
         let mut open = true;
-        egui::Window::new("Unit menu")
+        egui::Window::new("Unit/Scale settings")
             .open(&mut open)
             .resizable(false)
             .collapsible(false)
@@ -551,7 +551,6 @@ fn unit_panel(app: &mut App, ui: &mut Ui) {
     let mut d: UnitDraft = ui
         .data(|data| data.get_temp::<UnitDraft>(id))
         .unwrap_or_else(|| UnitDraft::of(app));
-    ui.label(egui::RichText::new("Unit/Scale settings").strong());
     egui::Grid::new("unit_panel")
         .num_columns(2)
         .spacing(vec2(8.0, 4.0))
