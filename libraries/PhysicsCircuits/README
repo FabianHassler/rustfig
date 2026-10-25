@@ -9,11 +9,12 @@ with three bars, chassis, protective earth, analog and digital ground),
 transformer and mutual inductance, port, terminal, wire junction dot, and three
 examples (example_rlc, example_transmon, example_resonator).
 
-Every part is one compound, in a horizontal (_h) and a vertical (_v) version.
+Every part is one compound, in one orientation (two-terminal parts horizontal,
+grounds pointing down); turn it with xfig's Rotate modes.
 All two-terminal parts have their pins exactly 1 inch apart on the 1/4-inch
 grid (horizontal: (1/4 in, 3/4 in) and (1 1/4 in, 3/4 in)), so a circuit
-joins with grid snapping on. Grounds have one pin (_v: on top, _h: on the
-left); transformers four pins on the grid. Labels in the examples are LaTeX
+joins with grid snapping on. Grounds have one pin, on top;
+transformers four pins on the grid. Labels in the examples are LaTeX
 special text ($C_c$, $E_J$).
 
 The files are written by `cargo xtask libraries` (xtask/src/libraries/circuits.rs);

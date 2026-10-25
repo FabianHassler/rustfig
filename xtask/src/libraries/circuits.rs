@@ -26,7 +26,8 @@ const C: f64 = 900.0;
 const PIN_A: Pt = (300.0, 900.0);
 const PIN_B: Pt = (1500.0, 900.0);
 
-/// Names of the two-terminal parts (each has `_h` and `_v`).
+/// Names of the two-terminal parts (published horizontal; the catalog also
+/// keeps a turned `_v` version for the examples).
 pub const TWO_TERMINAL: [&str; 17] = [
     "resistor_iec",
     "resistor_zigzag",
@@ -606,10 +607,28 @@ fn examples(out: &mut Vec<Part>) {
     );
 }
 
+/// The name a catalog entry is published under, or `None` for the turned
+/// versions that only the examples use: one orientation per part (the user's
+/// decision, 2026-10-25: turning a part is one click in xfig). Two-terminal
+/// parts and the port lie horizontal; grounds point down and the coupled
+/// coils stand upright, as drawn.
+fn published_name(name: &str) -> Option<String> {
+    if let Some(base) = name.strip_suffix("_h") {
+        let horizontal = TWO_TERMINAL.contains(&base) || base == "port";
+        return horizontal.then(|| base.to_string());
+    }
+    if let Some(base) = name.strip_suffix("_v") {
+        let upright = base.starts_with("ground_") || base == "transformer" || base == "mutual_inductance";
+        return upright.then(|| base.to_string());
+    }
+    Some(name.to_string())
+}
+
 /// Every figure of the PhysicsCircuits library, in file-name order.
 pub fn physics_circuits() -> Vec<Part> {
     let mut v: Vec<Part> = catalog()
         .into_iter()
+        .filter_map(|(name, text, objs, pins)| Some((published_name(&name)?, text, objs, pins)))
         .map(|(name, text, objs, pins)| {
             let c1 = format!("Physics circuits: {text}");
             let c2 = "Keywords: circuit physics electronics resistor capacitor inductor Josephson ground source";

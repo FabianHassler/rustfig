@@ -1194,7 +1194,7 @@ mod tests {
         let a: Vec<String> = physics_circuits().iter().map(|p| render(p).unwrap()).collect();
         let b: Vec<String> = physics_circuits().iter().map(|p| render(p).unwrap()).collect();
         assert_eq!(a, b);
-        assert!(a.len() > 50);
+        assert!(a.len() >= 30);
         let parts = physics_circuits();
         let mut names: Vec<&str> = parts.iter().map(|p| p.name.as_str()).collect();
         names.sort_unstable();
@@ -1236,23 +1236,17 @@ mod tests {
     }
 
     #[test]
-    fn two_terminal_parts_have_pins_one_inch_apart_horizontal_and_vertical() {
+    fn two_terminal_parts_have_pins_one_inch_apart_and_one_orientation() {
         let parts = physics_circuits();
         for name in circuits::TWO_TERMINAL {
-            for (suffix, horizontal) in [("h", true), ("v", false)] {
-                let full = format!("{name}_{suffix}");
-                let part = parts.iter().find(|p| p.name == full).unwrap();
-                assert_eq!(part.ends.len(), 2, "{full}");
-                let (a, b) = (part.ends[0], part.ends[1]);
-                if horizontal {
-                    assert_eq!(a.y, b.y, "{full}");
-                    assert_eq!((a.x - b.x).abs(), 1200.0, "{full}");
-                } else {
-                    assert_eq!(a.x, b.x, "{full}");
-                    assert_eq!((a.y - b.y).abs(), 1200.0, "{full}");
-                }
-            }
+            let part = parts.iter().find(|p| p.name == name).unwrap();
+            assert_eq!(part.ends.len(), 2, "{name}");
+            let (a, b) = (part.ends[0], part.ends[1]);
+            assert_eq!(a.y, b.y, "{name}");
+            assert_eq!((a.x - b.x).abs(), 1200.0, "{name}");
         }
+        // One orientation per part: no turned copies in the library.
+        assert!(parts.iter().all(|p| !p.name.ends_with("_h") && !p.name.ends_with("_v")));
     }
 
     #[test]
