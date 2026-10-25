@@ -24,7 +24,7 @@ the score.
 | Drawing modes | 12 | 98 % | none known | 0 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
 | Export | 12 | 73 % | the audit's remaining hardening passes (B11), picture frames and GIF transparency (gap #26)(`sld` checked 2026-10-23: fig2dev has no `gensld`, the port reproduces `ppmtoacad`; `\ooo` escapes byte-identical to C fig2dev, fig2dev branch `b11-export-hardening`) | 79 |
-| Text | 10 | 84 % | exact PostScript font metrics (text editing on the canvas done 2026-10-22, E10; spell check 2026-10-23, F5; character map 2026-10-22, E5); installed fonts per text (F7, 2026-10-23), embedded in PDF/PS/SVG exports by fig2dev v0.8.0 | 14 |
+| Text | 10 | 92 % | nothing known beyond the round-2 xfig check; text widths match xfig and fig2dev when the PostScript fonts (URW base35 or TeX Gyre) are installed, which RustFig measures and draws with (F1); without them, and on the web, the built-in fallback fonts are used (an environment limit, not a parity gap; the corpus and reference tests force the fallback on purpose). Done: text editing on the canvas (E10), spell check (F5), character map (E5), installed fonts per text embedded in exports (F7, fig2dev v0.8.0), LaTeX on the canvas (F8) | 4 |
 | View & navigation | 8 | 100 % | — (zoom box, pan to origin and unzoom with Ctrl+click done 2026-10-22, E3) | 0 |
 | Undo | 4 | 100 % | — | 0 |
 | Libraries | 5 | 95 % | the web build now serves the bundled libraries (C2, not yet checked in a real browser); no user library or comment search there | 3 |
