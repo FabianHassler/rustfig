@@ -1,6 +1,6 @@
 # RustFig roadmap
 
-**Status (2026-10-25):** Stage **Beta** (public pre-releases 0.9.0-beta.N). Overall xfig parity **≈91 %**
+**Status (2026-10-26):** Stage **Beta** (public pre-releases 0.9.0-beta.N). Overall xfig parity **≈93 %**
 ([assessment](docs/target-app-parity.md)). The native app draws, edits,
 saves and exports. The web build compiles; it is not yet packaged or tested in a browser.
 
@@ -17,12 +17,12 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 
 | Measure | Value |
 |---------|-------|
-| Overall parity (weighted) | ≈91 % |
+| Overall parity (weighted) | ≈93 % |
 | Commands (all reachable from the control channel and MCP) | 223 engine (incl. 44 tool modes and "no mode") + 29 UI |
 | Interactive tools (xfig modes) | 44 (xfig's 43 + Trim/Split/Extend) |
 | Tests | 598 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 1.3–3.2, write 3.2 |
-| Export formats | all through fig2dev's ported drivers (`convert`): PDF, SVG, EPS, PNG, GIF, JPEG, TIFF, PPM, PCX, XBM, XPM, EPS+PDF pair, LaTeX box from its scene writers (PostScript without page layout yet); LaTeX picture, epic/eepic/eepicemu, PiCTeX, TeXtyl, tpic, pic, pstex/pdftex, pict2e, CGM, HPGL, DXF, MetaPost, METAFONT, ge, image map, Gerber, shape, TikZ, PSTricks, EMF, Tk/Perl-Tk from ported fig2dev drivers (every fig2dev language except `sld`); fig2dev's own suite 79 pass / 9 fail / 1 skipped |
+| Export formats | all through fig2dev's ported drivers (`convert`): PDF, SVG, EPS, PNG, GIF, JPEG, TIFF, PPM, PCX, XBM, XPM, EPS+PDF pair, LaTeX box from its scene writers (PostScript without page layout yet); LaTeX picture, epic/eepic/eepicemu, PiCTeX, TeXtyl, tpic, pic, pstex/pdftex, pict2e, CGM, HPGL, DXF, MetaPost, METAFONT, ge, image map, Gerber, shape, TikZ, PSTricks, EMF, Tk/Perl-Tk from ported fig2dev drivers (every fig2dev language except `sld`); fig2dev's own suite 88 pass / 0 fail / 1 skipped; SVG byte-identical with C fig2dev on 284 of 299 sample figures |
 | Perf, 50k paths (render fit / hit test / open / edit + undo) | 260 ms / 0.1 ms / 20 ms / 0.9 ms |
 
 ## Parity by dimension
@@ -33,7 +33,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Editing modes | 81 % | measure modes done; missing anchor point, array copy, align to canvas |
 | Attributes panel | 80 % | xfig's per-mode buttons; missing colour editor, latex/manhattan positioning |
 | File format | 92 % | Fig 1.3–3.2 read; exact pre-3.2 spline conversion missing |
-| Export | 66 % | every fig2dev language but `sld`; PostScript page layout and previews, hardening passes missing |
+| Export | 88 % | every fig2dev language; hardening passes 1–7 done (B11); small items, `-j` and smoothed fill patterns left |
 | Text | 55 % | fallback fonts, no character map or LaTeX special text |
 | View & navigation | 96 % | xfig's layout and three-button mouse (the only ones, W16/W17), depth panel, rulers and units box, object snaps; zoom box missing |
 | Undo | 100 % | multi-level (xfig: single level) |
@@ -74,6 +74,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 | Date | Change |
 |------|--------|
 | 2026-10-25 | D11 screen capture: File > Capture Screen… (`app.capture`; `rustfig_os::capture`: macOS `screencapture -i`, Linux portal Screenshot, Windows whole screen; Save names the PNG, a picture object is added), the arc's "N points, Length = …" message and the "Unit/Scale settings" title (W22 row 36 fully fixed); xfig function audit: 0 missing; Editing 95 → 97 %. The OS calls are manual checks (hardware-parity.md). |
+| 2026-10-26 | B11 export hardening, passes 1–7 (fig2dev v0.9.1): fig2dev's own suite 88 of 88 (was 82); SVG byte-identical with C fig2dev on 284 of 299 sample figures; options and messages as C; bitmaps drawn as ghostscript draws them; PDF MediaBox and XMP. Export 73 → 88 %, parity ≈91 → ≈93 %. |
 | 2026-10-25 | **v0.9.0-beta.3**: the second xfig comparison round (119 more scenarios) and its fixes: √2 zoom steps, xfig's pick order at equal depth, box/centre scale factors, objects put last after edits, point order on flip/rotate, Update radius, spline tangents, Convert at a vertex, compound panel corners, live messages, vertex numbers from 0; the audit's last missing functions (drawing messages, crosshair, Open/Merge panel with preview, text super/subscript and Ctrl keys, HPGL options; only screen capture left); plot window regrouped with Box, Ticks and Numbers per axis; text widths reclassified (Text 92 %). |
 | 2026-10-25 | **v0.9.0-beta.2**: the 15 real differences from the side-by-side check with the real xfig fixed (W22: spline shape -0.5, rotate pivot, draw order after move/scale, radius -1, clicked circle points, regular-polygon and arc-box order, xfig's mode messages, Glue hint, depth pop-up, Comments first, Trim at the end, load message, indicator labels); the macOS app is signed ad hoc (the beta.1 download was reported as damaged); web keys follow the browser's system. |
 | 2026-10-24 | First public pre-release **v0.9.0-beta.1**: the repository is public, CI runs on every push (Linux, Windows, macOS), release builds attach the apps (macOS .dmg, Windows zip, Linux .deb/.tar.gz), the web version goes to GitHub Pages (C5, preview). Web: Merge, pictures and bundled libraries (C2). F1 help per attribute button. README with a hero section. |

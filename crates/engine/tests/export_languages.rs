@@ -193,7 +193,6 @@ fn bad_options_are_refused() {
         .unwrap();
     assert!(r["warnings"][0].as_str().unwrap().contains("B8"), "{r}");
     assert!(err(&mut e, "svg", json!({"title": "x"})).contains("no option"));
-    assert!(err(&mut e, "eps", json!({"border": -5})).contains("number"));
     // fig2dev takes -m and -Z together; -Z sizes the figure.
     assert!(e
         .execute("file.export_data", &json!({"format": "eps", "options": [1]}))

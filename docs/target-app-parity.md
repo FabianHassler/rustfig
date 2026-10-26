@@ -23,7 +23,7 @@ the score.
 | Attributes / indicator | 10 | 93 % | mix memory and lock of xfig's colour panel (recent colours instead); depth pop-up, labels and text flags as xfig since W22 | 3 |
 | Drawing modes | 12 | 98 % | none known | 0 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |
-| Export | 12 | 73 % | the audit's remaining hardening passes (B11), picture frames and GIF transparency (gap #26)(`sld` checked 2026-10-23: fig2dev has no `gensld`, the port reproduces `ppmtoacad`; `\ooo` escapes byte-identical to C fig2dev, fig2dev branch `b11-export-hardening`) | 79 |
+| Export | 12 | 88 % | B11 passes 1–7 done (fig2dev v0.9.1, 2026-10-26: fig2dev's suite 88 of 88; SVG byte-identical with C on 284 of 299 sample figures; EPS/PDF render like C's; bitmaps closer to gs's). Left: B11 pass 8 (small items) and 9 (`-j` composite fonts), fill patterns in smoothed bitmaps (C: hard-edged tiles), picture frames and GIF transparency (gap #26) | 15 |
 | Text | 10 | 92 % | nothing known beyond the round-2 xfig check; text widths match xfig and fig2dev when the PostScript fonts (URW base35 or TeX Gyre) are installed, which RustFig measures and draws with (F1); without them, and on the web, the built-in fallback fonts are used (an environment limit, not a parity gap; the corpus and reference tests force the fallback on purpose). Done: text editing on the canvas (E10), spell check (F5), character map (E5), installed fonts per text embedded in exports (F7, fig2dev v0.8.0), LaTeX on the canvas (F8) | 4 |
 | View & navigation | 8 | 100 % | — (zoom box, pan to origin and unzoom with Ctrl+click done 2026-10-22, E3) | 0 |
 | Undo | 4 | 100 % | — | 0 |
@@ -31,7 +31,11 @@ the score.
 | Printing | 5 | 90 % | Linux print dialog checked (2026-10-25); left: the Windows print hand-off | 2 |
 | Settings & styles | 5 | 90 % | little known: preferences, recent files, styles with families, colours, Global settings, Unit/Scale and Arrow Size panels, number pop-ups; checked in W22 round 2 (dialogs behind the menus) | 2 |
 | Platforms | 7 | 82 % | Linux checked on Debian 13 (Xfce, X11, ARM64; 2026-10-25): install, files with Unicode names, exports, mouse, keys, print, clipboard, file manager, capture, recovery all work; left: Linux Wayland and HiDPI, Windows by hand, the browsers, a screen reader, code signing (user decision) | 7 |
-| **Overall** | 100 | **≈91 %** | | **195** |
+| **Overall** | 100 | **≈93 %** | | **131** |
+
+## Re-score 2026-10-26
+
+B11 export hardening, passes 1–7 (fig2dev v0.9.1): fig2dev's own test suite 82 → 88 of 88; SVG written as gensvg.c writes it (byte-identical on 284 of 299 sample figures, was 0); options and messages as fig2dev.c; hard-edged and smoothed bitmaps drawn as ghostscript draws them (EPS pictures, line widths); PDF MediaBox and XMP as ps2pdf; dash value 0 solid. Export 73 → 88 %, overall ≈91 → ≈93 % (weighted 93.2).
 
 ## Re-score 2026-10-25
 

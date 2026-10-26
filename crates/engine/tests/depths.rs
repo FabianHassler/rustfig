@@ -160,5 +160,7 @@ fn export_active_layers_only() {
             &json!({"format": "svg", "active_layers_only": true}),
         )
         .unwrap();
-    assert_eq!(v["data"].as_str().unwrap().matches("<path").count(), 1);
+    let svg = v["data"].as_str().unwrap();
+    assert_eq!(svg.matches("<rect").count(), 1, "{svg}");
+    assert!(!svg.contains("<polyline"), "{svg}");
 }

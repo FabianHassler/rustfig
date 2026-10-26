@@ -25,7 +25,7 @@
 | 19 | Accessibility: G3 done 2026-10-24 (AccessKit on, every interactive widget has an accessible label, `canvas::describe_drawing` names the drawing for the canvas). Left: a real screen-reader check on each OS, per-object navigation on the canvas | Platforms | Low | 6 |
 | 21 | closed: EMF, Tk/Perl-Tk ported (B9); the `sld` driver (slide output) is the one fig2dev language left unported | Export | Low | 4 |
 | 27 | ✅ closed 2026-10-18: text bytes as C (`Text::raw`, `Comment::raw`; drivers write the input bytes). `-E` charsets beyond UTF-8/ISO-8859-1/-2 convert through `encoding_rs` (audit pass 27, 2026-10-18; no CP437/CP850, stderr messages with raw bytes and tk/pstricks picture names are Unicode) | Export | Low | 2 |
-| 24 | fig2dev port hardening: the audit's partial and missing functions outside the unported drivers (options and messages, text bytes, depth order, FMA in bounds, EPS/PDF fonts and Unicode, SVG text, `readpics`, JPEG passthrough; B11) | Export | Medium | 66 |
+| 24 | fig2dev port hardening, leftovers after passes 1–7 (fig2dev v0.9.1): small items (box comments, readpics zip/bz2/xz, palette order, textconvert messages; pass 8), `-j` composite fonts (pass 9), fill patterns in smoothed bitmaps (B11) | Export | Low | 13 |
 | 28 | ✅ 2026-10-18 (audit pass 15): non-Latin-1 text in EPS/PS goes through fig2dev's Xfig-UTF8-H CMap and `composefont` fonts, in PDF through Type 3 fonts from RustFig's glyph outlines with a ToUnicode map (was `?`). Left: the 35 PostScript fonts are not embedded in PDF (substitutes; needs font files that cannot live in this repo), PDF text in Symbol/ZapfDingbats beyond WinAnsi, `-j` composite fonts | Export | Low | 12 |
 | 20 | ~~Text widths differ from fig2dev~~ (reclassified 2026-10-25: with the PostScript fonts installed the widths match, F1; the differences the A10 corpus shows come from the built-in fallback fonts those tests force on purpose. Without matching installed fonts, and on the web, bold/italic are synthetic: an environment limit, not a gap) | Text | — | 0 |
 | 29 | ✅ closed 2026-10-22: main-window leftovers found by W10 group 1 ([window-parity.md](window-parity.md)): Help documentation entries (W10-2, W10-28), Show vertex numbers (W10-3), Autorefresh and Update Control (S4-9, W10-1) | UI | Done | 0 |
@@ -57,6 +57,7 @@
 | 2026-10-17 | #1 shrank: pict2e ported (B3). |
 | 2026-10-21 | DD9: #25 restated (exports come from the bridge's objects, not the Fig text; the writer's arc losses are unchanged). |
 | 2026-10-16 | #25 added (B12: exports through the Fig writer expose its arc losses); #26 added (the corpus now exports pictures as the app does). |
+| 2026-10-26 | #24 shrank (B11 passes 1–7, fig2dev v0.9.1: suite 88 of 88, SVG byte-identical with C, gs-like bitmaps). |
 | 2026-10-16 | #13 closed (G1: the app reads Fig 1.3–2.1 through fig2dev's reader); #1 shrank (B2 pstex/pdftex), #21 shrank to EMF and Tk, #14 shrank (pictures in exports); #24 added from the fig2dev audit (B11). |
 | 2026-10-15 | #23 closed: start values are xfig's (positioning magnet 1/16 inch, alignment none, stick arrows, dot gap 3 apart from dash length 4); the man page's text step 1.2 is a documentation error, xfig's code starts at 1.0 as RustFig does. |
 | 2026-10-15 | D12 closed #22 (fill patterns as fig2dev's). |

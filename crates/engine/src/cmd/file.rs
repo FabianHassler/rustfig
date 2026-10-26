@@ -1531,8 +1531,10 @@ fn export_formats(_: &mut Engine, _: &Value) -> CmdResult {
                     })
                 })
                 .collect();
-            // The ported driver's own options, by letter.
-            if !l.available() && available {
+            // The ported driver's own options, by letter, for languages
+            // whose options fig2dev's table doesn't list.
+            let listed = options_for(l.id).any(|o| !o.langs.is_empty());
+            if available && !listed {
                 let drv = match l.id {
                     "pstex" | "pspdftex" => "pstex_t",
                     "pdftex" => "pdftex_t",

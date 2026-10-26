@@ -219,6 +219,7 @@ fn render_example(app: &App, d: &DimlineSettings, ppp: f32, paper: [u8; 3]) -> O
         &RasterOptions {
             transform: Affine::scale(k, k),
             min_line_px: 1.0,
+            adjust_px: 0.0,
             pattern: rustfig_render::pattern::PatternFrame::screen(),
         },
     );

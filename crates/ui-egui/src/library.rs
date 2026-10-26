@@ -258,6 +258,7 @@ fn render(doc: &Document, px: usize) -> Option<egui::ColorImage> {
         &RasterOptions {
             transform: t,
             min_line_px: 1.0,
+            adjust_px: 0.0,
             pattern: rustfig_render::pattern::PatternFrame::screen(),
         },
     );

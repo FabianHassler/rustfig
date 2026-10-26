@@ -180,6 +180,7 @@ fn rasterize_scene(scene: &Scene, t: Affine, w: usize, h: usize) -> egui::ColorI
         &RasterOptions {
             transform: t,
             min_line_px: 1.0,
+            adjust_px: 0.0,
             pattern: rustfig_render::pattern::PatternFrame::screen(),
         },
     );

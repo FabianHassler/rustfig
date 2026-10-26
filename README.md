@@ -5,7 +5,7 @@ in Rust for macOS, Windows, Linux and the web, with fig2dev built in.
 
 [![CI](https://github.com/FabianHassler/rustfig/actions/workflows/ci.yml/badge.svg)](https://github.com/FabianHassler/rustfig/actions/workflows/ci.yml)
 [![Licence: MIT OR Apache-2.0](https://img.shields.io/badge/licence-MIT%20OR%20Apache--2.0-blue)](#license)
-![Status: beta](https://img.shields.io/badge/status-beta%2C%20%E2%89%8891%25%20xfig%20parity-yellow)
+![Status: beta](https://img.shields.io/badge/status-beta%2C%20%E2%89%8893%25%20xfig%20parity-yellow)
 
 ![RustFig's window: a plot with LaTeX labels, LaTeX formulas typeset on the canvas, and a block diagram, in xfig's layout](docs/images/rustfig-window.png)
 
@@ -124,7 +124,7 @@ bundled). `FIG2DEV_BUILTIN_FONTS=1` forces the built-in fonts.
 
 ## What RustFig can do
 
-**Beta (pre-releases 0.9.0-beta.N). Overall xfig parity ≈91 %** (see [ROADMAP.md](ROADMAP.md) and the
+**Beta (pre-releases 0.9.0-beta.N). Overall xfig parity ≈93 %** (see [ROADMAP.md](ROADMAP.md) and the
 [parity assessment](docs/target-app-parity.md)).
 
 - Draw: circles, ellipses, approximated/interpolated/X-splines, polylines,
