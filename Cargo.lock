@@ -1277,8 +1277,8 @@ checksum = "3296eb97d869113eaf148a6bdf01884e90b3828ad7ae2340b0f93362fc158611"
 
 [[package]]
 name = "fig2dev"
-version = "0.9.1"
-source = "git+https://github.com/FabianHassler/fig2dev?tag=v0.9.1#406d9538a8f5152363d9f24a1b385e2a3e314555"
+version = "0.9.2"
+source = "git+https://github.com/FabianHassler/fig2dev?tag=v0.9.2#adbf73dbf9061f5f59fcfb610c0a0b7809bbd80a"
 dependencies = [
  "encoding_rs",
  "figbase",
@@ -1295,8 +1295,8 @@ dependencies = [
 
 [[package]]
 name = "figbase"
-version = "0.9.1"
-source = "git+https://github.com/FabianHassler/fig2dev?tag=v0.9.1#406d9538a8f5152363d9f24a1b385e2a3e314555"
+version = "0.9.2"
+source = "git+https://github.com/FabianHassler/fig2dev?tag=v0.9.2#adbf73dbf9061f5f59fcfb610c0a0b7809bbd80a"
 dependencies = [
  "epaint_default_fonts",
  "fontdb",

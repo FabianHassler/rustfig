@@ -153,7 +153,7 @@ fig2dev -L svg drawing.fig drawing.svg             # under its own name (see bel
 ```
 
 Common uses (all of fig2dev's options are accepted; `rustfig fig2dev -h` lists
-them, `-h` after `-L LANG` shows the language's own options):
+the general ones, `rustfig fig2dev -h -L LANG` adds the language's own):
 
 ```sh
 rustfig fig2dev -L pdf -m 0.5 in.fig out.pdf        # half size
