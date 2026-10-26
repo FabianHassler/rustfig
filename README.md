@@ -46,19 +46,18 @@ has ready-made apps (not yet signed by Apple or Microsoft):
 
 ### Homebrew (macOS, Linux)
 
-The repository is its own tap; the formula builds `rustfig` and
-`rustfig-cli` from source, plus a `fig2dev` command: a link to `rustfig`,
-which runs fig2dev's command line (`fig2dev -L pdf in.fig out.pdf`, the same
-as `rustfig fig2dev -L pdf in.fig out.pdf`).
+The tap [FabianHassler/homebrew-tap](https://github.com/FabianHassler/homebrew-tap)
+builds `rustfig` and `rustfig-cli` from source (`rustfig fig2dev …` runs
+fig2dev's command line); `fig2dev-rs` adds a plain `fig2dev` command.
 
 ```sh
-brew tap fabianhassler/rustfig https://github.com/FabianHassler/rustfig
-brew install --HEAD rustfig
+brew install --HEAD fabianhassler/tap/rustfig
+brew install fabianhassler/tap/fig2dev-rs    # optional: `fig2dev`
 ```
 
 Update with `brew upgrade --fetch-HEAD rustfig`, remove with
 `brew uninstall rustfig`. Homebrew's own `fig2dev` formula (the C program)
-installs the same command name: `brew unlink fig2dev` first if you have it.
+installs the same command name as `fig2dev-rs`: keep one of them linked.
 
 ### From source (Cargo)
 

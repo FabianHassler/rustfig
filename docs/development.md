@@ -1,6 +1,6 @@
 # Development
 
-**Status:** 2026-10-23 (Homebrew formula; CI by hand).
+**Status:** 2026-10-26 (Homebrew formulae in the tap).
 
 ## Build and run
 
@@ -72,7 +72,7 @@ it, so `cargo +toolchain xtask …` stays on that toolchain.
 
 ## Homebrew
 
-`Formula/rustfig.rb` makes the repository its own tap (`brew tap fabianhassler/rustfig https://github.com/FabianHassler/rustfig`, then `brew install --HEAD rustfig`). It builds `rustfig` and `rustfig-cli` and links `fig2dev` to `rustfig` (no separate fig2dev build: started as `fig2dev`, `rustfig` runs fig2dev's command line); it conflicts with Homebrew's C `fig2dev` formula. Once RustFig has release tags, add a stable `url` with the tag.
+The formulae live in the tap [FabianHassler/homebrew-tap](https://github.com/FabianHassler/homebrew-tap) (decided 2026-10-26; the repository's own `Formula/rustfig.rb` is gone): `rustfig` builds `rustfig` and `rustfig-cli` (`--HEAD` until a release tag whose `Cargo.lock` names the current fig2dev commits; then add a stable `url`), `fig2dev-rs` builds fig2dev's `fig2dev` from its tag and conflicts with Homebrew's C `fig2dev`. Bump both when you tag a release.
 
 ## Fonts
 
@@ -118,6 +118,7 @@ format or geometry changes, on an idle machine.
 | 2026-10-13 | First version. |
 | 2026-10-16 | B12: exports through fig2dev; `RUSTFIG_CORPUS_LIST`. |
 | 2026-10-23 | Homebrew formula. |
+| 2026-10-26 | Formulae moved to FabianHassler/homebrew-tap (rustfig, fig2dev-rs). |
 | 2026-10-24 | P3: `cargo xtask package`. |
 | 2026-10-24 | W22: `cargo xtask xfig-compare`. |
 | 2026-10-25 | W22 round 2: `XFIG_COMPARE_FILTER` takes comma-separated substrings; second fixture, `Key`, `Dlg`, `Item`, `Drag` steps. |
