@@ -51,11 +51,11 @@ builds `rustfig` and `rustfig-cli` from source (`rustfig fig2dev …` runs
 fig2dev's command line); `fig2dev-rs` adds a plain `fig2dev` command.
 
 ```sh
-brew install --HEAD fabianhassler/tap/rustfig
+brew install fabianhassler/tap/rustfig
 brew install fabianhassler/tap/fig2dev-rs    # optional: `fig2dev`
 ```
 
-Update with `brew upgrade --fetch-HEAD rustfig`, remove with
+Update with `brew upgrade rustfig`, remove with
 `brew uninstall rustfig`. Homebrew's own `fig2dev` formula (the C program)
 installs the same command name as `fig2dev-rs`: keep one of them linked.
 

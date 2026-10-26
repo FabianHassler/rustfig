@@ -72,7 +72,7 @@ it, so `cargo +toolchain xtask …` stays on that toolchain.
 
 ## Homebrew
 
-The formulae live in the tap [FabianHassler/homebrew-tap](https://github.com/FabianHassler/homebrew-tap) (decided 2026-10-26; the repository's own `Formula/rustfig.rb` is gone): `rustfig` builds `rustfig` and `rustfig-cli` (`--HEAD` until a release tag whose `Cargo.lock` names the current fig2dev commits; then add a stable `url`), `fig2dev-rs` builds fig2dev's `fig2dev` from its tag and conflicts with Homebrew's C `fig2dev`. Bump both when you tag a release.
+The formulae live in the tap [FabianHassler/homebrew-tap](https://github.com/FabianHassler/homebrew-tap) (decided 2026-10-26; the repository's own `Formula/rustfig.rb` is gone): `rustfig` builds `rustfig` and `rustfig-cli` (stable `url` from v0.9.0-beta.5 on, `--HEAD` for main), `fig2dev-rs` builds fig2dev's `fig2dev` from its tag and conflicts with Homebrew's C `fig2dev`. Bump both when you tag a release.
 
 ## Fonts
 
