@@ -145,6 +145,18 @@ impl FigurePreview {
 
     /// The figure drawn to fit in `max_w` x `max_h` pixels on white
     /// (RGBA, row by row); `None` when the figure is empty.
+    /// The preview's scene: special (LaTeX) text as Unicode, as in the
+    /// library previews (no TeX run for a preview).
+    fn scene(&self) -> rustfig_render::Scene {
+        rustfig_render::build_scene(
+            &self.doc,
+            &SceneOptions {
+                approx_latex: true,
+                ..SceneOptions::default()
+            },
+        )
+    }
+
     pub fn render(&self, max_w: u32, max_h: u32) -> Option<(u32, u32, Vec<u8>)> {
         let b = self.bounds;
         if b.is_empty() || b.width() <= 0.0 || b.height() <= 0.0 || max_w == 0 || max_h == 0 {
@@ -159,7 +171,7 @@ impl FigurePreview {
             ((b.width() * k).ceil() as u32).clamp(1, max_w),
             ((b.height() * k).ceil() as u32).clamp(1, max_h),
         );
-        let scene = rustfig_render::build_scene(&self.doc, &SceneOptions::default());
+        let scene = self.scene();
         let mut pm = Pixmap::new(w, h)?;
         for px in pm.data_mut().as_chunks_mut::<4>().0 {
             *px = [255, 255, 255, 255];
@@ -241,6 +253,32 @@ mod tests {
         assert!(glob_match("[a-c]*", "b.fig") && !glob_match("[!a-c]*", "b.fig"));
         assert!(mask_match("", "anything") && !mask_match("*.fig", "x.png"));
         assert!(!glob_match("[", "x"));
+    }
+
+    #[test]
+    fn preview_shows_latex_text_approximately() {
+        let dir = std::env::temp_dir().join(format!("rustfig-fp-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("latex.fig");
+        std::fs::write(
+            &path,
+            "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+             4 0 0 50 -1 0 12 0.0000 2 135 450 600 600 $\\\\lambda/2$\\001\n",
+        )
+        .unwrap();
+        let fig = preview_figure(Units::Inches, path.to_str().unwrap()).unwrap();
+        let texts: Vec<String> = fig
+            .scene()
+            .prims
+            .iter()
+            .filter_map(|p| match p {
+                rustfig_render::Prim::Text(t) => Some(t.text.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(texts, ["λ/2"]);
+        assert!(fig.render(64, 64).is_some());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
