@@ -147,27 +147,50 @@ impl Route {
 const THICK: i32 = 2;
 const AMP: f64 = 75.0;
 
+/// How far an arrow head on a line reaches past the point where the line
+/// goes on: the head is as wide as the line `d` before its tip
+/// (`d = line width × head length / head width`), so the continuing line
+/// starts under the head instead of poking out of its tip.
+fn tip_overshoot(thickness: i32, head: &Arrow) -> f64 {
+    if head.width <= 0.0 {
+        return 0.0;
+    }
+    rustfig_geom::stroke_width(f64::from(thickness)) * head.height / head.width
+}
+
 /// Fermion line with the arrow in the middle: two pieces, one ending in the
-/// arrow head. `reverse` points the arrow back (anti-fermion).
+/// arrow head, whose tip lies a little past the middle so that the arrow
+/// sits on the line ([`tip_overshoot`]). `reverse` points the arrow back
+/// (anti-fermion).
 fn fermion(path: Route, reverse: bool) -> Vec<Object> {
     let s = style(LineKind::Solid, THICK, 50);
     let (a, b) = path.ends();
-    let head = Some(arrow_head(150.0));
+    let arrow = arrow_head(150.0);
+    // The tip's place along the route, as a fraction of its length.
+    let ds = tip_overshoot(THICK, &arrow) / path.length().max(1.0);
+    let tip = if reverse { 0.5 - ds } else { 0.5 + ds };
+    let head = Some(arrow);
     match path {
         Route::Line(..) => {
-            let m = p((a.x + b.x) / 2.0, (a.y + b.y) / 2.0);
+            let (m, t) = (path.at_rounded(0.5), path.at_rounded(tip));
             if reverse {
-                vec![polyline(s, vec![a, m], None), polyline(s, vec![b, m], head)]
+                vec![polyline(s, vec![a, m], None), polyline(s, vec![b, t], head)]
             } else {
-                vec![polyline(s, vec![a, m], head), polyline(s, vec![m, b], None)]
+                vec![polyline(s, vec![a, t], head), polyline(s, vec![m, b], None)]
             }
         }
         Route::Arc(..) => {
-            let (q1, top, q3) = (path.at_rounded(0.25), path.at_rounded(0.5), path.at_rounded(0.75));
+            let top = path.at_rounded(0.5);
             let halves = if reverse {
-                [arc_obj(s, b, q3, top, head), arc_obj(s, a, q1, top, None)]
+                [
+                    arc_obj(s, b, path.at_rounded((1.0 + tip) / 2.0), path.at_rounded(tip), head),
+                    arc_obj(s, a, path.at_rounded(0.25), top, None),
+                ]
             } else {
-                [arc_obj(s, a, q1, top, head), arc_obj(s, top, q3, b, None)]
+                [
+                    arc_obj(s, a, path.at_rounded(tip / 2.0), path.at_rounded(tip), head),
+                    arc_obj(s, top, path.at_rounded(0.75), b, None),
+                ]
             };
             halves.into_iter().flatten().collect()
         }

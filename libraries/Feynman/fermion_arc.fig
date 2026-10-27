@@ -11,7 +11,7 @@ Single
 # Feynman diagram: fermion line, half circle on a chord of 1 inch (loops, self-energy)
 # Ends on the 1/4-inch grid. Keywords: feynman loop particle physics
 6 300 300 1500 900
-5 1 0 2 0 7 50 -1 -1 0.000 0 0 1 0 900.903 900.903 300 900 476 476 900 300
+5 1 0 2 0 7 50 -1 -1 0.000 0 0 1 0 899.758 900.227 300 900 485 467 925 301
 	1 1 1.00 90.00 150.00
 5 1 0 2 0 7 50 -1 -1 0.000 0 0 0 0 899.097 900.903 900 300 1324 476 1500 900
 -6
