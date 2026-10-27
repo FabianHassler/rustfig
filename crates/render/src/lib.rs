@@ -74,7 +74,8 @@ pub struct SceneOptions {
     /// by 80/76.2 (fig2dev with xfig's `-F`, `genps.c` `PSFONTMAG`).
     pub text_scale: Option<f64>,
     /// Show special (LaTeX) texts as a Unicode approximation of their source
-    /// (library icons and preview: fast, no TeX). Never saved.
+    /// (library icons, file previews, and on the canvas where `typeset` has
+    /// no picture: fast, no TeX). Never saved.
     pub approx_latex: bool,
 }
 
@@ -471,6 +472,22 @@ mod tests {
             ..SceneOptions::default()
         };
         assert_eq!(text_of(&opts), "λ/2");
+        // The canvas: TeX has no picture yet (or failed), so the
+        // approximation stands in.
+        #[derive(Debug)]
+        struct NotYet;
+        impl Typesetter for NotYet {
+            fn typeset(&self, _: &TypesetRequest<'_>) -> Option<Typeset> {
+                None
+            }
+        }
+        let canvas = SceneOptions {
+            typeset: Some(Arc::new(NotYet)),
+            screen: true,
+            approx_latex: true,
+            ..SceneOptions::default()
+        };
+        assert_eq!(text_of(&canvas), "λ/2");
     }
 
     #[test]

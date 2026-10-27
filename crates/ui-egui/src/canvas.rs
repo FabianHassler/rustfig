@@ -455,7 +455,9 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         gray_hidden: app.engine.gray_hidden_depths,
         screen: true,
         text_scale: None,
-        approx_latex: false,
+        // Special text TeX has not typeset (yet, or without TeX) shows as a
+        // Unicode approximation; View > Typeset LaTeX text off shows the source.
+        approx_latex: app.engine.latex.settings().enabled,
     };
     // The scene: rebuilt only when the drawing changes, not on pan or zoom.
     let scene = match &app.canvas.scene {
@@ -549,10 +551,22 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
                 next_id: 0,
                 open: Vec::new(),
             };
+            // Objects being placed or moved look as on the canvas (TeX's
+            // picture or the approximation); the text being typed shows its source.
+            let mut scene = rustfig_render::build_scene(
+                &d,
+                &SceneOptions {
+                    typeset: scene_opts.typeset.clone(),
+                    screen: true,
+                    approx_latex: scene_opts.approx_latex,
+                    ..SceneOptions::default()
+                },
+            );
             if let Some(t) = &overlay.text {
-                d.objects.push(std::sync::Arc::new(t.object.clone()));
+                d.objects = vec![std::sync::Arc::new(t.object.clone())];
+                let typed = rustfig_render::build_scene(&d, &SceneOptions::default());
+                scene.prims.extend(typed.prims);
             }
-            let scene = rustfig_render::build_scene(&d, &SceneOptions::default());
             let img = rasterize_scene(&scene, t, w, h);
             match &mut app.canvas.ov_tex {
                 Some(tex) => tex.set(img, TextureOptions::NEAREST),
