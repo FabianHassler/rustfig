@@ -455,9 +455,8 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         gray_hidden: app.engine.gray_hidden_depths,
         screen: true,
         text_scale: None,
-        // Special text TeX has not typeset (yet, or without TeX) shows as a
-        // Unicode approximation; View > Typeset LaTeX text off shows the source.
-        approx_latex: app.engine.latex.settings().enabled,
+        // The canvas shows TeX's own output, never the approximation.
+        approx_latex: false,
     };
     // The scene: rebuilt only when the drawing changes, not on pan or zoom.
     let scene = match &app.canvas.scene {
@@ -552,13 +551,12 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
                 open: Vec::new(),
             };
             // Objects being placed or moved look as on the canvas (TeX's
-            // picture or the approximation); the text being typed shows its source.
+            // picture where it has one); the text being typed shows its source.
             let mut scene = rustfig_render::build_scene(
                 &d,
                 &SceneOptions {
                     typeset: scene_opts.typeset.clone(),
                     screen: true,
-                    approx_latex: scene_opts.approx_latex,
                     ..SceneOptions::default()
                 },
             );
