@@ -855,6 +855,27 @@ fn apply_balloons(ctx: &egui::Context, on: bool) {
     }
 }
 
+/// Room for a dialog's content: the window's height less its title bar and
+/// frame.
+pub(crate) fn dialog_max_height(ctx: &egui::Context) -> f32 {
+    (ctx.content_rect().height() - 56.0).max(120.0)
+}
+
+/// A dialog's content in a scroll area: as tall as the content, scrolling
+/// vertically when it doesn't fit on the screen. (Horizontal scrolling would
+/// give rows unlimited width, which right-aligned and full-width rows fill.)
+pub(crate) fn dialog_body<R>(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui) -> R) -> R {
+    // A window offers its content egui's default height (420 points);
+    // the content may be as tall as the screen.
+    let max_h = dialog_max_height(ui.ctx());
+    ui.set_max_height(max_h);
+    egui::ScrollArea::vertical()
+        .max_height(max_h)
+        .auto_shrink([true, true])
+        .show(ui, add)
+        .inner
+}
+
 /// The drawing as Fig text with its file name, for the browser autosave.
 #[cfg(target_arch = "wasm32")]
 fn web_fig(engine: &mut Engine) -> web_autosave::Snapshot {

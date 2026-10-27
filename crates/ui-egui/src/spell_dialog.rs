@@ -79,47 +79,49 @@ pub fn dialog(app: &mut App, ctx: &egui::Context) {
         .collapsible(false)
         .default_size([380.0, 320.0])
         .show(ctx, |ui| {
-            ui.label(if st.message.is_empty() {
-                "Spell checker"
-            } else {
-                st.message.as_str()
-            });
-            ui.separator();
-            ui.label("Misspelled words");
-            egui::ScrollArea::vertical().max_height(160.0).show(ui, |ui| {
-                for (i, w) in st.words.iter().enumerate() {
-                    if ui.selectable_label(st.selected == Some(i), w).clicked() {
-                        picked = Some(i);
+            crate::dialog_body(ui, |ui| {
+                ui.label(if st.message.is_empty() {
+                    "Spell checker"
+                } else {
+                    st.message.as_str()
+                });
+                ui.separator();
+                ui.label("Misspelled words");
+                egui::ScrollArea::vertical().max_height(160.0).show(ui, |ui| {
+                    for (i, w) in st.words.iter().enumerate() {
+                        if ui.selectable_label(st.selected == Some(i), w).clicked() {
+                            picked = Some(i);
+                        }
                     }
-                }
-            });
-            ui.separator();
-            let has = st.selected.is_some();
-            ui.horizontal(|ui| {
-                ui.add_enabled(has, egui::Label::new("Correction"));
-                let r = ui.add_enabled(has, egui::TextEdit::singleline(&mut st.correction));
-                if r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) && has {
-                    do_correct = true;
-                }
-            });
-            ui.horizontal(|ui| {
-                if ui.add_enabled(has, egui::Button::new("Correct")).clicked() {
-                    do_correct = true;
-                }
-                if ui
-                    .add_enabled(has, egui::Button::new("Ignore"))
-                    .on_hover_text("Leave the word as it is and remove it from the list")
-                    .clicked()
-                {
-                    ignore = true;
-                }
-                if ui.button("Recheck").clicked() {
-                    recheck = true;
-                }
-                if ui.button("Dismiss").clicked() {
-                    dismiss = true;
-                }
-            });
+                });
+                ui.separator();
+                let has = st.selected.is_some();
+                ui.horizontal(|ui| {
+                    ui.add_enabled(has, egui::Label::new("Correction"));
+                    let r = ui.add_enabled(has, egui::TextEdit::singleline(&mut st.correction));
+                    if r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) && has {
+                        do_correct = true;
+                    }
+                });
+                ui.horizontal(|ui| {
+                    if ui.add_enabled(has, egui::Button::new("Correct")).clicked() {
+                        do_correct = true;
+                    }
+                    if ui
+                        .add_enabled(has, egui::Button::new("Ignore"))
+                        .on_hover_text("Leave the word as it is and remove it from the list")
+                        .clicked()
+                    {
+                        ignore = true;
+                    }
+                    if ui.button("Recheck").clicked() {
+                        recheck = true;
+                    }
+                    if ui.button("Dismiss").clicked() {
+                        dismiss = true;
+                    }
+                });
+            })
         });
     if let Some(i) = picked {
         let st = &mut app.dialogs.spell;

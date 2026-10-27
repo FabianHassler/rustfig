@@ -50,17 +50,19 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
         .resizable(false)
         .default_pos(egui::pos2(260.0, 120.0))
         .show(ctx, |ui| {
-            preview(app, ui, &draft);
-            fields(app, ui, &mut draft);
-            ui.separator();
-            ui.horizontal(|ui| {
-                if ui.button("OK").clicked() {
-                    result = Some(true);
-                }
-                if ui.button("Cancel").clicked() {
-                    result = Some(false);
-                }
-            });
+            crate::dialog_body(ui, |ui| {
+                preview(app, ui, &draft);
+                fields(app, ui, &mut draft);
+                ui.separator();
+                ui.horizontal(|ui| {
+                    if ui.button("OK").clicked() {
+                        result = Some(true);
+                    }
+                    if ui.button("Cancel").clicked() {
+                        result = Some(false);
+                    }
+                });
+            })
         });
     if !window_open {
         result = Some(false);

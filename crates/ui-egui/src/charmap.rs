@@ -146,71 +146,75 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
         .resizable(false)
         .collapsible(false)
         .show(ctx, |ui| {
-            match font_name(font) {
-                Some(n) => {
-                    ui.label(format!("{n} font: the characters are stored as its own codes."));
-                }
-                None => {
-                    egui::ComboBox::from_label("Block")
-                        .selected_text(BLOCKS.get(block).map_or("", |b| b.0))
-                        .show_ui(ui, |ui| {
-                            for (i, (n, _, _)) in BLOCKS.iter().enumerate() {
-                                ui.selectable_value(&mut block, i, *n);
-                            }
-                        });
-                }
-            }
-            ui.horizontal(|ui| {
-                ui.label("Search");
-                let r = ui.text_edit_singleline(&mut filter);
-                r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Character search"));
-                ui.weak("a character or its code, e.g. 2211");
-            });
-            let key = (font, ps, block, filter.clone());
-            let chars = match &cache {
-                Some((k, chars)) if *k == key => chars.clone(),
-                _ => {
-                    let chars = drawable(font, ps, block, &filter);
-                    cache = Some((key, chars.clone()));
-                    chars
-                }
-            };
-            egui::ScrollArea::vertical().max_height(260.0).show(ui, |ui| {
-                ui.spacing_mut().item_spacing = egui::vec2(2.0, 2.0);
-                ui.horizontal_wrapped(|ui| {
-                    ui.set_max_width(12.0 * 30.0);
-                    for (c, code) in &chars {
-                        let text = c.to_string();
-                        let ink = ui.visuals().text_color();
-                        let b = match crate::font_chooser::sample_image(ui.ctx(), font, ps, &text, 16.0) {
-                            Some(img) => egui::Button::image(img.tint(ink)),
-                            None => egui::Button::new(text),
-                        }
-                        .min_size(egui::vec2(28.0, 28.0));
-                        let r = ui.add_enabled(typing, b);
-                        let label = format!("Insert {c}");
-                        r.widget_info(move || egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label.clone()));
-                        if r.hovered() {
-                            hover = Some((*c, *code));
-                        }
-                        if r.clicked() {
-                            insert = Some(*c);
-                        }
+            crate::dialog_body(ui, |ui| {
+                match font_name(font) {
+                    Some(n) => {
+                        ui.label(format!("{n} font: the characters are stored as its own codes."));
                     }
-                    if chars.is_empty() {
-                        ui.label("No such character.");
+                    None => {
+                        egui::ComboBox::from_label("Block")
+                            .selected_text(BLOCKS.get(block).map_or("", |b| b.0))
+                            .show_ui(ui, |ui| {
+                                for (i, (n, _, _)) in BLOCKS.iter().enumerate() {
+                                    ui.selectable_value(&mut block, i, *n);
+                                }
+                            });
                     }
+                }
+                ui.horizontal(|ui| {
+                    ui.label("Search");
+                    let r = ui.text_edit_singleline(&mut filter);
+                    r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Character search"));
+                    ui.weak("a character or its code, e.g. 2211");
                 });
-            });
-            ui.separator();
-            match app.charmap.hover {
-                Some((c, Some(b))) => ui.label(format!("U+{:04X}, code {b:#04X} (octal \\{b:03o})", u32::from(c))),
-                Some((c, None)) => ui.label(format!("U+{:04X}", u32::from(c))),
-                None => ui.label(" "),
-            };
-            if !typing {
-                ui.weak("Choose Text mode and click in the drawing to start typing; then click a character.");
-            }
+                let key = (font, ps, block, filter.clone());
+                let chars = match &cache {
+                    Some((k, chars)) if *k == key => chars.clone(),
+                    _ => {
+                        let chars = drawable(font, ps, block, &filter);
+                        cache = Some((key, chars.clone()));
+                        chars
+                    }
+                };
+                egui::ScrollArea::vertical().max_height(260.0).show(ui, |ui| {
+                    ui.spacing_mut().item_spacing = egui::vec2(2.0, 2.0);
+                    ui.horizontal_wrapped(|ui| {
+                        ui.set_max_width(12.0 * 30.0);
+                        for (c, code) in &chars {
+                            let text = c.to_string();
+                            let ink = ui.visuals().text_color();
+                            let b = match crate::font_chooser::sample_image(ui.ctx(), font, ps, &text, 16.0) {
+                                Some(img) => egui::Button::image(img.tint(ink)),
+                                None => egui::Button::new(text),
+                            }
+                            .min_size(egui::vec2(28.0, 28.0));
+                            let r = ui.add_enabled(typing, b);
+                            let label = format!("Insert {c}");
+                            r.widget_info(move || {
+                                egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label.clone())
+                            });
+                            if r.hovered() {
+                                hover = Some((*c, *code));
+                            }
+                            if r.clicked() {
+                                insert = Some(*c);
+                            }
+                        }
+                        if chars.is_empty() {
+                            ui.label("No such character.");
+                        }
+                    });
+                });
+                ui.separator();
+                match app.charmap.hover {
+                    Some((c, Some(b))) => ui.label(format!("U+{:04X}, code {b:#04X} (octal \\{b:03o})", u32::from(c))),
+                    Some((c, None)) => ui.label(format!("U+{:04X}", u32::from(c))),
+                    None => ui.label(" "),
+                };
+                if !typing {
+                    ui.weak("Choose Text mode and click in the drawing to start typing; then click a character.");
+                }
+            })
         });
     app.charmap.cache = cache;
     app.charmap.open = open;

@@ -107,146 +107,148 @@ pub fn dialog(app: &mut App, ctx: &egui::Context) {
         .resizable(false)
         .collapsible(false)
         .show(ctx, |ui| {
-            ui.horizontal_top(|ui| {
-                egui::Grid::new("print_grid")
-                    .num_columns(2)
-                    .spacing([8.0, 4.0])
-                    .show(ui, |ui| {
-                        ui.label("Magnification");
-                        ui.horizontal(|ui| {
-                            let r = ui.add(
-                                egui::DragValue::new(&mut st.magnification)
-                                    .range(1.0..=10000.0)
-                                    .suffix(" %"),
-                            );
-                            if r.changed() && !r.dragged() || r.drag_stopped() {
-                                act.magnification = Some(st.magnification);
-                            }
-                            if ui.button("Fit to Page").clicked() {
-                                act.fit = true;
-                            }
-                            ui.label("Figure size");
-                            ui.label(format!("{bw:.1}{unit} x {bh:.1}{unit}"));
-                        });
-                        ui.end_row();
-                        ui.label("Paper size");
-                        ui.horizontal(|ui| {
-                            let combo = egui::ComboBox::from_id_salt("print_paper")
-                                .selected_text(d.paper.name())
-                                .show_ui(ui, |ui| {
-                                    for p in PaperSize::ALL {
-                                        if ui.selectable_label(p == d.paper, p.name()).clicked() {
-                                            act.paper = Some(p);
-                                        }
-                                    }
-                                });
-                            combo.response.widget_info(|| {
-                                egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, d.paper.name())
+            crate::dialog_body(ui, |ui| {
+                ui.horizontal_top(|ui| {
+                    egui::Grid::new("print_grid")
+                        .num_columns(2)
+                        .spacing([8.0, 4.0])
+                        .show(ui, |ui| {
+                            ui.label("Magnification");
+                            ui.horizontal(|ui| {
+                                let r = ui.add(
+                                    egui::DragValue::new(&mut st.magnification)
+                                        .range(1.0..=10000.0)
+                                        .suffix(" %"),
+                                );
+                                if r.changed() && !r.dragged() || r.drag_stopped() {
+                                    act.magnification = Some(st.magnification);
+                                }
+                                if ui.button("Fit to Page").clicked() {
+                                    act.fit = true;
+                                }
+                                ui.label("Figure size");
+                                ui.label(format!("{bw:.1}{unit} x {bh:.1}{unit}"));
                             });
-                            ui.label("Orientation");
-                            if ui.radio(!landscape, "Portrait").clicked() {
-                                act.page.push(("orientation", "portrait"));
-                            }
-                            if ui.radio(landscape, "Landscape").clicked() {
-                                act.page.push(("orientation", "landscape"));
-                            }
-                        });
-                        ui.end_row();
-                        ui.label("Justification");
-                        ui.horizontal(|ui| {
-                            if ui.radio(d.center, "Centered").clicked() {
-                                act.page.push(("justify", "center"));
-                            }
-                            if ui.radio(!d.center, "Flush left").clicked() {
-                                act.page.push(("justify", "flush_left"));
-                            }
-                        });
-                        ui.end_row();
-                        ui.label("Pages");
-                        ui.horizontal(|ui| {
-                            if ui.radio(!d.multiple_pages, "Single").clicked() {
-                                act.page.push(("pages", "single"));
-                            }
-                            if ui.radio(d.multiple_pages, "Multiple").clicked() {
-                                act.page.push(("pages", "multiple"));
-                            }
-                            ui.add_enabled(
-                                d.multiple_pages,
-                                egui::Checkbox::new(&mut st.settings.overlap, "Overlap"),
-                            );
-                        });
-                        ui.end_row();
-                        ui.label("Background");
-                        if let Some(c) = crate::panels::color_menu(
-                            ui,
-                            "print_background",
-                            doc,
-                            st.settings.background,
-                            &[(COLOR_NONE, "None")],
-                        ) {
-                            st.settings.background = c;
-                        }
-                        ui.end_row();
-                        ui.label("Grid");
-                        ui.horizontal(|ui| {
-                            let choices: &[&str] = if d.units == Units::Metric { &GRID_MM } else { &GRID_INCH };
-                            ui.label("Minor");
-                            if let Some(c) = text_combo(ui, "print_grid_minor", &st.settings.grid_minor, choices) {
-                                st.settings.grid_minor = c;
-                            }
-                            ui.label("Major");
-                            if let Some(c) = text_combo(ui, "print_grid_major", &st.settings.grid_major, choices) {
-                                st.settings.grid_major = c;
-                            }
-                            ui.label(if d.units == Units::Metric { "mm" } else { "in" });
-                        });
-                        ui.end_row();
-                        ui.label("Layers");
-                        ui.horizontal_wrapped(|ui| {
-                            ui.radio_value(&mut st.settings.all_layers, true, "Print all layers");
-                            ui.add_enabled_ui(some_hidden || !st.settings.all_layers, |ui| {
-                                ui.radio_value(&mut st.settings.all_layers, false, "Print only active")
-                                    .on_hover_text("Leave out the depths switched off in the depth manager");
+                            ui.end_row();
+                            ui.label("Paper size");
+                            ui.horizontal(|ui| {
+                                let combo = egui::ComboBox::from_id_salt("print_paper")
+                                    .selected_text(d.paper.name())
+                                    .show_ui(ui, |ui| {
+                                        for p in PaperSize::ALL {
+                                            if ui.selectable_label(p == d.paper, p.name()).clicked() {
+                                                act.paper = Some(p);
+                                            }
+                                        }
+                                    });
+                                combo.response.widget_info(|| {
+                                    egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, d.paper.name())
+                                });
+                                ui.label("Orientation");
+                                if ui.radio(!landscape, "Portrait").clicked() {
+                                    act.page.push(("orientation", "portrait"));
+                                }
+                                if ui.radio(landscape, "Landscape").clicked() {
+                                    act.page.push(("orientation", "landscape"));
+                                }
+                            });
+                            ui.end_row();
+                            ui.label("Justification");
+                            ui.horizontal(|ui| {
+                                if ui.radio(d.center, "Centered").clicked() {
+                                    act.page.push(("justify", "center"));
+                                }
+                                if ui.radio(!d.center, "Flush left").clicked() {
+                                    act.page.push(("justify", "flush_left"));
+                                }
+                            });
+                            ui.end_row();
+                            ui.label("Pages");
+                            ui.horizontal(|ui| {
+                                if ui.radio(!d.multiple_pages, "Single").clicked() {
+                                    act.page.push(("pages", "single"));
+                                }
+                                if ui.radio(d.multiple_pages, "Multiple").clicked() {
+                                    act.page.push(("pages", "multiple"));
+                                }
                                 ui.add_enabled(
-                                    !st.settings.all_layers,
-                                    egui::Checkbox::new(
-                                        &mut st.settings.bound_active_layers,
-                                        "Page sized by the active layers",
-                                    ),
+                                    d.multiple_pages,
+                                    egui::Checkbox::new(&mut st.settings.overlap, "Overlap"),
                                 );
                             });
+                            ui.end_row();
+                            ui.label("Background");
+                            if let Some(c) = crate::panels::color_menu(
+                                ui,
+                                "print_background",
+                                doc,
+                                st.settings.background,
+                                &[(COLOR_NONE, "None")],
+                            ) {
+                                st.settings.background = c;
+                            }
+                            ui.end_row();
+                            ui.label("Grid");
+                            ui.horizontal(|ui| {
+                                let choices: &[&str] = if d.units == Units::Metric { &GRID_MM } else { &GRID_INCH };
+                                ui.label("Minor");
+                                if let Some(c) = text_combo(ui, "print_grid_minor", &st.settings.grid_minor, choices) {
+                                    st.settings.grid_minor = c;
+                                }
+                                ui.label("Major");
+                                if let Some(c) = text_combo(ui, "print_grid_major", &st.settings.grid_major, choices) {
+                                    st.settings.grid_major = c;
+                                }
+                                ui.label(if d.units == Units::Metric { "mm" } else { "in" });
+                            });
+                            ui.end_row();
+                            ui.label("Layers");
+                            ui.horizontal_wrapped(|ui| {
+                                ui.radio_value(&mut st.settings.all_layers, true, "Print all layers");
+                                ui.add_enabled_ui(some_hidden || !st.settings.all_layers, |ui| {
+                                    ui.radio_value(&mut st.settings.all_layers, false, "Print only active")
+                                        .on_hover_text("Leave out the depths switched off in the depth manager");
+                                    ui.add_enabled(
+                                        !st.settings.all_layers,
+                                        egui::Checkbox::new(
+                                            &mut st.settings.bound_active_layers,
+                                            "Page sized by the active layers",
+                                        ),
+                                    );
+                                });
+                            });
+                            ui.end_row();
                         });
-                        ui.end_row();
+                    ui.vertical(|ui| {
+                        ui.label("Preview");
+                        preview_ui(ui, &mut st.preview);
                     });
-                ui.vertical(|ui| {
-                    ui.label("Preview");
-                    preview_ui(ui, &mut st.preview);
                 });
-            });
-            ui.separator();
-            ui.horizontal(|ui| {
-                if ui.button("Dismiss").clicked() {
-                    act.close = true;
-                }
-                if ui
-                    .button("Print FIGURE")
-                    .on_hover_text("Open the system's print dialog")
-                    .clicked()
-                {
-                    act.print = true;
-                }
-                if ui.button("Add to Batch").clicked() {
-                    act.add = true;
-                }
-                if ui.add_enabled(batch > 0, egui::Button::new("Print Batch")).clicked() {
-                    act.print_batch = true;
-                }
-                if ui.add_enabled(batch > 0, egui::Button::new("Clear Batch")).clicked() {
-                    act.clear = true;
-                }
-                ui.label("Figures in batch");
-                ui.label(batch.to_string());
-            });
+                ui.separator();
+                ui.horizontal(|ui| {
+                    if ui.button("Dismiss").clicked() {
+                        act.close = true;
+                    }
+                    if ui
+                        .button("Print FIGURE")
+                        .on_hover_text("Open the system's print dialog")
+                        .clicked()
+                    {
+                        act.print = true;
+                    }
+                    if ui.button("Add to Batch").clicked() {
+                        act.add = true;
+                    }
+                    if ui.add_enabled(batch > 0, egui::Button::new("Print Batch")).clicked() {
+                        act.print_batch = true;
+                    }
+                    if ui.add_enabled(batch > 0, egui::Button::new("Clear Batch")).clicked() {
+                        act.clear = true;
+                    }
+                    ui.label("Figures in batch");
+                    ui.label(batch.to_string());
+                });
+            })
         });
     app.dialogs.print.open = open && !act.close;
     apply(app, ctx, act);

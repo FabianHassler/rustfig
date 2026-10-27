@@ -889,25 +889,29 @@ fn recovery_dialog(app: &mut App, ctx: &egui::Context) {
         .collapsible(false)
         .resizable(false)
         .show(ctx, |ui| {
-            ui.label("RustFig stopped without saving these drawings. Restore one to keep working on it, then save it.");
-            ui.add_space(4.0);
-            egui::Grid::new("recoverable").num_columns(3).show(ui, |ui| {
-                for (i, (_, original)) in app.recoverable.iter().enumerate() {
-                    let name = original
-                        .as_deref()
-                        .and_then(|o| std::path::Path::new(o).file_name())
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("Untitled");
-                    ui.label(name);
-                    if ui.button("Restore").clicked() {
-                        action = Some((i, true));
+            crate::dialog_body(ui, |ui| {
+                ui.label(
+                    "RustFig stopped without saving these drawings. Restore one to keep working on it, then save it.",
+                );
+                ui.add_space(4.0);
+                egui::Grid::new("recoverable").num_columns(3).show(ui, |ui| {
+                    for (i, (_, original)) in app.recoverable.iter().enumerate() {
+                        let name = original
+                            .as_deref()
+                            .and_then(|o| std::path::Path::new(o).file_name())
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("Untitled");
+                        ui.label(name);
+                        if ui.button("Restore").clicked() {
+                            action = Some((i, true));
+                        }
+                        if ui.button("Discard").clicked() {
+                            action = Some((i, false));
+                        }
+                        ui.end_row();
                     }
-                    if ui.button("Discard").clicked() {
-                        action = Some((i, false));
-                    }
-                    ui.end_row();
-                }
-            });
+                });
+            })
         });
     if let Some((i, restore)) = action {
         if let Some((id, _)) = app.recoverable.get(i).cloned() {
@@ -939,7 +943,7 @@ fn web_restore_dialog(app: &mut App, ctx: &egui::Context) {
     egui::Window::new("Restore unsaved drawing")
         .collapsible(false)
         .resizable(false)
-        .show(ctx, |ui| {
+        .show(ctx, |ui| crate::dialog_body(ui, |ui| {
             let name = saved.name.as_deref().unwrap_or("Untitled");
             ui.label(format!(
                 "The browser still holds an unsaved copy of {name} from your last visit. Restore it to keep working, then save it."
@@ -953,7 +957,7 @@ fn web_restore_dialog(app: &mut App, ctx: &egui::Context) {
                     restore = Some(false);
                 }
             });
-        });
+        }));
     let Some(restore) = restore else { return };
     if restore {
         let name = saved.name.clone().unwrap_or_else(|| "figure.fig".to_string());
@@ -1014,23 +1018,25 @@ fn versions_dialog(app: &mut App, ctx: &egui::Context) {
         .collapsible(false)
         .resizable(false)
         .show(ctx, |ui| {
-            if app.engine.path().is_none() {
-                ui.label("Save the drawing first; its older versions are kept from then on.");
-            } else if list.is_empty() {
-                ui.label("No older versions of this file are kept yet.");
-            } else {
-                ui.label("Restore one to open it as an unsaved drawing; saving writes it over the file.");
-                egui::Grid::new("saved_versions").num_columns(3).show(ui, |ui| {
-                    for (id, ms, size) in &list {
-                        ui.label(version_time(*ms));
-                        ui.label(format!("{} KB", size.div_ceil(1024)));
-                        if ui.button("Restore").clicked() {
-                            restore = Some(id.clone());
+            crate::dialog_body(ui, |ui| {
+                if app.engine.path().is_none() {
+                    ui.label("Save the drawing first; its older versions are kept from then on.");
+                } else if list.is_empty() {
+                    ui.label("No older versions of this file are kept yet.");
+                } else {
+                    ui.label("Restore one to open it as an unsaved drawing; saving writes it over the file.");
+                    egui::Grid::new("saved_versions").num_columns(3).show(ui, |ui| {
+                        for (id, ms, size) in &list {
+                            ui.label(version_time(*ms));
+                            ui.label(format!("{} KB", size.div_ceil(1024)));
+                            if ui.button("Restore").clicked() {
+                                restore = Some(id.clone());
+                            }
+                            ui.end_row();
                         }
-                        ui.end_row();
-                    }
-                });
-            }
+                    });
+                }
+            })
         });
     if let Some(id) = restore {
         if app.engine.is_modified() {
@@ -1251,121 +1257,123 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
         .resizable(false)
         .collapsible(false)
         .show(ctx, |ui| {
-            ui.checkbox(&mut d.autorefresh, "Autorefresh figure");
-            ui.checkbox(&mut d.track_mouse, "Track mouse in rulers");
-            ui.checkbox(&mut d.page_borders, "Show page borders");
-            ui.checkbox(&mut d.depth_manager, "Show depth manager");
-            ui.checkbox(&mut d.balloons, "Show info balloons");
-            ui.horizontal(|ui| {
-                ui.label("   Delay (ms):");
-                ui.add(egui::DragValue::new(&mut d.balloon_delay).range(0..=100_000));
-            });
-            ui.checkbox(&mut d.lengths, "Show line lengths");
-            ui.checkbox(&mut d.vertex_numbers, "Show vertex numbers");
-            ui.checkbox(&mut d.crosshair, "Show crosshair");
-            ui.checkbox(&mut d.negative_coords, "Allow negative coords");
-            ui.checkbox(&mut d.axis_lines, "Draw axis lines");
-            ui.horizontal(|ui| {
-                ui.label("Freehand drawing resolution");
-                ui.add(egui::DragValue::new(&mut d.freehand).range(1..=10_000));
-            });
-            ui.horizontal(|ui| {
-                ui.label("Recently used files");
-                ui.add(egui::DragValue::new(&mut d.recent).range(0..=9));
-            });
-            ui.horizontal(|ui| {
-                ui.label("Maximum image colors");
-                ui.add(egui::DragValue::new(&mut d.image_colors).range(0..=256));
-            });
-            ui.horizontal(|ui| {
-                ui.label("Saved versions kept");
-                ui.add(egui::DragValue::new(&mut d.save_versions).range(0..=50))
-                    .on_hover_text("Older versions of a file, kept in the recovery folder at each save (0: none)");
-            });
-            egui::Grid::new("global_commands").num_columns(2).show(ui, |ui| {
-                for (label, text) in [
-                    ("Image editor", &mut d.image_editor),
-                    ("Spell checker", &mut d.spell),
-                    ("HTML Browser", &mut d.browser),
-                    ("PDF Viewer", &mut d.pdf_viewer),
-                ] {
-                    ui.label(label);
-                    ui.add(egui::TextEdit::singleline(text).desired_width(260.0))
-                        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, label));
-                    ui.end_row();
-                }
-            });
-            ui.label(
-                egui::RichText::new("%f in a command stands for the file.")
-                    .small()
-                    .weak(),
-            );
-            ui.horizontal(|ui| {
-                cancel = ui.button("Cancel").clicked();
-                ok = ui.button("Ok").clicked();
-            });
-            ui.separator();
-            ui.label(egui::RichText::new("RustFig").strong());
-            let mut keys = app.xfig_keys;
-            if ui.checkbox(&mut keys, "xfig keyboard shortcuts").changed() {
-                app.run("app.toggle_xfig_keys", serde_json::json!({}));
-            }
-            ui.horizontal(|ui| {
-                ui.label("Button style:");
-                for (style, label) in [("3d", "3D"), ("flat", "Flat")] {
-                    if ui.radio(app.button_3d == (style == "3d"), label).clicked() {
-                        app.run("app.button_style", serde_json::json!({ "style": style }));
+            crate::dialog_body(ui, |ui| {
+                ui.checkbox(&mut d.autorefresh, "Autorefresh figure");
+                ui.checkbox(&mut d.track_mouse, "Track mouse in rulers");
+                ui.checkbox(&mut d.page_borders, "Show page borders");
+                ui.checkbox(&mut d.depth_manager, "Show depth manager");
+                ui.checkbox(&mut d.balloons, "Show info balloons");
+                ui.horizontal(|ui| {
+                    ui.label("   Delay (ms):");
+                    ui.add(egui::DragValue::new(&mut d.balloon_delay).range(0..=100_000));
+                });
+                ui.checkbox(&mut d.lengths, "Show line lengths");
+                ui.checkbox(&mut d.vertex_numbers, "Show vertex numbers");
+                ui.checkbox(&mut d.crosshair, "Show crosshair");
+                ui.checkbox(&mut d.negative_coords, "Allow negative coords");
+                ui.checkbox(&mut d.axis_lines, "Draw axis lines");
+                ui.horizontal(|ui| {
+                    ui.label("Freehand drawing resolution");
+                    ui.add(egui::DragValue::new(&mut d.freehand).range(1..=10_000));
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Recently used files");
+                    ui.add(egui::DragValue::new(&mut d.recent).range(0..=9));
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Maximum image colors");
+                    ui.add(egui::DragValue::new(&mut d.image_colors).range(0..=256));
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Saved versions kept");
+                    ui.add(egui::DragValue::new(&mut d.save_versions).range(0..=50))
+                        .on_hover_text("Older versions of a file, kept in the recovery folder at each save (0: none)");
+                });
+                egui::Grid::new("global_commands").num_columns(2).show(ui, |ui| {
+                    for (label, text) in [
+                        ("Image editor", &mut d.image_editor),
+                        ("Spell checker", &mut d.spell),
+                        ("HTML Browser", &mut d.browser),
+                        ("PDF Viewer", &mut d.pdf_viewer),
+                    ] {
+                        ui.label(label);
+                        ui.add(egui::TextEdit::singleline(text).desired_width(260.0))
+                            .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, label));
+                        ui.end_row();
                     }
+                });
+                ui.label(
+                    egui::RichText::new("%f in a command stands for the file.")
+                        .small()
+                        .weak(),
+                );
+                ui.horizontal(|ui| {
+                    cancel = ui.button("Cancel").clicked();
+                    ok = ui.button("Ok").clicked();
+                });
+                ui.separator();
+                ui.label(egui::RichText::new("RustFig").strong());
+                let mut keys = app.xfig_keys;
+                if ui.checkbox(&mut keys, "xfig keyboard shortcuts").changed() {
+                    app.run("app.toggle_xfig_keys", serde_json::json!({}));
                 }
-            });
-            ui.horizontal(|ui| {
-                ui.label("Theme:");
-                for (t, label) in [("system", "System"), ("light", "Light"), ("dark", "Dark")] {
-                    if ui.radio(app.theme == t, label).clicked() {
-                        app.run("app.theme", serde_json::json!({ "theme": t }));
+                ui.horizontal(|ui| {
+                    ui.label("Button style:");
+                    for (style, label) in [("3d", "3D"), ("flat", "Flat")] {
+                        if ui.radio(app.button_3d == (style == "3d"), label).clicked() {
+                            app.run("app.button_style", serde_json::json!({ "style": style }));
+                        }
                     }
-                }
-            });
-            ui.horizontal(|ui| {
-                ui.label("UI scale:");
-                let mut pct = (app.ui_scale * 100.0).round();
-                let r = ui.add(egui::Slider::new(&mut pct, 75.0..=200.0).suffix(" %").step_by(5.0));
-                r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Slider, true, "UI scale"));
-                if r.drag_stopped() || (r.changed() && !r.dragged()) {
-                    app.run("app.ui_scale", serde_json::json!({ "percent": pct }));
-                }
-            });
-            ui.horizontal(|ui| {
-                if ui.button("Units and page…").clicked() {
-                    app.run("app.document_settings", serde_json::json!({}));
-                }
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Theme:");
+                    for (t, label) in [("system", "System"), ("light", "Light"), ("dark", "Dark")] {
+                        if ui.radio(app.theme == t, label).clicked() {
+                            app.run("app.theme", serde_json::json!({ "theme": t }));
+                        }
+                    }
+                });
+                ui.horizontal(|ui| {
+                    ui.label("UI scale:");
+                    let mut pct = (app.ui_scale * 100.0).round();
+                    let r = ui.add(egui::Slider::new(&mut pct, 75.0..=200.0).suffix(" %").step_by(5.0));
+                    r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Slider, true, "UI scale"));
+                    if r.drag_stopped() || (r.changed() && !r.dragged()) {
+                        app.run("app.ui_scale", serde_json::json!({ "percent": pct }));
+                    }
+                });
+                ui.horizontal(|ui| {
+                    if ui.button("Units and page…").clicked() {
+                        app.run("app.document_settings", serde_json::json!({}));
+                    }
+                    if ui
+                        .button("xfig resources…")
+                        .on_hover_text("All of xfig's settings (its X resources and command-line options)")
+                        .clicked()
+                    {
+                        app.dialogs.resources_open = true;
+                    }
+                });
                 if ui
-                    .button("xfig resources…")
-                    .on_hover_text("All of xfig's settings (its X resources and command-line options)")
+                    .button("Use current attributes as defaults")
+                    .on_hover_text(
+                        "The attribute panel's values become the start values (startfontsize, startlinewidth, …)",
+                    )
                     .clicked()
                 {
-                    app.dialogs.resources_open = true;
+                    app.run("prefs.use_current_attributes", serde_json::json!({}));
                 }
-            });
-            if ui
-                .button("Use current attributes as defaults")
-                .on_hover_text(
-                    "The attribute panel's values become the start values (startfontsize, startlinewidth, …)",
-                )
-                .clicked()
-            {
-                app.run("prefs.use_current_attributes", serde_json::json!({}));
-            }
-            ui.separator();
-            latex_settings(app, ui);
-            ui.separator();
-            user_colors_editor(app, ui);
-            ui.separator();
-            ui.label(
-                egui::RichText::new(format!("Saved in {}", app.settings.location()))
-                    .small()
-                    .weak(),
-            );
+                ui.separator();
+                latex_settings(app, ui);
+                ui.separator();
+                user_colors_editor(app, ui);
+                ui.separator();
+                ui.label(
+                    egui::RichText::new(format!("Saved in {}", app.settings.location()))
+                        .small()
+                        .weak(),
+                );
+            })
         });
     if ok {
         apply_global(app, &current, &d);
@@ -1645,24 +1653,26 @@ fn figure_comments_dialog(app: &mut App, ctx: &egui::Context) {
         .resizable(false)
         .collapsible(false)
         .show(ctx, |ui| {
-            ui.spacing_mut().interact_size.y = crate::attributes::PIC_BTN;
-            egui::Grid::new("figure_comments_grid")
-                .num_columns(2)
-                .spacing([10.0, 4.0])
-                .show(ui, |ui| {
-                    rl(ui, "Comments");
-                    ui.add(
-                        egui::TextEdit::multiline(&mut st.text)
-                            .desired_rows(4)
-                            .desired_width(300.0),
-                    );
-                    ui.end_row();
+            crate::dialog_body(ui, |ui| {
+                ui.spacing_mut().interact_size.y = crate::attributes::PIC_BTN;
+                egui::Grid::new("figure_comments_grid")
+                    .num_columns(2)
+                    .spacing([10.0, 4.0])
+                    .show(ui, |ui| {
+                        rl(ui, "Comments");
+                        ui.add(
+                            egui::TextEdit::multiline(&mut st.text)
+                                .desired_rows(4)
+                                .desired_width(300.0),
+                        );
+                        ui.end_row();
+                    });
+                ui.separator();
+                ui.horizontal(|ui| {
+                    done = ui.button("Done").clicked();
+                    cancel = ui.button("Cancel").clicked();
                 });
-            ui.separator();
-            ui.horizontal(|ui| {
-                done = ui.button("Done").clicked();
-                cancel = ui.button("Cancel").clicked();
-            });
+            })
         });
     if done {
         app.run("doc.set_comments", json!({"comments": st.text}));
@@ -1682,34 +1692,36 @@ fn spline_point_dialog(app: &mut App, ctx: &egui::Context) {
         .resizable(false)
         .collapsible(false)
         .show(ctx, |ui| {
-            ui.label("Edit the behavior\nof the control point");
-            if let Some(v) = st.shapes.get_mut(st.index) {
-                ui.spacing_mut().interact_size.y = crate::attributes::PIC_BTN;
-                egui::Grid::new("spline_point_grid")
-                    .num_columns(2)
-                    .spacing([10.0, 4.0])
-                    .show(ui, |ui| {
-                        rl(ui, "Shape factor");
-                        ui.add(egui::Slider::new(v, -1.0..=1.0));
-                        ui.end_row();
+            crate::dialog_body(ui, |ui| {
+                ui.label("Edit the behavior\nof the control point");
+                if let Some(v) = st.shapes.get_mut(st.index) {
+                    ui.spacing_mut().interact_size.y = crate::attributes::PIC_BTN;
+                    egui::Grid::new("spline_point_grid")
+                        .num_columns(2)
+                        .spacing([10.0, 4.0])
+                        .show(ui, |ui| {
+                            rl(ui, "Shape factor");
+                            ui.add(egui::Slider::new(v, -1.0..=1.0));
+                            ui.end_row();
+                        });
+                    ui.horizontal(|ui| {
+                        // xfig's three buttons: approximated, angular, interpolated.
+                        if ui.button("Approximated").clicked() {
+                            *v = 1.0;
+                        }
+                        if ui.button("Angular").clicked() {
+                            *v = 0.0;
+                        }
+                        if ui.button("Interpolated").clicked() {
+                            *v = -1.0;
+                        }
                     });
+                }
                 ui.horizontal(|ui| {
-                    // xfig's three buttons: approximated, angular, interpolated.
-                    if ui.button("Approximated").clicked() {
-                        *v = 1.0;
-                    }
-                    if ui.button("Angular").clicked() {
-                        *v = 0.0;
-                    }
-                    if ui.button("Interpolated").clicked() {
-                        *v = -1.0;
-                    }
+                    done = ui.button("Done").clicked();
+                    cancel = ui.button("Cancel").clicked();
                 });
-            }
-            ui.horizontal(|ui| {
-                done = ui.button("Done").clicked();
-                cancel = ui.button("Cancel").clicked();
-            });
+            })
         });
     if done {
         app.run("object.set_geometry", json!({"id": st.id.0, "shapes": st.shapes}));
@@ -2052,288 +2064,292 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
         .resizable(false)
         .collapsible(false)
         .show(ctx, |ui| {
-            // One row height for labels, fields and pictorial buttons.
-            ui.spacing_mut().interact_size.y = crate::attributes::PIC_BTN;
-            egui::Grid::new("edit_grid")
-                .num_columns(2)
-                .spacing([10.0, 4.0])
-                .show(ui, |ui| {
-                    // xfig's edit panels start with Comments (`e_edit.c`).
-                    rl(ui, "Comments");
-                    ui.add(
-                        egui::TextEdit::multiline(&mut st.comment)
-                            .desired_rows(2)
-                            .desired_width(240.0),
-                    );
-                    ui.end_row();
-                    if st.is_arc {
-                        rl(ui, "Arc type");
-                        ui.horizontal(|ui| {
-                            ui.radio_value(&mut st.pie, false, "Open");
-                            ui.radio_value(&mut st.pie, true, "Pie wedge");
-                        });
-                        ui.end_row();
-                    }
-                    if st.is_text {
-                        rl(ui, "Size");
-                        ui.add(egui::DragValue::new(&mut st.size).range(1.0..=500.0).suffix(" pt"));
-                        ui.end_row();
-                        rl(ui, "Pen colour");
-                        if let Some(c) = color_combo(ui, "edit_tcolor", app.engine.doc(), st.pen) {
-                            st.pen = c;
-                        }
-                        ui.end_row();
-                        rl(ui, "Angle");
-                        ui.add(egui::DragValue::new(&mut st.angle).range(-360.0..=360.0).suffix("°"));
-                        ui.end_row();
-                        rl(ui, "Justification");
-                        ui.horizontal(|ui| {
-                            for (j, n) in [
-                                (Justify::Left, "Left justified"),
-                                (Justify::Center, "Centered"),
-                                (Justify::Right, "Right justified"),
-                            ] {
-                                ui.radio_value(&mut st.justify, j, n);
-                            }
-                        });
-                        ui.end_row();
-                        rl(ui, "Flags");
-                        ui.horizontal(|ui| {
-                            ui.checkbox(&mut st.hidden, "Hidden");
-                            ui.checkbox(&mut st.rigid, "Rigid");
-                            ui.checkbox(&mut st.special, "TeX");
-                        });
-                        ui.end_row();
-                        rl(ui, "Font");
-                        if let Some(out) = font_combo(ui, "edit_font", st.font, st.postscript, st.local_font.as_deref())
-                        {
-                            if let Some((f, ps)) = out.font {
-                                st.font = f;
-                                st.postscript = ps;
-                            }
-                            if let Some(l) = out.local {
-                                st.local_font = l;
-                            }
-                        }
-                        ui.end_row();
-                        rl(ui, "Text");
+            crate::dialog_body(ui, |ui| {
+                // One row height for labels, fields and pictorial buttons.
+                ui.spacing_mut().interact_size.y = crate::attributes::PIC_BTN;
+                egui::Grid::new("edit_grid")
+                    .num_columns(2)
+                    .spacing([10.0, 4.0])
+                    .show(ui, |ui| {
+                        // xfig's edit panels start with Comments (`e_edit.c`).
+                        rl(ui, "Comments");
                         ui.add(
-                            egui::TextEdit::multiline(&mut st.text)
-                                .desired_rows(3)
+                            egui::TextEdit::multiline(&mut st.comment)
+                                .desired_rows(2)
                                 .desired_width(240.0),
                         );
                         ui.end_row();
-                    }
-                    if st.has_style && !st.is_picture {
-                        rl(ui, "Width");
-                        ui.add(egui::DragValue::new(&mut st.thickness).range(0..=1000));
-                        ui.end_row();
-                        rl(ui, "Line style");
-                        ui.horizontal(|ui| {
-                            if let Some(k) = line_menu(ui, "edit_line", st.line) {
-                                st.line = k;
-                            }
-                            if st.line != LineKind::Solid {
-                                // xfig's edit panel names the one value by the style
-                                // (`e_edit.c`); its meaning follows fig2dev's `set_style`.
-                                let dotted = st.line == LineKind::Dotted;
-                                ui.label(if dotted { "Dot gap" } else { "Dash length" })
-                                    .on_hover_text(LINE_STYLE_VALUE_HELP);
-                                ui.add(egui::DragValue::new(&mut st.style_val).range(0.0..=1000.0).speed(0.1))
-                                    .on_hover_text(LINE_STYLE_VALUE_HELP);
-                            }
-                        });
-                        ui.end_row();
-                        rl(ui, "Pen colour");
-                        if let Some(c) = color_combo(ui, "edit_pen", app.engine.doc(), st.pen) {
-                            st.pen = c;
-                        }
-                        ui.end_row();
-                        rl(ui, "Fill colour");
-                        if let Some(c) = color_combo(ui, "edit_fill", app.engine.doc(), st.fill) {
-                            st.fill = c;
-                        }
-                        ui.end_row();
-                        rl(ui, "Fill style");
-                        // xfig offers no tints for black, white and default.
-                        st.area = limit_fill(st.area, st.fill);
-                        if let Some(f) = crate::attributes::fill_menu(ui, app.engine.doc(), (st.pen, st.fill), st.area)
-                        {
-                            st.area = f;
-                        }
-                        ui.end_row();
-                        // xfig: cap style for arcs, open splines and polylines;
-                        // join style for polylines, polygons and boxes.
-                        let cap_ok = st.is_arc || st.kind == "polyline" || (st.kind == "spline" && st.has_arrows);
-                        let join_ok = matches!(st.kind.as_str(), "polyline" | "polygon" | "box");
-                        if cap_ok || join_ok {
-                            rl(
-                                ui,
-                                match (cap_ok, join_ok) {
-                                    (true, true) => "Cap / join style",
-                                    (true, false) => "Cap style",
-                                    _ => "Join style",
-                                },
-                            );
+                        if st.is_arc {
+                            rl(ui, "Arc type");
                             ui.horizontal(|ui| {
-                                if cap_ok {
-                                    if let Some(c) = cap_menu(ui, "edit_cap", st.cap) {
-                                        st.cap = c;
-                                    }
-                                }
-                                if join_ok {
-                                    if let Some(j) = join_menu(ui, "edit_join", st.join) {
-                                        st.join = j;
-                                    }
-                                }
+                                ui.radio_value(&mut st.pie, false, "Open");
+                                ui.radio_value(&mut st.pie, true, "Pie wedge");
                             });
                             ui.end_row();
                         }
-                    }
-                    if st.has_arrows && !(st.is_arc && st.pie) {
-                        arrow_rows(ui, "edit_farrow", "Forward arrow", &mut st.fwd);
-                        arrow_rows(ui, "edit_barrow", "Backward arrow", &mut st.back);
-                    }
-                    if st.is_arcbox {
-                        rl(ui, "Corner radius");
-                        ui.add(egui::DragValue::new(&mut st.radius).range(0..=1000));
-                        ui.end_row();
-                    }
-                    if st.is_picture {
-                        picture_rows(ui, ctx, app, &mut st, scale);
-                    }
-                    if st.is_compound {
-                        // xfig: the smallest and largest depth inside, and a
-                        // button that gives every object the smallest.
-                        rl(ui, "Depths");
-                        ui.horizontal(|ui| {
-                            ui.label(format!("Minimum: {}", st.min_depth));
-                            ui.label(format!("Maximum: {}", st.max_depth));
-                            if ui.button("Collapse Depths").clicked() {
-                                st.collapse = true;
-                                st.depth = st.min_depth;
-                                st.max_depth = st.min_depth;
+                        if st.is_text {
+                            rl(ui, "Size");
+                            ui.add(egui::DragValue::new(&mut st.size).range(1.0..=500.0).suffix(" pt"));
+                            ui.end_row();
+                            rl(ui, "Pen colour");
+                            if let Some(c) = color_combo(ui, "edit_tcolor", app.engine.doc(), st.pen) {
+                                st.pen = c;
                             }
-                        });
-                        ui.end_row();
-                        rl(ui, "Number of objects");
-                        rl(ui, st.members.to_string());
-                        ui.end_row();
-                        if !st.texts.is_empty() {
-                            rl(ui, "Text objects in this compound");
+                            ui.end_row();
+                            rl(ui, "Angle");
+                            ui.add(egui::DragValue::new(&mut st.angle).range(-360.0..=360.0).suffix("°"));
+                            ui.end_row();
+                            rl(ui, "Justification");
+                            ui.horizontal(|ui| {
+                                for (j, n) in [
+                                    (Justify::Left, "Left justified"),
+                                    (Justify::Center, "Centered"),
+                                    (Justify::Right, "Right justified"),
+                                ] {
+                                    ui.radio_value(&mut st.justify, j, n);
+                                }
+                            });
+                            ui.end_row();
+                            rl(ui, "Flags");
+                            ui.horizontal(|ui| {
+                                ui.checkbox(&mut st.hidden, "Hidden");
+                                ui.checkbox(&mut st.rigid, "Rigid");
+                                ui.checkbox(&mut st.special, "TeX");
+                            });
+                            ui.end_row();
+                            rl(ui, "Font");
+                            if let Some(out) =
+                                font_combo(ui, "edit_font", st.font, st.postscript, st.local_font.as_deref())
+                            {
+                                if let Some((f, ps)) = out.font {
+                                    st.font = f;
+                                    st.postscript = ps;
+                                }
+                                if let Some(l) = out.local {
+                                    st.local_font = l;
+                                }
+                            }
+                            ui.end_row();
+                            rl(ui, "Text");
+                            ui.add(
+                                egui::TextEdit::multiline(&mut st.text)
+                                    .desired_rows(3)
+                                    .desired_width(240.0),
+                            );
                             ui.end_row();
                         }
-                        for (i, t) in st.texts.iter_mut().enumerate() {
-                            rl(ui, "Text");
-                            ui.add(egui::TextEdit::singleline(t).desired_width(240.0))
-                                .widget_info(|| {
-                                    egui::WidgetInfo::text_edit(
-                                        true,
-                                        format!("Compound text {}", i + 1),
-                                        t.as_str(),
-                                        "",
-                                    )
+                        if st.has_style && !st.is_picture {
+                            rl(ui, "Width");
+                            ui.add(egui::DragValue::new(&mut st.thickness).range(0..=1000));
+                            ui.end_row();
+                            rl(ui, "Line style");
+                            ui.horizontal(|ui| {
+                                if let Some(k) = line_menu(ui, "edit_line", st.line) {
+                                    st.line = k;
+                                }
+                                if st.line != LineKind::Solid {
+                                    // xfig's edit panel names the one value by the style
+                                    // (`e_edit.c`); its meaning follows fig2dev's `set_style`.
+                                    let dotted = st.line == LineKind::Dotted;
+                                    ui.label(if dotted { "Dot gap" } else { "Dash length" })
+                                        .on_hover_text(LINE_STYLE_VALUE_HELP);
+                                    ui.add(egui::DragValue::new(&mut st.style_val).range(0.0..=1000.0).speed(0.1))
+                                        .on_hover_text(LINE_STYLE_VALUE_HELP);
+                                }
+                            });
+                            ui.end_row();
+                            rl(ui, "Pen colour");
+                            if let Some(c) = color_combo(ui, "edit_pen", app.engine.doc(), st.pen) {
+                                st.pen = c;
+                            }
+                            ui.end_row();
+                            rl(ui, "Fill colour");
+                            if let Some(c) = color_combo(ui, "edit_fill", app.engine.doc(), st.fill) {
+                                st.fill = c;
+                            }
+                            ui.end_row();
+                            rl(ui, "Fill style");
+                            // xfig offers no tints for black, white and default.
+                            st.area = limit_fill(st.area, st.fill);
+                            if let Some(f) =
+                                crate::attributes::fill_menu(ui, app.engine.doc(), (st.pen, st.fill), st.area)
+                            {
+                                st.area = f;
+                            }
+                            ui.end_row();
+                            // xfig: cap style for arcs, open splines and polylines;
+                            // join style for polylines, polygons and boxes.
+                            let cap_ok = st.is_arc || st.kind == "polyline" || (st.kind == "spline" && st.has_arrows);
+                            let join_ok = matches!(st.kind.as_str(), "polyline" | "polygon" | "box");
+                            if cap_ok || join_ok {
+                                rl(
+                                    ui,
+                                    match (cap_ok, join_ok) {
+                                        (true, true) => "Cap / join style",
+                                        (true, false) => "Cap style",
+                                        _ => "Join style",
+                                    },
+                                );
+                                ui.horizontal(|ui| {
+                                    if cap_ok {
+                                        if let Some(c) = cap_menu(ui, "edit_cap", st.cap) {
+                                            st.cap = c;
+                                        }
+                                    }
+                                    if join_ok {
+                                        if let Some(j) = join_menu(ui, "edit_join", st.join) {
+                                            st.join = j;
+                                        }
+                                    }
+                                });
+                                ui.end_row();
+                            }
+                        }
+                        if st.has_arrows && !(st.is_arc && st.pie) {
+                            arrow_rows(ui, "edit_farrow", "Forward arrow", &mut st.fwd);
+                            arrow_rows(ui, "edit_barrow", "Backward arrow", &mut st.back);
+                        }
+                        if st.is_arcbox {
+                            rl(ui, "Corner radius");
+                            ui.add(egui::DragValue::new(&mut st.radius).range(0..=1000));
+                            ui.end_row();
+                        }
+                        if st.is_picture {
+                            picture_rows(ui, ctx, app, &mut st, scale);
+                        }
+                        if st.is_compound {
+                            // xfig: the smallest and largest depth inside, and a
+                            // button that gives every object the smallest.
+                            rl(ui, "Depths");
+                            ui.horizontal(|ui| {
+                                ui.label(format!("Minimum: {}", st.min_depth));
+                                ui.label(format!("Maximum: {}", st.max_depth));
+                                if ui.button("Collapse Depths").clicked() {
+                                    st.collapse = true;
+                                    st.depth = st.min_depth;
+                                    st.max_depth = st.min_depth;
+                                }
+                            });
+                            ui.end_row();
+                            rl(ui, "Number of objects");
+                            rl(ui, st.members.to_string());
+                            ui.end_row();
+                            if !st.texts.is_empty() {
+                                rl(ui, "Text objects in this compound");
+                                ui.end_row();
+                            }
+                            for (i, t) in st.texts.iter_mut().enumerate() {
+                                rl(ui, "Text");
+                                ui.add(egui::TextEdit::singleline(t).desired_width(240.0))
+                                    .widget_info(|| {
+                                        egui::WidgetInfo::text_edit(
+                                            true,
+                                            format!("Compound text {}", i + 1),
+                                            t.as_str(),
+                                            "",
+                                        )
+                                    });
+                                ui.end_row();
+                            }
+                        } else {
+                            rl(ui, "Depth");
+                            ui.add(egui::DragValue::new(&mut st.depth).range(0..=999));
+                            ui.end_row();
+                        }
+                        if !matches!(st.geo, Geo::None) {
+                            rl(ui, "Units");
+                            egui::ComboBox::from_id_salt("edit_units")
+                                .selected_text(if st.fig_units { "Fig units" } else { doc_unit })
+                                .show_ui(ui, |ui| {
+                                    ui.selectable_value(&mut st.fig_units, false, doc_unit);
+                                    ui.selectable_value(&mut st.fig_units, true, "Fig units");
                                 });
                             ui.end_row();
                         }
-                    } else {
-                        rl(ui, "Depth");
-                        ui.add(egui::DragValue::new(&mut st.depth).range(0..=999));
-                        ui.end_row();
-                    }
-                    if !matches!(st.geo, Geo::None) {
-                        rl(ui, "Units");
-                        egui::ComboBox::from_id_salt("edit_units")
-                            .selected_text(if st.fig_units { "Fig units" } else { doc_unit })
-                            .show_ui(ui, |ui| {
-                                ui.selectable_value(&mut st.fig_units, false, doc_unit);
-                                ui.selectable_value(&mut st.fig_units, true, "Fig units");
-                            });
-                        ui.end_row();
-                    }
-                    if matches!(st.geo, Geo::Points(_)) {
-                        point_table(ui, &mut st, scale);
-                    }
-                    match &mut st.geo {
-                        Geo::None => {}
-                        Geo::Corners(c) => {
-                            let [a, b] = c;
-                            xy_row(ui, "First corner", a, scale);
-                            xy_row(ui, "Opposite corner", b, scale);
+                        if matches!(st.geo, Geo::Points(_)) {
+                            point_table(ui, &mut st, scale);
                         }
-                        Geo::Points(_) => {}
-                        Geo::Arc(a) => {
-                            for (i, p) in a.iter_mut().enumerate() {
-                                xy_row(ui, ["First point", "Second point", "Third point"][i], p, scale);
+                        match &mut st.geo {
+                            Geo::None => {}
+                            Geo::Corners(c) => {
+                                let [a, b] = c;
+                                xy_row(ui, "First corner", a, scale);
+                                xy_row(ui, "Opposite corner", b, scale);
                             }
-                        }
-                        Geo::Ellipse {
-                            center,
-                            radii,
-                            circle,
-                            angle,
-                        } => {
-                            if !*circle {
-                                rl(ui, "Angle (degrees)");
-                                ui.add(egui::DragValue::new(angle).range(-360.0..=360.0).speed(1.0));
+                            Geo::Points(_) => {}
+                            Geo::Arc(a) => {
+                                for (i, p) in a.iter_mut().enumerate() {
+                                    xy_row(ui, ["First point", "Second point", "Third point"][i], p, scale);
+                                }
+                            }
+                            Geo::Ellipse {
+                                center,
+                                radii,
+                                circle,
+                                angle,
+                            } => {
+                                if !*circle {
+                                    rl(ui, "Angle (degrees)");
+                                    ui.add(egui::DragValue::new(angle).range(-360.0..=360.0).speed(1.0));
+                                    ui.end_row();
+                                }
+                                xy_row(ui, "Center", center, scale);
+                                if *circle {
+                                    rl(ui, "Radius");
+                                    coord(ui, &mut radii[0], scale);
+                                    ui.end_row();
+                                } else {
+                                    xy_row(ui, "Radii", radii, scale);
+                                }
+                            }
+                            Geo::Origin(o) => xy_row(ui, "Origin", o, scale),
+                            Geo::Compound { nw, se } => {
+                                // xfig: Return in a corner repositions (the size
+                                // stays), in the dimensions it rescales about the
+                                // top-left corner; changes apply as they are made.
+                                let (nw0, se0) = (*nw, *se);
+                                let mut size = [se0[0] - nw0[0], se0[1] - nw0[1]];
+                                let size0 = size;
+                                xy_row_dec(ui, "Top left corner", nw, scale, 4);
+                                xy_row_dec(ui, "Bottom right corner", se, scale, 4);
+                                rl(ui, "Dimensions");
+                                ui.horizontal(|ui| {
+                                    ui.label("Width =");
+                                    coord_dec(ui, &mut size[0], scale, 4);
+                                    ui.label("Height =");
+                                    coord_dec(ui, &mut size[1], scale, 4);
+                                });
                                 ui.end_row();
-                            }
-                            xy_row(ui, "Center", center, scale);
-                            if *circle {
-                                rl(ui, "Radius");
-                                coord(ui, &mut radii[0], scale);
-                                ui.end_row();
-                            } else {
-                                xy_row(ui, "Radii", radii, scale);
-                            }
-                        }
-                        Geo::Origin(o) => xy_row(ui, "Origin", o, scale),
-                        Geo::Compound { nw, se } => {
-                            // xfig: Return in a corner repositions (the size
-                            // stays), in the dimensions it rescales about the
-                            // top-left corner; changes apply as they are made.
-                            let (nw0, se0) = (*nw, *se);
-                            let mut size = [se0[0] - nw0[0], se0[1] - nw0[1]];
-                            let size0 = size;
-                            xy_row_dec(ui, "Top left corner", nw, scale, 4);
-                            xy_row_dec(ui, "Bottom right corner", se, scale, 4);
-                            rl(ui, "Dimensions");
-                            ui.horizontal(|ui| {
-                                ui.label("Width =");
-                                coord_dec(ui, &mut size[0], scale, 4);
-                                ui.label("Height =");
-                                coord_dec(ui, &mut size[1], scale, 4);
-                            });
-                            ui.end_row();
-                            if *nw != nw0 {
-                                *se = [se0[0] + nw[0] - nw0[0], se0[1] + nw[1] - nw0[1]];
-                            } else if *se != se0 {
-                                *nw = [nw0[0] + se[0] - se0[0], nw0[1] + se[1] - se0[1]];
-                            } else if size != size0 {
-                                *se = [nw[0] + size[0], nw[1] + size[1]];
+                                if *nw != nw0 {
+                                    *se = [se0[0] + nw[0] - nw0[0], se0[1] + nw[1] - nw0[1]];
+                                } else if *se != se0 {
+                                    *nw = [nw0[0] + se[0] - se0[0], nw0[1] + se[1] - se0[1]];
+                                } else if size != size0 {
+                                    *se = [nw[0] + size[0], nw[1] + size[1]];
+                                }
                             }
                         }
+                    });
+                ui.separator();
+                ui.horizontal(|ui| {
+                    // The panel is live, so xfig's Apply has nothing to do and
+                    // is left out.
+                    if ui
+                        .button("Done")
+                        .on_hover_text("Changes show as you make them; Done keeps them as one undo step")
+                        .clicked()
+                    {
+                        close = true;
+                    }
+                    if ui
+                        .button("Cancel")
+                        .on_hover_text("Undo every change since the panel opened")
+                        .clicked()
+                    {
+                        cancel = true;
                     }
                 });
-            ui.separator();
-            ui.horizontal(|ui| {
-                // The panel is live, so xfig's Apply has nothing to do and
-                // is left out.
-                if ui
-                    .button("Done")
-                    .on_hover_text("Changes show as you make them; Done keeps them as one undo step")
-                    .clicked()
-                {
-                    close = true;
-                }
-                if ui
-                    .button("Cancel")
-                    .on_hover_text("Undo every change since the panel opened")
-                    .clicked()
-                {
-                    cancel = true;
-                }
-            });
+            })
         });
     // xfig's edit popup (`e_edit.c`): Return applies, Ctrl+Return is Done.
     // A single-line field gives up the focus on Return; a multi-line one
@@ -2460,322 +2476,327 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
         .resizable(false)
         .collapsible(false)
         .show(ctx, |ui| {
-            egui::Grid::new("export_grid")
-                .num_columns(2)
-                .spacing([8.0, 6.0])
-                .show(ui, |ui| {
-                    ui.label("Language");
-                    let current = language(st.format).map_or(st.format, |l| l.description);
-                    let combo = egui::ComboBox::from_id_salt("export_language")
-                        .selected_text(current)
-                        .width(280.0)
-                        .show_ui(ui, |ui| {
-                            for l in LANGUAGES {
-                                let available = rustfig_engine::fig2dev::language_available(l);
-                                let item = ui
-                                    .add_enabled(available, egui::Button::selectable(st.format == l.id, l.description));
-                                let item = match l.task() {
-                                    Some(t) if !available => item
-                                        .on_disabled_hover_text(format!("Being ported from fig2dev (plan task {t})")),
-                                    _ => item,
-                                };
-                                if item.clicked() {
-                                    st.format = l.id;
-                                }
-                            }
-                        });
-                    combo
-                        .response
-                        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, current));
-                    ui.end_row();
-                    ui.label("Magnification");
-                    ui.horizontal(|ui| {
-                        ui.add(
-                            egui::DragValue::new(&mut st.magnification)
-                                .range(1.0..=10000.0)
-                                .suffix(" %"),
-                        );
-                        if ui.button("Fit to Page").clicked() {
-                            act.fit = true;
-                        }
-                    });
-                    ui.end_row();
-                    ui.label("Figure size");
-                    ui.label(format!("{bw:.1}{unit} x {bh:.1}{unit}"));
-                    ui.end_row();
-                    // The rows xfig shows for the language (manage_optional).
-                    if rows.transparent {
-                        ui.label("GIF transparent color");
-                        if let Some(c) = crate::panels::color_menu(
-                            ui,
-                            "export_transparent",
-                            doc,
-                            st.settings.transparent,
-                            &[(TRANSP_NONE, "None"), (TRANSP_BACKGROUND, "Background")],
-                        ) {
-                            st.settings.transparent = c;
-                        }
-                        ui.end_row();
-                    }
-                    if rows.quality {
-                        ui.label("Image quality");
-                        ui.add(
-                            egui::DragValue::new(&mut st.settings.quality)
-                                .range(1..=100)
-                                .suffix(" %"),
-                        );
-                        ui.end_row();
-                    }
-                    if rows.border {
-                        ui.label(if rows.border_pixels {
-                            "Border (pixels)"
-                        } else {
-                            "Border (points)"
-                        });
-                        ui.add(egui::DragValue::new(&mut st.settings.border).range(0.0..=10000.0));
-                        ui.end_row();
-                    }
-                    if rows.background {
-                        ui.label("Background");
-                        if let Some(c) = crate::panels::color_menu(
-                            ui,
-                            "export_background",
-                            doc,
-                            st.settings.background,
-                            &[(rustfig_engine::export_panel::COLOR_NONE, "Default")],
-                        ) {
-                            st.settings.background = c;
-                        }
-                        ui.end_row();
-                    }
-                    if rows.grid {
-                        ui.label("Grid");
-                        ui.horizontal(|ui| {
-                            let choices: &[&str] = if units == rustfig_model::Units::Metric {
-                                &GRID_MM
-                            } else {
-                                &GRID_INCH
-                            };
-                            ui.label("Minor");
-                            if let Some(c) = text_combo(ui, "export_grid_minor", &st.settings.grid_minor, choices) {
-                                st.settings.grid_minor = c;
-                            }
-                            ui.label("Major");
-                            if let Some(c) = text_combo(ui, "export_grid_major", &st.settings.grid_major, choices) {
-                                st.settings.grid_major = c;
-                            }
-                            ui.label(if units == rustfig_model::Units::Metric {
-                                "mm"
-                            } else {
-                                "in"
-                            });
-                        });
-                        ui.end_row();
-                    }
-                    if rows.preview {
-                        ui.label("EPS/PS preview");
-                        let names = ["None", "ASCII (EPSI)", "Color TIFF", "Monochrome TIFF"];
-                        let cur = names.get(usize::from(st.settings.preview)).copied().unwrap_or("None");
-                        if let Some(c) = text_combo(ui, "export_preview_kind", cur, &names) {
-                            st.settings.preview = names.iter().position(|n| *n == c).map_or(0, |i| i as u8);
-                        }
-                        ui.end_row();
-                    }
-                    if rows.embed {
-                        ui.label("Editable");
-                        ui.checkbox(&mut st.settings.embed, "Embed the figure").on_hover_text(
-                            "Store the figure (.fig text, with hidden depths and comments) inside the file, \
-                                 so File > Open can edit it again",
-                        );
-                        ui.end_row();
-                    }
-                    if rows.pdf_page_mode {
-                        ui.label("PDF");
-                        ui.checkbox(
-                            &mut st.settings.pdf_page_mode,
-                            "Page mode (the paper size, not the figure's)",
-                        );
-                        ui.end_row();
-                    }
-                    if rows.page {
-                        let page_on = st.format != "pdf" || st.settings.pdf_page_mode;
-                        ui.label("Paper size");
-                        ui.add_enabled_ui(page_on, |ui| {
-                            let combo = egui::ComboBox::from_id_salt("export_paper")
-                                .selected_text(paper.name())
-                                .show_ui(ui, |ui| {
-                                    for p in PaperSize::ALL {
-                                        if ui.selectable_label(p == paper, p.name()).clicked() {
-                                            act.paper = Some(p);
-                                        }
-                                    }
-                                });
-                            combo.response.widget_info(|| {
-                                egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, paper.name())
-                            });
-                        });
-                        ui.end_row();
-                        ui.label("Orientation");
-                        ui.add_enabled_ui(page_on, |ui| {
-                            ui.horizontal(|ui| {
-                                if ui.radio(landscape, "Landscape").clicked() {
-                                    act.page.push(("orientation", "landscape"));
-                                }
-                                if ui.radio(!landscape, "Portrait").clicked() {
-                                    act.page.push(("orientation", "portrait"));
-                                }
-                            });
-                        });
-                        ui.end_row();
-                        ui.label("Justification");
-                        ui.add_enabled_ui(page_on, |ui| {
-                            ui.horizontal(|ui| {
-                                if ui.radio(center, "Center").clicked() {
-                                    act.page.push(("justify", "center"));
-                                }
-                                if ui.radio(!center, "Flush left").clicked() {
-                                    act.page.push(("justify", "flush_left"));
-                                }
-                            });
-                        });
-                        ui.end_row();
-                    }
-                    if rows.multiple {
-                        let page_on = st.format != "pdf" || st.settings.pdf_page_mode;
-                        ui.label("Pages");
-                        ui.add_enabled_ui(page_on, |ui| {
-                            ui.horizontal(|ui| {
-                                if ui.radio(!multiple, "Single").clicked() {
-                                    act.page.push(("pages", "single"));
-                                }
-                                if ui.radio(multiple, "Multiple").clicked() {
-                                    act.page.push(("pages", "multiple"));
-                                }
-                                ui.add_enabled(multiple, egui::Checkbox::new(&mut st.settings.overlap, "Overlap"));
-                            });
-                        });
-                        ui.end_row();
-                        ui.label("Offset");
-                        ui.add_enabled_ui(page_on, |ui| {
-                            ui.horizontal(|ui| {
-                                ui.label("X");
-                                ui.add(egui::DragValue::new(&mut st.settings.x_offset).speed(0.05));
-                                let cur = OFFSET_UNITS
-                                    .get(usize::from(st.settings.x_unit))
-                                    .copied()
-                                    .unwrap_or("in");
-                                if let Some(c) = text_combo(ui, "export_x_unit", cur, &OFFSET_UNITS) {
-                                    st.settings.x_unit =
-                                        OFFSET_UNITS.iter().position(|n| *n == c).map_or(0, |i| i as u8);
-                                }
-                                ui.label("Y");
-                                ui.add(egui::DragValue::new(&mut st.settings.y_offset).speed(0.05));
-                                let cur = OFFSET_UNITS
-                                    .get(usize::from(st.settings.y_unit))
-                                    .copied()
-                                    .unwrap_or("in");
-                                if let Some(c) = text_combo(ui, "export_y_unit", cur, &OFFSET_UNITS) {
-                                    st.settings.y_unit =
-                                        OFFSET_UNITS.iter().position(|n| *n == c).map_or(0, |i| i as u8);
-                                }
-                            });
-                        });
-                        ui.end_row();
-                    }
-                    if rows.hpgl {
-                        // `toggle_hpgl_pcl_switch` and `toggle_hpgl_font`.
-                        ui.label("HPGL");
-                        ui.vertical(|ui| {
-                            ui.checkbox(&mut st.settings.hpgl_pcl, "Issue PCL Command to use HPGL")
-                                .on_hover_text("fig2dev -k: precede the output with the PCL switch to HP-GL/2");
-                            ui.checkbox(&mut st.settings.hpgl_font, "Use Specified Font")
-                                .on_hover_text("fig2dev -F: select the figure's font with the SD command");
-                        });
-                        ui.end_row();
-                    }
-                    if rows.bitmap {
-                        ui.label("Resolution");
-                        ui.add(
-                            egui::DragValue::new(&mut st.settings.dpi)
-                                .range(10.0..=2400.0)
-                                .suffix(" dpi"),
-                        );
-                        ui.end_row();
-                        // xfig's smoothing menu (fig2dev's -S).
-                        let choices: [(Option<u32>, &str); 3] = [
-                            (Some(1), "No smoothing"),
-                            (Some(2), "Some smoothing"),
-                            (Some(4), "More smoothing"),
-                        ];
-                        let current = choices
-                            .iter()
-                            .find(|(v, _)| *v == st.settings.smoothing)
-                            .map_or("No smoothing", |(_, t)| *t);
-                        ui.label("Smoothing");
-                        let combo = egui::ComboBox::from_id_salt("export_smoothing")
+            crate::dialog_body(ui, |ui| {
+                egui::Grid::new("export_grid")
+                    .num_columns(2)
+                    .spacing([8.0, 6.0])
+                    .show(ui, |ui| {
+                        ui.label("Language");
+                        let current = language(st.format).map_or(st.format, |l| l.description);
+                        let combo = egui::ComboBox::from_id_salt("export_language")
                             .selected_text(current)
+                            .width(280.0)
                             .show_ui(ui, |ui| {
-                                for (v, t) in choices {
-                                    ui.selectable_value(&mut st.settings.smoothing, v, t);
+                                for l in LANGUAGES {
+                                    let available = rustfig_engine::fig2dev::language_available(l);
+                                    let item = ui.add_enabled(
+                                        available,
+                                        egui::Button::selectable(st.format == l.id, l.description),
+                                    );
+                                    let item = match l.task() {
+                                        Some(t) if !available => item.on_disabled_hover_text(format!(
+                                            "Being ported from fig2dev (plan task {t})"
+                                        )),
+                                        _ => item,
+                                    };
+                                    if item.clicked() {
+                                        st.format = l.id;
+                                    }
                                 }
                             });
                         combo
                             .response
                             .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, current));
                         ui.end_row();
-                    }
-                    rl(ui, "Depths");
-                    ui.vertical(|ui| {
-                        ui.add_enabled_ui(some_hidden, |ui| {
-                            ui.checkbox(&mut st.active_layers_only, "active layers only")
-                                .on_disabled_hover_text("Every depth is on");
-                            ui.add_enabled_ui(st.active_layers_only, |ui| {
+                        ui.label("Magnification");
+                        ui.horizontal(|ui| {
+                            ui.add(
+                                egui::DragValue::new(&mut st.magnification)
+                                    .range(1.0..=10000.0)
+                                    .suffix(" %"),
+                            );
+                            if ui.button("Fit to Page").clicked() {
+                                act.fit = true;
+                            }
+                        });
+                        ui.end_row();
+                        ui.label("Figure size");
+                        ui.label(format!("{bw:.1}{unit} x {bh:.1}{unit}"));
+                        ui.end_row();
+                        // The rows xfig shows for the language (manage_optional).
+                        if rows.transparent {
+                            ui.label("GIF transparent color");
+                            if let Some(c) = crate::panels::color_menu(
+                                ui,
+                                "export_transparent",
+                                doc,
+                                st.settings.transparent,
+                                &[(TRANSP_NONE, "None"), (TRANSP_BACKGROUND, "Background")],
+                            ) {
+                                st.settings.transparent = c;
+                            }
+                            ui.end_row();
+                        }
+                        if rows.quality {
+                            ui.label("Image quality");
+                            ui.add(
+                                egui::DragValue::new(&mut st.settings.quality)
+                                    .range(1..=100)
+                                    .suffix(" %"),
+                            );
+                            ui.end_row();
+                        }
+                        if rows.border {
+                            ui.label(if rows.border_pixels {
+                                "Border (pixels)"
+                            } else {
+                                "Border (points)"
+                            });
+                            ui.add(egui::DragValue::new(&mut st.settings.border).range(0.0..=10000.0));
+                            ui.end_row();
+                        }
+                        if rows.background {
+                            ui.label("Background");
+                            if let Some(c) = crate::panels::color_menu(
+                                ui,
+                                "export_background",
+                                doc,
+                                st.settings.background,
+                                &[(rustfig_engine::export_panel::COLOR_NONE, "Default")],
+                            ) {
+                                st.settings.background = c;
+                            }
+                            ui.end_row();
+                        }
+                        if rows.grid {
+                            ui.label("Grid");
+                            ui.horizontal(|ui| {
+                                let choices: &[&str] = if units == rustfig_model::Units::Metric {
+                                    &GRID_MM
+                                } else {
+                                    &GRID_INCH
+                                };
+                                ui.label("Minor");
+                                if let Some(c) = text_combo(ui, "export_grid_minor", &st.settings.grid_minor, choices) {
+                                    st.settings.grid_minor = c;
+                                }
+                                ui.label("Major");
+                                if let Some(c) = text_combo(ui, "export_grid_major", &st.settings.grid_major, choices) {
+                                    st.settings.grid_major = c;
+                                }
+                                ui.label(if units == rustfig_model::Units::Metric {
+                                    "mm"
+                                } else {
+                                    "in"
+                                });
+                            });
+                            ui.end_row();
+                        }
+                        if rows.preview {
+                            ui.label("EPS/PS preview");
+                            let names = ["None", "ASCII (EPSI)", "Color TIFF", "Monochrome TIFF"];
+                            let cur = names.get(usize::from(st.settings.preview)).copied().unwrap_or("None");
+                            if let Some(c) = text_combo(ui, "export_preview_kind", cur, &names) {
+                                st.settings.preview = names.iter().position(|n| *n == c).map_or(0, |i| i as u8);
+                            }
+                            ui.end_row();
+                        }
+                        if rows.embed {
+                            ui.label("Editable");
+                            ui.checkbox(&mut st.settings.embed, "Embed the figure").on_hover_text(
+                                "Store the figure (.fig text, with hidden depths and comments) inside the file, \
+                                 so File > Open can edit it again",
+                            );
+                            ui.end_row();
+                        }
+                        if rows.pdf_page_mode {
+                            ui.label("PDF");
+                            ui.checkbox(
+                                &mut st.settings.pdf_page_mode,
+                                "Page mode (the paper size, not the figure's)",
+                            );
+                            ui.end_row();
+                        }
+                        if rows.page {
+                            let page_on = st.format != "pdf" || st.settings.pdf_page_mode;
+                            ui.label("Paper size");
+                            ui.add_enabled_ui(page_on, |ui| {
+                                let combo = egui::ComboBox::from_id_salt("export_paper")
+                                    .selected_text(paper.name())
+                                    .show_ui(ui, |ui| {
+                                        for p in PaperSize::ALL {
+                                            if ui.selectable_label(p == paper, p.name()).clicked() {
+                                                act.paper = Some(p);
+                                            }
+                                        }
+                                    });
+                                combo.response.widget_info(|| {
+                                    egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, paper.name())
+                                });
+                            });
+                            ui.end_row();
+                            ui.label("Orientation");
+                            ui.add_enabled_ui(page_on, |ui| {
                                 ui.horizontal(|ui| {
-                                    ui.label("bounds:");
-                                    ui.radio_value(&mut st.whole_figure_bounds, true, "whole figure");
-                                    ui.radio_value(&mut st.whole_figure_bounds, false, "active layers");
+                                    if ui.radio(landscape, "Landscape").clicked() {
+                                        act.page.push(("orientation", "landscape"));
+                                    }
+                                    if ui.radio(!landscape, "Portrait").clicked() {
+                                        act.page.push(("orientation", "portrait"));
+                                    }
+                                });
+                            });
+                            ui.end_row();
+                            ui.label("Justification");
+                            ui.add_enabled_ui(page_on, |ui| {
+                                ui.horizontal(|ui| {
+                                    if ui.radio(center, "Center").clicked() {
+                                        act.page.push(("justify", "center"));
+                                    }
+                                    if ui.radio(!center, "Flush left").clicked() {
+                                        act.page.push(("justify", "flush_left"));
+                                    }
+                                });
+                            });
+                            ui.end_row();
+                        }
+                        if rows.multiple {
+                            let page_on = st.format != "pdf" || st.settings.pdf_page_mode;
+                            ui.label("Pages");
+                            ui.add_enabled_ui(page_on, |ui| {
+                                ui.horizontal(|ui| {
+                                    if ui.radio(!multiple, "Single").clicked() {
+                                        act.page.push(("pages", "single"));
+                                    }
+                                    if ui.radio(multiple, "Multiple").clicked() {
+                                        act.page.push(("pages", "multiple"));
+                                    }
+                                    ui.add_enabled(multiple, egui::Checkbox::new(&mut st.settings.overlap, "Overlap"));
+                                });
+                            });
+                            ui.end_row();
+                            ui.label("Offset");
+                            ui.add_enabled_ui(page_on, |ui| {
+                                ui.horizontal(|ui| {
+                                    ui.label("X");
+                                    ui.add(egui::DragValue::new(&mut st.settings.x_offset).speed(0.05));
+                                    let cur = OFFSET_UNITS
+                                        .get(usize::from(st.settings.x_unit))
+                                        .copied()
+                                        .unwrap_or("in");
+                                    if let Some(c) = text_combo(ui, "export_x_unit", cur, &OFFSET_UNITS) {
+                                        st.settings.x_unit =
+                                            OFFSET_UNITS.iter().position(|n| *n == c).map_or(0, |i| i as u8);
+                                    }
+                                    ui.label("Y");
+                                    ui.add(egui::DragValue::new(&mut st.settings.y_offset).speed(0.05));
+                                    let cur = OFFSET_UNITS
+                                        .get(usize::from(st.settings.y_unit))
+                                        .copied()
+                                        .unwrap_or("in");
+                                    if let Some(c) = text_combo(ui, "export_y_unit", cur, &OFFSET_UNITS) {
+                                        st.settings.y_unit =
+                                            OFFSET_UNITS.iter().position(|n| *n == c).map_or(0, |i| i as u8);
+                                    }
+                                });
+                            });
+                            ui.end_row();
+                        }
+                        if rows.hpgl {
+                            // `toggle_hpgl_pcl_switch` and `toggle_hpgl_font`.
+                            ui.label("HPGL");
+                            ui.vertical(|ui| {
+                                ui.checkbox(&mut st.settings.hpgl_pcl, "Issue PCL Command to use HPGL")
+                                    .on_hover_text("fig2dev -k: precede the output with the PCL switch to HP-GL/2");
+                                ui.checkbox(&mut st.settings.hpgl_font, "Use Specified Font")
+                                    .on_hover_text("fig2dev -F: select the figure's font with the SD command");
+                            });
+                            ui.end_row();
+                        }
+                        if rows.bitmap {
+                            ui.label("Resolution");
+                            ui.add(
+                                egui::DragValue::new(&mut st.settings.dpi)
+                                    .range(10.0..=2400.0)
+                                    .suffix(" dpi"),
+                            );
+                            ui.end_row();
+                            // xfig's smoothing menu (fig2dev's -S).
+                            let choices: [(Option<u32>, &str); 3] = [
+                                (Some(1), "No smoothing"),
+                                (Some(2), "Some smoothing"),
+                                (Some(4), "More smoothing"),
+                            ];
+                            let current = choices
+                                .iter()
+                                .find(|(v, _)| *v == st.settings.smoothing)
+                                .map_or("No smoothing", |(_, t)| *t);
+                            ui.label("Smoothing");
+                            let combo = egui::ComboBox::from_id_salt("export_smoothing")
+                                .selected_text(current)
+                                .show_ui(ui, |ui| {
+                                    for (v, t) in choices {
+                                        ui.selectable_value(&mut st.settings.smoothing, v, t);
+                                    }
+                                });
+                            combo
+                                .response
+                                .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, current));
+                            ui.end_row();
+                        }
+                        rl(ui, "Depths");
+                        ui.vertical(|ui| {
+                            ui.add_enabled_ui(some_hidden, |ui| {
+                                ui.checkbox(&mut st.active_layers_only, "active layers only")
+                                    .on_disabled_hover_text("Every depth is on");
+                                ui.add_enabled_ui(st.active_layers_only, |ui| {
+                                    ui.horizontal(|ui| {
+                                        ui.label("bounds:");
+                                        ui.radio_value(&mut st.whole_figure_bounds, true, "whole figure");
+                                        ui.radio_value(&mut st.whole_figure_bounds, false, "active layers");
+                                    });
                                 });
                             });
                         });
+                        ui.end_row();
+                        ui.label("On save");
+                        ui.checkbox(&mut st.export_on_save, "Also export on every save")
+                            .on_hover_text(
+                                "Whenever this figure is saved, write the chosen export file again with these options",
+                            );
+                        ui.end_row();
                     });
-                    ui.end_row();
-                    ui.label("On save");
-                    ui.checkbox(&mut st.export_on_save, "Also export on every save")
-                        .on_hover_text(
-                            "Whenever this figure is saved, write the chosen export file again with these options",
-                        );
-                    ui.end_row();
+                ui.separator();
+                // The result, made again when an option changes (W10-10).
+                ui.label("Preview");
+                match (&st.preview.texture, &st.preview.error) {
+                    (Some(t), _) => {
+                        let s = t.size_vec2();
+                        let k = (260.0 / s.x.max(1.0)).min(180.0 / s.y.max(1.0)).min(1.0);
+                        let r = ui.add(egui::Image::new((t.id(), s * k)));
+                        r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Image, true, "Export preview"));
+                    }
+                    (None, Some(e)) => {
+                        ui.weak(e.as_str());
+                    }
+                    (None, None) => {
+                        ui.weak("(nothing to show)");
+                    }
+                }
+                ui.separator();
+                ui.horizontal(|ui| {
+                    if ui.button("Export…").clicked() {
+                        act.go = true;
+                    }
+                    if ui
+                        .button("Reset to xfig defaults")
+                        .on_hover_text("Put this language's options back to xfig's own values")
+                        .clicked()
+                    {
+                        act.reset = true;
+                    }
                 });
-            ui.separator();
-            // The result, made again when an option changes (W10-10).
-            ui.label("Preview");
-            match (&st.preview.texture, &st.preview.error) {
-                (Some(t), _) => {
-                    let s = t.size_vec2();
-                    let k = (260.0 / s.x.max(1.0)).min(180.0 / s.y.max(1.0)).min(1.0);
-                    let r = ui.add(egui::Image::new((t.id(), s * k)));
-                    r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Image, true, "Export preview"));
-                }
-                (None, Some(e)) => {
-                    ui.weak(e.as_str());
-                }
-                (None, None) => {
-                    ui.weak("(nothing to show)");
-                }
-            }
-            ui.separator();
-            ui.horizontal(|ui| {
-                if ui.button("Export…").clicked() {
-                    act.go = true;
-                }
-                if ui
-                    .button("Reset to xfig defaults")
-                    .on_hover_text("Put this language's options back to xfig's own values")
-                    .clicked()
-                {
-                    act.reset = true;
-                }
-            });
+            })
         });
     app.dialogs.export.open = open;
     // xfig's Return in the export panel exports (`ExportFile`).
@@ -3038,7 +3059,7 @@ fn search_dialog(app: &mut App, ctx: &egui::Context) {
         .open(&mut open)
         .collapsible(false)
         .default_size([460.0, 320.0])
-        .show(ctx, |ui| {
+        .show(ctx, |ui| crate::dialog_body(ui, |ui| {
             egui::Grid::new("search_grid").num_columns(2).show(ui, |ui| {
                 // xfig: Return in the search field searches, in the
                 // replace field replaces (`w_srchrepl.c`).
@@ -3083,7 +3104,7 @@ fn search_dialog(app: &mut App, ctx: &egui::Context) {
                     ui.monospace(line);
                 }
             });
-        });
+        }));
     app.dialogs.search.open = open;
     if update {
         let ids = app.dialogs.search.found.clone();
@@ -3166,47 +3187,49 @@ fn settings_dialog(app: &mut App, ctx: &egui::Context) {
         .resizable(false)
         .collapsible(false)
         .show(ctx, |ui| {
-            egui::Grid::new("settings_grid")
-                .num_columns(2)
-                .spacing([8.0, 6.0])
-                .show(ui, |ui| {
-                    ui.label("Units");
-                    ui.horizontal(|ui| {
-                        if ui.radio(s.units == rustfig_model::Units::Inches, "Inches").clicked() {
-                            cmds.push(("doc.set_units", json!({"units": "inches"})));
-                        }
-                        if ui.radio(s.units == rustfig_model::Units::Metric, "Metric").clicked() {
-                            cmds.push(("doc.set_units", json!({"units": "metric"})));
-                        }
-                    });
-                    ui.end_row();
-                    ui.label("Paper");
-                    egui::ComboBox::from_id_salt("paper")
-                        .selected_text(s.paper.name())
-                        .show_ui(ui, |ui| {
-                            for p in PaperSize::ALL {
-                                if ui.selectable_label(p == s.paper, p.name()).clicked() {
-                                    cmds.push(("doc.set_paper", json!({"paper": p.name()})));
-                                }
+            crate::dialog_body(ui, |ui| {
+                egui::Grid::new("settings_grid")
+                    .num_columns(2)
+                    .spacing([8.0, 6.0])
+                    .show(ui, |ui| {
+                        ui.label("Units");
+                        ui.horizontal(|ui| {
+                            if ui.radio(s.units == rustfig_model::Units::Inches, "Inches").clicked() {
+                                cmds.push(("doc.set_units", json!({"units": "inches"})));
+                            }
+                            if ui.radio(s.units == rustfig_model::Units::Metric, "Metric").clicked() {
+                                cmds.push(("doc.set_units", json!({"units": "metric"})));
                             }
                         });
-                    ui.end_row();
-                    ui.label("Orientation");
-                    if ui.button(format!("{:?} (toggle)", s.orientation)).clicked() {
-                        cmds.push(("doc.toggle_orientation", json!({})));
-                    }
-                    ui.end_row();
-                    ui.label("Magnification");
-                    let mut m = s.magnification;
-                    if ui
-                        .add(egui::DragValue::new(&mut m).range(1.0..=10000.0).suffix(" %"))
-                        .changed()
-                    {
-                        cmds.push(("doc.set_magnification", json!({"magnification": m})));
-                    }
-                    ui.end_row();
-                });
-            ui.label(format!("{} user colours", app.engine.doc().colors.len()));
+                        ui.end_row();
+                        ui.label("Paper");
+                        egui::ComboBox::from_id_salt("paper")
+                            .selected_text(s.paper.name())
+                            .show_ui(ui, |ui| {
+                                for p in PaperSize::ALL {
+                                    if ui.selectable_label(p == s.paper, p.name()).clicked() {
+                                        cmds.push(("doc.set_paper", json!({"paper": p.name()})));
+                                    }
+                                }
+                            });
+                        ui.end_row();
+                        ui.label("Orientation");
+                        if ui.button(format!("{:?} (toggle)", s.orientation)).clicked() {
+                            cmds.push(("doc.toggle_orientation", json!({})));
+                        }
+                        ui.end_row();
+                        ui.label("Magnification");
+                        let mut m = s.magnification;
+                        if ui
+                            .add(egui::DragValue::new(&mut m).range(1.0..=10000.0).suffix(" %"))
+                            .changed()
+                        {
+                            cmds.push(("doc.set_magnification", json!({"magnification": m})));
+                        }
+                        ui.end_row();
+                    });
+                ui.label(format!("{} user colours", app.engine.doc().colors.len()));
+            })
         });
     for (c, p) in cmds {
         app.run(c, p);
@@ -3300,7 +3323,7 @@ fn about_dialog(app: &mut App, ctx: &egui::Context) {
         .open(&mut open)
         .resizable(false)
         .collapsible(false)
-        .show(ctx, |ui| {
+        .show(ctx, |ui| crate::dialog_body(ui, |ui| {
             ui.heading("RustFig");
             ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
             ui.label("A Rust-native reimplementation of xfig, close to the original in look and behaviour.");
@@ -3318,7 +3341,7 @@ fn about_dialog(app: &mut App, ctx: &egui::Context) {
             ] {
                 ui.label(line);
             }
-        });
+        }));
     app.dialogs.about_open = open;
 }
 

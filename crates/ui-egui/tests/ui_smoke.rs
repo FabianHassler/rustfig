@@ -11,7 +11,7 @@ use serde_json::json;
 
 fn harness(app: App) -> Harness<'static, App> {
     let mut h = Harness::builder()
-        .with_size(vec2(1280.0, 860.0))
+        .with_size(vec2(1280.0, 1400.0))
         .build_state(|ctx, app: &mut App| app.ui(ctx), app);
     h.run_steps(3);
     h
@@ -3188,4 +3188,31 @@ fn screen_capture_becomes_a_picture() {
     assert_eq!(std::fs::read(&path).unwrap(), png);
     assert_eq!(h.state().engine.doc().objects.len(), 1);
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Dialogs taller or wider than the window scroll instead of running off it.
+#[test]
+fn dialogs_fit_a_small_window() {
+    let (w, h_px) = (700.0, 360.0);
+    let mut h = Harness::builder()
+        .with_size(vec2(w, h_px))
+        .build_state(|ctx, app: &mut App| app.ui(ctx), app());
+    h.run_steps(3);
+    for (cmd, title) in [
+        ("app.global_settings", "Global settings"),
+        ("app.export", "Export"),
+        ("app.document_settings", "Document Settings"),
+        ("app.unit_panel", "Unit/Scale settings"),
+    ] {
+        h.state_mut().run(cmd, json!({}));
+        h.run_steps(4);
+        let rect = h
+            .ctx
+            .memory(|m| m.area_rect(egui::Id::new(title)))
+            .unwrap_or_else(|| panic!("{title} is not open"));
+        assert!(
+            rect.bottom() <= h_px + 1.0 && rect.right() <= w + 1.0,
+            "{title} runs off a {w}x{h_px} window: {rect:?}"
+        );
+    }
 }

@@ -277,13 +277,15 @@ pub fn tick(app: &mut App, ctx: &egui::Context) {
                 .resizable(false)
                 .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
                 .show(ctx, |ui| {
-                    ui.horizontal(|ui| {
-                        ui.spinner();
-                        ui.label(format!("Downloading from CTAN ({secs} s)"));
-                    });
-                    if ui.button("Cancel").clicked() {
-                        cancel_clicked = true;
-                    }
+                    crate::dialog_body(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.spinner();
+                            ui.label(format!("Downloading from CTAN ({secs} s)"));
+                        });
+                        if ui.button("Cancel").clicked() {
+                            cancel_clicked = true;
+                        }
+                    })
                 });
             if cancel_clicked {
                 if let Some(r) = app.tex_gyre.take() {

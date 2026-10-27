@@ -97,13 +97,15 @@ pub fn tick(app: &mut App, ctx: &egui::Context) {
                 .resizable(false)
                 .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
                 .show(ctx, |ui| {
-                    ui.horizontal(|ui| {
-                        ui.spinner();
-                        ui.label(format!("Writing {name} ({secs} s)"));
-                    });
-                    if ui.button("Cancel").clicked() {
-                        cancel_clicked = true;
-                    }
+                    crate::dialog_body(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.spinner();
+                            ui.label(format!("Writing {name} ({secs} s)"));
+                        });
+                        if ui.button("Cancel").clicked() {
+                            cancel_clicked = true;
+                        }
+                    })
                 });
             if cancel_clicked {
                 cancel(app);
@@ -145,15 +147,17 @@ fn show_done(app: &mut App, ctx: &egui::Context) {
         .resizable(false)
         .anchor(egui::Align2::RIGHT_BOTTOM, egui::vec2(-12.0, -12.0))
         .show(ctx, |ui| {
-            ui.label(format!("Exported {path}"));
-            ui.horizontal(|ui| {
-                if ui.button("Show in folder").clicked() {
-                    show = true;
-                }
-                if ui.button("Close").clicked() {
-                    close = true;
-                }
-            });
+            crate::dialog_body(ui, |ui| {
+                ui.label(format!("Exported {path}"));
+                ui.horizontal(|ui| {
+                    if ui.button("Show in folder").clicked() {
+                        show = true;
+                    }
+                    if ui.button("Close").clicked() {
+                        close = true;
+                    }
+                });
+            })
         });
     if show {
         app.run("app.show_export_folder", serde_json::json!({}));

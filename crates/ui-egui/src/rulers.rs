@@ -505,7 +505,7 @@ fn units_box(app: &mut App, ui: &mut Ui, tk: &Tokens, r: Rect) {
             .resizable(false)
             .collapsible(false)
             .default_pos(r.left_bottom() + vec2(-220.0, 6.0))
-            .show(ui.ctx(), |ui| unit_panel(app, ui));
+            .show(ui.ctx(), |ui| crate::dialog_body(ui, |ui| unit_panel(app, ui)));
         app.unit_panel_open &= open;
     }
     if !app.unit_panel_open {

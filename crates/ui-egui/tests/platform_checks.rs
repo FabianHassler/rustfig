@@ -11,7 +11,7 @@ use serde_json::json;
 
 fn harness_at(app: App, ppp: f32) -> Harness<'static, App> {
     let mut h = Harness::builder()
-        .with_size(vec2(1280.0, 860.0))
+        .with_size(vec2(1280.0, 1400.0))
         .with_pixels_per_point(ppp)
         .build_state(|ctx, app: &mut App| app.ui(ctx), app);
     h.run_steps(3);

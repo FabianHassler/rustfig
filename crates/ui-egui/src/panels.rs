@@ -129,20 +129,22 @@ pub fn close_compound_popup(app: &mut App, ctx: &egui::Context) {
         .resizable(false)
         .default_pos(egui::pos2(MODE_PANEL_WIDTH + 60.0, 90.0))
         .show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                for (label, id) in [
-                    ("Close This Compound", "compound.close"),
-                    ("Close All Compounds", "compound.close_all"),
-                ] {
-                    if ui.button(label).clicked() {
-                        // xfig finishes a text being typed before closing.
-                        if let Err(e) = app.engine.finish_text() {
-                            app.error(e.message);
+            crate::dialog_body(ui, |ui| {
+                ui.horizontal(|ui| {
+                    for (label, id) in [
+                        ("Close This Compound", "compound.close"),
+                        ("Close All Compounds", "compound.close_all"),
+                    ] {
+                        if ui.button(label).clicked() {
+                            // xfig finishes a text being typed before closing.
+                            if let Err(e) = app.engine.finish_text() {
+                                app.error(e.message);
+                            }
+                            app.run(id, json!({}));
                         }
-                        app.run(id, json!({}));
                     }
-                }
-            });
+                });
+            })
         });
 }
 

@@ -56,47 +56,49 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
         .resizable(false)
         .default_pos(egui::pos2(300.0, 200.0))
         .show(ctx, |ui| {
-            ui.label("Point as x,y or length<angle (r before a number: relative):");
-            let mut enter = false;
-            ui.horizontal(|ui| {
-                let resp = ui
-                    .add(egui::TextEdit::singleline(&mut app.point_entry.text).desired_width(180.0))
-                    .on_hover_text("Enter: left button");
-                resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Point entry"));
-                if app.point_entry.focus {
-                    resp.request_focus();
-                    app.point_entry.focus = false;
+            crate::dialog_body(ui, |ui| {
+                ui.label("Point as x,y or length<angle (r before a number: relative):");
+                let mut enter = false;
+                ui.horizontal(|ui| {
+                    let resp = ui
+                        .add(egui::TextEdit::singleline(&mut app.point_entry.text).desired_width(180.0))
+                        .on_hover_text("Enter: left button");
+                    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Point entry"));
+                    if app.point_entry.focus {
+                        resp.request_focus();
+                        app.point_entry.focus = false;
+                    }
+                    enter = resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+                });
+                let mut button = enter.then_some("left");
+                ui.horizontal(|ui| {
+                    for (label, name) in [("Left", "left"), ("Middle", "middle"), ("Right", "right")] {
+                        if ui.button(label).clicked() {
+                            button = Some(name);
+                        }
+                    }
+                });
+                if !app.point_entry.error.is_empty() {
+                    ui.colored_label(ui.visuals().error_fg_color, app.point_entry.error.clone());
                 }
-                enter = resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-            });
-            let mut button = enter.then_some("left");
-            ui.horizontal(|ui| {
-                for (label, name) in [("Left", "left"), ("Middle", "middle"), ("Right", "right")] {
-                    if ui.button(label).clicked() {
-                        button = Some(name);
+                if !app.point_entry.history.is_empty() {
+                    ui.separator();
+                    ui.label("History");
+                    let mut pick = None;
+                    for h in &app.point_entry.history {
+                        if ui.link(h).clicked() {
+                            pick = Some(h.clone());
+                        }
+                    }
+                    if let Some(h) = pick {
+                        app.point_entry.text = h;
+                        app.point_entry.focus = true;
                     }
                 }
-            });
-            if !app.point_entry.error.is_empty() {
-                ui.colored_label(ui.visuals().error_fg_color, app.point_entry.error.clone());
-            }
-            if !app.point_entry.history.is_empty() {
-                ui.separator();
-                ui.label("History");
-                let mut pick = None;
-                for h in &app.point_entry.history {
-                    if ui.link(h).clicked() {
-                        pick = Some(h.clone());
-                    }
+                if let Some(b) = button {
+                    submit(app, b);
                 }
-                if let Some(h) = pick {
-                    app.point_entry.text = h;
-                    app.point_entry.focus = true;
-                }
-            }
-            if let Some(b) = button {
-                submit(app, b);
-            }
+            })
         });
     app.point_entry.open &= open;
 }

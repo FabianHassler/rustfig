@@ -24,7 +24,7 @@ fn open_panel() -> (Harness<'static, App>, Arc<Mutex<Vec<PrintJob>>>) {
         json!({"x": 0, "y": 0, "width": 2400, "height": 1200}),
     );
     let mut h = Harness::builder()
-        .with_size(vec2(1280.0, 860.0))
+        .with_size(vec2(1280.0, 1400.0))
         .build_state(|ctx, app: &mut App| app.ui(ctx), a);
     h.run_steps(3);
     h.state_mut().run("app.print", json!({}));
@@ -132,7 +132,7 @@ fn the_file_menu_and_the_xfig_keys_open_the_panel() {
     let mut a = App::with_engine(Engine::new());
     a.file_dialogs = Box::new(ScriptedDialogs::default());
     let mut h = Harness::builder()
-        .with_size(vec2(1280.0, 860.0))
+        .with_size(vec2(1280.0, 1400.0))
         .build_state(|ctx, app: &mut App| app.ui(ctx), a);
     h.run_steps(3);
     h.get_by_label("File").click();

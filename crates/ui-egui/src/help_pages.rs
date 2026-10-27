@@ -145,11 +145,13 @@ pub fn show_whats_new(app: &mut App, ctx: &egui::Context) {
         .open(&mut open)
         .default_width(420.0)
         .show(ctx, |ui| {
-            ui.strong(format!("RustFig {}", env!("CARGO_PKG_VERSION")));
-            ui.separator();
-            for l in WHATS_NEW.lines() {
-                ui.label(format!("\u{2022} {l}"));
-            }
+            crate::dialog_body(ui, |ui| {
+                ui.strong(format!("RustFig {}", env!("CARGO_PKG_VERSION")));
+                ui.separator();
+                for l in WHATS_NEW.lines() {
+                    ui.label(format!("\u{2022} {l}"));
+                }
+            })
         });
     app.whats_new_open = open;
 }

@@ -27,7 +27,7 @@ fn spell_check_window_lists_and_corrects() {
     let mut a = App::with_engine(Engine::new());
     a.file_dialogs = Box::new(ScriptedDialogs::default());
     let mut h = Harness::builder()
-        .with_size(vec2(1280.0, 860.0))
+        .with_size(vec2(1280.0, 1400.0))
         .build_state(|ctx, app: &mut App| app.ui(ctx), a);
     h.run_steps(3);
     let e = &mut h.state_mut().engine;

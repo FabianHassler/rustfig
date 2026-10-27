@@ -343,144 +343,146 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
         .resizable(false)
         .default_pos(egui::pos2(240.0, 90.0))
         .show(ctx, |ui| {
-            heading(ui, "Function");
-            ui.horizontal(|ui| {
-                ui.radio_value(&mut d.mode, PlotMode::Function, "y = f(x)");
-                ui.radio_value(&mut d.mode, PlotMode::Parametric, "x(t), y(t)");
-                // Files are read by path: not on the web.
-                ui.add_enabled_ui(cfg!(not(target_arch = "wasm32")), |ui| {
-                    ui.radio_value(&mut d.mode, PlotMode::Data, "Data file");
+            crate::dialog_body(ui, |ui| {
+                heading(ui, "Function");
+                ui.horizontal(|ui| {
+                    ui.radio_value(&mut d.mode, PlotMode::Function, "y = f(x)");
+                    ui.radio_value(&mut d.mode, PlotMode::Parametric, "x(t), y(t)");
+                    // Files are read by path: not on the web.
+                    ui.add_enabled_ui(cfg!(not(target_arch = "wasm32")), |ui| {
+                        ui.radio_value(&mut d.mode, PlotMode::Data, "Data file");
+                    });
                 });
-            });
-            egui::Grid::new("plot_function")
-                .num_columns(2)
-                .min_col_width(LABEL_W)
-                .show(ui, |ui| {
-                    match d.mode {
-                        PlotMode::Function => {
-                            ui.label("y =");
-                            field(ui, "Plot expression", &mut d.expr, 260.0);
+                egui::Grid::new("plot_function")
+                    .num_columns(2)
+                    .min_col_width(LABEL_W)
+                    .show(ui, |ui| {
+                        match d.mode {
+                            PlotMode::Function => {
+                                ui.label("y =");
+                                field(ui, "Plot expression", &mut d.expr, 260.0);
+                                ui.end_row();
+                            }
+                            PlotMode::Parametric => {
+                                ui.label("x(t) =");
+                                field(ui, "Plot x(t)", &mut d.xt, 260.0);
+                                ui.end_row();
+                                ui.label("y(t) =");
+                                field(ui, "Plot y(t)", &mut d.yt, 260.0);
+                                ui.end_row();
+                                ui.label("t from / to:");
+                                ui.horizontal(|ui| {
+                                    field(ui, "Plot t from", &mut d.tmin, 70.0);
+                                    field(ui, "Plot t to", &mut d.tmax, 70.0);
+                                    ui.weak("(default 0 to 2*pi)");
+                                });
+                                ui.end_row();
+                            }
+                            PlotMode::Data => {
+                                ui.label("File:");
+                                ui.horizontal(|ui| {
+                                    field(ui, "Plot data file", &mut d.file, 190.0);
+                                    if ui.button("Browse...").clicked() {
+                                        browse = true;
+                                    }
+                                });
+                                ui.end_row();
+                                ui.label("Columns x / y:");
+                                ui.horizontal(|ui| {
+                                    field(ui, "Plot x column", &mut d.xcol, 40.0);
+                                    field(ui, "Plot y column", &mut d.ycol, 40.0);
+                                    ui.weak("(from 1; x 0: row number)");
+                                });
+                                ui.end_row();
+                            }
+                        }
+                        if d.mode != PlotMode::Data {
+                            ui.label("Samples:");
+                            field(ui, "Plot samples", &mut d.samples, 70.0);
                             ui.end_row();
                         }
-                        PlotMode::Parametric => {
-                            ui.label("x(t) =");
-                            field(ui, "Plot x(t)", &mut d.xt, 260.0);
-                            ui.end_row();
-                            ui.label("y(t) =");
-                            field(ui, "Plot y(t)", &mut d.yt, 260.0);
-                            ui.end_row();
-                            ui.label("t from / to:");
-                            ui.horizontal(|ui| {
-                                field(ui, "Plot t from", &mut d.tmin, 70.0);
-                                field(ui, "Plot t to", &mut d.tmax, 70.0);
-                                ui.weak("(default 0 to 2*pi)");
-                            });
-                            ui.end_row();
-                        }
-                        PlotMode::Data => {
-                            ui.label("File:");
-                            ui.horizontal(|ui| {
-                                field(ui, "Plot data file", &mut d.file, 190.0);
-                                if ui.button("Browse...").clicked() {
-                                    browse = true;
-                                }
-                            });
-                            ui.end_row();
-                            ui.label("Columns x / y:");
-                            ui.horizontal(|ui| {
-                                field(ui, "Plot x column", &mut d.xcol, 40.0);
-                                field(ui, "Plot y column", &mut d.ycol, 40.0);
-                                ui.weak("(from 1; x 0: row number)");
-                            });
-                            ui.end_row();
-                        }
-                    }
-                    if d.mode != PlotMode::Data {
-                        ui.label("Samples:");
-                        field(ui, "Plot samples", &mut d.samples, 70.0);
+                    });
+
+                heading(ui, "Range");
+                egui::Grid::new("plot_range")
+                    .num_columns(3)
+                    .min_col_width(LABEL_W)
+                    .show(ui, |ui| {
+                        ui.label("x from / to:");
+                        ui.horizontal(|ui| {
+                            field(ui, "Plot x from", &mut d.xmin, 70.0);
+                            field(ui, "Plot x to", &mut d.xmax, 70.0);
+                        });
+                        ui.checkbox(&mut d.log_x, "Logarithmic");
                         ui.end_row();
+                        ui.label("y from / to:");
+                        ui.horizontal(|ui| {
+                            field(ui, "Plot y from", &mut d.ymin, 70.0);
+                            field(ui, "Plot y to", &mut d.ymax, 70.0);
+                        });
+                        ui.checkbox(&mut d.log_y, "Logarithmic");
+                        ui.end_row();
+                    });
+                ui.weak("Empty fields fit the data (a function: x from -10 to 10).");
+
+                heading(ui, "Axes");
+                egui::Grid::new("plot_axes")
+                    .num_columns(3)
+                    .min_col_width(LABEL_W)
+                    .show(ui, |ui| {
+                        ui.label("");
+                        ui.label("Ticks");
+                        ui.label("Numbers");
+                        ui.end_row();
+                        ui.label("x axis");
+                        labelled_check(ui, &mut d.xticks.ticks, "Plot x ticks");
+                        labelled_check(ui, &mut d.xticks.numbers, "Plot x numbers");
+                        ui.end_row();
+                        ui.label("y axis");
+                        labelled_check(ui, &mut d.yticks.ticks, "Plot y ticks");
+                        labelled_check(ui, &mut d.yticks.numbers, "Plot y numbers");
+                        ui.end_row();
+                    });
+                ui.horizontal(|ui| {
+                    ui.checkbox(&mut d.frame_box, "Box");
+                    ui.checkbox(&mut d.grid, "Grid");
+                });
+                tick_section(ui, "x", &mut d.xticks);
+                tick_section(ui, "y", &mut d.yticks);
+
+                heading(ui, "Labels");
+                egui::Grid::new("plot_labels")
+                    .num_columns(2)
+                    .min_col_width(LABEL_W)
+                    .show(ui, |ui| {
+                        ui.label("x label:");
+                        field(ui, "Plot x label", &mut d.xlabel, 260.0);
+                        ui.end_row();
+                        ui.label("y label:");
+                        field(ui, "Plot y label", &mut d.ylabel, 260.0);
+                        ui.end_row();
+                        ui.label("LaTeX:");
+                        ui.horizontal(|ui| {
+                            ui.checkbox(&mut d.latex, "labels");
+                            ui.checkbox(&mut d.latex_numbers, "numbers");
+                        });
+                        ui.end_row();
+                    });
+                ui.add_space(4.0);
+                ui.weak("Line style, depth and font are the current ones in the attribute panel.");
+                if !d.error.is_empty() {
+                    ui.colored_label(ui.visuals().error_fg_color, &d.error);
+                }
+                ui.separator();
+                ui.horizontal(|ui| {
+                    if ui.button("Draw plot").clicked() {
+                        go = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        d.open = false;
                     }
                 });
-
-            heading(ui, "Range");
-            egui::Grid::new("plot_range")
-                .num_columns(3)
-                .min_col_width(LABEL_W)
-                .show(ui, |ui| {
-                    ui.label("x from / to:");
-                    ui.horizontal(|ui| {
-                        field(ui, "Plot x from", &mut d.xmin, 70.0);
-                        field(ui, "Plot x to", &mut d.xmax, 70.0);
-                    });
-                    ui.checkbox(&mut d.log_x, "Logarithmic");
-                    ui.end_row();
-                    ui.label("y from / to:");
-                    ui.horizontal(|ui| {
-                        field(ui, "Plot y from", &mut d.ymin, 70.0);
-                        field(ui, "Plot y to", &mut d.ymax, 70.0);
-                    });
-                    ui.checkbox(&mut d.log_y, "Logarithmic");
-                    ui.end_row();
-                });
-            ui.weak("Empty fields fit the data (a function: x from -10 to 10).");
-
-            heading(ui, "Axes");
-            egui::Grid::new("plot_axes")
-                .num_columns(3)
-                .min_col_width(LABEL_W)
-                .show(ui, |ui| {
-                    ui.label("");
-                    ui.label("Ticks");
-                    ui.label("Numbers");
-                    ui.end_row();
-                    ui.label("x axis");
-                    labelled_check(ui, &mut d.xticks.ticks, "Plot x ticks");
-                    labelled_check(ui, &mut d.xticks.numbers, "Plot x numbers");
-                    ui.end_row();
-                    ui.label("y axis");
-                    labelled_check(ui, &mut d.yticks.ticks, "Plot y ticks");
-                    labelled_check(ui, &mut d.yticks.numbers, "Plot y numbers");
-                    ui.end_row();
-                });
-            ui.horizontal(|ui| {
-                ui.checkbox(&mut d.frame_box, "Box");
-                ui.checkbox(&mut d.grid, "Grid");
-            });
-            tick_section(ui, "x", &mut d.xticks);
-            tick_section(ui, "y", &mut d.yticks);
-
-            heading(ui, "Labels");
-            egui::Grid::new("plot_labels")
-                .num_columns(2)
-                .min_col_width(LABEL_W)
-                .show(ui, |ui| {
-                    ui.label("x label:");
-                    field(ui, "Plot x label", &mut d.xlabel, 260.0);
-                    ui.end_row();
-                    ui.label("y label:");
-                    field(ui, "Plot y label", &mut d.ylabel, 260.0);
-                    ui.end_row();
-                    ui.label("LaTeX:");
-                    ui.horizontal(|ui| {
-                        ui.checkbox(&mut d.latex, "labels");
-                        ui.checkbox(&mut d.latex_numbers, "numbers");
-                    });
-                    ui.end_row();
-                });
-            ui.add_space(4.0);
-            ui.weak("Line style, depth and font are the current ones in the attribute panel.");
-            if !d.error.is_empty() {
-                ui.colored_label(ui.visuals().error_fg_color, &d.error);
-            }
-            ui.separator();
-            ui.horizontal(|ui| {
-                if ui.button("Draw plot").clicked() {
-                    go = true;
-                }
-                if ui.button("Cancel").clicked() {
-                    d.open = false;
-                }
-            });
+            })
         });
     if !open {
         d.open = false;

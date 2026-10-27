@@ -210,7 +210,7 @@ pub fn dialog(app: &mut App, ctx: &egui::Context) {
         .open(&mut open)
         .resizable(false)
         .collapsible(false)
-        .show(ctx, |ui| body(app, ui));
+        .show(ctx, |ui| crate::dialog_body(ui, |ui| body(app, ui)));
     app.dialogs.color.open &= open;
 }
 

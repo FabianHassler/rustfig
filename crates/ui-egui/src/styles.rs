@@ -73,7 +73,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
         .open(&mut open)
         .resizable(false)
         .collapsible(false)
-        .show(ctx, |ui| {
+        .show(ctx, |ui| crate::dialog_body(ui, |ui| {
             ui.columns(2, |cols| {
                 // Family list.
                 let ui = &mut cols[0];
@@ -161,7 +161,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
             if labelled(ui.button("Close"), "Close styles").clicked() {
                 close = true;
             }
-        });
+        }));
     app.styles.open &= open && !close;
     for (id, params) in actions {
         app.run(id, params);

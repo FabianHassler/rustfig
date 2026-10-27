@@ -120,70 +120,72 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
         .resizable(false)
         .default_pos(egui::pos2(240.0, 110.0))
         .show(ctx, |ui| {
-            ui.label("Saves the points of the selected polylines and splines.");
-            ui.horizontal(|ui| {
-                ui.label("File name prefix:");
-                field(ui, "Digitize prefix", &mut d.prefix, 160.0);
-                if ui.button("Browse...").clicked() {
-                    browse = true;
-                }
-            });
-            ui.horizontal(|ui| {
-                ui.label("Starting number:");
-                field(ui, "Digitize starting number", &mut d.start, 60.0);
-                ui.label("Suffix:");
-                field(ui, "Digitize suffix", &mut d.suffix, 50.0);
-            });
-            ui.horizontal(|ui| {
-                ui.label("Example:");
-                ui.monospace(d.example());
-            });
-            ui.horizontal(|ui| {
-                ui.radio_value(&mut d.append, false, "New file for each line");
-                ui.radio_value(&mut d.append, true, "Append to one file");
-            });
-            ui.label("A suffix of csv writes comma separated values with a header; any other, x y per line.");
-            ui.separator();
-            ui.checkbox(&mut d.calibrate, "Calibrate to data units");
-            if d.calibrate {
-                ui.label("Two reference points of the plot: position in the figure and value.");
-                egui::Grid::new("digitize_cal").show(ui, |ui| {
-                    ui.label("");
-                    for h in ["Figure x", "Figure y", "Value x", "Value y"] {
-                        ui.label(h);
-                    }
-                    ui.end_row();
-                    for (i, row) in d.points.iter_mut().enumerate() {
-                        ui.label(format!("Point {}", i + 1));
-                        for (j, text) in row.iter_mut().enumerate() {
-                            field(
-                                ui,
-                                &format!("Digitize point {} {}", i + 1, ["x", "y", "vx", "vy"][j]),
-                                text,
-                                70.0,
-                            );
-                        }
-                        ui.end_row();
+            crate::dialog_body(ui, |ui| {
+                ui.label("Saves the points of the selected polylines and splines.");
+                ui.horizontal(|ui| {
+                    ui.label("File name prefix:");
+                    field(ui, "Digitize prefix", &mut d.prefix, 160.0);
+                    if ui.button("Browse...").clicked() {
+                        browse = true;
                     }
                 });
                 ui.horizontal(|ui| {
-                    ui.checkbox(&mut d.log_x, "Logarithmic x");
-                    ui.checkbox(&mut d.log_y, "Logarithmic y");
+                    ui.label("Starting number:");
+                    field(ui, "Digitize starting number", &mut d.start, 60.0);
+                    ui.label("Suffix:");
+                    field(ui, "Digitize suffix", &mut d.suffix, 50.0);
                 });
-            } else {
-                ui.label("Without calibration the points are in figure units (1/1200 inch).");
-            }
-            ui.separator();
-            ui.horizontal(|ui| {
-                let native = cfg!(not(target_arch = "wasm32"));
-                let b = ui.add_enabled(native, egui::Button::new("Export"));
-                if b.clicked() {
-                    do_export = true;
+                ui.horizontal(|ui| {
+                    ui.label("Example:");
+                    ui.monospace(d.example());
+                });
+                ui.horizontal(|ui| {
+                    ui.radio_value(&mut d.append, false, "New file for each line");
+                    ui.radio_value(&mut d.append, true, "Append to one file");
+                });
+                ui.label("A suffix of csv writes comma separated values with a header; any other, x y per line.");
+                ui.separator();
+                ui.checkbox(&mut d.calibrate, "Calibrate to data units");
+                if d.calibrate {
+                    ui.label("Two reference points of the plot: position in the figure and value.");
+                    egui::Grid::new("digitize_cal").show(ui, |ui| {
+                        ui.label("");
+                        for h in ["Figure x", "Figure y", "Value x", "Value y"] {
+                            ui.label(h);
+                        }
+                        ui.end_row();
+                        for (i, row) in d.points.iter_mut().enumerate() {
+                            ui.label(format!("Point {}", i + 1));
+                            for (j, text) in row.iter_mut().enumerate() {
+                                field(
+                                    ui,
+                                    &format!("Digitize point {} {}", i + 1, ["x", "y", "vx", "vy"][j]),
+                                    text,
+                                    70.0,
+                                );
+                            }
+                            ui.end_row();
+                        }
+                    });
+                    ui.horizontal(|ui| {
+                        ui.checkbox(&mut d.log_x, "Logarithmic x");
+                        ui.checkbox(&mut d.log_y, "Logarithmic y");
+                    });
+                } else {
+                    ui.label("Without calibration the points are in figure units (1/1200 inch).");
                 }
-                if ui.button("Done").clicked() {
-                    d.open = false;
-                }
-            });
+                ui.separator();
+                ui.horizontal(|ui| {
+                    let native = cfg!(not(target_arch = "wasm32"));
+                    let b = ui.add_enabled(native, egui::Button::new("Export"));
+                    if b.clicked() {
+                        do_export = true;
+                    }
+                    if ui.button("Done").clicked() {
+                        d.open = false;
+                    }
+                });
+            })
         });
     if !open {
         d.open = false;

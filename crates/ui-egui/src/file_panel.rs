@@ -178,17 +178,19 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
         .collapsible(false)
         .default_pos(egui::pos2(160.0, 80.0))
         .show(ctx, |ui| {
-            ui.horizontal_top(|ui| {
-                ui.vertical(|ui| {
-                    ui.set_width(300.0);
-                    left_column(ui, &mut fp, &mut act, modified, objects);
+            crate::dialog_body(ui, |ui| {
+                ui.horizontal_top(|ui| {
+                    ui.vertical(|ui| {
+                        ui.set_width(300.0);
+                        left_column(ui, &mut fp, &mut act, modified, objects);
+                    });
+                    ui.separator();
+                    ui.vertical(|ui| {
+                        ui.set_width(PREVIEW + 10.0);
+                        preview_column(ui, &fp);
+                    });
                 });
-                ui.separator();
-                ui.vertical(|ui| {
-                    ui.set_width(PREVIEW + 10.0);
-                    preview_column(ui, &fp);
-                });
-            });
+            })
         });
     app.file_panel = fp;
     if !window_open || act.cancel {

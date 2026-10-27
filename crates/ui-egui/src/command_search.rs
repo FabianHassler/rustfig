@@ -149,67 +149,69 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
         .default_width(460.0)
         .anchor(egui::Align2::CENTER_TOP, [0.0, 80.0])
         .show(ctx, |ui| {
-            let r = ui.add(
-                egui::TextEdit::singleline(&mut st.query)
-                    .hint_text("Type a command")
-                    .desired_width(f32::INFINITY),
-            );
-            r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Command search"));
-            if st.focus {
-                r.request_focus();
-                st.focus = false;
-            }
-            if r.changed() {
-                st.selected = 0;
-            }
-            ui.separator();
-            egui::ScrollArea::vertical().max_height(320.0).show(ui, |ui| {
-                if hits.is_empty() {
-                    ui.weak("No command matches.");
+            crate::dialog_body(ui, |ui| {
+                let r = ui.add(
+                    egui::TextEdit::singleline(&mut st.query)
+                        .hint_text("Type a command")
+                        .desired_width(f32::INFINITY),
+                );
+                r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Command search"));
+                if st.focus {
+                    r.request_focus();
+                    st.focus = false;
                 }
-                for (row, &i) in hits.iter().enumerate() {
-                    let Some(e) = all.get(i) else { continue };
-                    let enabled = app.enabled(&e.id);
-                    let text = if e.keys.is_empty() {
-                        e.label.clone()
-                    } else {
-                        format!("{}    {}", e.label, e.keys)
-                    };
-                    let mut rt = egui::RichText::new(text);
-                    if !enabled {
-                        rt = rt.weak();
+                if r.changed() {
+                    st.selected = 0;
+                }
+                ui.separator();
+                egui::ScrollArea::vertical().max_height(320.0).show(ui, |ui| {
+                    if hits.is_empty() {
+                        ui.weak("No command matches.");
                     }
-                    let tip = if e.menu.is_empty() {
-                        e.id.clone()
-                    } else {
-                        format!("{}  ({})", e.id, e.menu)
-                    };
-                    let resp = ui.selectable_label(row == st.selected, rt).on_hover_text(tip);
-                    resp.widget_info(|| {
-                        egui::WidgetInfo::selected(
-                            egui::WidgetType::Button,
-                            enabled,
-                            row == st.selected,
-                            e.label.clone(),
-                        )
-                    });
-                    if row == st.selected {
-                        resp.scroll_to_me(None);
+                    for (row, &i) in hits.iter().enumerate() {
+                        let Some(e) = all.get(i) else { continue };
+                        let enabled = app.enabled(&e.id);
+                        let text = if e.keys.is_empty() {
+                            e.label.clone()
+                        } else {
+                            format!("{}    {}", e.label, e.keys)
+                        };
+                        let mut rt = egui::RichText::new(text);
+                        if !enabled {
+                            rt = rt.weak();
+                        }
+                        let tip = if e.menu.is_empty() {
+                            e.id.clone()
+                        } else {
+                            format!("{}  ({})", e.id, e.menu)
+                        };
+                        let resp = ui.selectable_label(row == st.selected, rt).on_hover_text(tip);
+                        resp.widget_info(|| {
+                            egui::WidgetInfo::selected(
+                                egui::WidgetType::Button,
+                                enabled,
+                                row == st.selected,
+                                e.label.clone(),
+                            )
+                        });
+                        if row == st.selected {
+                            resp.scroll_to_me(None);
+                        }
+                        if resp.clicked() && enabled {
+                            run = Some(e.id.clone());
+                        }
                     }
-                    if resp.clicked() && enabled {
-                        run = Some(e.id.clone());
+                });
+                if enter {
+                    if let Some(e) = hits.get(st.selected).and_then(|&i| all.get(i)) {
+                        if app.enabled(&e.id) {
+                            run = Some(e.id.clone());
+                        } else {
+                            app.info(format!("{} is not available now", e.label));
+                        }
                     }
                 }
-            });
-            if enter {
-                if let Some(e) = hits.get(st.selected).and_then(|&i| all.get(i)) {
-                    if app.enabled(&e.id) {
-                        run = Some(e.id.clone());
-                    } else {
-                        app.info(format!("{} is not available now", e.label));
-                    }
-                }
-            }
+            })
         });
     st.open = open && run.is_none();
     app.command_search = st;
