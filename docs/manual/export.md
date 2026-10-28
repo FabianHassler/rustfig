@@ -31,3 +31,5 @@ Export from the panel runs on a background thread, so the window stays responsiv
 - Text uses fig2dev's font metrics; special LaTeX text (the "special" flag) is typeset by TeX in the TeX languages and shown as written on the canvas.
 - Pictures in the figure are embedded, linked or converted as the format allows; EPS pictures on the canvas and in bitmaps need ghostscript (optional).
 - The same exports are available from the command line: `rustfig-cli convert in.fig out.pdf`, `rustfig-cli formats`, or as `fig2dev` ([Automation](automation.md)).
+
+Objects that share a depth are drawn in xfig's order in every export, as on the canvas: arcs, compounds, ellipses, lines, splines, then texts, each in the order of the file. (The C fig2dev leaves that order to its system's sort routine, so where objects of one depth overlap, its output can differ.)

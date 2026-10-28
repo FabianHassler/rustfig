@@ -72,7 +72,7 @@ it, so `cargo +toolchain xtask …` stays on that toolchain.
 
 ## Homebrew
 
-The formulae live in the tap [FabianHassler/homebrew-tap](https://github.com/FabianHassler/homebrew-tap) (decided 2026-10-26; the repository's own `Formula/rustfig.rb` is gone): `rustfig` builds `rustfig` and `rustfig-cli` (stable `url` from v0.9.0-beta.5 on, `--HEAD` for main), `fig2dev-rs` builds fig2dev's `fig2dev` from its tag and conflicts with Homebrew's C `fig2dev`. Bump both when you tag a release, and the `--tag` in the README's `cargo install --git` line. RustFig is not on crates.io (decided 2026-10-28: fig2dev, figbase and fig2dev-cli are, RustFig follows near 1.0).
+The formulae live in the tap [FabianHassler/homebrew-tap](https://github.com/FabianHassler/homebrew-tap) (decided 2026-10-26; the repository's own `Formula/rustfig.rb` is gone): `rustfig` builds `rustfig` and `rustfig-cli` (stable `url` from v0.9.0-beta.5 on, `--HEAD` for main), `fig2dev-rs` builds fig2dev's `fig2dev` from its tag and conflicts with Homebrew's C `fig2dev`. Bump both when you tag a release, and the `--tag` in the README's `cargo install --git` line. RustFig is not on crates.io (decided 2026-10-28: fig2dev's crates `figbase`, `fig2dev-rs-lib` and `fig2dev-rs` are, RustFig follows near 1.0).
 
 ## Fonts
 
