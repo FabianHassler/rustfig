@@ -199,6 +199,7 @@ fn nav(prefix: &str) -> String {
 <a class="brand" href="{prefix}index.html">RustFig</a>
 <a href="{prefix}index.html#download">Download</a>
 <a href="{prefix}manual/index.html">Manual</a>
+<a href="{prefix}compare.html">Compared</a>
 <a href="{prefix}app/">Try it in the browser</a>
 <a href="{REPO}">GitHub</a>
 </nav></header>
@@ -289,7 +290,7 @@ pub fn landing() -> String {
 <section class="hero">
 <h1>RustFig: xfig for today's computers</h1>
 <p class="lead">The classic vector drawing program, rebuilt in Rust. It runs natively on <strong>Windows</strong>, <strong>macOS</strong> and <strong>Linux</strong> and in the browser, with <strong>no X server, XQuartz or WSL</strong>, and has fig2dev and LaTeX built in.</p>
-<p class="buttons"><a class="button primary" href="#download">Download</a> <a class="button" href="app/">Try it in the browser</a> <a class="button" href="manual/index.html">Read the manual</a></p>
+<p class="buttons"><a class="button primary" href="#download">Download</a> <a class="button" href="app/">Try it in the browser</a> <a class="button" href="manual/index.html">Read the manual</a> <a class="button" href="compare.html">Compare with xfig and others</a></p>
 <img src="rustfig-window.png" width="1600" height="1033" alt="RustFig's window in xfig's layout: a plot with LaTeX labels, LaTeX formulas typeset on the canvas, and a block diagram">
 </section>
 
@@ -325,6 +326,152 @@ pub fn landing() -> String {
         let _ = write!(s, "<h3>{}</h3>\n<p>{}</p>\n", esc(q), esc(a));
     }
     s.push_str("</section>\n</main>\n");
+    s.push_str(&footer());
+    s
+}
+
+/// One row of the comparison: program, platforms, X server, `.fig`, LaTeX,
+/// licence, notes.
+type Row = (
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+);
+
+/// What the comparison page says about each program (as of October 2026;
+/// the others' facts from their own sites and package listings).
+const COMPARE: &[Row] = &[
+    (
+        "RustFig",
+        "Windows, macOS, Linux, web browser",
+        "No",
+        "Opens every Fig version (1.3–3.2), saves Fig 3.2 that xfig reads",
+        "Typeset on the canvas; every fig2dev export built in (pstex/pdftex, TikZ, PSTricks, pict2e, …)",
+        "Open source (MIT or Apache-2.0)",
+        "xfig's modes, mouse buttons, panels and keys; beta",
+    ),
+    (
+        "xfig 3.2.9a",
+        "Linux and Unix; macOS with XQuartz; Windows with Cygwin/X or WSL",
+        "Yes (X11)",
+        "Its own format",
+        "Through fig2dev, installed separately",
+        "Open source (xfig licence)",
+        "The original, still maintained",
+    ),
+    (
+        "xfig-qt",
+        "macOS",
+        "No",
+        "Its own format (it is xfig 3.2.9a)",
+        "Through fig2dev, installed separately",
+        "Open source (xfig licence, MIT)",
+        "xfig's own code on Qt instead of X11",
+    ),
+    (
+        "WinFIG",
+        "Windows, macOS, Linux",
+        "No",
+        "Aims at xfig's format and rendering",
+        "Exports through fig2dev",
+        "Shareware",
+        "An independent program modelled on xfig",
+    ),
+    (
+        "jfig",
+        "Any system with Java",
+        "No",
+        "Reads and writes Fig files",
+        "Several export formats",
+        "Shareware (registration)",
+        "Java editor modelled on xfig; last releases are years old",
+    ),
+    (
+        "Ipe",
+        "Windows, macOS, Linux",
+        "No",
+        "No (own XML/PDF format; the figtoipe tool converts .fig)",
+        "LaTeX is its native text system",
+        "Open source (GPL)",
+        "Built for figures in LaTeX documents and slides",
+    ),
+    (
+        "Inkscape",
+        "Windows, macOS, Linux",
+        "No",
+        "Import only, through an extension that needs fig2dev",
+        "PDF/EPS with a LaTeX text overlay",
+        "Open source (GPL)",
+        "A general SVG editor, not xfig-like",
+    ),
+];
+
+/// The comparison page: RustFig beside xfig and the other programs people
+/// look at instead of it.
+pub fn compare() -> String {
+    let mut s = head(
+        "RustFig, xfig, WinFIG, jfig, Ipe, Inkscape compared – xfig alternatives",
+        "Which program for xfig figures on Windows, macOS and Linux? RustFig, xfig, xfig-qt, WinFIG, jfig, Ipe and Inkscape compared: platforms, X server, .fig files, LaTeX, licence.",
+        &format!("{BASE}compare.html"),
+        "style.css",
+    );
+    s.push_str("<body>\n");
+    s.push_str(&nav(""));
+    s.push_str(
+        "<main>\n<h1>xfig and its alternatives compared</h1>\n\
+         <p class=\"lead\">xfig is the classic drawing program for figures in papers and LaTeX documents, \
+         but it needs an X server: XQuartz on macOS, Cygwin/X or WSL on Windows. \
+         These programs open xfig's <code>.fig</code> files or do a similar job.</p>\n<table class=\"compare\">\n\
+         <tr><th>Program</th><th>Systems</th><th>Needs an X server</th><th>xfig's <code>.fig</code> files</th>\
+         <th>LaTeX</th><th>Licence</th><th>Notes</th></tr>\n",
+    );
+    // The programs' own sites (none listed where unsure).
+    let site = |name: &str| match name {
+        "RustFig" => Some(BASE),
+        "xfig 3.2.9a" => Some("https://mcj.sourceforge.net/"),
+        "xfig-qt" => Some("https://github.com/FabianHassler/xfig-qt"),
+        "WinFIG" => Some("https://www.winfig.com/"),
+        "Ipe" => Some("https://ipe.otfried.org/"),
+        "Inkscape" => Some("https://inkscape.org/"),
+        _ => None,
+    };
+    for (name, systems, x, fig, tex, licence, notes) in COMPARE {
+        let name_html = match site(name) {
+            Some(url) => format!("<a href=\"{url}\">{}</a>", esc(name)),
+            None => esc(name),
+        };
+        let _ = writeln!(
+            s,
+            "<tr><th>{}</th><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
+            name_html,
+            esc(systems),
+            esc(x),
+            esc(fig),
+            esc(tex),
+            esc(licence),
+            esc(notes)
+        );
+    }
+    s.push_str(
+        "</table>\n<p class=\"note\">As of October 2026; the other programs' details come from their own \
+         sites and package listings and may have changed. Corrections are welcome as GitHub issues.</p>\n\
+         <h2>Which one to choose</h2>\n<ul class=\"features\">\n\
+         <li><strong>You have xfig figures and want to keep working the xfig way on Windows or macOS:</strong> \
+         RustFig or WinFIG. RustFig is open source, also runs in the browser, and has fig2dev's exports and \
+         LaTeX typesetting built in.</li>\n\
+         <li><strong>You are on Linux and xfig works for you:</strong> keep xfig; RustFig reads and writes the \
+         same files, so you can switch back and forth.</li>\n\
+         <li><strong>You want xfig exactly, without X11, on a Mac:</strong> xfig-qt runs xfig's own code on Qt.</li>\n\
+         <li><strong>You draw mainly for LaTeX and don't need <code>.fig</code>:</strong> Ipe, or TikZ directly; \
+         RustFig also exports TikZ, pict2e and pstex/pdftex.</li>\n\
+         <li><strong>You want a general illustration program:</strong> Inkscape.</li>\n</ul>\n\
+         <p class=\"buttons\"><a class=\"button primary\" href=\"index.html#download\">Download RustFig</a> \
+         <a class=\"button\" href=\"app/\">Try it in the browser</a></p>\n</main>\n",
+    );
     s.push_str(&footer());
     s
 }
@@ -384,6 +531,10 @@ pre code { padding: 0; }
 .manual main.topic { flex: 1; min-width: 0; padding: 0 0 2em; margin: 0; }
 .os { border-left: 3px solid var(--line); padding: 0.1em 0 0.1em 1em; margin: 1em 0; }
 .os-label { font-size: 0.85em; color: var(--muted); margin: 0.3em 0; text-transform: uppercase; letter-spacing: 0.04em; }
+table.compare th[scope], table.compare tr th:first-child { white-space: nowrap; }
+table.compare td, table.compare th { font-size: 0.93em; }
+.note { color: var(--muted); font-size: 0.9em; }
+main > p.lead { margin-left: 0; }
 footer { border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9em; padding: 1.2em 16px; text-align: center; }
 @media (max-width: 760px) { .manual { flex-direction: column; gap: 0; } .manual aside { flex: none; } .hero h1 { font-size: 1.6em; } }
 "#;
@@ -449,13 +600,14 @@ pub fn build(root: &Path, out: &Path, app: Option<&Path>) -> Result<usize, Strin
     }
     toc.push_str("</ul>\n");
     write(&out.join("index.html"), landing())?;
+    write(&out.join("compare.html"), compare())?;
     write(&out.join("style.css"), CSS)?;
     std::fs::copy(
         root.join("docs/images/rustfig-window.png"),
         out.join("rustfig-window.png"),
     )
     .map_err(|e| format!("docs/images/rustfig-window.png: {e}"))?;
-    let mut urls = vec![BASE.to_string(), format!("{BASE}app/")];
+    let mut urls = vec![BASE.to_string(), format!("{BASE}compare.html"), format!("{BASE}app/")];
     for p in &pages {
         write(&out.join(format!("manual/{}.html", p.stem)), manual_html(p, &toc))?;
         urls.push(format!("{BASE}manual/{}.html", p.stem));
@@ -563,7 +715,7 @@ mod tests {
             assert_eq!(a, std::fs::read(dir.join("b").join(f)).unwrap(), "{f}");
         }
         let sitemap = std::fs::read_to_string(dir.join("a/sitemap.xml")).unwrap();
-        assert_eq!(sitemap.matches("<url>").count(), n + 2);
+        assert_eq!(sitemap.matches("<url>").count(), n + 3);
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
