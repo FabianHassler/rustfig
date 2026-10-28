@@ -68,7 +68,7 @@ it, so `cargo +toolchain xtask …` stays on that toolchain.
 
 ## Web version on GitHub Pages (C5)
 
-`cargo xtask web` builds the browser version with trunk into `dist/` (`--serve` serves it locally, `--public-url /PATH/` sets the address it is served from). `.github/workflows/pages.yml` builds it with `--public-url /rustfig/` on every release tag (or by hand: `gh workflow run pages.yml`) and publishes it at https://fabianhassler.github.io/rustfig/ (the repository's Pages source is "GitHub Actions").
+`cargo xtask web` builds the browser version with trunk into `dist/` (`--serve` serves it locally, `--public-url /PATH/` sets the address it is served from). `cargo xtask site [--out DIR] [--app DIR]` writes the project's web site (default `target/site/`): a landing page (features, downloads, a FAQ with schema.org data), the manual `docs/manual/*.md` as HTML pages (per-system blocks shown labelled), the screenshot, `sitemap.xml`, and with `--app` the web build under `app/`; static HTML and CSS, deterministic (tests in `xtask/src/site.rs`). `.github/workflows/pages.yml` runs `cargo xtask web --public-url /rustfig/app/` and `cargo xtask site --app dist` on every release tag (or by hand: `gh workflow run pages.yml`) and publishes the site at https://fabianhassler.github.io/rustfig/, the web app at https://fabianhassler.github.io/rustfig/app/ (the repository's Pages source is "GitHub Actions").
 
 ## Homebrew
 

@@ -1,6 +1,6 @@
-# Plan C5: the web version on GitHub Pages
-# (https://fabianhassler.github.io/rustfig/), built with every release tag or
-# by hand (`gh workflow run pages.yml`).
+# Plan C5: the site on GitHub Pages (https://fabianhassler.github.io/rustfig/):
+# landing page and manual from `cargo xtask site`, the web version under app/;
+# built with every release tag or by hand (`gh workflow run pages.yml`).
 name: Pages
 
 on:
@@ -31,10 +31,12 @@ jobs:
         with:
           tool: trunk
       - name: Build the web version
-        run: cargo xtask web --public-url /rustfig/
+        run: cargo xtask web --public-url /rustfig/app/
+      - name: Build the site (landing page, manual, the web app under app/)
+        run: cargo xtask site --out site --app dist
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: dist
+          path: site
   deploy:
     needs: build
     runs-on: ubuntu-latest

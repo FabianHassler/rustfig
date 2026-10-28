@@ -1,8 +1,9 @@
-//! Project automation: `cargo xtask ci | layers | assets | licences | wasm | web | source-audit | libraries`.
+//! Project automation: `cargo xtask ci | layers | assets | licences | wasm | web | site | source-audit | libraries`.
 
 mod audit;
 mod libraries;
 mod package;
+mod site;
 mod xfig_compare;
 
 use std::path::{Path, PathBuf};
@@ -516,6 +517,7 @@ fn main() -> ExitCode {
         "source-audit" => audit::run(&root()),
         "xfig-compare" => xfig_compare::run(&root(), cargo()),
         "libraries" => libraries::run(&root()),
+        "site" => site::run(&root()),
         _ => Err(
             "usage: cargo xtask ci | layers | assets | licences | wasm | web | package | source-audit | xfig-compare | libraries"
                 .into(),

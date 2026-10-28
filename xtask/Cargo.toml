@@ -11,6 +11,7 @@ publish = false
 workspace = true
 
 [dependencies]
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 
 rustfig-geom.workspace = true
 rustfig-model.workspace = true

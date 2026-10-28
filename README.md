@@ -28,7 +28,7 @@ XQuartz or WSL.
 
 **[Download RustFig](https://github.com/FabianHassler/rustfig/releases)**
 for macOS, Windows or Linux, or install it with Homebrew; see
-[Installation](#installation). Or **[try it in your browser](https://fabianhassler.github.io/rustfig/)**,
+[Installation](#installation). Or **[try it in your browser](https://fabianhassler.github.io/rustfig/app/)**,
 nothing to install (a preview: drawings stay in your browser until you save
 them as a download, and a few exports need the desktop app). The drawing above is
 [`docs/images/rustfig-window.fig`](docs/images/rustfig-window.fig).
@@ -114,7 +114,9 @@ Tool shortcuts follow xfig: `C` circle, `E` ellipse, `L` polyline,
 `S` select. Left click adds points; double click, right click or Enter
 finishes; Esc cancels. Without a three-button mouse: Option/Alt + click is the
 middle button, and on macOS Ctrl + click the right one (on Linux and Windows,
-left and right pressed together also give the middle button).
+left and right pressed together also give the middle button). The full manual
+is in the program (Help > RustFig Manual, F1) and
+[on the web](https://fabianhassler.github.io/rustfig/manual/index.html).
 
 Fonts: RustFig draws text with the fonts installed on your system (Times,
 Helvetica, Courier, Symbol, Palatino, … or their URW/TeX Gyre clones) and
