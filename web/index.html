@@ -3,7 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>RustFig</title>
+  <title>RustFig – xfig for Windows, macOS, Linux and the browser, no X server</title>
+  <meta name="description" content="RustFig is a modern xfig: the classic vector drawing program rebuilt in Rust. It runs natively on Windows, macOS and Linux and in the browser, with no X server, XQuartz or WSL, and has fig2dev and LaTeX built in.">
+  <link rel="canonical" href="https://fabianhassler.github.io/rustfig/">
+  <meta property="og:title" content="RustFig – a modern xfig for Windows, macOS, Linux and the web">
+  <meta property="og:description" content="The classic xfig drawing program rebuilt in Rust: native on Windows, macOS and Linux, no X server needed, fig2dev and LaTeX built in. Try it in the browser.">
+  <meta property="og:url" content="https://fabianhassler.github.io/rustfig/">
+  <meta property="og:type" content="website">
+  <script type="application/ld+json">
+  {"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "RustFig",
+   "description": "A modern xfig: the vector drawing program rebuilt in Rust for Windows, macOS, Linux and the browser, without an X server, with fig2dev and LaTeX built in.",
+   "applicationCategory": "DesignApplication", "operatingSystem": "Windows, macOS, Linux, Web browser",
+   "offers": {"@type": "Offer", "price": "0"}, "license": "https://opensource.org/licenses/MIT",
+   "url": "https://fabianhassler.github.io/rustfig/", "sameAs": "https://github.com/FabianHassler/rustfig"}
+  </script>
   <link data-trunk rel="rust" data-bin="rustfig" data-wasm-opt="z" href="../apps/rustfig/Cargo.toml">
   <!-- The bundled figure libraries, fetched lazily by Library mode (C2); libraries.json is the index `cargo xtask web` writes. -->
   <link data-trunk rel="copy-dir" href="../libraries">
@@ -11,13 +24,24 @@
   <style>
     html, body { margin: 0; height: 100%; overflow: hidden; background: #3a3c42; }
     canvas { width: 100%; height: 100%; display: block; }
-    #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
-      color: #d8d8d8; font: 16px sans-serif; pointer-events: none; }
+    #loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; color: #d8d8d8; font: 16px sans-serif; text-align: center; padding: 1em; }
+    #loading h1 { font-size: 22px; font-weight: normal; margin: 0 0 0.6em; }
+    #loading p { max-width: 36em; margin: 0.3em 0; color: #b0b0b0; }
+    #loading a, noscript a { color: #9cc4ff; }
   </style>
 </head>
 <body>
   <canvas id="rustfig_canvas"></canvas>
-  <div id="loading">Loading RustFig…</div>
-  <noscript><p style="color:#d8d8d8;font:16px sans-serif;padding:1em">RustFig needs JavaScript and WebAssembly.</p></noscript>
+  <!-- Shown until the app has started (apps/rustfig removes it); also what search engines read. -->
+  <div id="loading">
+    <h1>Loading RustFig…</h1>
+    <p>RustFig is a modern xfig: the classic vector drawing program, rebuilt in Rust.
+      It runs natively on Windows, macOS and Linux and here in the browser, with no X server,
+      XQuartz or WSL, and has fig2dev and LaTeX built in.</p>
+    <p>Desktop apps, Homebrew and source: <a href="https://github.com/FabianHassler/rustfig">github.com/FabianHassler/rustfig</a></p>
+  </div>
+  <noscript><p style="color:#d8d8d8;font:16px sans-serif;padding:1em">RustFig needs JavaScript and WebAssembly.
+    Desktop apps for Windows, macOS and Linux: <a href="https://github.com/FabianHassler/rustfig/releases">github.com/FabianHassler/rustfig/releases</a></p></noscript>
 </body>
 </html>

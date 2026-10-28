@@ -1,7 +1,9 @@
 # RustFig
 
 **xfig for today's computers.** The classic vector drawing program, rebuilt
-in Rust for macOS, Windows, Linux and the web, with fig2dev built in.
+in Rust for macOS, Windows, Linux and the web, with fig2dev built in: a
+modern xfig that runs natively on Windows and macOS, with no X server,
+XQuartz or WSL.
 
 [![CI](https://github.com/FabianHassler/rustfig/actions/workflows/ci.yml/badge.svg)](https://github.com/FabianHassler/rustfig/actions/workflows/ci.yml)
 [![Licence: MIT OR Apache-2.0](https://img.shields.io/badge/licence-MIT%20OR%20Apache--2.0-blue)](#license)
@@ -12,8 +14,8 @@ in Rust for macOS, Windows, Linux and the web, with fig2dev built in.
 - **It is xfig.** The same modes, mouse buttons, panels and keys, and the
   same `.fig` files: RustFig opens every Fig version and saves Fig 3.2 that
   xfig and fig2dev read unchanged.
-- **It runs everywhere.** Native on macOS, Windows and Linux, no X11
-  needed; a web build for the browser is in testing.
+- **It runs everywhere.** Native on macOS, Windows and Linux, no X11, X
+  server or XQuartz needed; a web build for the browser is in testing.
 - **LaTeX on the canvas.** Special text is typeset by your TeX installation
   and shown as it will print, formulas included; plots of functions and
   data with LaTeX labels.
