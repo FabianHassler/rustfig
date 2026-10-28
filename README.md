@@ -73,7 +73,18 @@ installs the same command name as `fig2dev-rs`: keep one of them linked.
 
    macOS and Windows need nothing extra.
 3. **Install** both programs (`rustfig`, the drawing program, and
-   `rustfig-cli`, the command line):
+   `rustfig-cli`, the command line) straight from GitHub, the latest release:
+
+   ```sh
+   cargo install --locked --git https://github.com/FabianHassler/rustfig --tag v0.9.0-beta.5 rustfig rustfig-cli
+   ```
+
+   Leave out `--tag …` for the latest `main`. RustFig is not on crates.io
+   (a plain `cargo install rustfig` does not work); the `--git` line builds
+   the same program. Cargo fetches fig2dev, the converter RustFig exports
+   through, by itself.
+
+   Or from a clone:
 
    ```sh
    git clone https://github.com/FabianHassler/rustfig
@@ -82,22 +93,10 @@ installs the same command name as `fig2dev-rs`: keep one of them linked.
    cargo install --locked --path apps/cli
    ```
 
-   Or install straight from GitHub, without a clone:
-
-   ```sh
-   cargo install --locked --git https://github.com/FabianHassler/rustfig rustfig rustfig-cli
-   ```
-
-   (add `--branch`, `--tag` or `--rev` to pick a version; the default is the
-   latest `main`).
-
-   Cargo fetches fig2dev, the converter RustFig exports through, from its own public
-   repository ([FabianHassler/fig2dev](https://github.com/FabianHassler/fig2dev))
-   by itself.
-
 The programs go into `~/.cargo/bin` (Windows: `%USERPROFILE%\.cargo\bin`),
-which rustup puts on your `PATH`. Update later with `git pull` and the same
-two `cargo install` lines (or rerun the `--git` line with `--force`); remove with `cargo uninstall rustfig rustfig-cli`.
+which rustup puts on your `PATH`. Update later by rerunning the `--git` line
+with a newer `--tag` (or `--force` for `main`), or with `git pull` and the two
+`--path` lines; remove with `cargo uninstall rustfig rustfig-cli`.
 
 ## Getting started
 
