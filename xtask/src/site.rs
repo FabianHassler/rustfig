@@ -261,7 +261,10 @@ pub fn landing() -> String {
             )
         })
         .collect();
-    let mut ld = String::new();
+    // Google Search Console's ownership check for the URL prefix BASE.
+    let mut ld = String::from(
+        "<meta name=\"google-site-verification\" content=\"VhJxcmEGe9HeblW2S-U6HkukDuyYXq5AJIMqeByEZhk\">\n",
+    );
     let _ = write!(
         ld,
         r#"<script type="application/ld+json">
