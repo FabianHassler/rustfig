@@ -479,6 +479,27 @@ fn windows(root: &Path, rel: &Path, out: &Path, version: &str) -> Result<(), Str
 
 #[cfg(test)]
 mod tests {
+    /// The Scoop and winget manifests in `packaging/` name the workspace
+    /// version (bump them with the release; their hashes are the release
+    /// zip's SHA-256).
+    #[test]
+    fn windows_package_manifests_follow_the_version() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+        let v = super::workspace_version(&std::fs::read_to_string(root.join("Cargo.toml")).unwrap());
+        let scoop = std::fs::read_to_string(root.join("packaging/scoop/rustfig.json")).unwrap();
+        assert!(
+            scoop.contains(&format!("\"version\": \"{v}\"")),
+            "packaging/scoop/rustfig.json is not {v}"
+        );
+        assert!(scoop.contains(&format!("/v{v}/rustfig-{v}-windows.zip")));
+        let dir = root.join(format!("packaging/winget/FabianHassler.RustFig/{v}"));
+        for f in ["", ".installer", ".locale.en-US"] {
+            let text = std::fs::read_to_string(dir.join(format!("FabianHassler.RustFig{f}.yaml")))
+                .unwrap_or_else(|e| panic!("winget manifests for {v}: {e}"));
+            assert!(text.contains(&format!("PackageVersion: {v}\n")), "{f}");
+        }
+    }
+
     use super::*;
 
     #[test]

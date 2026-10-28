@@ -43,7 +43,7 @@ has ready-made apps (not yet signed by Apple or Microsoft):
 | System | File | How |
 |--------|------|-----|
 | macOS (Apple silicon) | `RustFig-VERSION-macos.dmg` | Drag RustFig to Applications. The app is not notarized by Apple yet, so the first start is refused: open System Settings > Privacy & Security and click **Open Anyway** (or run `xattr -dr com.apple.quarantine /Applications/RustFig.app` once). `.fig` files then open with a double-click. |
-| Windows | `rustfig-VERSION-windows.zip` | Unpack anywhere and start `rustfig.exe`. `fig-association.reg` makes `.fig` files open in RustFig. |
+| Windows | `rustfig-VERSION-windows.zip` | Unpack anywhere and start `rustfig.exe`. `fig-association.reg` makes `.fig` files open in RustFig. Or with [Scoop](https://scoop.sh): `scoop install https://raw.githubusercontent.com/FabianHassler/rustfig/main/packaging/scoop/rustfig.json` |
 | Linux (x86-64 and ARM64) | `.deb` or `.tar.gz` | `sudo apt install ./rustfig_VERSION_amd64.deb` (`_arm64.deb` on ARM, e.g. a Linux VM on an Apple-silicon Mac), or unpack the `.tar.gz` and run `install.sh`; both register the `.fig` file type. The `.deb` leaves the name `fig2dev` to Debian's fig2dev package: run RustFig's as `rustfig fig2dev …`. |
 
 ### Homebrew (macOS, Linux)

@@ -305,7 +305,7 @@ pub fn landing() -> String {
 <h2>Download and install</h2>
 <table>
 <tr><th>System</th><th>How</th></tr>
-<tr><td>Windows</td><td><a href="{REPO}/releases/latest">rustfig-VERSION-windows.zip</a>: unpack anywhere and start <code>rustfig.exe</code>; <code>fig-association.reg</code> makes <code>.fig</code> files open in RustFig.</td></tr>
+<tr><td>Windows</td><td><a href="{REPO}/releases/latest">rustfig-VERSION-windows.zip</a>: unpack anywhere and start <code>rustfig.exe</code>; <code>fig-association.reg</code> makes <code>.fig</code> files open in RustFig. Or with <a href="https://scoop.sh">Scoop</a>: <code>scoop install https://raw.githubusercontent.com/FabianHassler/rustfig/main/packaging/scoop/rustfig.json</code></td></tr>
 <tr><td>macOS (Apple silicon)</td><td><a href="{REPO}/releases/latest">RustFig-VERSION-macos.dmg</a>: drag RustFig to Applications (not yet notarized: allow it once under System Settings › Privacy &amp; Security). Or with Homebrew: <code>brew install fabianhassler/tap/rustfig</code></td></tr>
 <tr><td>Linux (x86-64, ARM64)</td><td><a href="{REPO}/releases/latest">.deb or .tar.gz</a>: <code>sudo apt install ./rustfig_VERSION_amd64.deb</code>, or unpack the .tar.gz and run <code>install.sh</code>.</td></tr>
 <tr><td>Browser</td><td><a href="app/">Open the web version</a>: nothing to install (drawings stay in your browser until you save them as a download).</td></tr>
