@@ -153,6 +153,10 @@ fn install_script() -> String {
     "#!/bin/sh\n# Installs RustFig for the current user (or system-wide with PREFIX=/usr/local, as root).\n\
      set -e\nPREFIX=${PREFIX:-$HOME/.local}\nd=$(dirname \"$0\")\n\
      install -Dm755 \"$d/rustfig\" \"$PREFIX/bin/rustfig\"\n\
+     # the figure libraries, where the program looks for them\n\
+     rm -rf \"$PREFIX/share/rustfig/libraries\"\n\
+     mkdir -p \"$PREFIX/share/rustfig\"\n\
+     cp -R \"$d/libraries\" \"$PREFIX/share/rustfig/libraries\"\n\
      # fig2dev under its own name only where no fig2dev is installed\n\
      command -v fig2dev >/dev/null 2>&1 || ln -sf rustfig \"$PREFIX/bin/fig2dev\"\n\
      install -Dm644 \"$d/rustfig.desktop\" \"$PREFIX/share/applications/rustfig.desktop\"\n\
@@ -271,6 +275,33 @@ fn copy_docs(root: &Path, dir: &Path) -> Result<(), String> {
     Ok(())
 }
 
+/// The figure libraries (`libraries/`) into `dest`, where the program
+/// finds them (`rustfig_engine::library::beside_program`). Returns the
+/// number of files.
+pub fn copy_libraries(root: &Path, dest: &Path) -> Result<usize, String> {
+    fn walk(from: &Path, to: &Path, n: &mut usize) -> Result<(), String> {
+        fs::create_dir_all(to).map_err(|e| format!("{}: {e}", to.display()))?;
+        let mut entries: Vec<_> = fs::read_dir(from)
+            .map_err(|e| format!("{}: {e}", from.display()))?
+            .filter_map(Result::ok)
+            .collect();
+        entries.sort_by_key(|e| e.file_name());
+        for e in entries {
+            let (src, dst) = (e.path(), to.join(e.file_name()));
+            if src.is_dir() {
+                walk(&src, &dst, n)?;
+            } else {
+                fs::copy(&src, &dst).map_err(|e| format!("{}: {e}", src.display()))?;
+                *n += 1;
+            }
+        }
+        Ok(())
+    }
+    let mut n = 0;
+    walk(&root.join("libraries"), dest, &mut n)?;
+    Ok(n)
+}
+
 pub fn run(root: &Path, mut cargo: Command) -> Result<(), String> {
     let version = workspace_version(&fs::read_to_string(root.join("Cargo.toml")).unwrap_or_default());
     sh(cargo
@@ -298,6 +329,7 @@ fn macos(root: &Path, rel: &Path, out: &Path, version: &str) -> Result<(), Strin
     let (macos_dir, res) = (app.join("Contents/MacOS"), app.join("Contents/Resources"));
     fs::create_dir_all(&macos_dir).map_err(|e| e.to_string())?;
     fs::create_dir_all(&res).map_err(|e| e.to_string())?;
+    copy_libraries(root, &res.join("libraries"))?;
     fs::copy(&exe, macos_dir.join("rustfig")).map_err(|e| format!("rustfig: {e}"))?;
     #[cfg(unix)]
     std::os::unix::fs::symlink("rustfig", macos_dir.join("fig2dev")).map_err(|e| e.to_string())?;
@@ -390,6 +422,7 @@ fn linux(root: &Path, rel: &Path, out: &Path, version: &str) -> Result<(), Strin
     write(&dir.join("rustfig.desktop"), &desktop_file())?;
     write(&dir.join("rustfig.xml"), &mime_xml())?;
     write(&dir.join("install.sh"), &install_script())?;
+    copy_libraries(root, &dir.join("libraries"))?;
     let png = icon_png(&exe, 256);
     match &png {
         Some(p) => fs::write(dir.join("rustfig.png"), p).map_err(|e| e.to_string())?,
@@ -435,6 +468,7 @@ fn linux(root: &Path, rel: &Path, out: &Path, version: &str) -> Result<(), Strin
         fs::create_dir_all(&d).map_err(|e| e.to_string())?;
         fs::write(d.join("rustfig.png"), p).map_err(|e| e.to_string())?;
     }
+    copy_libraries(root, &pkg.join("usr/share/rustfig/libraries"))?;
     let doc = pkg.join("usr/share/doc/rustfig");
     fs::create_dir_all(&doc).map_err(|e| e.to_string())?;
     copy_docs(root, &doc)?;
@@ -465,6 +499,7 @@ fn windows(root: &Path, rel: &Path, out: &Path, version: &str) -> Result<(), Str
          may ask for confirmation on the first start.\r\n",
     )?;
     copy_docs(root, &dir)?;
+    copy_libraries(root, &dir.join("libraries"))?;
     let zip = out.join(format!("{name}.zip"));
     // tar (bsdtar) ships with Windows 10+ and writes zip with -a.
     sh(Command::new("tar")
@@ -501,6 +536,25 @@ mod tests {
     }
 
     use super::*;
+
+    /// Every package gets the whole `libraries/` folder.
+    #[test]
+    fn libraries_are_copied_whole() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+        let dest = std::env::temp_dir().join(format!("rustfig-pkglibs-{}", std::process::id()));
+        let n = copy_libraries(&root, &dest).unwrap();
+        fn count(p: &std::path::Path) -> usize {
+            std::fs::read_dir(p)
+                .unwrap()
+                .filter_map(Result::ok)
+                .map(|e| if e.path().is_dir() { count(&e.path()) } else { 1 })
+                .sum()
+        }
+        assert_eq!(n, count(&root.join("libraries")));
+        assert!(dest.join("Feynman/fermion.fig").is_file());
+        let _ = std::fs::remove_dir_all(&dest);
+        assert!(install_script().contains("share/rustfig/libraries"));
+    }
 
     #[test]
     fn plist_has_document_type_and_id() {

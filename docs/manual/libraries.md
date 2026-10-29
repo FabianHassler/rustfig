@@ -44,7 +44,7 @@ Like xfig, `library_dir` may name a plain text file instead of a folder. Each li
 
 A big library is read while the panel is open: the library folders are scanned in the background and the icons are drawn a few at a time, so the window stays usable. *Stop* (shown while this goes on) ends it: the scan keeps what it found so far and icons not yet drawn stay blank. *Resume* draws them.
 
-The bundled libraries are in the `libraries` folder next to the program (or in the folders named in the environment variable `RUSTFIG_LIBRARIES`). 
+The bundled libraries come with every package: in the `libraries` folder next to the program (Windows zip, Linux tarball), inside the app on macOS (`RustFig.app/Contents/Resources/libraries`), and in `share/rustfig/libraries` for the `.deb`, `install.sh` and Homebrew. The folders named in the environment variable `RUSTFIG_LIBRARIES` take their place. 
 
 In the web version the page serves the bundled libraries as static files (`cargo xtask web` copies `libraries/` into `dist/` and writes the index `libraries.json` there). The panel fetches the index when it opens and each figure the first time it is drawn, so the first view of a big library fills in while you watch ("Loading icons..."); a figure is fetched again only after the page is reloaded. The browser has no folder for your own libraries, so the *Source* field, *Copy to library* and a user library are desktop-only. Search finds figures by name; searching the comment lines needs the figures to have been fetched, so it is left out in the browser. Selecting an object before its preview has appeared can say "still loading, try again": wait for the preview and select again.
 

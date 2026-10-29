@@ -119,9 +119,23 @@ pub struct LibObject {
     pub nw: Point,
 }
 
+/// Where the packages put the libraries, relative to the program's folder:
+/// next to it (Windows zip, Linux tarball), `../Resources/libraries` (macOS
+/// app bundle), `../share/rustfig/libraries` (.deb, `install.sh`, Homebrew),
+/// and `../../libraries` (`cargo run`: the program is in target/<profile>/).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn beside_program(dir: &Path) -> [PathBuf; 4] {
+    [
+        dir.join("libraries"),
+        dir.join("../Resources/libraries"),
+        dir.join("../share/rustfig/libraries"),
+        dir.join("../../libraries"),
+    ]
+}
+
 /// The folders bundled libraries are looked for in, most specific first:
-/// `RUSTFIG_LIBRARIES` (folders separated as `PATH` is), `libraries` next to
-/// the program, `../share/rustfig/libraries`, and the source tree's own.
+/// `RUSTFIG_LIBRARIES` (folders separated as `PATH` is), the places the
+/// packages install them ([`beside_program`]), and the source tree's own.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn bundled_roots() -> Vec<PathBuf> {
     let mut v: Vec<PathBuf> = Vec::new();
@@ -132,10 +146,7 @@ pub fn bundled_roots() -> Vec<PathBuf> {
         .ok()
         .and_then(|e| e.parent().map(Path::to_path_buf))
     {
-        v.push(dir.join("libraries"));
-        v.push(dir.join("../share/rustfig/libraries"));
-        // `cargo run`: the executable is in target/<profile>/.
-        v.push(dir.join("../../libraries"));
+        v.extend(beside_program(&dir));
     }
     // The source tree this build came from (development builds and tests).
     v.push(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../libraries"));
@@ -887,4 +898,28 @@ pub fn search(libs: &[Library], query: &str, limit: usize, comments: bool) -> Ve
     #[cfg(target_arch = "wasm32")]
     let _ = rest;
     out
+}
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod tests {
+    use super::*;
+
+    /// Each package's layout puts the libraries where the program looks
+    /// (`cargo xtask package`, the Homebrew formula).
+    #[test]
+    fn packaged_libraries_are_found_beside_the_program() {
+        let base = std::env::temp_dir().join(format!("rustfig-libroots-{}", std::process::id()));
+        for (program_dir, libs) in [
+            ("zip", "zip/libraries"),
+            ("RustFig.app/Contents/MacOS", "RustFig.app/Contents/Resources/libraries"),
+            ("usr/bin", "usr/share/rustfig/libraries"),
+        ] {
+            let (dir, lib) = (base.join(program_dir), base.join(libs));
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::create_dir_all(&lib).unwrap();
+            let found = beside_program(&dir).into_iter().find(|p| p.is_dir()).unwrap();
+            assert!(same_dir(&found, &lib), "{program_dir}: {}", found.display());
+        }
+        let _ = std::fs::remove_dir_all(&base);
+    }
 }
