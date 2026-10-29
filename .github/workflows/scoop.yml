@@ -1,0 +1,48 @@
+# Installs RustFig on Windows with Scoop from packaging/scoop/rustfig.json (the
+# manifest the README points to) and runs it: checks the release zip's URL,
+# hash and layout and that the installed programs work. Runs when the manifest
+# changes, after a release is published, or by hand (`gh workflow run scoop.yml`).
+name: Scoop
+
+on:
+  push:
+    branches: [main]
+    paths: ["packaging/scoop/**"]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Scoop
+        shell: pwsh
+        run: |
+          Invoke-RestMethod -Uri https://get.scoop.sh -OutFile install-scoop.ps1
+          .\install-scoop.ps1 -RunAsAdmin
+          Join-Path (Resolve-Path ~).Path "scoop\shims" >> $env:GITHUB_PATH
+      - name: Install RustFig from the manifest
+        shell: pwsh
+        run: scoop install packaging\scoop\rustfig.json
+      - name: Run the installed programs
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          rustfig-cli info crates\engine\tests\fixtures\boxes.fig
+          if ($LASTEXITCODE -ne 0) { throw "rustfig-cli info failed" }
+          rustfig-cli convert crates\engine\tests\fixtures\boxes.fig boxes.pdf
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path boxes.pdf)) { throw "conversion failed" }
+          # rustfig.exe is a GUI program: start it and wait for its exit code.
+          $exe = Join-Path (scoop prefix rustfig) "rustfig.exe"
+          $p = Start-Process $exe -ArgumentList "fig2dev","-L","eps","crates\engine\tests\fixtures\boxes.fig","boxes.eps" -Wait -PassThru
+          if ($p.ExitCode -ne 0 -or -not (Test-Path boxes.eps)) { throw "rustfig fig2dev failed" }
+          # The figure libraries ship in the zip from v0.9.0-beta.6 on.
+          $libs = Join-Path (scoop prefix rustfig) "libraries"
+          if (Test-Path $libs) { "libraries: $((Get-ChildItem $libs -Directory).Count) folders" }
+          else { "::warning::no libraries folder in this release's zip" }
