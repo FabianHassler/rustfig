@@ -63,16 +63,36 @@ fn other_programs_still_read_the_files() {
     let pdf = std::fs::read(export(&mut e, &dir, "a.pdf", true)).unwrap();
     let plain = std::fs::read(export(&mut e, &dir, "b.pdf", false)).unwrap();
     // The two exports may fall in different seconds (slow runners): mask
-    // the creation date before comparing.
+    // every date before comparing (`/CreationDate (D:…)`, `/ModDate (D:…)`
+    // and the XMP packet's `…Date>2026-10-29T18:38:57Z<`).
     let undated = |b: &[u8]| -> Vec<u8> {
         let mut b = b.to_vec();
-        if let Some(i) = b.windows(17).position(|w| w == b"/CreationDate (D:") {
-            for c in b.iter_mut().skip(i + 17).take_while(|c| c.is_ascii_digit()) {
-                *c = b'0';
+        for marker in [&b"Date (D:"[..], &b"Date>"[..]] {
+            let mut from = 0;
+            while let Some(i) = b
+                .get(from..)
+                .and_then(|t| t.windows(marker.len()).position(|w| w == marker))
+            {
+                let start = from + i + marker.len();
+                for c in b
+                    .iter_mut()
+                    .skip(start)
+                    .take_while(|c| c.is_ascii_digit() || b"-:TZ".contains(c))
+                {
+                    if c.is_ascii_digit() {
+                        *c = b'0';
+                    }
+                }
+                from = start;
             }
         }
         b
     };
+    assert_eq!(
+        undated(b"/ModDate (D:20261029183857) <xmp:CreateDate>2026-10-29T18:38:57Z</"),
+        undated(b"/ModDate (D:20261029183858) <xmp:CreateDate>2026-10-29T18:38:58Z</"),
+        "dates one second apart compare equal"
+    );
     assert!(undated(&pdf).starts_with(&undated(&plain)), "the update only appends");
     let doc = hayro_syntax::Pdf::new(Arc::new(pdf.clone())).expect("PDF parses");
     assert_eq!(doc.pages().len(), 1);
