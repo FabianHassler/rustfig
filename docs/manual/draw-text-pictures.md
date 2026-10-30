@@ -25,7 +25,7 @@ The font chooser (the Text Font button of the indicator, and the Font row of the
 
 A Fig file knows fonts only as numbers, so a text in a local font also keeps the nearest Fig font as its number (serif: Times, sans-serif: Helvetica, monospace: Courier, with the weight and slant matched) and the font's name in a comment line of the text, `# rustfig-font: Minion Pro Semibold`. xfig and fig2dev read the file as an ordinary Fig text and ignore the comment; your own comments on the text stay. RustFig draws and measures the text in the installed font, so selecting, editing and the text's box follow it. When a file names a font this computer does not have, the text is drawn in its Fig font and one message on opening lists the missing fonts; saving the file keeps the font name.
 
-Exports (PostScript, PDF, SVG and the others) draw such a text with its Fig font. Embedding the local font in PDF and SVG exports is a follow-up in the fig2dev repository. Scripts use `text.set_local_font` (a font name or `null`, for the selection or `ids`; it also sets the font for new text), `text.local_fonts` (the list) and the `local_font` parameter of `object.set_attributes`.
+Exports: PDF, EPS and PostScript embed the local font (a subset of the glyphs used, as a TrueType/Type 42 font), PNG and the other bitmaps draw it, and SVG names it with its Fig font as the fallback (the viewer must have the font installed). The TeX languages (LaTeX, PSTricks, TikZ, pict2e and the others) and xfig or the C fig2dev reading the file use the Fig font. Scripts use `text.set_local_font` (a font name or `null`, for the selection or `ids`; it also sets the font for new text), `text.local_fonts` (the list) and the `local_font` parameter of `object.set_attributes`.
 
 ### Character map
 
