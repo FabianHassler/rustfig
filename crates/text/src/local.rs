@@ -127,6 +127,13 @@ fn is_serif_name(n: &str) -> bool {
     .any(|k| n.contains(k))
 }
 
+/// macOS's private system fonts (".SF NS", ".Apple Color Emoji UI"): their
+/// names start with a dot, they are not meant for documents and can change
+/// with every system update, so the list leaves them out.
+fn is_hidden_family(family: &str) -> bool {
+    family.starts_with('.')
+}
+
 fn describe(db: &Database) -> Vec<(LocalFace, ID)> {
     let mut out: Vec<(LocalFace, ID)> = Vec::new();
     for info in db.faces() {
@@ -138,6 +145,9 @@ fn describe(db: &Database) -> Vec<(LocalFace, ID)> {
         else {
             continue;
         };
+        if is_hidden_family(family) {
+            continue;
+        }
         let italic = info.style != Style::Normal;
         let mut parts: Vec<&str> = Vec::new();
         let w = weight_label(info.weight.0);
@@ -426,6 +436,13 @@ pub(crate) mod tests {
         override_local_faces(Some(vec![f.clone()]));
         assert_eq!(find_local_face("fake"), Some(f));
         override_local_faces(None);
+    }
+
+    #[test]
+    fn dot_families_are_hidden() {
+        assert!(is_hidden_family(".SF NS"));
+        assert!(is_hidden_family(".Apple Color Emoji UI"));
+        assert!(!is_hidden_family("Helvetica"));
     }
 
     /// A font found in a folder is listed, drawn and measured by its name
