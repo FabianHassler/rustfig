@@ -28,7 +28,7 @@ Export from the panel runs on a background thread, so the window stays responsiv
 
 ## Notes
 
-- Text uses fig2dev's font metrics; special LaTeX text (the "special" flag) is typeset by TeX in the TeX languages and shown as written on the canvas.
+- Text uses fig2dev's font metrics; LaTeX text (the TeX flag) is typeset by TeX in the TeX languages and shown as written on the canvas.
 - Pictures in the figure are embedded, linked or converted as the format allows; EPS pictures on the canvas and in bitmaps need ghostscript (optional).
 - The same exports are available from the command line: `rustfig-cli convert in.fig out.pdf`, `rustfig-cli formats`, or as `fig2dev` ([Automation](automation.md)).
 

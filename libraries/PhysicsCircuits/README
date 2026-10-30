@@ -14,8 +14,8 @@ grounds pointing down); turn it with xfig's Rotate modes.
 All two-terminal parts have their pins exactly 1 inch apart on the 1/4-inch
 grid (horizontal: (1/4 in, 3/4 in) and (1 1/4 in, 3/4 in)), so a circuit
 joins with grid snapping on. Grounds have one pin, on top;
-transformers four pins on the grid. Labels in the examples are LaTeX
-special text ($C_c$, $E_J$).
+transformers four pins on the grid. Labels in the examples are LaTeX text
+with the TeX flag ($C_c$, $E_J$).
 
 The files are written by `cargo xtask libraries` (xtask/src/libraries/circuits.rs);
 change the generator, not the files.

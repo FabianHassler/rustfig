@@ -990,7 +990,7 @@ enum Half {
     /// The whole figure.
     Whole,
     /// The graphics of a combined LaTeX export (fig2dev's `pstex` or
-    /// `pdftex`: no special texts); only the options it knows reach it.
+    /// `pdftex`: no texts with the TeX flag); only the options it knows reach it.
     Graphics,
     /// The LaTeX part (`pstex_t`, `pdftex_t`) next to graphics in the
     /// given language, whose own options stay with the graphics.

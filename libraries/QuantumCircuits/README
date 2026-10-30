@@ -8,7 +8,7 @@ line, and four complete circuits (example_*.fig: Bell state, GHZ, teleportation,
 quantum Fourier transform).
 
 Qubit wires are 1 inch long and end on the 1/4-inch grid; wires of a circuit are
-1/2 inch apart, so parts stack. Labels are LaTeX special text ($H$,
+1/2 inch apart, so parts stack. Labels are LaTeX text with the TeX flag ($H$,
 $|0\rangle$): edit them with the Text mode.
 
 The files are written by `cargo xtask libraries` (xtask/src/libraries.rs);

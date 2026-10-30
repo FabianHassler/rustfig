@@ -9,7 +9,7 @@ Single
 -2
 1200 2
 # Quantum circuit: multi-qubit gate box spanning 3 wires
-# Tall box over three wires; label in the middle (LaTeX special text). Keywords: quantum circuit qubit gate qcircuit quantikz
+# Tall box over three wires; label in the middle (LaTeX text with the TeX flag). Keywords: quantum circuit qubit gate qcircuit quantikz
 6 300 450 1500 1950
 2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
 	300 600 1500 600

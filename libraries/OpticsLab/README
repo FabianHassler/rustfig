@@ -14,7 +14,7 @@ Mach-Zehnder interferometer, fibre-coupled laser to detector).
 Every part is one compound with the optical axis through its centre, on the
 1/4-inch grid (axis at y = 3/4 inch in the figure); parts in the beam have
 their beam ports 1 inch apart on the grid, so they line up at the same height.
-Beams are xfig's red. Labels are LaTeX special text ($\lambda/2$).
+Beams are xfig's red. Labels are LaTeX text with the TeX flag ($\lambda/2$).
 
 The files are written by `cargo xtask libraries` (xtask/src/libraries/optics.rs);
 change the generator, not the files.

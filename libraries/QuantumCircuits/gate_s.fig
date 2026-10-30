@@ -9,7 +9,7 @@ Single
 -2
 1200 2
 # Quantum circuit: phase gate S, single-qubit gate on a wire
-# Square box centred on the wire. The label is LaTeX special text; edit it with the Text mode. Keywords: quantum circuit qubit gate qcircuit quantikz
+# Square box centred on the wire. The label is LaTeX text with the TeX flag; edit it with the Text mode. Keywords: quantum circuit qubit gate qcircuit quantikz
 6 300 420 1500 780
 2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
 	300 600 1500 600

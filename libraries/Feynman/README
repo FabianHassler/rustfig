@@ -7,7 +7,7 @@ modes), half-circle arcs for loops, vertex dot, hatched and grey blobs,
 momentum arrows, and four complete example diagrams (example_*.fig).
 
 Every line part ends on the 1/4-inch grid: with grid snapping on, join parts
-end to end. Labels are LaTeX special text: type $e^-$ with the Text mode.
+end to end. Labels are LaTeX text with the TeX flag: type $e^-$ with the Text mode.
 
 The files are written by `cargo xtask libraries` (xtask/src/libraries.rs);
 change the generator, not the files.

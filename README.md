@@ -16,7 +16,7 @@ XQuartz or WSL.
   xfig and fig2dev read unchanged.
 - **It runs everywhere.** Native on macOS, Windows and Linux, no X11, X
   server or XQuartz needed; a web build for the browser is in testing.
-- **LaTeX on the canvas.** Special text is typeset by your TeX installation
+- **LaTeX on the canvas.** Text with the TeX flag is typeset by your TeX installation
   and shown as it will print, formulas included; plots of functions and
   data with LaTeX labels.
 - **Every fig2dev export, built in.** PDF, SVG, EPS, PNG, pstex/pdftex,

@@ -1949,11 +1949,11 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             }
         }
         Attr::TextFlags => {
-            // xfig's Text Flags panel: Hidden, Rigid and TeX (special).
+            // xfig's Text Flags panel: Hidden, Rigid and TeX (the special flag).
             for (field, name, on) in [
                 ("hidden_text", "Hidden", ind.hidden_text),
                 ("rigid_text", "Rigid", ind.rigid_text),
-                ("special_text", "TeX (special)", ind.special_text),
+                ("special_text", "TeX", ind.special_text),
             ] {
                 let mut v = on;
                 if ui.checkbox(&mut v, name).changed() {

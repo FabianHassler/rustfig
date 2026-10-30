@@ -275,7 +275,7 @@ fn momentum(a: Point, b: Point) -> Object {
     )
 }
 
-/// A LaTeX label (special text) for the examples.
+/// A LaTeX label (text with the TeX flag) for the examples.
 fn label(x: f64, y: f64, tex: &str) -> Object {
     Object::new(ObjectKind::Text(Text {
         justify: Justify::Center,
@@ -720,7 +720,7 @@ fn qc_parts(out: &mut Vec<Part>) {
         out.push(qc_part(
             name,
             &format!("{what}, single-qubit gate on a wire"),
-            "Square box centred on the wire. The label is LaTeX special text; edit it with the Text mode.",
+            "Square box centred on the wire. The label is LaTeX text with the TeX flag; edit it with the Text mode.",
             with_wire(gate_box(900.0, Y0, GATE, tex), &[Y0]),
             w1.clone(),
         ));
@@ -728,7 +728,7 @@ fn qc_parts(out: &mut Vec<Part>) {
     out.push(qc_part(
         "gate_rx",
         "rotation gate R_x(theta), single-qubit gate on a wire",
-        "Wide box centred on the wire; LaTeX special text, change x and the angle as needed.",
+        "Wide box centred on the wire; LaTeX text with the TeX flag, change x and the angle as needed.",
         with_wire(gate_box(900.0, Y0, 330.0, "$R_x(\\theta)$"), &[Y0]),
         w1.clone(),
     ));
@@ -792,7 +792,7 @@ fn qc_parts(out: &mut Vec<Part>) {
     out.push(qc_part(
         "gate_multi2",
         "multi-qubit gate box spanning 2 wires",
-        "Tall box over two wires; label in the middle (LaTeX special text).",
+        "Tall box over two wires; label in the middle (LaTeX text with the TeX flag).",
         with_wire(v, &[Y0, Y1]),
         w2.clone(),
     ));
@@ -801,7 +801,7 @@ fn qc_parts(out: &mut Vec<Part>) {
     out.push(qc_part(
         "gate_multi3",
         "multi-qubit gate box spanning 3 wires",
-        "Tall box over three wires; label in the middle (LaTeX special text).",
+        "Tall box over three wires; label in the middle (LaTeX text with the TeX flag).",
         with_wire(v, &[Y0, Y1, Y2]),
         w3.clone(),
     ));
@@ -817,7 +817,7 @@ fn qc_parts(out: &mut Vec<Part>) {
         out.push(qc_part(
             name,
             what,
-            "Label left of the wire (LaTeX special text); the wire starts on the grid.",
+            "Label left of the wire (LaTeX text with the TeX flag); the wire starts on the grid.",
             vec![label(360.0, Y0 + 60.0, tex), qwire(600.0, 1500.0, Y0)],
             vec![p(600.0, Y0), p(1500.0, Y0)],
         ));
@@ -825,7 +825,7 @@ fn qc_parts(out: &mut Vec<Part>) {
     out.push(qc_part(
         "ket_out",
         "output ket |psi'> at the right end of a wire",
-        "Label right of the wire (LaTeX special text).",
+        "Label right of the wire (LaTeX text with the TeX flag).",
         vec![label(1440.0, Y0 + 60.0, "$|\\psi'\\rangle$"), qwire(300.0, 1200.0, Y0)],
         vec![p(300.0, Y0), p(1200.0, Y0)],
     ));

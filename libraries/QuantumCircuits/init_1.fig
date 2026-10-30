@@ -9,7 +9,7 @@ Single
 -2
 1200 2
 # Quantum circuit: initial state |1> at the left end of a wire
-# Label left of the wire (LaTeX special text); the wire starts on the grid. Keywords: quantum circuit qubit gate qcircuit quantikz
+# Label left of the wire (LaTeX text with the TeX flag); the wire starts on the grid. Keywords: quantum circuit qubit gate qcircuit quantikz
 6 -300 525 1500 694
 2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 0 2
 	600 600 1500 600

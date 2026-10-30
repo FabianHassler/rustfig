@@ -299,7 +299,7 @@ pub fn landing() -> String {
 <ul class="features">
 <li><strong>It is xfig.</strong> The same modes, mouse buttons, panels and keys, and the same <code>.fig</code> files: RustFig opens every Fig version and saves Fig 3.2 that xfig and fig2dev read unchanged.</li>
 <li><strong>It runs everywhere.</strong> Native on Windows, macOS and Linux, no X11 needed, and in the browser.</li>
-<li><strong>LaTeX on the canvas.</strong> Special text is typeset by your TeX installation and shown as it will print, formulas included; plots of functions and data with LaTeX labels.</li>
+<li><strong>LaTeX on the canvas.</strong> Text with the TeX flag is typeset by your TeX installation and shown as it will print, formulas included; plots of functions and data with LaTeX labels.</li>
 <li><strong>Every fig2dev export, built in.</strong> PDF, SVG, EPS, PNG, pstex/pdftex, TikZ, PSTricks, pict2e and all of fig2dev's other languages, through fig2dev's drivers ported to Rust. The <code>fig2dev</code> command line comes along.</li>
 <li><strong>Modern where it helps.</strong> Native printing, undo, command search, F1 help everywhere, the system's keys next to xfig's, figure libraries (Feynman diagrams, quantum circuits, optics, circuits), and automation through a JSON control channel and MCP.</li>
 </ul>

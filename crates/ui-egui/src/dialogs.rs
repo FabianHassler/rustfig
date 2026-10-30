@@ -1444,7 +1444,7 @@ fn apply_global(app: &mut App, was: &GlobalDraft, now: &GlobalDraft) {
 }
 
 /// The colours kept for every drawing (E1): offered in every colour menu.
-/// RustFig's LaTeX settings (F8): typeset special texts on the canvas, the
+/// RustFig's LaTeX settings (F8): typeset texts with the TeX flag on the canvas, the
 /// TeX program and the preamble added to every typeset text.
 fn latex_settings(app: &mut App, ui: &mut egui::Ui) {
     use rustfig_engine::latex_preview::BASE_PREAMBLE;
@@ -1453,7 +1453,7 @@ fn latex_settings(app: &mut App, ui: &mut egui::Ui) {
     let mut on = settings.enabled;
     if ui
         .checkbox(&mut on, "Typeset LaTeX text on the canvas")
-        .on_hover_text("Special texts are typeset by TeX, as they will appear in the document")
+        .on_hover_text("Texts with the TeX flag are typeset by TeX, as they will appear in the document")
         .changed()
     {
         app.run("view.toggle_latex_preview", serde_json::json!({}));
@@ -1484,7 +1484,7 @@ fn latex_settings(app: &mut App, ui: &mut egui::Ui) {
     ui.label(
         egui::RichText::new(match &found {
             Some(p) => format!("Using {}", p.display()),
-            None => "No TeX program found: special texts show their source".to_string(),
+            None => "No TeX program found: texts with the TeX flag show their source".to_string(),
         })
         .small(),
     );
