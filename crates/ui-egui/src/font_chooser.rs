@@ -238,28 +238,6 @@ pub(crate) fn sample_image(
     Some(egui::Image::new(&t.tex).fit_to_exact_size(t.size))
 }
 
-/// How an installed font shows its own name: `None` when it has the
-/// letters of the name, otherwise a sample in a script it has (Arabic for
-/// Waseem), or `Some(None)` for none. Cached: the list asks every frame.
-fn uncovered(ctx: &egui::Context, name: &str) -> Option<Option<&'static str>> {
-    type Covers = Arc<Mutex<HashMap<String, Option<Option<&'static str>>>>>;
-    let cache: Covers = ctx.data_mut(|d| {
-        d.get_temp_mut_or_insert_with(egui::Id::new("font_chooser_covers"), Covers::default)
-            .clone()
-    });
-    let Ok(mut map) = cache.lock() else {
-        return None;
-    };
-    *map.entry(name.to_string()).or_insert_with(|| {
-        // A font that is not installed is drawn as its Fig font.
-        if !rustfig_text::local_font_available(name) || rustfig_text::local_font_covers(name, name) {
-            None
-        } else {
-            Some(rustfig_text::local_font_sample(name))
-        }
-    })
-}
-
 /// Draw `text` in the font at `px` (points), tinted `ink`. Falls back to the
 /// UI font when it can't be rendered.
 fn paint_text(ui: &mut egui::Ui, font: i32, ps: bool, local: Option<&str>, text: &str, px: f32, ink: Color32) {
@@ -373,13 +351,7 @@ pub fn show(
             Shown::Fig(f, ps) => paint_text(ui, *f, *ps, None, SAMPLE, sample_px, ink),
             Shown::Local(n) => {
                 let fig = engine_font(n);
-                // A font without the Latin letters shows what it has.
-                let text = if rustfig_text::local_font_covers(n, SAMPLE) {
-                    SAMPLE
-                } else {
-                    rustfig_text::local_font_sample(n).unwrap_or(SAMPLE)
-                };
-                paint_text(ui, fig, true, Some(n), text, sample_px, ink)
+                paint_text(ui, fig, true, Some(n), SAMPLE, sample_px, ink)
             }
         });
     ui.separator();
@@ -422,21 +394,7 @@ pub fn show(
             let inner = Rect::from_min_max(rect.min + vec2(18.0, 1.0), rect.max - vec2(2.0, 1.0));
             let mut child = ui.new_child(egui::UiBuilder::new().max_rect(inner));
             child.horizontal_centered(|ui| {
-                match loc.and_then(|n| uncovered(ui.ctx(), n)) {
-                    // The name in the UI font, then what the font can draw.
-                    Some(sample) => {
-                        // Painted, not a label: the row already carries the name.
-                        let g = ui
-                            .painter()
-                            .layout_no_wrap(name.to_string(), egui::FontId::proportional(15.0), color);
-                        let (r, _) = ui.allocate_exact_size(g.size(), Sense::hover());
-                        ui.painter().galley(r.min, g, color);
-                        if let Some(s) = sample {
-                            paint_text(ui, fig, ps, loc, s, 15.0, color);
-                        }
-                    }
-                    None => paint_text(ui, fig, ps, loc, name, 15.0, color),
-                }
+                paint_text(ui, fig, ps, loc, name, 15.0, color);
                 if substitute {
                     ui.label(RichText::new("(substitute)").small().weak());
                 }

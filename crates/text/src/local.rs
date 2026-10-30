@@ -134,6 +134,23 @@ fn is_hidden_family(family: &str) -> bool {
     family.starts_with('.')
 }
 
+/// Whether the face has the Latin letters. RustFig lays text out left to
+/// right without shaping (F6), so a font for Arabic, Hebrew or an Indic
+/// script would come out wrong; the list offers only fonts with Latin
+/// letters.
+fn has_latin(db: &Database, id: ID) -> bool {
+    db.with_face_data(id, |data, index| {
+        let face = Face::parse(data, index).ok()?;
+        Some(
+            ('a'..='z')
+                .chain('A'..='Z')
+                .all(|c| face.glyph_index(c).is_some_and(|g| g.0 != 0)),
+        )
+    })
+    .flatten()
+    .unwrap_or(false)
+}
+
 fn describe(db: &Database) -> Vec<(LocalFace, ID)> {
     let mut out: Vec<(LocalFace, ID)> = Vec::new();
     for info in db.faces() {
@@ -145,7 +162,7 @@ fn describe(db: &Database) -> Vec<(LocalFace, ID)> {
         else {
             continue;
         };
-        if is_hidden_family(family) {
+        if is_hidden_family(family) || !has_latin(db, info.id) {
             continue;
         }
         let italic = info.style != Style::Normal;
@@ -379,54 +396,6 @@ fn run(name: &str, size_pt: f64, text: &str, outlines: bool) -> Option<Shaped> {
     })?
 }
 
-/// Whether the installed face `name` has a glyph for every character of
-/// `text` (spaces aside); `false` when it is not installed. A font for
-/// another script (Arabic Waseem, a symbol font) lacks the Latin letters.
-pub fn local_font_covers(name: &str, text: &str) -> bool {
-    let mut g = lock();
-    let key = name.trim().to_lowercase();
-    let b = built(&mut g);
-    let Some(id) = b.faces.iter().find(|(f, _)| f.name.to_lowercase() == key).map(|f| f.1) else {
-        return false;
-    };
-    b.db.with_face_data(id, |data, index| {
-        let face = Face::parse(data, index).ok()?;
-        Some(
-            text.chars()
-                .filter(|c| !c.is_whitespace())
-                .all(|c| face.glyph_index(c).is_some_and(|g| g.0 != 0)),
-        )
-    })
-    .flatten()
-    .unwrap_or(false)
-}
-
-/// Short samples of scripts, for showing a font that has no Latin letters.
-/// The layout runs left to right, so Arabic and Hebrew are in visual order.
-const SCRIPT_SAMPLES: &[&str] = &[
-    "\u{62f}\u{62c}\u{628}\u{627}",
-    "\u{5d3}\u{5d2}\u{5d1}\u{5d0}",
-    "\u{391}\u{3b2}\u{3b3}\u{3b4}",
-    "\u{410}\u{431}\u{432}\u{433}",
-    "\u{915}\u{916}\u{917}\u{918}",
-    "\u{985}\u{986}\u{987}\u{988}",
-    "\u{b85}\u{b86}\u{b87}\u{b88}",
-    "\u{e01}\u{e02}\u{e04}\u{e06}",
-    "\u{10d0}\u{10d1}\u{10d2}\u{10d3}",
-    "\u{531}\u{562}\u{563}\u{564}",
-    "\u{6c38}\u{5b57}\u{516b}\u{6cd5}",
-    "\u{3042}\u{3044}\u{3046}\u{3048}",
-    "\u{ac00}\u{b098}\u{b2e4}\u{b77c}",
-    "\u{2605}\u{260e}\u{2708}\u{2660}",
-    "0123456789",
-];
-
-/// A few characters the installed face `name` can draw, from the first
-/// script sample it covers; `None` when it covers none of them.
-pub fn local_font_sample(name: &str) -> Option<&'static str> {
-    SCRIPT_SAMPLES.iter().copied().find(|s| local_font_covers(name, s))
-}
-
 /// Glyph outlines of `text` in the installed face `name`; `None` when it
 /// is not installed (the caller falls back to the Fig font).
 pub fn shape_local(name: &str, size_pt: f64, text: &str) -> Option<Shaped> {
@@ -516,11 +485,6 @@ pub(crate) mod tests {
         assert!((m.width - s.metrics.width).abs() < 1e-9 && m.width > 0.0);
         assert!(s.lines[0].len() > 5);
         assert!(shape_local("Not Installed", 12.0, "x").is_none());
-        // Hack has the Latin letters but no Arabic; an unknown font nothing.
-        assert!(local_font_covers("Hack", "Hack abc"));
-        assert!(!local_font_covers("Hack", "\u{627}\u{628}"));
-        assert!(local_font_sample("Hack").is_some());
-        assert!(!local_font_covers("Not Installed", "x"));
         // Back to the built-in fonts only.
         crate::set_builtin_fonts(true);
         assert!(!local_font_available("Hack"));
