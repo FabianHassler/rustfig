@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.9.0.schema.json
 PackageIdentifier: FabianHassler.RustFig
-PackageVersion: 0.9.0-beta.6
+PackageVersion: 0.9.0-beta.7
 PackageLocale: en-US
 Publisher: Fabian Hassler
 PublisherUrl: https://github.com/FabianHassler
@@ -22,7 +22,7 @@ Tags:
   - diagram
   - latex
   - tikz
-ReleaseNotesUrl: https://github.com/FabianHassler/rustfig/releases/tag/v0.9.0-beta.6
+ReleaseNotesUrl: https://github.com/FabianHassler/rustfig/releases/tag/v0.9.0-beta.7
 Documentations:
   - DocumentLabel: Manual
     DocumentUrl: https://fabianhassler.github.io/rustfig/manual/index.html
