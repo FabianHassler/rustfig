@@ -11,6 +11,7 @@ RustFig's own formats are xfig's **Fig** files (`.fig`, Fig 3.2 on writing) and 
   - **Images** become picture objects; the pixels are written as PNG files `NAME-pPAGE-N.png` next to the PDF (and kept in memory), so the figure saved there shows them.
   - **Dropped or approximated**: clipping to a convex shape cuts the lines it clips; clipping to a concave shape, transparency, blend modes and soft masks are ignored, with one message each in the message panel (and the `warnings` of the command). Rotated images take their bounding box. A PDF with more than 200,000 shapes keeps the first 200,000. Encrypted or damaged PDFs give an error and leave the figure as it was.
   - A PDF exported with **Embed the figure** still opens as the figure inside it; `vectors: true` imports the page instead. PDFs from other programs come out as drawn: expect many small objects.
+  - A PDF already placed as a picture can be turned into objects in place with **Import as objects** in the picture's Edit panel (plan G6, `picture.import_objects`; see [Pictures](draw-text-pictures.md)).
   - In the browser the page is always page 1 and the images stay in memory.
 Other SVG or PNG files give "no embedded figure".
 - **Save** and **Save As** write the file. When they replace an existing file, the old one is kept as `NAME.bak` (xfig's `write_bak`; switch it off with the `write_bak` preference or `-nowrite_bak`).

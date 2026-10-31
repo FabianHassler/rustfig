@@ -518,7 +518,7 @@ fn pdf_page(p: &Value) -> Result<usize, EngineError> {
 }
 
 /// A file name without folders and extension, for picture names.
-fn pdf_stem(name: &str) -> String {
+pub(super) fn pdf_stem(name: &str) -> String {
     let base = name.rsplit(['/', '\\']).next().unwrap_or(name);
     let stem = base.rsplit_once('.').map_or(base, |(s, _)| s);
     let clean: String = stem
@@ -542,7 +542,12 @@ fn pdf_stem(name: &str) -> String {
 /// A PDF page as a figure with its pictures: the PNG files go next to the
 /// PDF (`dir`, native builds) and into the in-memory picture store, so the
 /// figure shows them before the first save.
-fn load_pdf(bytes: &[u8], p: &Value, stem: &str, dir: Option<&Path>) -> Result<(Document, Vec<String>), EngineError> {
+pub(super) fn load_pdf(
+    bytes: &[u8],
+    p: &Value,
+    stem: &str,
+    dir: Option<&Path>,
+) -> Result<(Document, Vec<String>), EngineError> {
     let page = pdf_page(p)?;
     let imp = import::pdf::import(bytes, page, stem).map_err(EngineError::format)?;
     let mut doc = imp.doc;

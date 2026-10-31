@@ -68,6 +68,24 @@ pub fn is_pdf(bytes: &[u8]) -> bool {
         .any(|w| w.iter().copied().eq(b"%PDF-".iter()))
 }
 
+/// The size of page `page` (1-based) in Fig units: what a page maps to when its
+/// import is placed (G6).
+pub fn page_size(bytes: &[u8], page: usize) -> Result<(f64, f64), String> {
+    crate::guard::catch(|| {
+        let pdf = open(bytes)?;
+        let pages = pdf.pages();
+        let p = pages
+            .get(page.max(1) - 1)
+            .ok_or_else(|| "the PDF has no such page".to_string())?;
+        let (w, h) = p.render_dimensions();
+        if !(w.is_finite() && h.is_finite() && w >= 1.0 && h >= 1.0 && w <= 200_000.0 && h <= 200_000.0) {
+            return Err("the page size is not usable".to_string());
+        }
+        Ok((f64::from(w) * K, f64::from(h) * K))
+    })
+    .map_err(|e| format!("the PDF cannot be read ({e})"))?
+}
+
 /// The number of pages of a PDF.
 pub fn page_count(bytes: &[u8]) -> Result<usize, String> {
     crate::guard::catch(|| {
