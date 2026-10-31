@@ -153,6 +153,9 @@ pub struct Engine {
     pub prefs_dirty: bool,
     /// WYSIWYG LaTeX text (F8): TeX typesets the special texts for the canvas.
     pub latex: latex_preview::LatexPreview,
+    /// xfig's `-scale_factor`: open, merge and `-update` scale each file
+    /// by this as they read it (1: unchanged).
+    pub read_scale: f64,
     /// Edit > Copy as Picture waits for its objects (xfig has no
     /// selection): left an object, middle a region, right the whole figure.
     pub(crate) copy_pick: bool,
@@ -218,6 +221,7 @@ impl Engine {
             prefs: prefs::Prefs::default(),
             prefs_dirty: false,
             latex: latex_preview::LatexPreview::new(),
+            read_scale: 1.0,
             copy_pick: false,
             gray_hidden_depths: true,
             show_page_border: true,

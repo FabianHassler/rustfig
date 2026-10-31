@@ -263,15 +263,34 @@ pub fn load_and_apply(app: &mut App) {
     for m in messages {
         app.error(m);
     }
+    // A settings file that does not exist yet (not the test store).
+    #[cfg(not(target_arch = "wasm32"))]
+    let first_start = prefs.is_none() && matches!(&app.settings.store, Store::File(p) if !p.exists());
+    #[cfg(target_arch = "wasm32")]
+    let first_start = false;
     if let Some(p) = prefs {
         app.engine.prefs = p;
     }
+    // First start: take xfig's recent files from `~/.xfigrc` (S3).
+    #[cfg(not(target_arch = "wasm32"))]
+    if first_start {
+        if let Some(text) = std::env::var_os("HOME")
+            .and_then(|h| std::fs::read_to_string(std::path::Path::new(&h).join(".xfigrc")).ok())
+        {
+            let n = app.engine.prefs.import_xfigrc(&text);
+            if n > 0 {
+                app.info(format!("Took {n} recent files from xfig's ~/.xfigrc"));
+            }
+        }
+    }
+    let imported = first_start && !app.engine.prefs.rustfig.recent_files.is_empty();
     let prefs = app.engine.prefs.clone();
     for w in prefs.apply(&mut app.engine) {
         app.error(format!("settings: {w}"));
     }
     apply_ui(app);
-    app.engine.prefs_dirty = false;
+    // Saved once, so the import happens on the first start only.
+    app.engine.prefs_dirty = imported;
     crate::help_pages::check_version(app);
 }
 

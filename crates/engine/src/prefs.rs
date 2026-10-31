@@ -8,8 +8,9 @@
 //! older RustFig. The engine applies the drawing-related resources; the UI
 //! reads its own (panels, balloons, export panel).
 //
-// Ported from xfig src/main.c (`application_resources`, `options`) and
-// doc/xfig.man.in (the resource table) (xfig licence, see LICENSE-xfig).
+// Ported from xfig src/main.c (`application_resources`, `options`),
+// src/f_util.c (`read_xfigrc`) and doc/xfig.man.in (the resource table)
+// (xfig licence, see LICENSE-xfig).
 
 use crate::{Engine, SnapMode};
 use rustfig_model::{Justify, Orientation, PaperSize, Units};
@@ -160,7 +161,7 @@ pub const RESOURCES: &[Resource] = &[
     r("pwidth", Float, "11", "-pwidth", Planned("B4")),
     r("rigidtext", Bool, "false", "-rigidtext", Applied),
     r("rulerthick", Int, "24", "-rulerthick", Planned("E9")),
-    r("scale_factor", Float, "1.0", "-scale_factor", Planned("D11")),
+    r("scale_factor", Float, "1.0", "-scale_factor", Applied),
     r("showallbuttons", Bool, "false", "-showallbuttons", Planned("E9")),
     r("showaxislines", Bool, "true", "-showaxislines, -dontshowaxislines", Applied),
     r("showballoons", Bool, "true", "-showballoons, -dontshowballoons", Applied),
@@ -377,6 +378,47 @@ impl Prefs {
         r.truncate(max);
     }
 
+    /// Take the recent files and `max_recent_files` of xfig's `~/.xfigrc`
+    /// (`read_xfigrc`: `word: operand` lines, the word ending at the first
+    /// colon, blank or tab). Returns how many files were taken.
+    pub fn import_xfigrc(&mut self, text: &str) -> usize {
+        let mut files = Vec::new();
+        let mut max = None;
+        for line in text.lines() {
+            let line = line.trim_start_matches([' ', '\t', ':']);
+            let Some(end) = line.find([':', ' ', '\t']) else {
+                continue;
+            };
+            let (word, rest) = line.split_at(end);
+            let rest = rest.strip_prefix(':').unwrap_or(rest);
+            let opnd = rest.trim_start_matches([' ', '\t']).trim_end_matches('\r');
+            if opnd.is_empty() {
+                continue;
+            }
+            if word.eq_ignore_ascii_case("max_recent_files") {
+                // C's atoi: the leading digits, 0 without any.
+                let digits: String = opnd.chars().take_while(char::is_ascii_digit).collect();
+                max = Some(digits.parse::<usize>().unwrap_or(0).min(MAX_RECENT));
+            } else if word.eq_ignore_ascii_case("file") {
+                files.push(opnd.to_string());
+            }
+        }
+        if let Some(m) = max {
+            self.xfig
+                .insert("max_recent_files".into(), toml::Value::Integer(m as i64));
+        }
+        let max = self.recent_max();
+        files.truncate(max);
+        let n = files.len();
+        let r = &mut self.rustfig.recent_files;
+        for f in files.into_iter().rev() {
+            r.retain(|p| *p != f);
+            r.insert(0, f);
+        }
+        r.truncate(max);
+        n
+    }
+
     /// xfig's "start" resources from the current attributes (Edit ›
     /// Global settings › Use current attributes as defaults).
     pub fn take_attributes(&mut self, e: &Engine) {
@@ -445,6 +487,12 @@ impl Prefs {
     pub fn apply(&self, e: &mut Engine) -> Vec<String> {
         let mut warn = Vec::new();
         self.apply_latex(e);
+        // `-scale_factor`: files are scaled as they are read (xfig's main.c:
+        // a value that is not positive means 1).
+        e.read_scale = self
+            .float("scale_factor")
+            .filter(|f| *f > 0.0 && *f <= 1000.0)
+            .unwrap_or(1.0);
         // The drawing's settings (for the empty start drawing and, as
         // file.new keeps them, every new one).
         let mut s = e.doc().settings.clone();
@@ -724,6 +772,20 @@ x = 1
         assert_eq!(q.float("startfontsize"), Some(18.0));
         assert_eq!(q.int("startgridmode"), Some(2));
         assert_eq!(q.str("startpsFont").as_deref(), Some("Helvetica"));
+    }
+
+    #[test]
+    fn xfigrc_recent_files_are_imported() {
+        let mut p = Prefs::default();
+        let n = p.import_xfigrc(
+            "max_recent_files: 3\nfile: /a/one.fig\nFILE:\t/b/two words.fig\nbogus\nfile:\nfile: /c.fig\nfile: /d.fig\n",
+        );
+        assert_eq!(n, 3);
+        assert_eq!(p.recent_max(), 3);
+        assert_eq!(p.rustfig.recent_files, ["/a/one.fig", "/b/two words.fig", "/c.fig"]);
+        // A second import keeps the order and drops duplicates.
+        p.import_xfigrc("file: /c.fig\n");
+        assert_eq!(p.rustfig.recent_files, ["/c.fig", "/a/one.fig", "/b/two words.fig"]);
     }
 
     #[test]

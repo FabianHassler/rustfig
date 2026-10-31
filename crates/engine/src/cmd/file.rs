@@ -1,7 +1,8 @@
 //! File commands: new, open, merge, save, export.
 //
-// Ported from xfig src/u_print.c (the fig2dev options an export passes) and
-// src/f_picobj.c (relative picture names)
+// Ported from xfig src/u_print.c (the fig2dev options an export passes),
+// src/f_picobj.c (relative picture names) and src/u_scale.c
+// (`read_scale_compound`, xfig's `-scale_factor`)
 // (xfig licence, see LICENSE-xfig).
 
 use super::{always, has_objects, num_or, opt_bool, opt_num, opt_str, string, CmdResult, Command};
@@ -280,6 +281,7 @@ fn open(e: &mut Engine, p: &Value) -> CmdResult {
     } else {
         path
     };
+    read_scale(&mut doc, e.read_scale);
     let (dx, dy) = offset(p)?;
     if dx != 0.0 || dy != 0.0 {
         for o in &mut doc.objects {
@@ -535,7 +537,36 @@ pub(crate) fn mapped_objects(e: &mut Engine, other: Document) -> Vec<rustfig_mod
     objects
 }
 
-fn merge_doc(e: &mut Engine, other: Document, (dx, dy): (f64, f64)) -> CmdResult {
+/// xfig's `read_scale_compound` for `-scale_factor`: coordinates, radii,
+/// picture sizes and arrowheads scale about the origin; font sizes and line
+/// widths stay.
+fn read_scale(doc: &mut Document, k: f64) {
+    fn arrows(o: &mut rustfig_model::Object, k: f64) {
+        if let ObjectKind::Compound(c) = &mut o.kind {
+            for child in &mut c.objects {
+                arrows(child, k);
+            }
+        }
+        if let Some((f, b)) = o.arrows_mut() {
+            for a in [f, b].into_iter().flatten() {
+                a.width *= k;
+                a.height *= k;
+            }
+        }
+    }
+    if !k.is_finite() || k <= 0.0 || k == 1.0 {
+        return;
+    }
+    let t = rustfig_geom::Affine::scale(k, k);
+    for o in &mut doc.objects {
+        let o = Arc::make_mut(o);
+        o.transform(&t, false);
+        arrows(o, k);
+    }
+}
+
+fn merge_doc(e: &mut Engine, mut other: Document, (dx, dy): (f64, f64)) -> CmdResult {
+    read_scale(&mut other, e.read_scale);
     let mut objects = mapped_objects(e, other);
     for o in &mut objects {
         o.translate(dx, dy);

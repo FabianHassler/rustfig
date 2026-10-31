@@ -47,6 +47,11 @@ RustFig starts like xfig: `rustfig [options] [file]`, and every option of xfig's
 - Libraries: `-library_dir FOLDER` (your library folder or a list file naming several folders, default `~/xfiglib`; [Libraries](libraries.md)), `-icon_view` / `-list_view`, `-library_icon_size N` (40 to 120).
 - Files: `-write_bak` / `-nowrite_bak` (keep the old file as `NAME.bak` when saving; on by default).
 - `-update file.fig ...` rewrites old files in the current Fig format (the original stays as `file.fig.bak`) and quits without opening a window.
+- `-scale_factor 2` scales every file by 2 as it is read (opening, merging and `-update`): positions, sizes and arrowheads, not font sizes or line widths. With `-update` it rescales the files for good.
+
+### Coming from xfig
+
+On the first start RustFig takes the recent files of xfig's `~/.xfigrc` into its File menu (and xfig's `max_recent_files`). On Linux, `install.sh` also installs an `xfig` command that starts RustFig, when no xfig is installed; with Homebrew, `brew install rustfig --with-xfig` does the same (it cannot be installed next to Homebrew's `xfig`). Scripts that call `xfig file.fig` then open RustFig.
 - Options that only make sense on X11 (`-display`, `-visual`, `-iconic`, colours and fonts of the toolkit) are accepted and ignored; RustFig prints a note to the terminal. An unknown option stops the start with a message.
 - Resources in `~/.Xresources` or `~/.Xdefaults` (`Fig.startfontsize: 14`) are read too, and fill in settings your preferences file does not have.
 

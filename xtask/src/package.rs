@@ -159,6 +159,8 @@ fn install_script() -> String {
      cp -R \"$d/libraries\" \"$PREFIX/share/rustfig/libraries\"\n\
      # fig2dev under its own name only where no fig2dev is installed\n\
      command -v fig2dev >/dev/null 2>&1 || ln -sf rustfig \"$PREFIX/bin/fig2dev\"\n\
+     # and xfig's name (S3: `xfig file.fig` starts RustFig) where no xfig is\n\
+     command -v xfig >/dev/null 2>&1 || ln -sf rustfig \"$PREFIX/bin/xfig\"\n\
      install -Dm644 \"$d/rustfig.desktop\" \"$PREFIX/share/applications/rustfig.desktop\"\n\
      install -Dm644 \"$d/rustfig.xml\" \"$PREFIX/share/mime/packages/rustfig.xml\"\n\
      [ -f \"$d/rustfig.png\" ] && install -Dm644 \"$d/rustfig.png\" \"$PREFIX/share/icons/hicolor/256x256/apps/rustfig.png\"\n\

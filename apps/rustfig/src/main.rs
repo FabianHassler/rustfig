@@ -53,13 +53,21 @@ fn main() -> eframe::Result<()> {
     for n in &opts.notes {
         eprintln!("rustfig: {n}");
     }
+    // `-scale_factor`: files are scaled as they are read (xfig's main.c).
+    let read_scale = opts
+        .override_table()
+        .get("scale_factor")
+        .and_then(|v| v.as_float().or_else(|| v.as_integer().map(|i| i as f64)))
+        .filter(|f| f.is_finite() && *f > 0.0 && *f <= 1000.0)
+        .unwrap_or(1.0);
     if let Some(files) = &opts.update {
-        std::process::exit(update_files(files));
+        std::process::exit(update_files(files, read_scale));
     }
     let control = opts.control;
     let background = opts.background;
     let file = opts.file.clone();
     let mut engine = rustfig_engine::Engine::new();
+    engine.read_scale = read_scale;
     let mut startup_error = None;
     if let Some(f) = &file {
         if let Err(e) = engine.execute("file.open", &serde_json::json!({ "path": f })) {
@@ -161,7 +169,7 @@ fn parse_geometry(g: &str) -> (Option<[f32; 2]>, Option<[f32; 2]>) {
 /// `xfig -update FILE...`: read each file and write it back in the current
 /// Fig format, keeping the original as `FILE.bak`. Returns the exit status.
 #[cfg(not(target_arch = "wasm32"))]
-fn update_files(files: &[String]) -> i32 {
+fn update_files(files: &[String], read_scale: f64) -> i32 {
     if files.is_empty() {
         eprintln!("xfig: -update needs file names");
         return 2;
@@ -169,6 +177,7 @@ fn update_files(files: &[String]) -> i32 {
     let mut failed = 0;
     for f in files {
         let mut engine = rustfig_engine::Engine::new();
+        engine.read_scale = read_scale;
         let r = std::fs::copy(f, format!("{f}.bak"))
             .map_err(|e| format!("{f}.bak: {e}"))
             .and_then(|_| {
