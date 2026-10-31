@@ -14,7 +14,7 @@
 | 6 | ✅ closed 2026-10-22 (D5): measure modes (join/split D2, chop D3, tangent/normal D4) | Editing | Low | 0 |
 | 7 | ✅ 2026-10-22 (E1, E6; E9 theme and scale 2026-10-23): settings persistence (units, grid, recent files, export options per format) and the style manager with families | Settings | Done | 0 |
 | 8 | ~~The zoom box~~ (done 2026-10-22, E3; rulers landed with W6) | View | Medium | 4 |
-| 9 | ✅ 2026-10-24 (F3 dead keys and compose through IME, F2 LaTeX special text on screen and in exports, F8 WYSIWYG LaTeX, E5 character map, F5 spell check). Left: right-to-left and complex-script shaping (F6, not started) | Text | Low | 6 |
+| 9 | ✅ 2026-10-24 (F3 dead keys and compose through IME, F2 LaTeX special text on screen and in exports, F8 WYSIWYG LaTeX, E5 character map, F5 spell check). Right-to-left and complex-script shaping (F6) dropped 2026-10-31 (not needed); fonts without Latin letters are not offered | Text | Low | 6 |
 | 10 | ✅ closed (Export panel rows and fig2dev's drivers: GIF with transparent colour, JPEG quality, TIFF, PPM, PCX, XBM, XPM; W10-4, B9) | Export | Done | 0 |
 | 11 | ✅ 2026-10-22 (E4, E4b): colour editor for user colours, recent colours, pick from screen. Left: xfig's mix memory and lock | Attributes | Done | 0 |
 | 12 | ✅ 2026-10-22 (D7): Angle Geom indicator (unconstrained, latex line/arrow, mountain, manhattan, mount-hattan; `crates/engine/src/anglegeom.rs`); linked move done with D8 | Attributes | Done | 0 |
