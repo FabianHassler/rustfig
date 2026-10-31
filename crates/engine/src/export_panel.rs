@@ -175,7 +175,7 @@ pub fn rows(id: &str) -> Rows {
         transparent: id == "gif",
         quality: id == "jpeg",
         embed: rustfig_format::embed::can_embed(id),
-        border: ps || bitmap || matches!(id, "pict2e" | "tikz" | "map"),
+        border: ps || bitmap || matches!(id, "pict2e" | "tikz" | "asy" | "map"),
         border_pixels: bitmap,
         background: ps || bitmap || id == "tk",
         grid: ps || bitmap,
