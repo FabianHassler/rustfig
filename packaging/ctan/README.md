@@ -17,8 +17,10 @@ opened or merged as editable objects.
 ## Contents
 
 - `doc/rustfig-manual.pdf`: the user manual (built from `docs/manual/*.md`).
-- The complete source code: a Cargo workspace (`Cargo.toml`, `crates/`,
-  `apps/`, `xtask/`).
+- The source code: a Cargo workspace (`Cargo.toml`, `Cargo.lock`,
+  `crates/`, `apps/`, `xtask/`, `assets/`); the manual's pages in
+  `docs/manual/`. The full repository (plans, packaging, web build) is at
+  https://github.com/FabianHassler/rustfig.
 - `libraries/`: xfig's figure libraries (electronics, Feynman diagrams,
   flowcharts, UML and many more), opened from the Library mode.
 

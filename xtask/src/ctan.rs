@@ -1,9 +1,9 @@
 //! `cargo xtask ctan [REF]`: the CTAN upload `target/ctan/rustfig.zip` of
 //! git revision `REF` (default `HEAD`): one top directory `rustfig/` with
-//! the source as `git archive` gives it, without the files CTAN refuses
-//! (names starting with a dot: `.github/`, `.gitignore`, `.gitattributes`,
-//! `.cargo/`), the CTAN README (`packaging/ctan/README.md`; the
-//! repository's README becomes `README-repository.md`) and the manual as
+//! what a CTAN user needs and nothing else: the source that builds
+//! (`INCLUDED`, as `git archive` gives it; no dot files, which CTAN
+//! refuses, and none of the project's planning documents), CTAN's README
+//! (`packaging/ctan/README.md` as `README.md`) and the manual as
 //! `doc/rustfig-manual.pdf`, made from `docs/manual/*.md` in the order of
 //! `index.md` with pandoc and LuaLaTeX (both needed).
 
@@ -12,8 +12,27 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-/// Top-level entries CTAN refuses (dot files), left out of the archive.
-const LEFT_OUT: &[&str] = &[".github", ".gitignore", ".gitattributes", ".cargo"];
+/// What goes into the archive: the workspace (`xtask` is a member, so the
+/// locked build needs it), the assets, the figure libraries, the manual's
+/// pages (compiled into the help and the PDF's source) and the licences.
+const INCLUDED: &[&str] = &[
+    "Cargo.toml",
+    "Cargo.lock",
+    "apps",
+    "crates",
+    "xtask",
+    "assets",
+    "libraries",
+    "docs/manual",
+    "LICENSE-MIT",
+    "LICENSE-APACHE",
+    "LICENSE-xfig",
+    "NOTICE",
+    "ASSETS.md",
+];
+
+/// CTAN's README, from the repository.
+const README: &str = "packaging/ctan/README.md";
 
 /// The manual's fonts: Charter and Menlo, Apple Symbols for ⌘ ⇧ ⌥ and the
 /// arrows (macOS); `RUSTFIG_CTAN_FONTS="main,sans,mono,fallback"` overrides.
@@ -29,27 +48,20 @@ pub fn run(root: &Path, rev: &str) -> Result<(), String> {
     }
     fs::create_dir_all(&top).map_err(|e| format!("{}: {e}", top.display()))?;
 
-    // The source of `rev`, without the dot files.
+    // The source of `rev`: the included paths and CTAN's README.
     let tar = out.join("source.tar");
-    let mut archive = Command::new("git");
-    archive
+    sh(Command::new("git")
         .current_dir(root)
         .args(["archive", "--format=tar", "-o"])
         .arg(&tar)
         .arg(rev)
         .arg("--")
-        .arg(".");
-    for p in LEFT_OUT {
-        archive.arg(format!(":(exclude){p}"));
-    }
-    sh(&mut archive)?;
+        .args(INCLUDED)
+        .arg(README))?;
     sh(Command::new("tar").arg("-xf").arg(&tar).arg("-C").arg(&top))?;
     fs::remove_file(&tar).map_err(|e| format!("{}: {e}", tar.display()))?;
-
-    // CTAN's README on top.
-    let readme = top.join("README.md");
-    fs::rename(&readme, top.join("README-repository.md")).map_err(|e| format!("README.md: {e}"))?;
-    fs::copy(top.join("packaging/ctan/README.md"), &readme).map_err(|e| format!("packaging/ctan/README.md: {e}"))?;
+    fs::rename(top.join(README), top.join("README.md")).map_err(|e| format!("{README}: {e}"))?;
+    let _ = fs::remove_dir_all(top.join("packaging")); // emptied by the move
 
     manual_pdf(&top, &out, &version)?;
 
