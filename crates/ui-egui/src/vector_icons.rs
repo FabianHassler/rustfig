@@ -182,6 +182,7 @@ pub fn render_objects(objs: Vec<Object>, w: usize, h: usize, scale: f32) -> Opti
             transform: Affine::scale(k, k),
             min_line_px: 1.0,
             adjust_px: 0.0,
+            pattern_k: 1,
             pattern: rustfig_render::pattern::PatternFrame::screen(),
         },
     );

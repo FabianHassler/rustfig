@@ -181,6 +181,7 @@ fn rasterize_scene(scene: &Scene, t: Affine, w: usize, h: usize) -> egui::ColorI
             transform: t,
             min_line_px: 1.0,
             adjust_px: 0.0,
+            pattern_k: 1,
             pattern: rustfig_render::pattern::PatternFrame::screen(),
         },
     );
