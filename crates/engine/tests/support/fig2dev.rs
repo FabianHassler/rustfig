@@ -54,12 +54,25 @@ fn locate() -> Option<Fig2dev> {
     for d in ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/opt/local/bin"] {
         candidates.push(Path::new(d).join(exe));
     }
-    candidates.into_iter().filter(|p| p.is_file()).find_map(|path| {
-        let out = Command::new(&path).arg("-V").stdin(Stdio::null()).output().ok()?;
-        let text = String::from_utf8_lossy(&out.stdout);
-        let version = text.lines().next().unwrap_or_default().trim().to_string();
-        version.contains("fig2dev").then_some(Fig2dev { path, version })
-    })
+    // RustFig's own fig2dev (Homebrew's `rustfig --with-fig2dev` or
+    // `fig2dev-rs` link it as fig2dev) is not the reference.
+    let is_port = |p: &Path| {
+        std::fs::canonicalize(p).is_ok_and(|c| {
+            c.components()
+                .any(|s| matches!(s.as_os_str().to_str(), Some("rustfig" | "fig2dev-rs")))
+                || c.file_name()
+                    .is_some_and(|n| n.to_string_lossy().starts_with("rustfig"))
+        })
+    };
+    candidates
+        .into_iter()
+        .filter(|p| p.is_file() && !is_port(p))
+        .find_map(|path| {
+            let out = Command::new(&path).arg("-V").stdin(Stdio::null()).output().ok()?;
+            let text = String::from_utf8_lossy(&out.stdout);
+            let version = text.lines().next().unwrap_or_default().trim().to_string();
+            version.contains("fig2dev").then_some(Fig2dev { path, version })
+        })
 }
 
 /// Runs `fig2dev -L lang [args] in.fig out` on the Fig file `fig` and
