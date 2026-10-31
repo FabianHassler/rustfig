@@ -1,6 +1,8 @@
 //! Loading imported pictures (PNG, JPEG, GIF, BMP, PNM, TIFF; through
 //! fig2dev's `readpics.c` also XBM, XPM, PCX and compressed files).
 
+pub mod pdf;
+
 use rustfig_model::{Document, Object, ObjectKind, RasterImage};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

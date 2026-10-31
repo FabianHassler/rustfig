@@ -35,17 +35,27 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Open…",
             menu: "",
             shortcut: "",
-            params: "{\"path\": string, \"offset_x\"?: number, \"offset_y\"?: number}  — open a .fig or .rustfig file; the optional offset (Fig units) moves the figure, as xfig's Figure Offset. A name that does not exist yet opens an empty figure of that name (xfig's \"(new file)\"; result new_file: true); the first Save creates the file",
+            params: "{\"path\": string, \"offset_x\"?: number, \"offset_y\"?: number, \"page\"?: number, \"vectors\"?: bool}  — open a .fig or .rustfig file, or a PDF as editable Fig objects (G5: page = the 1-based page, default 1; a PDF with an embedded figure opens that figure unless vectors is true; result warnings say what was dropped); the optional offset (Fig units) moves the figure, as xfig's Figure Offset. A name that does not exist yet opens an empty figure of that name (xfig's \"(new file)\"; result new_file: true); the first Save creates the file",
             mutates: false,
             enabled: always,
             run: open,
+        },
+        Command {
+            id: "file.pdf_pages",
+            label: "Count PDF pages",
+            menu: "",
+            shortcut: "",
+            params: "{\"path\": string}  — the number of pages of a PDF file: {pages, embedded} (embedded: the PDF carries its own figure, which Open and Merge use instead of a page; the Open and Merge panels ask which page to import when it is more than one)",
+            mutates: false,
+            enabled: always,
+            run: pdf_pages,
         },
         Command {
             id: "file.open_data",
             label: "Open from data",
             menu: "",
             shortcut: "",
-            params: "{\"data\": string | \"base64\": string, \"name\"?: string}  — open a document from its text, or from its bytes in base64 (a Fig file, or a PDF, SVG or PNG export with the figure embedded); the browser's Open and drag-and-drop use this",
+            params: "{\"data\": string | \"base64\": string, \"name\"?: string, \"page\"?: number, \"vectors\"?: bool}  — open a document from its text, or from its bytes in base64 (a Fig file, a PDF, SVG or PNG export with the figure embedded, or any other PDF as Fig objects: page, vectors as in file.open); the browser's Open and drag-and-drop use this",
             mutates: false,
             enabled: always,
             run: open_data,
@@ -105,7 +115,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Merge…",
             menu: "",
             shortcut: "",
-            params: "{\"path\": string, \"offset_x\"?: number, \"offset_y\"?: number, \"unit\"?: fig|inches|cm}  — add the objects of another file as one compound (a file that is one compound is added as it is), moved by the optional Figure Offset (in Fig units, or in the `unit` given), as xfig's Merge",
+            params: "{\"path\": string, \"offset_x\"?: number, \"offset_y\"?: number, \"unit\"?: fig|inches|cm, \"page\"?: number}  — add the objects of another file (a PDF page too, G5) as one compound (a file that is one compound is added as it is), moved by the optional Figure Offset (in Fig units, or in the `unit` given), as xfig's Merge",
             mutates: true,
             enabled: always,
             run: merge,
@@ -135,7 +145,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Merge from data",
             menu: "",
             shortcut: "",
-            params: "{\"data\": string | \"base64\": string, \"offset_x\"?: number, \"offset_y\"?: number}  — Merge from the file's text or its bytes in base64 (a Fig file, or a PDF, SVG or PNG export with the figure embedded); the browser's Merge uses this. Pictures it names load from memory (`picture.store`)",
+            params: "{\"data\": string | \"base64\": string, \"offset_x\"?: number, \"offset_y\"?: number, \"page\"?: number, \"name\"?: string}  — Merge from the file's text or its bytes in base64 (a Fig file, a PDF, SVG or PNG export with the figure embedded, or a PDF page as Fig objects); the browser's Merge uses this. Pictures it names load from memory (`picture.store`)",
             mutates: true,
             enabled: always,
             run: merge_data,
@@ -267,6 +277,9 @@ fn open(e: &mut Engine, p: &Value) -> CmdResult {
         return Ok(json!({"objects": 0, "warnings": [], "new_file": true}));
     }
     let bytes = read_file(&path)?;
+    if wants_pdf_import(&bytes, p)? {
+        return open_pdf(e, &path, &bytes, p);
+    }
     let (mut doc, mut warnings) = parse(&bytes)?;
     // The figure embedded in a PDF, SVG or PNG export (E16) opens under a
     // .fig name of its own, so that Save never overwrites the export.
@@ -449,6 +462,16 @@ fn open_data(e: &mut Engine, p: &Value) -> CmdResult {
     if bytes.len() > rustfig_format::MAX_FILE_BYTES {
         return Err(EngineError::io("the file is too large"));
     }
+    if wants_pdf_import(&bytes, p)? {
+        let stem = pdf_stem(opt_str(p, "name")?.unwrap_or("figure.pdf"));
+        let (doc, warnings) = load_pdf(&bytes, p, &stem, None)?;
+        let count = doc.objects.len();
+        e.replace_document(doc, Some(format!("{stem}.fig")));
+        e.set_modified(true);
+        let r = e.doc_bounds();
+        e.view.fit(&r);
+        return Ok(json!({"objects": count, "warnings": warnings}));
+    }
     let (doc, warnings) = parse(&bytes)?;
     let count = doc.objects.len();
     e.replace_document(doc, opt_str(p, "name")?.map(str::to_string));
@@ -473,9 +496,117 @@ fn offset(p: &Value) -> Result<(f64, f64), EngineError> {
     ))
 }
 
+/// Whether `bytes` is a PDF to import as Fig objects (G5) and not one that
+/// carries its figure (E16): `vectors: true` forces the import.
+fn wants_pdf_import(bytes: &[u8], p: &Value) -> Result<bool, EngineError> {
+    if !import::pdf::is_pdf(bytes) {
+        return Ok(false);
+    }
+    if opt_bool(p, "vectors")?.unwrap_or(false) {
+        return Ok(true);
+    }
+    Ok(!matches!(rustfig_format::embed::extract_figure(bytes), Ok(Some(_))))
+}
+
+/// The 1-based page of a PDF the command asks for (default 1).
+fn pdf_page(p: &Value) -> Result<usize, EngineError> {
+    let n = num_or(p, "page", 1.0)?;
+    if n.fract() != 0.0 || !(1.0..=100_000.0).contains(&n) {
+        return Err(EngineError::bad_params("\"page\" must be a whole number from 1"));
+    }
+    Ok(n as usize)
+}
+
+/// A file name without folders and extension, for picture names.
+fn pdf_stem(name: &str) -> String {
+    let base = name.rsplit(['/', '\\']).next().unwrap_or(name);
+    let stem = base.rsplit_once('.').map_or(base, |(s, _)| s);
+    let clean: String = stem
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .take(60)
+        .collect();
+    if clean.is_empty() {
+        "figure".to_string()
+    } else {
+        clean
+    }
+}
+
+/// A PDF page as a figure with its pictures: the PNG files go next to the
+/// PDF (`dir`, native builds) and into the in-memory picture store, so the
+/// figure shows them before the first save.
+fn load_pdf(bytes: &[u8], p: &Value, stem: &str, dir: Option<&Path>) -> Result<(Document, Vec<String>), EngineError> {
+    let page = pdf_page(p)?;
+    let imp = import::pdf::import(bytes, page, stem).map_err(EngineError::format)?;
+    let mut doc = imp.doc;
+    let mut warnings = imp.warnings;
+    let mut not_written = 0;
+    for (name, png) in imp.images {
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(d) = dir {
+            if std::fs::write(d.join(&name), &png).is_err() {
+                not_written += 1;
+            }
+        }
+        if import::store_picture(&name, png).is_err() {
+            not_written += 1;
+        }
+    }
+    if not_written > 0 {
+        warnings.push(format!(
+            "{not_written} image files could not be written next to the PDF"
+        ));
+    }
+    warnings.extend(import::load_all_pictures(&mut doc, dir));
+    Ok((doc, warnings))
+}
+
+fn open_pdf(e: &mut Engine, path: &str, bytes: &[u8], p: &Value) -> CmdResult {
+    let base = Path::new(path).parent().map(Path::to_path_buf);
+    let stem = pdf_stem(path);
+    let (mut doc, warnings) = load_pdf(bytes, p, &stem, base.as_deref())?;
+    read_scale(&mut doc, e.read_scale);
+    let (dx, dy) = offset(p)?;
+    for o in &mut doc.objects {
+        Arc::make_mut(o).translate(dx, dy);
+    }
+    // Opens under a .fig name of its own: Save never overwrites the PDF.
+    let mut name = with_extension(path, "fig");
+    if Path::new(&name).exists() {
+        name = with_extension(path, "imported.fig");
+    }
+    let count = doc.objects.len();
+    e.replace_document(doc, Some(name.clone()));
+    e.set_modified(true);
+    let r = e.doc_bounds();
+    e.view.fit(&r);
+    e.set_status(format!("Imported {path} as {name} ({count} objects)"));
+    Ok(json!({"objects": count, "warnings": warnings, "imported": true, "path": name}))
+}
+
+fn pdf_pages(_: &mut Engine, p: &Value) -> CmdResult {
+    let path = string(p, "path")?;
+    let bytes = read_file(&path)?;
+    let pages = import::pdf::page_count(&bytes).map_err(EngineError::format)?;
+    Ok(json!({"pages": pages, "embedded": !wants_pdf_import(&bytes, &json!({}))?}))
+}
+
 /// A figure file read with its pictures (the Open/Merge panel's preview).
 pub(crate) fn read_figure(path: &str) -> Result<(Document, Vec<String>), EngineError> {
-    let (mut doc, warnings) = parse(&read_file(path)?)?;
+    let bytes = read_file(path)?;
+    // A PDF without a figure inside: its first page, imported.
+    if wants_pdf_import(&bytes, &json!({}))? {
+        let base = Path::new(path).parent().map(Path::to_path_buf);
+        return load_pdf(&bytes, &json!({}), &pdf_stem(path), base.as_deref());
+    }
+    let (mut doc, warnings) = parse(&bytes)?;
     let base = Path::new(path).parent().map(Path::to_path_buf);
     import::load_all_pictures(&mut doc, base.as_deref());
     Ok((doc, warnings))
@@ -589,8 +720,16 @@ fn merge_doc(e: &mut Engine, mut other: Document, (dx, dy): (f64, f64)) -> CmdRe
 
 fn merge(e: &mut Engine, p: &Value) -> CmdResult {
     let path = string(p, "path")?;
-    let (mut doc, _) = parse(&read_file(&path)?)?;
+    let bytes = read_file(&path)?;
     let base = Path::new(&path).parent().map(Path::to_path_buf);
+    if wants_pdf_import(&bytes, p)? {
+        let stem = pdf_stem(&path);
+        let (doc, warnings) = load_pdf(&bytes, p, &stem, base.as_deref())?;
+        let mut r = merge_doc(e, doc, offset(p)?)?;
+        r["warnings"] = json!(warnings);
+        return Ok(r);
+    }
+    let (mut doc, _) = parse(&bytes)?;
     import::load_all_pictures(&mut doc, base.as_deref());
     merge_doc(e, doc, offset(p)?)
 }
@@ -602,6 +741,13 @@ fn merge_data(e: &mut Engine, p: &Value) -> CmdResult {
     };
     if bytes.len() > rustfig_format::MAX_FILE_BYTES {
         return Err(EngineError::io("the file is too large"));
+    }
+    if wants_pdf_import(&bytes, p)? {
+        let stem = pdf_stem(opt_str(p, "name")?.unwrap_or("figure.pdf"));
+        let (doc, warnings) = load_pdf(&bytes, p, &stem, None)?;
+        let mut r = merge_doc(e, doc, offset(p)?)?;
+        r["warnings"] = json!(warnings);
+        return Ok(r);
     }
     let mut doc = parse(&bytes)?.0;
     // Pictures the figure names load from the in-memory store (the browser) or the current folder.

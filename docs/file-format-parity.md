@@ -37,6 +37,7 @@
 | epic, eepic, eepicemu, tpic, pic | — | ✅ | ported from fig2dev (B9): identical to fig2dev 3.2.9a on ≈99% of runs (every sample, several option sets); the rest differ in Latin-1 text, one ellipse bound, ±1 point in some closed X-splines |
 | Picture import PNG/JPEG/GIF/BMP/TIFF/PNM | ✅ | — | |
 | Picture import EPS/PDF/XPM/XBM/PCX | ❌ | — | gap #14 |
+| PDF page as editable Fig objects (Open/Merge, RustFig addition) | ✅ 2026-10-31 | `import::pdf`, `crates/engine/tests/pdf_import.rs` | G5 |
 
 Fuzzing: `crates/format/tests/prop_format.rs`, `crates/engine/tests/import_fuzz.rs`.
 
@@ -57,3 +58,4 @@ Fuzzing: `crates/format/tests/prop_format.rs`, `crates/engine/tests/import_fuzz.
 | 2026-10-21 | B15: PDF and EPS picture objects (row "Pictures in exports"). |
 | 2026-10-23 | E16: PDF, SVG and PNG exports can carry the Fig text (PDF embedded file, SVG metadata, PNG iTXt); File > Open reads it back. |
 | 2026-10-21 | E15: export-on-save setting round-trips through Fig comments and native JSON. |
+| 2026-10-31 | G5: PDF pages open and merge as editable Fig objects (row "PDF page as editable Fig objects"). |

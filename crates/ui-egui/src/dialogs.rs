@@ -269,6 +269,8 @@ pub struct SearchState {
 
 #[derive(Default)]
 pub struct Dialogs {
+    /// Which page of a PDF to open or merge (G5).
+    pub pdf_page: Option<PdfPageQuery>,
     pub edit: Option<EditState>,
     pub figure_comments: Option<FigureComments>,
     pub spline_point: Option<SplinePointEdit>,
@@ -1091,6 +1093,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     crate::color_dialog::dialog(app, ctx);
     crate::styles::show(app, ctx);
     unsaved_dialog(app, ctx);
+    pdf_page_dialog(app, ctx);
     rename_dialog(app, ctx);
     save_scope_dialog(app, ctx);
 }
@@ -3343,6 +3346,82 @@ fn about_dialog(app: &mut App, ctx: &egui::Context) {
             }
         }));
     app.dialogs.about_open = open;
+}
+
+/// The question asked before a PDF with several pages is opened or merged.
+#[derive(Debug, Clone)]
+pub struct PdfPageQuery {
+    pub path: String,
+    pub merge: bool,
+    pub pages: usize,
+    pub page: usize,
+    /// The other parameters of the command (the Figure Offset).
+    pub params: serde_json::Value,
+}
+
+/// Open or merge `path`; a PDF with more than one page first asks which page
+/// (G5). Returns the command's result when it ran now.
+pub fn open_or_merge(app: &mut App, path: &str, merge: bool, params: serde_json::Value) -> Option<serde_json::Value> {
+    if path.to_ascii_lowercase().ends_with(".pdf") {
+        if let Ok(r) = app.engine.execute("file.pdf_pages", &json!({"path": path})) {
+            let pages = r["pages"].as_u64().unwrap_or(1) as usize;
+            if pages > 1 && r["embedded"] != json!(true) && params.get("page").is_none() {
+                app.dialogs.pdf_page = Some(PdfPageQuery {
+                    path: path.to_string(),
+                    merge,
+                    pages,
+                    page: 1,
+                    params,
+                });
+                return None;
+            }
+        }
+    }
+    let mut p = params;
+    p["path"] = json!(path);
+    let r = app.run(if merge { "file.merge" } else { "file.open" }, p)?;
+    if r["imported"] == json!(true) || merge {
+        if let Some(w) = r["warnings"].as_array().filter(|w| !w.is_empty()) {
+            let w: Vec<&str> = w.iter().filter_map(|x| x.as_str()).collect();
+            app.info(format!("PDF import: {}", w.join("; ")));
+        }
+    }
+    Some(r)
+}
+
+fn pdf_page_dialog(app: &mut App, ctx: &egui::Context) {
+    let Some(mut q) = app.dialogs.pdf_page.clone() else {
+        return;
+    };
+    let mut choice = None;
+    egui::Modal::new(egui::Id::new("pdf_page")).show(ctx, |ui| {
+        ui.heading(if q.merge { "Merge PDF page" } else { "Open PDF page" });
+        ui.label(format!("The PDF has {} pages. Which one?", q.pages));
+        ui.horizontal(|ui| {
+            ui.label("Page");
+            let r = ui.add(egui::DragValue::new(&mut q.page).range(1..=q.pages).speed(0.2));
+            r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::DragValue, true, "PDF page"));
+            ui.weak(format!("of {}", q.pages));
+        });
+        ui.horizontal(|ui| {
+            if ui.button("OK").clicked() {
+                choice = Some(true);
+            }
+            if ui.button("Cancel").clicked() {
+                choice = Some(false);
+            }
+        });
+    });
+    match choice {
+        Some(true) => {
+            app.dialogs.pdf_page = None;
+            let mut p = q.params.clone();
+            p["page"] = json!(q.page);
+            open_or_merge(app, &q.path, q.merge, p);
+        }
+        Some(false) => app.dialogs.pdf_page = None,
+        None => app.dialogs.pdf_page = Some(q),
+    }
 }
 
 fn unsaved_dialog(app: &mut App, ctx: &egui::Context) {

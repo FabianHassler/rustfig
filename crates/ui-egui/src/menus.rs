@@ -318,10 +318,7 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         }
         "app.merge" => {
             if let Some(p) = path.or_else(|| app.file_dialogs.pick_file("Figures", dialogs::FIGURE_EXTS)) {
-                return app
-                    .engine
-                    .execute("file.merge", &json!({ "path": p }))
-                    .map_err(|e| e.message);
+                return Ok(dialogs::open_or_merge(app, &p, true, json!({})).unwrap_or_else(|| json!({})));
             }
         }
         "app.open_panel" | "app.merge_panel" => {

@@ -83,6 +83,46 @@ proptest! {
         }
     }
 
+    /// G5: hostile PDF content streams and damaged PDFs are errors or small
+    /// figures, never panics, and the figure they make saves.
+    #[test]
+    fn pdf_import_hostile(
+        ops in "([-0-9.e ]{0,12} (m|l|c|re|h|f|S|B|q|Q|cm|w|d|g|rg|RG|n|W|Do|BT|ET|Tj|Tf)\n){0,40}",
+        cut in 0usize..400,
+        flip in 0usize..400,
+        byte in any::<u8>(),
+    ) {
+        let content = format!("1 0 0 1 0 0 cm {ops}");
+        let mut pdf = format!(
+            "%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n\
+             2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n\
+             3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 4 0 R >>\nendobj\n\
+             4 0 obj\n<< /Length {} >>\nstream\n{content}\nendstream\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n",
+            content.len()
+        )
+        .into_bytes();
+        let at = flip % pdf.len();
+        if flip % 3 == 0 {
+            pdf[at] = byte;
+        }
+        pdf.truncate(pdf.len().saturating_sub(cut % 40));
+        let mut e = Engine::new();
+        let before = e.doc().clone();
+        match rustfig_engine::import::pdf::import(&pdf, 1, "fuzz") {
+            Ok(_) => {
+                let _ = e.execute("file.open_data", &json!({"base64": rustfig_engine::base64(&pdf), "vectors": true}));
+                let _ = e.execute("file.save_data", &json!({"format": "fig"}));
+                let _ = e.execute("file.merge_data", &json!({"base64": rustfig_engine::base64(&pdf), "vectors": true}));
+            }
+            Err(_) => {
+                let r = e.execute("file.open_data", &json!({"base64": rustfig_engine::base64(&pdf), "vectors": true}));
+                if r.is_err() {
+                    prop_assert_eq!(e.doc(), &before);
+                }
+            }
+        }
+    }
+
     /// E16: damaged or hostile embedded figures (PDF, SVG, PNG) never panic.
     #[test]
     fn embedded_figure_damaged(
