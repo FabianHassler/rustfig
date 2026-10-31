@@ -301,3 +301,15 @@ fn tex_style_text_gets_spaces_ligatures_fonts_and_depths() {
         t.iter().map(|t| t.depth).collect::<Vec<_>>()
     );
 }
+
+#[test]
+fn tight_tex_lines_keep_their_word_spaces() {
+    let dir = temp_dir("tight");
+    // Helvetica 10 pt: a TJ adjustment of -150 is 0.15 em (a squeezed word
+    // space), -50 a 0.05 em kern, +80 a negative kern.
+    let content = "BT /F1 10 Tf 20 80 Td [(ab) -150 (cd) -50 (ef) 80 (gh) -190 (ij)] TJ ET";
+    let (e, _) = open_bytes(&tiny_pdf(content, false), &dir, "tight.pdf");
+    let t = texts(&e);
+    assert_eq!(t.len(), 1, "{:?}", t.iter().map(|t| t.text.clone()).collect::<Vec<_>>());
+    assert_eq!(t[0].text, "ab cdefgh ij");
+}

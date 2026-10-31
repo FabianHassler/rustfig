@@ -23,6 +23,11 @@ use rustfig_model::{
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 
+/// A gap between glyphs of more than this many em is a word space. TeX sets
+/// no space glyphs: its interword glue shrinks to about 0.2 em on tight lines
+/// (0.197 em measured in transfig's manual) while kerns are negative or
+/// below 0.1 em.
+const WORD_GAP: f64 = 0.12;
 /// Most objects one import creates.
 pub const MAX_OBJECTS: usize = 200_000;
 /// Most points in one path.
@@ -552,7 +557,7 @@ impl Importer {
                 );
             }
             // Join onto the text before it when it continues on the same
-            // baseline: a gap over 0.2 em is a word space (TeX sets none),
+            // baseline: a gap over WORD_GAP em is a word space (TeX sets none),
             // one over 3 em starts a new text.
             if let Some(p) = &mut self.pending {
                 let t = &p.text;
@@ -567,7 +572,7 @@ impl Importer {
                     let along = dx * p.dir.0 + dy * p.dir.1;
                     let across = -dx * p.dir.1 + dy * p.dir.0;
                     if across.abs() < 0.1 * em && along > -0.5 * em && along < 3.0 * em {
-                        if along > 0.2 * em && !p.text.text.ends_with(' ') && !pc.text.starts_with(' ') {
+                        if along > WORD_GAP * em && !p.text.text.ends_with(' ') && !pc.text.starts_with(' ') {
                             p.text.text.push(' ');
                         }
                         p.text.text.push_str(&pc.text);
