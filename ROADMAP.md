@@ -1,6 +1,6 @@
 # RustFig roadmap
 
-**Status (2026-10-26):** Stage **Beta** (public pre-releases 0.9.0-beta.N). Overall xfig parity **≈93 %**
+**Status (2026-10-31):** Stage **Beta** (public pre-releases 0.9.0-beta.N). Overall xfig parity **≈93 %**
 ([assessment](docs/target-app-parity.md)). The native app draws, edits,
 saves and exports. The web build compiles; it is not yet packaged or tested in a browser.
 
@@ -74,6 +74,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 | Date | Change |
 |------|--------|
 | 2026-10-25 | D11 screen capture: File > Capture Screen… (`app.capture`; `rustfig_os::capture`: macOS `screencapture -i`, Linux portal Screenshot, Windows whole screen; Save names the PNG, a picture object is added), the arc's "N points, Length = …" message and the "Unit/Scale settings" title (W22 row 36 fully fixed); xfig function audit: 0 missing; Editing 95 → 97 %. The OS calls are manual checks (hardware-parity.md). |
+| 2026-10-31 | **v0.9.0-beta.6**: the figure libraries ship in every package (macOS app, Windows zip, Linux tarball and .deb, Homebrew) and are found there; objects of one depth drawn in xfig's order everywhere (canvas, every export, fig2dev v0.9.3); Feynman fermion arrows sit on the line; LaTeX text: the canvas shows TeX's output only, Open/Merge with preview approximate it; dialogs taller than the window scroll; the text flag is called the TeX flag everywhere; the Local fonts list leaves out hidden macOS fonts and fonts without Latin letters; `fig2dev -h -L LANG`; Scoop and winget manifests, project site with manual and comparison page. |
 | 2026-10-26 | **v0.9.0-beta.5**: no new features; built against fig2dev v0.9.1 after its author rewrite (same code, new commit ids, so beta.4's lock file no longer resolves); Homebrew formulae in the tap FabianHassler/homebrew-tap (`rustfig`, `fig2dev-rs`). |
 | 2026-10-26 | **v0.9.0-beta.4**: export hardening (fig2dev v0.9.1: its own test suite 88 of 88, SVG byte-identical with C fig2dev on 284 of 299 sample figures, bitmaps and EPS/PDF as C draws them); four new physics libraries (Feynman diagrams, quantum circuits, optics and lab, circuit elements) with LaTeX previews; screen capture; CJK fallback font; tools panel scrolls on small screens; web fixes (downloads, desktop-only entries hidden); the .deb no longer clashes with Debian's fig2dev; Linux and Chrome checks. Parity ≈93 %. |
 | 2026-10-26 | B11 export hardening, passes 1–7 (fig2dev v0.9.1): fig2dev's own suite 88 of 88 (was 82); SVG byte-identical with C fig2dev on 284 of 299 sample figures; options and messages as C; bitmaps drawn as ghostscript draws them; PDF MediaBox and XMP. Export 73 → 88 %, parity ≈91 → ≈93 %. |

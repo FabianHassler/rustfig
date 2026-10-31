@@ -1,15 +1,14 @@
 # Installs RustFig on Windows with Scoop from packaging/scoop/rustfig.json (the
 # manifest the README points to) and runs it: checks the release zip's URL,
 # hash and layout and that the installed programs work. Runs when the manifest
-# changes, after a release is published, or by hand (`gh workflow run scoop.yml`).
+# changes (the commit after a release that names the new zip and its hash) or
+# by hand (`gh workflow run scoop.yml`).
 name: Scoop
 
 on:
   push:
     branches: [main]
     paths: ["packaging/scoop/**"]
-  release:
-    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -21,16 +20,33 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+      # The version bump names the next release's zip before it is published:
+      # skip until it exists (the commit after the release adds its hash).
+      - name: Check that the release zip is published
+        id: zip
+        shell: pwsh
+        run: |
+          $url = (Get-Content packaging\scoop\rustfig.json -Raw | ConvertFrom-Json).architecture.'64bit'.url
+          try {
+            Invoke-WebRequest -Method Head -Uri $url | Out-Null
+            "published=true" >> $env:GITHUB_OUTPUT
+          } catch {
+            "::notice::$url is not published yet; nothing to check"
+            "published=false" >> $env:GITHUB_OUTPUT
+          }
       - name: Install Scoop
+        if: steps.zip.outputs.published == 'true'
         shell: pwsh
         run: |
           Invoke-RestMethod -Uri https://get.scoop.sh -OutFile install-scoop.ps1
           .\install-scoop.ps1 -RunAsAdmin
           Join-Path (Resolve-Path ~).Path "scoop\shims" >> $env:GITHUB_PATH
       - name: Install RustFig from the manifest
+        if: steps.zip.outputs.published == 'true'
         shell: pwsh
         run: scoop install packaging\scoop\rustfig.json
       - name: Run the installed programs
+        if: steps.zip.outputs.published == 'true'
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -42,7 +58,7 @@ jobs:
           $exe = Join-Path (scoop prefix rustfig) "rustfig.exe"
           $p = Start-Process $exe -ArgumentList "fig2dev","-L","eps","crates\engine\tests\fixtures\boxes.fig","boxes.eps" -Wait -PassThru
           if ($p.ExitCode -ne 0 -or -not (Test-Path boxes.eps)) { throw "rustfig fig2dev failed" }
-          # The figure libraries ship in the zip from v0.9.0-beta.6 on.
+          # The figure libraries ship in the zip.
           $libs = Join-Path (scoop prefix rustfig) "libraries"
-          if (Test-Path $libs) { "libraries: $((Get-ChildItem $libs -Directory).Count) folders" }
-          else { "::warning::no libraries folder in this release's zip" }
+          if (-not (Test-Path $libs)) { throw "no libraries folder in the zip" }
+          "libraries: $((Get-ChildItem $libs -Directory).Count) folders"

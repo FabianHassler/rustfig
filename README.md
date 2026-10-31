@@ -78,7 +78,7 @@ installs the same command name as `fig2dev-rs`: keep one of them linked.
    `rustfig-cli`, the command line) straight from GitHub, the latest release:
 
    ```sh
-   cargo install --locked --git https://github.com/FabianHassler/rustfig --tag v0.9.0-beta.5 rustfig rustfig-cli
+   cargo install --locked --git https://github.com/FabianHassler/rustfig --tag v0.9.0-beta.6 rustfig rustfig-cli
    ```
 
    Leave out `--tag …` for the latest `main`. RustFig is not on crates.io
