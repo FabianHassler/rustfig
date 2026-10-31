@@ -315,6 +315,7 @@ User decision 2026-10-20: RustFig uses fig2dev for everything fig2dev can do.
 
 ## Decisions that are the user's
 
+- fig2dev's helper programs (decided 2026-10-31): `fig2ps2tex`, `pic2tpic` and `transfig` from the C package are not ported; RustFig's fig2dev is the `fig2dev` program only. Right-to-left and complex-script text (F6) dropped the same day.
 - xfig comparison W22 (decided 2026-10-25): the canvas keeps RustFig's white page with grey around it (xfig: light grey everywhere, #20); Box scale keeps working on any object, not only boxes and compounds (#29). After the beta, the new RustFig libraries (D13) come first.
 - Use of xfig's sources (decided 2026-10-14): agents may read, port and reuse xfig and fig2dev code under the xfig licence, keeping its notice (`LICENSE-xfig`).
 - Export output (decided 2026-10-15): RustFig's output need not equal fig2dev's byte for byte; RustFig's own EPS is the reference for PNG and SVG. EPS, PDF, SVG and PNG stay on RustFig's renderers; fig2dev's drivers are ported for the other languages and for what the renderers lack (PostScript page layout, pstex/pdftex, previews).
