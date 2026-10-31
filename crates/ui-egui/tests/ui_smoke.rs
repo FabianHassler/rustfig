@@ -1915,6 +1915,7 @@ fn picture_panel_rows_relink_and_drop() {
         "Use original size",
         "Scale by %",
         "Edit Image",
+        "Import as objects",
         "Picture thumbnail",
     ] {
         assert!(h.query_all_by_label(label).count() >= 1, "{label}");
@@ -1949,6 +1950,82 @@ fn picture_panel_rows_relink_and_drop() {
         .unwrap();
     assert_eq!(info["file"], json!(second));
     assert_eq!(info["exists"], true);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A one-page PDF filled with a rectangle (G6 tests).
+fn small_pdf() -> Vec<u8> {
+    let content = "0 0 200 100 re f";
+    let objs: Vec<String> = vec![
+        "<< /Type /Catalog /Pages 2 0 R >>".into(),
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".into(),
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 100] /Contents 4 0 R >>".into(),
+        format!("<< /Length {} >>\nstream\n{content}\nendstream", content.len()),
+    ];
+    let mut out = String::from("%PDF-1.4\n");
+    let mut offs = Vec::new();
+    for (i, o) in objs.iter().enumerate() {
+        offs.push(out.len());
+        out.push_str(&format!("{} 0 obj\n{o}\nendobj\n", i + 1));
+    }
+    let x = out.len();
+    out.push_str(&format!("xref\n0 {}\n0000000000 65535 f \n", objs.len() + 1));
+    for o in offs {
+        out.push_str(&format!("{o:010} 00000 n \n"));
+    }
+    out.push_str(&format!(
+        "trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{x}\n%%EOF\n",
+        objs.len() + 1
+    ));
+    out.into_bytes()
+}
+
+/// G6: the picture panel's "Import as objects" is enabled for a PDF picture only, and turns
+/// it into a compound.
+#[test]
+fn picture_panel_import_as_objects_is_for_pdf_pictures() {
+    let dir = std::env::temp_dir().join(format!("rustfig-g6-ui-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let pdf = dir.join("p.pdf");
+    std::fs::write(&pdf, small_pdf()).unwrap();
+    let xpm = dir.join("p.xpm");
+    std::fs::write(
+        &xpm,
+        "/* XPM */\nstatic char *a[] = {\n\"2 2 1 1\",\n\"a c #ff0000\",\n\"aa\",\n\"aa\"};\n",
+    )
+    .unwrap();
+    let mut h = harness(app());
+    for (path, enabled) in [(&xpm, false), (&pdf, true)] {
+        h.state_mut()
+            .engine
+            .execute(
+                "shape.picture",
+                &json!({"path": path.to_string_lossy(), "x": 0, "y": 0, "width": 600, "height": 300}),
+            )
+            .unwrap();
+        h.state_mut().engine.execute("edit.select_all", &json!({})).unwrap();
+        // select_all picks every object; pick just the last one.
+        let last = h.state().engine.doc().objects.last().map(|o| o.id).unwrap();
+        h.state_mut().engine.set_selection(vec![last]);
+        open_edit(&mut h);
+        h.run_steps(3);
+        let b = h.get_by_label("Import as objects");
+        assert_eq!(
+            egui_kittest::kittest::NodeT::accesskit_node(&b).is_disabled(),
+            !enabled,
+            "{path:?}"
+        );
+        if enabled {
+            b.click();
+            h.run_steps(4);
+            let doc = h.state().engine.doc();
+            assert!(matches!(
+                doc.objects.last().map(|o| &o.kind),
+                Some(rustfig_engine::model::ObjectKind::Compound(_))
+            ));
+            assert!(h.state().dialogs.edit.is_none());
+        }
+    }
     let _ = std::fs::remove_dir_all(&dir);
 }
 

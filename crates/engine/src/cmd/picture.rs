@@ -249,6 +249,16 @@ pub(super) fn commands() -> Vec<Command> {
             false,
             store,
         ),
+        Command {
+            id: "picture.import_objects",
+            label: "Import picture as objects",
+            menu: "",
+            shortcut: "",
+            params: "{\"id\"?} — replaces a PDF picture (default: the selected one) with the first page of its file as Fig objects in one compound that fills the picture's box, at the picture's depth; the importer's warnings go to the message panel. PDF pictures only (an EPS picture cannot be imported)",
+            mutates: true,
+            enabled: can_import_objects,
+            run: import_objects,
+        },
         cmd(
             "picture.edit_image",
             "Edit picture's image",
@@ -419,6 +429,120 @@ fn open_external(file: &str, editor: &str) -> Result<(), EngineError> {
 #[cfg(target_arch = "wasm32")]
 fn open_external(_file: &str, _editor: &str) -> Result<(), EngineError> {
     Err(EngineError::io("Edit Image is not available in the web app"))
+}
+
+// ---- G6: Import as objects ----
+
+/// The affine map of a PDF page (`pw` x `ph` Fig units, origin top-left) onto
+/// the picture box `min`..`min + (bw, bh)` as the canvas draws the picture: the
+/// box's own corners, the picture transposed when flipped (Fig's "flipped
+/// about the diagonal").
+pub fn page_to_box(pw: f64, ph: f64, min: Point, bw: f64, bh: f64, flipped: bool) -> rustfig_geom::Affine {
+    use rustfig_geom::Affine;
+    if flipped {
+        Affine {
+            a: 0.0,
+            b: bh / pw.max(1.0e-9),
+            c: bw / ph.max(1.0e-9),
+            d: 0.0,
+            e: min.x,
+            f: min.y,
+        }
+    } else {
+        Affine {
+            a: bw / pw.max(1.0e-9),
+            b: 0.0,
+            c: 0.0,
+            d: bh / ph.max(1.0e-9),
+            e: min.x,
+            f: min.y,
+        }
+    }
+}
+
+/// Whether top-level object `id` is a picture whose file is a PDF (by content).
+fn is_pdf_picture(e: &Engine, id: ObjectId) -> bool {
+    let Some(o) = e.doc().get(id) else { return false };
+    let ObjectKind::Polyline(pl) = &o.kind else {
+        return false;
+    };
+    pl.picture
+        .as_ref()
+        .is_some_and(|pic| pl.points.len() >= 3 && picture_type(&pic.file) == "PDF")
+}
+
+/// G6: enabled while a PDF picture is selected.
+fn can_import_objects(e: &Engine) -> bool {
+    e.selection().iter().any(|&id| is_pdf_picture(e, id))
+}
+
+fn import_objects(e: &mut Engine, p: &Value) -> CmdResult {
+    let id = match opt_num(p, "id")? {
+        Some(n) => ObjectId(n.round().max(0.0) as u64),
+        None => e
+            .selection()
+            .iter()
+            .copied()
+            .find(|&id| is_pdf_picture(e, id))
+            .ok_or_else(|| EngineError::bad_params("select a PDF picture or give an \"id\""))?,
+    };
+    let (id, a, b, pic) = target(e, &json!({"id": id.0}))?;
+    let dir = e
+        .path()
+        .and_then(|p| std::path::Path::new(p).parent())
+        .map(std::path::Path::to_path_buf);
+    let path = import::resolve(&pic.file, dir.as_deref());
+    let bytes: Vec<u8> = match std::fs::metadata(&path) {
+        Ok(m) if m.len() > rustfig_format::MAX_FILE_BYTES as u64 => {
+            return Err(EngineError::io(format!("{}: file is too large", pic.file)))
+        }
+        Ok(_) => std::fs::read(&path).map_err(|err| EngineError::io(format!("{}: {err}", pic.file)))?,
+        Err(_) => match import::stored_picture(&pic.file) {
+            Some(b) => b.to_vec(),
+            None => return Err(EngineError::not_found(format!("{}: file not found", pic.file))),
+        },
+    };
+    if !import::pdf::is_pdf(&bytes) {
+        return Err(EngineError::bad_params(
+            "only a PDF picture can be imported as objects (an EPS picture cannot)",
+        ));
+    }
+    let r = rustfig_geom::Rect::from_points([a, b]);
+    let (bw, bh) = (r.max.x - r.min.x, r.max.y - r.min.y);
+    if !(bw.is_finite() && bh.is_finite() && bw >= 1.0 && bh >= 1.0) {
+        return Err(EngineError::bad_params("the picture box has no area"));
+    }
+    // The vectors, even when the PDF carries an embedded RustFig figure: the
+    // user asked for objects drawn from the page.
+    let (pw, ph) = import::pdf::page_size(&bytes, 1).map_err(EngineError::format)?;
+    let stem = super::file::pdf_stem(&pic.file);
+    let (doc, warnings) = super::file::load_pdf(&bytes, &json!({}), &stem, dir.as_deref())?;
+    let depth = e.doc().get(id).map(|o| o.depth()).unwrap_or(50);
+    let t = page_to_box(pw, ph, r.min, bw, bh, pic.flipped);
+    let mut objects = super::file::mapped_objects(e, doc);
+    if objects.is_empty() {
+        return Err(EngineError::bad_params("the PDF page has nothing to import"));
+    }
+    for o in &mut objects {
+        o.transform(&t, true);
+    }
+    let mut comp = rustfig_model::Object::new(ObjectKind::Compound(rustfig_model::Compound { objects }));
+    comp.set_depth(depth);
+    let Some(index) = e.doc().index_of(id) else {
+        return Err(EngineError::not_found("the picture is gone"));
+    };
+    e.doc_mut().objects.remove(index);
+    let new_id = e.add_object(comp);
+    let objs = &mut e.doc_mut().objects;
+    if let Some(o) = objs.pop() {
+        let at = index.min(objs.len());
+        objs.insert(at, o);
+    }
+    e.set_selection(vec![new_id]);
+    if !warnings.is_empty() {
+        e.set_status(format!("Imported the PDF as objects: {}", warnings.join("; ")));
+    }
+    Ok(json!({"id": new_id.0, "warnings": warnings}))
 }
 
 #[cfg(test)]

@@ -148,6 +148,8 @@ pub struct EditState {
     pub picture_thumb: Option<Thumb>,
     /// "Scale by %" entry.
     pub picture_percent: f64,
+    /// G6: "Import as objects" was clicked; done after the panel closes.
+    pub import_objects: bool,
     /// Compound rows: member count.
     pub members: usize,
     /// The panel is live (W10-18): every change is applied at once as one
@@ -364,6 +366,7 @@ impl Dialogs {
             picture_image: None,
             picture_thumb: None,
             picture_percent: 100.0,
+            import_objects: false,
             members: 0,
             live: false,
             rev: 0,
@@ -2392,8 +2395,17 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
     if st.last.as_ref() != Some(&params) {
         live_apply(app, &mut st, params);
     }
+    if st.import_objects {
+        // The panel's changes become one undo step, then the picture is imported.
+        close = true;
+    }
     if close && !st.valid {
         close = false;
+        st.import_objects = false;
+    }
+    if close && st.import_objects {
+        app.run("picture.import_objects", json!({"id": st.id.0}));
+        return;
     }
     if !close && app.engine.doc().get(st.id).is_some() {
         app.dialogs.edit = Some(st);
@@ -3666,9 +3678,20 @@ fn picture_rows(ui: &mut egui::Ui, ctx: &egui::Context, app: &mut App, st: &mut 
         ui.end_row();
     }
     ui.label("");
-    if ui.button("Edit Image").clicked() {
-        app.run("picture.edit_image", json!({"id": st.id.0}));
-    }
+    ui.horizontal(|ui| {
+        if ui.button("Edit Image").clicked() {
+            app.run("picture.edit_image", json!({"id": st.id.0}));
+        }
+        // G6: only a PDF picture (by content) can become objects.
+        let pdf = info.as_ref().is_some_and(|i| i.exists && i.kind == "PDF");
+        if ui
+            .add_enabled(pdf, egui::Button::new("Import as objects"))
+            .on_hover_text("Replace the picture by the objects of its PDF page (PDF pictures only)")
+            .clicked()
+        {
+            st.import_objects = true;
+        }
+    });
     ui.end_row();
 }
 
