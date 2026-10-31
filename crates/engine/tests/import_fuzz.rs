@@ -123,6 +123,64 @@ proptest! {
         }
     }
 
+    /// G7: hostile SVG documents (random attribute values and element
+    /// soup, cut or flipped bytes) are errors or small figures, never
+    /// panics, and the figure they make saves.
+    #[test]
+    fn svg_import_hostile(
+        vals in prop::collection::vec("[-0-9.eE%a-z(), #]{0,24}", 0..8),
+        tags in prop::collection::vec(0usize..12, 0..20),
+        cut in 0usize..200,
+        flip in 0usize..600,
+        byte in any::<u8>(),
+        gz in any::<bool>(),
+    ) {
+        const TAGS: [&str; 12] = [
+            "rect", "circle", "ellipse", "path", "line", "polyline", "polygon", "text", "g", "use", "image", "tspan",
+        ];
+        const ATTRS: [&str; 12] = [
+            "x", "y", "width", "height", "r", "d", "points", "transform", "stroke-width", "stroke-dasharray",
+            "viewBox", "font-size",
+        ];
+        let mut body = String::new();
+        for (i, t) in tags.iter().enumerate() {
+            let tag = TAGS[*t % TAGS.len()];
+            let mut attrs = String::new();
+            for (j, v) in vals.iter().enumerate().take(4) {
+                attrs.push_str(&format!(" {}=\"{}\"", ATTRS[(i + j * 5 + t) % ATTRS.len()], v));
+            }
+            body.push_str(&format!("<{tag}{attrs} fill=\"#123\" stroke=\"red\">t{i}</{tag}>"));
+        }
+        let svg = format!("<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"100\" height=\"100\">{body}</svg>");
+        let mut data = svg.into_bytes();
+        let at = flip % data.len();
+        if flip % 3 == 0 {
+            data[at] = byte;
+        }
+        data.truncate(data.len().saturating_sub(cut % 40));
+        if gz {
+            use std::io::Write;
+            let mut enc = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
+            enc.write_all(&data).unwrap();
+            data = enc.finish().unwrap();
+        }
+        let mut e = Engine::new();
+        let before = e.doc().clone();
+        match rustfig_engine::import::svg::import(&data, "fuzz", None) {
+            Ok(_) => {
+                let _ = e.execute("file.open_data", &json!({"base64": rustfig_engine::base64(&data), "vectors": true}));
+                let _ = e.execute("file.save_data", &json!({"format": "fig"}));
+                let _ = e.execute("file.merge_data", &json!({"base64": rustfig_engine::base64(&data), "vectors": true}));
+            }
+            Err(_) => {
+                let r = e.execute("file.open_data", &json!({"base64": rustfig_engine::base64(&data), "vectors": true}));
+                if r.is_err() {
+                    prop_assert_eq!(e.doc(), &before);
+                }
+            }
+        }
+    }
+
     /// E16: damaged or hostile embedded figures (PDF, SVG, PNG) never panic.
     #[test]
     fn embedded_figure_damaged(

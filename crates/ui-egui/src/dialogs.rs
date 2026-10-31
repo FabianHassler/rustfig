@@ -672,7 +672,7 @@ pub const LINE_STYLE_VALUE_HELP: &str = "A Fig file keeps one number per line, i
 
 /// Extensions offered when picking a figure: also PDF, SVG and PNG exports
 /// with the figure embedded (E16).
-pub const FIGURE_EXTS: &[&str] = &["fig", "xfig", "rustfig", "pdf", "svg", "png"];
+pub const FIGURE_EXTS: &[&str] = &["fig", "xfig", "rustfig", "pdf", "svg", "svgz", "png"];
 /// Extensions offered when picking a picture: xfig's picture types
 /// (`f_picobj.c`: EPS/PS, PDF, GIF, PCX, PPM, TIFF, XBM, JPEG, PNG, XPM),
 /// BMP, and compressed files (`.gz`, `.Z`), which fig2dev's reader unpacks.
@@ -3395,7 +3395,7 @@ pub fn open_or_merge(app: &mut App, path: &str, merge: bool, params: serde_json:
     if r["imported"] == json!(true) || merge {
         if let Some(w) = r["warnings"].as_array().filter(|w| !w.is_empty()) {
             let w: Vec<&str> = w.iter().filter_map(|x| x.as_str()).collect();
-            app.info(format!("PDF import: {}", w.join("; ")));
+            app.info(format!("Import: {}", w.join("; ")));
         }
     }
     Some(r)

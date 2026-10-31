@@ -2,6 +2,7 @@
 //! fig2dev's `readpics.c` also XBM, XPM, PCX and compressed files).
 
 pub mod pdf;
+pub mod svg;
 
 use rustfig_model::{Document, Object, ObjectKind, RasterImage};
 use std::path::{Path, PathBuf};
