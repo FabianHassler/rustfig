@@ -125,6 +125,7 @@ fn import_inner(bytes: &[u8], page: usize, stem: &str) -> Result<Imported, Strin
     );
     let mut imp = Importer::new(stem, page, KRect::new(0.0, 0.0, f64::from(w), f64::from(h)));
     imp.font_names = names;
+    imp.font_info = page_fonts(p);
     interpret_page(p, &mut ctx, &mut imp);
     Ok(imp.finish())
 }
@@ -138,6 +139,47 @@ struct PendingText {
     dir: (f64, f64),
     /// Type 3 glyphs have no advance: never joined.
     open: bool,
+}
+
+/// What a PDF font dictionary says about the font.
+#[derive(Clone)]
+struct FontInfo {
+    name: String,
+    flags: Option<u32>,
+}
+
+/// `/BaseFont` and descriptor `/Flags` of the fonts in the page's resources,
+/// by the key hayro gives the font (the dictionary's cache key).
+fn page_fonts(page: &hayro::hayro_interpret::hayro_syntax::page::Page<'_>) -> HashMap<u128, FontInfo> {
+    use hayro::hayro_interpret::hayro_syntax::object::{Dict, Name};
+    use hayro::hayro_interpret::CacheKey;
+    let mut out = HashMap::new();
+    let fonts = &page.resources().fonts;
+    for key in fonts.keys().take(1000) {
+        let Some(d) = fonts.get::<Dict<'_>>(&key) else {
+            continue;
+        };
+        let Some(base) = d.get::<Name<'_>>(b"BaseFont".as_slice()) else {
+            continue;
+        };
+        let name = base.as_str().to_string();
+        let name = name
+            .split_once('+')
+            .filter(|(p, _)| p.len() == 6)
+            .map_or(name.as_str(), |(_, r)| r)
+            .to_string();
+        let desc = d.get::<Dict<'_>>(b"FontDescriptor".as_slice()).or_else(|| {
+            let arr =
+                d.get::<hayro::hayro_interpret::hayro_syntax::object::Array<'_>>(b"DescendantFonts".as_slice())?;
+            let df = arr.iter::<Dict<'_>>().next()?;
+            df.get::<Dict<'_>>(b"FontDescriptor".as_slice())
+        });
+        let flags = desc
+            .and_then(|f| f.get::<i32>(b"Flags".as_slice()))
+            .and_then(|f| u32::try_from(f).ok());
+        out.insert(d.cache_key(), FontInfo { name, flags });
+    }
+    out
 }
 
 struct Importer {
@@ -159,6 +201,8 @@ struct Importer {
     /// Font names the resolver saw and the fig font chosen per hayro font.
     font_names: Arc<Mutex<VecDeque<String>>>,
     fonts: HashMap<u128, (i32, bool)>,
+    /// The page's font dictionaries by hayro's font key.
+    font_info: HashMap<u128, FontInfo>,
     /// Active clip paths in Fig units: convex polygons (counter-clockwise),
     /// or `None` for one that can't be applied.
     clips: Vec<Option<Vec<(f64, f64)>>>,
@@ -187,6 +231,7 @@ impl Importer {
             capped: false,
             font_names: Arc::default(),
             fonts: HashMap::new(),
+            font_info: HashMap::new(),
             clips: Vec::new(),
         }
     }
@@ -413,10 +458,14 @@ impl Importer {
 
     fn text_run(&mut self, run: &GlyphRun<'_, '_>, props: &DrawProps<'_>) -> bool {
         // Text needs a Unicode value for every glyph and only outline fonts.
-        let mut s = String::new();
+        struct Piece {
+            text: String,
+            origin: (f64, f64),
+            end: (f64, f64),
+            known: bool,
+        }
+        let mut pieces: Vec<Piece> = Vec::new();
         let mut first: Option<(Affine, Option<hayro::hayro_interpret::font::OutlineFontData>, u128)> = None;
-        let mut end = (0.0, 0.0);
-        let mut advance_known = true;
         for g in run.glyphs() {
             let Glyph::Outline(og) = &**g else {
                 return false;
@@ -431,31 +480,46 @@ impl Importer {
             if u.chars().any(|c| c == '\u{fffd}') {
                 return false;
             }
+            let mut text = String::new();
             for ch in u.chars() {
-                if ch.is_control() {
-                    continue;
+                match ch {
+                    c if c.is_control() => {}
+                    '\u{fb00}' => text.push_str("ff"),
+                    '\u{fb01}' => text.push_str("fi"),
+                    '\u{fb02}' => text.push_str("fl"),
+                    '\u{fb03}' => text.push_str("ffi"),
+                    '\u{fb04}' => text.push_str("ffl"),
+                    '\u{fb05}' | '\u{fb06}' => text.push_str("st"),
+                    '\u{ad}' => text.push('-'),
+                    '\u{a0}' | '\u{2009}' | '\u{202f}' | '\u{2002}' | '\u{2003}' => text.push(' '),
+                    c => text.push(c),
                 }
-                s.push(ch);
             }
             let m = props.transform * g.transform();
             if first.is_none() {
                 first = Some((m, og.font_data(), og.font_cache_key()));
             }
-            match og.advance_width() {
-                Some(a) if a.is_finite() => {
-                    let o = m * KPoint::new(f64::from(a), 0.0);
-                    end = fig(o);
-                }
-                _ => advance_known = false,
+            let origin = fig(m * KPoint::new(0.0, 0.0));
+            let (end, known) = match og.advance_width() {
+                Some(a) if a.is_finite() => (fig(m * KPoint::new(f64::from(a), 0.0)), true),
+                _ => (origin, false),
+            };
+            if !text.is_empty() {
+                pieces.push(Piece {
+                    text,
+                    origin,
+                    end,
+                    known,
+                });
             }
         }
         let Some((m, font, key)) = first else {
             return true;
         };
-        if s.is_empty() {
+        if pieces.is_empty() {
             return true;
         }
-        let Some((rgb, _)) = self.paint_rgb(&props.paint).map(|c| (c, ())) else {
+        let Some(rgb) = self.paint_rgb(&props.paint) else {
             return true;
         };
         let c = m.as_coeffs();
@@ -469,80 +533,97 @@ impl Importer {
         } else {
             angle
         };
-        let o = fig(m * KPoint::new(0.0, 0.0));
-        if o.0.abs() > MAX_COORD || o.1.abs() > MAX_COORD {
+        if pieces
+            .iter()
+            .any(|p| p.origin.0.abs() > MAX_COORD || p.origin.1.abs() > MAX_COORD)
+        {
             return true;
         }
-        let (ps_font, ps) = match self.fonts.get(&key) {
-            Some(f) => *f,
-            None => {
-                let queued = if font.is_none() {
-                    self.font_names.lock().ok().and_then(|mut q| q.pop_front())
-                } else {
-                    None
-                };
-                let f = map_font(font.as_ref(), queued.as_deref());
-                self.fonts.insert(key, f);
-                f
-            }
-        };
+        let (ps_font, ps) = self.font_for(key, font.as_ref());
         let color = self.color(rgb);
         let dir = (angle.cos(), -angle.sin());
         let size = (size * 10.0).round() / 10.0;
-        if s.chars().any(|c| c as u32 > 0xFF) {
-            self.warn_once(
-                "latin1",
-                "Characters outside Latin-1 are kept, but Fig's PostScript fonts cannot show them",
-            );
-        }
-        // Join onto the text before it when it continues on the same baseline.
-        if let Some(p) = &mut self.pending {
-            let t = &p.text;
-            let same = p.open
-                && t.font == ps_font
-                && (t.size - size).abs() < 0.05
-                && (t.angle - angle).abs() < 1e-3
-                && t.color == color;
-            if same {
-                let dx = o.0 - p.next.0;
-                let dy = o.1 - p.next.1;
-                let along = dx * p.dir.0 + dy * p.dir.1;
-                let across = -dx * p.dir.1 + dy * p.dir.0;
-                let em = size * K;
-                if across.abs() < 0.1 * em && along > -0.1 * em && along < 0.6 * em {
-                    if along > 0.15 * em && !p.text.text.ends_with(' ') && !s.starts_with(' ') {
-                        p.text.text.push(' ');
+        let em = size * K;
+        for pc in pieces {
+            if pc.text.chars().any(|c| c as u32 > 0xFF) {
+                self.warn_once(
+                    "latin1",
+                    "Characters outside Latin-1 are kept, but Fig's PostScript fonts cannot show them",
+                );
+            }
+            // Join onto the text before it when it continues on the same
+            // baseline: a gap over 0.2 em is a word space (TeX sets none),
+            // one over 3 em starts a new text.
+            if let Some(p) = &mut self.pending {
+                let t = &p.text;
+                let same = p.open
+                    && t.font == ps_font
+                    && (t.size - size).abs() < 0.05
+                    && (t.angle - angle).abs() < 1e-3
+                    && t.color == color;
+                if same {
+                    let dx = pc.origin.0 - p.next.0;
+                    let dy = pc.origin.1 - p.next.1;
+                    let along = dx * p.dir.0 + dy * p.dir.1;
+                    let across = -dx * p.dir.1 + dy * p.dir.0;
+                    if across.abs() < 0.1 * em && along > -0.5 * em && along < 3.0 * em {
+                        if along > 0.2 * em && !p.text.text.ends_with(' ') && !pc.text.starts_with(' ') {
+                            p.text.text.push(' ');
+                        }
+                        p.text.text.push_str(&pc.text);
+                        p.next = pc.end;
+                        p.open = pc.known;
+                        continue;
                     }
-                    p.text.text.push_str(&s);
-                    p.next = end;
-                    p.open = advance_known;
-                    return true;
                 }
             }
+            self.flush_text();
+            let text = Text {
+                justify: rustfig_model::Justify::Left,
+                color,
+                depth: 50,
+                pen_style: -1,
+                font: ps_font,
+                size,
+                angle,
+                flags: if ps { text_flags::POSTSCRIPT } else { 0 },
+                height: 0.0,
+                length: 0.0,
+                origin: Point::new(pc.origin.0.round(), pc.origin.1.round()),
+                text: pc.text,
+                local_font: None,
+            };
+            self.pending = Some(PendingText {
+                text,
+                next: pc.end,
+                dir,
+                open: pc.known,
+            });
         }
-        self.flush_text();
-        let text = Text {
-            justify: rustfig_model::Justify::Left,
-            color,
-            depth: 50,
-            pen_style: -1,
-            font: ps_font,
-            size,
-            angle,
-            flags: if ps { text_flags::POSTSCRIPT } else { 0 },
-            height: 0.0,
-            length: 0.0,
-            origin: Point::new(o.0.round(), o.1.round()),
-            text: s,
-            local_font: None,
-        };
-        self.pending = Some(PendingText {
-            text,
-            next: end,
-            dir,
-            open: advance_known,
-        });
         true
+    }
+
+    /// The Fig font of a hayro font: by the PDF's own font dictionary
+    /// (`/BaseFont`, descriptor flags), else by the name the resolver saw
+    /// (non-embedded fonts), else by what the font data says.
+    fn font_for(&mut self, key: u128, font: Option<&hayro::hayro_interpret::font::OutlineFontData>) -> (i32, bool) {
+        if let Some(f) = self.fonts.get(&key) {
+            return *f;
+        }
+        let info = self.font_info.get(&key).cloned();
+        let queued = if font.is_none() && info.is_none() {
+            self.font_names.lock().ok().and_then(|mut q| q.pop_front())
+        } else {
+            None
+        };
+        let name = info
+            .as_ref()
+            .map(|i| i.name.clone())
+            .or_else(|| font.and_then(|f| f.postscript_name.clone()))
+            .or(queued);
+        let f = map_font(name.as_deref(), info.and_then(|i| i.flags), font);
+        self.fonts.insert(key, f);
+        f
     }
 
     fn picture(&mut self, rgba: image::RgbaImage, t: Affine) {
@@ -1104,44 +1185,65 @@ fn subpath_object(sp: &SubPath, style: Style, fill: bool) -> Option<Object> {
 }
 
 /// The Fig font nearest to a PDF font and whether it is a PostScript font:
-/// by name where it names one of the 35, else by the font's flags.
-fn map_font(font: Option<&hayro::hayro_interpret::font::OutlineFontData>, queued: Option<&str>) -> (i32, bool) {
-    let name = font
-        .and_then(|f| f.postscript_name.as_deref())
-        .or(queued)
-        .map(|n| n.split_once('+').map_or(n, |(_, r)| r).to_ascii_lowercase())
+/// by the font's name (`/BaseFont`, subset prefix removed), then by the
+/// descriptor flags (FixedPitch 1, Serif 2, Italic 64, ForceBold 1<<18), then
+/// by what the font program says.
+fn map_font(
+    name: Option<&str>,
+    flags: Option<u32>,
+    font: Option<&hayro::hayro_interpret::font::OutlineFontData>,
+) -> (i32, bool) {
+    let name = name
+        .map(|n| {
+            n.split_once('+')
+                .filter(|(p, _)| p.len() == 6)
+                .map_or(n, |(_, r)| r)
+                .to_ascii_lowercase()
+        })
         .unwrap_or_default();
     let has = |s: &[&str]| s.iter().any(|k| name.contains(k));
-    let bold =
-        has(&["bold", "black", "heavy", "demi", "semibold"]) || font.and_then(|f| f.weight).is_some_and(|w| w >= 600);
-    let italic = has(&["italic", "oblique", "slanted"]) || font.is_some_and(|f| f.is_italic);
-    // (base number, has the four styles)
-    let base = if has(&["avantgarde", "gothic"]) {
-        4
+    let flag = |bit: u32| flags.is_some_and(|f| f & bit != 0);
+    // Symbol fonts only where they really are (CMMI letters are italic text).
+    if has(&["symbol", "cmsy", "cmex", "msam", "msbm", "stix-math"]) && !has(&["symbolneu"]) {
+        return (32, true);
+    }
+    if has(&["dingbats"]) {
+        return (34, true);
+    }
+    if has(&["chancery"]) {
+        return (33, true);
+    }
+    let bold = has(&["bold", "black", "heavy", "demi", "cmbx", "cmssbx", "cmb10", "extrabold"])
+        || (has(&["medi"]) && !has(&["medium"]))
+        || flag(1 << 18)
+        || font.and_then(|f| f.weight).is_some_and(|w| w >= 600);
+    let italic = has(&[
+        "italic", "ital", "oblique", "slant", "cmti", "cmsl", "cmmi", "cmitt", "cmbxti", "cmssi",
+    ]) || flag(64)
+        || font.is_some_and(|f| f.is_italic);
+    let named: Option<i32> = if has(&["avantgarde", "gothic"]) {
+        Some(4)
     } else if has(&["bookman"]) {
-        8
+        Some(8)
     } else if has(&[
         "courier",
         "mono",
+        "nimbusmon",
         "consolas",
         "typewriter",
         "cmtt",
+        "cmitt",
         "menlo",
         "inconsolata",
+        "lmmono",
     ]) {
-        12
+        Some(12)
     } else if has(&["narrow"]) {
-        20
+        Some(20)
     } else if has(&["newcentury", "century"]) {
-        24
-    } else if has(&["palatino", "palladio", "palat"]) {
-        28
-    } else if has(&["symbol"]) {
-        return (32, true);
-    } else if has(&["dingbats"]) {
-        return (34, true);
-    } else if has(&["chancery"]) {
-        return (33, true);
+        Some(24)
+    } else if has(&["palatino", "palladio", "palat", "pagella"]) {
+        Some(28)
     } else if has(&[
         "helvetica",
         "arial",
@@ -1154,25 +1256,42 @@ fn map_font(font: Option<&hayro::hayro_interpret::font::OutlineFontData>, queued
         "segoe",
         "lato",
         "roboto",
+        "nimbussan",
+        "lmsans",
+        "heros",
     ]) {
-        16
+        Some(16)
     } else if has(&[
-        "times", "cmr", "serif", "roman", "georgia", "garamond", "minion", "cambria",
+        "times",
+        "cmr",
+        "cmmi",
+        "cmbx",
+        "cmti",
+        "cmsl",
+        "serif",
+        "roman",
+        "georgia",
+        "garamond",
+        "minion",
+        "cambria",
+        "nimbusrom",
+        "termes",
+        "lmroman",
     ]) {
-        0
-    } else if font.is_some_and(|f| f.is_monospace) {
-        12
-    } else if font.is_some_and(|f| !f.is_serif) && font.is_some() {
-        16
+        Some(0)
     } else {
-        0
+        None
     };
-    // AvantGarde and Bookman order: book/light, oblique/italic, demi/demi-oblique...
-    let n = match base {
-        4 | 8 => base + if bold { 2 } else { 0 } + i32::from(italic),
-        _ => base + if bold { 2 } else { 0 } + i32::from(italic),
-    };
-    (n, true)
+    let base = named.unwrap_or_else(|| {
+        if flag(1) || font.is_some_and(|f| f.is_monospace) {
+            12
+        } else if flags.is_some_and(|f| f & 2 == 0) || font.is_some_and(|f| !f.is_serif) {
+            16
+        } else {
+            0
+        }
+    });
+    (base + if bold { 2 } else { 0 } + i32::from(italic), true)
 }
 
 #[cfg(test)]
@@ -1185,6 +1304,27 @@ mod tests {
         assert!(page_count(b"nothing").is_err());
         assert!(!is_pdf(b"#FIG 3.2"));
         assert!(is_pdf(b"%PDF-1.7\n"));
+    }
+
+    #[test]
+    fn fonts_map_by_name_and_flags() {
+        let m = |n: &str, f: Option<u32>| map_font(Some(n), f, None).0;
+        assert_eq!(m("ABCDEF+CMR10", None), 0);
+        assert_eq!(m("ABCDEF+CMBX12", Some(4)), 2);
+        assert_eq!(m("CMTI10", None), 1);
+        assert_eq!(m("NimbusRomNo9L-Medi", Some(6)), 2);
+        assert_eq!(m("NimbusRomNo9L-ReguItal", Some(70)), 1);
+        assert_eq!(m("NimbusMonL-Regu", Some(6)), 12);
+        assert_eq!(m("CMMI10", None), 1, "math italic letters stay Times Italic");
+        assert_eq!(m("CMSY10", None), 32);
+        assert_eq!(m("CMTT10", None), 12);
+        assert_eq!(m("CMSS10", None), 16);
+        assert_eq!(m("Helvetica-BoldOblique", None), 19);
+        assert_eq!(m("Courier-Bold", None), 14);
+        assert_eq!(m("Mystery", Some(1)), 12, "FixedPitch");
+        assert_eq!(m("Mystery", Some(2 | 64)), 1, "serif italic");
+        assert_eq!(m("Mystery", Some(0)), 16, "no serif flag: sans");
+        assert_eq!(m("Mystery", Some(1 << 18)), 18, "ForceBold on a sans fallback");
     }
 
     #[test]

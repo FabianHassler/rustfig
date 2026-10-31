@@ -80,7 +80,7 @@ fn tiny_pdf(content: &str, with_image: bool) -> Vec<u8> {
     let mut objs: Vec<Vec<u8>> = vec![
         b"<< /Type /Catalog /Pages 2 0 R >>".to_vec(),
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_vec(),
-        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 100] /Contents 4 0 R /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> >> /XObject << /Im 5 0 R >> >> >>".to_vec(),
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 100] /Contents 4 0 R /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> /F2 << /Type /Font /Subtype /Type1 /BaseFont /ABCDEF+CMTT10 /FontDescriptor << /Type /FontDescriptor /FontName /ABCDEF+CMTT10 /Flags 33 >> >> /F3 << /Type /Font /Subtype /Type1 /BaseFont /CMBX12 >> >> /XObject << /Im 5 0 R >> >> >>".to_vec(),
         format!("<< /Length {} >>\nstream\n{}\nendstream", content.len(), content).into_bytes(),
     ];
     if with_image {
@@ -254,4 +254,50 @@ fn hostile_pdfs_are_errors_not_panics() {
     assert!(e
         .execute("file.open_data", &json!({"data": "%PDF-1.4 nonsense", "vectors": true}))
         .is_err());
+}
+
+fn texts(e: &Engine) -> Vec<rustfig_engine::model::Text> {
+    e.doc()
+        .objects
+        .iter()
+        .filter_map(|o| match &o.kind {
+            ObjectKind::Text(t) => Some(t.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+#[test]
+fn tex_style_text_gets_spaces_ligatures_fonts_and_depths() {
+    let dir = temp_dir("tex");
+    // Words set with a kern instead of a space glyph, a fi ligature, a far
+    // away piece on the same line, other fonts, then a white box on top.
+    let content = "BT /F1 10 Tf 20 80 Td [(Hello) -400 (World) -300 (\\256nal) -9000 (Far)] TJ ET \
+        BT /F2 10 Tf 20 60 Td (code) Tj ET BT /F3 10 Tf 20 40 Td (Bold) Tj ET \
+        1 g 0 0 200 20 re f";
+    let (e, _) = open_bytes(&tiny_pdf(content, false), &dir, "tex.pdf");
+    let t = texts(&e);
+    let strings: Vec<&str> = t.iter().map(|t| t.text.as_str()).collect();
+    assert!(strings.contains(&"Hello World final"), "{strings:?}");
+    assert!(strings.contains(&"Far"), "{strings:?}");
+    assert!(strings.contains(&"code"));
+    let font = |s: &str| t.iter().find(|t| t.text == s).unwrap().font;
+    assert_eq!(font("Hello World final"), 18, "Helvetica-Bold");
+    assert_eq!(font("code"), 12, "CMTT10: Courier");
+    assert_eq!(font("Bold"), 2, "CMBX12: Times Bold");
+    // The white box was painted last: it is above every text (smaller depth).
+    let box_depth = e
+        .doc()
+        .objects
+        .iter()
+        .find_map(|o| match &o.kind {
+            ObjectKind::Polyline(p) if p.kind == PolyKind::Box => Some(p.style.depth),
+            _ => None,
+        })
+        .unwrap();
+    assert!(
+        t.iter().all(|t| box_depth < t.depth),
+        "box {box_depth} texts {:?}",
+        t.iter().map(|t| t.depth).collect::<Vec<_>>()
+    );
 }
