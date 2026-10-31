@@ -18,7 +18,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Measure | Value |
 |---------|-------|
 | Overall parity (weighted) | ≈94 % |
-| Commands (all reachable from the control channel and MCP) | 223 engine (incl. 44 tool modes and "no mode") + 29 UI |
+| Commands (all reachable from the control channel and MCP) | 255 engine (incl. the tool modes and "no mode") + 43 UI |
 | Interactive tools (xfig modes) | 44 (xfig's 43 + Trim/Split/Extend) |
 | Tests | 598 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 1.3–3.2, write 3.2 |
