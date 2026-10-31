@@ -1,6 +1,6 @@
 # File format parity checklist
 
-**Status:** 2026-10-21 (B15: PDF/EPS pictures); 2026-10-21 (DD9 sweep); 2026-10-20 (DD3: one reader, fig2dev's, for Fig 1.3–3.2); 2026-10-18 (B9: EMF, Tk; G1: Fig 1.3–2.1; B2: pstex/pdftex; B3: pict2e; B1: tikz; B3: PSTricks; ported languages exported from the app; B12: every export through fig2dev).
+**Status:** 2026-10-31 (G5, G7: PDF and SVG import); 2026-10-21 (B15: PDF/EPS pictures); 2026-10-21 (DD9 sweep); 2026-10-20 (DD3: one reader, fig2dev's, for Fig 1.3–3.2); 2026-10-18 (B9: EMF, Tk; G1: Fig 1.3–2.1; B2: pstex/pdftex; B3: pict2e; B1: tikz; B3: PSTricks; ported languages exported from the app; B12: every export through fig2dev).
 
 | Format | Read | Write | Notes |
 |---|---|---|---|
@@ -38,6 +38,7 @@
 | Picture import PNG/JPEG/GIF/BMP/TIFF/PNM | ✅ | — | |
 | Picture import EPS/PDF/XPM/XBM/PCX | ❌ | — | gap #14 |
 | PDF page as editable Fig objects (Open/Merge, RustFig addition) | ✅ 2026-10-31 | `import::pdf`, `crates/engine/tests/pdf_import.rs` | G5 |
+| SVG / SVGZ as editable Fig objects (Open/Merge, RustFig addition) | ✅ 2026-10-31 | `import::svg` (usvg), `crates/engine/tests/svg_import.rs` | G7 |
 
 Fuzzing: `crates/format/tests/prop_format.rs`, `crates/engine/tests/import_fuzz.rs`.
 
@@ -59,3 +60,4 @@ Fuzzing: `crates/format/tests/prop_format.rs`, `crates/engine/tests/import_fuzz.
 | 2026-10-23 | E16: PDF, SVG and PNG exports can carry the Fig text (PDF embedded file, SVG metadata, PNG iTXt); File > Open reads it back. |
 | 2026-10-21 | E15: export-on-save setting round-trips through Fig comments and native JSON. |
 | 2026-10-31 | G5: PDF pages open and merge as editable Fig objects (row "PDF page as editable Fig objects"). |
+| 2026-10-31 | G7: SVG and SVGZ files open and merge as editable Fig objects (row "SVG / SVGZ as editable Fig objects"). |

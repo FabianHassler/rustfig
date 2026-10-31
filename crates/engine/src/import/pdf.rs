@@ -1016,7 +1016,7 @@ fn apply_stroke(st: &mut Style, s: &StrokeProps, scale: f64) {
 
 /// A subpath in Fig units: its flattened points, whether it was closed and
 /// the ellipse it draws when it is an axis-aligned one.
-struct SubPath {
+pub(crate) struct SubPath {
     points: Vec<(f64, f64)>,
     closed: bool,
     ellipse: Option<((f64, f64), f64, f64)>,
@@ -1024,7 +1024,7 @@ struct SubPath {
 
 /// Split a path (already in Fig units) into flattened subpaths. `false`
 /// when it has coordinates that are not finite or too large.
-fn split_subpaths(path: &BezPath) -> (Vec<SubPath>, bool) {
+pub(crate) fn split_subpaths(path: &BezPath) -> (Vec<SubPath>, bool) {
     let mut groups: Vec<Vec<PathEl>> = Vec::new();
     for el in path.elements() {
         match el {
@@ -1137,7 +1137,7 @@ fn ellipse_of(g: &[PathEl]) -> Option<((f64, f64), f64, f64)> {
 }
 
 /// The Fig object a subpath makes, if it makes one.
-fn subpath_object(sp: &SubPath, style: Style, fill: bool) -> Option<Object> {
+pub(crate) fn subpath_object(sp: &SubPath, style: Style, fill: bool) -> Option<Object> {
     if let Some(((cx, cy), rx, ry)) = sp.ellipse {
         let center = Point::new(cx.round(), cy.round());
         let (rx, ry) = (rx.round().max(1.0), ry.round().max(1.0));
@@ -1193,7 +1193,7 @@ fn subpath_object(sp: &SubPath, style: Style, fill: bool) -> Option<Object> {
 /// by the font's name (`/BaseFont`, subset prefix removed), then by the
 /// descriptor flags (FixedPitch 1, Serif 2, Italic 64, ForceBold 1<<18), then
 /// by what the font program says.
-fn map_font(
+pub(crate) fn map_font(
     name: Option<&str>,
     flags: Option<u32>,
     font: Option<&hayro::hayro_interpret::font::OutlineFontData>,

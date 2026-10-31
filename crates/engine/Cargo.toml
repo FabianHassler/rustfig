@@ -26,6 +26,11 @@ hayro = "0.8"
 # Joins the batch's PDFs into one print job (B5); both already come with hayro.
 hayro-write = "0.8"
 hayro-syntax = "0.8"
+# SVG import (G7): usvg resolves CSS, transforms, use and shapes; text layout
+# needs the built-in fonts (epaint_default_fonts), svgz is unpacked here with a size cap.
+usvg = { version = "0.48", default-features = false, features = ["text"] }
+flate2.workspace = true
+epaint_default_fonts.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true

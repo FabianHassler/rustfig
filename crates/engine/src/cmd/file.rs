@@ -35,7 +35,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Open…",
             menu: "",
             shortcut: "",
-            params: "{\"path\": string, \"offset_x\"?: number, \"offset_y\"?: number, \"page\"?: number, \"vectors\"?: bool}  — open a .fig or .rustfig file, or a PDF as editable Fig objects (G5: page = the 1-based page, default 1; a PDF with an embedded figure opens that figure unless vectors is true; result warnings say what was dropped); the optional offset (Fig units) moves the figure, as xfig's Figure Offset. A name that does not exist yet opens an empty figure of that name (xfig's \"(new file)\"; result new_file: true); the first Save creates the file",
+            params: "{\"path\": string, \"offset_x\"?: number, \"offset_y\"?: number, \"page\"?: number, \"vectors\"?: bool}  — open a .fig or .rustfig file, or a PDF or SVG/SVGZ as editable Fig objects (G7 for SVG; G5: page = the 1-based page, default 1; a PDF with an embedded figure opens that figure unless vectors is true; result warnings say what was dropped); the optional offset (Fig units) moves the figure, as xfig's Figure Offset. A name that does not exist yet opens an empty figure of that name (xfig's \"(new file)\"; result new_file: true); the first Save creates the file",
             mutates: false,
             enabled: always,
             run: open,
@@ -496,10 +496,13 @@ fn offset(p: &Value) -> Result<(f64, f64), EngineError> {
     ))
 }
 
-/// Whether `bytes` is a PDF to import as Fig objects (G5) and not one that
-/// carries its figure (E16): `vectors: true` forces the import.
+/// Whether `bytes` is a PDF (G5) or an SVG or SVGZ (G7) to import as Fig
+/// objects and not one that carries its figure (E16): `vectors: true` forces
+/// the import.
 fn wants_pdf_import(bytes: &[u8], p: &Value) -> Result<bool, EngineError> {
-    if !import::pdf::is_pdf(bytes) {
+    let svg =
+        !import::pdf::is_pdf(bytes) && rustfig_format::FileFormat::sniff(bytes).is_none() && import::svg::is_svg(bytes);
+    if !import::pdf::is_pdf(bytes) && !svg {
         return Ok(false);
     }
     if opt_bool(p, "vectors")?.unwrap_or(false) {
@@ -539,12 +542,21 @@ fn pdf_stem(name: &str) -> String {
     }
 }
 
-/// A PDF page as a figure with its pictures: the PNG files go next to the
-/// PDF (`dir`, native builds) and into the in-memory picture store, so the
+/// A PDF page or an SVG as a figure with its pictures: the PNG files go next to the
+/// file (`dir`, native builds) and into the in-memory picture store, so the
 /// figure shows them before the first save.
 fn load_pdf(bytes: &[u8], p: &Value, stem: &str, dir: Option<&Path>) -> Result<(Document, Vec<String>), EngineError> {
-    let page = pdf_page(p)?;
-    let imp = import::pdf::import(bytes, page, stem).map_err(EngineError::format)?;
+    let imp = if import::pdf::is_pdf(bytes) {
+        let page = pdf_page(p)?;
+        import::pdf::import(bytes, page, stem).map_err(EngineError::format)?
+    } else {
+        let s = import::svg::import(bytes, stem, dir).map_err(EngineError::format)?;
+        import::pdf::Imported {
+            doc: s.doc,
+            images: s.images,
+            warnings: s.warnings,
+        }
+    };
     let mut doc = imp.doc;
     let mut warnings = imp.warnings;
     let mut not_written = 0;
@@ -561,7 +573,7 @@ fn load_pdf(bytes: &[u8], p: &Value, stem: &str, dir: Option<&Path>) -> Result<(
     }
     if not_written > 0 {
         warnings.push(format!(
-            "{not_written} image files could not be written next to the PDF"
+            "{not_written} image files could not be written next to the file"
         ));
     }
     warnings.extend(import::load_all_pictures(&mut doc, dir));
