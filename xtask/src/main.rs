@@ -1,6 +1,7 @@
 //! Project automation: `cargo xtask ci | layers | assets | licences | wasm | web | site | source-audit | libraries`.
 
 mod audit;
+mod ctan;
 mod libraries;
 mod package;
 mod site;
@@ -518,8 +519,9 @@ fn main() -> ExitCode {
         "xfig-compare" => xfig_compare::run(&root(), cargo()),
         "libraries" => libraries::run(&root()),
         "site" => site::run(&root()),
+        "ctan" => ctan::run(&root(), &std::env::args().nth(2).unwrap_or_else(|| "HEAD".into())),
         _ => Err(
-            "usage: cargo xtask ci | layers | assets | licences | wasm | web | package | source-audit | xfig-compare | libraries"
+            "usage: cargo xtask ci | layers | assets | licences | wasm | web | package | source-audit | xfig-compare | libraries | site | ctan [REF]"
                 .into(),
         ),
     };

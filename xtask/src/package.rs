@@ -233,7 +233,7 @@ pub fn png_from_rgba(rgba: &[u8], size: u32) -> Option<Vec<u8>> {
 
 // ---- driver ----
 
-fn sh(cmd: &mut Command) -> Result<(), String> {
+pub(crate) fn sh(cmd: &mut Command) -> Result<(), String> {
     eprintln!("$ {cmd:?}");
     let s = cmd.status().map_err(|e| format!("{cmd:?}: {e}"))?;
     if s.success() {
