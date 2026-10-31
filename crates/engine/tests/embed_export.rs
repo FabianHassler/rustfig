@@ -115,6 +115,11 @@ fn off_by_default_and_files_without_payload_say_so() {
         let path = dir.join(name);
         e.execute("file.export", &json!({"path": path.to_str().unwrap()}))
             .unwrap();
+        // A PDF without the figure inside is imported as Fig objects (G5).
+        if name == "x.pdf" {
+            assert!(reopen(&path).unwrap().doc().objects.len() >= 2);
+            continue;
+        }
         let err = reopen(&path).err().unwrap();
         assert!(err.contains("no embedded figure"), "{name}: {err}");
     }

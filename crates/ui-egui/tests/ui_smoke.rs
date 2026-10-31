@@ -3216,3 +3216,59 @@ fn dialogs_fit_a_small_window() {
         );
     }
 }
+
+/// A two-page PDF: the page chooser appears and the chosen page is merged (G5).
+#[test]
+fn pdf_with_several_pages_asks_for_the_page() {
+    let contents = ["0 0 100 50 re f", "0 0 10 10 re f 50 50 10 10 re f"];
+    let mut objs: Vec<String> = vec![
+        "<< /Type /Catalog /Pages 2 0 R >>".into(),
+        "<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>".into(),
+    ];
+    for (i, c) in contents.iter().enumerate() {
+        let first = 3 + 2 * i;
+        objs.push(format!(
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 100] /Contents {} 0 R >>",
+            first + 1
+        ));
+        objs.push(format!("<< /Length {} >>\nstream\n{c}\nendstream", c.len()));
+    }
+    let mut out = String::from("%PDF-1.4\n");
+    let mut offs = Vec::new();
+    for (i, o) in objs.iter().enumerate() {
+        offs.push(out.len());
+        out.push_str(&format!("{} 0 obj\n{o}\nendobj\n", i + 1));
+    }
+    let x = out.len();
+    out.push_str(&format!("xref\n0 {}\n0000000000 65535 f \n", objs.len() + 1));
+    for o in offs {
+        out.push_str(&format!("{o:010} 00000 n \n"));
+    }
+    out.push_str(&format!(
+        "trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{x}\n%%EOF\n",
+        objs.len() + 1
+    ));
+    let dir = std::env::temp_dir().join(format!("rustfig-g5-ui-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("two.pdf");
+    std::fs::write(&path, out).unwrap();
+
+    let mut h = harness(app());
+    h.state_mut().run("app.merge", json!({"path": path.to_str().unwrap()}));
+    h.run_steps(2);
+    h.get_by_label("Merge PDF page");
+    assert!(
+        h.state().engine.doc().objects.is_empty(),
+        "nothing merged before the page is chosen"
+    );
+    h.state_mut().dialogs.pdf_page.as_mut().unwrap().page = 2;
+    h.run_steps(1);
+    h.get_by_label("OK").click();
+    h.run_steps(3);
+    let objs = &h.state().engine.doc().objects;
+    assert_eq!(objs.len(), 1);
+    match &objs[0].kind {
+        rustfig_model::ObjectKind::Compound(c) => assert_eq!(c.objects.len(), 2),
+        k => panic!("expected a compound, got {k:?}"),
+    }
+}

@@ -531,7 +531,7 @@ impl App {
             Pending::Open(path) => {
                 let path = path.or_else(|| self.file_dialogs.pick_file("Figures", dialogs::FIGURE_EXTS));
                 if let Some(p) = path {
-                    self.run("file.open", json!({ "path": p }));
+                    dialogs::open_or_merge(self, &p, false, json!({}));
                 }
             }
             Pending::Quit => {

@@ -18,7 +18,7 @@ use std::path::Path;
 /// The most entries of one directory the panel lists.
 pub const MAX_ENTRIES: usize = 20_000;
 /// xfig's default filename mask, plus the figures RustFig opens.
-pub const DEFAULT_MASK: &str = "*.fig *.rustfig *.xfig *.fig.gz *.fig.Z";
+pub const DEFAULT_MASK: &str = "*.fig *.rustfig *.xfig *.fig.gz *.fig.Z *.pdf";
 
 /// Whether `name` matches the glob `pattern` (`*`, `?` and `[set]`, as the
 /// mask of xfig's file list uses).

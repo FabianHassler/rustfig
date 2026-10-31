@@ -241,10 +241,7 @@ fn go(app: &mut App) {
         let fp = &app.file_panel;
         let to_fig = |v: f64, u: usize| file_panel::offset_in_fig_units(v, u as u8);
         let (xf, yf) = (to_fig(fp.x, fp.x_unit), to_fig(fp.y, fp.y_unit));
-        app.run(
-            "file.merge",
-            json!({"path": path, "offset_x": xf, "offset_y": yf, "unit": "fig"}),
-        );
+        crate::dialogs::open_or_merge(app, &path, true, json!({"offset_x": xf, "offset_y": yf, "unit": "fig"}));
     } else {
         app.run("app.open", json!({ "path": path }));
     }
