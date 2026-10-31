@@ -109,8 +109,13 @@ fn flipped_picture_transposes_the_page() {
 #[test]
 fn not_a_pdf_picture_is_refused_and_disabled() {
     let dir = temp_dir("no");
-    // A PostScript file named .eps: not importable.
-    let (mut e, id) = engine_with_picture(&dir, b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 10 10\n", "x.eps");
+    // A bitmap picture (XBM, read the same way everywhere; an EPS without a
+    // preview needs ghostscript just to be placed): not importable.
+    let (mut e, id) = engine_with_picture(
+        &dir,
+        b"#define x_width 2\n#define x_height 2\nstatic char x_bits[] = {0x01, 0x02};\n",
+        "x.xbm",
+    );
     e.execute("edit.select_all", &json!({})).unwrap();
     assert!(!rustfig_engine::cmd::find("picture.import_objects")
         .map(|c| (c.enabled)(&e))
