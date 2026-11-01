@@ -30,7 +30,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "List libraries",
             menu: "",
             shortcut: "",
-            params: "{}  — the bundled libraries and the ones in the preference library_dir: {\"libraries\": [{\"name\": \"Electronic / Schematic / Classic\", \"objects\": n, \"user\": bool}]}",
+            params: "{}  — the bundled libraries and the ones in the preference library_dir: {\"libraries\": [{\"name\": \"Electronic / Schematic / Classic\", \"objects\": n, \"user\": bool, \"favourite\": bool}]}",
             mutates: false,
             enabled: always,
             run: list,
@@ -74,6 +74,16 @@ pub(super) fn commands() -> Vec<Command> {
             mutates: false,
             enabled: always,
             run: favourite,
+        },
+        Command {
+            id: "library.favourite_library",
+            label: "Library favourite (whole library)",
+            menu: "",
+            shortcut: "",
+            params: "{\"library\": name, \"on\"?: bool (default: toggle)}  — marks the library as a favourite or removes the mark (kept in the preferences, listed first in the library chooser); only an existing library can be added: {\"favourite\": bool, \"count\": n}",
+            mutates: false,
+            enabled: always,
+            run: favourite_library,
         },
         Command {
             id: "library.favourites",
@@ -144,10 +154,11 @@ pub(super) fn commands() -> Vec<Command> {
 }
 
 fn list(e: &mut Engine, _: &Value) -> CmdResult {
+    let fav = e.prefs.rustfig.library_favourite_libraries.clone();
     let libs: Vec<Value> = e
         .libraries()
         .into_iter()
-        .map(|l| json!({"name": l.name, "objects": l.objects, "user": l.user}))
+        .map(|l| json!({"name": l.name, "objects": l.objects, "user": l.user, "favourite": fav.contains(&l.name)}))
         .collect();
     Ok(json!({"libraries": libs}))
 }
@@ -236,6 +247,22 @@ fn favourite(e: &mut Engine, p: &Value) -> CmdResult {
     }
     e.prefs_dirty = true;
     Ok(json!({"favourite": on, "count": e.prefs.rustfig.library_favourites.len()}))
+}
+
+fn favourite_library(e: &mut Engine, p: &Value) -> CmdResult {
+    let library = string(p, "library")?;
+    let now = e.prefs.is_favourite_library(&library);
+    let on = opt_bool(p, "on")?.unwrap_or(!now);
+    if on && !now {
+        e.find_library(&library)?;
+    }
+    if !e.prefs.set_favourite_library(&library, on) {
+        return Err(EngineError::bad_params(
+            "too many favourite libraries: remove one first",
+        ));
+    }
+    e.prefs_dirty = true;
+    Ok(json!({"favourite": on, "count": e.prefs.rustfig.library_favourite_libraries.len()}))
 }
 
 fn favourites(e: &mut Engine, p: &Value) -> CmdResult {

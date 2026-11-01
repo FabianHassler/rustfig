@@ -649,3 +649,50 @@ fn library_favourites_and_recent_persist() {
     assert!(cleared["figures"].as_array().unwrap().is_empty());
     let _ = std::fs::remove_dir_all(&user);
 }
+
+/// W10-30: favourite libraries toggle, show in library.list, persist through
+/// the preferences and tolerate a library that is gone.
+#[test]
+fn favourite_libraries_toggle_and_persist() {
+    let user = scratch("favlib");
+    let mut e = engine_with_user_dir(&user);
+    let r = e
+        .execute("library.favourite_library", &json!({"library": "Computers"}))
+        .unwrap();
+    assert_eq!(r["favourite"], true);
+    e.execute("library.favourite_library", &json!({"library": "Optics", "on": true}))
+        .unwrap();
+    e.execute("library.favourite_library", &json!({"library": "Optics", "on": true}))
+        .unwrap();
+    assert_eq!(e.prefs.rustfig.library_favourite_libraries, vec!["Computers", "Optics"]);
+    let l = e.execute("library.list", &json!({})).unwrap();
+    let favs: Vec<&str> = l["libraries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|x| x["favourite"] == true)
+        .map(|x| x["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(favs.len(), 2);
+    assert!(e
+        .execute("library.favourite_library", &json!({"library": "Nope"}))
+        .is_err());
+    assert!(e.execute("library.favourite_library", &json!({})).is_err());
+    let text = e.prefs.to_toml();
+    let (back, _) = rustfig_engine::prefs::Prefs::parse(&text).unwrap();
+    assert_eq!(
+        back.rustfig.library_favourite_libraries,
+        e.prefs.rustfig.library_favourite_libraries
+    );
+    // A stored favourite that no longer exists is kept quietly and can be removed.
+    e.prefs.set_favourite_library("Gone", true);
+    assert!(e.execute("library.list", &json!({})).is_ok());
+    let r = e
+        .execute("library.favourite_library", &json!({"library": "Gone"}))
+        .unwrap();
+    assert_eq!(r["favourite"], false);
+    let r = e
+        .execute("library.favourite_library", &json!({"library": "Computers"}))
+        .unwrap();
+    assert_eq!(r["favourite"], false);
+}

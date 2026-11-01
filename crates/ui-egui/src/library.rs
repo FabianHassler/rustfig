@@ -575,6 +575,8 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     let favourites = app.engine.prefs.rustfig.library_favourites.clone();
     let recent = app.engine.prefs.rustfig.library_recent.clone();
     let mut toggle_fav: Option<(String, String)> = None;
+    let mut toggle_fav_lib: Option<String> = None;
+    let fav_libs = app.engine.prefs.rustfig.library_favourite_libraries.clone();
     egui::Window::new("Select an object or library")
         .open(&mut open)
         .default_size(vec2(440.0, 560.0))
@@ -589,18 +591,36 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                     None if p.libs.is_empty() => "No libraries".to_string(),
                     None => "None Loaded".to_string(),
                 };
-                let combo = egui::ComboBox::from_id_salt("library_choice").selected_text(text).width(300.0);
+                let combo = egui::ComboBox::from_id_salt("library_choice").selected_text(text).width(270.0);
                 let r = combo.show_ui(ui, |ui| {
-                    for l in &p.libs {
-                        let sel = p.current.as_deref() == Some(l.name.as_str());
-                        let label = if l.user { format!("{} (yours)", l.name) } else { l.name.clone() };
-                        if ui.selectable_label(sel, label).clicked() {
-                            load = Some(l.name.clone());
+                    // Favourite libraries first (a favourite no longer found is skipped), then the rest.
+                    let is_fav = |n: &str| fav_libs.iter().any(|f| f == n);
+                    let any_fav = p.libs.iter().any(|l| is_fav(&l.name));
+                    if any_fav {
+                        ui.weak("Favourites");
+                    }
+                    for pass in [true, false] {
+                        if !pass && any_fav {
+                            ui.separator();
+                        }
+                        for l in p.libs.iter().filter(|l| is_fav(&l.name) == pass) {
+                            let sel = p.current.as_deref() == Some(l.name.as_str());
+                            let label = if l.user { format!("{} (yours)", l.name) } else { l.name.clone() };
+                            if ui.selectable_label(sel, label).clicked() {
+                                load = Some(l.name.clone());
+                            }
                         }
                     }
                 });
                 r.response
                     .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, "Library"));
+                let cur = p.current.clone();
+                let fav = cur.as_ref().is_some_and(|c| fav_libs.iter().any(|f| f == c));
+                let tip = if fav { "Remove library from favourites" } else { "Add library to favourites" };
+                let r = star_button(ui, fav, cur.is_some(), tip).on_hover_text(tip);
+                if r.clicked() {
+                    toggle_fav_lib = cur;
+                }
             });
             ui.horizontal(|ui| {
                 ui.label("Source:");
@@ -948,6 +968,11 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     }
     if let Some(s) = set_size {
         app.run("prefs.set", json!({"resource": "library_icon_size", "value": s}));
+    }
+    if let Some(l) = toggle_fav_lib {
+        if let Err(m) = app.try_run("library.favourite_library", &json!({"library": l})) {
+            app.library.message = m;
+        }
     }
     if let Some((l, n)) = toggle_fav {
         if let Err(m) = app.try_run("library.favourite", &json!({"library": l, "name": n})) {

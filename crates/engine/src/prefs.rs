@@ -248,6 +248,8 @@ pub struct LibRef {
 pub const MAX_LIB_FAVOURITES: usize = 48;
 /// Most recently placed library figures kept.
 pub const MAX_LIB_RECENT: usize = 8;
+/// Most favourite libraries kept.
+pub const MAX_LIB_FAV_LIBS: usize = 32;
 
 /// RustFig's own settings.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -292,6 +294,9 @@ pub struct RustFigPrefs {
     /// W10-30: library figures placed lately, newest first.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub library_recent: Vec<LibRef>,
+    /// W10-30: favourite libraries (listed first in the library chooser), oldest first.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub library_favourite_libraries: Vec<String>,
     pub user_colors: Vec<NamedColor>,
     /// Colours used lately (`#rrggbb`, newest first), offered in the colour pop-ups (E4).
     pub recent_colors: Vec<String>,
@@ -361,6 +366,7 @@ impl Prefs {
         p.rustfig.recent_colors.truncate(MAX_RECENT_COLORS);
         p.rustfig.library_favourites.truncate(MAX_LIB_FAVOURITES);
         p.rustfig.library_recent.truncate(MAX_LIB_RECENT);
+        p.rustfig.library_favourite_libraries.truncate(MAX_LIB_FAV_LIBS);
         Ok((p, warnings))
     }
 
@@ -433,6 +439,24 @@ impl Prefs {
             },
         );
         r.truncate(MAX_LIB_RECENT);
+    }
+
+    /// Mark or unmark a library as a favourite; false when the list is full.
+    pub fn set_favourite_library(&mut self, library: &str, on: bool) -> bool {
+        let f = &mut self.rustfig.library_favourite_libraries;
+        f.retain(|x| x != library);
+        if on {
+            if f.len() >= MAX_LIB_FAV_LIBS {
+                return false;
+            }
+            f.push(library.to_string());
+        }
+        true
+    }
+
+    /// Whether a library is a favourite.
+    pub fn is_favourite_library(&self, library: &str) -> bool {
+        self.rustfig.library_favourite_libraries.iter().any(|x| x == library)
     }
 
     /// Whether a library figure is a favourite.

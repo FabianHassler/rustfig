@@ -3841,3 +3841,35 @@ fn library_panel_favourites_row_picks_figures_from_any_library() {
     h.get_by_label("Recent floppy_lg in Computers");
     let _ = std::fs::remove_dir_all(&user);
 }
+
+/// Favourite libraries: the star next to Library marks the loaded library and
+/// the chooser lists it first.
+#[test]
+fn library_chooser_lists_favourite_libraries_first() {
+    let user = std::env::temp_dir().join(format!("rustfig-ui-library-favlib-{}", std::process::id()));
+    let mut h = harness(app());
+    h.state_mut().run(
+        "prefs.set",
+        json!({"resource": "library_dir", "value": user.to_string_lossy()}),
+    );
+    h.get_by_label("Library").scroll_to_me();
+    h.get_by_label("Library").click();
+    h.run_steps(3);
+    h.state_mut().library.load("Optics");
+    h.run_steps(2);
+    h.get_by_label("Add library to favourites").click();
+    h.run_steps(2);
+    assert!(h.state().engine.prefs.is_favourite_library("Optics"));
+    h.get_by_label("Remove library from favourites");
+    let listed = h.state_mut().engine.execute("library.list", &json!({})).unwrap();
+    let first_in_list = listed["libraries"][0]["name"].as_str().map(str::to_string);
+    assert_ne!(first_in_list.as_deref(), Some("Optics"));
+    h.get_by_role_and_label(egui::accesskit::Role::ComboBox, "Library")
+        .click();
+    h.run_steps(4);
+    h.get_by_label("Favourites");
+    let y_of =
+        |h: &Harness<'static, App>, l: &str| h.get_all_by_label(l).map(|n| n.rect().min.y).fold(f32::MAX, f32::min);
+    let first = first_in_list.unwrap_or_default();
+    assert!(y_of(&h, "Optics") < y_of(&h, &first));
+}
