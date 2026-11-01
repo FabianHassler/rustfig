@@ -307,7 +307,7 @@ impl App {
             plot_dialog: plot_dialog::PlotDialog::default(),
             reload: reload::Reload::default(),
             after_save: None,
-            file_dialogs: Box::new(dialogs::NativeDialogs),
+            file_dialogs: Box::new(dialogs::NativeDialogs::new()),
             web_inbox: web_io::WebInbox::default(),
             web_relink_name: None,
             quit_confirmed: false,
@@ -679,6 +679,13 @@ impl App {
     pub fn ui(&mut self, ctx: &egui::Context) {
         key_font::install(ctx);
         platform::note_os(ctx);
+        // File dialogs open in the current figure's folder (xfig's cur_file_dir).
+        let dir = self
+            .engine
+            .path()
+            .and_then(|p| std::path::Path::new(p).parent())
+            .map(std::path::Path::to_path_buf);
+        self.file_dialogs.set_dir(dir.filter(|d| !d.as_os_str().is_empty()));
         #[cfg(not(target_arch = "wasm32"))]
         let start = std::time::Instant::now();
         let frame_result = rustfig_engine::guard::catch(|| self.frame(ctx));

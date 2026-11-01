@@ -709,19 +709,59 @@ pub trait FileDialogs {
     fn download(&self, _name: &str, _bytes: Vec<u8>) -> Result<(), String> {
         Err("downloads are only available in the browser".to_string())
     }
+    /// The folder of the current figure, where the next dialog opens
+    /// (`None`: the folder RustFig was started in).
+    fn set_dir(&self, _dir: Option<std::path::PathBuf>) {}
 }
 
 /// The operating system's file dialogs; in the browser the file picker and downloads.
-pub struct NativeDialogs;
+///
+/// They open in the current figure's folder, else in the folder RustFig was
+/// started in, as xfig's file panel does (`cur_file_dir` is the working
+/// directory at start-up).
+#[derive(Default)]
+pub struct NativeDialogs {
+    /// The working folder at start-up; the home folder when that is the root
+    /// (an app started from the Finder or a desktop menu).
+    start: Option<std::path::PathBuf>,
+    /// The current figure's folder.
+    file_dir: std::sync::Mutex<Option<std::path::PathBuf>>,
+}
+
+impl NativeDialogs {
+    /// Dialogs that open in the working folder of this process.
+    pub fn new() -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
+        let start = std::env::current_dir()
+            .ok()
+            .filter(|d| d.parent().is_some())
+            .or_else(|| std::env::var_os("HOME").map(std::path::PathBuf::from));
+        #[cfg(target_arch = "wasm32")]
+        let start = None;
+        Self {
+            start,
+            file_dir: std::sync::Mutex::new(None),
+        }
+    }
+
+    /// Where the next dialog opens.
+    #[cfg(not(target_arch = "wasm32"))]
+    fn dir(&self) -> Option<std::path::PathBuf> {
+        // A poisoned lock only loses the remembered folder.
+        let file_dir = self.file_dir.lock().ok().and_then(|d| d.clone());
+        file_dir.filter(|d| d.is_dir()).or_else(|| self.start.clone())
+    }
+}
 
 impl FileDialogs for NativeDialogs {
     fn pick_file(&self, what: &str, exts: &[&str]) -> Option<String> {
         #[cfg(not(target_arch = "wasm32"))]
         {
-            rfd::FileDialog::new()
-                .add_filter(what, exts)
-                .pick_file()
-                .and_then(|p| p.to_str().map(str::to_string))
+            let mut dialog = rfd::FileDialog::new().add_filter(what, exts);
+            if let Some(d) = self.dir() {
+                dialog = dialog.set_directory(d);
+            }
+            dialog.pick_file().and_then(|p| p.to_str().map(str::to_string))
         }
         #[cfg(target_arch = "wasm32")]
         {
@@ -733,11 +773,13 @@ impl FileDialogs for NativeDialogs {
     fn save_file(&self, default_name: &str, what: &str, exts: &[&str]) -> Option<String> {
         #[cfg(not(target_arch = "wasm32"))]
         {
-            rfd::FileDialog::new()
+            let mut dialog = rfd::FileDialog::new()
                 .set_file_name(default_name)
-                .add_filter(what, exts)
-                .save_file()
-                .and_then(|p| p.to_str().map(str::to_string))
+                .add_filter(what, exts);
+            if let Some(d) = self.dir() {
+                dialog = dialog.set_directory(d);
+            }
+            dialog.save_file().and_then(|p| p.to_str().map(str::to_string))
         }
         #[cfg(target_arch = "wasm32")]
         {
@@ -748,6 +790,12 @@ impl FileDialogs for NativeDialogs {
 
     fn is_web(&self) -> bool {
         cfg!(target_arch = "wasm32")
+    }
+
+    fn set_dir(&self, dir: Option<std::path::PathBuf>) {
+        if let Ok(mut d) = self.file_dir.lock() {
+            *d = dir;
+        }
     }
 
     fn pick_web(&self, what: &str, exts: &[&str], inbox: &WebInbox) {
