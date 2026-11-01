@@ -56,7 +56,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | File: New window... (xfig's New xfig, native only; S4-9) | ✅ | ✅ |
 | View: Autorefresh mode (reloads a file changed on disk, asks with unsaved edits; native only; S4-9) | ✅ | ✅ |
 | Edit: Undo (multi-level), Paste, Delete All, Search/Replace | ✅ | ✅ |
-| Edit > Find Objects (RustFig addition, W10-39): criteria, count, list, canvas outline, actions on all matches | ✅ | ✅ |
+| Edit > Find Objects (RustFig addition, W10-39; a mode without a mode-panel button: left click adds/removes an object, the panel shows the update boxes): criteria, count, list, canvas outline, actions on all matches | ✅ | ✅ |
 | Edit: Spell check, Global settings | Global settings ✅ (W10-23: xfig's rows with Ok/Cancel); Spell check ✅ (F5: Misspelled words window) | ✅ |
 | View: zoom, fit, pan to origin, page border, portrait/landscape | ✅ | ✅ |
 | View: depth manager | right panel | ✅ |

@@ -11,6 +11,7 @@
 mod chop;
 mod ctrl;
 mod cursor;
+mod find;
 mod mode_messages;
 mod textedit;
 pub use cursor::CursorKind;
@@ -88,6 +89,9 @@ pub enum ToolKind {
     /// Plot a function or data (plan E12): drag the plot's frame, then the
     /// Plot dialog draws it.
     Plot,
+    /// Find objects: the match set of Edit > Find Objects; a click
+    /// adds or removes an object. No button in the mode panel.
+    Find,
 }
 
 impl ToolKind {
@@ -127,10 +131,11 @@ impl ToolKind {
                 | AngleMeasure
                 | LengthMeasure
                 | AreaMeasure
+                | Find
         )
     }
 
-    pub const ALL: [ToolKind; 46] = [
+    pub const ALL: [ToolKind; 47] = [
         ToolKind::CircleRadius,
         ToolKind::CircleDiameter,
         ToolKind::EllipseRadii,
@@ -177,6 +182,7 @@ impl ToolKind {
         ToolKind::LengthMeasure,
         ToolKind::AreaMeasure,
         ToolKind::Plot,
+        ToolKind::Find,
     ];
 
     pub fn id(self) -> &'static str {
@@ -228,6 +234,7 @@ impl ToolKind {
             ToolKind::LengthMeasure => "tool.length_measure",
             ToolKind::AreaMeasure => "tool.area_measure",
             ToolKind::Plot => "tool.plot",
+            ToolKind::Find => "tool.find",
         }
     }
 
@@ -284,6 +291,7 @@ impl ToolKind {
             ToolKind::LengthMeasure => "Measure length",
             ToolKind::AreaMeasure => "Measure area",
             ToolKind::Plot => "Plot",
+            ToolKind::Find => "Find objects",
         }
     }
 
@@ -857,6 +865,8 @@ impl Engine {
         // Choosing Rotate or Flip erases any centre / anchor (`rotate_cw_selected`).
         self.set_point = None;
         self.tool = kind;
+        // The match set belongs to Find mode: entering or leaving clears it.
+        self.find_set.clear();
         // xfig puts the mode button's sentence in the message panel.
         self.set_status(kind.xfig_message().unwrap_or_else(|| kind.label()));
     }
@@ -892,6 +902,11 @@ impl Engine {
         }
         if self.locate.take().is_some() || self.set_point.take().is_some() {
             return Ok("cleared");
+        }
+        // Find mode ends at once; its match set goes with it.
+        if self.tool == ToolKind::Find {
+            self.set_tool(ToolKind::None);
+            return Ok("mode left");
         }
         if !self.selection().is_empty() {
             self.set_selection(Vec::new());
@@ -1213,6 +1228,7 @@ impl Engine {
             ToolKind::MovePoint | ToolKind::AddPoint => self.point_event(ev),
             ToolKind::Scale => self.scale_event(ev),
             ToolKind::Delete => self.delete_event(ev),
+            ToolKind::Find => self.find_event(ev),
             ToolKind::OpenCompound => self.open_compound_event(ev),
             ToolKind::JoinSplit => self.join_split_event(ev),
             ToolKind::Chop => self.chop_event(ev),
@@ -3578,6 +3594,7 @@ impl Engine {
                     ToolKind::DeletePoint => ("delete point", "", ""),
                     ToolKind::Delete => ("delete object", "delete region", "del to cut buf"),
                     ToolKind::Update => ("update object", "update settings", ""),
+                    ToolKind::Find => ("add/remove object", "", ""),
                     ToolKind::Edit => ("edit object", "edit Main comment", "edit point"),
                     ToolKind::FlipV | ToolKind::FlipH if self.set_point.is_some() => {
                         ("flip", "copy & flip", "unset anchor")

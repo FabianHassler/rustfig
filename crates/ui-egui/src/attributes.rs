@@ -285,7 +285,8 @@ pub fn attributes_for(tool: ToolKind) -> Vec<Attr> {
         // `I_COPY`: array copies (Copy middle button).
         ToolKind::Copy => &[MIN2, &[NumXCopies, NumYCopies, SmartLinks]],
         ToolKind::Align => &[&[HAlign, VAlign, SmartLinks]],
-        ToolKind::Update => &[TEXT0, LINE1, ARROWS, &[BoxRadius, ArcType]],
+        // Find mode's Update acts with the same attributes and boxes.
+        ToolKind::Update | ToolKind::Find => &[TEXT0, LINE1, ARROWS, &[BoxRadius, ArcType]],
         // RustFig's own Select tool edits with the same attributes as Update.
         ToolKind::RotateCcw | ToolKind::RotateCw => &[MIN2, &[RotnAngle, NumCopies, SmartLinks]],
         ToolKind::Arrow => &[&[LineWidth, ArrowType, ArrowSize]],
@@ -320,12 +321,18 @@ pub const BUTTON_HINTS: (&str, &str, &str) = ("Menu", "Dec/Prev", "Inc/Next");
 
 const BUTTON_HEIGHT: f32 = 34.0;
 
+/// Update mode and Find mode (whose Update button acts by the same flags)
+/// show the update boxes, Update Control and the "Update will change" line.
+pub fn shows_update_boxes(t: ToolKind) -> bool {
+    matches!(t, ToolKind::Update | ToolKind::Find)
+}
+
 /// The attribute panel: one row of buttons, wrapping when the window is narrow.
 pub fn attribute_panel(app: &mut App, ui: &mut Ui, tk: &Tokens) {
     let attrs = attributes_for(app.engine.tool());
     let mut hovered = false;
     ui.add_space(2.0);
-    let update_mode = app.engine.tool() == ToolKind::Update;
+    let update_mode = shows_update_boxes(app.engine.tool());
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = vec2(2.0, 2.0);
         if update_mode {
@@ -347,7 +354,7 @@ pub fn attribute_panel(app: &mut App, ui: &mut Ui, tk: &Tokens) {
     app.hint_override = hovered.then_some(BUTTON_HINTS);
 }
 
-/// xfig's "Update Control" box, shown in Update mode only: a caption and
+/// xfig's "Update Control" box, shown in Update and Find mode: a caption and
 /// three small buttons that set, clear and toggle every update flag.
 fn update_control(app: &mut App, ui: &mut Ui, tk: &Tokens) {
     let (rect, _) = ui.allocate_exact_size(vec2(76.0, BUTTON_HEIGHT), Sense::hover());
@@ -482,7 +489,7 @@ fn button(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) -> bool {
     // In Update mode the small upper-right box toggles the attribute's
     // update flag; when it is clicked it owns the click, so the button's
     // pop-up and wheel/right/middle actions stay closed and unchanged.
-    let flag_clicked = if app.engine.tool() == ToolKind::Update {
+    let flag_clicked = if shows_update_boxes(app.engine.tool()) {
         match a.update_flag() {
             Some(flag) => update_box(app, ui, rect, a, flag),
             None => false,

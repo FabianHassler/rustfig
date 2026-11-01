@@ -159,6 +159,8 @@ pub struct Engine {
     /// Edit > Copy as Picture waits for its objects (xfig has no
     /// selection): left an object, middle a region, right the whole figure.
     pub(crate) copy_pick: bool,
+    /// Find mode's match set (top-level object ids, in the order added).
+    pub(crate) find_set: Vec<ObjectId>,
     /// A Ctrl press was refused (a tool at work): its release must not finish anything.
     pub(crate) ignore_release: bool,
     /// Draw objects on hidden depths in gray (xfig's "Gray"); otherwise
@@ -225,6 +227,7 @@ impl Engine {
             latex: latex_preview::LatexPreview::new(),
             read_scale: 1.0,
             copy_pick: false,
+            find_set: Vec::new(),
             ignore_release: false,
             gray_hidden_depths: true,
             show_page_border: true,
