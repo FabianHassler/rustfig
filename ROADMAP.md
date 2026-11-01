@@ -64,15 +64,15 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 [docs/gaps.md](docs/gaps.md). Next up:
 1. W22 is done (three rounds, 64 differences; the user kept RustFig's picking and chose xfig's Ctrl+wheel zoom steps).
 2. E10: only a check by hand with a real input method is left.
-3. B11 leftovers in fig2dev: `-j` composite fonts, netpbm's palette order for PPM/TIFF/XPM/GIF pictures, `-E utf-16`.
-4. Checks by hand: Windows install and print hand-off (P3, Printing), Linux Wayland and HiDPI, the web demo in real browsers (C5).
-5. The accepted UI proposals (W10-25 to W10-38): Global settings in tabs, Search, spell check while typing, library browser, live value pop-ups, mode finder.
-6. 1.0: what it needs is the user's decision (proposed: parity ≥ 95 % and no known regressions); then the web version (phase C).
+3. Checks by hand: Windows install and print hand-off (P3, Printing), Linux Wayland and HiDPI, the web demo in real browsers (C5).
+4. The accepted UI proposals (W10-25 to W10-38): Global settings in tabs, Search, spell check while typing, library browser, live value pop-ups, mode finder.
+5. 1.0: what it needs is the user's decision (proposed: parity ≥ 95 % and no known regressions); then the web version (phase C).
 
 ## Progress log
 
 | Date | Change |
 |------|--------|
+| 2026-11-01 | **B11 done** (fig2dev v0.9.6, on crates.io): `-j` composite fonts (Japanese, Korean) in PS/EPS, netpbm's palette order, TIFF pictures with a palette, `-E utf-16`; W22 answers: Ctrl+wheel zooms in xfig's steps, RustFig's picking kept. |
 | 2026-11-01 | W22 round 3 (side-by-side with the real xfig: Shift and Ctrl variants of every mode's buttons, wheel and keys, two more fixtures; 210 scenarios, differences 45–64): 11 real fixed (Ctrl+Shift in drawing modes, refused Ctrl click's release, one job per button within a modifier set incl. ellipse drags, shape factor -0.5, re-append after Update/Add point/Delete point/Convert/shape factor, X-spline close factors, arrow add/delete on end points, box scale on edges, no "-0", dimension box points); 8 intended; two questions for the user. |
 | 2026-10-25 | D11 screen capture: File > Capture Screen… (`app.capture`; `rustfig_os::capture`: macOS `screencapture -i`, Linux portal Screenshot, Windows whole screen; Save names the PNG, a picture object is added), the arc's "N points, Length = …" message and the "Unit/Scale settings" title (W22 row 36 fully fixed); xfig function audit: 0 missing; Editing 95 → 97 %. The OS calls are manual checks (hardware-parity.md). |
 | 2026-10-31 | **v0.9.0-beta.7**: PDF and SVG import as editable objects (G5, G7), Import as objects for PDF pictures (G6), Asymptote export (B16), fig2dev v0.9.5 (23 bugs of C fig2dev no longer copied; on crates.io with 0.9.4). |

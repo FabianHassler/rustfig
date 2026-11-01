@@ -16,7 +16,8 @@ opened or merged as editable objects.
 
 ## Contents
 
-- `doc/rustfig-manual.pdf`: the user manual (built from `docs/manual/*.md`).
+- `doc/rustfig-manual.pdf`: the user manual (built from `docs/manual/*.md`);
+  also as HTML at https://fabianhassler.github.io/rustfig/manual/index.html.
 - The source code: a Cargo workspace (`Cargo.toml`, `Cargo.lock`,
   `crates/`, `apps/`, `xtask/`, `assets/`); the manual's pages in
   `docs/manual/`. The full repository (plans, packaging, web build) is at

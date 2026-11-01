@@ -1277,8 +1277,8 @@ checksum = "3296eb97d869113eaf148a6bdf01884e90b3828ad7ae2340b0f93362fc158611"
 
 [[package]]
 name = "fig2dev-rs-lib"
-version = "0.9.5"
-source = "git+https://github.com/FabianHassler/fig2dev?tag=v0.9.5#d5c819c4f45e62f7d6c8ed3bd07877eaa4ac9305"
+version = "0.9.6"
+source = "git+https://github.com/FabianHassler/fig2dev?tag=v0.9.6#4f09acb03ab938402eeb49acba4c0fb321eab86f"
 dependencies = [
  "encoding_rs",
  "figbase",
@@ -1291,13 +1291,15 @@ dependencies = [
  "png 0.18.1",
  "smallvec",
  "subsetter",
+ "tiff",
  "tiny-skia 0.11.4",
+ "weezl",
 ]
 
 [[package]]
 name = "figbase"
-version = "0.9.5"
-source = "git+https://github.com/FabianHassler/fig2dev?tag=v0.9.5#d5c819c4f45e62f7d6c8ed3bd07877eaa4ac9305"
+version = "0.9.6"
+source = "git+https://github.com/FabianHassler/fig2dev?tag=v0.9.6#4f09acb03ab938402eeb49acba4c0fb321eab86f"
 dependencies = [
  "epaint_default_fonts",
  "fontdb",

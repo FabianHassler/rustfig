@@ -184,14 +184,15 @@ fn bad_options_are_refused() {
             .message
     };
     assert!(err(&mut e, "eps", json!({"nonsense": 1})).contains("no option"));
-    // Options not ported yet: fig2dev's driver warns and goes on.
+    // Composite fonts (-j, fig2dev 0.9.6): ported; without a CJK text
+    // nothing changes and nothing is said.
     let r = e
         .execute(
             "file.export_data",
             &json!({"format": "eps", "options": {"composite_fonts": true}}),
         )
         .unwrap();
-    assert!(r["warnings"][0].as_str().unwrap().contains("B8"), "{r}");
+    assert!(r["warnings"].as_array().is_none_or(|w| w.is_empty()), "{r}");
     assert!(err(&mut e, "svg", json!({"title": "x"})).contains("no option"));
     // fig2dev takes -m and -Z together; -Z sizes the figure.
     assert!(e
@@ -224,8 +225,7 @@ fn formats_list_each_languages_options() {
             .find(|o| o["key"] == key)
             .unwrap()
     };
-    // Ported with B4b; composite fonts wait for B8.
+    // Ported with B4b; composite fonts with fig2dev 0.9.6 (B11).
     assert_eq!(opt("bbox")["available"], true);
-    assert_eq!(opt("composite_fonts")["available"], false);
-    assert_eq!(opt("composite_fonts")["task"], "B8");
+    assert_eq!(opt("composite_fonts")["available"], true);
 }
