@@ -70,7 +70,8 @@ fn q(v: f64, prec: usize) -> f64 {
     if !v.is_finite() {
         return 0.0;
     }
-    format!("{v:.prec$}").parse().unwrap_or(0.0)
+    // `+ 0.0` turns "-0.000" into 0, as the writer prints it.
+    format!("{v:.prec$}").parse::<f64>().unwrap_or(0.0) + 0.0
 }
 
 /// A coordinate as an integer file unit.

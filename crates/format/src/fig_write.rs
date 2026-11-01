@@ -21,15 +21,14 @@ fn i(v: f64) -> i64 {
     }
 }
 
-fn f(v: f64) -> f64 {
-    // No "-0.000": negative zero and values that round to it print as 0 (a flipped arc's
-    // centre was written "-0" where xfig writes 0).
-    if v.is_finite() && v.abs() < 5.0e-5 {
+/// `v` for printing with `prec` decimals: 0 when not finite, and 0 (not
+/// "-0.000") when it prints as zero (a flipped arc's centre was written
+/// "-0" where xfig writes 0).
+fn f(v: f64, prec: usize) -> f64 {
+    if !v.is_finite() || format!("{v:.prec$}").parse::<f64>().is_ok_and(|r| r == 0.0) {
         0.0
-    } else if v.is_finite() {
-        v
     } else {
-        0.0
+        v
     }
 }
 
@@ -52,7 +51,7 @@ fn style_common(out: &mut String, s: &Style) {
         s.depth,
         s.pen_style,
         s.area_fill,
-        f(s.style_val)
+        f(s.style_val, 3)
     );
 }
 
@@ -63,9 +62,9 @@ fn arrow(out: &mut String, a: &Option<Arrow>) {
             "\t{} {} {:.2} {:.2} {:.2}",
             a.kind,
             a.style,
-            f(a.thickness),
-            f(a.width),
-            f(a.height)
+            f(a.thickness, 2),
+            f(a.width, 2),
+            f(a.height, 2)
         );
     }
 }
@@ -121,7 +120,7 @@ fn object(out: &mut String, o: &Object) {
                 out,
                 " {} {:.4} {} {} {} {} {} {} {} {}",
                 e.direction,
-                f(angle(e.angle)),
+                f(angle(e.angle), 4),
                 i(e.center.x),
                 i(e.center.y),
                 i(e.radii.x),
@@ -188,7 +187,7 @@ fn object(out: &mut String, o: &Object) {
             arrow(out, ba);
             points(out, &s.points);
             let shapes: Vec<f64> = (0..s.points.len())
-                .map(|k| f(s.shapes.get(k).copied().unwrap_or(0.0)).clamp(-1.0, 1.0))
+                .map(|k| f(s.shapes.get(k).copied().unwrap_or(0.0), 3).clamp(-1.0, 1.0))
                 .collect();
             for chunk in shapes.chunks(8) {
                 out.push('\t');
@@ -206,8 +205,8 @@ fn object(out: &mut String, o: &Object) {
                 t.depth,
                 t.pen_style,
                 t.font,
-                f(t.size),
-                f(angle(t.angle)),
+                f(t.size, 6),
+                f(angle(t.angle), 4),
                 t.flags,
                 i(t.height).max(0),
                 i(t.length).max(0),
@@ -228,8 +227,8 @@ fn object(out: &mut String, o: &Object) {
                 i32::from(a.ccw),
                 i32::from(fa.is_some()),
                 i32::from(ba.is_some()),
-                f(a.center.x),
-                f(a.center.y),
+                f(a.center.x, 3),
+                f(a.center.y, 3),
                 i(a.points[0].x),
                 i(a.points[0].y),
                 i(a.points[1].x),
@@ -271,7 +270,7 @@ pub fn write_fig(doc: &Document) -> String {
         Units::Metric => "Metric\n",
     });
     let _ = writeln!(out, "{}", s.paper.name());
-    let _ = writeln!(out, "{:.2}", f(s.magnification));
+    let _ = writeln!(out, "{:.2}", f(s.magnification, 2));
     out.push_str(if s.multiple_pages { "Multiple\n" } else { "Single\n" });
     let _ = writeln!(out, "{}", s.transparent_color);
     comments(&mut out, &doc.comments);
