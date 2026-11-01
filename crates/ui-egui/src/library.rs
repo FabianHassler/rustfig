@@ -61,6 +61,13 @@ pub struct LibraryPanel {
     save_name: String,
     save_folder: String,
     message: String,
+    /// The small list of hidden libraries is open.
+    hidden_open: bool,
+    /// Favourite and hidden libraries (the preferences, synced before each scan and frame).
+    fav_libs: Vec<String>,
+    hidden_libs: Vec<String>,
+    /// The library whose right-click menu is open in the chooser.
+    menu_for: Option<String>,
     /// The search text, and the text `hits` were found for.
     query: String,
     searched: String,
@@ -182,6 +189,12 @@ impl LibraryPanel {
         self.stopped = true;
     }
 
+    /// Take the favourite and hidden libraries from the preferences.
+    pub fn sync_prefs(&mut self, favourites: &[String], hidden: &[String]) {
+        self.fav_libs = favourites.to_vec();
+        self.hidden_libs = hidden.to_vec();
+    }
+
     /// Set the libraries a scan found.
     pub fn show_panel(&mut self, app_libs: Vec<Library>) {
         self.open = true;
@@ -190,14 +203,25 @@ impl LibraryPanel {
         self.exists.clear();
         self.libs = app_libs;
         if let Some(c) = self.current.clone() {
-            if !self.libs.iter().any(|l| l.name == c) {
+            // The last-used library stays while it exists and is not hidden.
+            if !self.libs.iter().any(|l| l.name == c) || self.hidden_libs.contains(&c) {
                 self.current = None;
                 self.objects.clear();
                 self.selected = None;
             }
         }
         if self.current.is_none() {
-            if let Some(first) = self.libs.first().map(|l| l.name.clone()) {
+            // The first favourite library, else the first one that is not hidden.
+            let visible = |l: &&Library| !self.hidden_libs.contains(&l.name);
+            let first = self
+                .libs
+                .iter()
+                .filter(visible)
+                .find(|l| self.fav_libs.contains(&l.name))
+                .or_else(|| self.libs.iter().find(visible))
+                .or_else(|| self.libs.first())
+                .map(|l| l.name.clone());
+            if let Some(first) = first {
                 self.load(&first);
             }
         }
@@ -522,6 +546,11 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
         return;
     }
     let mut open = true;
+    let (f, h) = (
+        app.engine.prefs.rustfig.library_favourite_libraries.clone(),
+        app.engine.prefs.rustfig.library_hidden.clone(),
+    );
+    app.library.sync_prefs(&f, &h);
     app.library.poll_scan();
     if app.library.scanning() {
         ctx.request_repaint_after(std::time::Duration::from_millis(50));
@@ -577,6 +606,9 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     let mut toggle_fav: Option<(String, String)> = None;
     let mut toggle_fav_lib: Option<String> = None;
     let fav_libs = app.engine.prefs.rustfig.library_favourite_libraries.clone();
+    let hidden_libs = app.engine.prefs.rustfig.library_hidden.clone();
+    let mut set_hidden: Option<(String, bool)> = None;
+    let mut open_hidden = false;
     egui::Window::new("Select an object or library")
         .open(&mut open)
         .default_size(vec2(440.0, 560.0))
@@ -591,11 +623,13 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                     None if p.libs.is_empty() => "No libraries".to_string(),
                     None => "None Loaded".to_string(),
                 };
-                let combo = egui::ComboBox::from_id_salt("library_choice").selected_text(text).width(270.0);
+                let combo = egui::ComboBox::from_id_salt("library_choice").selected_text(text).width(270.0).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside);
                 let r = combo.show_ui(ui, |ui| {
                     // Favourite libraries first (a favourite no longer found is skipped), then the rest.
+                    // Hidden libraries are left out (a name that no longer exists is ignored).
                     let is_fav = |n: &str| fav_libs.iter().any(|f| f == n);
-                    let any_fav = p.libs.iter().any(|l| is_fav(&l.name));
+                    let is_hidden = |n: &str| hidden_libs.iter().any(|f| f == n);
+                    let any_fav = p.libs.iter().any(|l| is_fav(&l.name) && !is_hidden(&l.name));
                     if any_fav {
                         ui.weak("Favourites");
                     }
@@ -603,12 +637,45 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                         if !pass && any_fav {
                             ui.separator();
                         }
-                        for l in p.libs.iter().filter(|l| is_fav(&l.name) == pass) {
+                        for l in p.libs.iter().filter(|l| is_fav(&l.name) == pass && !is_hidden(&l.name)) {
                             let sel = p.current.as_deref() == Some(l.name.as_str());
                             let label = if l.user { format!("{} (yours)", l.name) } else { l.name.clone() };
-                            if ui.selectable_label(sel, label).clicked() {
+                            let r = ui.selectable_label(sel, label);
+                            if r.clicked() {
                                 load = Some(l.name.clone());
+                                ui.close();
                             }
+                            // Right-click: a small menu for this library right below it
+                            // (a context-menu pop-up would close the chooser).
+                            if r.secondary_clicked() {
+                                p.menu_for = if p.menu_for.as_deref() == Some(l.name.as_str()) {
+                                    None
+                                } else {
+                                    Some(l.name.clone())
+                                };
+                            }
+                            if p.menu_for.as_deref() == Some(l.name.as_str()) {
+                                ui.indent("library_entry_menu", |ui| {
+                                    if ui.button("Hide library").clicked() {
+                                        set_hidden = Some((l.name.clone(), true));
+                                        p.menu_for = None;
+                                    }
+                                    let t = if is_fav(&l.name) { "Remove from favourites" } else { "Add to favourites" };
+                                    if ui.button(t).clicked() {
+                                        toggle_fav_lib = Some(l.name.clone());
+                                        p.menu_for = None;
+                                    }
+                                });
+                            }
+                        }
+                    }
+                    let n = p.libs.iter().filter(|l| is_hidden(&l.name)).count();
+                    if n > 0 {
+                        ui.separator();
+                        let r = ui.add(egui::Button::new(egui::RichText::new(format!("{n} hidden libraries\u{2026}")).weak()).frame(false));
+                        if r.clicked() {
+                            open_hidden = true;
+                            ui.close();
                         }
                     }
                 });
@@ -968,6 +1035,42 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     }
     if let Some(s) = set_size {
         app.run("prefs.set", json!({"resource": "library_icon_size", "value": s}));
+    }
+    if open_hidden {
+        app.library.hidden_open = true;
+    }
+    if app.library.hidden_open {
+        let mut o = true;
+        egui::Window::new("Hidden libraries")
+            .open(&mut o)
+            .collapsible(false)
+            .resizable(false)
+            .show(ctx, |ui| {
+                let names: Vec<String> = app
+                    .library
+                    .libs
+                    .iter()
+                    .filter(|l| hidden_libs.contains(&l.name))
+                    .map(|l| l.name.clone())
+                    .collect();
+                if names.is_empty() {
+                    ui.weak("No hidden libraries");
+                }
+                for n in names {
+                    let mut shown = false;
+                    if ui.checkbox(&mut shown, format!("Show {n}")).changed() {
+                        set_hidden = Some((n, false));
+                    }
+                }
+            });
+        app.library.hidden_open = o;
+    }
+    if let Some((l, on)) = set_hidden {
+        match app.try_run("library.hide_library", &json!({"library": l, "on": on})) {
+            // The search results change with the libraries shown.
+            Ok(_) => app.library.searched = "\u{0}".into(),
+            Err(m) => app.library.message = m,
+        }
     }
     if let Some(l) = toggle_fav_lib {
         if let Err(m) = app.try_run("library.favourite_library", &json!({"library": l})) {
