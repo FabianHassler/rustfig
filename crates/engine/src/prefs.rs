@@ -238,6 +238,9 @@ pub struct RustFigPrefs {
     /// F8: extra preamble lines for the typeset texts.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub latex_preamble: Option<String>,
+    /// W10-25: Global settings apply as you change them (default off: xfig's Ok button).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub apply_immediately: Option<bool>,
     /// W18: the version whose "What's new" page was shown last.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub whats_new_seen: Option<String>,

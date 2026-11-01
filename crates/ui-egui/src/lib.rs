@@ -115,6 +115,8 @@ pub struct App {
     pub theme: String,
     /// E9: the UI scale, 1.0 = 100 % (persisted).
     pub ui_scale: f32,
+    /// W10-25: Global settings take effect as you change them, not at Ok (persisted).
+    pub apply_immediately: bool,
     /// Button style: bevelled "3D" buttons (default) or flat ones.
     pub button_3d: bool,
     /// xfig's mode menu popped up by Alt+wheel over the canvas: drawing
@@ -243,6 +245,7 @@ impl App {
             theme: "system".to_string(),
             ui_scale: 1.0,
             button_3d: true,
+            apply_immediately: false,
             mode_popup: None,
             #[cfg(not(target_arch = "wasm32"))]
             autosave: None,

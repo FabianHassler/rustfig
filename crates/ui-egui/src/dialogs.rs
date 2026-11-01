@@ -1222,6 +1222,11 @@ struct GlobalDraft {
     spell: String,
     browser: String,
     pdf_viewer: String,
+    /// The tab shown (without a filter) and the filter text.
+    tab: GlobalTab,
+    filter: String,
+    /// The Advanced tab's texts by resource name (W10-25).
+    adv: std::collections::BTreeMap<&'static str, String>,
 }
 
 impl GlobalDraft {
@@ -1249,12 +1254,440 @@ impl GlobalDraft {
             spell: text("spellcheckcommand", "aspell list < %f"),
             browser: text("browser", rustfig_engine::prefs::SYSTEM_OPEN),
             pdf_viewer: text("pdf_viewer", rustfig_engine::prefs::SYSTEM_OPEN),
+            tab: GlobalTab::Window,
+            filter: String::new(),
+            adv: rustfig_engine::prefs::RESOURCES
+                .iter()
+                .map(|r| (r.name, resource_text(e, r)))
+                .collect(),
         }
     }
 }
 
+/// The tabs of Global settings (W10-25). "Advanced" lists xfig's whole
+/// resources table.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum GlobalTab {
+    Window,
+    Drawing,
+    Files,
+    Programs,
+    Advanced,
+}
+
+impl GlobalTab {
+    const ALL: [GlobalTab; 5] = [
+        GlobalTab::Window,
+        GlobalTab::Drawing,
+        GlobalTab::Files,
+        GlobalTab::Programs,
+        GlobalTab::Advanced,
+    ];
+
+    fn name(self) -> &'static str {
+        match self {
+            GlobalTab::Window => "Window",
+            GlobalTab::Drawing => "Drawing",
+            GlobalTab::Files => "Files",
+            GlobalTab::Programs => "Programs",
+            GlobalTab::Advanced => "Advanced",
+        }
+    }
+}
+
+/// Every row of the first four tabs: its tab, its label and the extra words
+/// the filter also looks at (xfig's resource names and options, synonyms).
+const GLOBAL_ROWS: &[(GlobalTab, &str, &str)] = &[
+    (GlobalTab::Window, "Autorefresh figure", "autorefresh -autorefresh"),
+    (
+        GlobalTab::Window,
+        "Track mouse in rulers",
+        "trackCursor -track -notrack",
+    ),
+    (GlobalTab::Window, "Show page borders", "showpageborder -showpageborder"),
+    (
+        GlobalTab::Window,
+        "Show depth manager",
+        "showdepthmanager -showdepthmanager",
+    ),
+    (
+        GlobalTab::Window,
+        "Show info balloons",
+        "showballoons -showballoons tooltips",
+    ),
+    (GlobalTab::Window, "Delay (ms)", "balloon_delay -balloon_delay"),
+    (GlobalTab::Window, "Show line lengths", "showlengths -showlengths"),
+    (GlobalTab::Window, "Show vertex numbers", "shownums -shownums"),
+    (GlobalTab::Window, "Show crosshair", "crosshair -crosshair"),
+    (
+        GlobalTab::Window,
+        "Allow negative coords",
+        "allownegcoords -allownegcoords",
+    ),
+    (GlobalTab::Window, "Draw axis lines", "showaxislines -showaxislines"),
+    (GlobalTab::Window, "xfig keyboard shortcuts", "keys meta ctrl"),
+    (GlobalTab::Window, "Button style", "3d flat bevel"),
+    (GlobalTab::Window, "Theme", "light dark system colour"),
+    (GlobalTab::Window, "UI scale", "zoom size scale"),
+    (GlobalTab::Window, "Units and page", "inches metric paper"),
+    (
+        GlobalTab::Drawing,
+        "Freehand drawing resolution",
+        "freehand_resolution -freehand_resolution",
+    ),
+    (
+        GlobalTab::Drawing,
+        "Use current attributes as defaults",
+        "start startfontsize startlinewidth startfillstyle",
+    ),
+    (GlobalTab::Drawing, "LaTeX text", "tex latex preamble typeset program"),
+    (GlobalTab::Drawing, "Your colours", "colors user palette"),
+    (GlobalTab::Files, "Recently used files", "max_recent_files recent open"),
+    (
+        GlobalTab::Files,
+        "Saved versions kept",
+        "save_versions -save_versions backup",
+    ),
+    (
+        GlobalTab::Files,
+        "Maximum image colors",
+        "max_image_colors -max_image_colors",
+    ),
+    (GlobalTab::Programs, "Image editor", "image_editor -image_editor"),
+    (
+        GlobalTab::Programs,
+        "Spell checker",
+        "spellcheckcommand -spellcheckcommand",
+    ),
+    (GlobalTab::Programs, "HTML Browser", "browser -browser"),
+    (GlobalTab::Programs, "PDF Viewer", "pdf_viewer -pdf_viewer"),
+];
+
+/// Does a row with this label and these extra words match the (lower case,
+/// trimmed) filter? An empty filter matches every row.
+fn filter_matches(filter: &str, label: &str, keys: &str) -> bool {
+    filter.is_empty() || label.to_lowercase().contains(filter) || keys.to_lowercase().contains(filter)
+}
+
+fn row_shown(filter: &str, label: &str) -> bool {
+    let keys = GLOBAL_ROWS.iter().find(|r| r.1 == label).map_or("", |r| r.2);
+    filter_matches(filter, label, keys)
+}
+
+fn resource_shown(filter: &str, r: &rustfig_engine::prefs::Resource) -> bool {
+    filter_matches(filter, r.name, r.option)
+}
+
+/// The rows Global settings shows for `filter` (case-insensitive; label,
+/// resource name or command-line option): tab name and row label, in the
+/// order of the window. An empty filter lists every row.
+pub fn global_settings_matches(filter: &str) -> Vec<(&'static str, String)> {
+    let f = filter.trim().to_lowercase();
+    let mut out: Vec<(&'static str, String)> = GLOBAL_ROWS
+        .iter()
+        .filter(|r| filter_matches(&f, r.1, r.2))
+        .map(|r| (r.0.name(), r.1.to_string()))
+        .collect();
+    out.extend(
+        rustfig_engine::prefs::RESOURCES
+            .iter()
+            .filter(|r| resource_shown(&f, r))
+            .map(|r| (GlobalTab::Advanced.name(), r.name.to_string())),
+    );
+    out
+}
+
+/// The text of resource `r` in the Advanced tab: its stored value, "" for an
+/// unset value (xfig's default applies), "true"/"false" for check boxes.
+fn resource_text(e: &Engine, r: &rustfig_engine::prefs::Resource) -> String {
+    use rustfig_engine::prefs::Kind;
+    match e.prefs.get(r.name) {
+        Some(v) => v.as_str().map_or_else(|| v.to_string(), str::to_string),
+        None if r.kind == Kind::Bool => r.default.to_string(),
+        None => String::new(),
+    }
+}
+
+/// The value `text` stands for in resource `r`: `Ok(Null)` for an empty
+/// field (xfig's default), `Err` when it doesn't parse.
+fn resource_value(r: &rustfig_engine::prefs::Resource, text: &str) -> Result<Value, String> {
+    use rustfig_engine::prefs::Kind;
+    let t = text.trim();
+    if t.is_empty() && r.kind != Kind::Bool {
+        return Ok(Value::Null);
+    }
+    match r.kind {
+        Kind::Bool => Ok(json!(t.eq_ignore_ascii_case("true"))),
+        Kind::Int => t
+            .parse::<i64>()
+            .map(|i| json!(i))
+            .map_err(|_| format!("{} takes a whole number", r.name)),
+        Kind::Float => match t.parse::<f64>() {
+            Ok(f) if f.is_finite() => Ok(json!(f)),
+            _ => Err(format!("{} takes a number", r.name)),
+        },
+        Kind::Str => Ok(json!(t)),
+    }
+}
+
+/// The Advanced tab's changes (`was` to `now`) go through `prefs.set`.
+fn apply_advanced(app: &mut App, was: &GlobalDraft, now: &GlobalDraft) {
+    for r in rustfig_engine::prefs::RESOURCES {
+        let (Some(a), Some(b)) = (was.adv.get(r.name), now.adv.get(r.name)) else {
+            continue;
+        };
+        let (Ok(va), vb) = (resource_value(r, a), resource_value(r, b)) else {
+            continue;
+        };
+        match vb {
+            Ok(v) if v != va => {
+                app.run("prefs.set", json!({ "resource": r.name, "value": v }));
+            }
+            Ok(_) => {}
+            Err(msg) => app.info(msg),
+        }
+    }
+}
+
+/// The rows of one tab that match `filter`.
+fn global_tab_rows(app: &mut App, ui: &mut egui::Ui, d: &mut GlobalDraft, tab: GlobalTab, filter: &str) {
+    let show = |label: &str| row_shown(filter, label);
+    match tab {
+        GlobalTab::Window => {
+            for (label, slot) in [
+                ("Autorefresh figure", &mut d.autorefresh),
+                ("Track mouse in rulers", &mut d.track_mouse),
+                ("Show page borders", &mut d.page_borders),
+                ("Show depth manager", &mut d.depth_manager),
+                ("Show info balloons", &mut d.balloons),
+            ] {
+                if show(label) {
+                    ui.checkbox(slot, label);
+                }
+            }
+            if show("Delay (ms)") {
+                ui.horizontal(|ui| {
+                    ui.label("   Delay (ms):");
+                    ui.add(egui::DragValue::new(&mut d.balloon_delay).range(0..=100_000))
+                        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::DragValue, true, "Delay (ms)"));
+                });
+            }
+            for (label, slot) in [
+                ("Show line lengths", &mut d.lengths),
+                ("Show vertex numbers", &mut d.vertex_numbers),
+                ("Show crosshair", &mut d.crosshair),
+                ("Allow negative coords", &mut d.negative_coords),
+                ("Draw axis lines", &mut d.axis_lines),
+            ] {
+                if show(label) {
+                    ui.checkbox(slot, label);
+                }
+            }
+            if filter.is_empty() {
+                ui.separator();
+            }
+            if show("xfig keyboard shortcuts") {
+                let mut keys = app.xfig_keys;
+                if ui.checkbox(&mut keys, "xfig keyboard shortcuts").changed() {
+                    app.run("app.toggle_xfig_keys", json!({}));
+                }
+            }
+            if show("Button style") {
+                ui.horizontal(|ui| {
+                    ui.label("Button style:");
+                    for (style, label) in [("3d", "3D"), ("flat", "Flat")] {
+                        if ui.radio(app.button_3d == (style == "3d"), label).clicked() {
+                            app.run("app.button_style", json!({ "style": style }));
+                        }
+                    }
+                });
+            }
+            if show("Theme") {
+                ui.horizontal(|ui| {
+                    ui.label("Theme:");
+                    for (t, label) in [("system", "System"), ("light", "Light"), ("dark", "Dark")] {
+                        if ui.radio(app.theme == t, label).clicked() {
+                            app.run("app.theme", json!({ "theme": t }));
+                        }
+                    }
+                });
+            }
+            if show("UI scale") {
+                ui.horizontal(|ui| {
+                    ui.label("UI scale:");
+                    let mut pct = (app.ui_scale * 100.0).round();
+                    let r = ui.add(egui::Slider::new(&mut pct, 75.0..=200.0).suffix(" %").step_by(5.0));
+                    r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Slider, true, "UI scale"));
+                    if r.drag_stopped() || (r.changed() && !r.dragged()) {
+                        app.run("app.ui_scale", json!({ "percent": pct }));
+                    }
+                });
+            }
+            if show("Units and page") && ui.button("Units and page…").clicked() {
+                app.run("app.document_settings", json!({}));
+            }
+        }
+        GlobalTab::Drawing => {
+            if show("Freehand drawing resolution") {
+                ui.horizontal(|ui| {
+                    ui.label("Freehand drawing resolution");
+                    ui.add(egui::DragValue::new(&mut d.freehand).range(1..=10_000))
+                        .widget_info(|| {
+                            egui::WidgetInfo::labeled(egui::WidgetType::DragValue, true, "Freehand drawing resolution")
+                        });
+                });
+            }
+            if show("Use current attributes as defaults")
+                && ui
+                    .button("Use current attributes as defaults")
+                    .on_hover_text(
+                        "The attribute panel's values become the start values (startfontsize, startlinewidth, …)",
+                    )
+                    .clicked()
+            {
+                app.run("prefs.use_current_attributes", json!({}));
+            }
+            if show("LaTeX text") {
+                if filter.is_empty() {
+                    ui.separator();
+                }
+                latex_settings(app, ui);
+            }
+            if show("Your colours") {
+                if filter.is_empty() {
+                    ui.separator();
+                }
+                user_colors_editor(app, ui);
+            }
+        }
+        GlobalTab::Files => {
+            for (label, slot, range, hint) in [
+                ("Recently used files", &mut d.recent, 0..=9, ""),
+                (
+                    "Saved versions kept",
+                    &mut d.save_versions,
+                    0..=50,
+                    "Older versions of a file, kept in the recovery folder at each save (0: none)",
+                ),
+                ("Maximum image colors", &mut d.image_colors, 0..=256, ""),
+            ] {
+                if show(label) {
+                    ui.horizontal(|ui| {
+                        ui.label(label);
+                        let r = ui.add(egui::DragValue::new(slot).range(range));
+                        r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::DragValue, true, label));
+                        if !hint.is_empty() {
+                            r.on_hover_text(hint);
+                        }
+                    });
+                }
+            }
+        }
+        GlobalTab::Programs => {
+            egui::Grid::new("global_commands").num_columns(2).show(ui, |ui| {
+                for (label, text) in [
+                    ("Image editor", &mut d.image_editor),
+                    ("Spell checker", &mut d.spell),
+                    ("HTML Browser", &mut d.browser),
+                    ("PDF Viewer", &mut d.pdf_viewer),
+                ] {
+                    if show(label) {
+                        ui.label(label);
+                        ui.add(egui::TextEdit::singleline(text).desired_width(280.0))
+                            .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, label));
+                        ui.end_row();
+                    }
+                }
+            });
+            ui.label(
+                egui::RichText::new("%f in a command stands for the file.")
+                    .small()
+                    .weak(),
+            );
+        }
+        GlobalTab::Advanced => advanced_rows(app, ui, d, filter),
+    }
+}
+
+/// xfig's resources table: each resource by kind, with its command-line
+/// option as a hint. Resources RustFig keeps for a later feature say so.
+fn advanced_rows(app: &mut App, ui: &mut egui::Ui, d: &mut GlobalDraft, filter: &str) {
+    use rustfig_engine::prefs::{Kind, Status};
+    let tk = crate::theme::Tokens::for_dark(ui.visuals().dark_mode);
+    if filter.is_empty() {
+        ui.horizontal(|ui| {
+            ui.label(
+                egui::RichText::new("xfig's resources under xfig's names. Empty means xfig's default.")
+                    .small()
+                    .weak(),
+            );
+            if ui
+                .small_button("Open as window…")
+                .on_hover_text("The same table in a window of its own; changes there apply at once")
+                .clicked()
+            {
+                app.dialogs.resources_open = true;
+            }
+        });
+    }
+    egui::Grid::new("global_advanced")
+        .striped(true)
+        .num_columns(3)
+        .show(ui, |ui| {
+            for r in rustfig_engine::prefs::RESOURCES {
+                if !resource_shown(filter, r) {
+                    continue;
+                }
+                let planned = match r.status {
+                    Status::Planned(t) => Some(t),
+                    Status::Applied => None,
+                };
+                let name = egui::RichText::new(r.name).monospace();
+                ui.label(if planned.is_some() { name.weak() } else { name });
+                let text = d.adv.entry(r.name).or_default();
+                if r.kind == Kind::Bool {
+                    let mut on = text.as_str() == "true";
+                    let resp = ui.checkbox(&mut on, "");
+                    resp.widget_info(|| {
+                        egui::WidgetInfo::labeled(egui::WidgetType::Checkbox, true, format!("{} value", r.name))
+                    });
+                    if resp.changed() {
+                        *text = on.to_string();
+                    }
+                } else {
+                    let bad = resource_value(r, text).is_err();
+                    let mut edit = egui::TextEdit::singleline(text)
+                        .id_salt(("global_adv", r.name))
+                        .hint_text(r.default)
+                        .desired_width(150.0);
+                    if bad {
+                        edit = edit.text_color(tk.error);
+                    }
+                    ui.add(edit).widget_info(|| {
+                        egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, format!("{} value", r.name))
+                    });
+                }
+                ui.vertical(|ui| {
+                    if !r.option.is_empty() {
+                        ui.label(egui::RichText::new(r.option).small().weak());
+                    }
+                    if let Some(t) = planned {
+                        ui.label(
+                            egui::RichText::new(format!("planned: kept, in use with {t}"))
+                                .small()
+                                .color(tk.muted),
+                        );
+                    }
+                });
+                ui.end_row();
+            }
+        });
+}
+
 /// Edit > Global settings as xfig's panel (check boxes and entries, Cancel
-/// and Ok), then RustFig's own settings that apply at once.
+/// and Ok), in tabs with a filter field (W10-25), then RustFig's own
+/// settings. Ok applies the changes as in xfig; "Apply changes immediately"
+/// applies them as you make them.
 fn global_dialog(app: &mut App, ctx: &egui::Context) {
     let id = egui::Id::new("global_settings_draft");
     if !app.dialogs.global_open {
@@ -1267,131 +1700,94 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
         .unwrap_or_else(|| current.clone());
     let mut open = true;
     let (mut ok, mut cancel) = (false, false);
+    let body_h = (dialog_body_height(ctx)).clamp(160.0, 440.0);
     egui::Window::new("Global settings")
         .open(&mut open)
         .resizable(false)
         .collapsible(false)
         .show(ctx, |ui| {
-            crate::dialog_body(ui, |ui| {
-                ui.checkbox(&mut d.autorefresh, "Autorefresh figure");
-                ui.checkbox(&mut d.track_mouse, "Track mouse in rulers");
-                ui.checkbox(&mut d.page_borders, "Show page borders");
-                ui.checkbox(&mut d.depth_manager, "Show depth manager");
-                ui.checkbox(&mut d.balloons, "Show info balloons");
-                ui.horizontal(|ui| {
-                    ui.label("   Delay (ms):");
-                    ui.add(egui::DragValue::new(&mut d.balloon_delay).range(0..=100_000));
-                });
-                ui.checkbox(&mut d.lengths, "Show line lengths");
-                ui.checkbox(&mut d.vertex_numbers, "Show vertex numbers");
-                ui.checkbox(&mut d.crosshair, "Show crosshair");
-                ui.checkbox(&mut d.negative_coords, "Allow negative coords");
-                ui.checkbox(&mut d.axis_lines, "Draw axis lines");
-                ui.horizontal(|ui| {
-                    ui.label("Freehand drawing resolution");
-                    ui.add(egui::DragValue::new(&mut d.freehand).range(1..=10_000));
-                });
-                ui.horizontal(|ui| {
-                    ui.label("Recently used files");
-                    ui.add(egui::DragValue::new(&mut d.recent).range(0..=9));
-                });
-                ui.horizontal(|ui| {
-                    ui.label("Maximum image colors");
-                    ui.add(egui::DragValue::new(&mut d.image_colors).range(0..=256));
-                });
-                ui.horizontal(|ui| {
-                    ui.label("Saved versions kept");
-                    ui.add(egui::DragValue::new(&mut d.save_versions).range(0..=50))
-                        .on_hover_text("Older versions of a file, kept in the recovery folder at each save (0: none)");
-                });
-                egui::Grid::new("global_commands").num_columns(2).show(ui, |ui| {
-                    for (label, text) in [
-                        ("Image editor", &mut d.image_editor),
-                        ("Spell checker", &mut d.spell),
-                        ("HTML Browser", &mut d.browser),
-                        ("PDF Viewer", &mut d.pdf_viewer),
-                    ] {
-                        ui.label(label);
-                        ui.add(egui::TextEdit::singleline(text).desired_width(260.0))
-                            .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, label));
-                        ui.end_row();
-                    }
-                });
-                ui.label(
-                    egui::RichText::new("%f in a command stands for the file.")
-                        .small()
-                        .weak(),
-                );
-                ui.horizontal(|ui| {
-                    cancel = ui.button("Cancel").clicked();
-                    ok = ui.button("Ok").clicked();
-                });
-                ui.separator();
-                ui.label(egui::RichText::new("RustFig").strong());
-                let mut keys = app.xfig_keys;
-                if ui.checkbox(&mut keys, "xfig keyboard shortcuts").changed() {
-                    app.run("app.toggle_xfig_keys", serde_json::json!({}));
+            ui.set_min_width(540.0);
+            ui.horizontal(|ui| {
+                ui.label("Filter:");
+                ui.add(
+                    egui::TextEdit::singleline(&mut d.filter)
+                        .hint_text("label, resource name or option")
+                        .desired_width(300.0),
+                )
+                .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Filter settings"));
+                if !d.filter.is_empty() && ui.small_button("Clear").clicked() {
+                    d.filter.clear();
                 }
+            });
+            let filter = d.filter.trim().to_lowercase();
+            if filter.is_empty() {
                 ui.horizontal(|ui| {
-                    ui.label("Button style:");
-                    for (style, label) in [("3d", "3D"), ("flat", "Flat")] {
-                        if ui.radio(app.button_3d == (style == "3d"), label).clicked() {
-                            app.run("app.button_style", serde_json::json!({ "style": style }));
+                    for tab in GlobalTab::ALL {
+                        let r = ui.selectable_label(d.tab == tab, tab.name());
+                        r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, tab.name()));
+                        if r.clicked() {
+                            d.tab = tab;
                         }
                     }
                 });
-                ui.horizontal(|ui| {
-                    ui.label("Theme:");
-                    for (t, label) in [("system", "System"), ("light", "Light"), ("dark", "Dark")] {
-                        if ui.radio(app.theme == t, label).clicked() {
-                            app.run("app.theme", serde_json::json!({ "theme": t }));
+            }
+            ui.separator();
+            egui::ScrollArea::vertical()
+                .id_salt("global_scroll")
+                .max_height(body_h)
+                .min_scrolled_height(body_h)
+                .auto_shrink([false, false])
+                .show(ui, |ui| {
+                    if filter.is_empty() {
+                        let tab = d.tab;
+                        global_tab_rows(app, ui, &mut d, tab, "");
+                    } else {
+                        // A filter looks in every tab, matches grouped by tab.
+                        let mut found = false;
+                        for tab in GlobalTab::ALL {
+                            let any = if tab == GlobalTab::Advanced {
+                                rustfig_engine::prefs::RESOURCES
+                                    .iter()
+                                    .any(|r| resource_shown(&filter, r))
+                            } else {
+                                GLOBAL_ROWS
+                                    .iter()
+                                    .any(|r| r.0 == tab && filter_matches(&filter, r.1, r.2))
+                            };
+                            if any {
+                                found = true;
+                                ui.label(egui::RichText::new(tab.name()).strong());
+                                global_tab_rows(app, ui, &mut d, tab, &filter);
+                                ui.add_space(6.0);
+                            }
+                        }
+                        if !found {
+                            ui.label(egui::RichText::new("No setting matches the filter.").weak());
                         }
                     }
                 });
-                ui.horizontal(|ui| {
-                    ui.label("UI scale:");
-                    let mut pct = (app.ui_scale * 100.0).round();
-                    let r = ui.add(egui::Slider::new(&mut pct, 75.0..=200.0).suffix(" %").step_by(5.0));
-                    r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Slider, true, "UI scale"));
-                    if r.drag_stopped() || (r.changed() && !r.dragged()) {
-                        app.run("app.ui_scale", serde_json::json!({ "percent": pct }));
-                    }
-                });
-                ui.horizontal(|ui| {
-                    if ui.button("Units and page…").clicked() {
-                        app.run("app.document_settings", serde_json::json!({}));
-                    }
-                    if ui
-                        .button("xfig resources…")
-                        .on_hover_text("All of xfig's settings (its X resources and command-line options)")
-                        .clicked()
-                    {
-                        app.dialogs.resources_open = true;
-                    }
-                });
-                if ui
-                    .button("Use current attributes as defaults")
-                    .on_hover_text(
-                        "The attribute panel's values become the start values (startfontsize, startlinewidth, …)",
-                    )
-                    .clicked()
-                {
-                    app.run("prefs.use_current_attributes", serde_json::json!({}));
-                }
-                ui.separator();
-                latex_settings(app, ui);
-                ui.separator();
-                user_colors_editor(app, ui);
-                ui.separator();
-                ui.label(
-                    egui::RichText::new(format!("Saved in {}", app.settings.location()))
-                        .small()
-                        .weak(),
-                );
-            })
+            ui.separator();
+            let mut imm = app.apply_immediately;
+            if ui
+                .checkbox(&mut imm, "Apply changes immediately")
+                .on_hover_text("Off: changes take effect at Ok, as in xfig")
+                .changed()
+            {
+                app.run("app.apply_immediately", json!({ "on": imm }));
+            }
+            ui.label(
+                egui::RichText::new(format!("Saved in {}", app.settings.location()))
+                    .small()
+                    .weak(),
+            );
+            ui.horizontal(|ui| {
+                cancel = ui.button("Cancel").clicked();
+                ok = ui.button("Ok").clicked();
+            });
         });
-    if ok {
+    if ok || (app.apply_immediately && open && !cancel) {
         apply_global(app, &current, &d);
+        apply_advanced(app, &current, &d);
     }
     if ok || cancel || !open {
         app.dialogs.global_open = false;
@@ -1399,6 +1795,12 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
     } else {
         ctx.data_mut(|data| data.insert_temp(id, d));
     }
+}
+
+/// The height the tab's content gets: what the screen allows minus the
+/// filter, tabs and buttons.
+fn dialog_body_height(ctx: &egui::Context) -> f32 {
+    crate::dialog_max_height(ctx) - 170.0
 }
 
 /// Ok in Global settings: every value that changed goes through its command.
