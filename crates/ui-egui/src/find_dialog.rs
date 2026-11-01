@@ -4,6 +4,7 @@
 //! Delete, Glue). The window shows exactly while Find mode is on: choosing
 //! another mode, Escape or closing the window ends the mode.
 
+use crate::attributes::{line_menu, number_popup, spec};
 use crate::panels::color_menu;
 use crate::App;
 use rustfig_model::LineKind;
@@ -12,30 +13,47 @@ use serde_json::{json, Value};
 const KINDS: [&str; 9] = [
     "line", "box", "polygon", "spline", "arc", "ellipse", "text", "picture", "compound",
 ];
+const KIND_NAMES: [&str; 9] = [
+    "Polyline", "Box", "Polygon", "Spline", "Arc", "Ellipse", "Text", "Picture", "Compound",
+];
 const FILLS: [&str; 3] = ["none", "filled", "pattern"];
-/// "Any" in the colour and font choosers.
-const ANY: i32 = -2;
+const FILL_NAMES: [&str; 3] = ["None", "Filled", "Pattern"];
+const ARROW_NAMES: [&str; 2] = ["With arrows", "Without arrows"];
 
+/// One tick box per property: a ticked property must match, an unticked one
+/// is ignored (and left out of the criteria) but keeps its last value.
 #[derive(Debug, Clone)]
 pub struct FindState {
     pub open: bool,
-    /// Index into [`KINDS`]; `None` is any.
-    pub kind: Option<usize>,
+    pub on_kind: bool,
+    pub on_width: bool,
+    pub on_line: bool,
+    pub on_pen: bool,
+    pub on_fill_color: bool,
+    pub on_fill: bool,
+    pub on_arrows: bool,
+    pub on_depth: bool,
+    pub on_font: bool,
+    pub on_size: bool,
+    pub on_text: bool,
+    /// Index into [`KINDS`].
+    pub kind: usize,
+    pub thickness: f64,
+    pub line: LineKind,
     pub pen: i32,
     pub fill_color: i32,
-    pub fill: Option<usize>,
-    pub depth_min: String,
-    pub depth_max: String,
-    pub thickness: String,
-    pub line: Option<LineKind>,
-    /// `None` any, `Some(true)` with arrows, `Some(false)` without.
-    pub arrows: Option<bool>,
+    /// Index into [`FILLS`].
+    pub fill: usize,
+    /// Index into [`ARROW_NAMES`]: 0 with arrows, 1 without.
+    pub arrows: usize,
+    pub depth_min: f64,
+    pub depth_max: f64,
     pub font: i32,
-    pub size: String,
+    pub size: f64,
     pub text: String,
     pub inside: bool,
-    /// The number for "Set depth".
-    pub new_depth: String,
+    /// The depth for "Set depth".
+    pub new_depth: f64,
     /// The matches: id and list line.
     pub hits: Vec<(u64, String)>,
     /// All matching ids (the list is cut at 500).
@@ -51,20 +69,31 @@ impl Default for FindState {
     fn default() -> Self {
         FindState {
             open: false,
-            kind: None,
-            pen: ANY,
-            fill_color: ANY,
-            fill: None,
-            depth_min: String::new(),
-            depth_max: String::new(),
-            thickness: String::new(),
-            line: None,
-            arrows: None,
-            font: ANY,
-            size: String::new(),
+            on_kind: false,
+            on_width: false,
+            on_line: false,
+            on_pen: false,
+            on_fill_color: false,
+            on_fill: false,
+            on_arrows: false,
+            on_depth: false,
+            on_font: false,
+            on_size: false,
+            on_text: false,
+            kind: 0,
+            thickness: 1.0,
+            line: LineKind::ALL.first().copied().unwrap_or_default(),
+            pen: 0,
+            fill_color: 7,
+            fill: 0,
+            arrows: 0,
+            depth_min: 50.0,
+            depth_max: 50.0,
+            font: 0,
+            size: 12.0,
             text: String::new(),
             inside: false,
-            new_depth: "50".to_string(),
+            new_depth: 50.0,
             hits: Vec::new(),
             ids: Vec::new(),
             message: String::new(),
@@ -75,48 +104,63 @@ impl Default for FindState {
 }
 
 impl FindState {
-    /// The criteria as `edit.find_objects` parameters; empty or unreadable
-    /// number fields mean "any".
+    /// Whether any property is ticked.
+    pub fn any_ticked(&self) -> bool {
+        self.on_kind
+            || self.on_width
+            || self.on_line
+            || self.on_pen
+            || self.on_fill_color
+            || self.on_fill
+            || self.on_arrows
+            || self.on_depth
+            || self.on_font
+            || self.on_size
+            || (self.on_text && !self.text.is_empty())
+    }
+
+    /// The ticked properties as `edit.find_objects` parameters; unticked
+    /// ones are left out.
     pub fn params(&self) -> Value {
         let mut p = serde_json::Map::new();
-        let num = |s: &str| s.trim().parse::<f64>().ok().filter(|v| v.is_finite());
-        if let Some(k) = self.kind.and_then(|i| KINDS.get(i)) {
+        let fin = |v: f64| if v.is_finite() { v } else { 0.0 };
+        if let Some(k) = KINDS.get(self.kind).filter(|_| self.on_kind) {
             p.insert("kind".into(), json!(k));
         }
-        if self.pen != ANY {
+        if self.on_pen {
             p.insert("pen_color".into(), json!(self.pen));
         }
-        if self.fill_color != ANY {
+        if self.on_fill_color {
             p.insert("fill_color".into(), json!(self.fill_color));
         }
-        if let Some(f) = self.fill.and_then(|i| FILLS.get(i)) {
+        if let Some(f) = FILLS.get(self.fill).filter(|_| self.on_fill) {
             p.insert("fill".into(), json!(f));
         }
-        if let Some(v) = num(&self.depth_min) {
-            p.insert("depth_min".into(), json!(v));
+        if self.on_depth {
+            let (lo, hi) = (fin(self.depth_min), fin(self.depth_max));
+            p.insert("depth_min".into(), json!(lo.min(hi)));
+            p.insert("depth_max".into(), json!(lo.max(hi)));
         }
-        if let Some(v) = num(&self.depth_max) {
-            p.insert("depth_max".into(), json!(v));
+        if self.on_width {
+            p.insert("thickness".into(), json!(fin(self.thickness)));
         }
-        if let Some(v) = num(&self.thickness) {
-            p.insert("thickness".into(), json!(v));
+        if self.on_line {
+            p.insert("line".into(), json!(self.line.name()));
         }
-        if let Some(l) = self.line {
-            p.insert("line".into(), json!(l.name()));
+        if self.on_arrows {
+            p.insert("arrows".into(), json!(if self.arrows == 0 { "any" } else { "none" }));
         }
-        if let Some(a) = self.arrows {
-            p.insert("arrows".into(), json!(if a { "any" } else { "none" }));
-        }
-        if self.font != ANY {
+        if self.on_font {
             p.insert("font".into(), json!(self.font));
         }
-        if let Some(v) = num(&self.size) {
-            p.insert("font_size".into(), json!(v));
+        if self.on_size {
+            p.insert("font_size".into(), json!(fin(self.size)));
         }
-        if !self.text.is_empty() {
+        if self.on_text && !self.text.is_empty() {
             p.insert("text".into(), json!(self.text));
         }
-        if self.inside {
+        // "Also inside compounds" only widens the other properties.
+        if self.inside && !p.is_empty() {
             p.insert("inside".into(), json!(true));
         }
         Value::Object(p)
@@ -161,27 +205,23 @@ fn refresh(app: &mut App) {
         }
     }
     st.message = match st.ids.len() {
-        0 => "No objects: set criteria or click objects".to_string(),
-        1 => "1 object".to_string(),
-        c => format!("{c} objects"),
+        0 if st.any_ticked() => "No objects found".to_string(),
+        0 => "Tick a property or click objects".to_string(),
+        1 => "1 object found".to_string(),
+        c => format!("{c} objects found"),
     };
 }
 
-fn pick<T: Copy + PartialEq>(ui: &mut egui::Ui, id: &str, cur: &mut Option<T>, choices: &[(T, &str)], width: f32) {
-    let label = choices
-        .iter()
-        .find(|(v, _)| Some(*v) == *cur)
-        .map_or("Any", |(_, n)| *n);
+/// A list of choices without an "any" entry (unticked means any).
+fn combo(ui: &mut egui::Ui, id: &str, cur: &mut usize, names: &[&str], width: f32) {
+    let label = names.get(*cur).copied().unwrap_or("");
     let r = egui::ComboBox::from_id_salt(id)
         .selected_text(label)
         .width(width)
         .show_ui(ui, |ui| {
-            if ui.selectable_label(cur.is_none(), "Any").clicked() {
-                *cur = None;
-            }
-            for (v, n) in choices {
-                if ui.selectable_label(*cur == Some(*v), *n).clicked() {
-                    *cur = Some(*v);
+            for (i, n) in names.iter().enumerate() {
+                if ui.selectable_label(*cur == i, *n).clicked() {
+                    *cur = i;
                 }
             }
         });
@@ -189,9 +229,11 @@ fn pick<T: Copy + PartialEq>(ui: &mut egui::Ui, id: &str, cur: &mut Option<T>, c
         .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, format!("{id}: {label}")));
 }
 
-fn field(ui: &mut egui::Ui, text: &mut String, label: &str, width: f32) {
-    let r = ui.add(egui::TextEdit::singleline(text).desired_width(width));
-    r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, label));
+/// A number button (the Edit panel's pop-up).
+fn number(ui: &mut egui::Ui, name: &str, v: &mut f64, sp: &crate::attributes::NumSpec) {
+    if let Some(x) = number_popup(ui, &format!("find_{name}"), name, *v, sp) {
+        *v = x;
+    }
 }
 
 pub fn dialog(app: &mut App, ctx: &egui::Context) {
@@ -211,7 +253,7 @@ pub fn dialog(app: &mut App, ctx: &egui::Context) {
     let mut action: Option<&'static str> = None;
     let mut clicked: Option<u64> = None;
     let mut st = std::mem::take(&mut app.find);
-    egui::Window::new("Find Objects")
+    egui::Window::new("Find Properties")
         .open(&mut open)
         .collapsible(false)
         .resizable(false)
@@ -220,105 +262,114 @@ pub fn dialog(app: &mut App, ctx: &egui::Context) {
                 let doc = app.engine.doc();
                 egui::Grid::new("find_grid")
                     .num_columns(4)
-                    .spacing([6.0, 3.0])
+                    .spacing([8.0, 4.0])
                     .show(ui, |ui| {
-                        ui.label("Kind");
-                        let mut kind = st.kind;
-                        let kinds: Vec<(usize, &str)> = KINDS.iter().copied().enumerate().collect();
-                        pick(ui, "Find kind", &mut kind, &kinds, 80.0);
-                        st.kind = kind;
-                        ui.label("Fill style");
-                        let mut fill = st.fill;
-                        let fills: Vec<(usize, &str)> = FILLS.iter().copied().enumerate().collect();
-                        pick(ui, "Find fill style", &mut fill, &fills, 70.0);
-                        st.fill = fill;
-                        ui.end_row();
-
-                        ui.label("Pen");
-                        if let Some(c) = color_menu(ui, "find_pen", doc, st.pen, &[(ANY, "Any")]) {
-                            st.pen = c;
-                        }
-                        ui.label("Fill");
-                        if let Some(c) = color_menu(ui, "find_fill", doc, st.fill_color, &[(ANY, "Any")]) {
-                            st.fill_color = c;
-                        }
-                        ui.end_row();
-
-                        ui.label("Depth");
-                        ui.horizontal(|ui| {
-                            field(ui, &mut st.depth_min, "Find depth from", 34.0);
-                            ui.label("to");
-                            field(ui, &mut st.depth_max, "Find depth to", 34.0);
+                        ui.checkbox(&mut st.on_kind, "Object kind");
+                        ui.add_enabled_ui(st.on_kind, |ui| {
+                            combo(ui, "Find kind", &mut st.kind, &KIND_NAMES, 90.0);
                         });
-                        ui.label("Width");
-                        field(ui, &mut st.thickness, "Find line width", 34.0);
                         ui.end_row();
 
-                        ui.label("Line");
-                        let mut line = st.line;
-                        let lines: Vec<(LineKind, &str)> = LineKind::ALL.iter().map(|k| (*k, k.name())).collect();
-                        pick(ui, "Find line style", &mut line, &lines, 80.0);
-                        st.line = line;
-                        ui.label("Arrows");
-                        pick(
-                            ui,
-                            "Find arrows",
-                            &mut st.arrows,
-                            &[(true, "with"), (false, "without")],
-                            70.0,
-                        );
+                        ui.checkbox(&mut st.on_width, "Line width");
+                        ui.add_enabled_ui(st.on_width, |ui| {
+                            number(ui, "Line width", &mut st.thickness, &spec::THICKNESS)
+                        });
+                        ui.checkbox(&mut st.on_line, "Line style");
+                        ui.add_enabled_ui(st.on_line, |ui| {
+                            if let Some(l) = line_menu(ui, "find_line", st.line) {
+                                st.line = l;
+                            }
+                        });
                         ui.end_row();
 
-                        ui.label("Font");
-                        let font_label = if st.font == ANY {
-                            "Any".to_string()
-                        } else {
-                            rustfig_text::ps_font_display_name(st.font).to_string()
-                        };
-                        let r = egui::ComboBox::from_id_salt("find_font")
-                            .selected_text(font_label.clone())
-                            .width(80.0)
-                            .show_ui(ui, |ui| {
-                                if ui.selectable_label(st.font == ANY, "Any").clicked() {
-                                    st.font = ANY;
-                                }
-                                for f in -1..35 {
-                                    let n = rustfig_text::ps_font_display_name(f);
-                                    if ui.selectable_label(st.font == f, n).clicked() {
-                                        st.font = f;
-                                    }
-                                }
+                        ui.checkbox(&mut st.on_pen, "Pen colour");
+                        ui.add_enabled_ui(st.on_pen, |ui| {
+                            if let Some(c) = color_menu(ui, "find_pen", doc, st.pen, &[]) {
+                                st.pen = c;
+                            }
+                        });
+                        ui.checkbox(&mut st.on_fill_color, "Fill colour");
+                        ui.add_enabled_ui(st.on_fill_color, |ui| {
+                            if let Some(c) = color_menu(ui, "find_fill", doc, st.fill_color, &[]) {
+                                st.fill_color = c;
+                            }
+                        });
+                        ui.end_row();
+
+                        ui.checkbox(&mut st.on_fill, "Fill style");
+                        ui.add_enabled_ui(st.on_fill, |ui| {
+                            combo(ui, "Find fill style", &mut st.fill, &FILL_NAMES, 80.0);
+                        });
+                        ui.checkbox(&mut st.on_arrows, "Arrows");
+                        ui.add_enabled_ui(st.on_arrows, |ui| {
+                            combo(ui, "Find arrows", &mut st.arrows, &ARROW_NAMES, 110.0);
+                        });
+                        ui.end_row();
+
+                        ui.checkbox(&mut st.on_depth, "Depth");
+                        ui.add_enabled_ui(st.on_depth, |ui| {
+                            ui.horizontal(|ui| {
+                                number(ui, "Depth from", &mut st.depth_min, &spec::DEPTH);
+                                ui.label("to");
+                                number(ui, "Depth to", &mut st.depth_max, &spec::DEPTH);
                             });
-                        r.response.widget_info(|| {
-                            egui::WidgetInfo::labeled(
-                                egui::WidgetType::ComboBox,
-                                true,
-                                format!("Find font: {font_label}"),
-                            )
                         });
-                        ui.label("Size");
-                        field(ui, &mut st.size, "Find font size", 34.0);
                         ui.end_row();
 
-                        ui.label("Text");
-                        let r = ui.add(egui::TextEdit::singleline(&mut st.text).desired_width(150.0));
-                        r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Find text"));
-                        ui.checkbox(&mut st.inside, "In compounds")
+                        ui.checkbox(&mut st.on_font, "Font");
+                        ui.add_enabled_ui(st.on_font, |ui| {
+                            let font_label = rustfig_text::ps_font_display_name(st.font).to_string();
+                            let r = egui::ComboBox::from_id_salt("find_font")
+                                .selected_text(font_label.clone())
+                                .width(110.0)
+                                .show_ui(ui, |ui| {
+                                    for f in -1..35 {
+                                        let n = rustfig_text::ps_font_display_name(f);
+                                        if ui.selectable_label(st.font == f, n).clicked() {
+                                            st.font = f;
+                                        }
+                                    }
+                                });
+                            r.response.widget_info(|| {
+                                egui::WidgetInfo::labeled(
+                                    egui::WidgetType::ComboBox,
+                                    true,
+                                    format!("Find font: {font_label}"),
+                                )
+                            });
+                        });
+                        ui.checkbox(&mut st.on_size, "Font size");
+                        ui.add_enabled_ui(st.on_size, |ui| number(ui, "Font size", &mut st.size, &spec::FONT_SIZE));
+                        ui.end_row();
+
+                        ui.checkbox(&mut st.on_text, "Text contains");
+                        ui.add_enabled_ui(st.on_text, |ui| {
+                            let r = ui.add(egui::TextEdit::singleline(&mut st.text).desired_width(150.0));
+                            r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Find text"));
+                        });
+                        ui.end_row();
+
+                        ui.checkbox(&mut st.inside, "Also inside compounds")
                             .on_hover_text("Also match members of compounds; the compound is the match");
                         ui.end_row();
                     });
+                ui.separator();
                 ui.label(st.message.as_str());
-                egui::ScrollArea::vertical().max_height(90.0).show(ui, |ui| {
-                    for (id, line) in &st.hits {
-                        if ui
-                            .selectable_label(false, line.as_str())
-                            .on_hover_text("Show this object")
-                            .clicked()
-                        {
-                            clicked = Some(*id);
-                        }
-                    }
-                });
+                if !st.hits.is_empty() {
+                    egui::CollapsingHeader::new("Show list").show(ui, |ui| {
+                        egui::ScrollArea::vertical().max_height(90.0).show(ui, |ui| {
+                            for (id, line) in &st.hits {
+                                if ui
+                                    .selectable_label(false, line.as_str())
+                                    .on_hover_text("Show this object")
+                                    .clicked()
+                                {
+                                    clicked = Some(*id);
+                                }
+                            }
+                        });
+                    });
+                }
                 let any = !st.ids.is_empty();
                 ui.horizontal(|ui| {
                     let b = |ui: &mut egui::Ui, label: &str, tip: &str| {
@@ -328,27 +379,21 @@ pub fn dialog(app: &mut App, ctx: &egui::Context) {
                     };
                     if b(
                         ui,
-                        "Update",
+                        "Update to indicator",
                         "Give the matches the attribute panel's settings (as Update mode)",
                     ) {
                         action = Some("update");
                     }
-                    if b(ui, "Delete", "Delete the matches") {
-                        action = Some("delete");
+                    if b(ui, "Set depth", "Give the matches the depth on the button (0-999)") {
+                        action = Some("depth");
                     }
+                    ui.add_enabled_ui(any, |ui| number(ui, "New depth", &mut st.new_depth, &spec::DEPTH));
                     if b(ui, "Glue", "Glue the matches into one compound") {
                         action = Some("group");
                     }
-                });
-                ui.horizontal(|ui| {
-                    if ui
-                        .add_enabled(any, egui::Button::new("Set depth"))
-                        .on_hover_text("Give the matches this depth (0-999)")
-                        .clicked()
-                    {
-                        action = Some("depth");
+                    if b(ui, "Delete", "Delete the matches") {
+                        action = Some("delete");
                     }
-                    field(ui, &mut st.new_depth, "New depth", 34.0);
                 });
             });
         });
@@ -371,13 +416,7 @@ pub fn dialog(app: &mut App, ctx: &egui::Context) {
 fn run_action(app: &mut App, action: &str) {
     let n = app.find.ids.len();
     let depth = match action {
-        "depth" => match app.find.new_depth.trim().parse::<f64>() {
-            Ok(d) if (0.0..=999.0).contains(&d) => Some(d),
-            _ => {
-                app.error("Depth must be a number from 0 to 999".to_string());
-                return;
-            }
-        },
+        "depth" => Some(app.find.new_depth.clamp(0.0, 999.0)),
         _ => None,
     };
     let done = app.run("find.apply", json!({ "action": action, "depth": depth }));

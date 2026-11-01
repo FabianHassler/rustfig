@@ -195,7 +195,7 @@ pub const UI_COMMANDS: &[UiCommand] = &[
     },
     UiCommand {
         id: "app.find_objects",
-        label: "Find Objects…",
+        label: "Find Properties…",
         shortcut: "",
         params: "{}  — Find mode and its window (criteria, a click on an object adds or removes it, matches outlined on the canvas, actions on all of them); script: tool.find, find.set, find.toggle, find.state and find.apply, or edit.find_objects, then object.update, arrange.set_depth, edit.delete or object.group with the ids",
     },
@@ -1711,8 +1711,8 @@ mod tests {
         ("edit.search_replace", "scripting API; Search/Replace... runs it"),
         ("edit.search_step", "the Next and Previous buttons of Search/Replace"),
         ("edit.show_object", "a click on a result line of Search/Replace"),
-        ("edit.find_objects", "the criteria of Edit > Find Objects; its actions run object.update, arrange.set_depth, edit.delete and object.group"),
-        ("find.", "Find mode: the Find Objects window and a click on an object; scripting API"),
+        ("edit.find_objects", "the criteria of Edit > Find Properties; its actions run object.update, arrange.set_depth, edit.delete and object.group"),
+        ("find.", "Find mode: the Find Properties window and a click on an object; scripting API"),
         ("text.spell_check", "scripting API; Spell Check... runs it"),
         ("edit.paste_text", "the middle button of the Text tool"),
         (

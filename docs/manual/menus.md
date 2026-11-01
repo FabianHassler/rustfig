@@ -8,7 +8,7 @@ Sections Open (New, Open, Merge, Open and Merge with preview, Digitize), Save (S
 
 ## Edit
 
-Sections Undo (Undo, Redo), Paste (Paste objects, Paste text, Copy as picture), Text (Search/Replace, Spell check, native app only), then Delete all and Settings (Global settings, Colours, Set units, Document settings). Find Objects, Enter point and the plots are in the Tools menu. xfig has no selection, so there is no Cut, Copy or Select all: the modes act on the object you click, and the cut buffer is filled by Copy mode or Delete mode (right button).
+Sections Undo (Undo, Redo), Paste (Paste objects, Paste text, Copy as picture), Text (Search/Replace, Spell check, native app only), then Delete all and Settings (Global settings, Colours, Set units, Document settings). Find Properties, Enter point and the plots are in the Tools menu. xfig has no selection, so there is no Cut, Copy or Select all: the modes act on the object you click, and the cut buffer is filled by Copy mode or Delete mode (right button).
 
 - Undo and Redo have many levels.
 - Paste objects attaches the cut buffer to the pointer as an outline, its top-left corner at the pointer. Left places the objects there (“place object”), middle at the position they were cut or copied from (“place at orig posn”), right or Escape cancels (“cancel paste”). One placement is one undo step. If the system clipboard holds a figure copied in another RustFig window, that is pasted instead of the cut buffer; if it holds an image (PNG, for example from a browser or a screenshot), it is pasted as a picture object, saved as `clipboard-<number>.png` next to the figure (in the temporary folder while the figure has no file name) and referenced by that path like any picture in a .fig file. The web version has only the cut buffer. Scripts and MCP give `dx` and `dy` to `edit.paste` to place the objects at once, moved by that offset.
@@ -29,7 +29,7 @@ Commands that xfig has only as modes or keys: Group and Ungroup, Update, Convert
 
 ## Tools
 
-RustFig's own menu, right after View. Find: Find Objects (see [Text](draw-text-pictures.md)) and Go to mode (Ctrl+J; puts the caret in the Go to mode field of the mode panel). Add to the drawing: Import picture, Capture Screen (native app only) and Enter point. Plots: Plot curve and Edit plot (see [Plot](plot.md)).
+RustFig's own menu, right after View. Find: Find Properties (see [Text](draw-text-pictures.md)) and Go to mode (Ctrl+J; puts the caret in the Go to mode field of the mode panel). Add to the drawing: Import picture, Capture Screen (native app only) and Enter point. Plots: Plot curve and Edit plot (see [Plot](plot.md)).
 
 ## Help
 
