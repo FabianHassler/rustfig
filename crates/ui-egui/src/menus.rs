@@ -1726,6 +1726,10 @@ mod tests {
             "the library mode button (Shift+L) and the library panel; scripting API",
         ),
         (
+            "preview.",
+            "the hover preview of the Edit panel's and Find mode's choices; scripting API",
+        ),
+        (
             "export.",
             "the Export panel's rows and Fit to Page button; scripting API",
         ),

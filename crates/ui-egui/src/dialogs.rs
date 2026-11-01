@@ -4,7 +4,7 @@
 // Ported from xfig src/e_edit.c (edit panel: compound, picture and point
 // rows, live apply) (xfig licence, see LICENSE-xfig).
 
-use crate::attributes::{arrow_menu, cap_menu, hovered, join_menu, line_menu};
+use crate::attributes::{arrow_menu, cap_menu, hovered, join_menu, line_menu, number_popup, spec};
 use crate::panels::{color_combo, font_combo, limit_fill};
 use crate::web_io::{WebInbox, WebPick};
 use crate::{menus, App};
@@ -848,6 +848,10 @@ impl FileDialogs for ScriptedDialogs {
 /// so an open panel takes Escape from Edit › Select none.
 pub(crate) fn escape_closes_panels(app: &mut App, ctx: &egui::Context) {
     if ctx.wants_keyboard_input() || app.engine.is_typing() || app.engine.tool_busy() {
+        return;
+    }
+    // An open pop-up (a number pop-up, a choice grid) takes Escape itself.
+    if egui::Popup::is_any_open(ctx) {
         return;
     }
     let d = &mut app.dialogs;
@@ -2434,23 +2438,21 @@ fn arrow_rows(ui: &mut egui::Ui, id: &str, label: &str, a: &mut ArrowRows) -> Op
     rl(ui, label);
     let mut hover = None;
     ui.horizontal(|ui| {
-        let h = ui.spacing().interact_size.y;
         ui.checkbox(&mut a.on, "on");
         if let Some(n) = arrow_menu(ui, id, a.choice) {
             a.choice = n;
         } else {
             hover = hovered(ui.ctx(), id).map(|n| n as i32);
         }
-        for (name, v) in [
-            ("Thick", &mut a.thick),
-            ("Width", &mut a.width),
-            ("Length", &mut a.length),
+        for (name, v, sp) in [
+            ("Thick", &mut a.thick, &spec::ARROW_THICK),
+            ("Width", &mut a.width, &spec::ARROW_WIDTH),
+            ("Length", &mut a.length, &spec::ARROW_LENGTH),
         ] {
             ui.label(name);
-            ui.add_sized(
-                [SHAPE_W, h],
-                egui::DragValue::new(v).range(0.0..=10000.0).speed(0.1).max_decimals(2),
-            );
+            if let Some(x) = number_popup(ui, &format!("{id}_{name}"), &format!("{label} {name}"), *v, sp) {
+                *v = x;
+            }
         }
     });
     ui.end_row();
@@ -2543,7 +2545,9 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                         }
                         if st.is_text {
                             rl(ui, "Size");
-                            ui.add(egui::DragValue::new(&mut st.size).range(1.0..=500.0).suffix(" pt"));
+                            if let Some(v) = number_popup(ui, "edit_size", "Size", st.size, &spec::TEXT_SIZE) {
+                                st.size = v;
+                            }
                             ui.end_row();
                             rl(ui, "Pen colour");
                             if let Some(c) = color_combo(ui, "edit_tcolor", app.engine.doc(), st.pen) {
@@ -2553,7 +2557,9 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             }
                             ui.end_row();
                             rl(ui, "Angle");
-                            ui.add(egui::DragValue::new(&mut st.angle).range(-360.0..=360.0).suffix("°"));
+                            if let Some(v) = number_popup(ui, "edit_text_angle", "Angle", st.angle, &spec::ANGLE) {
+                                st.angle = v;
+                            }
                             ui.end_row();
                             rl(ui, "Justification");
                             ui.horizontal(|ui| {
@@ -2596,14 +2602,18 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                         }
                         if st.has_style && !st.is_picture {
                             rl(ui, "Width");
-                            ui.add(egui::DragValue::new(&mut st.thickness).range(0..=1000));
+                            if let Some(v) =
+                                number_popup(ui, "edit_width", "Width", f64::from(st.thickness), &spec::THICKNESS)
+                            {
+                                st.thickness = v.round() as i32;
+                            }
                             ui.end_row();
                             rl(ui, "Line style");
                             ui.horizontal(|ui| {
                                 if let Some(k) = line_menu(ui, "edit_line", st.line) {
                                     st.line = k;
-                                } else if let Some(k) = hovered(ui.ctx(), "edit_line")
-                                    .and_then(|i| LineKind::ALL.get(i as usize))
+                                } else if let Some(k) =
+                                    hovered(ui.ctx(), "edit_line").and_then(|i| LineKind::ALL.get(i as usize))
                                 {
                                     hover = Some(json!({"line": k.name()}));
                                 }
@@ -2613,8 +2623,11 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                                     let dotted = st.line == LineKind::Dotted;
                                     ui.label(if dotted { "Dot gap" } else { "Dash length" })
                                         .on_hover_text(LINE_STYLE_VALUE_HELP);
-                                    ui.add(egui::DragValue::new(&mut st.style_val).range(0.0..=1000.0).speed(0.1))
-                                        .on_hover_text(LINE_STYLE_VALUE_HELP);
+                                    let name = if dotted { "Dot gap" } else { "Dash length" };
+                                    if let Some(v) = number_popup(ui, "edit_style_val", name, st.style_val, &spec::DASH)
+                                    {
+                                        st.style_val = v;
+                                    }
                                 }
                             });
                             ui.end_row();
@@ -2693,7 +2706,11 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                         }
                         if st.is_arcbox {
                             rl(ui, "Corner radius");
-                            ui.add(egui::DragValue::new(&mut st.radius).range(0..=1000));
+                            if let Some(v) =
+                                number_popup(ui, "edit_radius", "Corner radius", f64::from(st.radius), &spec::RADIUS)
+                            {
+                                st.radius = v.round() as i32;
+                            }
                             ui.end_row();
                         }
                         if st.is_picture {
@@ -2735,7 +2752,10 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             }
                         } else {
                             rl(ui, "Depth");
-                            ui.add(egui::DragValue::new(&mut st.depth).range(0..=999));
+                            if let Some(v) = number_popup(ui, "edit_depth", "Depth", f64::from(st.depth), &spec::DEPTH)
+                            {
+                                st.depth = v.round() as i32;
+                            }
                             ui.end_row();
                         }
                         if !matches!(st.geo, Geo::None) {
@@ -2772,7 +2792,9 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             } => {
                                 if !*circle {
                                     rl(ui, "Angle (degrees)");
-                                    ui.add(egui::DragValue::new(angle).range(-360.0..=360.0).speed(1.0));
+                                    if let Some(v) = number_popup(ui, "edit_angle", "Angle", *angle, &spec::ANGLE) {
+                                        *angle = v;
+                                    }
                                     ui.end_row();
                                 }
                                 xy_row(ui, "Center", center, scale);
@@ -4187,11 +4209,15 @@ fn picture_rows(ui: &mut egui::Ui, ctx: &egui::Context, app: &mut App, st: &mut 
             if ui.button("Scale by %").clicked() {
                 mode = Some(Resize::Percent(st.picture_percent));
             }
-            ui.add(
-                egui::DragValue::new(&mut st.picture_percent)
-                    .range(0.001..=100000.0)
-                    .max_decimals(3),
-            );
+            if let Some(v) = number_popup(
+                ui,
+                "edit_picture_percent",
+                "Scale",
+                st.picture_percent,
+                &spec::SCALE_PERCENT,
+            ) {
+                st.picture_percent = v;
+            }
         });
         ui.end_row();
         if let Some(m) = mode {

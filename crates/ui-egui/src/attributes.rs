@@ -1473,7 +1473,8 @@ fn fill_swatch(
 /// A clickable cell with a picture; returns whether it was clicked.
 /// Whether the last [`cell`] drawn is under the pointer.
 fn last_cell_hovered(ui: &Ui) -> bool {
-    ui.ctx().data(|d| d.get_temp::<bool>(egui::Id::new("cell_hovered")).unwrap_or(false))
+    ui.ctx()
+        .data(|d| d.get_temp::<bool>(egui::Id::new("cell_hovered")).unwrap_or(false))
 }
 
 fn cell(ui: &mut Ui, size: egui::Vec2, selected: bool, name: &str, paint: impl FnOnce(&Painter, Rect)) -> bool {
@@ -1941,58 +1942,59 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
         }
         Attr::ArrowSize => {
             // xfig's `popup_arrowsize_panel`: Absolute Values or Multiple of
-            // Line Width, each with Thickness, Width and Length; Cancel and Set.
+            // Line Width, each with Thickness, Width and Length. Live like the
+            // other number pop-ups: Return or a click outside keeps, Escape
+            // restores what the panel opened with.
             let unit = rustfig_geom::FIG_PER_STYLE_UNIT;
             let id = egui::Id::new("arrow_size_draft");
             let frame = ui.ctx().cumulative_frame_nr();
-            let start = (
+            type Sz = (bool, [f64; 3], [f64; 3]);
+            let now: Sz = (
                 ind.arrow_absolute,
                 [ind.arrow.thickness, ind.arrow.width / unit, ind.arrow.height / unit],
                 [ind.arrow_mult.0, ind.arrow_mult.1, ind.arrow_mult.2],
             );
-            let (mut absolute, mut abs, mut mult) = ui
-                .data(|d| d.get_temp::<((bool, [f64; 3], [f64; 3]), u64)>(id))
+            let original = ui
+                .data(|d| d.get_temp::<(Sz, u64)>(id))
                 .filter(|(_, last)| frame <= last + 2)
-                .map_or(start, |(v, _)| v);
-            egui::Grid::new("arrow_size").show(ui, |ui| {
-                ui.radio_value(&mut absolute, true, "Absolute Values");
-                ui.end_row();
-                for (i, name) in ["Thickness", "Width", "Length"].iter().enumerate() {
-                    ui.label(format!("   {name}"));
-                    if let Some(v) = abs.get_mut(i) {
-                        ui.add_enabled(
-                            absolute,
-                            egui::DragValue::new(v).range(0.1..=10_000.0).speed(0.1).max_decimals(2),
-                        )
-                        .widget_info(|| {
-                            egui::WidgetInfo::labeled(egui::WidgetType::DragValue, absolute, format!("Absolute {name}"))
-                        });
-                    }
-                    ui.end_row();
-                }
-                ui.radio_value(&mut absolute, false, "Multiple of Line Width");
-                ui.end_row();
-                for (i, name) in ["Thickness", "Width", "Length"].iter().enumerate() {
-                    ui.label(format!("   {name}"));
-                    if let Some(v) = mult.get_mut(i) {
-                        ui.add_enabled(
-                            !absolute,
-                            egui::DragValue::new(v).range(0.1..=10_000.0).speed(0.1).max_decimals(2),
-                        )
-                        .widget_info(|| {
-                            egui::WidgetInfo::labeled(
-                                egui::WidgetType::DragValue,
-                                !absolute,
-                                format!("Multiple {name}"),
-                            )
-                        });
-                    }
-                    ui.end_row();
+                .map_or(now, |(v, _)| v);
+            ui.data_mut(|d| d.insert_temp(id, (original, frame)));
+            let (mut absolute, mut abs, mut mult) = now;
+            let mut changed = false;
+            let sizes = [
+                ("Thickness", spec::ARROW_THICK),
+                ("Width", spec::ARROW_WIDTH),
+                ("Length", spec::ARROW_LENGTH),
+            ];
+            changed |= ui.radio_value(&mut absolute, true, "Absolute Values").changed();
+            ui.add_enabled_ui(absolute, |ui| {
+                for (i, (name, sp)) in sizes.iter().enumerate() {
+                    let sp = NumSpec {
+                        presets: &[],
+                        lo: 0.1,
+                        ..*sp
+                    };
+                    ui.horizontal(|ui| {
+                        ui.label(format!("   {name}"));
+                        if let Some(v) = abs.get_mut(i) {
+                            changed |= number_body(ui, &format!("Absolute {name}"), v, &sp);
+                        }
+                    });
                 }
             });
-            ui.data_mut(|d| d.insert_temp(id, ((absolute, abs, mult), frame)));
-            let (set_it, cancel) = nval_buttons(ui);
-            if set_it {
+            changed |= ui.radio_value(&mut absolute, false, "Multiple of Line Width").changed();
+            ui.add_enabled_ui(!absolute, |ui| {
+                for (i, (name, _)) in sizes.iter().enumerate() {
+                    let sp = NumSpec::new(0.1, 10_000.0).slider(0.0, 10.0).speed(0.1);
+                    ui.horizontal(|ui| {
+                        ui.label(format!("   {name}"));
+                        if let Some(v) = mult.get_mut(i) {
+                            changed |= number_body(ui, &format!("Multiple {name}"), v, &sp);
+                        }
+                    });
+                }
+            });
+            let apply = |app: &mut App, (absolute, abs, mult): Sz| {
                 let mut arrow = ind.arrow;
                 arrow.thickness = abs[0];
                 arrow.width = abs[1] * unit;
@@ -2001,9 +2003,16 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                     app,
                     json!({ "arrow": arrow, "arrow_absolute": absolute, "arrow_mult": mult }),
                 );
+            };
+            if changed {
+                apply(app, (absolute, abs, mult));
             }
-            if set_it || cancel {
-                ui.data_mut(|d| d.remove::<((bool, [f64; 3], [f64; 3]), u64)>(id));
+            let (keep, cancel) = ui.input(|i| (i.key_pressed(egui::Key::Enter), i.key_pressed(egui::Key::Escape)));
+            if cancel {
+                apply(app, original);
+            }
+            if keep || cancel {
+                ui.data_mut(|d| d.remove::<(Sz, u64)>(id));
                 ui.close();
             }
         }
@@ -2076,63 +2085,178 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
     }
 }
 
-/// xfig's value panel: a number field.
-fn value_entry(app: &mut App, ui: &mut Ui, ind: &Indicator, a: Attr) {
-    let (field, mut v, lo, hi, speed) = match a {
-        Attr::Depth => (
-            "depth",
-            f64::from(ind.depth),
-            0.0,
-            f64::from(rustfig_model::MAX_DEPTH),
-            1.0,
-        ),
-        Attr::RotnAngle => ("rotate_angle", ind.rotate_angle, -360.0, 360.0, 1.0),
-        Attr::NumSides => ("sides", ind.sides as f64, 3.0, 200.0, 1.0),
-        Attr::NumCopies => ("num_copies", f64::from(ind.num_copies), 1.0, 99.0, 1.0),
-        Attr::NumXCopies => ("num_x_copies", f64::from(ind.num_x_copies), 0.0, 99.0, 1.0),
-        Attr::NumYCopies => ("num_y_copies", f64::from(ind.num_y_copies), 0.0, 99.0, 1.0),
-        Attr::LineWidth => ("thickness", f64::from(ind.thickness), 0.0, 500.0, 1.0),
-        Attr::BoxRadius => ("box_radius", f64::from(ind.box_radius), 0.0, 1000.0, 1.0),
-        Attr::TextAngle => ("text_angle", ind.text_angle, -360.0, 360.0, 1.0),
-        Attr::FontSize => ("font_size", ind.font_size, 1.0, 500.0, 0.5),
-        Attr::TextStep => ("text_step", ind.text_step, 0.0, 100.0, 0.05),
-        Attr::TangentLength => ("tangent_length", ind.tangent_length, 0.0, 20.0, 0.05),
-        _ => return,
-    };
-    let integer = matches!(
-        a,
-        Attr::Depth
-            | Attr::NumSides
-            | Attr::NumCopies
-            | Attr::NumXCopies
-            | Attr::NumYCopies
-            | Attr::LineWidth
-            | Attr::BoxRadius
-    );
-    // A live pop-up (xfig's `popup_nval_panel` entry, without Set/Cancel): the
-    // indicator follows the slider, the field and the chips at once; Return or a
-    // click outside keeps the value, Escape restores the one it had on opening.
-    // The indicator is not part of the document, so there is no undo step.
-    let original = nval_draft(ui, a, v);
-    let (slo, shi) = slider_range(a);
+/// How a number is offered in a pop-up: the field always, a slider only
+/// where a range is really better than typing, preset chips, and the +/-
+/// steppers for counts and depths.
+#[derive(Clone, Copy)]
+pub(crate) struct NumSpec {
+    /// The field's range (what is accepted).
+    pub lo: f64,
+    pub hi: f64,
+    /// The slider's range, if it has one.
+    pub slider: Option<(f64, f64)>,
+    pub presets: &'static [f64],
+    pub integer: bool,
+    pub speed: f64,
+    /// -10, -1, +1, +10 buttons beside the field.
+    pub steppers: bool,
+    /// Shown after the number on the button ("°", " %").
+    pub suffix: &'static str,
+}
+
+impl NumSpec {
+    const fn new(lo: f64, hi: f64) -> Self {
+        NumSpec {
+            lo,
+            hi,
+            slider: None,
+            presets: &[],
+            integer: false,
+            speed: 1.0,
+            steppers: false,
+            suffix: "",
+        }
+    }
+    /// A small whole number: field, steppers and chips, no slider.
+    pub(crate) const fn count(lo: f64, hi: f64, chips: &'static [f64]) -> Self {
+        NumSpec::new(lo, hi).int().steppers().chips(chips)
+    }
+    const fn slider(mut self, lo: f64, hi: f64) -> Self {
+        self.slider = Some((lo, hi));
+        self
+    }
+    const fn chips(mut self, p: &'static [f64]) -> Self {
+        self.presets = p;
+        self
+    }
+    const fn int(mut self) -> Self {
+        self.integer = true;
+        self
+    }
+    const fn speed(mut self, s: f64) -> Self {
+        self.speed = s;
+        self
+    }
+    const fn steppers(mut self) -> Self {
+        self.steppers = true;
+        self
+    }
+    const fn suffix(mut self, s: &'static str) -> Self {
+        self.suffix = s;
+        self
+    }
+}
+
+/// The pop-ups of the Edit panel's number fields and of the indicator.
+pub(crate) mod spec {
+    use super::NumSpec;
+    const ANGLES: &[f64] = &[0.0, 15.0, 30.0, 45.0, 60.0, 90.0, 120.0, 180.0, 270.0];
+    pub const THICKNESS: NumSpec = NumSpec::new(0.0, 1000.0)
+        .int()
+        .slider(0.0, 20.0)
+        .chips(&[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0]);
+    pub const DASH: NumSpec = NumSpec::new(0.0, 1000.0)
+        .speed(0.1)
+        .slider(0.0, 30.0)
+        .chips(&[2.0, 3.0, 4.0, 5.0, 8.0, 10.0, 15.0]);
+    pub const RADIUS: NumSpec = NumSpec::new(0.0, 1000.0)
+        .int()
+        .slider(0.0, 100.0)
+        .chips(&[0.0, 5.0, 10.0, 20.0, 50.0]);
+    pub const DEPTH: NumSpec = NumSpec::new(0.0, 999.0)
+        .int()
+        .steppers()
+        .chips(&[0.0, 10.0, 50.0, 100.0, 500.0, 999.0]);
+    pub const TEXT_SIZE: NumSpec = NumSpec::new(1.0, 500.0)
+        .speed(0.5)
+        .slider(1.0, 72.0)
+        .chips(&[8.0, 10.0, 12.0, 14.0, 18.0, 24.0, 36.0]);
+    pub const ANGLE: NumSpec = NumSpec::new(-360.0, 360.0).chips(ANGLES).suffix("°");
+    pub const ROTATE_ANGLE: NumSpec = NumSpec::new(-360.0, 360.0)
+        .chips(&[-90.0, -45.0, -15.0, 15.0, 30.0, 45.0, 60.0, 90.0, 120.0, 180.0, 270.0])
+        .suffix("°");
+    pub const ARROW_THICK: NumSpec = NumSpec::new(0.0, 10000.0)
+        .speed(0.1)
+        .slider(0.0, 10.0)
+        .chips(&[0.5, 1.0, 2.0, 3.0, 4.0]);
+    pub const ARROW_WIDTH: NumSpec = NumSpec::new(0.0, 10000.0)
+        .speed(0.1)
+        .slider(0.0, 30.0)
+        .chips(&[2.0, 4.0, 6.0, 8.0, 10.0, 12.0]);
+    pub const ARROW_LENGTH: NumSpec = NumSpec::new(0.0, 10000.0)
+        .speed(0.1)
+        .slider(0.0, 40.0)
+        .chips(&[4.0, 6.0, 8.0, 10.0, 12.0, 16.0]);
+    pub const SCALE_PERCENT: NumSpec = NumSpec::new(0.1, 10000.0)
+        .speed(1.0)
+        .chips(&[25.0, 50.0, 100.0, 200.0])
+        .suffix(" %");
+    pub const SIDES: NumSpec = NumSpec::new(3.0, 200.0)
+        .int()
+        .steppers()
+        .chips(&[3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 12.0]);
+    pub const COPIES: NumSpec = NumSpec::new(1.0, 99.0)
+        .int()
+        .steppers()
+        .chips(&[1.0, 2.0, 3.0, 4.0, 5.0, 10.0]);
+    pub const COPIES_XY: NumSpec = NumSpec::new(0.0, 99.0)
+        .int()
+        .steppers()
+        .chips(&[0.0, 1.0, 2.0, 3.0, 5.0, 10.0]);
+    pub const BOX_RADIUS: NumSpec = RADIUS;
+    pub const TEXT_STEP: NumSpec = NumSpec::new(0.0, 100.0)
+        .speed(0.05)
+        .slider(0.0, 5.0)
+        .chips(&[0.5, 1.0, 1.2, 1.5, 2.0]);
+    pub const TANGENT: NumSpec = NumSpec::new(0.0, 20.0)
+        .speed(0.05)
+        .slider(0.0, 20.0)
+        .chips(&[0.0, 0.5, 1.0, 2.0, 5.0]);
+    pub const FONT_SIZE: NumSpec = TEXT_SIZE;
+}
+
+/// The body of a number pop-up: slider (where the spec has one), field,
+/// steppers and preset chips. Returns whether the value changed.
+pub(crate) fn number_body(ui: &mut Ui, name: &str, v: &mut f64, spec: &NumSpec) -> bool {
     let mut changed = false;
-    let name = a.name();
     ui.horizontal(|ui| {
-        let slider = ui.add(
-            egui::Slider::new(&mut v, slo..=shi)
-                .show_value(false)
-                .clamping(egui::SliderClamping::Never)
-                .step_by(if integer { 1.0 } else { 0.0 }),
-        );
-        slider.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Slider, true, format!("{name} slider")));
-        changed |= slider.changed();
-        let mut dv = egui::DragValue::new(&mut v).range(lo..=hi).speed(speed);
-        if integer {
+        if let Some((slo, shi)) = spec.slider {
+            let slider = ui.add(
+                egui::Slider::new(v, slo..=shi)
+                    .show_value(false)
+                    .clamping(egui::SliderClamping::Never)
+                    .step_by(if spec.integer { 1.0 } else { 0.0 }),
+            );
+            slider.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Slider, true, format!("{name} slider")));
+            changed |= slider.changed();
+        }
+        if spec.steppers {
+            for (text, d) in [("-10", -10.0), ("-1", -1.0)] {
+                let r = ui.small_button(text);
+                r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, format!("{name} {text}")));
+                if r.clicked() {
+                    *v = (*v + d).clamp(spec.lo, spec.hi);
+                    changed = true;
+                }
+            }
+        }
+        let mut dv = egui::DragValue::new(v).range(spec.lo..=spec.hi).speed(spec.speed);
+        if spec.integer {
             dv = dv.fixed_decimals(0);
         }
         let resp = ui.add(dv);
         resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::DragValue, true, format!("{name} value")));
         changed |= resp.changed();
+        if spec.steppers {
+            for (text, d) in [("+1", 1.0), ("+10", 10.0)] {
+                let r = ui.small_button(text);
+                r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, format!("{name} {text}")));
+                if r.clicked() {
+                    *v = (*v + d).clamp(spec.lo, spec.hi);
+                    changed = true;
+                }
+            }
+        }
         if resp.hovered() {
             // xfig's spinners (`Fig*spinner_form*Text.translations`): wheel up
             // decreases, wheel down increases, one step per notch.
@@ -2143,12 +2267,8 @@ fn value_entry(app: &mut App, ui: &mut Ui, ind: &Indicator, a: Attr) {
                 let notches = (acc / 40.0).trunc();
                 ui.data_mut(|d| d.insert_temp(id, acc - notches * 40.0));
                 if notches != 0.0 {
-                    let step = if matches!(a, Attr::TextStep | Attr::TangentLength) {
-                        0.1
-                    } else {
-                        1.0
-                    };
-                    v = (v - f64::from(notches) * step).clamp(lo, hi);
+                    let step = if spec.integer || spec.speed >= 1.0 { 1.0 } else { 0.1 };
+                    *v = (*v - f64::from(notches) * step).clamp(spec.lo, spec.hi);
                     changed = true;
                 }
             }
@@ -2156,18 +2276,92 @@ fn value_entry(app: &mut App, ui: &mut Ui, ind: &Indicator, a: Attr) {
     });
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing.x = 3.0;
-        for &p in presets(a) {
+        for &p in spec.presets {
             let text = fmt_g(p);
-            let r = ui.selectable_label((v - p).abs() < 1e-9, text.clone());
+            let r = ui.selectable_label((*v - p).abs() < 1e-9, text.clone());
             r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, format!("Set to {text}")));
             if r.clicked() {
-                v = p;
+                *v = p;
                 changed = true;
             }
         }
     });
     if changed {
-        v = v.clamp(lo, hi);
+        *v = v.clamp(spec.lo, spec.hi);
+        if !v.is_finite() {
+            *v = spec.lo;
+        }
+    }
+    changed
+}
+
+/// A number field of the Edit panel: a button showing the value that opens a
+/// live pop-up ([`number_body`]). Returns the new value whenever it changes
+/// (the panel applies it at once, as one undo step); Return or a click
+/// outside keeps it, Escape returns the value the pop-up opened with.
+pub(crate) fn number_popup(ui: &mut Ui, id: &str, name: &str, value: f64, spec: &NumSpec) -> Option<f64> {
+    let mut out = None;
+    ui.push_id(id, |ui| {
+        let text = format!("{}{}", fmt_g(value), spec.suffix);
+        let resp = ui.add_sized(
+            [64.0, PIC_BTN],
+            egui::Button::new(text.as_str()).min_size(vec2(64.0, PIC_BTN)),
+        );
+        resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, format!("Edit {name}")));
+        let resp = resp.on_hover_text(format!("{name}: click for a slider, presets and the number field"));
+        let key = egui::Id::new(("num_popup_open", id));
+        egui::Popup::from_toggle_button_response(&resp)
+            .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+            .show(|ui| {
+                let frame = ui.ctx().cumulative_frame_nr();
+                let original = ui
+                    .data(|d| d.get_temp::<(f64, u64)>(key))
+                    .filter(|(_, last)| frame <= last + 2)
+                    .map_or(value, |(v, _)| v);
+                ui.data_mut(|d| d.insert_temp(key, (original, frame)));
+                ui.label(egui::RichText::new(name).strong());
+                let mut v = value;
+                if number_body(ui, name, &mut v, spec) {
+                    out = Some(v);
+                }
+                let (keep, cancel) = ui.input(|i| (i.key_pressed(egui::Key::Enter), i.key_pressed(egui::Key::Escape)));
+                if cancel {
+                    out = Some(original);
+                }
+                if keep || cancel {
+                    ui.data_mut(|d| d.remove::<(f64, u64)>(key));
+                    ui.close();
+                }
+            });
+    });
+    out
+}
+
+/// The pop-up of an indicator value (xfig's `popup_nval_panel` entry,
+/// without Set/Cancel): the indicator follows the slider, the field and the
+/// chips at once; Return or a click outside keeps the value, Escape restores
+/// the one it had on opening. The indicator is not part of the document, so
+/// there is no undo step.
+fn value_entry(app: &mut App, ui: &mut Ui, ind: &Indicator, a: Attr) {
+    let (field, mut v, sp) = match a {
+        Attr::Depth => ("depth", f64::from(ind.depth), spec::DEPTH),
+        Attr::RotnAngle => ("rotate_angle", ind.rotate_angle, spec::ROTATE_ANGLE),
+        Attr::NumSides => ("sides", ind.sides as f64, spec::SIDES),
+        Attr::NumCopies => ("num_copies", f64::from(ind.num_copies), spec::COPIES),
+        Attr::NumXCopies => ("num_x_copies", f64::from(ind.num_x_copies), spec::COPIES_XY),
+        Attr::NumYCopies => ("num_y_copies", f64::from(ind.num_y_copies), spec::COPIES_XY),
+        Attr::LineWidth => ("thickness", f64::from(ind.thickness), spec::THICKNESS),
+        Attr::BoxRadius => ("box_radius", f64::from(ind.box_radius), spec::BOX_RADIUS),
+        Attr::TextAngle => ("text_angle", ind.text_angle, spec::ANGLE),
+        Attr::FontSize => ("font_size", ind.font_size, spec::FONT_SIZE),
+        Attr::TextStep => ("text_step", ind.text_step, spec::TEXT_STEP),
+        Attr::TangentLength => ("tangent_length", ind.tangent_length, spec::TANGENT),
+        _ => return,
+    };
+    let integer = sp.integer;
+    let original = nval_draft(ui, a, v);
+    let changed = number_body(ui, &a.name(), &mut v, &sp);
+    if changed {
         let value = if integer { json!(v.round() as i64) } else { json!(v) };
         let mut m = serde_json::Map::new();
         m.insert(field.into(), value);
@@ -2193,42 +2387,6 @@ fn value_entry(app: &mut App, ui: &mut Ui, ind: &Indicator, a: Attr) {
         let mut m = serde_json::Map::new();
         m.insert(field.into(), value);
         app.want_preview(json!({ "ids": ids, "indicator": Value::Object(m) }));
-    }
-}
-
-/// The range of the pop-up's slider: the useful part of the field's range
-/// (the field still takes xfig's full range).
-fn slider_range(a: Attr) -> (f64, f64) {
-    match a {
-        Attr::Depth => (0.0, 999.0),
-        Attr::RotnAngle | Attr::TextAngle => (-360.0, 360.0),
-        Attr::NumSides => (3.0, 30.0),
-        Attr::NumCopies => (1.0, 20.0),
-        Attr::NumXCopies | Attr::NumYCopies => (0.0, 20.0),
-        Attr::LineWidth => (0.0, 20.0),
-        Attr::BoxRadius => (0.0, 100.0),
-        Attr::FontSize => (1.0, 72.0),
-        Attr::TextStep => (0.0, 5.0),
-        Attr::TangentLength => (0.0, 20.0),
-        _ => (0.0, 100.0),
-    }
-}
-
-/// The preset chips of a number pop-up.
-fn presets(a: Attr) -> &'static [f64] {
-    match a {
-        Attr::Depth => &[0.0, 10.0, 50.0, 100.0, 500.0, 999.0],
-        Attr::RotnAngle => &[-90.0, -45.0, 15.0, 30.0, 45.0, 90.0, 180.0],
-        Attr::TextAngle => &[0.0, 45.0, 90.0, 180.0, 270.0],
-        Attr::NumSides => &[3.0, 4.0, 5.0, 6.0, 8.0, 12.0],
-        Attr::NumCopies => &[1.0, 2.0, 3.0, 4.0, 5.0, 10.0],
-        Attr::NumXCopies | Attr::NumYCopies => &[0.0, 1.0, 2.0, 3.0, 5.0, 10.0],
-        Attr::LineWidth => &[0.0, 1.0, 2.0, 4.0, 6.0, 8.0],
-        Attr::BoxRadius => &[0.0, 5.0, 10.0, 20.0, 50.0],
-        Attr::FontSize => &[8.0, 10.0, 12.0, 14.0, 18.0, 24.0, 36.0],
-        Attr::TextStep => &[0.5, 1.0, 1.2, 1.5, 2.0],
-        Attr::TangentLength => &[0.0, 0.5, 1.0, 2.0, 5.0],
-        _ => &[],
     }
 }
 

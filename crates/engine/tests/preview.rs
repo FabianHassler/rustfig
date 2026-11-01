@@ -8,7 +8,10 @@ use serde_json::json;
 fn with_box() -> (Engine, u64) {
     let mut e = Engine::new();
     let r = e
-        .execute("shape.rectangle", &json!({"x": 0, "y": 0, "width": 1200, "height": 600}))
+        .execute(
+            "shape.rectangle",
+            &json!({"x": 0, "y": 0, "width": 1200, "height": 600}),
+        )
         .unwrap();
     let id = r["id"].as_u64().unwrap();
     (e, id)
@@ -24,8 +27,11 @@ fn set_and_clear_leave_document_and_history_alone() {
     let before = e.doc().clone();
     let rev = e.revision();
     let sel = e.selection().to_vec();
-    e.execute("preview.set", &json!({"ids": [id], "attrs": {"area_fill": 45, "fill_color": 4}}))
-        .unwrap();
+    e.execute(
+        "preview.set",
+        &json!({"ids": [id], "attrs": {"area_fill": 45, "fill_color": 4}}),
+    )
+    .unwrap();
     assert!(e.preview_active());
     assert_eq!(e.doc(), &before);
     assert_eq!(e.revision(), rev);
@@ -74,7 +80,11 @@ fn preview_ends_with_a_document_change_or_a_mode_change() {
 fn bad_params_are_errors() {
     let (mut e, id) = with_box();
     assert!(e.execute("preview.set", &json!({"ids": [id]})).is_err());
-    assert!(e.execute("preview.set", &json!({"ids": [id], "attrs": {"line": "nope"}})).is_err());
-    assert!(e.execute("preview.set", &json!({"ids": [424242], "attrs": {"area_fill": 1}})).is_err());
+    assert!(e
+        .execute("preview.set", &json!({"ids": [id], "attrs": {"line": "nope"}}))
+        .is_err());
+    assert!(e
+        .execute("preview.set", &json!({"ids": [424242], "attrs": {"area_fill": 1}}))
+        .is_err());
     assert!(!e.preview_active());
 }

@@ -5,7 +5,7 @@
 //! lines. OK stores the draft in the indicator (`indicator.set`), Cancel
 //! drops it.
 
-use crate::attributes::{color32, color_name, colors, font_name};
+use crate::attributes::{color32, color_name, colors, font_name, number_popup};
 use crate::App;
 use egui::Ui;
 use rustfig_engine::dimline::{self, DimlineDefaults, DimlineSettings};
@@ -83,15 +83,32 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
 
 fn int(ui: &mut Ui, name: &str, v: &mut i32, hi: i32) {
     ui.label(name);
-    ui.add(egui::DragValue::new(v).range(0..=hi))
-        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::DragValue, true, name));
+    let sp = if hi <= 9 {
+        PRECISION
+    } else {
+        crate::attributes::spec::THICKNESS
+    };
+    if let Some(x) = number_popup(ui, name, name, f64::from(*v), &sp) {
+        *v = (x.round() as i32).clamp(0, hi);
+    }
 }
 
 fn float(ui: &mut Ui, name: &str, v: &mut f64, lo: f64, hi: f64) {
     ui.label(name);
-    ui.add(egui::DragValue::new(v).range(lo..=hi).speed(0.1).fixed_decimals(1))
-        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::DragValue, true, name));
+    let mut sp = if hi > 100.0 && lo >= 1.0 {
+        crate::attributes::spec::TEXT_SIZE
+    } else {
+        crate::attributes::spec::ARROW_LENGTH
+    };
+    sp.lo = lo;
+    sp.hi = hi;
+    if let Some(x) = number_popup(ui, name, name, *v, &sp) {
+        *v = x;
+    }
 }
+
+/// Digits after the decimal point: a few values, steppers and chips.
+const PRECISION: crate::attributes::NumSpec = crate::attributes::NumSpec::count(0.0, 9.0, &[0.0, 1.0, 2.0, 3.0, 4.0]);
 
 fn color_box(app: &App, ui: &mut Ui, name: &str, c: &mut i32) {
     ui.label(name);

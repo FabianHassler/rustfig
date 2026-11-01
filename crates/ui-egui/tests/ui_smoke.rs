@@ -2955,7 +2955,8 @@ fn zoom_popup_integer_zoom_and_return() {
     assert_eq!(open_state(&mut h)["popup"], json!(false));
 }
 
-/// W10-31: the Arrow Size panel sets both modes with Set; Cancel keeps them.
+/// The Arrow Size pop-up is live: a mode applies at once, Escape restores
+/// what it opened with, Return keeps.
 #[test]
 fn arrow_size_panel_modes() {
     let mut h = harness(app());
@@ -2965,16 +2966,16 @@ fn arrow_size_panel_modes() {
     h.get_by_label_contains("Arrow Size: ").click();
     h.run_steps(3);
     h.get_by_label("Absolute Values").click();
-    h.run_steps(2);
-    h.get_by_label("Cancel").click();
     h.run_steps(3);
-    assert!(!h.state().engine.indicator.arrow_absolute);
+    assert!(h.state().engine.indicator.arrow_absolute, "live");
+    h.key_press(egui::Key::Escape);
+    h.run_steps(3);
+    assert!(!h.state().engine.indicator.arrow_absolute, "Escape restores");
     h.get_by_label_contains("Arrow Size: ").click();
     h.run_steps(3);
     h.get_by_label("Absolute Values").click();
-    h.run_steps(2);
-    h.get_by_label("Multiple of Line Width");
-    h.get_by_label("Set").click();
+    h.run_steps(3);
+    h.key_press(egui::Key::Enter);
     h.run_steps(3);
     assert!(h.state().engine.indicator.arrow_absolute);
 }
@@ -4148,16 +4149,15 @@ fn edit_panel_hover_previews_fill_and_click_keeps_it() {
     assert!(h.state().engine.overlay().preview.is_empty());
     assert_eq!(area(&h), -1);
     // Hover again, then click: kept, no preview left, one undo step.
-    h.get_by_label("30").hover();
+    h.get_all_by_label("30").next().unwrap().hover();
     h.run_steps(3);
-    h.get_by_label("30").click();
+    h.get_all_by_label("30").next().unwrap().click();
     h.run_steps(4);
     assert_eq!(area(&h), 30);
     assert!(h.state().engine.overlay().preview.is_empty());
     // One undo step takes the kept choice back (the hover left none).
     assert!(h.state_mut().engine.undo());
     assert_eq!(area(&h), -1);
-})");
 }
 
 /// Hovering an arrow type shows the arrow on the object, also when the
@@ -4180,6 +4180,139 @@ fn edit_panel_hover_previews_an_arrow_type() {
     h.run_steps(4);
     let ov = h.state().engine.overlay();
     assert_eq!(ov.preview.len(), 1);
-    assert!(back(&ov.preview[0]) || matches!(&ov.preview[0].kind, ObjectKind::Polyline(p) if p.forward_arrow.is_some()));
+    assert!(
+        back(&ov.preview[0]) || matches!(&ov.preview[0].kind, ObjectKind::Polyline(p) if p.forward_arrow.is_some())
+    );
     assert!(!back(&first_of(&h, "polyline")), "the document keeps its arrows");
+}
+
+/// Every object type's edit panel offers its attribute numbers as pop-ups
+/// (a button that opens a slider / chips / field), not as bare number fields.
+#[test]
+fn edit_panels_of_all_object_types_use_number_popups() {
+    let fig = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 1 0 2\n\t1 1 1.00 60.00 120.00\n\t0 0 600 600\n\
+2 2 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 5\n\t0 1000 600 1000 600 1600 0 1600 0 1000\n\
+2 4 0 1 0 7 50 -1 -1 0.000 0 0 7 0 0 5\n\t0 2000 600 2000 600 2600 0 2600 0 2000\n\
+2 3 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 4\n\t0 3000 600 3000 300 3600 0 3000\n\
+2 5 0 1 0 -1 50 -1 -1 0.000 0 0 -1 0 0 5\n\t0 /nonexistent/pic.png\n\t0 4000 600 4000 600 4600 0 4600 0 4000\n\
+1 1 0 1 0 7 50 -1 -1 0.000 1 0.0 3000 500 600 400 3000 500 3600 900\n\
+1 3 0 1 0 7 50 -1 -1 0.000 1 0.0 3000 1500 400 400 3000 1500 3400 1500\n\
+5 1 0 1 0 7 50 -1 -1 0.000 0 1 0 0 3000.000 2800.000 3000 2500 3300 2800 3000 3100\n\
+5 2 0 1 0 7 50 -1 -1 0.000 0 1 0 0 3000.000 3800.000 3000 3500 3300 3800 3000 4100\n\
+3 0 0 1 0 7 50 -1 -1 0.000 0 0 0 3\n\t6000 0 6300 300 6600 0\n\t0.0 0.0 0.0\n\
+3 2 0 1 0 7 50 -1 -1 0.000 0 0 0 3\n\t6000 1000 6300 1300 6600 1000\n\t0.0 0.0 0.0\n\
+3 5 0 1 0 7 50 -1 -1 0.000 0 0 0 3\n\t6000 2000 6300 2300 6600 2000\n\t1.0 -1.0 1.0\n\
+4 0 0 40 -1 0 12 0.0000 4 150 600 6000 3300 One\\001\n\
+6 6000 4000 7200 4600\n2 2 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 5\n\t6000 4000 7200 4000 7200 4600 6000 4600 6000 4000\n-6\n";
+    let mut h = harness(app());
+    h.state_mut()
+        .engine
+        .execute("file.open_data", &json!({"data": fig}))
+        .unwrap();
+    h.run_steps(2);
+    let count = h.state().engine.doc().objects.len();
+    assert!(count >= 13, "the figure has all kinds ({count})");
+    let ids: Vec<(u64, &'static str)> = h
+        .state()
+        .engine
+        .doc()
+        .objects
+        .iter()
+        .map(|o| (o.id.0, o.type_name()))
+        .collect();
+    let mut seen = std::collections::BTreeSet::new();
+    for (id, ty) in ids {
+        seen.insert(ty);
+        let a = h.state_mut();
+        a.dialogs.open_edit(&a.engine, rustfig_model::ObjectId(id));
+        h.run_steps(3);
+        assert!(h.state().dialogs.edit.is_some(), "{ty}: panel");
+        let has = |h: &Harness<'static, App>, l: &str| h.query_all_by_label(l).count() >= 1;
+        let mut want: Vec<&str> = Vec::new();
+        if ty != "compound" {
+            want.push("Edit Depth");
+        }
+        match ty {
+            "text" => want.extend(["Edit Size", "Edit Angle"]),
+            "compound" => {}
+            "picture" => want.push("Edit Scale"),
+            _ => want.push("Edit Width"),
+        }
+        if ty == "arc-box" {
+            want.push("Edit Corner radius");
+        }
+        if ty == "ellipse" {
+            want.push("Edit Angle");
+        }
+        if ty == "polyline" {
+            want.extend([
+                "Edit Forward arrow Thick",
+                "Edit Forward arrow Width",
+                "Edit Forward arrow Length",
+            ]);
+        }
+        for l in want {
+            assert!(has(&h, l), "{ty}: no pop-up button {l:?}");
+        }
+        // No bare number field is left for these attributes.
+        for l in ["Width value", "Depth value"] {
+            assert!(!has(&h, l), "{ty}: {l:?} should be inside a pop-up");
+        }
+        h.state_mut().dialogs.edit = None;
+        h.run_steps(2);
+    }
+    for ty in [
+        "polyline",
+        "box",
+        "arc-box",
+        "polygon",
+        "picture",
+        "ellipse",
+        "circle",
+        "arc",
+        "spline",
+        "closed spline",
+        "text",
+        "compound",
+    ] {
+        assert!(seen.contains(ty), "figure lacks a {ty}: {seen:?}");
+    }
+}
+
+/// The Edit panel's Width pop-up: live, Escape restores, Return keeps as one
+/// undo step.
+#[test]
+fn edit_panel_width_popup_is_live_and_escape_restores() {
+    use rustfig_model::ObjectKind;
+    let mut h = edit_harness();
+    open_panel(&mut h, "polyline");
+    let width = |h: &Harness<'static, App>| match &first_of(h, "polyline").kind {
+        ObjectKind::Polyline(p) => p.style.thickness,
+        _ => panic!(),
+    };
+    let start = width(&h);
+    h.get_by_label("Edit Width").click();
+    h.run_steps(3);
+    h.get_by_label("Set to 6").click();
+    h.run_steps(3);
+    assert_eq!(width(&h), 6, "live");
+    // Escape returns the value it opened with.
+    h.key_press(egui::Key::Escape);
+    h.run_steps(4);
+    assert_eq!(width(&h), start);
+    // Reopen, set, Return keeps; closing the panel leaves one undo step.
+    h.get_by_label("Edit Width").click();
+    h.run_steps(3);
+    h.get_by_label("Set to 8").click();
+    h.run_steps(3);
+    h.key_press(egui::Key::Enter);
+    h.run_steps(4);
+    assert_eq!(width(&h), 8);
+    let undo_before = h.state().engine.undo_bytes();
+    let _ = undo_before;
+    h.state_mut().dialogs.edit = None;
+    h.run_steps(2);
+    assert!(h.state_mut().engine.undo());
+    assert_eq!(width(&h), start, "one undo step took the width back");
 }
