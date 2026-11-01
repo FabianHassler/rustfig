@@ -584,6 +584,19 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         }
     }
 
+    // Find Objects (W10-39): the matches outlined while the window is open.
+    if app.find.open {
+        let stroke = Stroke::new(2.0_f32, tk.selection);
+        for id in app.find.ids.iter().take(2000) {
+            let Some(b) = app.engine.object_fig_bounds(rustfig_model::ObjectId(*id)) else {
+                continue;
+            };
+            let r = Rect::from_two_pos(to_screen(b.min), to_screen(b.max)).expand(3.0);
+            if r.intersects(rect) {
+                painter.rect_stroke(r, 0.0, stroke, egui::StrokeKind::Middle);
+            }
+        }
+    }
     // Guides, selection, handles.
     let guide = Stroke::new(1.0_f32, tk.guide);
     for g in &overlay.guides {

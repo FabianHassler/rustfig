@@ -75,6 +75,8 @@ fn hostile_values() -> Vec<Value> {
         json!({"id": 4, "x": 600, "y": 2300, "length": 21, "tolerance": 1e308}),
         json!({"id": 5, "x": 3300, "y": 0, "normal": false, "length": 0}),
         json!({"id": 6, "x": 100, "y": 3000, "tolerance": 1e9}),
+        json!({"kind": [5, "blob"], "fill": "x", "depth_min": "a", "arrows": 3, "text": 4, "inside": "y", "pen_color": 1e300}),
+        json!({"kind": "box", "depth_min": 0, "depth_max": 999, "line": "wavy", "font_size": -1e300}),
         json!({"tangent_length": 1e308, "id": 3, "x": 300, "y": 1200}),
         json!({"tangent_length": -3}),
         json!({"tangent_length": "long"}),

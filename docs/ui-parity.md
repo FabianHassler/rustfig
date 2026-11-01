@@ -1,6 +1,6 @@
 # UI parity checklist
 
-2026-11-01 (W10-29: message history levels, filter, copy); 2026-10-23 (W10-13: background export; D10: dimension line example preview; W10-14: Saved versions window; W9: cap/join pictures redrawn); 2026-10-23 (E5: character map lists only drawable characters, in the text's font); 2026-10-22 (E4, W10-36: colour picker and editor, recent colours, eyedropper); 2026-10-22 (E10: text editing); 2026-10-22 (S4-3, S4-8, S4-9: Digitize, New window, Autorefresh); 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: live edit panel, compound panel, point table, pictorial menus); 2026-10-22 (W10-16, W10-20: picture edit panel); 2026-10-22 (D5: measure modes); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: Tangent mode and its length button). ✅ done · 🟡 partial · ❌ missing
+2026-11-01 (W10-39: Edit > Find Objects; W10-29: message history levels, filter, copy); 2026-10-23 (W10-13: background export; D10: dimension line example preview; W10-14: Saved versions window; W9: cap/join pictures redrawn); 2026-10-23 (E5: character map lists only drawable characters, in the text's font); 2026-10-22 (E4, W10-36: colour picker and editor, recent colours, eyedropper); 2026-10-22 (E10: text editing); 2026-10-22 (S4-3, S4-8, S4-9: Digitize, New window, Autorefresh); 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: live edit panel, compound panel, point table, pictorial menus); 2026-10-22 (W10-16, W10-20: picture edit panel); 2026-10-22 (D5: measure modes); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: Tangent mode and its length button). ✅ done · 🟡 partial · ❌ missing
 
 ## Drawing modes
 
@@ -56,6 +56,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | File: New window... (xfig's New xfig, native only; S4-9) | ✅ | ✅ |
 | View: Autorefresh mode (reloads a file changed on disk, asks with unsaved edits; native only; S4-9) | ✅ | ✅ |
 | Edit: Undo (multi-level), Paste, Delete All, Search/Replace | ✅ | ✅ |
+| Edit > Find Objects (RustFig addition, W10-39): criteria, count, list, canvas outline, actions on all matches | ✅ | ✅ |
 | Edit: Spell check, Global settings | Global settings ✅ (W10-23: xfig's rows with Ok/Cancel); Spell check ✅ (F5: Misspelled words window) | ✅ |
 | View: zoom, fit, pan to origin, page border, portrait/landscape | ✅ | ✅ |
 | View: depth manager | right panel | ✅ |
@@ -164,3 +165,4 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | 2026-10-21 | W13, W14: the mouse-function box shows the new functions on the free buttons (xfig scheme), rubber bands are drawn for the regions, the three-point circle and the align reference. |
 | 2026-10-21 | W15: pressing the middle or right button and dragging in a region function (tag, delete, update, move, delete points) draws a freehand lasso; the mouse-function box says "(drag: lasso)" and "release: close lasso". |
 | 2026-11-01 | W10-25: Global settings in tabs (Window, Drawing, Files, Programs, Advanced = xfig's resources table) with a filter field and "Apply changes immediately". |
+| 2026-11-01 | W10-39: Edit > Find Objects… finds objects by kind, colours, fill, depth, width, line style, arrows, font, size and text; lists and outlines the matches; Update, Delete, Glue, Set depth act on all of them. |
