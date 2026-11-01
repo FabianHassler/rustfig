@@ -4,7 +4,7 @@
 // Ported from xfig src/e_edit.c (edit panel: compound, picture and point
 // rows, live apply) (xfig licence, see LICENSE-xfig).
 
-use crate::attributes::{arrow_menu, cap_menu, hovered, join_menu, line_menu, number_popup, spec};
+use crate::attributes::{arrow_menu, cap_menu, hovered, join_menu, line_menu, number_popup, number_popup_ext, spec};
 use crate::panels::{color_combo, font_combo, limit_fill};
 use crate::web_io::{WebInbox, WebPick};
 use crate::{menus, App};
@@ -2500,7 +2500,14 @@ fn arrow_rows(ui: &mut egui::Ui, id: &str, label: &str, a: &mut ArrowRows) -> Op
             ("Length", &mut a.length, &spec::ARROW_LENGTH),
         ] {
             ui.label(name);
-            if let Some(x) = number_popup(ui, &format!("{id}_{name}"), &format!("{label} {name}"), *v, sp) {
+            if let Some(x) = number_popup_ext(
+                ui,
+                &format!("{id}_{name}"),
+                &format!("{label} {name}"),
+                *v,
+                sp,
+                Some(SHAPE_W),
+            ) {
                 *v = x;
             }
         }

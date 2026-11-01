@@ -205,13 +205,13 @@ impl Attr {
             | Attr::ArrowMode
             | Attr::ArrowType
             | Attr::TextJust => 68.0,
-            Attr::BoxRadius => 62.0,
+            Attr::BoxRadius => 84.0,
             Attr::LineWidth => 72.0,
             Attr::RotnAngle => 76.0,
             Attr::PenColor | Attr::FillColor => 82.0,
             // A one-line label, the value on the line below.
             Attr::FontSize => 64.0,
-            Attr::ArrowSize => 76.0,
+            Attr::ArrowSize => 104.0,
             Attr::TextFlags | Attr::TangentLength => 90.0,
             Attr::TextAngle => 104.0,
             Attr::Font => 170.0,
@@ -1371,6 +1371,21 @@ fn draw_value(app: &App, ui: &Ui, p: &Painter, r: Rect, button: Rect, tk: &Token
         return;
     }
     match a {
+        Attr::ArrowSize => {
+            // The value box under the one-line label, like Arrow Type's picture.
+            arrow_size_face(ui, ind, r, ink);
+        }
+        Attr::BoxRadius => {
+            // The picture right of the label, the radius as a number at the right.
+            let num = ind.box_radius.to_string();
+            text_right(&num);
+            let w = p.layout_no_wrap(num, small.clone(), ink).size().x;
+            let pic = Rect::from_min_max(
+                pos2(r.left(), button.top() + 2.0),
+                pos2((r.right() - w - 3.0).max(r.left() + 8.0), button.bottom() - 2.0),
+            );
+            box_curve_face(ui, ind, pic, ink);
+        }
         Attr::PenColor | Attr::FillColor => {
             let c = if a == Attr::PenColor {
                 ind.pen_color
@@ -2244,7 +2259,8 @@ pub(crate) fn number_body(ui: &mut Ui, name: &str, v: &mut f64, spec: &NumSpec) 
         if spec.integer {
             dv = dv.fixed_decimals(0);
         }
-        let resp = ui.add(dv);
+        // Room to type and see the longest valid value ("-360.0", "10000.00").
+        let resp = ui.add_sized([72.0, ui.spacing().interact_size.y], dv);
         resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::DragValue, true, format!("{name} value")));
         changed |= resp.changed();
         if spec.steppers {
@@ -2300,13 +2316,28 @@ pub(crate) fn number_body(ui: &mut Ui, name: &str, v: &mut f64, spec: &NumSpec) 
 /// (the panel applies it at once, as one undo step); Return or a click
 /// outside keeps it, Escape returns the value the pop-up opened with.
 pub(crate) fn number_popup(ui: &mut Ui, id: &str, name: &str, value: f64, spec: &NumSpec) -> Option<f64> {
+    number_popup_ext(ui, id, name, value, spec, None)
+}
+
+/// [`number_popup`] with a fixed button width (the old field's).
+pub(crate) fn number_popup_ext(
+    ui: &mut Ui,
+    id: &str,
+    name: &str,
+    value: f64,
+    spec: &NumSpec,
+    min_w: Option<f32>,
+) -> Option<f64> {
     let mut out = None;
     ui.push_id(id, |ui| {
         let text = format!("{}{}", fmt_g(value), spec.suffix);
-        let resp = ui.add_sized(
-            [64.0, PIC_BTN],
-            egui::Button::new(text.as_str()).min_size(vec2(64.0, PIC_BTN)),
-        );
+        // As egui's DragValue: the value text in a frame, at least one
+        // interaction-size box.
+        let min = ui.spacing().interact_size;
+        let resp = match min_w {
+            Some(w) => ui.add_sized([w, min.y], egui::Button::new(text.as_str())),
+            None => ui.add(egui::Button::new(text.as_str()).min_size(min)),
+        };
         resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, format!("Edit {name}")));
         let resp = resp.on_hover_text(format!("{name}: click for a slider, presets and the number field"));
         let key = egui::Id::new(("num_popup_open", id));
@@ -2335,6 +2366,138 @@ pub(crate) fn number_popup(ui: &mut Ui, id: &str, name: &str, value: f64, spec: 
             });
     });
     out
+}
+
+/// A button face drawn by the renderer from the current value (so the shape
+/// is the real one) and kept as a texture until the value changes.
+fn live_face(
+    ui: &Ui,
+    name: &str,
+    key: [i64; 4],
+    (w, h): (usize, usize),
+    rect: Rect,
+    tint: Color32,
+    objs: Vec<rustfig_model::Object>,
+) {
+    let ppp = ui.ctx().pixels_per_point();
+    let key = (key, ppp.to_bits());
+    let id = egui::Id::new(("live_face", name));
+    let cached = ui
+        .ctx()
+        .data(|d| d.get_temp::<(([i64; 4], u32), egui::TextureHandle)>(id));
+    let tex = match cached {
+        Some((k, t)) if k == key => t,
+        _ => {
+            let Some(img) = crate::vector_icons::render_objects(objs, w, h, ppp) else {
+                return;
+            };
+            let t = ui
+                .ctx()
+                .load_texture(format!("live-face-{name}"), img, egui::TextureOptions::LINEAR);
+            ui.ctx().data_mut(|d| d.insert_temp(id, (key, t.clone())));
+            t
+        }
+    };
+    let fit = (rect.width() / w as f32).min(rect.height() / h as f32).min(1.0);
+    let r = Rect::from_center_size(rect.center(), vec2(w as f32 * fit, h as f32 * fit));
+    ui.painter()
+        .image(tex.id(), r, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), tint);
+}
+
+/// Arrow Size's face: the arrow as it will look, at a fixed scale of one
+/// pixel per 1/80 inch (the default 4 x 8 head is 4 pixels wide and 8 long),
+/// its tip at the right end of the box; larger arrows are clipped at the box.
+fn arrow_size_face(ui: &Ui, ind: &Indicator, rect: Rect, tint: Color32) {
+    use rustfig_model::{Arrow, Object, ObjectKind, PolyKind, Polyline, Style};
+    const W: usize = 44;
+    const H: usize = 16;
+    let u = rustfig_geom::FIG_PER_STYLE_UNIT;
+    let lw = f64::from(ind.thickness.max(1));
+    let (t, w, l) = if ind.arrow_absolute {
+        (ind.arrow.thickness, ind.arrow.width / u, ind.arrow.height / u)
+    } else {
+        (ind.arrow_mult.0 * lw, ind.arrow_mult.1 * lw, ind.arrow_mult.2 * lw)
+    };
+    let sane = |v: f64| if v.is_finite() { v.clamp(0.0, 1000.0) } else { 0.0 };
+    let (t, w, l) = (sane(t), sane(w), sane(l));
+    let mut st = Style::default();
+    st.thickness = ind.thickness.clamp(1, 20);
+    let mut p = Polyline::new(
+        PolyKind::Polyline,
+        st,
+        vec![
+            rustfig_geom::Point::new(0.0, 8.0 * u),
+            rustfig_geom::Point::new((W as f64 - 1.0) * u, 8.0 * u),
+        ],
+    );
+    p.forward_arrow = Some(Arrow {
+        kind: ind.arrow.kind,
+        style: ind.arrow.style,
+        thickness: t,
+        width: w * u,
+        height: l * u,
+    });
+    let key = [
+        i64::from(ind.arrow.kind) * 2 + i64::from(ind.arrow.style),
+        (t * 100.0) as i64 * 1_000_000 + (w * 100.0) as i64,
+        (l * 100.0) as i64,
+        i64::from(st.thickness),
+    ];
+    // The three numbers as xfig shows them, small, at the left.
+    let nums = format!("{} {} {}", fmt_g(t), fmt_g(w), fmt_g(l));
+    let font = egui::FontId::proportional(9.0);
+    ui.painter().text(
+        pos2(rect.left(), rect.center().y),
+        egui::Align2::LEFT_CENTER,
+        nums,
+        font,
+        tint,
+    );
+    // Unscaled, the tip at the right end of the value box.
+    let pic = Rect::from_min_size(
+        pos2(rect.right() - W as f32, rect.center().y - H as f32 / 2.0),
+        vec2(W as f32, H as f32),
+    );
+    live_face(
+        ui,
+        "arrow_size",
+        key,
+        (W, H),
+        pic,
+        tint,
+        vec![Object::new(ObjectKind::Polyline(p))],
+    );
+}
+
+/// Box Curve's face: a rounded rectangle with the current corner radius,
+/// drawn large and shown small, with radii up to 60 told apart (the number
+/// is beside it).
+fn box_curve_face(ui: &Ui, ind: &Indicator, rect: Rect, tint: Color32) {
+    use rustfig_model::{Object, ObjectKind, PolyKind, Polyline, Style};
+    const W: usize = 88;
+    const H: usize = 64;
+    let u = rustfig_geom::FIG_PER_STYLE_UNIT;
+    let pt = |x: f64, y: f64| rustfig_geom::Point::new(x * u, y * u);
+    let mut st = Style::default();
+    st.thickness = 6;
+    let mut p = Polyline::new(
+        PolyKind::ArcBox,
+        st,
+        vec![pt(4.0, 4.0), pt(84.0, 4.0), pt(84.0, 60.0), pt(4.0, 60.0), pt(4.0, 4.0)],
+    );
+    // 0 to 60 map to square to fully round (half the short side, 28).
+    let shown = (f64::from(ind.box_radius.clamp(0, 60)) * 28.0 / 60.0).round() as i32;
+    p.radius = shown;
+    let key = [i64::from(shown), 0, 0, 0];
+    live_face(
+        ui,
+        "box_curve",
+        key,
+        (W, H),
+        rect,
+        tint,
+        vec![Object::new(ObjectKind::Polyline(p))],
+    );
 }
 
 /// The pop-up of an indicator value (xfig's `popup_nval_panel` entry,
