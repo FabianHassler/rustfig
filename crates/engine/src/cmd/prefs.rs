@@ -72,6 +72,7 @@ fn get(e: &mut Engine, _: &Value) -> CmdResult {
             let (status, task) = match r.status {
                 Status::Applied => ("applied", None),
                 Status::Planned(t) => ("planned", Some(t)),
+                Status::NoEffect => ("no_effect", None),
             };
             json!({
                 "name": r.name,

@@ -1216,12 +1216,9 @@ struct GlobalDraft {
     axis_lines: bool,
     freehand: i64,
     recent: i64,
-    image_colors: i64,
     save_versions: i64,
     image_editor: String,
     spell: String,
-    browser: String,
-    pdf_viewer: String,
     /// The tab shown (without a filter) and the filter text.
     tab: GlobalTab,
     filter: String,
@@ -1248,16 +1245,14 @@ impl GlobalDraft {
             axis_lines: e.show_axis_lines(),
             freehand: int("freehand_resolution", 25),
             recent: i64::try_from(e.prefs.recent_max()).unwrap_or(9),
-            image_colors: int("max_image_colors", 0),
             save_versions: int("save_versions", 5),
             image_editor: text("image_editor", rustfig_engine::prefs::SYSTEM_OPEN),
             spell: text("spellcheckcommand", "aspell list < %f"),
-            browser: text("browser", rustfig_engine::prefs::SYSTEM_OPEN),
-            pdf_viewer: text("pdf_viewer", rustfig_engine::prefs::SYSTEM_OPEN),
             tab: GlobalTab::Window,
             filter: String::new(),
             adv: rustfig_engine::prefs::RESOURCES
                 .iter()
+                .filter(|r| r.in_ui())
                 .map(|r| (r.name, resource_text(e, r)))
                 .collect(),
         }
@@ -1348,19 +1343,12 @@ const GLOBAL_ROWS: &[(GlobalTab, &str, &str)] = &[
         "Saved versions kept",
         "save_versions -save_versions backup",
     ),
-    (
-        GlobalTab::Files,
-        "Maximum image colors",
-        "max_image_colors -max_image_colors",
-    ),
     (GlobalTab::Programs, "Image editor", "image_editor -image_editor"),
     (
         GlobalTab::Programs,
         "Spell checker",
         "spellcheckcommand -spellcheckcommand",
     ),
-    (GlobalTab::Programs, "HTML Browser", "browser -browser"),
-    (GlobalTab::Programs, "PDF Viewer", "pdf_viewer -pdf_viewer"),
 ];
 
 /// Does a row with this label and these extra words match the (lower case,
@@ -1375,7 +1363,7 @@ fn row_shown(filter: &str, label: &str) -> bool {
 }
 
 fn resource_shown(filter: &str, r: &rustfig_engine::prefs::Resource) -> bool {
-    filter_matches(filter, r.name, r.option)
+    r.in_ui() && filter_matches(filter, r.name, r.option)
 }
 
 /// The rows Global settings shows for `filter` (case-insensitive; label,
@@ -1569,7 +1557,6 @@ fn global_tab_rows(app: &mut App, ui: &mut egui::Ui, d: &mut GlobalDraft, tab: G
                     0..=50,
                     "Older versions of a file, kept in the recovery folder at each save (0: none)",
                 ),
-                ("Maximum image colors", &mut d.image_colors, 0..=256, ""),
             ] {
                 if show(label) {
                     ui.horizontal(|ui| {
@@ -1585,12 +1572,7 @@ fn global_tab_rows(app: &mut App, ui: &mut egui::Ui, d: &mut GlobalDraft, tab: G
         }
         GlobalTab::Programs => {
             egui::Grid::new("global_commands").num_columns(2).show(ui, |ui| {
-                for (label, text) in [
-                    ("Image editor", &mut d.image_editor),
-                    ("Spell checker", &mut d.spell),
-                    ("HTML Browser", &mut d.browser),
-                    ("PDF Viewer", &mut d.pdf_viewer),
-                ] {
+                for (label, text) in [("Image editor", &mut d.image_editor), ("Spell checker", &mut d.spell)] {
                     if show(label) {
                         ui.label(label);
                         ui.add(egui::TextEdit::singleline(text).desired_width(280.0))
@@ -1609,10 +1591,10 @@ fn global_tab_rows(app: &mut App, ui: &mut egui::Ui, d: &mut GlobalDraft, tab: G
     }
 }
 
-/// xfig's resources table: each resource by kind, with its command-line
-/// option as a hint. Resources RustFig keeps for a later feature say so.
+/// xfig's resources table: each resource RustFig uses, by kind, with its
+/// command-line option as a hint.
 fn advanced_rows(app: &mut App, ui: &mut egui::Ui, d: &mut GlobalDraft, filter: &str) {
-    use rustfig_engine::prefs::{Kind, Status};
+    use rustfig_engine::prefs::Kind;
     let tk = crate::theme::Tokens::for_dark(ui.visuals().dark_mode);
     if filter.is_empty() {
         ui.horizontal(|ui| {
@@ -1638,12 +1620,7 @@ fn advanced_rows(app: &mut App, ui: &mut egui::Ui, d: &mut GlobalDraft, filter: 
                 if !resource_shown(filter, r) {
                     continue;
                 }
-                let planned = match r.status {
-                    Status::Planned(t) => Some(t),
-                    Status::Applied => None,
-                };
-                let name = egui::RichText::new(r.name).monospace();
-                ui.label(if planned.is_some() { name.weak() } else { name });
+                ui.label(egui::RichText::new(r.name).monospace());
                 let text = d.adv.entry(r.name).or_default();
                 if r.kind == Kind::Bool {
                     let mut on = text.as_str() == "true";
@@ -1670,13 +1647,6 @@ fn advanced_rows(app: &mut App, ui: &mut egui::Ui, d: &mut GlobalDraft, filter: 
                 ui.vertical(|ui| {
                     if !r.option.is_empty() {
                         ui.label(egui::RichText::new(r.option).small().weak());
-                    }
-                    if let Some(t) = planned {
-                        ui.label(
-                            egui::RichText::new(format!("planned: kept, in use with {t}"))
-                                .small()
-                                .color(tk.muted),
-                        );
                     }
                 });
                 ui.end_row();
@@ -1829,7 +1799,6 @@ fn apply_global(app: &mut App, was: &GlobalDraft, now: &GlobalDraft) {
         ("balloon_delay", was.balloon_delay, now.balloon_delay),
         ("freehand_resolution", was.freehand, now.freehand),
         ("max_recent_files", was.recent, now.recent),
-        ("max_image_colors", was.image_colors, now.image_colors),
         ("save_versions", was.save_versions, now.save_versions),
     ];
     for (name, a, b) in ints {
@@ -1850,8 +1819,6 @@ fn apply_global(app: &mut App, was: &GlobalDraft, now: &GlobalDraft) {
     let texts = [
         ("image_editor", &was.image_editor, &now.image_editor),
         ("spellcheckcommand", &was.spell, &now.spell),
-        ("browser", &was.browser, &now.browser),
-        ("pdf_viewer", &was.pdf_viewer, &now.pdf_viewer),
     ];
     for (name, a, b) in texts {
         if a != b {
@@ -1979,14 +1946,17 @@ fn resources_dialog(app: &mut App, ctx: &egui::Context) {
             ui.add(egui::TextEdit::singleline(&mut app.dialogs.resource_filter).hint_text("filter"));
             let filter = app.dialogs.resource_filter.to_lowercase();
             egui::ScrollArea::vertical().show(ui, |ui| {
-                egui::Grid::new("resources").striped(true).num_columns(4).show(ui, |ui| {
+                egui::Grid::new("resources").striped(true).num_columns(3).show(ui, |ui| {
                     ui.strong("Resource");
                     ui.strong("Value");
                     ui.strong("Option");
-                    ui.strong("In RustFig");
                     ui.end_row();
                     for r in rustfig_engine::prefs::RESOURCES {
-                        if !filter.is_empty() && !r.name.to_lowercase().contains(&filter) && !r.option.contains(&filter) {
+                        if !r.in_ui()
+                            || (!filter.is_empty()
+                                && !r.name.to_lowercase().contains(&filter)
+                                && !r.option.contains(&filter))
+                        {
                             continue;
                         }
                         ui.label(r.name);
@@ -2009,11 +1979,6 @@ fn resources_dialog(app: &mut App, ctx: &egui::Context) {
                             commit = Some((r.name, (!t.is_empty()).then_some(t)));
                         }
                         ui.label(egui::RichText::new(r.option).small());
-                        let status = match r.status {
-                            rustfig_engine::prefs::Status::Applied => "applied".to_string(),
-                            rustfig_engine::prefs::Status::Planned(t) => format!("kept; in use with {t}"),
-                        };
-                        ui.label(egui::RichText::new(status).small());
                         ui.end_row();
                     }
                 });
@@ -2920,9 +2885,7 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
                                         egui::Button::selectable(st.format == l.id, l.description),
                                     );
                                     let item = match l.task() {
-                                        Some(t) if !available => item.on_disabled_hover_text(format!(
-                                            "Being ported from fig2dev (plan task {t})"
-                                        )),
+                                        Some(_) if !available => item.on_disabled_hover_text("Not available yet"),
                                         _ => item,
                                     };
                                     if item.clicked() {

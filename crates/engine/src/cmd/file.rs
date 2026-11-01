@@ -35,7 +35,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Open…",
             menu: "",
             shortcut: "",
-            params: "{\"path\": string, \"offset_x\"?: number, \"offset_y\"?: number, \"page\"?: number, \"vectors\"?: bool}  — open a .fig or .rustfig file, or a PDF or SVG/SVGZ as editable Fig objects (G7 for SVG; G5: page = the 1-based page, default 1; a PDF with an embedded figure opens that figure unless vectors is true; result warnings say what was dropped); the optional offset (Fig units) moves the figure, as xfig's Figure Offset. A name that does not exist yet opens an empty figure of that name (xfig's \"(new file)\"; result new_file: true); the first Save creates the file",
+            params: "{\"path\": string, \"offset_x\"?: number, \"offset_y\"?: number, \"page\"?: number, \"vectors\"?: bool}  — open a .fig or .rustfig file, or a PDF or SVG/SVGZ as editable Fig objects (page = the 1-based page, default 1; a PDF with an embedded figure opens that figure unless vectors is true; result warnings say what was dropped); the optional offset (Fig units) moves the figure, as xfig's Figure Offset. A name that does not exist yet opens an empty figure of that name (xfig's \"(new file)\"; result new_file: true); the first Save creates the file",
             mutates: false,
             enabled: always,
             run: open,
@@ -115,7 +115,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Merge…",
             menu: "",
             shortcut: "",
-            params: "{\"path\": string, \"offset_x\"?: number, \"offset_y\"?: number, \"unit\"?: fig|inches|cm, \"page\"?: number}  — add the objects of another file (a PDF page too, G5) as one compound (a file that is one compound is added as it is), moved by the optional Figure Offset (in Fig units, or in the `unit` given), as xfig's Merge",
+            params: "{\"path\": string, \"offset_x\"?: number, \"offset_y\"?: number, \"unit\"?: fig|inches|cm, \"page\"?: number}  — add the objects of another file (a PDF page too) as one compound (a file that is one compound is added as it is), moved by the optional Figure Offset (in Fig units, or in the `unit` given), as xfig's Merge",
             mutates: true,
             enabled: always,
             run: merge,
@@ -1496,9 +1496,8 @@ fn export_language(p: &Value, path: Option<&str>) -> Result<&'static Language, E
     };
     if !crate::fig2dev::language_available(lang) {
         return Err(EngineError::bad_params(format!(
-            "{} export is not available yet: it is being ported from fig2dev (plan task {})",
-            lang.description,
-            lang.task().unwrap_or("B0")
+            "{} export is not available yet",
+            lang.description
         )));
     }
     Ok(lang)

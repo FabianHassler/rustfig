@@ -655,7 +655,8 @@ impl App {
     }
 
     fn frame(&mut self, ctx: &egui::Context) {
-        apply_balloons(ctx, self.show_balloons);
+        let delay = self.engine.prefs.int("balloon_delay");
+        apply_balloons(ctx, self.show_balloons, delay);
         if let Some(t) = self.theme_request.take() {
             ctx.set_theme(t);
         }
@@ -870,13 +871,14 @@ impl App {
     }
 }
 
-/// Tooltip delay with balloons on (egui's default) and a delay that never
-/// passes with them off.
+/// Tooltip delay with balloons on (xfig's `balloon_delay`, in ms; egui's
+/// default when unset) and a delay that never passes with them off.
 const BALLOON_DELAY: f32 = 0.5;
 const NO_BALLOONS: f32 = 1.0e9;
 
-fn apply_balloons(ctx: &egui::Context, on: bool) {
-    let want = if on { BALLOON_DELAY } else { NO_BALLOONS };
+fn apply_balloons(ctx: &egui::Context, on: bool, delay_ms: Option<i64>) {
+    let shown = delay_ms.map_or(BALLOON_DELAY, |ms| ms.clamp(0, 100_000) as f32 / 1000.0);
+    let want = if on { shown } else { NO_BALLOONS };
     if ctx.style().interaction.tooltip_delay != want {
         ctx.style_mut(|s| s.interaction.tooltip_delay = want);
     }

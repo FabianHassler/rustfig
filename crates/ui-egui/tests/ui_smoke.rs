@@ -2790,12 +2790,10 @@ fn global_settings_every_resource_is_reachable() {
     use rustfig_ui_egui::dialogs::global_settings_matches;
     for r in rustfig_engine::prefs::RESOURCES {
         let rows = global_settings_matches(r.name);
-        assert!(
-            rows.iter().any(|(tab, label)| *tab == "Advanced" && label == r.name),
-            "{} is not in the Advanced tab",
-            r.name
-        );
-        if !r.option.is_empty() {
+        let listed = rows.iter().any(|(tab, label)| *tab == "Advanced" && label == r.name);
+        // Resources RustFig doesn't use are not shown (settings stay accepted).
+        assert_eq!(listed, r.in_ui(), "{}", r.name);
+        if r.in_ui() && !r.option.is_empty() {
             let first = r.option.split(',').next().unwrap_or("").trim();
             assert!(global_settings_matches(first)
                 .iter()
@@ -2809,9 +2807,7 @@ fn global_settings_every_resource_is_reachable() {
         ("Window", "Show vertex numbers"),
         ("Drawing", "Freehand drawing resolution"),
         ("Files", "Recently used files"),
-        ("Files", "Maximum image colors"),
         ("Programs", "Spell checker"),
-        ("Programs", "PDF Viewer"),
     ] {
         assert!(all.iter().any(|(t, l)| *t == tab && l == label), "{label}");
         assert!(global_settings_matches(&label.to_uppercase())
@@ -2849,10 +2845,9 @@ fn global_settings_tabs_and_filter() {
     assert!(h.query_by_label("Track mouse in rulers").is_none());
     h.get_by_label("Filter settings").click();
     h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
-    h.get_by_label("Filter settings").type_text("pdf_viewer");
+    h.get_by_label("Filter settings").type_text("export_margin");
     h.run_steps(3);
-    assert!(h.query_all_by_label("PDF Viewer").count() > 0);
-    h.get_by_label("pdf_viewer value");
+    h.get_by_label("export_margin value");
 }
 
 /// W10-25: an Advanced value is applied at Ok; "Apply changes immediately"

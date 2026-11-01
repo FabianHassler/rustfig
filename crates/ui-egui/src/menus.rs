@@ -41,37 +41,37 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         id: "app.character_map",
         label: "Character map…",
         shortcut: "Ctrl+Shift+M",
-        params: "{}  — the Character Map window (E5): the characters of the text font (Latin, Greek, arrows, maths; the Symbol and ZapfDingbats tables for those fonts); clicking one inserts it at the caret of the text being typed (script: text.insert_char)",
+        params: "{}  — the Character Map window: the characters of the text font (Latin, Greek, arrows, maths; the Symbol and ZapfDingbats tables for those fonts); clicking one inserts it at the caret of the text being typed (script: text.insert_char)",
     },
     UiCommand {
         id: "app.keys",
         label: "Keys…",
         shortcut: "",
-        params: "{}  — the shortcut sheet (E8): every command with its keys in the standard and in xfig's scheme, per system, searchable",
+        params: "{}  — the shortcut sheet: every command with its keys in the standard and in xfig's scheme, per system, searchable",
     },
     UiCommand {
         id: "help.command_search",
         label: "Command search…",
         shortcut: "Ctrl+Shift+K",
-        params: "{}  — W18: a small window to find any command or menu entry by label, id or menu path; shows its keys, greys out the ones not available now, Enter runs it (Ctrl+K is xfig's Enter point)",
+        params: "{}  — a small window to find any command or menu entry by label, id or menu path; shows its keys, greys out the ones not available now, Enter runs it (Ctrl+K is xfig's Enter point)",
     },
     UiCommand {
         id: "app.mouse_sheet",
         label: "Mouse buttons…",
         shortcut: "",
-        params: "{}  — W18: the mouse cheat sheet: what the left, middle and right buttons do in every mode (from the mouse-function indicator) and how to press them without a three-button mouse",
+        params: "{}  — the mouse cheat sheet: what the left, middle and right buttons do in every mode (from the mouse-function indicator) and how to press them without a three-button mouse",
     },
     UiCommand {
         id: "app.whats_new",
         label: "What's new…",
         shortcut: "",
-        params: "{}  — W18: what changed in this version (shown once after an update)",
+        params: "{}  — what changed in this version (shown once after an update)",
     },
     UiCommand {
         id: "app.versions",
         label: "Saved versions…",
         shortcut: "",
-        params: "{}  — the older saved versions of the current file kept in the recovery folder (W10-14), each restorable; script: file.versions, file.restore_version",
+        params: "{}  — the older saved versions of the current file kept in the recovery folder, each restorable; script: file.versions, file.restore_version",
     },
     UiCommand {
         id: "app.global_settings",
@@ -113,13 +113,13 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         id: "app.open_panel",
         label: "Open with preview…",
         shortcut: "",
-        params: "{}  — xfig's Open panel (W10-12): the files of a folder under a filename mask, the selected figure's preview with size, number of objects and comments; Open runs app.open (script: file.list_dir, file.preview)",
+        params: "{}  — xfig's Open panel: the files of a folder under a filename mask, the selected figure's preview with size, number of objects and comments; Open runs app.open (script: file.list_dir, file.preview)",
     },
     UiCommand {
         id: "app.merge_panel",
         label: "Merge with preview…",
         shortcut: "",
-        params: "{}  — xfig's Merge panel (W10-12): as Open with preview, plus the Figure Offset X and Y with their units; Merge runs file.merge with the offset",
+        params: "{}  — xfig's Merge panel: as Open with preview, plus the Figure Offset X and Y with their units; Merge runs file.merge with the offset",
     },
     UiCommand {
         id: "app.save",
@@ -173,13 +173,13 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         id: "app.messages",
         label: "Message history…",
         shortcut: "",
-        params: "{\"levels\"?: [\"info\"|\"warning\"|\"error\"]}  — W10-29: opens the message history (also a click on the message panel) and returns {\"messages\": [{level, text}]} at the chosen levels (default: the window's check boxes)",
+        params: "{\"levels\"?: [\"info\"|\"warning\"|\"error\"]}  — opens the message history (also a click on the message panel) and returns {\"messages\": [{level, text}]} at the chosen levels (default: the window's check boxes)",
     },
     UiCommand {
         id: "app.copy_messages",
         label: "Copy messages",
         shortcut: "",
-        params: "{\"levels\"?: [string]}  — W10-29: copies the history's messages at those levels to the clipboard, one per line (warnings and errors prefixed with their level); returns {copied, text}",
+        params: "{\"levels\"?: [string]}  — copies the history's messages at those levels to the clipboard, one per line (warnings and errors prefixed with their level); returns {copied, text}",
     },
     UiCommand {
         id: "app.search",
@@ -293,7 +293,7 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         id: "app.capture",
         label: "Capture Screen…",
         shortcut: "",
-        params: "{}  — D11, xfig's Screen Capture: the window steps aside, the system's selector picks a window or an area of the screen (Windows: the whole screen), then Save asks for the PNG file name (default <figure>_<seconds>.png) and the image becomes a picture object; not in the browser",
+        params: "{}  — xfig's Screen Capture: the window steps aside, the system's selector picks a window or an area of the screen (Windows: the whole screen), then Save asks for the PNG file name (default <figure>_<seconds>.png) and the image becomes a picture object; not in the browser",
     },
     UiCommand {
         id: "app.import_picture",
@@ -783,7 +783,7 @@ fn xfig_items(app: &mut App, ui: &mut egui::Ui, items: &[XfigItem]) {
                 } else if task == "—" {
                     "Not available in RustFig".to_string()
                 } else {
-                    format!("Not available yet (plan task {task})")
+                    "Not available yet".to_string()
                 };
                 ui.add_enabled(false, b).on_disabled_hover_text(why);
             }
