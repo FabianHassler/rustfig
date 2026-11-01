@@ -191,7 +191,7 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         id: "app.find_objects",
         label: "Find Objects…",
         shortcut: "",
-        params: "{}  — the Find Objects window (criteria, matches outlined on the canvas, actions on all of them); script: edit.find_objects, then object.update, arrange.set_depth, edit.delete or object.group with the ids",
+        params: "{}  — Find mode and its window (criteria, a click on an object adds or removes it, matches outlined on the canvas, actions on all of them); script: tool.find, find.set, find.toggle, find.state and find.apply, or edit.find_objects, then object.update, arrange.set_depth, edit.delete or object.group with the ids",
     },
     UiCommand {
         id: "app.spell_check",
@@ -418,7 +418,10 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.messages" => return messages::run_messages(app, p),
         "app.copy_messages" => return messages::run_copy(app, p),
         "app.search" => app.dialogs.search.open = true,
-        "app.find_objects" => app.find.open = true,
+        "app.find_objects" => {
+            // Find is a mode: its window follows the mode.
+            app.run("tool.find", json!({}));
+        }
         "app.spell_check" => {
             #[cfg(target_arch = "wasm32")]
             return Err("Spell check is not available on the web".into());
@@ -1641,6 +1644,7 @@ mod tests {
         ("edit.search_step", "the Next and Previous buttons of Search/Replace"),
         ("edit.show_object", "a click on a result line of Search/Replace"),
         ("edit.find_objects", "the criteria of Edit > Find Objects; its actions run object.update, arrange.set_depth, edit.delete and object.group"),
+        ("find.", "Find mode: the Find Objects window and a click on an object; scripting API"),
         ("text.spell_check", "scripting API; Spell Check... runs it"),
         ("edit.paste_text", "the middle button of the Text tool"),
         (

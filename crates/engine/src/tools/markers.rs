@@ -118,7 +118,7 @@ pub fn mode_mask(tool: ToolKind, rotate_angle: f64) -> ObjMask {
     use ToolKind as T;
     match tool {
         T::Text => ObjMask::TEXT_NORMAL,
-        T::Glue | T::Move | T::Copy | T::Delete | T::Update | T::Edit => ObjMask::ALL,
+        T::Glue | T::Move | T::Copy | T::Delete | T::Update | T::Edit | T::Find => ObjMask::ALL,
         T::RotateCw | T::RotateCcw => {
             let a = rotate_angle.abs();
             if a == 90.0 || a == 180.0 {

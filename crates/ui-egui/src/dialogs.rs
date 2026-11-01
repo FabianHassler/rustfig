@@ -888,7 +888,11 @@ pub(crate) fn escape_closes_panels(app: &mut App, ctx: &egui::Context) {
         d.messages_open = false;
         app.unit_panel_open = false;
         app.styles.open = false;
-        app.find.open = false;
+        // Escape ends Find mode, and the mode closes its window.
+        if app.find.open {
+            app.run("tool.escape", serde_json::json!({}));
+            app.find.open = false;
+        }
     }
 }
 

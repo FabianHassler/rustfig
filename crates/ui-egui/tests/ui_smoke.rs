@@ -75,7 +75,11 @@ fn every_tool_button_selects_its_tool() {
         ToolKind::EllipseRadii,
         ToolKind::EllipseDiameter,
     ];
-    for t in ToolKind::ALL.into_iter().filter(|t| !menu_only.contains(t)) {
+    // Find mode has no button: Edit > Find Objects enters it.
+    for t in ToolKind::ALL
+        .into_iter()
+        .filter(|t| !menu_only.contains(t) && *t != ToolKind::Find)
+    {
         // The mode panel scrolls in a small window, as a user would.
         h.get_by_label(t.label()).scroll_to_me();
         // Scrolling is animated: let it settle.
@@ -3755,11 +3759,12 @@ fn find_objects_window_finds_and_acts() {
     h.state_mut().run("app.find_objects", json!({}));
     h.run_steps(3);
     h.get_by_label("Find Objects");
-    h.get_by_label_contains("3 objects found");
+    assert_eq!(h.state().engine.tool(), ToolKind::Find);
+    h.get_by_label_contains("No objects");
     h.get_by_label("Find text").click();
     h.get_by_label("Find text").type_text("hello");
     h.run_steps(3);
-    h.get_by_label_contains("2 objects found");
+    h.get_by_label("2 objects");
     assert_eq!(h.state().find.ids.len(), 2);
     // Set depth: one command for both matches.
     h.state_mut().find.new_depth = "9".to_string();
@@ -3778,6 +3783,36 @@ fn find_objects_window_finds_and_acts() {
     h.run_steps(3);
     assert_eq!(h.state().engine.doc().objects.len(), 2);
     h.get_by_label_contains("glued");
+}
+
+/// Find is a mode: its window shows the attribute panel's update boxes and
+/// the "Update will change" line, and ends with the mode (another mode,
+/// or Escape).
+#[test]
+fn find_mode_shows_update_boxes_and_ends_with_the_mode() {
+    let mut h = harness(app());
+    h.state_mut()
+        .engine
+        .execute("shape.rectangle", &json!({"x": 0, "y": 0, "width": 600, "height": 300}))
+        .unwrap();
+    h.state_mut().run("app.find_objects", json!({}));
+    h.run_steps(3);
+    assert_eq!(h.state().engine.tool(), ToolKind::Find);
+    h.get_by_label("Find Objects");
+    h.get_by_label_contains("Update will change");
+    // Another mode closes the window and forgets the matches.
+    h.get_by_label("Box").click();
+    h.run_steps(3);
+    assert!(h.query_by_label("Find Objects").is_none());
+    assert!(!h.state().find.open);
+    // Escape ends it too.
+    h.state_mut().run("app.find_objects", json!({}));
+    h.run_steps(3);
+    assert!(h.state().find.open);
+    h.key_press(egui::Key::Escape);
+    h.run_steps(3);
+    assert_ne!(h.state().engine.tool(), ToolKind::Find);
+    assert!(h.query_by_label("Find Objects").is_none());
 }
 
 /// W10-30: the star next to Selected object marks a favourite; the

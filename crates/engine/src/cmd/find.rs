@@ -4,22 +4,68 @@
 //! (`object.update`, `arrange.set_depth`, `edit.delete`, `object.group`),
 //! each one undo step.
 //!
+//! Find mode (`tool.find`) keeps a match set: `find.set` fills it from the
+//! same criteria, a left click or `find.toggle` adds or removes one object,
+//! `find.state` reads it and `find.apply` acts on all of it (update, depth,
+//! delete, group), each one undo step.
+//!
 //! Compounds: by default only top-level objects are tested, and a compound
 //! matches by its kind and depth only (it has no other attributes). With
 //! `inside` a compound also matches when any member, at any depth of
 //! nesting, matches; the result then names the top-level compound, because
 //! the commands act on top-level objects.
 
-use super::{opt_bool, opt_num, opt_str, CmdResult, Command};
+use super::{always, num, opt_bool, opt_num, opt_str, CmdResult, Command};
 use crate::{Engine, EngineError};
-use rustfig_model::{LineKind, Object, ObjectKind, PolyKind, Style};
+use rustfig_model::{LineKind, Object, ObjectId, ObjectKind, PolyKind, Style};
 use serde_json::{json, Value};
 
 /// Longest result list returned in `items` (all ids are always returned).
 const MAX_ITEMS: usize = 500;
 
 pub(super) fn commands() -> Vec<Command> {
-    vec![Command {
+    vec![
+        Command {
+            id: "find.set",
+            label: "Find: set matches",
+            menu: "",
+            shortcut: "",
+            params: "{same criteria as edit.find_objects}  — enters Find mode (as tool.find) and makes the objects that match the match set, replacing it; returns what find.state returns",
+            mutates: false,
+            enabled: |e| !e.doc().objects.is_empty(),
+            run: find_set,
+        },
+        Command {
+            id: "find.toggle",
+            label: "Find: add or remove object",
+            menu: "",
+            shortcut: "",
+            params: "{\"id\": object id}  — Find mode: adds the object to the match set, or removes it when it is in (what a left click does); returns what find.state returns",
+            mutates: false,
+            enabled: always,
+            run: find_toggle,
+        },
+        Command {
+            id: "find.state",
+            label: "Find: matches",
+            menu: "",
+            shortcut: "",
+            params: "{}  — read-only; returns {mode: bool (Find mode active), count, ids, items: [{id, type, depth, label}]} for the match set",
+            mutates: false,
+            enabled: always,
+            run: |e, _| Ok(find_state(e)),
+        },
+        Command {
+            id: "find.apply",
+            label: "Find: act on matches",
+            menu: "",
+            shortcut: "",
+            params: "{\"action\": update|depth|delete|group, \"depth\"?: 0-999 (for depth)}  — Find mode: one undo step on all matches; update gives them the indicator's attributes by the update flags, delete empties the match set, group leaves the new compound as the only match; returns {count}",
+            mutates: false,
+            enabled: always,
+            run: find_apply,
+        },
+        Command {
         id: "edit.find_objects",
         label: "Find objects",
         menu: "",
@@ -28,7 +74,8 @@ pub(super) fn commands() -> Vec<Command> {
         mutates: false,
         enabled: |e| !e.doc().objects.is_empty(),
         run: find_objects,
-    }]
+        },
+    ]
 }
 
 #[derive(Default)]
@@ -215,6 +262,17 @@ fn label(o: &Object) -> String {
     }
 }
 
+/// The result shape of `edit.find_objects` and `find.state`.
+fn result_of(hits: &[&Object]) -> Value {
+    let items: Vec<Value> = hits
+        .iter()
+        .take(MAX_ITEMS)
+        .map(|o| json!({"id": o.id.0, "type": o.type_name(), "depth": o.depth(), "label": label(o)}))
+        .collect();
+    let ids: Vec<u64> = hits.iter().map(|o| o.id.0).collect();
+    json!({"count": ids.len(), "ids": ids, "items": items})
+}
+
 fn find_objects(e: &mut Engine, p: &Value) -> CmdResult {
     let c = parse(p)?;
     let hits: Vec<&Object> = e
@@ -224,11 +282,46 @@ fn find_objects(e: &mut Engine, p: &Value) -> CmdResult {
         .map(|o| &**o)
         .filter(|o| matches(o, &c))
         .collect();
-    let items: Vec<Value> = hits
-        .iter()
-        .take(MAX_ITEMS)
-        .map(|o| json!({"id": o.id.0, "type": o.type_name(), "depth": o.depth(), "label": label(o)}))
+    Ok(result_of(&hits))
+}
+
+fn find_state(e: &Engine) -> Value {
+    let hits: Vec<&Object> = e
+        .find_matches()
+        .into_iter()
+        .filter_map(|id| e.doc().get(ObjectId(id)))
         .collect();
-    let ids: Vec<u64> = hits.iter().map(|o| o.id.0).collect();
-    Ok(json!({"count": ids.len(), "ids": ids, "items": items}))
+    let mut r = result_of(&hits);
+    if let Some(m) = r.as_object_mut() {
+        m.insert("mode".into(), json!(e.tool() == crate::tools::ToolKind::Find));
+    }
+    r
+}
+
+fn find_set(e: &mut Engine, p: &Value) -> CmdResult {
+    let c = parse(p)?;
+    let ids: Vec<ObjectId> = e
+        .doc()
+        .objects
+        .iter()
+        .filter(|o| matches(o, &c))
+        .map(|o| o.id)
+        .collect();
+    e.find_replace(ids);
+    Ok(find_state(e))
+}
+
+fn find_toggle(e: &mut Engine, p: &Value) -> CmdResult {
+    let id = num(p, "id")?;
+    if !id.is_finite() || id < 0.0 {
+        return Err(EngineError::bad_params("\"id\" must be an object id"));
+    }
+    e.find_toggle(ObjectId(id as u64))?;
+    Ok(find_state(e))
+}
+
+fn find_apply(e: &mut Engine, p: &Value) -> CmdResult {
+    let action = opt_str(p, "action")?.ok_or_else(|| EngineError::bad_params("\"action\" is required"))?;
+    let n = e.find_apply(action, opt_num(p, "depth")?)?;
+    Ok(json!({"count": n}))
 }

@@ -1,8 +1,8 @@
-//! Edit › Find Objects… (W10-39): a small window that finds the objects
-//! with given properties (`edit.find_objects`), lists them, outlines them on
-//! the canvas while it is open, and acts on all of them with one command
-//! each: Update (`object.update`), Set depth (`arrange.set_depth`), Delete
-//! (`edit.delete`) and Glue into a compound (`object.group`).
+//! Edit › Find Objects… (W10-39): Find mode's window. It finds the objects
+//! with given properties (`find.set`), lists the match set, outlines it on
+//! the canvas and acts on all of it with `find.apply` (Update, Set depth,
+//! Delete, Glue). The window shows exactly while Find mode is on: choosing
+//! another mode, Escape or closing the window ends the mode.
 
 use crate::panels::color_menu;
 use crate::App;
@@ -41,8 +41,10 @@ pub struct FindState {
     /// All matching ids (the list is cut at 500).
     pub ids: Vec<u64>,
     pub message: String,
-    /// What the hits were computed from (criteria, document revision).
-    key: Option<(String, u64)>,
+    /// What the hits were computed from (match set, document revision).
+    key: Option<(Vec<u64>, u64)>,
+    /// The criteria the engine's match set was last made from.
+    criteria: Option<String>,
 }
 
 impl Default for FindState {
@@ -67,6 +69,7 @@ impl Default for FindState {
             ids: Vec::new(),
             message: String::new(),
             key: None,
+            criteria: None,
         }
     }
 }
@@ -120,40 +123,48 @@ impl FindState {
     }
 }
 
-/// Run the search again when the criteria or the drawing changed.
+/// Rebuild the list from the engine's match set when it or the drawing
+/// changed, and run the search again when the criteria changed.
 fn refresh(app: &mut App) {
-    let params = app.find.params();
-    let key = (params.to_string(), app.engine.revision());
+    let params = app.find.params().to_string();
+    if app.find.criteria.as_deref() != Some(params.as_str()) {
+        app.find.criteria = Some(params);
+        let p = app.find.params();
+        // An empty drawing has nothing to find (the command is disabled).
+        if let Err(m) = app.try_run("find.set", &p) {
+            if !app.engine.doc().objects.is_empty() {
+                app.find.message = m;
+            }
+        }
+        app.find.key = None;
+    }
+    let ids = app.engine.find_matches();
+    let key = (ids.clone(), app.engine.revision());
     if app.find.key.as_ref() == Some(&key) {
         return;
     }
-    let result = app.try_run("edit.find_objects", &params);
+    let state = app.try_run("find.state", &json!({}));
     let st = &mut app.find;
     st.key = Some(key);
     st.hits.clear();
-    st.ids.clear();
-    match result {
-        Ok(r) => {
-            let n = |v: Option<&Value>| v.and_then(Value::as_u64);
-            if let Some(a) = r.get("ids").and_then(Value::as_array) {
-                st.ids = a.iter().filter_map(Value::as_u64).collect();
-            }
-            if let Some(a) = r.get("items").and_then(Value::as_array) {
-                for i in a {
-                    let label = i.get("label").and_then(Value::as_str).unwrap_or("");
-                    let depth = n(i.get("depth")).unwrap_or(0);
-                    if let Some(id) = n(i.get("id")) {
-                        st.hits.push((id, format!("{label}  (depth {depth})")));
-                    }
+    st.ids = ids;
+    if let Ok(r) = state {
+        let n = |v: Option<&Value>| v.and_then(Value::as_u64);
+        if let Some(a) = r.get("items").and_then(Value::as_array) {
+            for i in a {
+                let label = i.get("label").and_then(Value::as_str).unwrap_or("");
+                let depth = n(i.get("depth")).unwrap_or(0);
+                if let Some(id) = n(i.get("id")) {
+                    st.hits.push((id, format!("{label}  (depth {depth})")));
                 }
             }
-            st.message = match st.ids.len() {
-                1 => "1 object found".to_string(),
-                c => format!("{c} objects found"),
-            };
         }
-        Err(m) => st.message = m,
     }
+    st.message = match st.ids.len() {
+        0 => "No objects: set criteria or click objects".to_string(),
+        1 => "1 object".to_string(),
+        c => format!("{c} objects"),
+    };
 }
 
 fn pick<T: Copy + PartialEq>(ui: &mut egui::Ui, id: &str, cur: &mut Option<T>, choices: &[(T, &str)], width: f32) {
@@ -184,8 +195,16 @@ fn field(ui: &mut egui::Ui, text: &mut String, label: &str, width: f32) {
 }
 
 pub fn dialog(app: &mut App, ctx: &egui::Context) {
-    if !app.find.open {
+    // The window is Find mode's panel: it shows exactly while the mode is on.
+    if app.engine.tool() != rustfig_engine::ToolKind::Find {
+        app.find.open = false;
         return;
+    }
+    if !app.find.open {
+        // Just entered: the match set starts empty, the criteria apply once changed.
+        app.find.open = true;
+        app.find.criteria = Some(app.find.params().to_string());
+        app.find.key = None;
     }
     refresh(app);
     let mut open = true;
@@ -334,7 +353,12 @@ pub fn dialog(app: &mut App, ctx: &egui::Context) {
             });
         });
     app.find = st;
-    app.find.open = open;
+    if !open {
+        // Closing the window ends Find mode.
+        app.run("tool.escape", json!({}));
+        app.find.open = false;
+        return;
+    }
     if let Some(id) = clicked {
         app.run("edit.show_object", json!({ "id": id }));
     }
@@ -345,29 +369,18 @@ pub fn dialog(app: &mut App, ctx: &egui::Context) {
 
 /// One command on all matches: one undo step.
 fn run_action(app: &mut App, action: &str) {
-    let ids = app.find.ids.clone();
-    let n = ids.len();
-    let done = match action {
-        "update" => app.run("object.update", json!({ "ids": ids })),
-        "delete" => app.run("edit.delete", json!({ "ids": ids })),
-        "group" => {
-            if n < 2 {
-                app.error("Glue needs at least two matches".to_string());
-                None
-            } else {
-                app.run("object.group", json!({ "ids": ids }))
-            }
-        }
-        _ => match app.find.new_depth.trim().parse::<f64>() {
-            Ok(d) if (0.0..=999.0).contains(&d) => {
-                app.run("arrange.set_depth", json!({ "ids": ids, "depth": d.round() }))
-            }
+    let n = app.find.ids.len();
+    let depth = match action {
+        "depth" => match app.find.new_depth.trim().parse::<f64>() {
+            Ok(d) if (0.0..=999.0).contains(&d) => Some(d),
             _ => {
                 app.error("Depth must be a number from 0 to 999".to_string());
-                None
+                return;
             }
         },
+        _ => None,
     };
+    let done = app.run("find.apply", json!({ "action": action, "depth": depth }));
     if done.is_some() {
         refresh(app);
         let verb = match action {

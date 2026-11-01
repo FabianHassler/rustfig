@@ -211,6 +211,7 @@ tool_runs!(
     LengthMeasure,
     AreaMeasure,
     Plot,
+    Find,
 );
 
 fn event(e: &mut Engine, p: &Value) -> CmdResult {
