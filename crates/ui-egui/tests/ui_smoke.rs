@@ -1274,7 +1274,7 @@ fn retired_settings_load_and_vanish() {
     .unwrap();
     let mut h = harness(app_with_settings(&path));
     assert!(!h.state().xfig_keys, "the other keys still apply");
-    assert!(h.state().message.as_ref().is_none_or(|m| !m.error));
+    assert!(h.state().message.as_ref().is_none_or(|m| !m.is_error()));
     h.state_mut().run("app.toggle_xfig_keys", json!({"on": true}));
     h.run_steps(2);
     let text = std::fs::read_to_string(&path).unwrap();
@@ -3400,4 +3400,51 @@ fn pdf_with_several_pages_asks_for_the_page() {
         rustfig_model::ObjectKind::Compound(c) => assert_eq!(c.objects.len(), 2),
         k => panic!("expected a compound, got {k:?}"),
     }
+}
+
+#[test]
+fn message_history_filters_by_level_and_copies() {
+    let mut h = harness(app());
+    h.state_mut().info("just info");
+    h.state_mut().warn("careful now");
+    h.state_mut().error("it broke");
+    // The command lists by level and opens the window.
+    let r = h
+        .state_mut()
+        .try_run("app.messages", &json!({"levels": ["warning", "error"]}))
+        .unwrap();
+    let texts: Vec<&str> = r["messages"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|m| m["text"].as_str().unwrap())
+        .collect();
+    assert_eq!(texts, ["careful now", "it broke"]);
+    assert!(h
+        .state_mut()
+        .try_run("app.messages", &json!({"levels": ["loud"]}))
+        .is_err());
+    h.run_steps(3);
+    // The check boxes follow the command: Info is off, so its line is gone.
+    assert_eq!(h.query_all_by_label("just info").count(), 0);
+    assert!(h.query_all_by_label("it broke").count() >= 1);
+    assert!(h.query_all_by_label("careful now").count() >= 1);
+    // Switching Info on through the window lists it again.
+    h.get_by_label("Info").click();
+    h.run_steps(3);
+    assert!(h.query_all_by_label("just info").count() >= 1);
+    // Copy gives the listed messages, levels as prefixes.
+    let r = h.state_mut().try_run("app.copy_messages", &json!({})).unwrap();
+    assert_eq!(r["text"], "just info\nwarning: careful now\nerror: it broke");
+    let r = h
+        .state_mut()
+        .try_run("app.copy_messages", &json!({"levels": ["error"]}))
+        .unwrap();
+    assert_eq!(r["text"], "error: it broke");
+    assert_eq!(r["copied"], 1);
+    h.run_steps(2);
+    assert!(
+        h.state().dialogs.messages_copy.is_none(),
+        "the copy reached the clipboard path"
+    );
 }

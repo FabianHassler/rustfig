@@ -51,7 +51,7 @@ fn hidpi_scales_keep_the_drawing_coordinates() {
         assert_eq!(doc.objects.len(), 1, "ppp {ppp}");
         let pts: Vec<(f64, f64)> = doc.objects[0].points().unwrap().iter().map(|p| (p.x, p.y)).collect();
         assert_eq!(pts.len(), 3, "ppp {ppp}");
-        let errors: Vec<_> = h.state().messages.iter().filter(|m| m.error).collect();
+        let errors: Vec<_> = h.state().messages.iter().filter(|m| m.is_error()).collect();
         assert!(errors.is_empty(), "ppp {ppp}: {errors:?}");
         seen.push((ppp, pts));
     }

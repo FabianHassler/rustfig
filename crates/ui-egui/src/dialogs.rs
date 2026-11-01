@@ -286,6 +286,10 @@ pub struct Dialogs {
     /// The bundled manual (`help.open`).
     pub help: crate::help::HelpState,
     pub messages_open: bool,
+    /// Levels the message history lists (W10-29).
+    pub message_levels: crate::messages::LevelFilter,
+    /// Text for the clipboard on the next frame (`app.copy_messages`).
+    pub messages_copy: Option<String>,
     /// Edit › Global settings (RustFig's preferences).
     pub global_open: bool,
     /// File > Saved versions (W10-14).
@@ -1091,6 +1095,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     commands_dialog(app, ctx);
     about_dialog(app, ctx);
     crate::help::help_dialog(app, ctx);
+    crate::messages::flush_copy(app, ctx);
     messages_dialog(app, ctx);
     global_dialog(app, ctx);
     crate::color_dialog::dialog(app, ctx);
@@ -3301,6 +3306,7 @@ fn messages_dialog(app: &mut App, ctx: &egui::Context) {
     let mut open = true;
     let tk = crate::theme::Tokens::for_dark(ctx.style().visuals.dark_mode);
     let mut dismiss = false;
+    let mut copy = false;
     egui::Window::new("Messages")
         .open(&mut open)
         .default_size([460.0, 260.0])
@@ -3313,17 +3319,44 @@ fn messages_dialog(app: &mut App, ctx: &egui::Context) {
                 if ui.button("Clear").clicked() {
                     app.messages.clear();
                 }
+                if ui
+                    .button("Copy")
+                    .on_hover_text("Copy the listed messages to the clipboard")
+                    .clicked()
+                {
+                    copy = true;
+                }
+                ui.separator();
+                for l in crate::messages::Level::ALL {
+                    let mut on = app.dialogs.message_levels.shows(l);
+                    let label = match l {
+                        crate::messages::Level::Info => "Info",
+                        crate::messages::Level::Warning => "Warning",
+                        crate::messages::Level::Error => "Error",
+                    };
+                    if ui.checkbox(&mut on, label).changed() {
+                        app.dialogs.message_levels.set(l, on);
+                    }
+                }
             });
             egui::ScrollArea::vertical().stick_to_bottom(true).show(ui, |ui| {
                 if app.messages.is_empty() {
                     ui.label("No messages yet.");
                 }
-                for m in &app.messages {
-                    let c = if m.error { tk.error } else { ui.visuals().text_color() };
+                let shown = crate::messages::filtered(&app.messages, &app.dialogs.message_levels);
+                if !app.messages.is_empty() && shown.is_empty() {
+                    ui.label("No messages at the chosen levels.");
+                }
+                for m in shown {
+                    let c = tk.message_color(m.level, ui.visuals().text_color());
                     ui.label(egui::RichText::new(&m.text).color(c));
                 }
             });
         });
+    if copy {
+        let text = crate::messages::as_text(&crate::messages::filtered(&app.messages, &app.dialogs.message_levels));
+        ctx.copy_text(text);
+    }
     // xfig's Return dismisses the message panel (`w_msgpanel.c`).
     let enter = ctx.input(|i| i.key_pressed(egui::Key::Enter)) && ctx.memory(|m| m.focused()).is_none();
     app.dialogs.messages_open = open && !dismiss && !(enter && !app.engine.is_typing());
@@ -3395,7 +3428,7 @@ pub fn open_or_merge(app: &mut App, path: &str, merge: bool, params: serde_json:
     if r["imported"] == json!(true) || merge {
         if let Some(w) = r["warnings"].as_array().filter(|w| !w.is_empty()) {
             let w: Vec<&str> = w.iter().filter_map(|x| x.as_str()).collect();
-            app.info(format!("Import: {}", w.join("; ")));
+            app.warn(format!("Import: {}", w.join("; ")));
         }
     }
     Some(r)

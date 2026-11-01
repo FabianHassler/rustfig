@@ -6,7 +6,8 @@ RustFig keeps xfig's arrangement of the main window.
 
 - **Menus**: File, Edit, View, Snap, Object (RustFig's own, for commands xfig only has as modes or keys) and Help. See [Menus](menus.md).
 - **File name**: the current file; it is marked when there are unsaved changes. Click it to rename the file.
-- **Message panel**: what to do next, errors and information. Click it to see the history of messages.
+- **Message panel**: what to do next, errors and information. Click it to see the history of messages (also Help > Message history..., `app.messages`).
+  - Each message has a level: information, warning (for example the notes after opening a file) or error (red). The window's **Info**, **Warning** and **Error** check boxes choose which levels are listed, **Copy** puts the listed messages on the clipboard one per line (warnings and errors start with their level), **Clear** empties the history and **Dismiss** (or Return) closes the window, as in xfig. Scripts use `app.messages` and `app.copy_messages` with `levels`, for example `["warning","error"]`.
 - **Mouse indicator**: three boxes, one per mouse button, say what each does in the current mode and step. Hold Shift to see the Shift meanings. Hovering shows the same as text.
 - **Units box**: shows the units (inches or centimetres, a scale); click it for the unit panel (Edit > Set units).
 
