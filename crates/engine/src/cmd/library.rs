@@ -66,6 +66,26 @@ pub(super) fn commands() -> Vec<Command> {
             run: search,
         },
         Command {
+            id: "library.favourite",
+            label: "Library favourite",
+            menu: "",
+            shortcut: "",
+            params: "{\"library\": name, \"name\": figure, \"on\"?: bool (default: toggle)}  — marks the figure as a favourite or removes the mark (kept in the preferences, shown in the library panel's Favourites row); only an existing figure can be added: {\"favourite\": bool, \"count\": n}",
+            mutates: false,
+            enabled: always,
+            run: favourite,
+        },
+        Command {
+            id: "library.favourites",
+            label: "List library favourites",
+            menu: "",
+            shortcut: "",
+            params: "{\"recent\"?: bool}  — the favourite figures (or, with recent, the last figures placed, newest first) from any library: {\"figures\": [{\"library\", \"name\", \"exists\": bool}]}; a figure whose file is gone has exists false; \"clear\": true empties the list first (recent only)",
+            mutates: false,
+            enabled: always,
+            run: favourites,
+        },
+        Command {
             id: "library.objects",
             label: "List library objects",
             menu: "",
@@ -200,6 +220,49 @@ fn search(e: &mut Engine, p: &Value) -> CmdResult {
     Ok(json!({"query": query, "hits": hits, "truncated": truncated}))
 }
 
+fn favourite(e: &mut Engine, p: &Value) -> CmdResult {
+    let library = string(p, "library")?;
+    let name = string(p, "name")?;
+    let now = e.prefs.is_library_favourite(&library, &name);
+    let on = opt_bool(p, "on")?.unwrap_or(!now);
+    if on && !now {
+        let lib = e.find_library(&library)?;
+        if !library::object_names(&lib.path).contains(&name) {
+            return Err(EngineError::bad_params(format!("no figure {name:?} in {library:?}")));
+        }
+    }
+    if !e.prefs.set_library_favourite(&library, &name, on) {
+        return Err(EngineError::bad_params("too many favourites: remove one first"));
+    }
+    e.prefs_dirty = true;
+    Ok(json!({"favourite": on, "count": e.prefs.rustfig.library_favourites.len()}))
+}
+
+fn favourites(e: &mut Engine, p: &Value) -> CmdResult {
+    let recent = opt_bool(p, "recent")?.unwrap_or(false);
+    if recent && opt_bool(p, "clear")?.unwrap_or(false) {
+        e.prefs.rustfig.library_recent.clear();
+        e.prefs_dirty = true;
+    }
+    let list = if recent {
+        e.prefs.rustfig.library_recent.clone()
+    } else {
+        e.prefs.rustfig.library_favourites.clone()
+    };
+    let libs = e.libraries();
+    let figures: Vec<Value> = list
+        .iter()
+        .map(|r| {
+            let exists = libs
+                .iter()
+                .find(|l| l.name == r.library)
+                .is_some_and(|l| library::object_names(&l.path).contains(&r.name));
+            json!({"library": r.library, "name": r.name, "exists": exists})
+        })
+        .collect();
+    Ok(json!({"figures": figures}))
+}
+
 fn objects(e: &mut Engine, p: &Value) -> CmdResult {
     let lib = e.find_library(&string(p, "library")?)?;
     let with_comments = opt_bool(p, "comments")?.unwrap_or(false);
@@ -264,6 +327,8 @@ fn place(e: &mut Engine, p: &Value) -> CmdResult {
     }
     let id = e.add_object(obj);
     e.set_selection(vec![id]);
+    e.prefs.add_library_recent(&library, &name);
+    e.prefs_dirty = true;
     e.set_status(format!("Placed library object {name}.fig"));
     Ok(json!({"id": id.0, "ids": [id.0]}))
 }

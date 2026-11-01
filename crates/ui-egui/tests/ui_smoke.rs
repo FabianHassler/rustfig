@@ -3779,3 +3779,65 @@ fn find_objects_window_finds_and_acts() {
     assert_eq!(h.state().engine.doc().objects.len(), 2);
     h.get_by_label_contains("glued");
 }
+
+/// W10-30: the star next to Selected object marks a favourite; the
+/// Favourites row shows it from any library, a click picks it, Select object
+/// (or a double-click) puts it in hand; a favourite whose figure is gone is shown but inert; a
+/// placed figure appears in the Recent row.
+#[test]
+fn library_panel_favourites_row_picks_figures_from_any_library() {
+    let user = std::env::temp_dir().join(format!("rustfig-ui-library-fav-{}", std::process::id()));
+    let mut h = harness(app());
+    h.state_mut().run(
+        "prefs.set",
+        json!({"resource": "library_dir", "value": user.to_string_lossy()}),
+    );
+    h.get_by_label("Library").scroll_to_me();
+    h.get_by_label("Library").click();
+    h.run_steps(3);
+    h.state_mut().library.load("Computers");
+    let i = h
+        .state()
+        .library
+        .object_index("floppy_lg")
+        .expect("floppy_lg is in Computers");
+    h.state_mut().library.pick_index(i);
+    h.run_steps(2);
+    h.get_by_label("Add to favourites").click();
+    h.run_steps(2);
+    assert!(h.state().engine.prefs.is_library_favourite("Computers", "floppy_lg"));
+    h.get_by_label("Remove from favourites");
+    // A favourite whose figure is gone does not break the panel.
+    h.state_mut()
+        .engine
+        .prefs
+        .set_library_favourite("Computers", "gone_for_good", true);
+    h.state_mut().library.load("Optics");
+    h.run_steps(3);
+    h.get_by_label("Favourites gone_for_good in Computers");
+    // Click picks the figure and loads its library.
+    h.get_by_label("Favourites floppy_lg in Computers").click();
+    h.run_steps(3);
+    assert_eq!(h.state().library.current.as_deref(), Some("Computers"));
+    assert!(h.state().library.selected.is_some());
+    h.get_by_label("Select object").click();
+    h.run_steps(3);
+    assert!(!h.state().library.open);
+    assert_eq!(
+        h.state()
+            .engine
+            .library_in_hand()
+            .map(|(l, n, _)| (l.to_string(), n.to_string())),
+        Some(("Computers".to_string(), "floppy_lg".to_string()))
+    );
+    // Placing it makes it a recent figure.
+    h.state_mut().run(
+        "library.place",
+        json!({"library": "Computers", "name": "floppy_lg", "x": 0, "y": 0}),
+    );
+    assert_eq!(h.state().engine.prefs.rustfig.library_recent.len(), 1);
+    h.state_mut().run("library.panel", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Recent floppy_lg in Computers");
+    let _ = std::fs::remove_dir_all(&user);
+}

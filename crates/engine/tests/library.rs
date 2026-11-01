@@ -551,3 +551,101 @@ fn comments_after_the_resolution_line_are_the_objects() {
     let bare = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2\n";
     assert!(comments_of_bytes(bare.as_bytes()).is_empty());
 }
+
+/// W10-30: favourites toggle, persist through the preferences and tolerate a
+/// figure whose file is gone; placed figures are remembered, newest first.
+#[test]
+fn library_favourites_and_recent_persist() {
+    let user = scratch("fav");
+    let fig = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../libraries/Arrows/3darrow1.fig"),
+    )
+    .unwrap();
+    std::fs::write(user.join("mine.fig"), &fig).unwrap();
+    let mut e = engine_with_user_dir(&user);
+    let lib = "(Toplevel Directory)";
+    let r = e
+        .execute(
+            "library.favourite",
+            &json!({"library": "Computers", "name": "floppy_lg"}),
+        )
+        .unwrap();
+    assert_eq!(r["favourite"], true);
+    let r = e
+        .execute(
+            "library.favourite",
+            &json!({"library": lib, "name": "mine", "on": true}),
+        )
+        .unwrap();
+    assert_eq!(r["count"], 2);
+    // Setting twice does not duplicate.
+    e.execute(
+        "library.favourite",
+        &json!({"library": lib, "name": "mine", "on": true}),
+    )
+    .unwrap();
+    assert_eq!(e.prefs.rustfig.library_favourites.len(), 2);
+    // Unknown figure or library cannot be added.
+    assert!(e
+        .execute("library.favourite", &json!({"library": "Computers", "name": "nope"}))
+        .is_err());
+    assert!(e
+        .execute("library.favourite", &json!({"library": "Nope", "name": "x"}))
+        .is_err());
+    assert!(e
+        .execute("library.favourite", &json!({"library": "Computers"}))
+        .is_err());
+    // Through the settings file and back.
+    let text = e.prefs.to_toml();
+    let (back, _) = rustfig_engine::prefs::Prefs::parse(&text).unwrap();
+    assert_eq!(back.rustfig.library_favourites, e.prefs.rustfig.library_favourites);
+    // A figure whose file is gone is listed as missing, and can be removed.
+    std::fs::remove_file(user.join("mine.fig")).unwrap();
+    let l = e.execute("library.favourites", &json!({})).unwrap();
+    let figs = l["figures"].as_array().unwrap();
+    assert_eq!(figs[0]["exists"], true);
+    assert_eq!(figs[1]["exists"], false);
+    let r = e
+        .execute("library.favourite", &json!({"library": lib, "name": "mine"}))
+        .unwrap();
+    assert_eq!(r["favourite"], false);
+    assert_eq!(e.prefs.rustfig.library_favourites.len(), 1);
+    // Toggle off the first, then on again.
+    let r = e
+        .execute(
+            "library.favourite",
+            &json!({"library": "Computers", "name": "floppy_lg"}),
+        )
+        .unwrap();
+    assert_eq!(r["favourite"], false);
+    // Recent: placing records, newest first, unique, capped.
+    let names: Vec<String> = e.execute("library.objects", &json!({"library": "Computers"})).unwrap()["objects"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .take(12)
+        .map(|o| o["name"].as_str().unwrap().to_string())
+        .collect();
+    for n in &names {
+        e.execute(
+            "library.place",
+            &json!({"library": "Computers", "name": n, "x": 0, "y": 0}),
+        )
+        .unwrap();
+    }
+    e.execute(
+        "library.place",
+        &json!({"library": "Computers", "name": names[5], "x": 0, "y": 0}),
+    )
+    .unwrap();
+    let rec = e.execute("library.favourites", &json!({"recent": true})).unwrap();
+    let rec = rec["figures"].as_array().unwrap();
+    assert_eq!(rec.len(), 8);
+    assert_eq!(rec[0]["name"], names[5].as_str());
+    assert_eq!(rec.iter().filter(|r| r["name"] == names[5].as_str()).count(), 1);
+    let cleared = e
+        .execute("library.favourites", &json!({"recent": true, "clear": true}))
+        .unwrap();
+    assert!(cleared["figures"].as_array().unwrap().is_empty());
+    let _ = std::fs::remove_dir_all(&user);
+}
