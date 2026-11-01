@@ -94,6 +94,54 @@ pub fn editing_tools() -> Vec<ToolKind> {
         .collect()
 }
 
+/// Every mode with a button in the panel, in its order.
+pub fn panel_tools() -> Vec<ToolKind> {
+    DRAWING
+        .iter()
+        .chain(EDITING.iter())
+        .filter_map(|s| match s {
+            Slot::Tool(t, _) => Some(*t),
+            Slot::Command(..) => None,
+        })
+        .collect()
+}
+
+/// A mode's panel icon.
+pub(crate) fn icon_of(t: ToolKind) -> Option<&'static xfig_icons::Xbm> {
+    DRAWING.iter().chain(EDITING.iter()).find_map(|s| match s {
+        Slot::Tool(k, icon) if *k == t => Some(*icon),
+        _ => None,
+    })
+}
+
+/// The right-click menu of a mode button: add the mode to the Favourites
+/// strip or remove it.
+pub(crate) fn favourite_menu(app: &mut App, resp: &egui::Response, t: ToolKind) {
+    let on = app.engine.prefs.rustfig.mode_favourites.iter().any(|x| x == t.id());
+    let full = app.engine.prefs.rustfig.mode_favourites.len() >= rustfig_engine::prefs::MAX_MODE_FAVOURITES;
+    resp.context_menu(|ui| {
+        let text = if on {
+            "Remove from favourites"
+        } else {
+            "Add to favourites"
+        };
+        if ui.add_enabled(on || !full, egui::Button::new(text)).clicked() {
+            app.run("mode.favourite", json!({"mode": t.id(), "on": !on}));
+            ui.close();
+        }
+    });
+}
+
+/// A mode's balloon text for this system.
+pub(crate) fn tip_text(t: ToolKind, mac: bool) -> String {
+    let tip = match xfig_tip(t) {
+        Some(tip) => tip.to_string(),
+        None if t.shortcut().is_empty() => t.label().to_string(),
+        None => format!("{} ({})", t.label(), t.shortcut()),
+    };
+    tip_for_os(&tip, mac)
+}
+
 /// Width of the mode panel: two columns of buttons, the frame's margin and
 /// stroke (nothing is clipped).
 pub const MODE_PANEL_MARGIN: f32 = 3.0;
@@ -105,6 +153,9 @@ pub fn mode_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     let size = SLOT;
     // A floating scroll bar takes no width from the 2-column grid.
     ui.spacing_mut().scroll = egui::style::ScrollStyle::floating();
+    // The finder and the Favourites strip stay on top while the buttons scroll.
+    crate::mode_finder::show(app, ui, tk);
+    ui.add_space(2.0);
     egui::ScrollArea::vertical()
         .auto_shrink([false, false])
         .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::VisibleWhenNeeded)
@@ -216,17 +267,13 @@ fn tool_button(
     let sunk = matches!(state, crate::bevel::State::Selected | crate::bevel::State::Pressed) && tk.bevel;
     let inner = if sunk { rect.translate(vec2(1.0, 1.0)) } else { rect };
     paint_mode_icon(ui, icon, inner, ink);
-    let tip = match xfig_tip(t) {
-        Some(tip) => tip.to_string(),
-        None if t.shortcut().is_empty() => t.label().to_string(),
-        None => format!("{} ({})", t.label(), t.shortcut()),
-    };
     let label = t.label();
     resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, active, label));
     if resp.hovered() {
         app.context_help.hovered = crate::context_help::mode_topic(t);
     }
-    let tip = tip_for_os(&tip, crate::platform::Os::current(ui.ctx()) == crate::platform::Os::Mac);
+    let tip = tip_text(t, crate::platform::Os::current(ui.ctx()) == crate::platform::Os::Mac);
+    favourite_menu(app, &resp, t);
     if resp.on_hover_text(tip).clicked() {
         app.run(t.id(), json!({}));
     }
@@ -264,7 +311,7 @@ fn xfig_tip(t: ToolKind) -> Option<&'static str> {
 
 /// A mode icon: the vector redraw when the icon has been traced (W9), else
 /// xfig's bitmap.
-fn paint_mode_icon(ui: &egui::Ui, icon: &'static xfig_icons::Xbm, rect: egui::Rect, ink: Color32) {
+pub(crate) fn paint_mode_icon(ui: &egui::Ui, icon: &'static xfig_icons::Xbm, rect: egui::Rect, ink: Color32) {
     if crate::mode_icons::traced(icon.name) {
         crate::vector_icons::paint(ui, crate::vector_icons::VIcon::Traced(icon.name), rect, ink);
     } else {

@@ -3841,3 +3841,95 @@ fn library_panel_favourites_row_picks_figures_from_any_library() {
     h.get_by_label("Recent floppy_lg in Computers");
     let _ = std::fs::remove_dir_all(&user);
 }
+
+/// The Find mode field: typing lists matches, Down and Return pick one.
+#[test]
+fn mode_finder_picks_a_mode_with_the_keyboard() {
+    let mut h = harness(app());
+    h.get_by_label("Find mode").click();
+    h.run_steps(2);
+    h.get_by_label("Find mode").type_text("ARR");
+    h.run_steps(2);
+    h.get_by_label("Find mode result Add/remove arrows");
+    press_key(&mut h, egui::Key::Enter, egui::Modifiers::NONE);
+    h.run_steps(2);
+    assert_eq!(h.state().engine.tool(), ToolKind::Arrow);
+    assert!(h.state().mode_finder.text.is_empty(), "the field is cleared");
+    assert!(h.query_by_label_contains("Find mode result").is_none());
+}
+
+#[test]
+fn mode_finder_down_moves_and_escape_clears() {
+    let mut h = harness(app());
+    h.get_by_label("Find mode").click();
+    h.run_steps(2);
+    h.get_by_label("Find mode").type_text("circle");
+    h.run_steps(2);
+    press_key(&mut h, egui::Key::ArrowDown, egui::Modifiers::NONE);
+    press_key(&mut h, egui::Key::Enter, egui::Modifiers::NONE);
+    assert_eq!(h.state().engine.tool(), ToolKind::CircleDiameter);
+    h.get_by_label("Find mode").click();
+    h.run_steps(2);
+    h.get_by_label("Find mode").type_text("box");
+    h.run_steps(2);
+    press_key(&mut h, egui::Key::Escape, egui::Modifiers::NONE);
+    assert!(h.state().mode_finder.text.is_empty());
+    assert_eq!(
+        h.state().engine.tool(),
+        ToolKind::CircleDiameter,
+        "Escape picks nothing"
+    );
+}
+
+#[test]
+fn mode_finder_click_picks_and_the_key_focuses_the_field() {
+    let mut h = harness(app());
+    press_key(&mut h, egui::Key::J, egui::Modifiers::COMMAND);
+    h.run_steps(2);
+    h.get_by_label("Find mode").type_text("trim");
+    h.run_steps(2);
+    h.get_by_label("Find mode result Trim, split and extend").click();
+    h.run_steps(2);
+    assert_eq!(h.state().engine.tool(), ToolKind::Trim);
+}
+
+#[test]
+fn favourite_modes_by_right_click_and_the_strip_picks_the_mode() {
+    let mut h = harness(app());
+    assert!(h.query_by_label("Favourite Box").is_none(), "hidden while empty");
+    h.get_by_label("Box").click_secondary();
+    h.run_steps(2);
+    h.get_by_label("Add to favourites").click();
+    h.run_steps(2);
+    assert_eq!(h.state().engine.prefs.rustfig.mode_favourites, vec!["tool.box"]);
+    h.get_by_label("Favourite Box").click();
+    h.run_steps(2);
+    assert_eq!(h.state().engine.tool(), ToolKind::Box);
+    h.get_by_label("Favourite Box"); // shown as the active mode too
+                                     // The panel button is unchanged and removes it again.
+    h.get_by_label("Box").click_secondary();
+    h.run_steps(2);
+    h.get_by_label("Remove from favourites").click();
+    h.run_steps(2);
+    assert!(h.query_by_label("Favourite Box").is_none());
+    assert!(h.state().engine.prefs.rustfig.mode_favourites.is_empty());
+}
+
+#[test]
+fn favourite_modes_survive_a_restart() {
+    let path = settings_file("modefav");
+    {
+        let mut h = harness(app_with_settings(&path));
+        h.state_mut().run("mode.favourite", json!({"mode": "tool.arc"}));
+        h.state_mut().run("mode.favourite", json!({"mode": "move"}));
+        h.run_steps(2);
+    }
+    let text = std::fs::read_to_string(&path).unwrap();
+    assert!(text.contains("mode_favourites"), "{text}");
+    let mut h = harness(app_with_settings(&path));
+    h.get_by_label("Favourite Arc");
+    h.get_by_label("Favourite Move");
+    let r = h.state_mut().run("mode.favourites", json!({}));
+    assert!(format!("{r:?}").contains("tool.move"));
+    let _ = std::fs::remove_dir_all(path.parent().unwrap());
+}
