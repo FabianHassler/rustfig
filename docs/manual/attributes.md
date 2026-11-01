@@ -66,7 +66,7 @@ Scripts and MCP use the `color.*` commands (`color.parse`, `color.new`, `color.e
 
 **View › Manage Styles…** (Ctrl+Y with xfig's keys on) keeps named sets of attributes in families, as xfig's style manager does, so a look you use again and again is one click away.
 
-  - The window shows two columns, **Family** and **Style**. Each has a sunken list of what is saved (a grey note when it is empty), the buttons for the selected entry under it (Delete; for styles also Set), and below them, apart, the field for a new name with its **Add**. Pick a family to see its styles.
+  - The window shows two lists side by side: **Family** and **Style**, each with what is saved; under each list, after a gap, a field for a new name and the buttons (**Add**, **Delete**; for styles also **Set**). Pick a family to see its styles.
   - A style holds the indicator's drawing attributes: depth, line width, style, join, cap, dash length and dot gap, pen and fill colour, fill style, box radius, arrows, the text font, size, angle, justification and flags, and the arc type.
   - The name fields are for new entries only. Type a family name and press **Add** (or Return): the family appears in the list, selected, and the field empties. To add a style, set the indicator panel as you want it, pick a family, type a name and press **Add** under Style (a style of the same name is replaced). Clicking a name in a list selects it; it does not copy it into the field.
   - **Set** sets the indicator, so what you draw next looks like the style; objects already drawn are not changed (as in xfig). **Delete** removes the selected family or style. **Close** (or Escape) closes the window.

@@ -36,39 +36,6 @@ fn field(ui: &mut egui::Ui, text: &mut String, label: &str, hint: &str) -> bool 
     r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter))
 }
 
-/// The saved entries: a sunken box of a fixed height (so it reads as
-/// stored data, apart from the field for a new name), or a grey note when
-/// it is empty.
-fn saved_list(
-    ui: &mut egui::Ui,
-    tk: &crate::theme::Tokens,
-    id: &str,
-    empty: bool,
-    empty_note: &str,
-    rows: impl FnOnce(&mut egui::Ui),
-) {
-    egui::Frame::new()
-        .fill(tk.inset_bg)
-        .stroke(egui::Stroke::new(1.0_f32, tk.muted.gamma_multiply(0.5)))
-        .corner_radius(3.0)
-        .inner_margin(4.0)
-        .show(ui, |ui| {
-            ui.set_width(ui.available_width());
-            egui::ScrollArea::vertical()
-                .id_salt(id)
-                .min_scrolled_height(120.0)
-                .max_height(120.0)
-                .auto_shrink([false, false])
-                .show(ui, |ui| {
-                    if empty {
-                        ui.label(egui::RichText::new(empty_note).italics().color(tk.muted));
-                    } else {
-                        rows(ui);
-                    }
-                });
-        });
-}
-
 /// Show the window when it is open.
 pub fn show(app: &mut App, ctx: &egui::Context) {
     if !app.styles.open {
@@ -102,7 +69,6 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     if !app.styles.style.as_ref().is_some_and(|s| styles.contains(s)) {
         app.styles.style = None;
     }
-    let tk = crate::theme::Tokens::new(ctx.style().visuals.dark_mode, app.button_3d);
     // Actions run after the layout, so the lists aren't changed while drawn.
     let mut close = false;
     let mut actions: Vec<(&'static str, serde_json::Value)> = Vec::new();
@@ -112,32 +78,26 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
         .collapsible(false)
         .show(ctx, |ui| crate::dialog_body(ui, |ui| {
             ui.columns(2, |cols| {
-                // Family: the saved families in a sunken list, the selected
-                // one's Delete under it, then the field for a new one.
+                // Family list.
                 let ui = &mut cols[0];
                 ui.strong("Family");
-                saved_list(ui, &tk, "style_families", families.is_empty(), "No families saved", |ui| {
-                    for (n, _) in &families {
-                        let sel = app.styles.family.as_ref() == Some(n);
-                        if labelled(ui.selectable_label(sel, n), &format!("Family {n}")).clicked() {
-                            app.styles.family = Some(n.clone());
-                            app.styles.style = None;
+                egui::ScrollArea::vertical()
+                    .id_salt("style_families")
+                    .max_height(160.0)
+                    .show(ui, |ui| {
+                        for (n, _) in &families {
+                            let sel = app.styles.family.as_ref() == Some(n);
+                            if labelled(ui.selectable_label(sel, n), &format!("Family {n}")).clicked() {
+                                app.styles.family = Some(n.clone());
+                                app.styles.style = None;
+                            }
                         }
-                    }
-                });
-                let can = app.styles.family.is_some();
+                    });
+                // A gap sets the saved list apart from the field for a new name.
+                ui.add_space(10.0);
+                let enter = field(ui, &mut app.styles.family_name, "Family name", "New family name");
+                let named = !app.styles.family_name.trim().is_empty();
                 ui.horizontal(|ui| {
-                    if labelled(ui.add_enabled(can, egui::Button::new("Delete")), "Delete family").clicked() {
-                        if let Some(f) = app.styles.family.take() {
-                            actions.push(("style.family_delete", json!({"family": f})));
-                        }
-                    }
-                });
-                ui.add_space(8.0);
-                ui.label(egui::RichText::new("New family").small().color(tk.muted));
-                ui.horizontal(|ui| {
-                    let enter = field(ui, &mut app.styles.family_name, "Family name", "Name");
-                    let named = !app.styles.family_name.trim().is_empty();
                     let add = labelled(ui.add_enabled(named, egui::Button::new("Add")), "Add family").clicked();
                     if named && (add || enter) {
                         let name = std::mem::take(&mut app.styles.family_name).trim().to_string();
@@ -145,45 +105,37 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                         app.styles.family = Some(name);
                         app.styles.style = None;
                     }
+                    let can = app.styles.family.is_some();
+                    if labelled(ui.add_enabled(can, egui::Button::new("Delete")), "Delete family").clicked() {
+                        if let Some(f) = app.styles.family.take() {
+                            actions.push(("style.family_delete", json!({"family": f})));
+                        }
+                    }
                 });
-                // Style: the selected family's saved styles, Set and Delete
-                // for the selected one, then the field for a new one.
+                // Style list.
                 let ui = &mut cols[1];
                 ui.strong("Style");
+                egui::ScrollArea::vertical()
+                    .id_salt("style_styles")
+                    .max_height(160.0)
+                    .show(ui, |ui| {
+                        for n in &styles {
+                            let sel = app.styles.style.as_ref() == Some(n);
+                            if labelled(ui.selectable_label(sel, n), &format!("Style {n}")).clicked() {
+                                app.styles.style = Some(n.clone());
+                            }
+                        }
+                    });
                 let has_family = app.styles.family.is_some();
-                let empty = if has_family {
-                    "No styles saved in this family"
+                let hint = if has_family {
+                    "New style name"
                 } else {
-                    "Pick a family"
+                    "Pick a family first"
                 };
-                saved_list(ui, &tk, "style_styles", styles.is_empty(), empty, |ui| {
-                    for n in &styles {
-                        let sel = app.styles.style.as_ref() == Some(n);
-                        if labelled(ui.selectable_label(sel, n), &format!("Style {n}")).clicked() {
-                            app.styles.style = Some(n.clone());
-                        }
-                    }
-                });
-                let sel = app.styles.family.clone().zip(app.styles.style.clone());
+                ui.add_space(10.0);
+                let enter = field(ui, &mut app.styles.style_name, "Style name", hint);
+                let named = !app.styles.style_name.trim().is_empty();
                 ui.horizontal(|ui| {
-                    if labelled(ui.add_enabled(sel.is_some(), egui::Button::new("Set")), "Set style").clicked() {
-                        if let Some((f, s)) = &sel {
-                            actions.push(("style.apply", json!({"family": f, "name": s})));
-                        }
-                    }
-                    if labelled(ui.add_enabled(sel.is_some(), egui::Button::new("Delete")), "Delete style").clicked() {
-                        if let Some((f, s)) = &sel {
-                            actions.push(("style.delete", json!({"family": f, "name": s})));
-                            app.styles.style = None;
-                        }
-                    }
-                });
-                ui.add_space(8.0);
-                ui.label(egui::RichText::new("New style from the indicator panel").small().color(tk.muted));
-                ui.horizontal(|ui| {
-                    let hint = if has_family { "Name" } else { "Pick a family first" };
-                    let enter = field(ui, &mut app.styles.style_name, "Style name", hint);
-                    let named = !app.styles.style_name.trim().is_empty();
                     let add = labelled(ui.add_enabled(has_family && named, egui::Button::new("Add")), "Add style")
                         .clicked();
                     if named && (add || enter) {
@@ -193,10 +145,29 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                             app.styles.style = Some(name);
                         }
                     }
+                    let sel = app.styles.family.clone().zip(app.styles.style.clone());
+                    if labelled(
+                        ui.add_enabled(sel.is_some(), egui::Button::new("Delete")),
+                        "Delete style",
+                    )
+                    .clicked()
+                    {
+                        if let Some((f, s)) = &sel {
+                            actions.push(("style.delete", json!({"family": f, "name": s})));
+                            app.styles.style = None;
+                        }
+                    }
+                    if labelled(ui.add_enabled(sel.is_some(), egui::Button::new("Set")), "Set style")
+                        .clicked()
+                    {
+                        if let Some((f, s)) = &sel {
+                            actions.push(("style.apply", json!({"family": f, "name": s})));
+                        }
+                    }
                 });
             });
             ui.separator();
-            ui.label("Add keeps the current attributes of the indicator panel under the new name (a style of the same name is replaced); Set makes the selected style the indicator's.");
+            ui.label("Add keeps the current attributes of the indicator panel; Set makes the selected style the indicator's.");
             if labelled(ui.button("Close"), "Close styles").clicked() {
                 close = true;
             }
