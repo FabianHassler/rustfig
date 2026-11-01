@@ -9,7 +9,9 @@
 //! a calibration screenshot of the 1400x1000 window; RustFig is driven through its control channel.
 //!
 //! Environment: `XFIG_COMPARE_FILTER=substring[,substring...]` runs the scenarios whose id contains one;
-//! `XFIG_COMPARE_DISPLAY=:77`; `XFIG_COMPARE_PORT=8031`; `XFIG_BIN` (default `/opt/homebrew/bin/xfig`).
+//! `XFIG_COMPARE_OUT=dir` (default `target/xfig-compare`; use another directory, display and port per parallel run);
+//! `XFIG_COMPARE_OUT=dir` (default `target/xfig-compare`; each parallel run needs its own directory,
+//! display and port); `XFIG_COMPARE_DISPLAY=:77`; `XFIG_COMPARE_PORT=8031`; `XFIG_BIN` (default `/opt/homebrew/bin/xfig`).
 
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpStream;
@@ -58,6 +60,63 @@ const FIXTURE2: &str =
 2 2 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 5\n\t 6000 6000 7200 6000 7200 7200 6000 7200 6000 6000\n\
 2 2 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 5\n\t 7800 6600 8400 6600 8400 7500 7800 7500 7800 6600\n\
 -6\n";
+
+/// Round 3 fixture A: an arc with both arrows, the six spline kinds, angled texts, boxes at three depths
+/// (two of them at the same depth), a dashed and a dotted line with arrows, a compound in a compound,
+/// a rotated ellipse and a hatched circle.
+const FIXTURE3: &str =
+    "#FIG 3.2  Produced by xfig version 3.2.9a\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+5 1 0 2 0 7 50 -1 -1 0.000 0 0 1 1 3000.000 3600.000 1200 3600 3000 1800 4800 3600\n\
+\t1 1 1.00 90.00 150.00\n\
+\t1 1 1.00 90.00 150.00\n\
+3 1 0 1 0 7 50 -1 -1 0.000 0 0 0 4\n\t 6000 1200 7800 1200 7800 2400 6000 2400\n\t 1.000 1.000 1.000 1.000\n\
+3 2 0 2 0 7 50 -1 -1 0.000 0 1 0 4\n\t1 1 1.00 60.00 120.00\n\t 9000 1200 10200 2400 11400 1200 12600 2400\n\t 0.000 -0.500 -0.500 0.000\n\
+3 3 0 1 0 7 50 -1 -1 0.000 0 0 0 4\n\t 1200 4800 2400 4200 3600 4800 2400 5400\n\t -0.500 -0.500 -0.500 -0.500\n\
+3 4 0 1 0 7 50 -1 -1 0.000 0 1 0 4\n\t1 1 1.00 60.00 120.00\n\t 4800 4200 6000 5400 7200 4200 8400 5400\n\t 0.000 1.000 -1.000 0.000\n\
+3 5 0 1 0 7 50 -1 -1 0.000 0 0 0 4\n\t 9600 4200 11400 4200 11400 5400 9600 5400\n\t 1.000 -1.000 1.000 -1.000\n\
+4 0 0 40 -1 0 12 0.7854 4 135 600 1200 9600 Angled\\001\n\
+4 2 0 40 -1 16 14 1.5708 4 200 900 3600 9600 Vert\\001\n\
+2 2 0 2 0 12 60 -1 20 0.000 0 0 -1 0 0 5\n\t 1200 6600 3000 6600 3000 7800 1200 7800 1200 6600\n\
+2 2 0 2 0 19 40 -1 20 0.000 0 0 -1 0 0 5\n\t 2100 7200 3900 7200 3900 8400 2100 8400 2100 7200\n\
+2 2 0 2 0 26 40 -1 20 0.000 0 0 -1 0 0 5\n\t 3000 6900 4200 6900 4200 7800 3000 7800 3000 6900\n\
+2 1 1 3 0 7 50 -1 -1 6.000 0 0 -1 0 0 3\n\t 4800 6600 6000 7800 7200 6600\n\
+2 1 2 2 4 7 45 -1 -1 4.000 1 1 -1 0 1 3\n\t2 1 1.00 60.00 120.00\n\t 4800 8100 6000 9000 7200 8100\n\
+6 8400 6000 12600 7500\n\
+2 2 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 5\n\t 8400 6000 9600 6000 9600 7200 8400 7200 8400 6000\n\
+6 10200 6000 12600 7500\n\
+2 2 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 5\n\t 10200 6000 11400 6000 11400 7200 10200 7200 10200 6000\n\
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2\n\t 10500 7500 12600 7500\n\
+-6\n\
+-6\n\
+1 1 0 1 0 7 50 -1 -1 0.000 1 0.5236 13200 9000 1200 600 12000 9000 14400 9000\n\
+1 3 0 1 0 7 45 -1 42 0.000 1 0.0000 8700 9300 450 450 8700 9300 9150 9300\n";
+
+/// Round 3 fixture B: two pictures (one flipped), a pie-wedge arc and an arc with an arrow (both counter-
+/// clockwise), lines with each arrow type, a hatched polygon, a many-point line, a dash-dotted line,
+/// overlapping filled circles at two depths, a rotated ellipse, a centred text and a compound in a
+/// compound (text, spline).
+const FIXTURE4: &str =
+    "#FIG 3.2  Produced by xfig version 3.2.9a\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+2 5 0 1 0 -1 50 -1 -1 0.000 0 0 -1 0 0 5\n\t0 pic.png\n\t 1200 1200 3000 1200 3000 2400 1200 2400 1200 1200\n\
+2 5 0 1 0 -1 45 -1 -1 0.000 0 0 -1 0 0 5\n\t1 pic.png\n\t 3600 1200 5400 1200 5400 2400 3600 2400 3600 1200\n\
+5 2 0 1 0 11 50 -1 20 0.000 0 1 0 0 8100.000 2400.000 9300 2400 8100 1200 6900 2400\n\
+5 1 0 3 1 7 50 -1 -1 0.000 1 1 1 0 11400.000 2400.000 12600 2400 11400 1200 10200 2400\n\t1 1 1.00 90.00 150.00\n\
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 1 0 3\n\t0 0 2.00 90.00 180.00\n\t 1200 3600 2400 4500 3600 3600\n\
+2 1 0 2 0 7 50 -1 -1 0.000 0 0 -1 0 1 3\n\t2 1 1.00 120.00 240.00\n\t 4800 3600 6000 4500 7200 3600\n\
+2 1 0 3 0 7 50 -1 -1 0.000 0 0 -1 1 1 2\n\t3 0 1.00 90.00 150.00\n\t3 1 1.00 90.00 150.00\n\t 8400 4500 10200 4500\n\
+2 3 0 4 1 4 30 -1 42 0.000 0 0 -1 0 0 7\n\t 1200 5400 2400 5400 3000 6300 2400 7200 1200 7200 600 6300 1200 5400\n\
+2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 8\n\t 4200 5400 4800 6300 5400 5400 6000 6300 6600 5400 7200 6300 7800 5400 8400 6300\n\
+2 1 3 2 2 7 50 -1 -1 8.000 0 0 -1 0 0 2\n\t 9000 5400 12000 5400\n\
+1 3 0 2 4 14 55 -1 20 0.000 1 0.0000 4200 8400 750 750 4200 8400 4950 8400\n\
+1 3 0 1 0 2 60 -1 20 0.000 1 0.0000 4800 8400 750 750 4800 8400 5550 8400\n\
+1 1 0 1 0 7 50 -1 -1 0.000 1 0.3000 7800 8400 1200 600 6600 8400 9000 8400\n\
+6 9600 6765 13800 9000\n\
+4 0 0 50 -1 0 12 0.0000 4 135 480 9600 6900 Inner\\001\n\
+6 11400 7200 13800 9000\n\
+3 0 0 1 0 7 50 -1 -1 0.000 0 0 0 4\n\t 11400 9000 12000 7200 13000 9000 13800 7200\n\t 0.000 1.000 1.000 0.000\n\
+-6\n\
+-6\n\
+4 1 1 50 -1 0 20 0.0000 4 300 1200 3000 9600 Center\\001\n";
 
 #[derive(Clone, Copy, PartialEq)]
 enum Btn {
@@ -111,11 +170,19 @@ enum Step {
     Item(i32, i32, &'static str, &'static str),
     /// Press at the first Fig point, drag to the second, release (button).
     Drag(f64, f64, f64, f64, Btn),
+    /// Hold exactly these modifiers from now on (`""`: none): "shift", "ctrl" (Cmd on macOS in RustFig),
+    /// "shift+ctrl". xdotool key down/up for xfig, `ui.modifiers` for RustFig.
+    Hold(&'static str),
+    /// Wheel at a Fig position: `n` notches (positive: up), with the held modifiers.
+    Scroll(f64, f64, i32),
+    /// Crop of the mouse-function box of both apps (xfig above, RustFig below), saved as `<name>-hint.png`.
+    Hint(&'static str),
 }
 
 struct Scenario {
     id: String,
-    /// 0: `FIXTURE`; 1: `FIXTURE2` (compounds, joins, picture) with `pic.png` beside it.
+    /// 0: `FIXTURE`; 1: `FIXTURE2` (compounds, joins, picture) with `pic.png` beside it; 2: `FIXTURE3`;
+    /// 3: `FIXTURE4` (round 3).
     fixture: u8,
     group: &'static str,
     steps: Vec<Step>,
@@ -1097,6 +1164,756 @@ fn scenarios_r2() -> Vec<Scenario> {
     v
 }
 
+/// Round 3 (2026-11-01): Shift and Ctrl variants of the buttons, the wheel, two more fixtures.
+fn scenarios_r3() -> Vec<Scenario> {
+    use Btn::{L, M, R};
+    let mut v: Vec<Scenario> = Vec::new();
+    // Hints with modifiers held, for every mode.
+    for (key, _, _, _) in MODES {
+        v.push(Scenario {
+            id: format!("r3-hint-mods-{key}"),
+            fixture: 1,
+            group: "r3-hints",
+            steps: vec![
+                Step::Mode(key),
+                Step::Move(600.0, 600.0),
+                Step::Hint("plain"),
+                Step::Hold("shift"),
+                Step::Hint("shift"),
+                Step::Hold("ctrl"),
+                Step::Hint("ctrl"),
+                Step::Hold("shift+ctrl"),
+                Step::Hint("shiftctrl"),
+                Step::Hold(""),
+            ],
+            save: false,
+            note: "",
+        });
+    }
+    // Wheel and panning keys.
+    for (id, mods, n) in [
+        ("wheel-down", "", -3),
+        ("wheel-up", "", 3),
+        ("wheel-shift-down", "shift", -3),
+        ("wheel-ctrl-down", "ctrl", -3),
+    ] {
+        v.push(Scenario {
+            id: format!("r3-{id}"),
+            fixture: 1,
+            group: "r3-scroll",
+            steps: vec![
+                Step::Mode("box"),
+                Step::Move(6000.0, 4500.0),
+                Step::Hold(mods),
+                Step::Scroll(6000.0, 4500.0, n),
+                Step::Hold(""),
+                Step::Shot("scrolled"),
+            ],
+            save: false,
+            note: "",
+        });
+    }
+    // Fixtures A (2) and B (3): draw/edit scenarios, one operation each, saved and compared.
+    type Op = (&'static str, u8, &'static str, &'static [(f64, f64, Btn)], bool);
+    let ops: &[Op] = &[
+        // fixture A: arc with arrows, six spline kinds, angled texts, depths, dashes, nested compound
+        (
+            "a-move-arc",
+            2,
+            "move",
+            &[(3000.0, 1800.0, L), (4200.0, 2700.0, L)],
+            true,
+        ),
+        (
+            "a-move-interp-spline",
+            2,
+            "move",
+            &[(10200.0, 2400.0, L), (10200.0, 3300.0, L)],
+            true,
+        ),
+        (
+            "a-copy-xspline-open",
+            2,
+            "copy",
+            &[(4800.0, 4200.0, L), (4800.0, 5700.0, L)],
+            true,
+        ),
+        (
+            "a-copy-xspline-closed",
+            2,
+            "copy",
+            &[(11400.0, 4200.0, L), (11400.0, 6000.0, L)],
+            true,
+        ),
+        (
+            "a-move-approx-closed",
+            2,
+            "move",
+            &[(6900.0, 1200.0, L), (6900.0, 3000.0, L)],
+            true,
+        ),
+        (
+            "a-scale-arc",
+            2,
+            "scale",
+            &[(3000.0, 1800.0, L), (3900.0, 1500.0, L)],
+            true,
+        ),
+        (
+            "a-scale-interp-spline",
+            2,
+            "scale",
+            &[(10200.0, 2400.0, L), (11400.0, 3000.0, L)],
+            true,
+        ),
+        (
+            "a-scale-nested",
+            2,
+            "scale",
+            &[(9000.0, 6000.0, L), (10200.0, 6600.0, L)],
+            true,
+        ),
+        ("a-rotate-text-cw", 2, "rotate_cw", &[(1200.0, 9600.0, L)], true),
+        ("a-rotate-text-ccw", 2, "rotate_ccw", &[(3600.0, 9300.0, L)], true),
+        ("a-rotate-arc-cw", 2, "rotate_cw", &[(3000.0, 1800.0, L)], true),
+        ("a-rotate-arc-ccw", 2, "rotate_ccw", &[(3000.0, 1800.0, L)], true),
+        ("a-rotate-ellipse", 2, "rotate_cw", &[(13200.0, 9600.0, L)], true),
+        (
+            "a-rotate-spline-closed-interp",
+            2,
+            "rotate_cw",
+            &[(2400.0, 4200.0, L)],
+            true,
+        ),
+        ("a-rotate-nested", 2, "rotate_ccw", &[(9000.0, 6000.0, L)], true),
+        ("a-flip-ud-arc", 2, "flip_ud", &[(3000.0, 1800.0, L)], true),
+        ("a-flip-lr-arc", 2, "flip_lr", &[(3000.0, 1800.0, L)], true),
+        ("a-flip-lr-text", 2, "flip_lr", &[(3600.0, 9300.0, L)], true),
+        ("a-flip-ud-text", 2, "flip_ud", &[(3600.0, 9300.0, L)], true),
+        (
+            "a-flip-ud-spline-open-interp",
+            2,
+            "flip_ud",
+            &[(10200.0, 2400.0, L)],
+            true,
+        ),
+        ("a-flip-lr-xspline", 2, "flip_lr", &[(4800.0, 4200.0, L)], true),
+        ("a-flip-lr-ellipse", 2, "flip_lr", &[(13200.0, 9600.0, L)], true),
+        ("a-flip-lr-nested", 2, "flip_lr", &[(9000.0, 6000.0, L)], true),
+        (
+            "a-delete-point-interp",
+            2,
+            "delete_point",
+            &[(10200.0, 2400.0, L)],
+            true,
+        ),
+        (
+            "a-delete-point-xspline",
+            2,
+            "delete_point",
+            &[(6000.0, 5400.0, L)],
+            true,
+        ),
+        (
+            "a-add-point-closed-interp",
+            2,
+            "add_point",
+            &[(3000.0, 4500.0, L), (3000.0, 4200.0, L)],
+            true,
+        ),
+        (
+            "a-add-point-dotted",
+            2,
+            "add_point",
+            &[(5400.0, 8550.0, L), (5400.0, 9300.0, L)],
+            true,
+        ),
+        (
+            "a-move-point-arc",
+            2,
+            "move_point",
+            &[(1200.0, 3600.0, L), (900.0, 3300.0, L)],
+            true,
+        ),
+        (
+            "a-move-point-xspline",
+            2,
+            "move_point",
+            &[(6000.0, 5400.0, L), (6000.0, 6000.0, L)],
+            true,
+        ),
+        (
+            "a-move-point-approx-closed",
+            2,
+            "move_point",
+            &[(7800.0, 1200.0, L), (8400.0, 900.0, L)],
+            true,
+        ),
+        ("a-convert-interp", 2, "convert", &[(10200.0, 2400.0, L)], true),
+        ("a-convert-xspline", 2, "convert", &[(4800.0, 4200.0, L)], true),
+        ("a-convert-closed-interp", 2, "convert", &[(2400.0, 4200.0, L)], true),
+        ("a-convert-dashed-line", 2, "convert", &[(5400.0, 7200.0, L)], true),
+        ("a-convert-right-xspline", 2, "convert", &[(4800.0, 4200.0, R)], true),
+        ("a-update-dashed", 2, "update", &[(5400.0, 7200.0, L)], true),
+        ("a-update-arc", 2, "update", &[(3000.0, 1800.0, L)], true),
+        ("a-update-text", 2, "update", &[(3600.0, 9300.0, L)], true),
+        ("a-autoarrow-dashed", 2, "autoarrow", &[(5400.0, 7200.0, L)], true),
+        ("a-autoarrow-arc", 2, "autoarrow", &[(3000.0, 1800.0, L)], true),
+        ("a-autoarrow-arc-middle", 2, "autoarrow", &[(3000.0, 1800.0, M)], true),
+        (
+            "a-autoarrow-xspline-right",
+            2,
+            "autoarrow",
+            &[(4800.0, 4200.0, R)],
+            true,
+        ),
+        ("a-break-nested", 2, "break", &[(9000.0, 6000.0, L)], true),
+        ("a-break-nested-right", 2, "break", &[(9000.0, 6000.0, R)], true),
+        ("a-delete-nested", 2, "delete", &[(9000.0, 6000.0, L)], true),
+        ("a-delete-depth-behind", 2, "delete", &[(2100.0, 7500.0, L)], true),
+        (
+            "a-delete-depth-top-vs-deeper",
+            2,
+            "delete",
+            &[(3000.0, 7500.0, L)],
+            true,
+        ),
+        ("a-delete-inside-filled", 2, "delete", &[(2400.0, 7500.0, L)], true),
+        ("a-delete-depth-equal", 2, "delete", &[(3000.0, 7200.0, L)], true),
+        ("a-delete-depth-equal-shift", 2, "delete", &[(3000.0, 7200.0, L)], true),
+        (
+            "a-move-depth-equal",
+            2,
+            "move",
+            &[(3000.0, 7200.0, L), (3000.0, 8400.0, L)],
+            true,
+        ),
+        (
+            "a-glue-region-nested",
+            2,
+            "glue",
+            &[(8100.0, 5700.0, M), (13200.0, 7800.0, M)],
+            true,
+        ),
+        (
+            "a-open-compound-nested",
+            2,
+            "open_compound",
+            &[(9000.0, 6000.0, L)],
+            true,
+        ),
+        ("a-tangent-arc", 2, "tangent", &[(3000.0, 1800.0, L)], true),
+        ("a-tangent-xspline", 2, "tangent", &[(6900.0, 4800.0, L)], true),
+        (
+            "a-measure-length-arc",
+            2,
+            "length_measure",
+            &[(3000.0, 1800.0, L)],
+            false,
+        ),
+        (
+            "a-measure-length-xspline",
+            2,
+            "length_measure",
+            &[(6000.0, 5100.0, L)],
+            false,
+        ),
+        (
+            "a-measure-area-closed-spline",
+            2,
+            "area_measure",
+            &[(2400.0, 4200.0, L)],
+            false,
+        ),
+        (
+            "a-measure-area-ellipse",
+            2,
+            "area_measure",
+            &[(13200.0, 9600.0, L)],
+            false,
+        ),
+        ("a-edit-arc", 2, "edit", &[(3000.0, 1800.0, L)], false),
+        ("a-edit-spline-xspline", 2, "edit", &[(4800.0, 4200.0, L)], false),
+        ("a-edit-spline-closed-approx", 2, "edit", &[(6900.0, 1200.0, L)], false),
+        ("a-edit-text-angled", 2, "edit", &[(1200.0, 9600.0, L)], false),
+        ("a-edit-dashed", 2, "edit", &[(5400.0, 7200.0, L)], false),
+        ("a-edit-dotted-arrow", 2, "edit", &[(5400.0, 8550.0, L)], false),
+        ("a-edit-ellipse-rotated", 2, "edit", &[(13200.0, 9600.0, L)], false),
+        ("a-edit-hatched-circle", 2, "edit", &[(8700.0, 9750.0, L)], false),
+        ("a-edit-nested", 2, "edit", &[(9000.0, 6000.0, L)], false),
+        ("a-edit-depth-box", 2, "edit", &[(1500.0, 6600.0, L)], false),
+        // fixture B: pictures, pie arc, arrow types, hatched polygon, many-point line, depths
+        (
+            "b-move-picture-flipped",
+            3,
+            "move",
+            &[(4500.0, 1200.0, L), (4500.0, 2400.0, L)],
+            true,
+        ),
+        (
+            "b-copy-picture",
+            3,
+            "copy",
+            &[(1200.0, 1800.0, L), (1200.0, 3000.0, L)],
+            true,
+        ),
+        (
+            "b-scale-picture-flipped",
+            3,
+            "scale",
+            &[(5400.0, 2400.0, L), (6300.0, 3000.0, L)],
+            true,
+        ),
+        ("b-rotate-picture-flipped", 3, "rotate_cw", &[(4500.0, 1200.0, L)], true),
+        ("b-flip-ud-picture-flipped", 3, "flip_ud", &[(4500.0, 1200.0, L)], true),
+        ("b-flip-lr-picture", 3, "flip_lr", &[(1200.0, 1800.0, L)], true),
+        ("b-delete-picture", 3, "delete", &[(1200.0, 1800.0, L)], true),
+        ("b-edit-picture-flipped", 3, "edit", &[(4500.0, 1200.0, L)], false),
+        ("b-update-picture", 3, "update", &[(4500.0, 1200.0, L)], true),
+        (
+            "b-move-pie-arc",
+            3,
+            "move",
+            &[(8100.0, 1200.0, L), (8100.0, 2400.0, L)],
+            true,
+        ),
+        ("b-rotate-pie-arc", 3, "rotate_cw", &[(8100.0, 1200.0, L)], true),
+        ("b-flip-lr-pie-arc", 3, "flip_lr", &[(8100.0, 1200.0, L)], true),
+        ("b-flip-ud-arc-arrow", 3, "flip_ud", &[(11400.0, 1200.0, L)], true),
+        (
+            "b-scale-pie-arc",
+            3,
+            "scale",
+            &[(6900.0, 2400.0, L), (6300.0, 3000.0, L)],
+            true,
+        ),
+        ("b-edit-pie-arc", 3, "edit", &[(8100.0, 1200.0, L)], false),
+        ("b-edit-arc-arrow", 3, "edit", &[(11400.0, 1200.0, L)], false),
+        ("b-update-pie-arc", 3, "update", &[(8100.0, 1200.0, L)], true),
+        ("b-autoarrow-pie-arc", 3, "autoarrow", &[(8100.0, 1200.0, L)], true),
+        ("b-flip-lr-arrow-line", 3, "flip_lr", &[(1800.0, 4050.0, L)], true),
+        ("b-rotate-arrow-line", 3, "rotate_cw", &[(1800.0, 4050.0, L)], true),
+        (
+            "b-scale-arrow-line",
+            3,
+            "scale",
+            &[(3600.0, 3600.0, L), (4500.0, 3000.0, L)],
+            true,
+        ),
+        (
+            "b-delete-point-arrow-line",
+            3,
+            "delete_point",
+            &[(2400.0, 4500.0, L)],
+            true,
+        ),
+        (
+            "b-add-point-arrow-line",
+            3,
+            "add_point",
+            &[(1800.0, 4050.0, L), (1800.0, 4800.0, L)],
+            true,
+        ),
+        (
+            "b-move-point-arrow-line",
+            3,
+            "move_point",
+            &[(3600.0, 3600.0, L), (3900.0, 3000.0, L)],
+            true,
+        ),
+        ("b-edit-arrow-line", 3, "edit", &[(1800.0, 4050.0, L)], false),
+        ("b-edit-both-arrows", 3, "edit", &[(9300.0, 4500.0, L)], false),
+        ("b-autoarrow-both-delete", 3, "autoarrow", &[(9300.0, 4500.0, M)], true),
+        ("b-update-arrow-line", 3, "update", &[(1800.0, 4050.0, L)], true),
+        (
+            "b-scale-polygon-hatched",
+            3,
+            "scale",
+            &[(3000.0, 6300.0, L), (3600.0, 6900.0, L)],
+            true,
+        ),
+        ("b-rotate-polygon-hatched", 3, "rotate_cw", &[(1800.0, 5400.0, L)], true),
+        ("b-flip-lr-polygon-hatched", 3, "flip_lr", &[(1800.0, 5400.0, L)], true),
+        (
+            "b-delete-point-polygon",
+            3,
+            "delete_point",
+            &[(3000.0, 6300.0, L)],
+            true,
+        ),
+        (
+            "b-add-point-polygon",
+            3,
+            "add_point",
+            &[(1800.0, 5400.0, L), (1800.0, 4800.0, L)],
+            true,
+        ),
+        ("b-convert-polygon", 3, "convert", &[(1800.0, 5400.0, L)], true),
+        ("b-convert-right-polygon", 3, "convert", &[(3000.0, 6300.0, R)], true),
+        ("b-edit-polygon-hatched", 3, "edit", &[(1800.0, 5400.0, L)], false),
+        ("b-update-polygon-hatched", 3, "update", &[(1800.0, 5400.0, L)], true),
+        ("b-convert-manypoint", 3, "convert", &[(4800.0, 6300.0, L)], true),
+        (
+            "b-delete-point-manypoint",
+            3,
+            "delete_point",
+            &[(6000.0, 6300.0, L)],
+            true,
+        ),
+        (
+            "b-move-point-manypoint",
+            3,
+            "move_point",
+            &[(5400.0, 5400.0, L), (5400.0, 4800.0, L)],
+            true,
+        ),
+        ("b-edit-dashdot", 3, "edit", &[(10500.0, 5400.0, L)], false),
+        (
+            "b-delete-circle-edge-in-other",
+            3,
+            "delete",
+            &[(4950.0, 8400.0, L)],
+            true,
+        ),
+        ("b-delete-circle-inside-both", 3, "delete", &[(4500.0, 8400.0, L)], true),
+        (
+            "b-move-circles-edge",
+            3,
+            "move",
+            &[(4950.0, 8400.0, L), (4950.0, 9300.0, L)],
+            true,
+        ),
+        ("b-edit-circle-filled", 3, "edit", &[(3450.0, 8400.0, L)], false),
+        ("b-rotate-ellipse", 3, "rotate_ccw", &[(7800.0, 9000.0, L)], true),
+        ("b-flip-ud-ellipse", 3, "flip_ud", &[(7800.0, 9000.0, L)], true),
+        ("b-edit-ellipse", 3, "edit", &[(7800.0, 9000.0, L)], false),
+        ("b-rotate-text-centered", 3, "rotate_cw", &[(3000.0, 9450.0, L)], true),
+        ("b-flip-ud-text-centered", 3, "flip_ud", &[(3000.0, 9450.0, L)], true),
+        ("b-edit-text-centered", 3, "edit", &[(3000.0, 9450.0, L)], false),
+        ("b-update-text-centered", 3, "update", &[(3000.0, 9450.0, L)], true),
+        (
+            "b-move-nested",
+            3,
+            "move",
+            &[(9600.0, 6900.0, L), (9600.0, 7800.0, L)],
+            true,
+        ),
+        (
+            "b-copy-nested",
+            3,
+            "copy",
+            &[(9600.0, 6900.0, L), (9600.0, 7800.0, L)],
+            true,
+        ),
+        (
+            "b-scale-nested",
+            3,
+            "scale",
+            &[(13800.0, 9000.0, L), (14400.0, 9300.0, L)],
+            true,
+        ),
+        ("b-break-nested", 3, "break", &[(9600.0, 6900.0, L)], true),
+        ("b-open-nested", 3, "open_compound", &[(9600.0, 6900.0, L)], true),
+        ("b-edit-nested", 3, "edit", &[(9600.0, 6900.0, L)], false),
+        ("b-update-nested", 3, "update", &[(9600.0, 6900.0, L)], true),
+        // Shift and Ctrl on real operations (xfig: locate object, dimension line, delete points, zoom, shape factor)
+        ("s-edit-locate-shift", 2, "edit", &[(3000.0, 1800.0, L)], false),
+        ("s-move-locate-shift", 2, "move", &[(10200.0, 2400.0, L)], false),
+        ("s-delete-locate-shift", 2, "delete", &[(5400.0, 7200.0, L)], false),
+        ("s-scale-locate-shift", 2, "scale", &[(1200.0, 9600.0, L)], false),
+        ("s-update-locate-shift", 2, "update", &[(4800.0, 4200.0, L)], false),
+        ("s-rotate-locate-shift", 2, "rotate_cw", &[(13200.0, 9600.0, L)], false),
+        ("s-flip-locate-shift", 2, "flip_ud", &[(8700.0, 9750.0, L)], false),
+        ("s-break-locate-shift", 2, "break", &[(9000.0, 6000.0, L)], false),
+        ("s-edit-locate-nothing-shift", 2, "edit", &[(900.0, 900.0, L)], false),
+    ];
+    for (id, fixture, mode, clicks, save) in ops {
+        let mut steps = vec![Step::Mode(mode)];
+        if id.ends_with("-shift") {
+            steps.push(Step::Move(1200.0, 300.0));
+            steps.push(Step::Hold("shift"));
+        }
+        for &(x, y, b) in *clicks {
+            steps.push(Step::Click(x, y, b));
+        }
+        if id.ends_with("-shift") {
+            steps.push(Step::Hold(""));
+        }
+        steps.push(Step::Shot("after"));
+        v.push(Scenario {
+            id: format!("r3-{id}"),
+            fixture: *fixture,
+            group: "r3-fixtures",
+            steps,
+            save: *save,
+            note: "",
+        });
+    }
+    // Shift and Ctrl with the buttons (xfig `canvas_selected`: Shift goes to the mode's proc, Ctrl alone
+    // is the zoom box / pan to origin / unzoom, Ctrl+Shift in the editing modes the shape factor).
+    let mut add = |id: &str, fixture: u8, steps: Vec<Step>, save: bool, note: &'static str| {
+        v.push(Scenario {
+            id: format!("r3-{id}"),
+            fixture,
+            group: "r3-modifiers",
+            steps,
+            save,
+            note,
+        });
+    };
+    add(
+        "s-polyline-dimension",
+        2,
+        vec![
+            Step::Mode("polyline"),
+            Step::Move(900.0, 9000.0),
+            Step::Hold("shift"),
+            Step::Click(1200.0, 9000.0, L),
+            Step::Hold(""),
+            Step::Click(3600.0, 9000.0, L),
+            Step::Shot("after"),
+        ],
+        true,
+        "Shift+left starts a dimension line",
+    );
+    add(
+        "s-polyline-shift-delpoint",
+        2,
+        vec![
+            Step::Mode("polyline"),
+            Step::Click(12000.0, 8400.0, L),
+            Step::Click(12600.0, 8400.0, L),
+            Step::Click(12600.0, 9000.0, L),
+            Step::Hold("shift"),
+            Step::Click(13200.0, 9600.0, L),
+            Step::Hold(""),
+            Step::Click(13800.0, 8400.0, M),
+            Step::Shot("after"),
+        ],
+        true,
+        "Shift+left deletes the last point",
+    );
+    add(
+        "s-polyline-shift-middle-finish",
+        2,
+        vec![
+            Step::Mode("polyline"),
+            Step::Click(12000.0, 8400.0, L),
+            Step::Click(12600.0, 8400.0, L),
+            Step::Hold("shift"),
+            Step::Click(13800.0, 9600.0, M),
+            Step::Hold(""),
+            Step::Shot("after"),
+        ],
+        true,
+        "Shift+middle finishes without adding the clicked point",
+    );
+    add(
+        "s-spline-shift-delpoint",
+        2,
+        vec![
+            Step::Mode("spline"),
+            Step::Click(12000.0, 8400.0, L),
+            Step::Click(12600.0, 8400.0, L),
+            Step::Click(12600.0, 9000.0, L),
+            Step::Hold("shift"),
+            Step::Click(13200.0, 9600.0, L),
+            Step::Hold(""),
+            Step::Click(13800.0, 8400.0, M),
+            Step::Shot("after"),
+        ],
+        true,
+        "",
+    );
+    add(
+        "s-arc-shift-delpoint",
+        2,
+        vec![
+            Step::Mode("arc"),
+            Step::Click(12000.0, 8400.0, L),
+            Step::Click(12600.0, 8100.0, L),
+            Step::Hold("shift"),
+            Step::Click(13200.0, 9600.0, L),
+            Step::Hold(""),
+            Step::Click(12600.0, 9000.0, L),
+            Step::Click(13200.0, 8400.0, L),
+            Step::Shot("after"),
+        ],
+        true,
+        "",
+    );
+    add(
+        "s-polygon-shift-delpoint",
+        2,
+        vec![
+            Step::Mode("polygon"),
+            Step::Click(12000.0, 8400.0, L),
+            Step::Click(12600.0, 8400.0, L),
+            Step::Click(12600.0, 9000.0, L),
+            Step::Hold("shift"),
+            Step::Click(13200.0, 9600.0, L),
+            Step::Hold(""),
+            Step::Click(13800.0, 8400.0, M),
+            Step::Shot("after"),
+        ],
+        true,
+        "",
+    );
+    add(
+        "s-box-shift",
+        2,
+        vec![
+            Step::Mode("box"),
+            Step::Move(900.0, 9000.0),
+            Step::Hold("shift"),
+            Step::Click(12000.0, 8400.0, L),
+            Step::Click(13200.0, 9300.0, L),
+            Step::Hold(""),
+            Step::Shot("after"),
+        ],
+        true,
+        "Shift with left in the box mode (xfig ignores it)",
+    );
+    add(
+        "s-circle-shift",
+        2,
+        vec![
+            Step::Mode("ellipse_radius"),
+            Step::Move(900.0, 9000.0),
+            Step::Hold("shift"),
+            Step::Click(12600.0, 8400.0, L),
+            Step::Click(13500.0, 8400.0, L),
+            Step::Hold(""),
+            Step::Shot("after"),
+        ],
+        true,
+        "",
+    );
+    add(
+        "s-ctrl-zoom-box",
+        1,
+        vec![
+            Step::Mode("box"),
+            Step::Move(6000.0, 3000.0),
+            Step::Hold("ctrl"),
+            Step::Click(6000.0, 3000.0, L),
+            Step::Click(9000.0, 5100.0, L),
+            Step::Hold(""),
+            Step::Shot("zoomed"),
+        ],
+        false,
+        "Ctrl+left: zoom area",
+    );
+    add(
+        "s-ctrl-right-unzoom",
+        1,
+        vec![
+            Step::Mode("box"),
+            Step::Move(6000.0, 3000.0),
+            Step::Hold("ctrl"),
+            Step::Click(6000.0, 3000.0, L),
+            Step::Click(9000.0, 5100.0, L),
+            Step::Click(6000.0, 3000.0, R),
+            Step::Hold(""),
+            Step::Shot("unzoomed"),
+        ],
+        false,
+        "Ctrl+right: unzoom",
+    );
+    add(
+        "s-ctrl-middle-pan-origin",
+        1,
+        vec![
+            Step::Mode("box"),
+            Step::Move(6000.0, 3000.0),
+            Step::Scroll(6000.0, 3000.0, -4),
+            Step::Hold("ctrl"),
+            Step::Click(6000.0, 3000.0, M),
+            Step::Hold(""),
+            Step::Shot("panned"),
+        ],
+        false,
+        "Ctrl+middle: pan to origin",
+    );
+    add(
+        "s-ctrl-during-box",
+        1,
+        vec![
+            Step::Mode("box"),
+            Step::Click(9000.0, 6000.0, L),
+            Step::Hold("ctrl"),
+            Step::Click(9600.0, 6300.0, L),
+            Step::Hold(""),
+            Step::Click(10500.0, 7200.0, L),
+            Step::Shot("after"),
+        ],
+        true,
+        "Ctrl while a box is under way: xfig refuses the zoom box",
+    );
+    add(
+        "s-ctrlshift-draw-box",
+        2,
+        vec![
+            Step::Mode("box"),
+            Step::Move(900.0, 9000.0),
+            Step::Hold("shift+ctrl"),
+            Step::Click(12000.0, 8400.0, L),
+            Step::Click(13200.0, 9300.0, L),
+            Step::Hold(""),
+            Step::Shot("after"),
+        ],
+        true,
+        "Ctrl+Shift in a drawing mode: xfig runs the mode's own proc (draws)",
+    );
+    for (id, mode, x, y, b) in [
+        ("xspline-left", "move", 6000.0, 5400.0, L),
+        ("xspline-middle", "move", 6000.0, 5400.0, M),
+        ("xspline-right", "move", 6000.0, 5400.0, R),
+        ("approx-left", "delete", 7800.0, 1200.0, L),
+        ("interp-right", "update", 10200.0, 2400.0, R),
+        ("closed-xspline-middle", "copy", 11400.0, 4200.0, M),
+        ("polyline-left", "move", 5400.0, 7200.0, L),
+        ("arc-middle", "move", 3000.0, 1800.0, M),
+    ] {
+        add(
+            &format!("s-ctrlshift-sfactor-{id}"),
+            2,
+            vec![
+                Step::Mode(mode),
+                Step::Move(x, y),
+                Step::Hold("shift+ctrl"),
+                Step::Click(x, y, b),
+                Step::Hold(""),
+                Step::Shot("after"),
+            ],
+            true,
+            "Ctrl+Shift: shape factor of the nearest spline point",
+        );
+    }
+    for (id, key, rk) in [
+        ("key-right", "Right", "ArrowRight"),
+        ("key-down", "Down", "ArrowDown"),
+        ("key-shift-down", "shift+Down", "ArrowDown"),
+        ("key-home", "Home", "Home"),
+    ] {
+        add(
+            &format!("s-{id}"),
+            1,
+            vec![
+                Step::Mode("box"),
+                Step::Move(6000.0, 3000.0),
+                Step::Key("Down", "ArrowDown"),
+                Step::Key("Right", "ArrowRight"),
+                Step::Key(key, rk),
+                Step::Shot("panned"),
+            ],
+            false,
+            "panning keys",
+        );
+    }
+    v
+}
+
 fn scenarios() -> Vec<Scenario> {
     use Btn::{L, M};
     let mut v: Vec<Scenario> = Vec::new();
@@ -1510,6 +2327,7 @@ fn scenarios() -> Vec<Scenario> {
         );
     }
     v.extend(scenarios_r2());
+    v.extend(scenarios_r3());
     v
 }
 
@@ -1595,6 +2413,9 @@ struct Rf {
     canvas: (f64, f64),
     origin: (f64, f64),
     log: Vec<String>,
+    /// Modifiers held (`Step::Hold`), JSON names, sent with every pointer step: `ui.modifiers` alone
+    /// does not reach the press events' own modifier field.
+    mods: Vec<String>,
 }
 
 fn json_str(s: &str) -> String {
@@ -1660,6 +2481,7 @@ impl Rf {
             canvas: (0.0, 0.0),
             origin: (0.0, 0.0),
             log: Vec::new(),
+            mods: Vec::new(),
         };
         rf.call("app.ping", "{}")?;
         rf.call("ui.run", r#"{"command":"app.theme","params":{"theme":"light"}}"#)?;
@@ -1720,9 +2542,17 @@ impl Rf {
 
     fn pointer(&mut self, action: &str, x: f64, y: f64, b: Btn) -> Result<(), String> {
         let (px, py) = self.pt(x, y);
+        let mods = if self.mods.is_empty() {
+            String::new()
+        } else {
+            format!(r#","modifiers":[{}]"#, self.mods.join(","))
+        };
         self.call(
             "ui.pointer",
-            &format!(r#"{{"action":"{action}","x":{px},"y":{py},"button":"{}"}}"#, b.name()),
+            &format!(
+                r#"{{"action":"{action}","x":{px},"y":{py},"button":"{}"{mods}}}"#,
+                b.name()
+            ),
         )?;
         Ok(())
     }
@@ -1922,6 +2752,15 @@ fn rmse(a: &Path, b: &Path, diff: &Path) -> f64 {
         .unwrap_or(1.0)
 }
 
+fn fixture_text(n: u8) -> &'static str {
+    match n {
+        1 => FIXTURE2,
+        2 => FIXTURE3,
+        3 => FIXTURE4,
+        _ => FIXTURE,
+    }
+}
+
 fn run_scenario(env: &Env, sc: &Scenario) -> Result<Outcome, String> {
     let dir = env.out.join("work").join(&sc.id);
     let img = env.out.join("img").join(&sc.id);
@@ -1935,10 +2774,10 @@ fn run_scenario(env: &Env, sc: &Scenario) -> Result<Outcome, String> {
         std::fs::create_dir_all(d).map_err(|e| format!("{}: {e}", d.display()))?;
     }
     let (xf_fig, rf_fig) = (dir.join("xfig.fig"), dir.join("rustfig.fig"));
-    let fixture = if sc.fixture == 1 { FIXTURE2 } else { FIXTURE };
+    let fixture = fixture_text(sc.fixture);
     std::fs::write(&xf_fig, fixture).map_err(|e| e.to_string())?;
     std::fs::write(&rf_fig, fixture).map_err(|e| e.to_string())?;
-    if sc.fixture == 1 {
+    if sc.fixture != 0 && sc.fixture != 2 {
         // a small picture beside each .fig (relative path in the figure)
         let png = env.out.join("pic.png");
         if !png.is_file() {
@@ -2007,8 +2846,100 @@ fn drive(env: &Env, sc: &Scenario, rf: &mut Rf, dir: &Path, img: &Path) -> Resul
     let (mut full_worst, mut canvas_worst) = (0.0f64, 0.0f64);
     xdo(d, &["mousemove", "700", "990"]);
     sleep_ms(300);
+    let mut held = "";
     for step in &sc.steps {
         match step {
+            Step::Hold(mods) => {
+                let has = |m: &str, k: &str| m.split('+').any(|t| t == k);
+                for (k, xk) in [("shift", "Shift_L"), ("ctrl", "Control_L")] {
+                    if has(held, k) && !has(mods, k) {
+                        xdo(d, &["keyup", xk]);
+                    } else if !has(held, k) && has(mods, k) {
+                        xdo(d, &["keydown", xk]);
+                    }
+                }
+                held = mods;
+                let list: Vec<String> = mods
+                    .split('+')
+                    .filter(|t| !t.is_empty())
+                    .map(|t| {
+                        let t = if t == "ctrl" && cfg!(target_os = "macos") {
+                            "command"
+                        } else {
+                            t
+                        };
+                        json_str(t)
+                    })
+                    .collect();
+                rf.call("ui.modifiers", &format!(r#"{{"modifiers":[{}]}}"#, list.join(",")))?;
+                rf.mods = list;
+                sleep_ms(400);
+            }
+            Step::Scroll(x, y, n) => {
+                let (x, y) = (snap(*x), snap(*y));
+                pointer_to(d, rf, x, y, fx(x), fy(y))?;
+                for _ in 0..n.unsigned_abs() {
+                    xdo(d, &["click", if *n > 0 { "4" } else { "5" }]);
+                    sleep_ms(150);
+                }
+                let (px, py) = rf.pt(x, y);
+                let mods = if held.is_empty() {
+                    String::new()
+                } else {
+                    let l: Vec<String> = held
+                        .split('+')
+                        .map(|t| {
+                            let t = if t == "ctrl" && cfg!(target_os = "macos") {
+                                "command"
+                            } else {
+                                t
+                            };
+                            json_str(t)
+                        })
+                        .collect();
+                    format!(r#","modifiers":[{}]"#, l.join(","))
+                };
+                // one notch is 15 points of wheel in RustFig's control channel
+                let dy = f64::from(*n) * 15.0;
+                rf.call(
+                    "ui.pointer",
+                    &format!(r#"{{"action":"scroll","x":{px},"y":{py},"dx":0,"dy":{dy}{mods}}}"#),
+                )?;
+                sleep_ms(300);
+            }
+            Step::Hint(name) => {
+                sleep_ms(300);
+                let (xw, rw) = (img.join("xfig-raw.png"), img.join("rustfig-raw.png"));
+                xfig_shot(d, &xw)?;
+                rf.shot(&rw)?;
+                let out = img.join(format!("{name}-hint.png"));
+                let (a, b) = (img.join(format!("{name}-hx.png")), img.join(format!("{name}-hr.png")));
+                magick(&[
+                    &xw.display().to_string(),
+                    "-crop",
+                    "290x50+1040+0",
+                    "+repage",
+                    &a.display().to_string(),
+                ])?;
+                magick(&[
+                    &rw.display().to_string(),
+                    "-resize",
+                    &format!("{WIN_W}x"),
+                    "-crop",
+                    "290x50+1085+0",
+                    "+repage",
+                    &b.display().to_string(),
+                ])?;
+                magick(&[
+                    &a.display().to_string(),
+                    &b.display().to_string(),
+                    "-append",
+                    &out.display().to_string(),
+                ])?;
+                let _ = std::fs::remove_file(&a);
+                let _ = std::fs::remove_file(&b);
+                shots.push(format!("{name}-hint"));
+            }
             Step::Mode(key) => {
                 let Some((_, draw, idx, label)) = MODES.iter().find(|m| m.0 == *key) else {
                     return Err(format!("unknown mode {key}"));
@@ -2200,7 +3131,7 @@ fn drive(env: &Env, sc: &Scenario, rf: &mut Rf, dir: &Path, img: &Path) -> Resul
         let a = std::fs::read_to_string(dir.join("xfig.fig")).map_err(|e| e.to_string())?;
         let b = std::fs::read_to_string(dir.join("rustfig.fig")).map_err(|e| e.to_string())?;
         diff = fig_diff(&fig_objects(&a), &fig_objects(&b));
-        fig_note = if a.trim() == (if sc.fixture == 1 { FIXTURE2 } else { FIXTURE }).trim() {
+        fig_note = if a.trim() == fixture_text(sc.fixture).trim() {
             "xfig file unchanged (save may not have run)".into()
         } else {
             String::new()
@@ -2241,6 +3172,13 @@ fn report(out: &Path, mut rows: Vec<Outcome>, failed: &[(String, String)]) -> Re
             r.canvas_rmse
         ));
         for s in &r.shots {
+            if s.ends_with("-hint") {
+                let f = format!("img/{}/{s}.png", r.id);
+                h.push_str(&format!(
+                    "<div>{s}: xfig above, RustFig below</div><a href=\"{f}\"><img src=\"{f}\"></a>"
+                ));
+                continue;
+            }
             for (suffix, label) in [("", "window"), ("-canvas", "canvas")] {
                 h.push_str(&format!("<div>{s} {label}:</div><div style=\"display:flex;gap:4px\">"));
                 for k in ["xfig", "rustfig", "diff"] {
@@ -2307,7 +3245,7 @@ pub fn run(root: &Path, cargo: Command) -> Result<(), String> {
     if !b.status().map_err(|e| e.to_string())?.success() {
         return Err("building rustfig failed".into());
     }
-    let out = root.join("target/xfig-compare");
+    let out = std::env::var_os("XFIG_COMPARE_OUT").map_or_else(|| root.join("target/xfig-compare"), PathBuf::from);
     let _ = std::fs::remove_dir_all(out.join("img"));
     let _ = std::fs::remove_dir_all(out.join("work"));
     std::fs::create_dir_all(&out).map_err(|e| e.to_string())?;

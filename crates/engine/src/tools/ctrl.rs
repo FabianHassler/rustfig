@@ -24,9 +24,15 @@ impl Engine {
             return Ok(());
         }
         if shift {
-            // Only the editing modes (`cur_mode >= FIRST_EDIT_MODE`).
+            // Only the editing modes (`cur_mode >= FIRST_EDIT_MODE`); in a
+            // drawing mode xfig falls through to the mode's own button proc
+            // with Shift (W22 round 3, `canvas_selected`).
             if self.tool.is_drawing() {
-                return Ok(());
+                return self.tool_event(super::ToolEvent::Press {
+                    pos,
+                    button,
+                    shift: true,
+                });
             }
             return self.change_sfactor(pos, button);
         }
@@ -38,11 +44,17 @@ impl Engine {
                     cursor: pos,
                 };
             }
-            Button::Left => {}
+            Button::Left => {
+                // xfig's `check_action_on` refuses the zoom box and the click does nothing at all:
+                // the release that follows must not finish the tool's drag either (W22 round 3).
+                self.ignore_release = true;
+            }
             Button::Middle => {
                 // `pan_origin`: the figure's origin at the canvas's corner.
                 self.execute("view.pan_origin", &json!({}))?;
             }
+            // `zoom_selected`: only Button2 (panning) is allowed while a tool is at work.
+            Button::Right if self.tool_busy() => {}
             Button::Right => {
                 // `unzoom`: back to 100 %, the corner stays.
                 self.view.zoom_about(1.0, Point::ZERO);
@@ -126,7 +138,7 @@ impl Engine {
         };
         match self.execute(
             "spline.shape_factor",
-            &json!({"id": id.0, "index": index, "action": action}),
+            &json!({"id": id.0, "index": index, "action": action, "reappend": true}),
         ) {
             Ok(_) => Ok(()),
             Err(e) => {

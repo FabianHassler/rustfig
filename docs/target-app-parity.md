@@ -19,7 +19,7 @@ the score.
 
 | Area | Weight | Score | Missing | Hours |
 |------|-------:|------:|---------|------:|
-| Editing modes | 12 | 97 % | none known (screen capture, D11, and the arc and Unit/Scale messages are done). Checked against the real xfig in two rounds (W22, 216 scenarios: every mode, its three buttons, dialogs, compounds; 30 real differences fixed, 2026-10-25); the audit lists no other missing function | 8 |
+| Editing modes | 12 | 97 % | none known (screen capture, D11, and the arc and Unit/Scale messages are done). Checked against the real xfig in three rounds (W22, 426 scenarios: every mode, its three buttons with Shift and Ctrl, dialogs, compounds, wheel and keys, three fixtures; 41 real differences fixed, 2026-10-25 and 2026-11-01; questions for the user: picking inside filled objects and by depth, Ctrl+wheel zoom steps); the audit lists no other missing function | 8 |
 | Attributes / indicator | 10 | 93 % | mix memory and lock of xfig's colour panel (recent colours instead); depth pop-up, labels and text flags as xfig since W22 | 3 |
 | Drawing modes | 12 | 98 % | none known | 0 |
 | File format | 10 | 92 % | exact pre-3.2 spline conversion | 4 |

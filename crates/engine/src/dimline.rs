@@ -192,7 +192,9 @@ pub fn create(
     let mut boxed = Object::new(ObjectKind::Polyline(Polyline::new(
         PolyKind::Polygon,
         box_style,
-        vec![Point::ZERO; 5],
+        // Four corners: a polygon's closing point is written, not stored (the box had five
+        // here and the file got a point twice).
+        vec![Point::ZERO; 4],
     )));
     boxed.comments = vec![BOX.into()];
 
@@ -385,7 +387,6 @@ pub fn recompute(o: &mut Object, s: &DimlineSettings, fmt: &dyn Fn(f64) -> Strin
                     at(centre, -tlen2, tht2),
                     at(centre, tlen2, tht2),
                     at(centre, tlen2, -tht2),
-                    at(centre, -tlen2, -tht2),
                 ];
             }
             Some(TICK) => {

@@ -13,7 +13,8 @@ use serde_json::{json, Value};
 /// xfig's `2*STEP_VALUE` (`STEP_VALUE` is 0.02).
 const STEP: f64 = 0.04;
 const APPROX: f64 = 1.0;
-const INTERP: f64 = -1.0;
+/// `S_SPLINE_INTERP` is -0.5 in xfig's `object.h`.
+const INTERP: f64 = -0.5;
 const ANGULAR: f64 = 0.0;
 
 pub(super) fn commands() -> Vec<Command> {
@@ -82,5 +83,8 @@ fn shape_factor(e: &mut Engine, p: &Value) -> CmdResult {
         *v = new;
     }
     s.kind = SplineKind::X;
+    if super::opt_bool(p, "reappend").ok().flatten().unwrap_or(false) {
+        super::transform::move_to_end(e, &[id]);
+    }
     Ok(json!({"shape": new}))
 }

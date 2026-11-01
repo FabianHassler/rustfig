@@ -68,7 +68,7 @@ How keys are written (W21): macOS ⌃ ⌥ ⇧ ⌘ plus a thin space ("⌥ U"), W
 | Shift+arrows, word jumps (Option on macOS, Ctrl elsewhere), select all, copy/cut/paste while typing (E10, RustFig's own) | selection and system clipboard | ✅ |
 | Wheel / Shift+wheel | pan vertically / horizontally | ✅ |
 | Ctrl+wheel | zoom | ✅ |
-| Ctrl+left/middle/right | zoom area / pan to origin / unzoom | ✅ E3 (Cmd on macOS); Ctrl+Shift+click shape factor ✅ S4-6 |
+| Ctrl+left/middle/right | zoom area / pan to origin / unzoom | ✅ E3 (Cmd on macOS); Ctrl+Shift+click shape factor ✅ S4-6 (editing modes; in the drawing modes Ctrl+Shift is Shift, W22 round 3; a Ctrl click while a tool is busy does nothing) |
 | Alt+wheel up/down | pop up the drawing/editing mode menus | ✅ (`panels::mode_popup`; closes on a mode, Escape, a click elsewhere or the wheel the other way) |
 | Ctrl-K | keyboard coordinate entry panel (`w_keyboard.c`) | ✅ Edit > Enter point… (Ctrl+K; PhysCtrl+K with xfig's keys), D10 |
 | Meta (Compose) alone, then two keys | compose characters (`CompKeyDB`, 97 sequences) | ✅ (`rustfig_text::compose`); on macOS Option's own dead keys work too |

@@ -22,7 +22,11 @@ fn i(v: f64) -> i64 {
 }
 
 fn f(v: f64) -> f64 {
-    if v.is_finite() {
+    // No "-0.000": negative zero and values that round to it print as 0 (a flipped arc's
+    // centre was written "-0" where xfig writes 0).
+    if v.is_finite() && v.abs() < 5.0e-5 {
+        0.0
+    } else if v.is_finite() {
         v
     } else {
         0.0

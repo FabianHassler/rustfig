@@ -17,7 +17,7 @@ No key (xfig key Ctrl+E). Opens the edit panel for an object with all of its att
 
 - Line style, cap style, join style and the arrow types are pictorial menus: the button shows the picture of the current value, its pop-up lists every value as a picture (the same pictures as the attribute panel). Every row of the panel has the same height, labels sit on the left and controls in one column, and the point table has headings (#, X, Y, Shape) over its columns.
 - Fill style (indicator and edit panel): the edit panel's "Fill style" row is a button showing the current fill; it opens the same choice panel as the indicator (NONE, shades and tints of the fill colour, patterns) and a label beside it says "No fill", "Filled 50 %" or "Pattern 3" as xfig's panel does. For the fill colours black, white and default the menu has no tints, as in xfig (a tint set earlier becomes the full colour).
-- Points of a polyline, polygon or spline are a table: edit the X and Y of a row, Insert adds a point before that row, Delete removes it (the object keeps its minimum number of points), Add point appends one. Open Paste points, type or paste a list (one point per pair of numbers: `x y`, `x, y` or `(x, y)`, in the units shown in the panel) and choose Replace points or Append points. X-splines have a Shape column with each point's shape factor (-1 interpolated, 0 angular, 1 approximated).
+- Points of a polyline, polygon or spline are a table: edit the X and Y of a row, Insert adds a point before that row, Delete removes it (the object keeps its minimum number of points), Add point appends one. Open Paste points, type or paste a list (one point per pair of numbers: `x y`, `x, y` or `(x, y)`, in the units shown in the panel) and choose Replace points or Append points. X-splines have a Shape column with each point's shape factor (-0.5 interpolated, 0 angular, 1 approximated; xfig's panel scale runs from -1 to 1).
 - A compound has its own panel, see [Compounds](compounds.md).
 
 - Left, “edit object”: click an object.
@@ -42,6 +42,6 @@ No key. Closes an open line or spline (a polyline becomes a polygon) or opens a 
 
 Key `Shift+A`. Arrowheads are shaped by the indicator's Arrow Type, Arrow Size and Arrow Mode.
 
-- Left, “add arrow”: click near the end of a line, arc or open spline; an arrowhead is added at that end.
-- Middle, “delete arrow”: removes the arrowhead at that end.
+- Left, “add arrow”: click on the first or last point of a line, arc or open spline (xfig's point search; a click anywhere else does nothing); an arrowhead is added at that end.
+- Middle, “delete arrow”: click on the end point to remove the arrowhead there.
 - Right, “reverse arrows”: swaps the arrowheads of the object's two ends.

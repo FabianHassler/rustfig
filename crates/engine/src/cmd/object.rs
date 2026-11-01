@@ -37,7 +37,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Update from Current Attributes",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id]}  — apply the indicator's attributes",
+            params: "{\"ids\"?: [id], \"reappend\"?: bool (the object goes to the end of the list, as xfig's Update mode)}  — apply the indicator's attributes",
             mutates: true,
             enabled: always,
             run: update,
@@ -117,7 +117,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Convert Line ↔ Spline",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id]}",
+            params: "{\"ids\"?: [id], \"reappend\"?: bool (the converted object goes to the end of the list, as xfig's Convert mode)}",
             mutates: true,
             enabled: always,
             run: convert,
@@ -157,7 +157,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Add point",
             menu: "",
             shortcut: "",
-            params: "{\"id\", \"index\": insert before this vertex, \"x\", \"y\"}",
+            params: "{\"id\", \"index\": insert before this vertex, \"x\", \"y\", \"reappend\"?: bool (the object goes to the end of the list, as xfig's Add point mode)}",
             mutates: true,
             enabled: |_| true,
             run: point_add,
@@ -167,7 +167,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Delete point",
             menu: "",
             shortcut: "",
-            params: "{\"id\", \"index\"}",
+            params: "{\"id\", \"index\", \"reappend\"?: bool (the object goes to the end of the list, as xfig's Delete point mode)}",
             mutates: true,
             enabled: |_| true,
             run: point_delete,
@@ -276,6 +276,8 @@ pub(super) fn update(e: &mut Engine, p: &Value) -> CmdResult {
     // attributes are copied.
     let ind = e.indicator.clone();
     let n = for_targets(e, p, &mut |o| ind.update_object(o))?;
+    // xfig's `change_*`: the updated object is added again at the end of its list.
+    super::transform::reappend(e, p);
     Ok(json!({"count": n}))
 }
 
@@ -711,7 +713,13 @@ fn convert(e: &mut Engine, p: &Value) -> CmdResult {
                 if closed && pl.points.len() < 3 {
                     return;
                 }
-                let mut s = Spline::new(remembered, closed, pl.style, pl.points.clone());
+                // `line_spline`: a polygon's first point is dropped and its closing
+                // point kept, so the spline starts at the second vertex.
+                let mut pts = pl.points.clone();
+                if closed && !pts.is_empty() {
+                    pts.rotate_left(1);
+                }
+                let mut s = Spline::new(remembered, closed, pl.style, pts);
                 s.forward_arrow = pl.forward_arrow;
                 s.backward_arrow = pl.backward_arrow;
                 ObjectKind::Spline(s)
@@ -723,7 +731,12 @@ fn convert(e: &mut Engine, p: &Value) -> CmdResult {
                 } else {
                     PolyKind::Polyline
                 };
-                let mut pl = Polyline::new(kind, s.style, s.points.clone());
+                // `spline_line`: a closed spline's last point comes first in the polygon.
+                let mut pts = s.points.clone();
+                if s.closed && !pts.is_empty() {
+                    pts.rotate_right(1);
+                }
+                let mut pl = Polyline::new(kind, s.style, pts);
                 pl.forward_arrow = s.forward_arrow;
                 pl.backward_arrow = s.backward_arrow;
                 ObjectKind::Polyline(pl)
@@ -733,6 +746,8 @@ fn convert(e: &mut Engine, p: &Value) -> CmdResult {
         o.kind = new;
     })?;
     e.convert_kind = remembered;
+    // The converted object is added at the end of the list, as xfig does.
+    super::transform::reappend(e, p);
     Ok(json!({"count": n}))
 }
 
@@ -771,7 +786,10 @@ fn toggle_closed(e: &mut Engine, p: &Value) -> CmdResult {
                 if s.closed {
                     s.forward_arrow = None;
                     s.backward_arrow = None;
-                    let d = s.kind.default_shape();
+                    // `toggle_open_closed_spline`: both ends take S_SPLINE_APPROX
+                    // (1.0) for an approximated spline, S_SPLINE_INTERP (-0.5)
+                    // for the others, X-splines too (W22 round 3).
+                    let d = if s.kind == SplineKind::Approximated { 1.0 } else { -0.5 };
                     if let Some(f) = s.shapes.first_mut() {
                         *f = d;
                     }
@@ -844,6 +862,7 @@ fn point_add(e: &mut Engine, p: &Value) -> CmdResult {
         .get_mut(id)
         .ok_or_else(|| EngineError::not_found("object vanished"))?;
     insert_point(o, idx, pt)?;
+    reappend_one(e, id, p);
     Ok(json!({}))
 }
 
@@ -885,7 +904,16 @@ fn point_delete(e: &mut Engine, p: &Value) -> CmdResult {
         .get_mut(id)
         .ok_or_else(|| EngineError::not_found("object vanished"))?;
     remove_point(o, idx)?;
+    reappend_one(e, id, p);
     Ok(json!({}))
+}
+
+/// xfig takes an object whose point was added or deleted out of its list and adds it
+/// again at the end (`list_delete_*`, `list_add_*`): `reappend: true` does the same.
+fn reappend_one(e: &mut Engine, id: ObjectId, p: &Value) {
+    if opt_bool(p, "reappend").ok().flatten().unwrap_or(false) {
+        super::transform::move_to_end(e, &[id]);
+    }
 }
 
 /// Remove vertex `idx` of a line, polygon or spline, keeping the minimum

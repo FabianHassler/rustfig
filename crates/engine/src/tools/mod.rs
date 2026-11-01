@@ -1036,6 +1036,9 @@ impl Engine {
         if let ToolEvent::Ctrl { pos, button, shift } = ev {
             return self.ctrl_press(pos, button, shift);
         }
+        if matches!(ev, ToolEvent::Release { .. }) && std::mem::take(&mut self.ignore_release) {
+            return Ok(());
+        }
         if let ToolEvent::Press { pos, button, shift } = ev {
             if self.locate_mode() && pos.is_finite() {
                 // Shift+left locates (xfig: any button). Shift+middle and
@@ -1600,11 +1603,10 @@ impl Engine {
                 } = self.tool_state
                 {
                     // Finished with the button that started it (decided
-                    // 2026-10-23), except xfig's ellipse, which either
-                    // button finishes (`d_ellipse.c`; xfig's buttons stay).
-                    let ellipse = matches!(kind, ToolKind::EllipseRadii | ToolKind::EllipseDiameter);
-                    let finishes = (ellipse && button != Button::Right) || b == button;
-                    if !finishes {
+                    // 2026-10-23), the ellipse modes too: xfig lets left or
+                    // middle finish them (`d_ellipse.c`), RustFig keeps the
+                    // other button free (user rule, W22 round 3).
+                    if b != button {
                         return Ok(());
                     }
                     self.tool_state = ToolState::Idle;
@@ -2632,7 +2634,10 @@ impl Engine {
     ) -> Result<(), EngineError> {
         let p = self.point_target(id, index, insert, start, pos, constrain);
         let cmd = if insert { "point.add" } else { "point.move" };
-        self.execute(cmd, &json!({"id": id.0, "index": index, "x": p.x, "y": p.y}))?;
+        self.execute(
+            cmd,
+            &json!({"id": id.0, "index": index, "x": p.x, "y": p.y, "reappend": insert}),
+        )?;
         Ok(())
     }
 
@@ -2904,7 +2909,7 @@ impl Engine {
                     let (center, axis) = if button == Button::Middle {
                         (bb.center(), ScaleAxis::Both)
                     } else {
-                        scale_handle(&bb, pos)
+                        scale_handle(&bb, pos, tol)
                     };
                     let from = if button == Button::Middle {
                         // `init_center_scale`: the object point the click found.
@@ -3135,7 +3140,7 @@ impl Engine {
         if tool == ToolKind::DeletePoint {
             if button == Button::Left {
                 if let Some((id, index)) = self.find_vertex(pos, tol) {
-                    self.execute("point.delete", &json!({"id": id.0, "index": index}))?;
+                    self.execute("point.delete", &json!({"id": id.0, "index": index, "reappend": true}))?;
                 }
             }
             return Ok(());
@@ -3216,7 +3221,7 @@ impl Engine {
             }
             (ToolKind::Update, Button::Left) => {
                 self.set_selection(vec![id]);
-                self.execute("object.update", &json!({ "ids": ids }))?;
+                self.execute("object.update", &json!({ "ids": ids, "reappend": true }))?;
             }
             (ToolKind::Update, Button::Middle) if !is_compound => {
                 // xfig's "update settings": the object's attributes become
@@ -3273,7 +3278,7 @@ impl Engine {
             }
             (ToolKind::Convert, Button::Left) => {
                 self.set_selection(vec![id]);
-                self.execute("object.convert", &json!({ "ids": ids }))?;
+                self.execute("object.convert", &json!({ "ids": ids, "reappend": true }))?;
             }
             (ToolKind::Convert, Button::Right) => {
                 // `point_search_right`: the click must hit a vertex of a line
@@ -3297,13 +3302,21 @@ impl Engine {
             (ToolKind::Arrow, Button::Left | Button::Middle) => {
                 let Some(o) = self.doc().get(id) else { return Ok(()) };
                 let Some((fwd, back)) = o.arrows() else { return Ok(()) };
-                let pts = rustfig_model::flatten_object(o);
-                let Some(path) = pts.first() else { return Ok(()) };
-                let (Some(first), Some(last)) = (path.pts.first(), path.pts.last()) else {
+                // `point_search_left`/`_middle`: the click must hit the first (backward arrow)
+                // or last point (forward arrow) of the line, spline or arc; anywhere else
+                // does nothing (W22 round 3). The control points, not the flattened curve.
+                let Some(cp) = o.points() else { return Ok(()) };
+                let (Some(first), Some(last)) = (cp.first(), cp.last()) else {
                     return Ok(());
                 };
-                // The forward arrow sits at the last point.
-                let at_end = pos.dist(*last) <= pos.dist(*first);
+                let tol = self.pick_tol();
+                let at_end = if pos.dist(*first) <= tol {
+                    false
+                } else if pos.dist(*last) <= tol {
+                    true
+                } else {
+                    return Ok(());
+                };
                 let present = if at_end { fwd.is_some() } else { back.is_some() };
                 // xfig: left adds an arrow, middle removes one.
                 let toggle = match button {
@@ -3465,8 +3478,8 @@ impl Engine {
                 // Finished with the button that started it.
                 match kind {
                     _ if *button == Button::Right => h("", "", "final point"),
-                    ToolKind::EllipseRadii => h("Ellipse corner", "Ellipse corner", "cancel"),
-                    ToolKind::EllipseDiameter => h("final corner", "final corner", "cancel"),
+                    ToolKind::EllipseRadii => on(*button, "Ellipse corner", "cancel"),
+                    ToolKind::EllipseDiameter => on(*button, "final corner", "cancel"),
                     ToolKind::CircleRadius => on(*button, "set radius", "cancel"),
                     _ => on(*button, "final point", "cancel"),
                 }
@@ -3965,10 +3978,37 @@ pub fn justify_name(j: Justify) -> &'static str {
 /// click picks the nearest of the box's eight handles; a corner scales both
 /// sizes about the opposite corner, the middle of an edge changes only the
 /// size across it, about the opposite edge.
-fn scale_handle(bb: &Rect, pos: Point) -> (Point, ScaleAxis) {
+fn scale_handle(bb: &Rect, pos: Point, tol: f64) -> (Point, ScaleAxis) {
     let (cx, cy) = (bb.center().x, bb.center().y);
     let xs = [bb.min.x, cx, bb.max.x];
     let ys = [bb.min.y, cy, bb.max.y];
+    // A click on the outline: xfig takes the exact point (`next_line_found`,
+    // `next_compound_found`): at a corner both sizes scale, anywhere else on
+    // an edge only the size across it (`BOX_HSTRETCH`/`BOX_VSTRETCH`), not the
+    // nearest of eight handles (W22 round 3).
+    let near = |a: f64, b: f64| (a - b).abs() <= tol;
+    let col = if near(pos.x, bb.min.x) {
+        Some(0)
+    } else if near(pos.x, bb.max.x) {
+        Some(2)
+    } else {
+        None
+    };
+    let row = if near(pos.y, bb.min.y) {
+        Some(0)
+    } else if near(pos.y, bb.max.y) {
+        Some(2)
+    } else {
+        None
+    };
+    let inside_x = pos.x >= bb.min.x - tol && pos.x <= bb.max.x + tol;
+    let inside_y = pos.y >= bb.min.y - tol && pos.y <= bb.max.y + tol;
+    let outline = match (col, row) {
+        (Some(i), Some(j)) => Some((i, j)),
+        (Some(i), None) if inside_y => Some((i, 1)),
+        (None, Some(j)) if inside_x => Some((1, j)),
+        _ => None,
+    };
     let mut best = (f64::MAX, 0usize, 0usize);
     for (i, x) in xs.iter().enumerate() {
         for (j, y) in ys.iter().enumerate() {
@@ -3981,7 +4021,7 @@ fn scale_handle(bb: &Rect, pos: Point) -> (Point, ScaleAxis) {
             }
         }
     }
-    let (_, i, j) = best;
+    let (_, i, j) = outline.map_or(best, |(i, j)| (0.0, i, j));
     let fx = if i == 1 {
         cx
     } else if i == 0 {
@@ -4272,6 +4312,161 @@ mod tests {
         // Modes without Shift meanings keep their labels.
         e.set_tool(ToolKind::Text);
         assert_eq!(e.mouse_hints_with(true), e.mouse_hints());
+    }
+
+    #[test]
+    fn no_two_buttons_share_a_label_in_one_modifier_set() {
+        // User rule (W22 round 3): within plain, Shift, Ctrl and Ctrl+Shift the three buttons never
+        // do the same job; a button without a function of its own stays blank.
+        let mut bad = Vec::new();
+        for t in ToolKind::ALL {
+            for first in [None, Some(Button::Left), Some(Button::Middle), Some(Button::Right)] {
+                let mut e = Engine::new();
+                e.set_tool(t);
+                if let Some(b) = first {
+                    // a press without release: the drag state of the tools that have one
+                    let _ = e.tool_event(ToolEvent::Press {
+                        pos: Point::new(600.0, 600.0),
+                        button: b,
+                        shift: false,
+                    });
+                }
+                for (shift, ctrl) in [(false, false), (true, false), (false, true), (true, true)] {
+                    let h = e.mouse_hints_for(shift, ctrl);
+                    let l = [h.left, h.middle, h.right];
+                    for (i, a) in l.iter().enumerate() {
+                        if !a.is_empty() && l.iter().skip(i + 1).any(|b| b == a) {
+                            bad.push(format!("{} {first:?} shift={shift} ctrl={ctrl}: {l:?}", t.id()));
+                        }
+                    }
+                }
+            }
+        }
+        assert!(bad.is_empty(), "{}", bad.join("\n"));
+    }
+
+    #[test]
+    fn ctrl_shift_in_a_drawing_mode_runs_the_modes_own_proc() {
+        // xfig's `canvas_selected`: the shape-factor case is for the editing modes only; in a
+        // drawing mode Ctrl+Shift falls through to the mode's button procs (W22 round 3).
+        let mut e = Engine::new();
+        e.set_tool(ToolKind::Box);
+        for p in [Point::new(0.0, 0.0), Point::new(1200.0, 600.0)] {
+            e.tool_event(ToolEvent::Ctrl {
+                pos: p,
+                button: Button::Left,
+                shift: true,
+            })
+            .unwrap();
+            e.tool_event(ToolEvent::Release {
+                pos: p,
+                button: Button::Left,
+            })
+            .unwrap();
+        }
+        assert_eq!(e.doc().objects.len(), 1);
+    }
+
+    #[test]
+    fn scale_on_an_edge_stretches_one_size_a_corner_scales_both() {
+        // xfig takes the exact click point: a corner scales both sizes, anywhere else on an
+        // edge only the size across it (`init_boxscale_compound`, W22 round 3).
+        let bb = Rect::new(Point::new(0.0, 0.0), Point::new(1200.0, 600.0));
+        assert_eq!(scale_handle(&bb, Point::new(0.0, 0.0), 40.0).1, ScaleAxis::Both);
+        // Near the corner on the top edge, nearer to it than to the middle handle: still one axis.
+        assert_eq!(scale_handle(&bb, Point::new(300.0, 0.0), 40.0).1, ScaleAxis::Y);
+        assert_eq!(scale_handle(&bb, Point::new(1200.0, 150.0), 40.0).1, ScaleAxis::X);
+        // Off the outline: the nearest of the eight handles.
+        assert_eq!(scale_handle(&bb, Point::new(100.0, 100.0), 40.0).1, ScaleAxis::Both);
+    }
+
+    #[test]
+    fn update_add_point_delete_point_and_convert_put_the_object_last() {
+        // xfig's `change_*` and `list_add_*`: the object comes back at the end of its list.
+        let mut e = Engine::new();
+        e.execute("shape.polyline", &json!({"points": [[0, 0], [1200, 0], [1200, 1200]]}))
+            .unwrap();
+        e.execute(
+            "shape.polyline",
+            &json!({"points": [[0, 3000], [1200, 3000], [1200, 4200]]}),
+        )
+        .unwrap();
+        let first = e.doc().objects[0].id;
+        for tool in [ToolKind::Update, ToolKind::Convert] {
+            e.set_tool(tool);
+            click(&mut e, 600.0, 0.0, Button::Left);
+            assert_eq!(e.doc().objects.last().unwrap().id, first, "{tool:?}");
+            let last = e.doc().objects[0].id;
+            e.set_tool(tool);
+            click(&mut e, 600.0, 3000.0, Button::Left);
+            assert_eq!(e.doc().objects.last().unwrap().id, last, "{tool:?}");
+        }
+        // Delete point: the vertex at (1200, 1200) of the (converted) first object; the object is last again.
+        e.set_tool(ToolKind::DeletePoint);
+        let before = e.doc().objects[0].id;
+        let v = e.doc().objects[0].points().unwrap().to_vec();
+        let p = v[v.len() - 1];
+        click(&mut e, p.x, p.y, Button::Left);
+        assert_eq!(e.doc().objects.last().unwrap().id, before);
+    }
+
+    #[test]
+    fn a_dimension_lines_text_box_has_four_corners() {
+        // The polygon's closing point is written by the file writer; five stored points wrote it twice.
+        let mut e = Engine::new();
+        e.set_tool(ToolKind::Polyline);
+        e.tool_event(ToolEvent::Press {
+            pos: Point::ZERO,
+            button: Button::Left,
+            shift: true,
+        })
+        .unwrap();
+        click(&mut e, 2400.0, 0.0, Button::Left);
+        let ObjectKind::Compound(c) = &e.doc().objects[0].kind else {
+            panic!("a dimension line is a compound")
+        };
+        let polygons: Vec<_> = c
+            .objects
+            .iter()
+            .filter_map(|m| match &m.kind {
+                ObjectKind::Polyline(p) if p.kind == rustfig_model::PolyKind::Polygon => Some(p.points.len()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(polygons, vec![4]);
+    }
+
+    #[test]
+    fn ctrl_click_while_a_box_is_under_way_does_nothing() {
+        // xfig's `zoom_selected` refuses everything but panning while a tool is at work, and the
+        // release of that click must not finish the box (W22 round 3).
+        let mut e = Engine::new();
+        e.set_tool(ToolKind::Box);
+        click(&mut e, 0.0, 0.0, Button::Left);
+        let p = Point::new(600.0, 300.0);
+        e.tool_event(ToolEvent::Move { pos: p }).unwrap();
+        e.tool_event(ToolEvent::Ctrl {
+            pos: p,
+            button: Button::Left,
+            shift: false,
+        })
+        .unwrap();
+        e.tool_event(ToolEvent::Release {
+            pos: p,
+            button: Button::Left,
+        })
+        .unwrap();
+        assert!(e.doc().objects.is_empty() && e.tool_busy());
+        let zoom = e.view.zoom;
+        e.tool_event(ToolEvent::Ctrl {
+            pos: p,
+            button: Button::Right,
+            shift: false,
+        })
+        .unwrap();
+        assert_eq!(e.view.zoom, zoom);
+        click(&mut e, 1200.0, 600.0, Button::Left);
+        assert_eq!(e.doc().objects.len(), 1);
     }
 
     #[test]
@@ -4587,7 +4782,7 @@ mod tests {
         let mut e = Engine::new();
         e.set_tool(ToolKind::CircleRadius);
         click(&mut e, 0.0, 0.0, Button::Middle);
-        // Either button finishes it, as in xfig.
+        // Finished with the button that started it (xfig lets either do it).
         click(&mut e, 1200.0, 600.0, Button::Middle);
         let ObjectKind::Ellipse(el) = objects_of(&e)[0] else {
             panic!()
@@ -4595,6 +4790,9 @@ mod tests {
         assert_eq!(el.radii, Point::new(1200.0, 600.0));
         click(&mut e, 0.0, 0.0, Button::Middle);
         click(&mut e, 600.0, 300.0, Button::Left);
+        assert_eq!(e.doc().objects.len(), 1, "left does not finish a middle drag");
+        assert_eq!(e.mouse_hints().left, "");
+        click(&mut e, 600.0, 300.0, Button::Middle);
         assert_eq!(e.doc().objects.len(), 2);
         assert!(e.undo());
         click(&mut e, 0.0, 0.0, Button::Left);
@@ -4676,6 +4874,31 @@ mod tests {
         click(&mut e, 0.0, 0.0, Button::Middle);
         assert_eq!(e.indicator.thickness, 3);
         assert!(e.indicator.forward_arrow && e.indicator.backward_arrow);
+    }
+
+    #[test]
+    fn arrows_need_a_click_on_an_end_point() {
+        // xfig's Add/Delete arrow is a point search: the first or last point only (W22 round 3).
+        let mut e = fixture(0);
+        e.set_tool(ToolKind::Arrow);
+        click(&mut e, 600.0, 0.0, Button::Left);
+        assert!(e.doc().objects[0].arrows().unwrap().0.is_none() && e.doc().objects[0].arrows().unwrap().1.is_none());
+        click(&mut e, 1200.0, 1200.0, Button::Left);
+        assert!(e.doc().objects[0].arrows().unwrap().0.is_some());
+        click(&mut e, 0.0, 0.0, Button::Left);
+        assert!(e.doc().objects[0].arrows().unwrap().1.is_some());
+        // The middle vertex of a three-point line is no end.
+        click(&mut e, 1200.0, 0.0, Button::Middle);
+        assert!(e.doc().objects[0].arrows().unwrap().0.is_some());
+        // An arc: the first and last of its three points.
+        let mut e = Engine::new();
+        e.execute("shape.arc", &json!({"points": [[0, 1200], [1200, 0], [2400, 1200]]}))
+            .unwrap();
+        e.set_tool(ToolKind::Arrow);
+        click(&mut e, 1200.0, 0.0, Button::Left);
+        assert!(e.doc().objects[0].arrows().unwrap().1.is_none());
+        click(&mut e, 0.0, 1200.0, Button::Left);
+        assert!(e.doc().objects[0].arrows().unwrap().1.is_some());
     }
 
     #[test]

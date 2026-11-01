@@ -47,14 +47,14 @@ fn left_is_more_approximating_and_makes_an_xspline() {
 }
 
 #[test]
-fn right_is_more_interpolating_and_stops_at_minus_one() {
+fn right_is_more_interpolating_and_stops_at_minus_one_half() {
     let mut e = spline_engine("approximated", false);
     ctrl(&mut e, 1200.0, 1200.0, Button::Right, true).unwrap();
     assert!((shapes(&e).1[1] - 0.96).abs() < 1e-9);
     for _ in 0..60 {
         ctrl(&mut e, 1200.0, 1200.0, Button::Right, true).unwrap();
     }
-    assert!((shapes(&e).1[1] - -1.0).abs() < 1e-9);
+    assert!((shapes(&e).1[1] - -0.5).abs() < 1e-9);
 }
 
 #[test]
@@ -72,7 +72,8 @@ fn middle_cycles_the_shapes() {
         ctrl(&mut e, 2400.0, 0.0, Button::Middle, true).unwrap();
         seen.push(shapes(&e).1[2]);
     }
-    assert_eq!(seen, vec![-1.0, 0.0, 1.0, -1.0]);
+    // S_SPLINE_INTERP is -0.5 (object.h), not -1.
+    assert_eq!(seen, vec![-0.5, 0.0, 1.0, -0.5]);
     assert_eq!(shapes(&e).0, SplineKind::X);
 }
 
