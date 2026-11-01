@@ -185,7 +185,7 @@ pub struct App {
     pub keys_sheet: keys_sheet::KeysSheet,
     /// Command search (W18).
     pub command_search: command_search::CommandSearch,
-    /// Edit > Find Objects (W10-39).
+    /// Edit > Find Properties (W10-39).
     pub find: find_dialog::FindState,
     /// F1 context help notes (W18).
     pub context_help: context_help::ContextHelp,

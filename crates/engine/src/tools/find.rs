@@ -1,4 +1,4 @@
-//! Find mode: the match set of Edit > Find Objects. The criteria
+//! Find mode: the match set of Edit > Find Properties. The criteria
 //! (`find.set`) or a left click on an object (`find.toggle`) change the set;
 //! `find.apply` acts on all of it. The set lives only while the mode is
 //! active: choosing another mode or Escape clears it.

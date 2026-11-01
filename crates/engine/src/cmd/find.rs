@@ -1,4 +1,4 @@
-//! Find objects by properties (W10-39): `edit.find_objects` turns criteria
+//! Find properties by properties (W10-39): `edit.find_objects` turns criteria
 //! into the ids of the matching top-level objects. It is read-only; the
 //! actions on the matches are the existing commands that take `ids`
 //! (`object.update`, `arrange.set_depth`, `edit.delete`, `object.group`),
@@ -30,7 +30,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Find: set matches",
             menu: "",
             shortcut: "",
-            params: "{same criteria as edit.find_objects}  — enters Find mode (as tool.find) and makes the objects that match the match set, replacing it; returns what find.state returns",
+            params: "{same criteria as edit.find_objects}  — enters Find mode (as tool.find) and makes the objects that match the match set, replacing it (no criterion: an empty set); returns what find.state returns",
             mutates: false,
             enabled: |e| !e.doc().objects.is_empty(),
             run: find_set,
@@ -67,7 +67,7 @@ pub(super) fn commands() -> Vec<Command> {
         },
         Command {
         id: "edit.find_objects",
-        label: "Find objects",
+        label: "Find properties",
         menu: "",
         shortcut: "",
         params: "{\"kind\"?: line|box|polygon|spline|arc|ellipse|text|picture|compound (or a list of them), \"pen_color\"?: colour number, \"fill_color\"?: colour number, \"fill\"?: none|filled|pattern, \"depth\"?: n, \"depth_min\"?, \"depth_max\"?: 0-999, \"thickness\"?: n, \"line\"?: line style name, \"arrows\"?: any|none, \"font\"?: font number, \"font_size\"?: points, \"text\"?: substring (case-insensitive), \"inside\"?: bool (also match members of compounds; the result names the top-level compound)}  — read-only; criteria combine with AND; returns {count, ids, items: [{id, type, depth, label}]}; act on the matches with object.update, arrange.set_depth, edit.delete or object.group and \"ids\"",
@@ -300,11 +300,16 @@ fn find_state(e: &Engine) -> Value {
 
 fn find_set(e: &mut Engine, p: &Value) -> CmdResult {
     let c = parse(p)?;
+    // No criterion at all is an empty set, not every object: the window with
+    // nothing ticked has found nothing.
+    let none = p
+        .as_object()
+        .is_none_or(|m| m.iter().all(|(k, v)| k == "inside" || v.is_null()));
     let ids: Vec<ObjectId> = e
         .doc()
         .objects
         .iter()
-        .filter(|o| matches(o, &c))
+        .filter(|o| !none && matches(o, &c))
         .map(|o| o.id)
         .collect();
     e.find_replace(ids);

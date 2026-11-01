@@ -89,7 +89,7 @@ pub enum ToolKind {
     /// Plot a function or data (plan E12): drag the plot's frame, then the
     /// Plot dialog draws it.
     Plot,
-    /// Find objects: the match set of Edit > Find Objects; a click
+    /// Find properties: the match set of Edit > Find Properties; a click
     /// adds or removes an object. No button in the mode panel.
     Find,
 }
@@ -291,7 +291,7 @@ impl ToolKind {
             ToolKind::LengthMeasure => "Measure length",
             ToolKind::AreaMeasure => "Measure area",
             ToolKind::Plot => "Plot",
-            ToolKind::Find => "Find objects",
+            ToolKind::Find => "Find properties",
         }
     }
 

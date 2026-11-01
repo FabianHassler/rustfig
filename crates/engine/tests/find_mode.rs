@@ -55,6 +55,21 @@ fn entering_starts_empty_and_criteria_fill_the_set() {
 }
 
 #[test]
+fn find_set_without_criteria_is_empty_and_inside_alone_is_none() {
+    let mut e = engine();
+    e.execute("find.set", &json!({"kind": "box"})).unwrap();
+    assert_eq!(count(&mut e), 3);
+    e.execute("find.set", &json!({})).unwrap();
+    assert_eq!(count(&mut e), 0);
+    e.execute("find.set", &json!({"kind": "box"})).unwrap();
+    e.execute("find.set", &json!({"inside": true, "text": null})).unwrap();
+    assert_eq!(count(&mut e), 0);
+    // edit.find_objects keeps meaning "all" without criteria.
+    let r = e.execute("edit.find_objects", &json!({})).unwrap();
+    assert!(r["count"].as_u64().unwrap() > 3);
+}
+
+#[test]
 fn find_set_enters_the_mode() {
     let mut e = engine();
     e.execute("find.set", &json!({"kind": "text"})).unwrap();

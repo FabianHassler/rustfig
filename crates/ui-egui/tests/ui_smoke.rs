@@ -3758,7 +3758,7 @@ fn library_copy_empties_the_name_and_picks_the_figure() {
     let _ = std::fs::remove_dir_all(&user);
 }
 
-/// W10-39: Tools > Find Objects: a criterion gives a count and a list, the
+/// W10-39: Tools > Find Properties: a criterion gives a count and a list, the
 /// matches are the operands of the actions (each one undo step).
 #[test]
 fn find_objects_window_finds_and_acts() {
@@ -3783,17 +3783,18 @@ fn find_objects_window_finds_and_acts() {
     }
     h.state_mut().run("app.find_objects", json!({}));
     h.run_steps(3);
-    h.get_by_label("Find Objects");
+    h.get_by_label("Find Properties");
     assert_eq!(h.state().engine.tool(), ToolKind::Find);
-    h.get_by_label_contains("No objects");
+    h.get_by_label_contains("Tick a property");
+    h.get_by_label("Text contains").click();
+    h.run_steps(2);
     h.get_by_label("Find text").click();
     h.get_by_label("Find text").type_text("hello");
     h.run_steps(3);
-    h.get_by_label("2 objects");
+    h.get_by_label("2 objects found");
     assert_eq!(h.state().find.ids.len(), 2);
     // Set depth: one command for both matches.
-    h.state_mut().find.new_depth = "9".to_string();
-    h.get_by_label("New depth");
+    h.state_mut().find.new_depth = 9.0;
     h.run_steps(2);
     h.get_by_label("Set depth").click();
     h.run_steps(3);
@@ -3810,6 +3811,50 @@ fn find_objects_window_finds_and_acts() {
     h.get_by_label_contains("glued");
 }
 
+/// W10-39: ticking "Line width" and setting 3 in its pop-up finds the
+/// objects of that width; unticked properties are ignored.
+#[test]
+fn find_properties_tick_a_property_and_set_its_value() {
+    let mut h = harness(app());
+    {
+        let e = &mut h.state_mut().engine;
+        for (i, t) in [1, 3, 3].into_iter().enumerate() {
+            e.execute(
+                "shape.rectangle",
+                &json!({"x": 1000 * i, "y": 0, "width": 600, "height": 300, "thickness": t}),
+            )
+            .unwrap();
+        }
+    }
+    h.state_mut().run("app.find_objects", json!({}));
+    h.run_steps(3);
+    h.get_by_label_contains("Tick a property");
+    // A value without a tick is ignored.
+    h.state_mut().find.thickness = 3.0;
+    h.run_steps(3);
+    assert!(h.state().find.ids.is_empty());
+    assert_eq!(h.state().find.params(), json!({}));
+    let tick = |h: &mut egui_kittest::Harness<'_, _>| {
+        h.get_by_role_and_label(egui::accesskit::Role::CheckBox, "Line width")
+            .click();
+    };
+    tick(&mut h);
+    h.run_steps(3);
+    h.get_by_label("Edit Line width").click();
+    h.run_steps(3);
+    h.get_by_label("Set to 3").click();
+    h.run_steps(3);
+    h.get_by_label("2 objects found");
+    assert_eq!(h.state().find.params(), json!({"thickness": 3.0}));
+    // Unticking it drops the criterion again.
+    h.key_press(egui::Key::Escape);
+    h.run_steps(3);
+    tick(&mut h);
+    h.run_steps(3);
+    assert!(h.state().find.ids.is_empty());
+    assert_eq!(h.state().find.params(), json!({}));
+}
+
 /// Find is a mode: its window shows the attribute panel's update boxes and
 /// the "Update will change" line, and ends with the mode (another mode,
 /// or Escape).
@@ -3823,12 +3868,12 @@ fn find_mode_shows_update_boxes_and_ends_with_the_mode() {
     h.state_mut().run("app.find_objects", json!({}));
     h.run_steps(3);
     assert_eq!(h.state().engine.tool(), ToolKind::Find);
-    h.get_by_label("Find Objects");
+    h.get_by_label("Find Properties");
     h.get_by_label_contains("Update will change");
     // Another mode closes the window and forgets the matches.
     h.get_by_label("Box").click();
     h.run_steps(3);
-    assert!(h.query_by_label("Find Objects").is_none());
+    assert!(h.query_by_label("Find Properties").is_none());
     assert!(!h.state().find.open);
     // Escape ends it too.
     h.state_mut().run("app.find_objects", json!({}));
@@ -3837,7 +3882,7 @@ fn find_mode_shows_update_boxes_and_ends_with_the_mode() {
     h.key_press(egui::Key::Escape);
     h.run_steps(3);
     assert_ne!(h.state().engine.tool(), ToolKind::Find);
-    assert!(h.query_by_label("Find Objects").is_none());
+    assert!(h.query_by_label("Find Properties").is_none());
 }
 
 /// W10-30: the star next to Selected object marks a favourite; the
