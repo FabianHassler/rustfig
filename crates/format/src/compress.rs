@@ -83,17 +83,11 @@ pub fn decompress(bytes: &[u8], kind: Compression, cap: usize) -> Result<Vec<u8>
                 .map_err(|e| bad("bzip2", &e))?;
         }
         Compression::Xz => {
-            let mut w = CappedWriter {
-                out: Vec::new(),
-                cap,
-                hit: false,
-            };
-            let r = lzma_rs::xz_decompress(&mut &bytes[..], &mut w);
-            if w.hit {
-                return Err(too_large());
-            }
-            r.map_err(|e| bad("xz", &e))?;
-            out = w.out;
+            // 256 MB of decoder memory (dictionary) at most.
+            lzma_rust2::XzReader::new_mem_limit(bytes, true, 256 << 10)
+                .take(limit)
+                .read_to_end(&mut out)
+                .map_err(|e| bad("xz", &e))?;
         }
         Compression::Compress => out = unlzw(bytes, cap)?,
     }
@@ -118,9 +112,10 @@ pub fn compress(data: &[u8], kind: Compression) -> Result<Vec<u8>, FormatError> 
             enc.finish().map_err(|e| bad("bzip2", &e))
         }
         Compression::Xz => {
-            let mut out = Vec::new();
-            lzma_rs::xz_compress(&mut &data[..], &mut out).map_err(|e| bad("xz", &e))?;
-            Ok(out)
+            let mut enc = lzma_rust2::XzWriter::new(Vec::new(), lzma_rust2::XzOptions::with_preset(6))
+                .map_err(|e| bad("xz", &e))?;
+            enc.write_all(data).map_err(|e| bad("xz", &e))?;
+            enc.finish().map_err(|e| bad("xz", &e))
         }
         Compression::Compress => Ok(lzw_compress(data)),
     }
@@ -146,26 +141,6 @@ pub fn unpack(bytes: &[u8], strict: bool) -> Result<Cow<'_, [u8]>, FormatError> 
 /// [`unpack`] for a file with this name.
 pub fn unpack_file<'a>(bytes: &'a [u8], path: &str) -> Result<Cow<'a, [u8]>, FormatError> {
     unpack(bytes, Compression::from_fig_path(path).is_some())
-}
-
-struct CappedWriter {
-    out: Vec<u8>,
-    cap: usize,
-    hit: bool,
-}
-
-impl Write for CappedWriter {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        if self.out.len().saturating_add(buf.len()) > self.cap {
-            self.hit = true;
-            return Err(std::io::Error::other("output too large"));
-        }
-        self.out.extend_from_slice(buf);
-        Ok(buf.len())
-    }
-    fn flush(&mut self) -> std::io::Result<()> {
-        Ok(())
-    }
 }
 
 const CLEAR: usize = 256;
@@ -404,8 +379,7 @@ mod tests {
         let data = vec![b'A'; 3 << 20];
         for kind in ALL {
             let packed = compress(&data, kind).unwrap();
-            // lzma-rs's xz encoder stores data in uncompressed LZMA2 chunks.
-            assert!(kind == Compression::Xz || packed.len() < data.len() / 4, "{kind:?}");
+            assert!(packed.len() < data.len() / 4, "{kind:?}");
             let err = decompress(&packed, kind, 1 << 20).unwrap_err();
             assert!(err.message.contains("too much"), "{kind:?}: {err}");
             assert_eq!(decompress(&packed, kind, 3 << 20).unwrap().len(), data.len());
@@ -458,6 +432,28 @@ mod tests {
                 let _ = decompress(&v, kind, 1 << 20);
             }
         }
+    }
+
+    /// xz really compresses: 5,000 identical boxes shrink a lot, and the
+    /// system `xz` reads the result.
+    #[test]
+    fn xz_output_is_smaller_and_readable_by_xz() {
+        let mut fig = b"#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n".to_vec();
+        for _ in 0..5000 {
+            fig.extend_from_slice(b"2 2 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 5\n\t 0 0 600 0 600 300 0 300 0 0\n");
+        }
+        let packed = compress(&fig, Compression::Xz).unwrap();
+        eprintln!("xz: {} -> {} bytes", fig.len(), packed.len());
+        assert!(packed.len() < fig.len() / 20);
+        let dir = std::env::temp_dir().join(format!("rustfig-g10-xz-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("b.fig.xz");
+        std::fs::write(&file, &packed).unwrap();
+        if let Ok(out) = std::process::Command::new("xz").arg("-dc").arg(&file).output() {
+            assert!(out.status.success());
+            assert_eq!(out.stdout, fig);
+        }
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     /// Real tools read what we write and we read what they write (skipped
