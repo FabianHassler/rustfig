@@ -62,8 +62,8 @@ English only. See [localization parity](docs/localization-parity.md).
 
 The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 [docs/gaps.md](docs/gaps.md). Next up:
-1. W22 is done; the user's two questions from round 3 (picking inside filled objects and by depth, Ctrl+wheel zoom steps) are in [xfig-compare.md](docs/xfig-compare.md).
-2. E10 leftovers: a check with a real input method; click-to-caret by wrapped column.
+1. W22 is done (three rounds, 64 differences; the user kept RustFig's picking and chose xfig's Ctrl+wheel zoom steps).
+2. E10: only a check by hand with a real input method is left.
 3. B11 leftovers in fig2dev: `-j` composite fonts, netpbm's palette order for PPM/TIFF/XPM/GIF pictures, `-E utf-16`.
 4. Checks by hand: Windows install and print hand-off (P3, Printing), Linux Wayland and HiDPI, the web demo in real browsers (C5).
 5. The accepted UI proposals (W10-25 to W10-38): Global settings in tabs, Search, spell check while typing, library browser, live value pop-ups, mode finder.

@@ -11,7 +11,8 @@
 | HiDPI / Retina | ✅ canvas renders at physical pixels, lowered when the GPU's biggest texture is smaller (P2); scales 1 to 4 tested |
 | Mouse: left/right buttons, double click | ✅ |
 | Middle-button and space-drag panning, scroll panning | ✅ |
-| Pinch / Ctrl-scroll zoom | ✅ |
+| Pinch / Ctrl-scroll zoom | ✅ pinch continuous; Ctrl+wheel (Cmd on macOS) one of xfig's √2 steps per notch (W22) |
+| Input method (IME) text entry on the canvas (E10) | 🟡 preedit and commit unit-tested; check by hand: Japanese or Chinese input source on macOS, Windows and Linux (ibus), type into a text, the preedit shows at the caret and Return commits |
 | Three-button xfig semantics (middle = finish) | ✅ left, Alt+click or middle, right; Ctrl+click right on macOS; left+right chord on Linux and Windows (unit and UI tests) |
 | Tablet pressure | ❌ (not an xfig feature) |
 | Touch | 🟡 via egui pointer emulation, untested |
@@ -82,6 +83,7 @@ Build with `cargo xtask web`, serve `dist/` (`cd dist && python3 -m http.server 
 
 ## Revision history
 | Date | Note |
+| 2026-11-01 | Ctrl+wheel zoom steps (W22); IME check row (E10). |
 | 2026-10-25 | First Linux check on Debian 13 (Xfce, X11, ARM64): findings listed above. |
 |---|---|
 | 2026-10-25 | D11: screen capture row in the per-OS checklist (macOS screencapture, Linux portal, Windows whole screen). |
