@@ -2850,6 +2850,41 @@ fn global_settings_tabs_and_filter() {
     h.get_by_label("export_margin value");
 }
 
+/// "Defaults" puts every row back to xfig's default in the pending state:
+/// Cancel discards it, Ok applies it.
+#[test]
+fn global_settings_defaults() {
+    let mut h = harness(app());
+    {
+        let a = h.state_mut();
+        a.run("prefs.set", json!({"resource": "trackCursor", "value": false}));
+        a.run("prefs.set", json!({"resource": "export_margin", "value": 7}));
+        a.run("prefs.set", json!({"resource": "save_versions", "value": 2}));
+        a.run("app.theme", json!({"theme": "dark"}));
+    }
+    h.state_mut().run("app.global_settings", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Defaults").click();
+    h.run_steps(3);
+    // Pending: nothing changed yet, Cancel keeps it so.
+    assert_eq!(h.state().engine.prefs.int("export_margin"), Some(7));
+    h.get_by_label("Cancel").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.prefs.int("export_margin"), Some(7));
+    assert!(!h.state().engine.track_mouse());
+    h.state_mut().run("app.global_settings", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Defaults").click();
+    h.run_steps(3);
+    h.get_by_label("Ok").click();
+    h.run_steps(3);
+    let e = &h.state().engine;
+    assert!(e.track_mouse());
+    assert_eq!(e.prefs.int("export_margin"), None);
+    assert_eq!(e.prefs.int("save_versions"), None);
+    assert_eq!(h.state().theme, "system");
+}
+
 /// W10-25: an Advanced value is applied at Ok; "Apply changes immediately"
 /// applies at once and is kept in the preferences.
 #[test]

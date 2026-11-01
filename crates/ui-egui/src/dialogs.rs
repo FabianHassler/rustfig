@@ -1219,6 +1219,9 @@ struct GlobalDraft {
     save_versions: i64,
     image_editor: String,
     spell: String,
+    /// Defaults was pressed: Ok also puts RustFig's look rows (keyboard
+    /// shortcuts, button style, theme, UI scale) back to their defaults.
+    reset_look: bool,
     /// The tab shown (without a filter) and the filter text.
     tab: GlobalTab,
     filter: String,
@@ -1227,6 +1230,41 @@ struct GlobalDraft {
 }
 
 impl GlobalDraft {
+    /// Every row back at xfig's default (RustFig's own for its look rows),
+    /// in this pending state only: Ok applies it, Cancel discards it.
+    fn reset_to_defaults(&mut self) {
+        use rustfig_engine::prefs::resource;
+        let on = |n: &str| resource(n).is_some_and(|r| r.default == "true");
+        let num = |n: &str| resource(n).and_then(|r| r.default.parse::<i64>().ok()).unwrap_or(0);
+        let text = |n: &str| resource(n).map_or(String::new(), |r| r.default.to_string());
+        self.autorefresh = on("autorefresh");
+        self.track_mouse = on("trackCursor");
+        self.page_borders = on("showpageborder");
+        self.depth_manager = on("showdepthmanager");
+        self.balloons = on("showballoons");
+        self.balloon_delay = num("balloon_delay");
+        self.lengths = on("showlengths");
+        self.vertex_numbers = on("shownums");
+        self.crosshair = on("crosshair");
+        self.negative_coords = on("allownegcoords");
+        self.axis_lines = on("showaxislines");
+        self.freehand = num("freehand_resolution");
+        self.recent = num("max_recent_files");
+        self.save_versions = num("save_versions");
+        self.image_editor = text("image_editor");
+        self.spell = text("spellcheckcommand");
+        for r in rustfig_engine::prefs::RESOURCES.iter().filter(|r| r.in_ui()) {
+            // An empty field means xfig's default.
+            let v = if r.kind == rustfig_engine::prefs::Kind::Bool {
+                r.default.to_string()
+            } else {
+                String::new()
+            };
+            self.adv.insert(r.name, v);
+        }
+        self.reset_look = true;
+    }
+
     fn of(app: &App) -> GlobalDraft {
         let e = &app.engine;
         let int = |name: &str, default: i64| e.prefs.int(name).unwrap_or(default);
@@ -1248,6 +1286,7 @@ impl GlobalDraft {
             save_versions: int("save_versions", 5),
             image_editor: text("image_editor", rustfig_engine::prefs::SYSTEM_OPEN),
             spell: text("spellcheckcommand", "aspell list < %f"),
+            reset_look: false,
             tab: GlobalTab::Window,
             filter: String::new(),
             adv: rustfig_engine::prefs::RESOURCES
@@ -1751,6 +1790,13 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
                     .weak(),
             );
             ui.horizontal(|ui| {
+                if ui
+                    .small_button("Defaults")
+                    .on_hover_text("Every row back to xfig's default; Ok applies, Cancel discards")
+                    .clicked()
+                {
+                    d.reset_to_defaults();
+                }
                 cancel = ui.button("Cancel").clicked();
                 ok = ui.button("Ok").clicked();
             });
@@ -1758,6 +1804,7 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
     if ok || (app.apply_immediately && open && !cancel) {
         apply_global(app, &current, &d);
         apply_advanced(app, &current, &d);
+        d.reset_look = false;
     }
     if ok || cancel || !open {
         app.dialogs.global_open = false;
@@ -1775,6 +1822,14 @@ fn dialog_body_height(ctx: &egui::Context) -> f32 {
 
 /// Ok in Global settings: every value that changed goes through its command.
 fn apply_global(app: &mut App, was: &GlobalDraft, now: &GlobalDraft) {
+    if now.reset_look {
+        if !app.xfig_keys {
+            app.run("app.toggle_xfig_keys", json!({}));
+        }
+        app.run("app.button_style", json!({ "style": "3d" }));
+        app.run("app.theme", json!({ "theme": "system" }));
+        app.run("app.ui_scale", json!({ "percent": 100 }));
+    }
     let toggles = [
         ("app.toggle_autorefresh", was.autorefresh, now.autorefresh),
         ("view.toggle_page_border", was.page_borders, now.page_borders),

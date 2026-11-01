@@ -703,6 +703,7 @@ fn coerce(kind: Kind, v: toml::Value) -> Option<toml::Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     #[test]
     fn catalogue_is_unique_and_known() {
@@ -829,5 +830,29 @@ x = 1
         assert_eq!(p.rustfig.recent_files.len(), MAX_RECENT);
         assert_eq!(p.rustfig.recent_files[0], "/f5.fig");
         assert_eq!(p.rustfig.recent_files.iter().filter(|f| *f == "/f5.fig").count(), 1);
+    }
+
+    #[test]
+    fn reset_restores_xfig_defaults_and_keeps_the_rest() {
+        let mut e = Engine::new();
+        for (k, v) in [
+            ("export_margin", json!(7)),
+            ("shownums", json!(true)),
+            ("startfontsize", json!(20)),
+        ] {
+            e.execute("prefs.set", &json!({"resource": k, "value": v})).unwrap();
+        }
+        e.prefs.add_recent_color("#ff0000");
+        // Named resources only.
+        e.execute("prefs.reset", &json!({"names": ["export_margin"]})).unwrap();
+        assert_eq!(e.prefs.int("export_margin"), None);
+        assert_eq!(e.prefs.bool("shownums"), Some(true));
+        assert!(e.execute("prefs.reset", &json!({"names": ["nonsense"]})).is_err());
+        assert!(e.execute("prefs.reset", &json!({"names": [3]})).is_err());
+        // All that RustFig uses; a default applies at once.
+        e.execute("prefs.reset", &json!({})).unwrap();
+        assert_eq!(e.prefs.int("startfontsize"), None);
+        assert!(!e.show_vertex_numbers());
+        assert_eq!(e.prefs.rustfig.recent_colors, ["#ff0000"]);
     }
 }

@@ -8,6 +8,8 @@ The window has a **filter** field at the top and five tabs: **Window**, **Drawin
 
 **Advanced** lists all of xfig's resources (see below) as editable fields: a check box for yes/no resources, a field for numbers and texts (empty means xfig's default; a value that does not read as a number is shown in red and not applied), with the command-line option beside each. Only resources that change something in RustFig are listed; the others (for example `canvasbackground` or `grid_unit`) are still accepted on the command line and in `~/.Xdefaults`, and stay in your settings file, but are not shown.
 
+**Defaults** (next to Cancel and Ok) sets every row of the window back to xfig's defaults (RustFig's own for its rows); like any other change, Ok applies it and Cancel discards it. Scripts use `prefs.reset` (optionally with `names`, a list of resource names). Your colours, recent files and saved styles are not touched.
+
 The rows of xfig's panel are spread over the tabs: **Window** has the display switches (autorefresh, rulers, page borders, depth manager, balloons, line lengths, vertex numbers, crosshair, negative coordinates, axis lines) and RustFig's look; **Drawing** has the freehand resolution, the current-attributes button, LaTeX text and your colours; **Files** has the recent files and saved versions; **Programs** has the image editor and the spell checker. Each row:
 
 - **Autorefresh figure**: reload the figure when its file changes on disk (View > Autorefresh mode).
