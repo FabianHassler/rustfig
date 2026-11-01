@@ -3689,3 +3689,36 @@ fn search_window_whole_word_next_previous_and_click() {
     h.get_by_label_contains("Match 1 of 2");
     assert_ne!(h.state().engine.selection(), &sel[..]);
 }
+
+/// Copy to library: the name field is for a new figure. After the copy it is
+/// empty again and the saved figure is picked in the list.
+#[test]
+fn library_copy_empties_the_name_and_picks_the_figure() {
+    let user = std::env::temp_dir().join(format!("rustfig-ui-library-copy-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&user);
+    std::fs::create_dir_all(&user).unwrap();
+    let mut h = harness(app());
+    h.state_mut().run(
+        "prefs.set",
+        json!({"resource": "library_dir", "value": user.to_string_lossy()}),
+    );
+    h.state_mut().run(
+        "shape.rectangle",
+        json!({"x": 600, "y": 600, "width": 1200, "height": 600}),
+    );
+    h.get_by_label("Library").scroll_to_me();
+    h.get_by_label("Library").click();
+    h.run_steps(3);
+    h.get_by_label("Copy to library").click();
+    h.run_steps(3);
+    h.get_by_label("Library figure name").click();
+    h.get_by_label("Library figure name").type_text("mybox");
+    h.run_steps(3);
+    h.query_all_by_label("Copy to library").last().unwrap().click();
+    h.run_steps(5);
+    assert!(user.join("mybox.fig").exists());
+    h.get_by_label("Library figure name");
+    assert!(h.state().library.selected.is_some(), "the new figure is picked");
+    h.get_by_label("Library object mybox");
+    let _ = std::fs::remove_dir_all(&user);
+}

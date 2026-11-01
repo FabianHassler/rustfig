@@ -1973,7 +1973,11 @@ fn user_colors_editor(app: &mut App, ui: &mut egui::Ui) {
     ui.horizontal(|ui| {
         let (name, rgb) = &mut app.dialogs.new_color;
         ui.color_edit_button_srgb(rgb);
-        ui.add(egui::TextEdit::singleline(name).hint_text("name").desired_width(120.0));
+        ui.add(
+            egui::TextEdit::singleline(name)
+                .hint_text("New colour name")
+                .desired_width(120.0),
+        );
         let hex = format!("#{:02x}{:02x}{:02x}", rgb[0], rgb[1], rgb[2]);
         let ready = !name.trim().is_empty();
         if ui.add_enabled(ready, egui::Button::new("Add colour")).clicked() {

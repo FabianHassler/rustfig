@@ -635,9 +635,13 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
             ui.collapsing("Copy to library", |ui| {
                 ui.label("Saves the selected objects (else the whole figure) as a library figure in your library folder (preference library_dir).");
                 ui.horizontal(|ui| {
-                    ui.label("Name:");
-                    ui.text_edit_singleline(&mut p.save_name)
-                        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Library figure name"));
+                    // A field for a new figure: emptied after a save, the figure is picked in the list.
+                    ui.add(
+                        egui::TextEdit::singleline(&mut p.save_name)
+                            .hint_text("New figure name")
+                            .desired_width(180.0),
+                    )
+                    .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Library figure name"));
                 });
                 ui.horizontal(|ui| {
                     ui.label("Library folder:");
@@ -696,14 +700,23 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
         app.library.message = match r {
             Ok(v) => {
                 let libs = app.engine.libraries();
-                let cur = app.library.current.clone();
                 app.library.show_panel(libs);
-                if let Some(c) = cur {
+                // Show the library the figure went to, with the figure picked.
+                let saved_in = v["library"].as_str().map(str::to_string);
+                let target = saved_in.or_else(|| app.library.current.clone());
+                if let Some(c) = target {
                     if app.library.libs.iter().any(|l| l.name == c) {
                         app.library.load(&c);
                     }
                 }
-                format!("Saved {}", v["path"].as_str().unwrap_or(""))
+                let path = v["path"].as_str().unwrap_or("");
+                app.library.save_name.clear();
+                if let Some(stem) = std::path::Path::new(path).file_stem().and_then(|n| n.to_str()) {
+                    if let Some(i) = app.library.objects.iter().position(|n| n == stem) {
+                        app.library.pick(i);
+                    }
+                }
+                format!("Saved {path}")
             }
             Err(e) => e,
         };

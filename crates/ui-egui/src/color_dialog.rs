@@ -433,7 +433,7 @@ fn body(app: &mut App, ui: &mut egui::Ui) {
     ui.horizontal(|ui| {
         ui.add(
             egui::TextEdit::singleline(&mut app.dialogs.color.name)
-                .hint_text("name")
+                .hint_text("New colour name")
                 .desired_width(110.0),
         )
         .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Colour name"));
