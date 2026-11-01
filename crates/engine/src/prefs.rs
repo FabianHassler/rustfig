@@ -236,6 +236,19 @@ pub struct NamedColor {
     pub rgb: String,
 }
 
+/// A library figure by library name and figure name (W10-30: favourites and
+/// recently placed figures).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LibRef {
+    pub library: String,
+    pub name: String,
+}
+
+/// Most favourite library figures kept.
+pub const MAX_LIB_FAVOURITES: usize = 48;
+/// Most recently placed library figures kept.
+pub const MAX_LIB_RECENT: usize = 8;
+
 /// RustFig's own settings.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(default)]
@@ -273,6 +286,12 @@ pub struct RustFigPrefs {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub whats_new_seen: Option<String>,
     pub recent_files: Vec<String>,
+    /// W10-30: favourite library figures (library panel's top row), oldest first.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub library_favourites: Vec<LibRef>,
+    /// W10-30: library figures placed lately, newest first.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub library_recent: Vec<LibRef>,
     pub user_colors: Vec<NamedColor>,
     /// Colours used lately (`#rrggbb`, newest first), offered in the colour pop-ups (E4).
     pub recent_colors: Vec<String>,
@@ -340,6 +359,8 @@ impl Prefs {
         p.rustfig.recent_files.truncate(MAX_RECENT);
         p.rustfig.user_colors.truncate(MAX_USER_COLORS);
         p.rustfig.recent_colors.truncate(MAX_RECENT_COLORS);
+        p.rustfig.library_favourites.truncate(MAX_LIB_FAVOURITES);
+        p.rustfig.library_recent.truncate(MAX_LIB_RECENT);
         Ok((p, warnings))
     }
 
@@ -398,6 +419,44 @@ impl Prefs {
         r.retain(|c| c != rgb);
         r.insert(0, rgb.to_string());
         r.truncate(MAX_RECENT_COLORS);
+    }
+
+    /// Note a library figure as the most recently placed one.
+    pub fn add_library_recent(&mut self, library: &str, name: &str) {
+        let r = &mut self.rustfig.library_recent;
+        r.retain(|x| !(x.library == library && x.name == name));
+        r.insert(
+            0,
+            LibRef {
+                library: library.into(),
+                name: name.into(),
+            },
+        );
+        r.truncate(MAX_LIB_RECENT);
+    }
+
+    /// Whether a library figure is a favourite.
+    pub fn is_library_favourite(&self, library: &str, name: &str) -> bool {
+        self.rustfig
+            .library_favourites
+            .iter()
+            .any(|x| x.library == library && x.name == name)
+    }
+
+    /// Mark or unmark a library figure as a favourite; false when the list is full.
+    pub fn set_library_favourite(&mut self, library: &str, name: &str, on: bool) -> bool {
+        let f = &mut self.rustfig.library_favourites;
+        f.retain(|x| !(x.library == library && x.name == name));
+        if on {
+            if f.len() >= MAX_LIB_FAVOURITES {
+                return false;
+            }
+            f.push(LibRef {
+                library: library.into(),
+                name: name.into(),
+            });
+        }
+        true
     }
 
     /// Note `path` as the most recent file.

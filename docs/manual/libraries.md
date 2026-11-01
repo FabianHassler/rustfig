@@ -13,6 +13,10 @@ Library mode button (the wide button at the bottom of the drawing modes) or `Shi
 
 **Search**: type in the *Search* field to find figures in all libraries at once, not only the loaded one. Every word you type must occur in the figure's name or in its comments (upper and lower case do not matter); the results list each figure with its library, and those found by their comments say so. Click a result: its library is loaded and the figure picked, then proceed as above (double-click, or *Select object*). *Clear* returns to the library's own list. A long result list is cut; type more of the name.
 
+In Icon View the results are thumbnails with the figure's name and its library in small type below (a `*` after the name: found by its comments); in List View they are names with the library.
+
+**Favourites and Recent**: the star next to *Selected object* marks the picked figure as a favourite (click again to remove the mark). Favourites from any library are shown in a *Favourites* row below the search field, as small thumbnails in Icon View and names in List View. Below it, the *Recent* row shows the last eight figures you placed. Click a figure in either row: its library is loaded and the figure picked, as for a search result; double-click it (or *Select object*) to take it in hand. A figure whose file is gone is shown greyed and cannot be picked; click the star on it in its library, or use `library.favourite` with `on: false`, to drop it. Both lists are kept in the preferences (`[rustfig]` keys `library_favourites`, `library_recent`), so they are there after a restart.
+
 Texts with the TeX flag in a figure, such as `$\lambda/2$` or `$|0\rangle$`, show in the icons and the preview as a quick Unicode approximation (λ/2, |0⟩; Greek letters, common symbols, super- and subscripts, fractions); no TeX is run. The figure and what you place keep the LaTeX source.
 
 *View* switches between *Icon View* (thumbnails; *Icon size* 40 to 120) and *List View* (names). Both are remembered (preferences `icon_view`, `library_icon_size`). *Cancel* closes the panel.
@@ -66,7 +70,7 @@ The `PhysicsCircuits` library holds lumped circuit elements the way physics pape
 
 ## Commands
 
-For scripts, the control channel and MCP: `library.list`, `library.source` (what `library_dir` names: a folder, or a list file with its entries), `library.use` (`path`: make a folder or list file the source), `library.search` (`query`, `limit`, `comments`: figures of all libraries by name and comments), `library.objects` (`comments: true` adds each figure's comments), `library.place` (`library`, `name`, `x`, `y` or `orig`, `ops`), `library.hand` (put the object in hand as Select object does), `library.transform`, `library.save`, `library.panel`. See [Automation](automation.md).
+For scripts, the control channel and MCP: `library.list`, `library.source` (what `library_dir` names: a folder, or a list file with its entries), `library.use` (`path`: make a folder or list file the source), `library.search` (`query`, `limit`, `comments`: figures of all libraries by name and comments), `library.favourite` (`library`, `name`, `on`: mark, unmark or toggle a favourite), `library.favourites` (`recent: true` lists the figures placed lately, `clear: true` empties that list; each entry says whether its file `exists`), `library.objects` (`comments: true` adds each figure's comments), `library.place` (`library`, `name`, `x`, `y` or `orig`, `ops`), `library.hand` (put the object in hand as Select object does), `library.transform`, `library.save`, `library.panel`. See [Automation](automation.md).
 
 ## Credits and licences
 

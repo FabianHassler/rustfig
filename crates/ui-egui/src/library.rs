@@ -10,6 +10,7 @@
 use crate::App;
 use egui::{vec2, Color32, Sense, TextureOptions};
 use rustfig_engine::library::{self, LibRoot, Library};
+use rustfig_engine::prefs::LibRef;
 use rustfig_geom::Affine;
 use rustfig_model::Document;
 use rustfig_render::raster::{rasterize, RasterOptions};
@@ -66,7 +67,12 @@ pub struct LibraryPanel {
     /// Search results: library, figure, found by comment.
     hits: Vec<(String, String, bool)>,
     truncated: bool,
+    /// Whether a favourite or recent figure's file is still there, by (library, figure).
+    exists: HashMap<(String, String), bool>,
 }
+
+/// Side of the thumbnails in the Favourites and Recent rows, in points.
+const STRIP_ICON: f32 = 34.0;
 
 impl LibraryPanel {
     /// Open the panel (the engine asked for it) and scan the library
@@ -110,6 +116,16 @@ impl LibraryPanel {
             return;
         }
         self.show_panel(library::scan(&roots));
+    }
+
+    /// The index of figure `name` in the loaded library (tests).
+    pub fn object_index(&self, name: &str) -> Option<usize> {
+        self.objects.iter().position(|n| n == name)
+    }
+
+    /// Pick the figure at `i` of the loaded library (tests).
+    pub fn pick_index(&mut self, i: usize) {
+        self.pick(i);
     }
 
     /// How many icons are drawn so far (tests).
@@ -171,6 +187,7 @@ impl LibraryPanel {
         self.open = true;
         // The libraries may have changed: search again.
         self.searched = "\u{0}".into();
+        self.exists.clear();
         self.libs = app_libs;
         if let Some(c) = self.current.clone() {
             if !self.libs.iter().any(|l| l.name == c) {
@@ -286,6 +303,219 @@ fn thumbnail(
     Some(tex)
 }
 
+/// Whether the figure `r` is in a loaded library (cached until the libraries are read again).
+fn figure_exists(p: &mut LibraryPanel, r: &LibRef) -> bool {
+    let key = (r.library.clone(), r.name.clone());
+    if let Some(v) = p.exists.get(&key) {
+        return *v;
+    }
+    let v = p
+        .libs
+        .iter()
+        .find(|l| l.name == r.library)
+        .is_some_and(|l| library::object_names(&l.path).contains(&r.name));
+    p.exists.insert(key, v);
+    v
+}
+
+/// A small star, filled when `on`; a click toggles. Painted, so no font needs the glyph.
+fn star_button(ui: &mut egui::Ui, on: bool, enabled: bool, label: &str) -> egui::Response {
+    let (rect, resp) = ui.allocate_exact_size(vec2(20.0, 20.0), if enabled { Sense::click() } else { Sense::hover() });
+    let c = rect.center();
+    let (ro, ri) = (8.5_f32, 3.6_f32);
+    let pts: Vec<egui::Pos2> = (0..10)
+        .map(|k| {
+            let a = -std::f32::consts::FRAC_PI_2 + k as f32 * std::f32::consts::PI / 5.0;
+            let r = if k % 2 == 0 { ro } else { ri };
+            egui::pos2(c.x + r * a.cos(), c.y + r * a.sin())
+        })
+        .collect();
+    let col = ui.visuals().text_color();
+    let col = if enabled { col } else { ui.visuals().weak_text_color() };
+    let fill = if on {
+        Color32::from_rgb(235, 170, 20)
+    } else {
+        Color32::TRANSPARENT
+    };
+    ui.painter()
+        .add(egui::Shape::convex_polygon(pts, fill, egui::Stroke::new(1.2_f32, col)));
+    let label = label.to_string();
+    resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, enabled, on, label.clone()));
+    resp
+}
+
+/// One row of figures from any library (Favourites, Recent): thumbnails in
+/// Icon View, names in List View. Returns the figure clicked and the one
+/// double-clicked.
+fn strip(
+    ui: &mut egui::Ui,
+    p: &mut LibraryPanel,
+    title: &str,
+    items: &[LibRef],
+    icon_view: bool,
+    budget: &std::cell::Cell<usize>,
+    pending: &std::cell::Cell<bool>,
+) -> (Option<LibRef>, Option<LibRef>) {
+    let mut click = None;
+    let mut dbl = None;
+    ui.horizontal(|ui| {
+        ui.strong(format!("{title}:"));
+        egui::ScrollArea::horizontal()
+            .id_salt(format!("library_strip_{title}"))
+            .auto_shrink([false, true])
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing = vec2(3.0, 3.0);
+                    for r in items {
+                        let ok = figure_exists(p, r);
+                        let sel = p.current.as_deref() == Some(r.library.as_str())
+                            && p.selected.and_then(|i| p.objects.get(i)) == Some(&r.name);
+                        let label = format!("{title} {} in {}", r.name, r.library);
+                        let resp = if icon_view {
+                            let (rect, resp) = ui.allocate_exact_size(vec2(STRIP_ICON, STRIP_ICON), Sense::click());
+                            if ui.is_rect_visible(rect) {
+                                let px = (STRIP_ICON * ui.ctx().pixels_per_point()).round().max(8.0) as u32;
+                                let key = (r.library.clone(), r.name.clone(), px);
+                                if ok && !p.thumbs.contains_key(&key) && !p.stopped {
+                                    if budget.get() > 0 {
+                                        budget.set(budget.get() - 1);
+                                        let lib = p.libs.iter().find(|l| l.name == r.library).cloned();
+                                        if let Some(lib) = lib {
+                                            match thumbnail(
+                                                ui.ctx(),
+                                                &lib,
+                                                &r.name,
+                                                px as usize,
+                                                &format!("lib-{title}-{}", r.name),
+                                            ) {
+                                                Some(t) => {
+                                                    p.thumbs.insert(key.clone(), t);
+                                                }
+                                                None => pending.set(true),
+                                            }
+                                        }
+                                    } else {
+                                        pending.set(true);
+                                    }
+                                }
+                                ui.painter().rect_filled(
+                                    rect,
+                                    2.0,
+                                    if ok { Color32::WHITE } else { Color32::from_gray(200) },
+                                );
+                                if let (true, Some(Some(tex))) = (ok, p.thumbs.get(&key)) {
+                                    ui.painter().image(
+                                        tex.id(),
+                                        rect,
+                                        egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                                        Color32::WHITE,
+                                    );
+                                }
+                                let stroke = if sel {
+                                    egui::Stroke::new(2.0_f32, Color32::BLACK)
+                                } else {
+                                    egui::Stroke::new(1.0_f32, Color32::from_gray(190))
+                                };
+                                ui.painter().rect_stroke(rect, 2.0, stroke, egui::StrokeKind::Inside);
+                            }
+                            resp
+                        } else {
+                            let text = egui::RichText::new(&r.name);
+                            let text = if ok { text } else { text.weak() };
+                            ui.selectable_label(sel, text)
+                        };
+                        resp.widget_info(|| {
+                            egui::WidgetInfo::selected(egui::WidgetType::Button, ok, sel, label.clone())
+                        });
+                        let tip = if ok {
+                            format!("{} ({})", r.name, r.library)
+                        } else {
+                            format!("{} ({}): the figure is not there any more", r.name, r.library)
+                        };
+                        let resp = resp.on_hover_text(tip);
+                        if ok && resp.clicked() {
+                            click = Some(r.clone());
+                        }
+                        if ok && resp.double_clicked() {
+                            dbl = Some(r.clone());
+                        }
+                    }
+                });
+            });
+    });
+    (click, dbl)
+}
+
+/// A search result cell in Icon View: the thumbnail, the figure's name and
+/// its library in small type below.
+fn hit_cell(
+    ui: &mut egui::Ui,
+    p: &mut LibraryPanel,
+    (l, n, by_comment): &(String, String, bool),
+    size: u32,
+    budget: &std::cell::Cell<usize>,
+    pending: &std::cell::Cell<bool>,
+) -> egui::Response {
+    let side = size as f32 + 6.0;
+    let sel = p.current.as_deref() == Some(l.as_str()) && p.selected.and_then(|i| p.objects.get(i)) == Some(n);
+    let (rect, resp) = ui.allocate_exact_size(vec2(side.max(70.0), side + 28.0), Sense::click());
+    if ui.is_rect_visible(rect) {
+        let key = (l.clone(), n.clone(), size);
+        if !p.thumbs.contains_key(&key) && !p.stopped {
+            if budget.get() > 0 {
+                budget.set(budget.get() - 1);
+                let lib = p.libs.iter().find(|x| x.name == *l).cloned();
+                if let Some(lib) = lib {
+                    match thumbnail(ui.ctx(), &lib, n, size as usize, &format!("lib-{n}")) {
+                        Some(t) => {
+                            p.thumbs.insert(key.clone(), t);
+                        }
+                        None => pending.set(true),
+                    }
+                }
+            } else {
+                pending.set(true);
+            }
+        }
+        let img = egui::Rect::from_min_size(rect.min, vec2(side, side));
+        ui.painter().rect_filled(img, 2.0, Color32::WHITE);
+        if let Some(Some(tex)) = p.thumbs.get(&key) {
+            ui.painter().image(
+                tex.id(),
+                img.shrink(3.0),
+                egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                Color32::WHITE,
+            );
+        }
+        let stroke = if sel {
+            egui::Stroke::new(2.0_f32, Color32::BLACK)
+        } else {
+            egui::Stroke::new(1.0_f32, Color32::from_gray(190))
+        };
+        ui.painter().rect_stroke(img, 2.0, stroke, egui::StrokeKind::Inside);
+        let w = rect.width();
+        let line = |text: String, size: f32, col: Color32, y: f32| {
+            let mut job = egui::text::LayoutJob::simple_singleline(text, egui::FontId::proportional(size), col);
+            job.wrap = egui::text::TextWrapping {
+                max_width: w,
+                max_rows: 1,
+                break_anywhere: true,
+                overflow_character: Some('\u{2026}'),
+            };
+            let g = ui.painter().layout_job(job);
+            ui.painter().galley(egui::pos2(rect.min.x, y), g, col);
+        };
+        line(
+            format!("{n}{}", if *by_comment { " *" } else { "" }),
+            11.0,
+            ui.visuals().text_color(),
+            rect.min.y + side + 2.0,
+        );
+        line(l.clone(), 9.5, ui.visuals().weak_text_color(), rect.min.y + side + 15.0);
+    }
+    resp
+}
+
 /// Show the window when it is open.
 pub fn show(app: &mut App, ctx: &egui::Context) {
     if !app.library.open {
@@ -342,6 +572,9 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     let mut set_view: Option<bool> = None;
     let mut set_size: Option<u32> = None;
     let have_objects = !app.engine.doc().objects.is_empty();
+    let favourites = app.engine.prefs.rustfig.library_favourites.clone();
+    let recent = app.engine.prefs.rustfig.library_recent.clone();
+    let mut toggle_fav: Option<(String, String)> = None;
     egui::Window::new("Select an object or library")
         .open(&mut open)
         .default_size(vec2(440.0, 560.0))
@@ -399,7 +632,23 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
             ui.horizontal(|ui| {
                 ui.label("Selected object:");
                 let name = p.selected.and_then(|i| p.objects.get(i)).cloned().unwrap_or_default();
-                ui.strong(name);
+                ui.strong(name.clone());
+                let cur = p.current.clone().filter(|_| !name.is_empty());
+                let fav = cur
+                    .as_ref()
+                    .is_some_and(|c| favourites.iter().any(|f| &f.library == c && f.name == name));
+                let r = star_button(
+                    ui,
+                    fav,
+                    cur.is_some(),
+                    if fav { "Remove from favourites" } else { "Add to favourites" },
+                )
+                .on_hover_text(if fav { "Remove from favourites" } else { "Add to favourites" });
+                if r.clicked() {
+                    if let Some(c) = cur {
+                        toggle_fav = Some((c, name));
+                    }
+                }
             });
             ui.horizontal(|ui| {
                 ui.label("View:");
@@ -445,6 +694,19 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
             let n = p.objects.len();
             let budget = std::cell::Cell::new(PER_FRAME);
             let pending = std::cell::Cell::new(false);
+            for (title, items) in [("Favourites", &favourites), ("Recent", &recent)] {
+                if items.is_empty() {
+                    continue;
+                }
+                let (c, d) = strip(ui, p, title, items, icon_view, &budget, &pending);
+                if let Some(r) = c {
+                    pick_hit = Some((r.library, r.name));
+                }
+                if let Some(r) = d {
+                    pick_hit = Some((r.library, r.name));
+                    select = true;
+                }
+            }
             let area = 240.0_f32;
             if searching {
                 egui::ScrollArea::vertical()
@@ -455,6 +717,29 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                         if p.hits.is_empty() {
                             ui.label("No figure found.");
                         }
+                        if icon_view {
+                            ui.spacing_mut().item_spacing = vec2(4.0, 4.0);
+                            let hits = p.hits.clone();
+                            ui.horizontal_wrapped(|ui| {
+                                for h in &hits {
+                                    let (l, n, _) = h;
+                                    let resp = hit_cell(ui, p, h, size, &budget, &pending);
+                                    let sel = p.current.as_deref() == Some(l.as_str())
+                                        && p.selected.and_then(|i| p.objects.get(i)) == Some(n);
+                                    let label = format!("Search result {n} in {l}");
+                                    resp.widget_info(|| {
+                                        egui::WidgetInfo::selected(egui::WidgetType::Button, true, sel, label.clone())
+                                    });
+                                    if resp.clone().on_hover_text(format!("{n} ({l})")).clicked() {
+                                        pick_hit = Some((l.clone(), n.clone()));
+                                    }
+                                    if resp.double_clicked() {
+                                        pick_hit = Some((l.clone(), n.clone()));
+                                        select = true;
+                                    }
+                                }
+                            });
+                        } else {
                         for (l, n, by_comment) in &p.hits {
                             let sel = p.current.as_deref() == Some(l.as_str())
                                 && p.selected.and_then(|i| p.objects.get(i)) == Some(n);
@@ -469,6 +754,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                                 pick_hit = Some((l.clone(), n.clone()));
                                 select = true;
                             }
+                        }
                         }
                         if p.truncated {
                             ui.weak("More figures match: type more of the name.");
@@ -662,6 +948,11 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     }
     if let Some(s) = set_size {
         app.run("prefs.set", json!({"resource": "library_icon_size", "value": s}));
+    }
+    if let Some((l, n)) = toggle_fav {
+        if let Err(m) = app.try_run("library.favourite", &json!({"library": l, "name": n})) {
+            app.library.message = m;
+        }
     }
     if stop {
         app.library.stop();
