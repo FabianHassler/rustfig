@@ -54,7 +54,7 @@ The complete list, searchable, is in Help > Keys...: every command with its key 
 | Shift+Z, Z | Zoom in, zoom out |
 | Ctrl+Z (the physical Ctrl key) | Zoom to fit |
 
-Meta+F, E, V and H open the File, Edit, View and Help menus; while a menu is open, the underlined letter of an entry picks it (for example `i` for Zoom In in the View menu). In the Help menu `x` opens this manual and `k` the key list. In the View menu `c` opens the character map (also Ctrl+Shift+M, even while typing). Ctrl+J (Cmd+J on macOS) puts the caret in the Find mode field of the mode panel, in both key schemes (xfig has no key there).
+Meta+F, E, V and H open the File, Edit, View and Help menus (the Tools menu has no letter); while a menu is open, the underlined letter of an entry picks it (for example `i` for Zoom In in the View menu). In the Help menu `x` opens this manual and `k` the key list. In the View menu `c` opens the character map (also Ctrl+Shift+M, even while typing). Ctrl+J (Cmd+J on macOS) puts the caret in the Find mode field of the mode panel, in both key schemes (xfig has no key there).
 
 ## Platform keys
 

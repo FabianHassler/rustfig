@@ -1,4 +1,4 @@
-//! Edit › Find Objects… (W10-39): Find mode's window. It finds the objects
+//! Tools › Find Objects… (W10-39): Find mode's window. It finds the objects
 //! with given properties (`find.set`), lists the match set, outlines it on
 //! the canvas and acts on all of it with `find.apply` (Update, Set depth,
 //! Delete, Glue). The window shows exactly while Find mode is on: choosing

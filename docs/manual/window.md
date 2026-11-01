@@ -4,7 +4,7 @@ RustFig keeps xfig's arrangement of the main window.
 
 ## Top strip
 
-- **Menus**: File, Edit, View, Snap, Object (RustFig's own, for commands xfig only has as modes or keys) and Help. See [Menus](menus.md).
+- **Menus**: File, Edit, View, Tools (RustFig's own, after View: finding objects and modes, importing pictures, plots), Snap and Help. The entries of each menu are grouped under small section titles. See [Menus](menus.md).
 - **File name**: the current file; it is marked when there are unsaved changes. Click it to rename the file.
 - **Message panel**: what to do next, errors and information. Click it to see the history of messages (also Help > Message history..., `app.messages`).
   - Each message has a level: information, warning (for example the notes after opening a file) or error (red). The window's **Info**, **Warning** and **Error** check boxes choose which levels are listed, **Copy** puts the listed messages on the clipboard one per line (warnings and errors start with their level), **Clear** empties the history and **Dismiss** (or Return) closes the window, as in xfig. Scripts use `app.messages` and `app.copy_messages` with `levels`, for example `["warning","error"]`.
@@ -15,7 +15,7 @@ RustFig keeps xfig's arrangement of the main window.
 
 One button per mode: drawing modes first, then editing modes. Hover for the name and key. The same modes are available as keys, see [Keys](keys.md). The mode is highlighted while it is active. On a small screen the panel scrolls vertically (mouse wheel over it); the buttons keep their size.
 
-At the top of the panel, which stays in place while the buttons scroll, is the **Find mode** field. Type part of a mode's name (upper or lower case; the name and xfig's long text are searched, so `arr` finds Add/remove arrows) and a short list shows the matches with each mode's key at the right, to learn it. Up and Down move in the list, Return or a click picks the mode exactly as its button does, Escape clears the field. Ctrl+J (Cmd+J on macOS; View › Find mode) puts the caret in the field from anywhere.
+At the top of the panel, which stays in place while the buttons scroll, is the **Go to mode** field. Type part of a mode's name (upper or lower case; the name and xfig's long text are searched, so `arr` finds Add/remove arrows) and a short list shows the matches with each mode's key at the right, to learn it. Up and Down move in the list, Return or a click picks the mode exactly as its button does, Escape clears the field. Ctrl+J (Cmd+J on macOS; Tools › Go to mode…) puts the caret in the field from anywhere.
 
 Below it, the **Favourites** strip holds up to eight small mode buttons of your own choice; it is hidden while empty. Right-click a mode button and choose Add to favourites (or Remove from favourites); a click on a favourite selects the mode like the panel button, and the same button shows as active. The favourites are kept in the settings file (`[rustfig] mode_favourites`). Scripts use `mode.favourite` and `mode.favourites`.
 

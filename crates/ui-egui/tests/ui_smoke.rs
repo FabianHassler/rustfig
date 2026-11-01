@@ -75,7 +75,7 @@ fn every_tool_button_selects_its_tool() {
         ToolKind::EllipseRadii,
         ToolKind::EllipseDiameter,
     ];
-    // Find mode has no button: Edit > Find Objects enters it.
+    // Find mode has no button: Tools > Find Objects enters it.
     for t in ToolKind::ALL
         .into_iter()
         .filter(|t| !menu_only.contains(t) && *t != ToolKind::Find)
@@ -793,7 +793,7 @@ fn xfig_menu_letters_name_menu_entries() {
         let found = items.iter().any(|i| match i {
             XfigItem::Cmd(_, id) => id == target,
             XfigItem::Missing(label, _, _) => label == target,
-            XfigItem::Own(_) | XfigItem::Sub(..) | XfigItem::Sep => false,
+            XfigItem::Own(_) | XfigItem::Sub(..) | XfigItem::Sep | XfigItem::Header(_) => false,
         });
         assert!(found, "{menu} {letter}: {target} isn't in the menu");
     }
@@ -3733,7 +3733,7 @@ fn library_copy_empties_the_name_and_picks_the_figure() {
     let _ = std::fs::remove_dir_all(&user);
 }
 
-/// W10-39: Edit > Find Objects: a criterion gives a count and a list, the
+/// W10-39: Tools > Find Objects: a criterion gives a count and a list, the
 /// matches are the operands of the actions (each one undo step).
 #[test]
 fn find_objects_window_finds_and_acts() {
@@ -3998,31 +3998,31 @@ fn library_panel_opens_on_a_favourite_or_the_first_visible_library() {
 #[test]
 fn mode_finder_picks_a_mode_with_the_keyboard() {
     let mut h = harness(app());
-    h.get_by_label("Find mode").click();
+    h.get_by_label("Go to mode").click();
     h.run_steps(2);
-    h.get_by_label("Find mode").type_text("ARR");
+    h.get_by_label("Go to mode").type_text("ARR");
     h.run_steps(2);
-    h.get_by_label("Find mode result Add/remove arrows");
+    h.get_by_label("Go to mode result Add/remove arrows");
     press_key(&mut h, egui::Key::Enter, egui::Modifiers::NONE);
     h.run_steps(2);
     assert_eq!(h.state().engine.tool(), ToolKind::Arrow);
     assert!(h.state().mode_finder.text.is_empty(), "the field is cleared");
-    assert!(h.query_by_label_contains("Find mode result").is_none());
+    assert!(h.query_by_label_contains("Go to mode result").is_none());
 }
 
 #[test]
 fn mode_finder_down_moves_and_escape_clears() {
     let mut h = harness(app());
-    h.get_by_label("Find mode").click();
+    h.get_by_label("Go to mode").click();
     h.run_steps(2);
-    h.get_by_label("Find mode").type_text("circle");
+    h.get_by_label("Go to mode").type_text("circle");
     h.run_steps(2);
     press_key(&mut h, egui::Key::ArrowDown, egui::Modifiers::NONE);
     press_key(&mut h, egui::Key::Enter, egui::Modifiers::NONE);
     assert_eq!(h.state().engine.tool(), ToolKind::CircleDiameter);
-    h.get_by_label("Find mode").click();
+    h.get_by_label("Go to mode").click();
     h.run_steps(2);
-    h.get_by_label("Find mode").type_text("box");
+    h.get_by_label("Go to mode").type_text("box");
     h.run_steps(2);
     press_key(&mut h, egui::Key::Escape, egui::Modifiers::NONE);
     assert!(h.state().mode_finder.text.is_empty());
@@ -4038,9 +4038,9 @@ fn mode_finder_click_picks_and_the_key_focuses_the_field() {
     let mut h = harness(app());
     press_key(&mut h, egui::Key::J, egui::Modifiers::COMMAND);
     h.run_steps(2);
-    h.get_by_label("Find mode").type_text("trim");
+    h.get_by_label("Go to mode").type_text("trim");
     h.run_steps(2);
-    h.get_by_label("Find mode result Trim, split and extend").click();
+    h.get_by_label("Go to mode result Trim, split and extend").click();
     h.run_steps(2);
     assert_eq!(h.state().engine.tool(), ToolKind::Trim);
 }

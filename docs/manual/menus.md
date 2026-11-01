@@ -4,11 +4,11 @@ Entries xfig has are named as in xfig; RustFig's own entries follow them. An ent
 
 ## File
 
-New, Open, Merge, Save, Save As, Export, Import picture (RustFig), Exit, then the recent files (numbered; pick with the number key). See [Files](files.md) and [Export](export.md).
+Sections Open (New, Open, Merge, Open and Merge with preview, Digitize), Save (Save, Save As, Saved versions), Output (Export, Print), then New window and Exit, and the recent files (numbered; pick with the number key). See [Files](files.md) and [Export](export.md).
 
 ## Edit
 
-Undo, Paste objects, Search/Replace, Spell check (native app only), Delete all, Global settings, Colours, Set units, Document settings (RustFig), Enter point, then Redo and Copy as picture. xfig has no selection, so there is no Cut, Copy or Select all: the modes act on the object you click, and the cut buffer is filled by Copy mode or Delete mode (right button).
+Sections Undo (Undo, Redo), Paste (Paste objects, Paste text, Copy as picture), Text (Search/Replace, Spell check, native app only), then Delete all and Settings (Global settings, Colours, Set units, Document settings). Find Objects, Enter point and the plots are in the Tools menu. xfig has no selection, so there is no Cut, Copy or Select all: the modes act on the object you click, and the cut buffer is filled by Copy mode or Delete mode (right button).
 
 - Undo and Redo have many levels.
 - Paste objects attaches the cut buffer to the pointer as an outline, its top-left corner at the pointer. Left places the objects there (“place object”), middle at the position they were cut or copied from (“place at orig posn”), right or Escape cancels (“cancel paste”). One placement is one undo step. If the system clipboard holds a figure copied in another RustFig window, that is pasted instead of the cut buffer; if it holds an image (PNG, for example from a browser or a screenshot), it is pasted as a picture object, saved as `clipboard-<number>.png` next to the figure (in the temporary folder while the figure has no file name) and referenced by that path like any picture in a .fig file. The web version has only the cut buffer. Scripts and MCP give `dx` and `dy` to `edit.paste` to place the objects at once, moved by that offset.
@@ -17,7 +17,7 @@ Undo, Paste objects, Search/Replace, Spell check (native app only), Delete all, 
 
 ## View
 
-Redraw, Portrait/Landscape, Zoom in, Zoom out, Zoom to fit canvas, Unzoom, Pan to origin, then the switches: Show page borders, Show depth manager, Show info balloons, Show grid, All depths on. See [Zoom and view](view.md).
+Sections Drawing (Manage Styles, Redraw, Portrait/Landscape), Zoom (Zoom in, Zoom out, Zoom to fit canvas, Unzoom, Pan to origin), Character map, and Show (the switches: page borders, grid, LaTeX text, depth manager, all depths on, info balloons, line lengths, vertex numbers, crosshair, autorefresh). See [Zoom and view](view.md).
 
 ## Snap
 
@@ -26,6 +26,10 @@ Hold and Release, then the object snaps for the next clicked point: Endpoint, Mi
 ## Object (RustFig)
 
 Commands that xfig has only as modes or keys: Group and Ungroup, Update, Convert, Open/Close, Arrows, Transform (rotate, flip), Arrange (align, distribute, depth order), Measure and Edit Attributes. They act on the selection.
+
+## Tools
+
+RustFig's own menu, right after View. Find: Find Objects (see [Text](draw-text-pictures.md)) and Go to mode (Ctrl+J; puts the caret in the Go to mode field of the mode panel). Add to the drawing: Import picture, Capture Screen (native app only) and Enter point. Plots: Plot curve and Edit plot (see [Plot](plot.md)).
 
 ## Help
 
