@@ -74,7 +74,7 @@ fn glue_hint_from_the_start() {
     assert_eq!(e.mouse_hints().right, "compound tagged");
 }
 
-/// W22-10: the Depth button opens xfig's number pop-up; Set applies.
+/// The Depth button opens the live number pop-up (preset chips, no Set).
 #[test]
 fn depth_button_opens_a_popup_that_sets() {
     let mut h = harness(app());
@@ -82,19 +82,15 @@ fn depth_button_opens_a_popup_that_sets() {
     h.run_steps(2);
     h.get_by_label("Depth: 50").click();
     h.run_steps(3);
-    h.get_by_label("Value");
-    h.get_by_label("Cancel");
-    // Cancel leaves the depth alone.
-    h.get_by_label("Cancel").click();
+    h.get_by_label("Depth value");
+    h.get_by_label("Set to 10").click();
+    h.run_steps(2);
+    assert_eq!(h.state().engine.indicator.depth, 10);
+    // Escape restores the depth the pop-up opened with.
+    h.key_press(egui::Key::Escape);
     h.run_steps(3);
     assert_eq!(h.state().engine.indicator.depth, 50);
-    assert!(h.query_by_label("Value").is_none());
-    h.get_by_label("Depth: 50").click();
-    h.run_steps(3);
-    h.get_by_label("Set").click();
-    h.run_steps(3);
-    assert_eq!(h.state().engine.indicator.depth, 50);
-    assert!(h.query_by_label("Value").is_none());
+    assert!(h.query_by_label("Depth value").is_none());
 }
 
 /// W22-12: Trim is the last editing button; xfig's buttons keep their

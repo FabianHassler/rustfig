@@ -2048,54 +2048,120 @@ fn value_entry(app: &mut App, ui: &mut Ui, ind: &Indicator, a: Attr) {
             | Attr::LineWidth
             | Attr::BoxRadius
     );
-    // xfig's number pop-up (`popup_nval_panel`): the value is edited here and
-    // only Set (or Return) applies it; Cancel closes without a change.
-    v = nval_draft(ui, a, v);
-    let mut dv = egui::DragValue::new(&mut v).range(lo..=hi).speed(speed);
-    if integer {
-        dv = dv.fixed_decimals(0);
-    }
-    // xfig's panel: a "Value" label before the field.
-    let resp = ui
-        .horizontal(|ui| {
-            ui.label("Value");
-            ui.add(dv)
-        })
-        .inner;
-    let mut changed = resp.changed();
-    if resp.hovered() {
-        // xfig's spinners (`Fig*spinner_form*Text.translations`): wheel up
-        // decreases, wheel down increases, one step per notch.
-        let dy = ui.input(|i| i.raw_scroll_delta.y);
-        if dy != 0.0 {
-            let id = resp.id.with("wheel");
-            let acc = ui.data(|d| d.get_temp::<f32>(id).unwrap_or(0.0)) + dy;
-            let notches = (acc / 40.0).trunc();
-            ui.data_mut(|d| d.insert_temp(id, acc - notches * 40.0));
-            if notches != 0.0 {
-                let step = if matches!(a, Attr::TextStep | Attr::TangentLength) {
-                    0.1
-                } else {
-                    1.0
-                };
-                v = (v - f64::from(notches) * step).clamp(lo, hi);
+    // A live pop-up (xfig's `popup_nval_panel` entry, without Set/Cancel): the
+    // indicator follows the slider, the field and the chips at once; Return or a
+    // click outside keeps the value, Escape restores the one it had on opening.
+    // The indicator is not part of the document, so there is no undo step.
+    let original = nval_draft(ui, a, v);
+    let (slo, shi) = slider_range(a);
+    let mut changed = false;
+    let name = a.name();
+    ui.horizontal(|ui| {
+        let slider = ui.add(
+            egui::Slider::new(&mut v, slo..=shi)
+                .show_value(false)
+                .clamping(egui::SliderClamping::Never)
+                .step_by(if integer { 1.0 } else { 0.0 }),
+        );
+        slider.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Slider, true, format!("{name} slider")));
+        changed |= slider.changed();
+        let mut dv = egui::DragValue::new(&mut v).range(lo..=hi).speed(speed);
+        if integer {
+            dv = dv.fixed_decimals(0);
+        }
+        let resp = ui.add(dv);
+        resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::DragValue, true, format!("{name} value")));
+        changed |= resp.changed();
+        if resp.hovered() {
+            // xfig's spinners (`Fig*spinner_form*Text.translations`): wheel up
+            // decreases, wheel down increases, one step per notch.
+            let dy = ui.input(|i| i.raw_scroll_delta.y);
+            if dy != 0.0 {
+                let id = resp.id.with("wheel");
+                let acc = ui.data(|d| d.get_temp::<f32>(id).unwrap_or(0.0)) + dy;
+                let notches = (acc / 40.0).trunc();
+                ui.data_mut(|d| d.insert_temp(id, acc - notches * 40.0));
+                if notches != 0.0 {
+                    let step = if matches!(a, Attr::TextStep | Attr::TangentLength) {
+                        0.1
+                    } else {
+                        1.0
+                    };
+                    v = (v - f64::from(notches) * step).clamp(lo, hi);
+                    changed = true;
+                }
+            }
+        }
+    });
+    ui.horizontal_wrapped(|ui| {
+        ui.spacing_mut().item_spacing.x = 3.0;
+        for &p in presets(a) {
+            let text = fmt_g(p);
+            let r = ui.selectable_label((v - p).abs() < 1e-9, text.clone());
+            r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, format!("Set to {text}")));
+            if r.clicked() {
+                v = p;
                 changed = true;
             }
         }
-    }
+    });
     if changed {
-        nval_store(ui, a, v);
-    }
-    let (set_it, cancel) = nval_buttons(ui);
-    if set_it {
+        v = v.clamp(lo, hi);
         let value = if integer { json!(v.round() as i64) } else { json!(v) };
         let mut m = serde_json::Map::new();
         m.insert(field.into(), value);
         set(app, Value::Object(m));
     }
-    if set_it || cancel {
+    let (keep, cancel) = ui.input(|i| (i.key_pressed(egui::Key::Enter), i.key_pressed(egui::Key::Escape)));
+    if cancel {
+        let value = if integer {
+            json!(original.round() as i64)
+        } else {
+            json!(original)
+        };
+        let mut m = serde_json::Map::new();
+        m.insert(field.into(), value);
+        set(app, Value::Object(m));
+    }
+    if keep || cancel {
         nval_forget(ui, a);
         ui.close();
+    }
+}
+
+/// The range of the pop-up's slider: the useful part of the field's range
+/// (the field still takes xfig's full range).
+fn slider_range(a: Attr) -> (f64, f64) {
+    match a {
+        Attr::Depth => (0.0, 999.0),
+        Attr::RotnAngle | Attr::TextAngle => (-360.0, 360.0),
+        Attr::NumSides => (3.0, 30.0),
+        Attr::NumCopies => (1.0, 20.0),
+        Attr::NumXCopies | Attr::NumYCopies => (0.0, 20.0),
+        Attr::LineWidth => (0.0, 20.0),
+        Attr::BoxRadius => (0.0, 100.0),
+        Attr::FontSize => (1.0, 72.0),
+        Attr::TextStep => (0.0, 5.0),
+        Attr::TangentLength => (0.0, 20.0),
+        _ => (0.0, 100.0),
+    }
+}
+
+/// The preset chips of a number pop-up.
+fn presets(a: Attr) -> &'static [f64] {
+    match a {
+        Attr::Depth => &[0.0, 10.0, 50.0, 100.0, 500.0, 999.0],
+        Attr::RotnAngle => &[-90.0, -45.0, 15.0, 30.0, 45.0, 90.0, 180.0],
+        Attr::TextAngle => &[0.0, 45.0, 90.0, 180.0, 270.0],
+        Attr::NumSides => &[3.0, 4.0, 5.0, 6.0, 8.0, 12.0],
+        Attr::NumCopies => &[1.0, 2.0, 3.0, 4.0, 5.0, 10.0],
+        Attr::NumXCopies | Attr::NumYCopies => &[0.0, 1.0, 2.0, 3.0, 5.0, 10.0],
+        Attr::LineWidth => &[0.0, 1.0, 2.0, 4.0, 6.0, 8.0],
+        Attr::BoxRadius => &[0.0, 5.0, 10.0, 20.0, 50.0],
+        Attr::FontSize => &[8.0, 10.0, 12.0, 14.0, 18.0, 24.0, 36.0],
+        Attr::TextStep => &[0.5, 1.0, 1.2, 1.5, 2.0],
+        Attr::TangentLength => &[0.0, 0.5, 1.0, 2.0, 5.0],
+        _ => &[],
     }
 }
 
