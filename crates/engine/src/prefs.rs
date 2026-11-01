@@ -250,6 +250,8 @@ pub const MAX_LIB_FAVOURITES: usize = 48;
 pub const MAX_LIB_RECENT: usize = 8;
 /// Most favourite libraries kept.
 pub const MAX_LIB_FAV_LIBS: usize = 32;
+/// Most hidden libraries kept.
+pub const MAX_LIB_HIDDEN: usize = 64;
 
 /// RustFig's own settings.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -297,6 +299,9 @@ pub struct RustFigPrefs {
     /// W10-30: favourite libraries (listed first in the library chooser), oldest first.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub library_favourite_libraries: Vec<String>,
+    /// W10-30: hidden libraries (not in the chooser or in Search), oldest first.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub library_hidden: Vec<String>,
     pub user_colors: Vec<NamedColor>,
     /// Colours used lately (`#rrggbb`, newest first), offered in the colour pop-ups (E4).
     pub recent_colors: Vec<String>,
@@ -367,6 +372,7 @@ impl Prefs {
         p.rustfig.library_favourites.truncate(MAX_LIB_FAVOURITES);
         p.rustfig.library_recent.truncate(MAX_LIB_RECENT);
         p.rustfig.library_favourite_libraries.truncate(MAX_LIB_FAV_LIBS);
+        p.rustfig.library_hidden.truncate(MAX_LIB_HIDDEN);
         Ok((p, warnings))
     }
 
@@ -452,6 +458,24 @@ impl Prefs {
             f.push(library.to_string());
         }
         true
+    }
+
+    /// Hide or show a library; false when the list is full.
+    pub fn set_hidden_library(&mut self, library: &str, on: bool) -> bool {
+        let h = &mut self.rustfig.library_hidden;
+        h.retain(|x| x != library);
+        if on {
+            if h.len() >= MAX_LIB_HIDDEN {
+                return false;
+            }
+            h.push(library.to_string());
+        }
+        true
+    }
+
+    /// Whether a library is hidden.
+    pub fn is_hidden_library(&self, library: &str) -> bool {
+        self.rustfig.library_hidden.iter().any(|x| x == library)
     }
 
     /// Whether a library is a favourite.

@@ -3908,3 +3908,88 @@ fn library_chooser_lists_favourite_libraries_first() {
     let first = first_in_list.unwrap_or_default();
     assert!(y_of(&h, "Optics") < y_of(&h, &first));
 }
+
+/// Hidden libraries: gone from the chooser, a "N hidden libraries" line shows
+/// them again.
+#[test]
+fn library_chooser_hides_libraries_and_shows_them_again() {
+    let user = std::env::temp_dir().join(format!("rustfig-ui-library-hide-{}", std::process::id()));
+    let mut h = harness(app());
+    h.state_mut().run(
+        "prefs.set",
+        json!({"resource": "library_dir", "value": user.to_string_lossy()}),
+    );
+    h.get_by_label("Library").scroll_to_me();
+    h.get_by_label("Library").click();
+    h.run_steps(3);
+    h.state_mut().library.load("Optics");
+    h.state_mut().run("library.hide_library", json!({"library": "Optics"}));
+    h.run_steps(2);
+    // Computers is hidden from its context menu in the chooser.
+    h.get_by_role_and_label(egui::accesskit::Role::ComboBox, "Library")
+        .click();
+    h.run_steps(4);
+    let at = h.get_all_by_label("Computers").last().map(|n| n.rect().center());
+    if let Some(at) = at {
+        click_button(&mut h, at, egui::PointerButton::Secondary, egui::Modifiers::NONE);
+        h.run_steps(3);
+        let at = h.get_by_label("Hide library").rect().center();
+        click_button(&mut h, at, egui::PointerButton::Primary, egui::Modifiers::NONE);
+        h.run_steps(3);
+    }
+    assert!(h.state().engine.prefs.is_hidden_library("Computers"));
+    // Optics stays loaded although hidden.
+    assert_eq!(h.state().library.current.as_deref(), Some("Optics"));
+    // The chooser stays open and no longer lists Computers.
+    assert!(h.query_by_label("Computers").is_none());
+    // The line ends the (scrolling) list.
+    h.get_by_label("2 hidden libraries\u{2026}").scroll_to_me();
+    h.run_steps(3);
+    let at = h.get_by_label("2 hidden libraries\u{2026}").rect().center();
+    click_button(&mut h, at, egui::PointerButton::Primary, egui::Modifiers::NONE);
+    h.run_steps(4);
+    h.get_by_label("Show Computers").click();
+    h.run_steps(3);
+    assert!(!h.state().engine.prefs.is_hidden_library("Computers"));
+    assert!(h.state().engine.prefs.is_hidden_library("Optics"));
+    let _ = std::fs::remove_dir_all(&user);
+}
+
+/// The library panel opens on the first favourite library; without favourites
+/// on the first library that is not hidden.
+#[test]
+fn library_panel_opens_on_a_favourite_or_the_first_visible_library() {
+    let user = std::env::temp_dir().join(format!("rustfig-ui-library-open-{}", std::process::id()));
+    let set_dir = |h: &mut Harness<'static, App>| {
+        h.state_mut().run(
+            "prefs.set",
+            json!({"resource": "library_dir", "value": user.to_string_lossy()}),
+        );
+    };
+    let first = {
+        let mut e = Engine::new();
+        let l = e.execute("library.list", &json!({})).unwrap();
+        l["libraries"][0]["name"].as_str().unwrap_or("").to_string()
+    };
+    assert!(!first.is_empty());
+    // A favourite wins over the first library.
+    let mut h = harness(app());
+    set_dir(&mut h);
+    h.state_mut()
+        .run("library.favourite_library", json!({"library": "Optics"}));
+    h.get_by_label("Library").scroll_to_me();
+    h.get_by_label("Library").click();
+    h.run_steps(3);
+    assert_eq!(h.state().library.current.as_deref(), Some("Optics"));
+    // No favourite: the first one, or the next when it is hidden.
+    let mut h = harness(app());
+    set_dir(&mut h);
+    h.state_mut()
+        .run("library.hide_library", json!({"library": first.clone()}));
+    h.get_by_label("Library").scroll_to_me();
+    h.get_by_label("Library").click();
+    h.run_steps(3);
+    let cur = h.state().library.current.clone();
+    assert!(cur.is_some() && cur.as_deref() != Some(first.as_str()));
+    let _ = std::fs::remove_dir_all(&user);
+}

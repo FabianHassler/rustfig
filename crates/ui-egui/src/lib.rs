@@ -479,6 +479,11 @@ impl App {
                         .get("library_dir")
                         .and_then(|v| v.as_str().map(str::to_string))
                         .unwrap_or_else(|| "~/xfiglib".to_string());
+                    let (f, h) = (
+                        self.engine.prefs.rustfig.library_favourite_libraries.clone(),
+                        self.engine.prefs.rustfig.library_hidden.clone(),
+                    );
+                    self.library.sync_prefs(&f, &h);
                     self.library.start_scan(roots, source);
                 }
                 UiRequest::PlotDialog { rect, edit } => match edit {

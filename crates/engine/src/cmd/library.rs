@@ -60,7 +60,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Search libraries",
             menu: "",
             shortcut: "",
-            params: "{\"query\": text, \"limit\"?: n (default 200, at most 1000), \"comments\"?: bool (default true)}  — the figures of all libraries whose name (and comment lines) hold every word of the query, case-insensitive, names first: {\"query\", \"hits\": [{\"library\", \"name\", \"user\": bool, \"comment\": bool}], \"truncated\": bool}; place one with library.place or library.hand",
+            params: "{\"query\": text, \"limit\"?: n (default 200, at most 1000), \"comments\"?: bool (default true), \"include_hidden\"?: bool (default false)}  — the figures of all libraries whose name (and comment lines) hold every word of the query, case-insensitive, names first: {\"query\", \"hits\": [{\"library\", \"name\", \"user\": bool, \"comment\": bool}], \"truncated\": bool}; place one with library.place or library.hand",
             mutates: false,
             enabled: always,
             run: search,
@@ -84,6 +84,16 @@ pub(super) fn commands() -> Vec<Command> {
             mutates: false,
             enabled: always,
             run: favourite_library,
+        },
+        Command {
+            id: "library.hide_library",
+            label: "Hide library",
+            menu: "",
+            shortcut: "",
+            params: "{\"library\": name, \"on\"?: bool (default: toggle)}  — hides the library (it disappears from the library chooser and from library.search; nothing is deleted; kept in the preferences) or shows it again; only an existing library can be hidden: {\"hidden\": bool, \"count\": n}",
+            mutates: false,
+            enabled: always,
+            run: hide_library,
         },
         Command {
             id: "library.favourites",
@@ -155,10 +165,14 @@ pub(super) fn commands() -> Vec<Command> {
 
 fn list(e: &mut Engine, _: &Value) -> CmdResult {
     let fav = e.prefs.rustfig.library_favourite_libraries.clone();
+    let hidden = e.prefs.rustfig.library_hidden.clone();
     let libs: Vec<Value> = e
         .libraries()
         .into_iter()
-        .map(|l| json!({"name": l.name, "objects": l.objects, "user": l.user, "favourite": fav.contains(&l.name)}))
+        .map(|l| {
+            json!({"name": l.name, "objects": l.objects, "user": l.user,
+                "favourite": fav.contains(&l.name), "hidden": hidden.contains(&l.name)})
+        })
         .collect();
     Ok(json!({"libraries": libs}))
 }
@@ -221,7 +235,13 @@ fn search(e: &mut Engine, p: &Value) -> CmdResult {
         None => 200,
     };
     let comments = opt_bool(p, "comments")?.unwrap_or(true);
-    let hits = library::search(&e.libraries(), &query, limit.saturating_add(1), comments);
+    let include_hidden = opt_bool(p, "include_hidden")?.unwrap_or(false);
+    let libs: Vec<_> = e
+        .libraries()
+        .into_iter()
+        .filter(|l| include_hidden || !e.prefs.is_hidden_library(&l.name))
+        .collect();
+    let hits = library::search(&libs, &query, limit.saturating_add(1), comments);
     let truncated = hits.len() > limit;
     let hits: Vec<Value> = hits
         .into_iter()
@@ -263,6 +283,20 @@ fn favourite_library(e: &mut Engine, p: &Value) -> CmdResult {
     }
     e.prefs_dirty = true;
     Ok(json!({"favourite": on, "count": e.prefs.rustfig.library_favourite_libraries.len()}))
+}
+
+fn hide_library(e: &mut Engine, p: &Value) -> CmdResult {
+    let library = string(p, "library")?;
+    let now = e.prefs.is_hidden_library(&library);
+    let on = opt_bool(p, "on")?.unwrap_or(!now);
+    if on && !now {
+        e.find_library(&library)?;
+    }
+    if !e.prefs.set_hidden_library(&library, on) {
+        return Err(EngineError::bad_params("too many hidden libraries: show one first"));
+    }
+    e.prefs_dirty = true;
+    Ok(json!({"hidden": on, "count": e.prefs.rustfig.library_hidden.len()}))
 }
 
 fn favourites(e: &mut Engine, p: &Value) -> CmdResult {

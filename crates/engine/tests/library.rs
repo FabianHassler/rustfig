@@ -696,3 +696,71 @@ fn favourite_libraries_toggle_and_persist() {
         .unwrap();
     assert_eq!(r["favourite"], false);
 }
+
+/// W10-30: hidden libraries toggle, persist, drop out of search, ignore names
+/// that are gone and are capped.
+#[test]
+fn hidden_libraries_toggle_persist_and_skip_search() {
+    let user = scratch("hidelib");
+    let mut e = engine_with_user_dir(&user);
+    let all = e.execute("library.list", &json!({})).unwrap();
+    let names: Vec<String> = all["libraries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|x| x["name"].as_str().unwrap().to_string())
+        .collect();
+    assert!(all["libraries"][0]["hidden"] == false);
+    let hits_before = e.execute("library.search", &json!({"query": "a"})).unwrap();
+    let in_computers = |v: &serde_json::Value| {
+        v["hits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|h| h["library"] == "Computers")
+    };
+    assert!(in_computers(&hits_before));
+    let r = e
+        .execute("library.hide_library", &json!({"library": "Computers"}))
+        .unwrap();
+    assert_eq!(r["hidden"], true);
+    assert_eq!(r["count"], 1);
+    e.execute("library.hide_library", &json!({"library": "Computers", "on": true}))
+        .unwrap();
+    assert_eq!(e.prefs.rustfig.library_hidden, vec!["Computers"]);
+    let l = e.execute("library.list", &json!({})).unwrap();
+    assert_eq!(l["libraries"].as_array().unwrap().len(), names.len());
+    assert!(l["libraries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|x| x["name"] == "Computers" && x["hidden"] == true));
+    let hits = e.execute("library.search", &json!({"query": "a"})).unwrap();
+    assert!(!in_computers(&hits));
+    let hits = e
+        .execute("library.search", &json!({"query": "a", "include_hidden": true}))
+        .unwrap();
+    assert!(in_computers(&hits));
+    // Persistence through the preferences.
+    let (back, _) = rustfig_engine::prefs::Prefs::parse(&e.prefs.to_toml()).unwrap();
+    assert_eq!(back.rustfig.library_hidden, vec!["Computers"]);
+    // Unknown library: error to hide; a stored name that is gone is ignored and can be shown.
+    assert!(e.execute("library.hide_library", &json!({"library": "Nope"})).is_err());
+    assert!(e.execute("library.hide_library", &json!({})).is_err());
+    e.prefs.set_hidden_library("Gone", true);
+    assert!(e.execute("library.list", &json!({})).is_ok());
+    let r = e.execute("library.hide_library", &json!({"library": "Gone"})).unwrap();
+    assert_eq!(r["hidden"], false);
+    let r = e
+        .execute("library.hide_library", &json!({"library": "Computers"}))
+        .unwrap();
+    assert_eq!(r["hidden"], false);
+    // The cap.
+    for i in 0..rustfig_engine::prefs::MAX_LIB_HIDDEN {
+        assert!(e.prefs.set_hidden_library(&format!("x{i}"), true));
+    }
+    assert!(!e.prefs.set_hidden_library("one more", true));
+    assert!(e
+        .execute("library.hide_library", &json!({"library": "Optics"}))
+        .is_err());
+}
