@@ -54,8 +54,12 @@ pub enum Kind {
 pub enum Status {
     /// Applied at start.
     Applied,
-    /// Kept; it takes effect once the feature exists (plan task).
+    /// Kept in the settings file and accepted on the command line; it
+    /// takes effect once the feature exists (plan task, never shown to users).
     Planned(&'static str),
+    /// Kept and accepted, but RustFig has nothing to change for it (it
+    /// always does what the resource would switch on).
+    NoEffect,
 }
 
 /// xfig resources with no counterpart in RustFig (X11 visuals, colormaps,
@@ -113,7 +117,7 @@ const fn r(name: &'static str, kind: Kind, default: &'static str, option: &'stat
 }
 
 use Kind::{Bool, Float, Int, Str};
-use Status::{Applied, Planned};
+use Status::{Applied, NoEffect, Planned};
 
 /// xfig's resources (`xfig.man.in`'s table and `main.c`), in the man page's order.
 #[rustfmt::skip]
@@ -126,7 +130,7 @@ pub const RESOURCES: &[Resource] = &[
     r("browser", Str, SYSTEM_OPEN, "-browser", Planned("D11")),
     r("canvasbackground", Str, "white", "-cbg", Planned("E9")),
     r("canvasforeground", Str, "black", "-cfg", Planned("E9")),
-    r("correctfontsize", Bool, "false", "-correctfontsize", Applied),
+    r("correctfontsize", Bool, "false", "-correctfontsize", NoEffect),
     r("crosshair", Bool, "false", "-crosshair", Applied),
     r("encoding", Int, "1", "-encoding", Planned("D11")),
     r("exportLanguage", Str, "eps", "-exportLanguage", Applied),
@@ -193,6 +197,30 @@ pub const RESOURCES: &[Resource] = &[
     r("write_bak", Bool, "true", "-write_bak", Applied),
     r("zoom", Float, "1.0", "-zoom", Applied),
 ];
+
+impl Resource {
+    /// Whether the settings windows list it: only resources that change
+    /// something in RustFig. The others stay accepted on the command line, in
+    /// `~/.Xdefaults` and in the settings file.
+    pub fn in_ui(&self) -> bool {
+        self.status == Applied
+    }
+
+    /// The resource's default as a value of its type (`None` when xfig has
+    /// no default text for it, such as `geometry`).
+    pub fn default_value(&self) -> Option<toml::Value> {
+        if self.default.is_empty() {
+            return None;
+        }
+        let v = match self.kind {
+            Kind::Bool => toml::Value::Boolean(self.default == "true"),
+            Kind::Int => toml::Value::Integer(self.default.parse().ok()?),
+            Kind::Float => toml::Value::Float(self.default.parse().ok()?),
+            Kind::Str => toml::Value::String(self.default.to_string()),
+        };
+        Some(v)
+    }
+}
 
 /// The resource `name` (xfig's spelling; case ignored, as X resources are
 /// commonly written either way).
@@ -675,6 +703,7 @@ fn coerce(kind: Kind, v: toml::Value) -> Option<toml::Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     #[test]
     fn catalogue_is_unique_and_known() {
@@ -801,5 +830,29 @@ x = 1
         assert_eq!(p.rustfig.recent_files.len(), MAX_RECENT);
         assert_eq!(p.rustfig.recent_files[0], "/f5.fig");
         assert_eq!(p.rustfig.recent_files.iter().filter(|f| *f == "/f5.fig").count(), 1);
+    }
+
+    #[test]
+    fn reset_restores_xfig_defaults_and_keeps_the_rest() {
+        let mut e = Engine::new();
+        for (k, v) in [
+            ("export_margin", json!(7)),
+            ("shownums", json!(true)),
+            ("startfontsize", json!(20)),
+        ] {
+            e.execute("prefs.set", &json!({"resource": k, "value": v})).unwrap();
+        }
+        e.prefs.add_recent_color("#ff0000");
+        // Named resources only.
+        e.execute("prefs.reset", &json!({"names": ["export_margin"]})).unwrap();
+        assert_eq!(e.prefs.int("export_margin"), None);
+        assert_eq!(e.prefs.bool("shownums"), Some(true));
+        assert!(e.execute("prefs.reset", &json!({"names": ["nonsense"]})).is_err());
+        assert!(e.execute("prefs.reset", &json!({"names": [3]})).is_err());
+        // All that RustFig uses; a default applies at once.
+        e.execute("prefs.reset", &json!({})).unwrap();
+        assert_eq!(e.prefs.int("startfontsize"), None);
+        assert!(!e.show_vertex_numbers());
+        assert_eq!(e.prefs.rustfig.recent_colors, ["#ff0000"]);
     }
 }

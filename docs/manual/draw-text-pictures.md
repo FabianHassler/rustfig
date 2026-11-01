@@ -69,6 +69,6 @@ After the box is drawn and the file chosen, xfig's Edit panel for a picture open
 - **Import as objects** (PDF pictures only, found by the file's content; an EPS picture cannot be imported, and the button stays grey) replaces the picture by the objects of the PDF's first page, as one compound that fills the picture's box (flipped pictures are transposed as the canvas draws them) at the picture's depth. It uses the same importer as File > Open of a PDF (see [Files](files.md)), so text becomes text and lines become lines; whatever the importer drops or approximates is listed in the message panel. The panel's changes are kept first (one undo step), the import is a second one. When the PDF carries an embedded RustFig figure, the page's vectors are imported anyway.
 - **XBM pen colour** appears for XBM pictures.
 
-Reread and Relink are undone by Cancel. The same actions are the commands `picture.resize`, `picture.rotate`, `picture.set_file`, `picture.info`, `picture.edit_image` and `picture.import_objects` (plan G6).
+Reread and Relink are undone by Cancel. The same actions are the commands `picture.resize`, `picture.rotate`, `picture.set_file`, `picture.info`, `picture.edit_image` and `picture.import_objects`.
 
 File > Import picture does the same without drawing a box first: the picture goes to the centre of the view at its own size. Pictures can be EPS, PDF, PNG, JPEG, GIF, PCX, PPM, TIFF and others; EPS needs ghostscript (optional) to show on the canvas. The picture is referenced by its file name in the figure; keep it next to the figure file.

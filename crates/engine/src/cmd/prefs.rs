@@ -29,6 +29,16 @@ pub(super) fn commands() -> Vec<Command> {
             run: set,
         },
         Command {
+            id: "prefs.reset",
+            label: "Restore default preferences",
+            menu: "",
+            shortcut: "",
+            params: "{\"names\"?: [xfig resource name]}  — sets the named xfig resources (default: all that RustFig uses) back to xfig's defaults and applies them; your colours, recent files and the other RustFig settings stay",
+            mutates: false,
+            enabled: always,
+            run: reset,
+        },
+        Command {
             id: "prefs.use_current_attributes",
             label: "Use current attributes as defaults",
             menu: "",
@@ -72,6 +82,7 @@ fn get(e: &mut Engine, _: &Value) -> CmdResult {
             let (status, task) = match r.status {
                 Status::Applied => ("applied", None),
                 Status::Planned(t) => ("planned", Some(t)),
+                Status::NoEffect => ("no_effect", None),
             };
             json!({
                 "name": r.name,
@@ -123,6 +134,40 @@ fn set(e: &mut Engine, p: &Value) -> CmdResult {
         Vec::new()
     };
     Ok(json!({"resource": r.name, "value": e.prefs.get(r.name).as_ref().map(to_json), "warnings": warnings}))
+}
+
+fn reset(e: &mut Engine, p: &Value) -> CmdResult {
+    let selected: Vec<&'static crate::prefs::Resource> = match p.get("names") {
+        None | Some(Value::Null) => RESOURCES.iter().filter(|r| r.in_ui()).collect(),
+        Some(Value::Array(a)) => {
+            let mut out = Vec::new();
+            for n in a {
+                let n = n
+                    .as_str()
+                    .ok_or_else(|| EngineError::bad_params("names must be strings"))?;
+                out.push(resource(n).ok_or_else(|| EngineError::bad_params(format!("unknown xfig resource {n:?}")))?);
+            }
+            out
+        }
+        Some(_) => return Err(EngineError::bad_params("names must be a list of resource names")),
+    };
+    for r in &selected {
+        e.prefs.xfig.retain(|k, _| !k.eq_ignore_ascii_case(r.name));
+        if let Some(v) = r.default_value() {
+            e.prefs.set(r.name, v).map_err(EngineError::bad_params)?;
+        }
+    }
+    e.prefs_dirty = true;
+    let max = e.prefs.recent_max();
+    e.prefs.rustfig.recent_files.truncate(max);
+    // Apply the defaults now, then leave the keys out of the file: xfig's
+    // default applies at every start, as when nothing was ever set.
+    let prefs = e.prefs.clone();
+    let warnings = prefs.apply(e);
+    for r in &selected {
+        e.prefs.xfig.retain(|k, _| !k.eq_ignore_ascii_case(r.name));
+    }
+    Ok(json!({"reset": selected.iter().map(|r| r.name).collect::<Vec<_>>(), "warnings": warnings}))
 }
 
 fn use_current(e: &mut Engine, _: &Value) -> CmdResult {

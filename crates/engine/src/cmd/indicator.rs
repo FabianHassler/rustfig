@@ -41,7 +41,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Update will change",
             menu: "",
             shortcut: "",
-            params: "{}  — W10-38: returns {\"flags\": [names of the update flags that are on], \"text\": \"Update will change: …\"}, the checklist the attribute panel shows in Update mode",
+            params: "{}  — returns {\"flags\": [names of the update flags that are on], \"text\": \"Update will change: …\"}, the checklist the attribute panel shows in Update mode",
             mutates: false,
             enabled: always,
             run: |e, _| {

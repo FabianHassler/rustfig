@@ -2790,12 +2790,10 @@ fn global_settings_every_resource_is_reachable() {
     use rustfig_ui_egui::dialogs::global_settings_matches;
     for r in rustfig_engine::prefs::RESOURCES {
         let rows = global_settings_matches(r.name);
-        assert!(
-            rows.iter().any(|(tab, label)| *tab == "Advanced" && label == r.name),
-            "{} is not in the Advanced tab",
-            r.name
-        );
-        if !r.option.is_empty() {
+        let listed = rows.iter().any(|(tab, label)| *tab == "Advanced" && label == r.name);
+        // Resources RustFig doesn't use are not shown (settings stay accepted).
+        assert_eq!(listed, r.in_ui(), "{}", r.name);
+        if r.in_ui() && !r.option.is_empty() {
             let first = r.option.split(',').next().unwrap_or("").trim();
             assert!(global_settings_matches(first)
                 .iter()
@@ -2809,9 +2807,7 @@ fn global_settings_every_resource_is_reachable() {
         ("Window", "Show vertex numbers"),
         ("Drawing", "Freehand drawing resolution"),
         ("Files", "Recently used files"),
-        ("Files", "Maximum image colors"),
         ("Programs", "Spell checker"),
-        ("Programs", "PDF Viewer"),
     ] {
         assert!(all.iter().any(|(t, l)| *t == tab && l == label), "{label}");
         assert!(global_settings_matches(&label.to_uppercase())
@@ -2849,10 +2845,44 @@ fn global_settings_tabs_and_filter() {
     assert!(h.query_by_label("Track mouse in rulers").is_none());
     h.get_by_label("Filter settings").click();
     h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
-    h.get_by_label("Filter settings").type_text("pdf_viewer");
+    h.get_by_label("Filter settings").type_text("export_margin");
     h.run_steps(3);
-    assert!(h.query_all_by_label("PDF Viewer").count() > 0);
-    h.get_by_label("pdf_viewer value");
+    h.get_by_label("export_margin value");
+}
+
+/// "Defaults" puts every row back to xfig's default in the pending state:
+/// Cancel discards it, Ok applies it.
+#[test]
+fn global_settings_defaults() {
+    let mut h = harness(app());
+    {
+        let a = h.state_mut();
+        a.run("prefs.set", json!({"resource": "trackCursor", "value": false}));
+        a.run("prefs.set", json!({"resource": "export_margin", "value": 7}));
+        a.run("prefs.set", json!({"resource": "save_versions", "value": 2}));
+        a.run("app.theme", json!({"theme": "dark"}));
+    }
+    h.state_mut().run("app.global_settings", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Defaults").click();
+    h.run_steps(3);
+    // Pending: nothing changed yet, Cancel keeps it so.
+    assert_eq!(h.state().engine.prefs.int("export_margin"), Some(7));
+    h.get_by_label("Cancel").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.prefs.int("export_margin"), Some(7));
+    assert!(!h.state().engine.track_mouse());
+    h.state_mut().run("app.global_settings", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Defaults").click();
+    h.run_steps(3);
+    h.get_by_label("Ok").click();
+    h.run_steps(3);
+    let e = &h.state().engine;
+    assert!(e.track_mouse());
+    assert_eq!(e.prefs.int("export_margin"), None);
+    assert_eq!(e.prefs.int("save_versions"), None);
+    assert_eq!(h.state().theme, "system");
 }
 
 /// W10-25: an Advanced value is applied at Ok; "Apply changes immediately"
@@ -3658,4 +3688,37 @@ fn search_window_whole_word_next_previous_and_click() {
     h.run_steps(2);
     h.get_by_label_contains("Match 1 of 2");
     assert_ne!(h.state().engine.selection(), &sel[..]);
+}
+
+/// Copy to library: the name field is for a new figure. After the copy it is
+/// empty again and the saved figure is picked in the list.
+#[test]
+fn library_copy_empties_the_name_and_picks_the_figure() {
+    let user = std::env::temp_dir().join(format!("rustfig-ui-library-copy-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&user);
+    std::fs::create_dir_all(&user).unwrap();
+    let mut h = harness(app());
+    h.state_mut().run(
+        "prefs.set",
+        json!({"resource": "library_dir", "value": user.to_string_lossy()}),
+    );
+    h.state_mut().run(
+        "shape.rectangle",
+        json!({"x": 600, "y": 600, "width": 1200, "height": 600}),
+    );
+    h.get_by_label("Library").scroll_to_me();
+    h.get_by_label("Library").click();
+    h.run_steps(3);
+    h.get_by_label("Copy to library").click();
+    h.run_steps(3);
+    h.get_by_label("Library figure name").click();
+    h.get_by_label("Library figure name").type_text("mybox");
+    h.run_steps(3);
+    h.query_all_by_label("Copy to library").last().unwrap().click();
+    h.run_steps(5);
+    assert!(user.join("mybox.fig").exists());
+    h.get_by_label("Library figure name");
+    assert!(h.state().library.selected.is_some(), "the new figure is picked");
+    h.get_by_label("Library object mybox");
+    let _ = std::fs::remove_dir_all(&user);
 }
