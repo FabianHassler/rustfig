@@ -20,7 +20,7 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "plot.panel",
             label: "Plot curve...",
-            menu: "Edit",
+            menu: "Tools",
             shortcut: "Ctrl+Shift+P",
             params: "{}  — open the Plot dialog for a new plot at the origin (the Plot mode button places it where you drag)",
             mutates: false,
@@ -33,7 +33,7 @@ pub(super) fn commands() -> Vec<Command> {
         Command {
             id: "plot.edit",
             label: "Edit plot...",
-            menu: "Edit",
+            menu: "Tools",
             shortcut: "",
             params: "{\"id\"?: plot compound (default: the selected one)}  — open the Plot dialog on an existing plot (Edit mode's left button on a plot does the same)",
             mutates: false,

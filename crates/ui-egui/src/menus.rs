@@ -45,9 +45,9 @@ pub const UI_COMMANDS: &[UiCommand] = &[
     },
     UiCommand {
         id: "app.find_mode",
-        label: "Find mode",
+        label: "Go to mode…",
         shortcut: "Ctrl+J",
-        params: "{}  — puts the caret in the Find mode field at the top of the mode panel: type part of a mode's name, Up/Down and Return pick one (mode.favourite and mode.favourites keep the Favourites strip below it)",
+        params: "{}  — puts the caret in the Go to mode field at the top of the mode panel: type part of a mode's name, Up/Down and Return pick one (mode.favourite and mode.favourites keep the Favourites strip below it)",
     },
     UiCommand {
         id: "app.keys",
@@ -550,6 +550,8 @@ pub enum XfigItem {
     Own(&'static str),
     /// A submenu.
     Sub(&'static str, &'static [XfigItem]),
+    /// A section title: small, weak, not clickable, skipped by the keys.
+    Header(&'static str),
     Sep,
 }
 
@@ -558,90 +560,111 @@ pub enum XfigItem {
 /// menu is [`snap_menu`] and sits before Help; preferences are under
 /// Edit › Global settings.
 pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
-    use XfigItem::{Cmd, Own, Sep};
+    use XfigItem::{Cmd, Header as H, Own, Sep};
     &[
         (
             "File",
             &[
+                H("Open"),
                 Cmd("New", "app.new"),
                 Cmd("Open...", "app.open"),
                 Cmd("Merge...", "app.merge"),
                 Own("app.open_panel"),
                 Own("app.merge_panel"),
                 Cmd("Digitize...", "app.digitize"),
+                H("Save"),
                 Cmd("Save", "app.save"),
                 Cmd("Save As...", "app.save_as"),
-                Cmd("Export...", "app.export"),
-                Own("app.import_picture"),
-                Own("app.capture"),
-                Own("app.new_window"),
                 Own("app.versions"),
+                H("Output"),
+                Cmd("Export...", "app.export"),
                 Cmd("Print...", "app.print"),
+                Sep,
+                Own("app.new_window"),
                 Cmd("Exit", "app.quit"),
             ],
         ),
         (
             "Edit",
             &[
+                H("Undo"),
                 Cmd("Undo", "edit.undo"),
+                Own("edit.redo"),
+                H("Paste"),
                 Cmd("Paste Objects", "edit.paste"),
                 Cmd("Paste Text", "text.paste"),
+                Own("edit.copy_picture_pick"),
+                H("Text"),
                 Cmd("Search/Replace...", "app.search"),
-                Own("app.find_objects"),
                 #[cfg(not(target_arch = "wasm32"))]
                 Cmd("Spell Check...", "app.spell_check"),
                 #[cfg(target_arch = "wasm32")]
                 XfigItem::Missing("Spell Check...", "Alt+K", "web"),
-                Cmd("Delete All", "edit.delete_all"),
                 Sep,
+                Cmd("Delete All", "edit.delete_all"),
+                H("Settings"),
                 Cmd("Global settings...", "app.global_settings"),
                 Cmd("Colours...", "app.colors"),
                 Cmd("Set units...", "app.unit_panel"),
                 Own("app.document_settings"),
-                Own("app.keyboard_entry"),
-                Sep,
-                Own("edit.redo"),
-                Own("edit.copy_picture_pick"),
-                Own("plot.panel"),
-                Own("plot.edit"),
             ],
         ),
         (
             "View",
             &[
+                H("Drawing"),
                 Cmd("Manage Styles...", "app.styles"),
                 Cmd("Redraw", "app.redraw"),
                 Cmd("Portrait/Landscape", "doc.toggle_orientation"),
+                H("Zoom"),
                 Cmd("Zoom In", "view.zoom_in"),
                 Cmd("Zoom Out", "view.zoom_out"),
                 Cmd("Zoom to Fit canvas", "view.zoom_fit"),
                 Cmd("Unzoom", "view.zoom_actual"),
                 Cmd("Pan to origin", "view.pan_origin"),
-                Cmd("Character map...", "app.character_map"),
-                Cmd("Find mode", "app.find_mode"),
                 Sep,
+                Cmd("Character map...", "app.character_map"),
+                H("Show"),
                 Cmd("Show page borders", "view.toggle_page_border"),
+                Own("view.toggle_grid"),
                 Cmd("Typeset LaTeX text", "view.toggle_latex_preview"),
                 Cmd("Show depth manager", "app.toggle_depths"),
+                Own("depth.show_all"),
                 Cmd("Show info balloons", "app.toggle_balloons"),
                 Cmd("Show line lengths", "view.toggle_lengths"),
                 Cmd("Show vertex numbers", "view.toggle_vertex_numbers"),
                 Cmd("Show crosshair", "view.toggle_crosshair"),
                 Cmd("Autorefresh mode", "app.toggle_autorefresh"),
-                Own("view.toggle_grid"),
-                Own("depth.show_all"),
+            ],
+        ),
+        (
+            "Tools",
+            &[
+                H("Find"),
+                Own("app.find_objects"),
+                Cmd("Go to mode...", "app.find_mode"),
+                H("Add to the drawing"),
+                Own("app.import_picture"),
+                Own("app.capture"),
+                Own("app.keyboard_entry"),
+                H("Plots"),
+                Own("plot.panel"),
+                Own("plot.edit"),
             ],
         ),
         (
             "Help",
             &[
+                H("Learn"),
                 Cmd("RustFig Manual...", "help.open"),
-                Cmd("RustFig Reference (commands)...", "app.commands"),
                 Cmd("Keys...", "app.keys"),
-                Own("help.command_search"),
                 Own("app.mouse_sheet"),
-                Own("app.messages"),
                 Own("app.whats_new"),
+                H("Look up"),
+                Cmd("RustFig Reference (commands)...", "app.commands"),
+                Own("help.command_search"),
+                Own("app.messages"),
+                Sep,
                 Cmd("Install TeX Gyre fonts...", "app.install_tex_gyre"),
                 Cmd("About RustFig...", "app.about"),
             ],
@@ -786,6 +809,10 @@ fn xfig_items(app: &mut App, ui: &mut egui::Ui, items: &[XfigItem]) {
         match *item {
             XfigItem::Sep => {
                 ui.separator();
+            }
+            XfigItem::Header(text) => {
+                ui.add_space(2.0);
+                ui.label(egui::RichText::new(text.to_uppercase()).small().weak());
             }
             XfigItem::Sub(name, sub) => {
                 ui.menu_button(name, |ui| xfig_items(app, ui, sub));
@@ -1380,7 +1407,7 @@ pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
         app.command_search.open = false;
         return;
     }
-    // The same for the Find mode field of the mode panel.
+    // The same for the Go to mode field of the mode panel.
     if app.mode_finder.active && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
         app.mode_finder.escape = true;
         return;
@@ -1545,7 +1572,7 @@ mod tests {
             match item {
                 XfigItem::Cmd(_, id) | XfigItem::Own(id) => out.push(id),
                 XfigItem::Sub(_, sub) => menu_ids(sub, out),
-                XfigItem::Missing(..) | XfigItem::Sep => {}
+                XfigItem::Missing(..) | XfigItem::Sep | XfigItem::Header(_) => {}
             }
         }
     }
@@ -1580,6 +1607,33 @@ mod tests {
             assert!(shown_desktop.contains(&id), "{id} missing on the desktop");
         }
         assert!(shown_web.contains(&"app.save"));
+    }
+
+    #[test]
+    fn tools_menu_follows_view_and_holds_the_moved_entries() {
+        let names: Vec<&str> = XFIG_MENUS.iter().map(|(n, _)| *n).collect();
+        assert_eq!(names, ["File", "Edit", "View", "Tools", "Help"]);
+        let tools = XFIG_MENUS.iter().find(|(n, _)| *n == "Tools").map(|(_, i)| *i).unwrap();
+        let mut ids = Vec::new();
+        menu_ids(tools, &mut ids);
+        for id in [
+            "app.find_objects",
+            "app.find_mode",
+            "app.import_picture",
+            "app.capture",
+            "app.keyboard_entry",
+            "plot.panel",
+            "plot.edit",
+        ] {
+            assert!(ids.contains(&id), "{id} not in Tools");
+        }
+        assert_eq!(label_of("app.find_mode").0, "Go to mode…");
+        for (_, items) in XFIG_MENUS {
+            assert!(
+                matches!(items.first(), Some(XfigItem::Header(_))),
+                "a menu starts with a section title"
+            );
+        }
     }
 
     #[test]

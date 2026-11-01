@@ -1,4 +1,4 @@
-//! The mode panel's Find mode field and Favourites strip: type part of a
+//! The mode panel's Go to mode field and Favourites strip: type part of a
 //! mode's name to pick it, keep the modes you use most within reach.
 
 use crate::panels;
@@ -13,14 +13,14 @@ const MAX_MATCHES: usize = 10;
 /// Size of a Favourites button.
 const FAV_SIZE: egui::Vec2 = vec2(17.0, 16.0);
 
-/// State of the Find mode field.
+/// State of the Go to mode field.
 #[derive(Default)]
 pub struct ModeFinder {
     /// What was typed.
     pub text: String,
     /// The highlighted match.
     pub sel: usize,
-    /// Put the caret in the field on the next frame (Find mode command).
+    /// Put the caret in the field on the next frame (Go to mode command).
     pub focus: bool,
     /// The field had the caret last frame.
     pub active: bool,
@@ -121,12 +121,12 @@ fn finder(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     let resp = ui.add(
         TextEdit::singleline(&mut f.text)
             .id(id)
-            .hint_text("Find mode")
+            .hint_text("Go to mode")
             .font(FontId::proportional(11.0))
             .margin(vec2(3.0, 2.0))
             .desired_width(ui.available_width()),
     );
-    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Find mode"));
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Go to mode"));
     f.active = ctx.memory(|m| m.has_focus(id)) && !leave;
     if f.focus {
         f.focus = false;
@@ -166,7 +166,7 @@ fn finder(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
                             FontId::proportional(11.0),
                             tk.muted,
                         );
-                        let label = format!("Find mode result {}", t.label());
+                        let label = format!("Go to mode result {}", t.label());
                         rr.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, &label));
                         if rr.clicked() {
                             clicked = Some(*t);

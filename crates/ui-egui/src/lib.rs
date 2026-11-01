@@ -124,7 +124,7 @@ pub struct App {
     /// xfig's mode menu popped up by Alt+wheel over the canvas: drawing
     /// (wheel up) or editing modes, at the pointer.
     pub mode_popup: Option<(bool, egui::Pos2)>,
-    /// The Find mode field at the top of the mode panel.
+    /// The Go to mode field at the top of the mode panel.
     pub mode_finder: mode_finder::ModeFinder,
     /// Crash-recovery copies of the drawing (A6); `None` until enabled.
     #[cfg(not(target_arch = "wasm32"))]

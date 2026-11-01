@@ -66,7 +66,7 @@ Other messages follow xfig as well. Moving or adding a point of a line or spline
 
 Command `tool.point` (xfig's keyboard point entry) gives the next point as text instead of a click: `1.5, 2` (ruler units; fractions as `1-1/2`), `r1, r-0.5` or `r1 0.5` (relative to the current point: the last point of the line, or where the operation started), `a` for absolute, or polar `2<30` (length and angle in degrees, `2<0.5p` in multiples of pi, `2<1r` in radians; from the current point). The point is used exactly, without snapping.
 
-In the app, **Edit > Enter point…** (Ctrl+K; physical Ctrl+K with xfig's keys) opens a small window with a text field: type a point and press Enter for the left button (the Left, Middle and Right buttons act as that mouse button), and the point goes to the current mode. A bad entry shows its error and stays in the field; the last ten entries are listed under History, click one to type it again.
+In the app, **Tools > Enter point…** (Ctrl+K; physical Ctrl+K with xfig's keys) opens a small window with a text field: type a point and press Enter for the left button (the Left, Middle and Right buttons act as that mouse button), and the point goes to the current mode. A bad entry shows its error and stays in the field; the last ten entries are listed under History, click one to type it again.
 
 ## Box
 
