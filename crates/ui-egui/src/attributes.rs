@@ -335,6 +335,12 @@ pub fn attribute_panel(app: &mut App, ui: &mut Ui, tk: &Tokens) {
             hovered |= button(app, ui, tk, a);
         }
     });
+    if update_mode {
+        // W10-38: the update boxes as a sentence.
+        let text = app.engine.indicator.update_summary();
+        let resp = ui.add(egui::Label::new(egui::RichText::new(&text).color(tk.muted)).wrap());
+        resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, &text));
+    }
     ui.add_space(2.0);
     crate::dimline_panel::show(app, ui.ctx());
     crate::point_entry::show(app, ui.ctx());

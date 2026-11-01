@@ -178,10 +178,30 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Search/Replace text",
             menu: "",
             shortcut: "",
-            params: "{\"find\": string, \"replace\"?: string, \"case_sensitive\"?: bool}  — without replace, selects matching texts and lists them in \"texts\" ({x,y,text}); an empty find matches every text",
+            params: "{\"find\": string, \"replace\"?: string, \"case_sensitive\"?: bool (default true), \"whole_word\"?: bool (default false)}  — without replace, selects matching texts and lists them in \"texts\" ({x,y,text,id}); an empty find matches every text; whole_word matches only where the letters, digits and _ on both ends of the match are not part of a longer word",
             mutates: true,
             enabled: has_objects,
             run: search_replace,
+        },
+        Command {
+            id: "edit.search_step",
+            label: "Search next/previous",
+            menu: "",
+            shortcut: "",
+            params: "{\"find\": string, \"direction\"?: \"next\"|\"previous\", \"case_sensitive\"?: bool, \"whole_word\"?: bool}  — W10-26: selects the next (or previous) object whose text matches, starting after the selected match and wrapping round, and scrolls it into view; returns {id, index, count, texts} (count 0 when nothing matches)",
+            mutates: false,
+            enabled: has_objects,
+            run: search_step,
+        },
+        Command {
+            id: "edit.show_object",
+            label: "Show object",
+            menu: "",
+            shortcut: "",
+            params: "{\"id\": id}  — W10-26: selects the top-level object and scrolls it into view when it is not wholly visible (a click on a search result)",
+            mutates: false,
+            enabled: has_objects,
+            run: show_object_cmd,
         },
     ]
 }
@@ -537,45 +557,109 @@ fn select(e: &mut Engine, p: &Value) -> CmdResult {
     Ok(json!({"ids": ids_value(e.selection())}))
 }
 
-fn search_replace(e: &mut Engine, p: &Value) -> CmdResult {
+/// What a search looks for: the text, case and whole-word options (W10-26).
+struct Pattern {
+    find: Vec<char>,
+    case: bool,
+    whole: bool,
+}
+
+fn word_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_'
+}
+
+fn same_char(a: char, b: char, case: bool) -> bool {
+    a == b || (!case && a.to_lowercase().eq(b.to_lowercase()))
+}
+
+impl Pattern {
+    fn new(find: &str, case: bool, whole: bool) -> Pattern {
+        Pattern {
+            find: find.chars().collect(),
+            case,
+            whole,
+        }
+    }
+
+    /// The match starting at byte `i` of `text`: its end.
+    fn match_at(&self, text: &str, i: usize) -> Option<usize> {
+        let rest = text.get(i..)?;
+        let mut it = rest.char_indices();
+        for &f in &self.find {
+            let (_, c) = it.next()?;
+            if !same_char(c, f, self.case) {
+                return None;
+            }
+        }
+        let end = i + it.next().map_or(rest.len(), |(k, _)| k);
+        if self.whole {
+            let before = text.get(..i).and_then(|t| t.chars().next_back());
+            let after = text.get(end..).and_then(|t| t.chars().next());
+            let starts_word = self.find.first().is_some_and(|c| word_char(*c));
+            let ends_word = self.find.last().is_some_and(|c| word_char(*c));
+            if (starts_word && before.is_some_and(word_char)) || (ends_word && after.is_some_and(word_char)) {
+                return None;
+            }
+        }
+        Some(end)
+    }
+
+    /// The non-overlapping matches in `text` as byte ranges (none for an
+    /// empty pattern).
+    fn spans(&self, text: &str) -> Vec<(usize, usize)> {
+        let mut out = Vec::new();
+        if self.find.is_empty() {
+            return out;
+        }
+        let mut next_start = 0;
+        for (i, _) in text.char_indices() {
+            if i < next_start {
+                continue;
+            }
+            if let Some(end) = self.match_at(text, i) {
+                out.push((i, end));
+                next_start = end;
+            }
+        }
+        out
+    }
+
+    /// xfig: an empty search string matches every text.
+    fn matches(&self, text: &str) -> bool {
+        self.find.is_empty() || !self.spans(text).is_empty()
+    }
+}
+
+fn pattern_of(p: &Value) -> Result<Pattern, EngineError> {
     let find = string(p, "find")?;
+    let case = opt_bool(p, "case_sensitive")?.unwrap_or(true);
+    let whole = opt_bool(p, "whole_word")?.unwrap_or(false);
+    Ok(Pattern::new(&find, case, whole))
+}
+
+fn search_replace(e: &mut Engine, p: &Value) -> CmdResult {
+    let pat = pattern_of(p)?;
     let replace = super::opt_str(p, "replace")?.map(str::to_string);
     // xfig: an empty search string matches every text (`w_srchrepl.c`);
     // replacing an empty string is refused.
-    if find.is_empty() && replace.is_some() {
+    if pat.find.is_empty() && replace.is_some() {
         return Err(EngineError::bad_params("\"find\" must not be empty when replacing"));
     }
-    let case = opt_bool(p, "case_sensitive")?.unwrap_or(true);
-    let matches = |s: &str| {
-        if find.is_empty() {
-            true
-        } else if case {
-            s.contains(&find)
-        } else {
-            s.to_lowercase().contains(&find.to_lowercase())
-        }
-    };
-    let mut hits: Vec<ObjectId> = Vec::new();
     let mut count = 0usize;
     // Searching never changes the document; replacing does.
-    let top: Vec<(ObjectId, bool)> = e
+    let hits: Vec<ObjectId> = e
         .doc()
         .objects
         .iter()
-        .map(|o| (o.id, contains_text(o, &matches)))
+        .filter(|o| contains_text(o, &|s| pat.matches(s)))
+        .map(|o| o.id)
         .collect();
-    for (id, hit) in top {
-        if hit {
-            hits.push(id);
-        }
-    }
     if let Some(rep) = replace {
-        let find_c = find.clone();
         for o in e.doc_mut().objects.iter_mut() {
             // Replace in a copy, kept only where something changed, so
             // untouched objects stay shared with the undo history.
             let mut copy = (**o).clone();
-            let n = replace_text(&mut copy, &find_c, &rep, case);
+            let n = replace_text(&mut copy, &pat, &rep);
             if n > 0 {
                 *o = Arc::new(copy);
                 count += n;
@@ -586,20 +670,92 @@ fn search_replace(e: &mut Engine, p: &Value) -> CmdResult {
     let mut found = Vec::new();
     for o in e.doc().objects.iter() {
         if hits.contains(&o.id) {
-            collect_texts(o, &matches, &mut found);
+            collect_texts(o, o.id, &|s| pat.matches(s), &mut found);
         }
     }
     e.set_selection(hits.clone());
     Ok(json!({"matches": hits.len(), "replaced": count, "ids": ids_value(&hits), "texts": found}))
 }
 
-/// The matching texts (also inside compounds) with their anchor positions.
-fn collect_texts(o: &Object, m: &dyn Fn(&str) -> bool, out: &mut Vec<Value>) {
+/// Select the next or previous object with a matching text and bring it
+/// into view (W10-26): from the selected match on, wrapping round at the end.
+fn search_step(e: &mut Engine, p: &Value) -> CmdResult {
+    let pat = pattern_of(p)?;
+    let forward = match super::opt_str(p, "direction")? {
+        None | Some("next") => true,
+        Some("previous") => false,
+        Some(_) => return Err(EngineError::bad_params("direction must be \"next\" or \"previous\"")),
+    };
+    let hits: Vec<ObjectId> = e
+        .doc()
+        .objects
+        .iter()
+        .filter(|o| contains_text(o, &|s| pat.matches(s)))
+        .map(|o| o.id)
+        .collect();
+    if hits.is_empty() {
+        return Ok(json!({"count": 0}));
+    }
+    // Where the selection sits among the matches.
+    let sel: Vec<usize> = hits
+        .iter()
+        .enumerate()
+        .filter(|(_, id)| e.selection().contains(id))
+        .map(|(i, _)| i)
+        .collect();
+    let n = hits.len();
+    let at = if forward {
+        sel.iter().max().map_or(0, |i| (i + 1) % n)
+    } else {
+        sel.iter().min().map_or(n - 1, |i| (i + n - 1) % n)
+    };
+    let id = *hits.get(at).ok_or_else(|| EngineError::bad_params("no match"))?;
+    let mut texts = Vec::new();
+    if let Some(o) = e.doc().objects.iter().find(|o| o.id == id) {
+        collect_texts(o, id, &|s| pat.matches(s), &mut texts);
+    }
+    show_object(e, id);
+    Ok(json!({"id": id.0, "index": at + 1, "count": n, "texts": texts}))
+}
+
+/// `edit.show_object`: select a top-level object and scroll it into view.
+fn show_object_cmd(e: &mut Engine, p: &Value) -> CmdResult {
+    let id = p
+        .get("id")
+        .and_then(Value::as_u64)
+        .map(ObjectId)
+        .ok_or_else(|| EngineError::bad_params("id must be an object id"))?;
+    if !e.doc().objects.iter().any(|o| o.id == id) {
+        return Err(EngineError::bad_params(format!("no object {}", id.0)));
+    }
+    show_object(e, id);
+    Ok(json!({"id": id.0}))
+}
+
+/// Select `id` and, when its box is not wholly visible, centre the view on it.
+fn show_object(e: &mut Engine, id: ObjectId) {
+    e.set_selection(vec![id]);
+    let Some(b) = e.object_fig_bounds(id) else { return };
+    if b.is_empty() || !(b.min.is_finite() && b.max.is_finite()) {
+        return;
+    }
+    let vis = e.view.visible();
+    let inside = b.min.x >= vis.min.x && b.min.y >= vis.min.y && b.max.x <= vis.max.x && b.max.y <= vis.max.y;
+    if !inside {
+        let (w, h) = (vis.width(), vis.height());
+        e.view.origin =
+            rustfig_geom::Point::new((b.min.x + b.max.x) / 2.0 - w / 2.0, (b.min.y + b.max.y) / 2.0 - h / 2.0);
+    }
+}
+
+/// The matching texts (also inside compounds) with their anchor positions;
+/// `id` is the top-level object holding them.
+fn collect_texts(o: &Object, id: ObjectId, m: &dyn Fn(&str) -> bool, out: &mut Vec<Value>) {
     match &o.kind {
         ObjectKind::Text(t) if m(&t.text) => {
-            out.push(json!({"x": t.origin.x, "y": t.origin.y, "text": t.text}));
+            out.push(json!({"x": t.origin.x, "y": t.origin.y, "text": t.text, "id": id.0}));
         }
-        ObjectKind::Compound(c) => c.objects.iter().for_each(|x| collect_texts(x, m, out)),
+        ObjectKind::Compound(c) => c.objects.iter().for_each(|x| collect_texts(x, id, m, out)),
         _ => {}
     }
 }
@@ -612,40 +768,50 @@ fn contains_text(o: &Object, m: &dyn Fn(&str) -> bool) -> bool {
     }
 }
 
-fn replace_text(o: &mut Object, find: &str, rep: &str, case: bool) -> usize {
+fn replace_text(o: &mut Object, pat: &Pattern, rep: &str) -> usize {
     match &mut o.kind {
         ObjectKind::Text(t) => {
-            if case {
-                let n = t.text.matches(find).count();
-                if n > 0 {
-                    t.text = t.text.replace(find, rep);
-                }
-                n
-            } else {
-                let lower = t.text.to_lowercase();
-                let fl = find.to_lowercase();
-                if !lower.contains(&fl) || lower.len() != t.text.len() {
-                    // Fall back to exact replacement when case folding changes lengths.
-                    let n = t.text.matches(find).count();
-                    t.text = t.text.replace(find, rep);
-                    return n;
-                }
-                let mut out = String::new();
-                let mut n = 0;
-                let mut i = 0;
-                while let Some(pos) = lower.get(i..).and_then(|s| s.find(&fl)) {
-                    out.push_str(t.text.get(i..i + pos).unwrap_or(""));
-                    out.push_str(rep);
-                    i += pos + fl.len();
-                    n += 1;
-                }
-                out.push_str(t.text.get(i..).unwrap_or(""));
-                t.text = out;
-                n
+            let spans = pat.spans(&t.text);
+            if spans.is_empty() {
+                return 0;
             }
+            let mut out = String::with_capacity(t.text.len());
+            let mut at = 0;
+            for &(a, b) in &spans {
+                out.push_str(t.text.get(at..a).unwrap_or(""));
+                out.push_str(rep);
+                at = b;
+            }
+            out.push_str(t.text.get(at..).unwrap_or(""));
+            t.text = out;
+            spans.len()
         }
-        ObjectKind::Compound(c) => c.objects.iter_mut().map(|x| replace_text(x, find, rep, case)).sum(),
+        ObjectKind::Compound(c) => c.objects.iter_mut().map(|x| replace_text(x, pat, rep)).sum(),
         _ => 0,
+    }
+}
+
+#[cfg(test)]
+mod pattern_tests {
+    use super::Pattern;
+
+    #[test]
+    fn case_folding_and_multibyte_text() {
+        let p = Pattern::new("ÄPFEL", false, false);
+        assert_eq!(p.spans("Äpfel äpfel"), vec![(0, 6), (7, 13)]);
+        assert!(Pattern::new("ä", true, false).spans("Ä").is_empty());
+        // Whole word: letters before or after rule a match out, punctuation does not.
+        let w = Pattern::new("cat", true, true);
+        assert_eq!(w.spans("cat, (cat) cats concat cat"), vec![(0, 3), (6, 9), (23, 26)]);
+        // Overlapping candidates are taken left to right without overlap.
+        assert_eq!(Pattern::new("aa", true, false).spans("aaaaa"), vec![(0, 2), (2, 4)]);
+        // A pattern ending in punctuation checks only the word edge.
+        assert_eq!(
+            Pattern::new("cat.", true, true).spans("a cat. b cat.x"),
+            vec![(2, 6), (9, 13)]
+        );
+        assert!(Pattern::new("", true, false).spans("x").is_empty());
+        assert!(Pattern::new("", true, false).matches("x"));
     }
 }
 

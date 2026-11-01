@@ -38,7 +38,7 @@ Number pop-ups (Line Width, Text Size, Depth, Rotn Angle, Num Sides, copies, Box
 
 **Grid Mode** has nine choices: none, four square grids and four **isometric** grids (vertical lines and lines at plus and minus 30 degrees; points snap to the crossings, [Snap and grid](snap-grid.md)). **Vert Align** and **Horiz Align** have xfig's seven choices: none, start (left or top), centre, end (right or bottom), distribute centres, distribute edges and abut ([Transform](transform.md)).
 
-The Update Control box (in Update mode) says which attributes Update applies. Edit > Global settings has "Use current attributes as defaults" to keep the panel's values as the start values for new drawings ([Preferences](preferences.md)).
+The Update Control box (in Update mode) says which attributes Update applies, and a line below the buttons, "Update will change: …", spells them out. Edit > Global settings has "Use current attributes as defaults" to keep the panel's values as the start values for new drawings ([Preferences](preferences.md)).
 
 ## Colours
 

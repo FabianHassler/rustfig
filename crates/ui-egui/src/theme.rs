@@ -20,6 +20,8 @@ pub struct Tokens {
     pub icon_active: Color32,
     pub tool_active_bg: Color32,
     pub error: Color32,
+    /// Warnings in the message history.
+    pub warning: Color32,
     pub muted: Color32,
     /// Buttons are bevelled (the "3D" button style) rather than flat.
     pub bevel: bool,
@@ -39,6 +41,15 @@ pub struct Tokens {
 }
 
 impl Tokens {
+    /// The colour a history message is drawn in (`normal` for info).
+    pub fn message_color(&self, l: crate::messages::Level, normal: Color32) -> Color32 {
+        match l {
+            crate::messages::Level::Info => normal,
+            crate::messages::Level::Warning => self.warning,
+            crate::messages::Level::Error => self.error,
+        }
+    }
+
     /// The tokens for the current theme and button style (`bevel`: 3D).
     pub fn new(dark: bool, bevel: bool) -> Tokens {
         Tokens {
@@ -65,6 +76,7 @@ impl Tokens {
                 icon_active: Color32::WHITE,
                 tool_active_bg: Color32::from_rgb(45, 95, 170),
                 error: Color32::from_rgb(255, 120, 110),
+                warning: Color32::from_rgb(235, 190, 70),
                 muted: Color32::from_gray(150),
                 bevel: true,
                 face_top: Color32::from_gray(74),
@@ -94,6 +106,7 @@ impl Tokens {
                 icon_active: Color32::WHITE,
                 tool_active_bg: Color32::from_rgb(60, 120, 210),
                 error: Color32::from_rgb(190, 30, 20),
+                warning: Color32::from_rgb(170, 105, 0),
                 muted: Color32::from_gray(110),
                 bevel: true,
                 face_top: Color32::from_gray(246),

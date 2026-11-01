@@ -66,6 +66,30 @@ impl UpdateFlag {
     pub fn from_name(n: &str) -> Option<UpdateFlag> {
         UpdateFlag::ALL.iter().copied().find(|f| f.name() == n)
     }
+
+    /// What the flag covers, in words, for the "Update will change" checklist.
+    pub fn label(self) -> &'static str {
+        match self {
+            UpdateFlag::TextJust => "text justification",
+            UpdateFlag::Font => "font",
+            UpdateFlag::FontSize => "text size",
+            UpdateFlag::PenColor => "pen colour",
+            UpdateFlag::FillColor => "fill colour",
+            UpdateFlag::FillStyle => "fill style",
+            UpdateFlag::LineStyle => "line style",
+            UpdateFlag::JoinStyle => "join style",
+            UpdateFlag::CapStyle => "cap style",
+            UpdateFlag::LineWidth => "line width",
+            UpdateFlag::Depth => "depth",
+            UpdateFlag::TextAngle => "text/ellipse angle",
+            UpdateFlag::TextFlags => "text flags",
+            UpdateFlag::ArrowMode => "arrow mode",
+            UpdateFlag::ArrowType => "arrow type",
+            UpdateFlag::ArrowSize => "arrow size",
+            UpdateFlag::BoxRadius => "box curve",
+            UpdateFlag::ArcType => "arc type",
+        }
+    }
 }
 
 /// Grid spacing / point positioning steps.
@@ -336,6 +360,23 @@ impl Indicator {
     /// Whether Update copies this attribute.
     pub fn updates(&self, f: UpdateFlag) -> bool {
         !self.update_off.contains(&f)
+    }
+
+    /// The flags Update applies now, in button order.
+    pub fn update_flags_on(&self) -> Vec<UpdateFlag> {
+        UpdateFlag::ALL.into_iter().filter(|f| self.updates(*f)).collect()
+    }
+
+    /// The "Update will change: …" line (W10-38), derived from the same
+    /// flags as the update boxes, so the two cannot disagree.
+    pub fn update_summary(&self) -> String {
+        let on = self.update_flags_on();
+        if on.is_empty() {
+            "Update will change: nothing".to_string()
+        } else {
+            let names: Vec<&str> = on.iter().map(|f| f.label()).collect();
+            format!("Update will change: {}", names.join(", "))
+        }
     }
 
     /// Switch one update flag.

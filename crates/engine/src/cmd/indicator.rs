@@ -37,6 +37,19 @@ pub(super) fn commands() -> Vec<Command> {
             run: set_update_flag,
         },
         Command {
+            id: "indicator.update_summary",
+            label: "Update will change",
+            menu: "",
+            shortcut: "",
+            params: "{}  — W10-38: returns {\"flags\": [names of the update flags that are on], \"text\": \"Update will change: …\"}, the checklist the attribute panel shows in Update mode",
+            mutates: false,
+            enabled: always,
+            run: |e, _| {
+                let flags: Vec<String> = e.indicator.update_flags_on().into_iter().map(UpdateFlag::name).collect();
+                Ok(json!({"flags": flags, "text": e.indicator.update_summary()}))
+            },
+        },
+        Command {
             id: "indicator.update_flags",
             label: "Update control",
             menu: "",

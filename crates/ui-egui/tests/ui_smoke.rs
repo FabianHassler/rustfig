@@ -388,9 +388,14 @@ fn update_control_flags_in_update_mode() {
     assert!(h.query_by_label("Sets all update flags").is_none());
     h.state_mut().engine.set_tool(ToolKind::Update);
     h.run_steps(2);
+    // The checklist line names every flag that is on, and follows the boxes.
+    h.get_by_label_contains("Update will change: ");
+    h.get_by_label_contains("line width");
     h.get_by_label("Update Line Width").click();
     h.run_steps(2);
     assert!(!h.state().engine.indicator.updates(UpdateFlag::LineWidth));
+    assert!(h.query_by_label_contains("line width").is_none());
+    h.get_by_label_contains("Update will change: ");
     assert!(h.state().engine.indicator.updates(UpdateFlag::Depth));
     // The click did not open the button's pop-up or change its value.
     assert_eq!(h.state().engine.indicator.thickness, 1);
@@ -1274,7 +1279,7 @@ fn retired_settings_load_and_vanish() {
     .unwrap();
     let mut h = harness(app_with_settings(&path));
     assert!(!h.state().xfig_keys, "the other keys still apply");
-    assert!(h.state().message.as_ref().is_none_or(|m| !m.error));
+    assert!(h.state().message.as_ref().is_none_or(|m| !m.is_error()));
     h.state_mut().run("app.toggle_xfig_keys", json!({"on": true}));
     h.run_steps(2);
     let text = std::fs::read_to_string(&path).unwrap();
@@ -3442,4 +3447,99 @@ fn start_screen_goes_on_a_click_and_nosplash_hides_it() {
         .unwrap();
     rustfig_ui_egui::settings::apply_ui(h.state_mut());
     assert!(h.state().splash.is_none());
+}
+
+#[test]
+fn message_history_filters_by_level_and_copies() {
+    let mut h = harness(app());
+    h.state_mut().info("just info");
+    h.state_mut().warn("careful now");
+    h.state_mut().error("it broke");
+    // The command lists by level and opens the window.
+    let r = h
+        .state_mut()
+        .try_run("app.messages", &json!({"levels": ["warning", "error"]}))
+        .unwrap();
+    let texts: Vec<&str> = r["messages"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|m| m["text"].as_str().unwrap())
+        .collect();
+    assert_eq!(texts, ["careful now", "it broke"]);
+    assert!(h
+        .state_mut()
+        .try_run("app.messages", &json!({"levels": ["loud"]}))
+        .is_err());
+    h.run_steps(3);
+    // The check boxes follow the command: Info is off, so its line is gone.
+    assert_eq!(h.query_all_by_label("just info").count(), 0);
+    assert!(h.query_all_by_label("it broke").count() >= 1);
+    assert!(h.query_all_by_label("careful now").count() >= 1);
+    // Switching Info on through the window lists it again.
+    h.get_by_label("Info").click();
+    h.run_steps(3);
+    assert!(h.query_all_by_label("just info").count() >= 1);
+    // Copy gives the listed messages, levels as prefixes.
+    let r = h.state_mut().try_run("app.copy_messages", &json!({})).unwrap();
+    assert_eq!(r["text"], "just info\nwarning: careful now\nerror: it broke");
+    let r = h
+        .state_mut()
+        .try_run("app.copy_messages", &json!({"levels": ["error"]}))
+        .unwrap();
+    assert_eq!(r["text"], "error: it broke");
+    assert_eq!(r["copied"], 1);
+    h.run_steps(2);
+    assert!(
+        h.state().dialogs.messages_copy.is_none(),
+        "the copy reached the clipboard path"
+    );
+}
+
+/// W10-26: Whole word, Next/Previous and clicking a result in the Search window.
+#[test]
+fn search_window_whole_word_next_previous_and_click() {
+    let fig = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+4 0 0 50 -1 0 12 0.0000 4 150 600 1200 1200 cat\\001\n\
+4 0 0 50 -1 0 12 0.0000 4 150 600 1200 2400 concatenate\\001\n\
+4 0 0 50 -1 0 12 0.0000 4 150 600 90000 90000 far cat\\001\n";
+    let mut h = harness(app());
+    h.state_mut()
+        .engine
+        .execute("file.open_data", &json!({"data": fig}))
+        .unwrap();
+    h.state_mut().run("app.search", json!({}));
+    h.state_mut().dialogs.search.find = "cat".into();
+    h.run_steps(2);
+    // Without Whole word, "concatenate" matches too.
+    h.get_by_label("Search").click();
+    h.run_steps(2);
+    assert!(h.query_all_by_label_contains("] concatenate").count() >= 1);
+    h.get_by_label("Whole word").click();
+    h.run_steps(2);
+    h.get_by_label("Search").click();
+    h.run_steps(2);
+    assert_eq!(h.query_all_by_label_contains("] concatenate").count(), 0);
+    h.get_by_label_contains("] far cat");
+    // Clicking a result selects that text and scrolls to it.
+    h.state_mut().engine.view.size = (800.0, 600.0);
+    h.get_by_label_contains("] far cat").click();
+    h.run_steps(2);
+    let sel = h.state().engine.selection().to_vec();
+    assert_eq!(sel.len(), 1);
+    let vis = h.state().engine.view.visible();
+    assert!(vis.min.x < 90000.0 && vis.max.x > 90000.0, "scrolled to the far text");
+    // Next wraps from the last match to the first, Previous goes back.
+    h.state_mut().engine.set_selection(vec![]);
+    h.get_by_label("Next").click();
+    h.run_steps(2);
+    h.get_by_label_contains("Match 1 of 2");
+    h.get_by_label("Next").click();
+    h.run_steps(2);
+    h.get_by_label_contains("Match 2 of 2");
+    assert_eq!(h.state().engine.selection(), &sel[..]);
+    h.get_by_label("Previous").click();
+    h.run_steps(2);
+    h.get_by_label_contains("Match 1 of 2");
+    assert_ne!(h.state().engine.selection(), &sel[..]);
 }

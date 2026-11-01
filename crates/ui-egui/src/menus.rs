@@ -6,7 +6,7 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::spell_dialog;
-use crate::{dialogs, reload, App, Pending};
+use crate::{dialogs, messages, reload, App, Pending};
 use rustfig_engine::{cmd, Key, ToolEvent};
 use serde_json::{json, Value};
 
@@ -168,6 +168,18 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         label: "Quit",
         shortcut: "Ctrl+Q",
         params: "{}",
+    },
+    UiCommand {
+        id: "app.messages",
+        label: "Message history…",
+        shortcut: "",
+        params: "{\"levels\"?: [\"info\"|\"warning\"|\"error\"]}  — W10-29: opens the message history (also a click on the message panel) and returns {\"messages\": [{level, text}]} at the chosen levels (default: the window's check boxes)",
+    },
+    UiCommand {
+        id: "app.copy_messages",
+        label: "Copy messages",
+        shortcut: "",
+        params: "{\"levels\"?: [string]}  — W10-29: copies the history's messages at those levels to the clipboard, one per line (warnings and errors prefixed with their level); returns {copied, text}",
     },
     UiCommand {
         id: "app.search",
@@ -391,6 +403,8 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
             return Err("Show in folder is not available on the web".into());
         }
         "app.quit" => app.guard_unsaved(Pending::Quit),
+        "app.messages" => return messages::run_messages(app, p),
+        "app.copy_messages" => return messages::run_copy(app, p),
         "app.search" => app.dialogs.search.open = true,
         "app.spell_check" => {
             #[cfg(target_arch = "wasm32")]
@@ -598,6 +612,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Keys...", "app.keys"),
                 Own("help.command_search"),
                 Own("app.mouse_sheet"),
+                Own("app.messages"),
                 Own("app.whats_new"),
                 Cmd("Install TeX Gyre fonts...", "app.install_tex_gyre"),
                 Cmd("About RustFig...", "app.about"),
@@ -1602,8 +1617,11 @@ mod tests {
         ("app.export_now", "the Export panel's Export button and the E key"),
         ("app.cancel_export", "the Cancel button of the export progress window"),
         ("app.show_export_folder", "the Show in folder button after an export"),
+        ("app.copy_messages", "the Copy button of the message history"),
         ("edit.select", "scripting API (xfig has no selection)"),
         ("edit.search_replace", "scripting API; Search/Replace... runs it"),
+        ("edit.search_step", "the Next and Previous buttons of Search/Replace"),
+        ("edit.show_object", "a click on a result line of Search/Replace"),
         ("text.spell_check", "scripting API; Spell Check... runs it"),
         ("edit.paste_text", "the middle button of the Text tool"),
         (

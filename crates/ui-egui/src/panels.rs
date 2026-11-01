@@ -784,10 +784,7 @@ fn current_file(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
 
 fn message_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     let (text, color) = match &app.message {
-        Some(m) => (
-            m.text.clone(),
-            if m.error { tk.error } else { ui.visuals().text_color() },
-        ),
+        Some(m) => (m.text.clone(), tk.message_color(m.level, ui.visuals().text_color())),
         // xfig's start-up message until a mode is chosen.
         None if app.engine.tool() == ToolKind::None => ("READY. Select a mode or load a file".to_string(), tk.muted),
         None => {

@@ -50,6 +50,7 @@ pub mod settings;
 pub fn install_open_handler() {
     rustfig_os::open_docs::install_open_handler();
 }
+pub mod messages;
 pub mod spell_dialog;
 pub mod splash;
 pub mod styles;
@@ -73,7 +74,13 @@ pub const MAX_MESSAGES: usize = 200;
 #[derive(Debug, Clone)]
 pub struct Message {
     pub text: String,
-    pub error: bool,
+    pub level: messages::Level,
+}
+
+impl Message {
+    pub fn is_error(&self) -> bool {
+        self.level == messages::Level::Error
+    }
 }
 
 /// What to do once the user has dealt with unsaved changes.
@@ -384,7 +391,10 @@ impl App {
         }
         self.engine.set_status("");
         if transient {
-            self.message = Some(Message { text: s, error: false });
+            self.message = Some(Message {
+                text: s,
+                level: messages::Level::Info,
+            });
         } else {
             self.info(s);
         }
@@ -393,14 +403,22 @@ impl App {
     pub fn info(&mut self, text: impl Into<String>) {
         self.push_message(Message {
             text: text.into(),
-            error: false,
+            level: messages::Level::Info,
+        });
+    }
+
+    /// A message that is not an error but wants attention (W10-29).
+    pub fn warn(&mut self, text: impl Into<String>) {
+        self.push_message(Message {
+            text: text.into(),
+            level: messages::Level::Warning,
         });
     }
 
     pub fn error(&mut self, text: impl Into<String>) {
         self.push_message(Message {
             text: text.into(),
-            error: true,
+            level: messages::Level::Error,
         });
     }
 

@@ -1,6 +1,6 @@
 # UI parity checklist
 
-P26-10-23 (W10-13: background export; D10: dimension line example preview; W10-14: Saved versions window; W9: cap/join pictures redrawn); 2026-10-23 (E5: character map lists only drawable characters, in the text's font); 2026-10-22 (E4, W10-36: colour picker and editor, recent colours, eyedropper); 2026-10-22 (E10: text editing); 2026-10-22 (S4-3, S4-8, S4-9: Digitize, New window, Autorefresh); 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: live edit panel, compound panel, point table, pictorial menus); 2026-10-22 (W10-16, W10-20: picture edit panel); 2026-10-22 (D5: measure modes); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: Tangent mode and its length button). ✅ done · 🟡 partial · ❌ missing
+2026-11-01 (W10-29: message history levels, filter, copy); 2026-10-23 (W10-13: background export; D10: dimension line example preview; W10-14: Saved versions window; W9: cap/join pictures redrawn); 2026-10-23 (E5: character map lists only drawable characters, in the text's font); 2026-10-22 (E4, W10-36: colour picker and editor, recent colours, eyedropper); 2026-10-22 (E10: text editing); 2026-10-22 (S4-3, S4-8, S4-9: Digitize, New window, Autorefresh); 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: live edit panel, compound panel, point table, pictorial menus); 2026-10-22 (W10-16, W10-20: picture edit panel); 2026-10-22 (D5: measure modes); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: Tangent mode and its length button). ✅ done · 🟡 partial · ❌ missing
 
 ## Drawing modes
 
@@ -139,6 +139,9 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | 2026-10-22 | D16: Trim, split and extend mode (`tool.trim`, button next to Chop; moved to the end of the editing buttons on 2026-10-25, W22-12). |
 | 2026-10-22 | D15: Chop mode's Shift+left/middle/right (Trim, Split at point, Extend). |
 | 2026-10-22 | D3: Chop mode added to the editing-modes table (`tool.chop`, `object.chop`). |
+| 2026-11-01 | W10-29: message history with levels (info, warning, error), filter check boxes and Copy next to xfig's Dismiss and Clear. |
+| 2026-11-01 | W10-38: the Update Control box gets an "Update will change: …" line listing the attributes whose update flags are on. |
+| 2026-11-01 | W10-26: Search and Replace gets Whole word, Next/Previous and clickable results (regular expressions pending). |
 | 2026-10-13 | First checklist. |
 | 2026-10-13 | Added the main-window section (plan phase W). |
 | 2026-10-13 | W1: classic layout, message panel, mouse indicator, units box. |
