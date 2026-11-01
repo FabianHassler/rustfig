@@ -680,7 +680,9 @@ pub const LINE_STYLE_VALUE_HELP: &str = "A Fig file keeps one number per line, i
 
 /// Extensions offered when picking a figure: also PDF, SVG and PNG exports
 /// with the figure embedded (E16).
-pub const FIGURE_EXTS: &[&str] = &["fig", "xfig", "rustfig", "pdf", "svg", "svgz", "png"];
+pub const FIGURE_EXTS: &[&str] = &[
+    "fig", "xfig", "rustfig", "gz", "Z", "z", "bz2", "xz", "pdf", "svg", "svgz", "png",
+];
 /// Extensions offered when picking a picture: xfig's picture types
 /// (`f_picobj.c`: EPS/PS, PDF, GIF, PCX, PPM, TIFF, XBM, JPEG, PNG, XPM),
 /// BMP, and compressed files (`.gz`, `.Z`), which fig2dev's reader unpacks.

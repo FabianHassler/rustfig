@@ -1,6 +1,6 @@
 # File format parity checklist
 
-**Status:** 2026-10-31 (G5, G7: PDF and SVG import); 2026-10-21 (B15: PDF/EPS pictures); 2026-10-21 (DD9 sweep); 2026-10-20 (DD3: one reader, fig2dev's, for Fig 1.3–3.2); 2026-10-18 (B9: EMF, Tk; G1: Fig 1.3–2.1; B2: pstex/pdftex; B3: pict2e; B1: tikz; B3: PSTricks; ported languages exported from the app; B12: every export through fig2dev).
+**Status:** 2026-11-01 (G10: compressed figures); 2026-10-31 (G5, G7: PDF and SVG import); 2026-10-21 (B15: PDF/EPS pictures); 2026-10-21 (DD9 sweep); 2026-10-20 (DD3: one reader, fig2dev's, for Fig 1.3–3.2); 2026-10-18 (B9: EMF, Tk; G1: Fig 1.3–2.1; B2: pstex/pdftex; B3: pict2e; B1: tikz; B3: PSTricks; ported languages exported from the app; B12: every export through fig2dev).
 
 | Format | Read | Write | Notes |
 |---|---|---|---|
@@ -9,6 +9,7 @@
 | Fig 3.2 | ✅ | ✅ | read by fig2dev's reader in editing mode (`Ctx::editing`, DD3), which reads as xfig's `f_read.c` does and keeps the figure as written: no arc re-fitting, open polygons, distorted boxes, fill of 2-point polylines and radius-0 ellipses stay. Where xfig changes things too: a figure comment before the resolution line is kept (`f_read.c` 531), objects come in xfig's list order (arcs, compounds, ellipses, lines, splines, texts), consecutive duplicate points are dropped (`f_read.c` 1099), boxes of fewer than 5 points and polygons of fewer than 3 are deleted with a message (1114), ellipse and text angles become 0 to 2π (`fix_angle`, 913/1418), depth is clamped and black/default fills lose their tints (`fix_depth`, `fix_fillstyle`), an invalid font or justification becomes the default (1430, 1520), a lone backslash in a text is dropped (1510), a NUL ends its line (`fgets`); header without the centring line (centred, as xfig); all object types, user colours, comments, pictures, resolution scaling, UTF-8 and Latin-1 text, octal escapes. E15's export-on-save setting is kept as a `# RustFigExportOnSave` whole-figure comment (ignored by xfig/fig2dev) and restored as `Document::export_on_save` |
 | Fig 3.1, 3.0 | ✅ | — | old splines converted to X-splines (shape ±1, interpolated splines' Bézier controls dropped), as xfig converts them (decided 2026-11-01: xfig's way, not fig2dev's exact B-splines); fig2dev's reader (DD3) |
 | Fig 2.1 and older | ✅ | — | Fig 1.3–2.1 through fig2dev's reader like every other version (G1, DD3); the reader's repairs shown as warnings |
+| Compressed Fig (`.fig.gz`, `.fig.Z`, `.fig.z`, `.fig.bz2`, `.fig.xz`) | ✅ | ✅ | G10: xfig reads these through `gunzip`, `uncompress`, `bunzip2`, `unxz` (`f_picobj.c` `open_stream`) and finds `name.fig.gz` for a missing `name.fig`; it never saves them. RustFig decodes by magic bytes in `rustfig-format` (`compress.rs`, pure Rust: flate2, `bzip2` with libbz2-rs-sys, lzma-rust2, own LZW for `compress`), capped at 256 MB, and saves by the file name's suffix (`.z` writes `compress` format); recovery files stay plain |
 | RustFig native (`.rustfig`, JSON) | ✅ | ✅ | versioned envelope |
 | PDF | — | ✅ | vector with true curves (ellipses, arcs, rounded boxes), standard-14 fonts, images with alpha; `-P`/`-z` page mode (paper, orientation, centring, multi-page), `-Y` version |
 | PostScript (`ps`) | — | ✅ | DSC pages as genps: `-z` paper table, `-l`/`-p`, `-c`/`-e`, `-x`/`-y`, `-M`/`-o`/`-O`; geometry equals fig2dev's under ghostscript |
@@ -61,3 +62,4 @@ Fuzzing: `crates/format/tests/prop_format.rs`, `crates/engine/tests/import_fuzz.
 | 2026-10-21 | E15: export-on-save setting round-trips through Fig comments and native JSON. |
 | 2026-10-31 | G5: PDF pages open and merge as editable Fig objects (row "PDF page as editable Fig objects"). |
 | 2026-10-31 | G7: SVG and SVGZ files open and merge as editable Fig objects (row "SVG / SVGZ as editable Fig objects"). |
+| 2026-11-01 | G10: compressed Fig files (.gz, .Z, .z, .bz2, .xz) open, merge and save. |

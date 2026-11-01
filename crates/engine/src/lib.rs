@@ -41,6 +41,7 @@ pub use cmd::file::{base64, base64_decode, export_job, ExportJob};
 pub use error::EngineError;
 pub use indicator::{arrow_choice, arrow_choice_of, GridMode, Indicator, LinkMode, SnapMode, UpdateFlag};
 pub use region::Region;
+pub use rustfig_format::Compression;
 pub use snap::ObjectSnap;
 pub use tools::{Button, CursorKind, Key, MouseHints, Overlay, ToolEvent, ToolKind};
 pub use view::{UnitScale, View};
