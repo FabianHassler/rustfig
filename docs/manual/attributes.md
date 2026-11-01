@@ -26,7 +26,7 @@ Buttons that exist (labels as in xfig):
 | Box Curve | corner radius of rounded boxes |
 | Text Just, Text/Ellipse Angle, Text Flags, Text Size, Text Step, Text Font | text settings |
 
-**Text Flags** shows one flag at a time as xfig does (`hidden=off`, `TeX=on`, `rigid=off`); the right or middle button shows the next or previous one, a click opens the panel that sets all three. **Text Size** shows two decimals (`12.00`). The number pop-ups (Depth, Rotation Angle, …) have a Value field with Cancel and Set.
+**Text Flags** shows one flag at a time as xfig does (`hidden=off`, `TeX=on`, `rigid=off`); the right or middle button shows the next or previous one, a click opens the panel that sets all three. **Text Size** shows two decimals (`12.00`). The number pop-ups (Depth, Rotation Angle, …) are live (see below).
 
 **Text Font** opens the font chooser (also in the edit panel's Font row). The switch **PostScript / LaTeX** picks xfig's two lists: the 35 PostScript fonts, or the six LaTeX fonts (Default, Roman, Bold, Italic, Sans Serif, Typewriter). Every name is drawn in its own font (with only the built-in fonts, every name is drawn in the fallback and tagged "(substitute)"); the current font is marked with a dot and highlighted. Type in **Search fonts** to narrow the list (every word must occur in the name). **Size** sets the Text Size, and the preview line shows sample text in the font under the pointer (or the current font) at that size. Click a name to choose it.
 
@@ -34,7 +34,7 @@ Buttons that exist (labels as in xfig):
 
 **Arrow Size** opens xfig's panel: **Absolute Values** or **Multiple of Line Width**, each with Thickness, Width and Length (0.1 to 10000; absolute values are in 1/80 inch). Only the set you chose is used for new arrows; with the multiples (xfig's start state: 1, 4 and 8) an arrow grows with the line width. **Set** (or Return) applies, **Cancel** keeps the old values. "Use current attributes as defaults" keeps the choice for the next start.
 
-Number pop-ups (Line Width, Text Size, Depth, Rotn Angle, Num Sides, copies, Box Curve, Text Step, Zoom and others) work as xfig's: type or drag a value, then **Set** or Return applies it and closes the pop-up; **Cancel** closes it without a change. The Zoom pop-up also has **Integer zoom**: zoom values above 1 become whole numbers when you set them there (rounded) or use Fit (truncated).
+Number pop-ups (Line Width, Text Size, Text Angle, Depth, Rotn Angle, Num Sides, copies, Box Curve, Text Step, Tangent Length) are small and stay out of the way: a slider, a number field (xfig's ranges; the mouse wheel steps it) and a row of preset values. The value applies at once, so the indicator and the next object you draw follow while you drag or type. **Return** or a click outside keeps the value; **Escape** puts back the value the button had when you opened it. Nothing is added to the undo list, since the indicator is not part of the drawing. The Zoom pop-up keeps xfig's **Set** and **Cancel**; so does Arrow Size. The Zoom pop-up also has **Integer zoom**: zoom values above 1 become whole numbers when you set them there (rounded) or use Fit (truncated).
 
 **Grid Mode** has nine choices: none, four square grids and four **isometric** grids (vertical lines and lines at plus and minus 30 degrees; points snap to the crossings, [Snap and grid](snap-grid.md)). **Vert Align** and **Horiz Align** have xfig's seven choices: none, start (left or top), centre, end (right or bottom), distribute centres, distribute edges and abut ([Transform](transform.md)).
 

@@ -3908,3 +3908,35 @@ fn library_chooser_lists_favourite_libraries_first() {
     let first = first_in_list.unwrap_or_default();
     assert!(y_of(&h, "Optics") < y_of(&h, &first));
 }
+
+/// The number buttons open a live pop-up: the value applies at once, Escape
+/// restores the old value, Return keeps the new one.
+#[test]
+fn number_popup_is_live_escape_restores_return_keeps() {
+    let mut h = harness(app());
+    h.state_mut().engine.set_tool(ToolKind::Polyline);
+    h.run_steps(2);
+    assert_eq!(h.state().engine.indicator.thickness, 1);
+    h.get_by_label("Line Width: 1").click();
+    h.run_steps(3);
+    h.get_by_label("Line Width slider");
+    h.get_by_label("Line Width value");
+    h.get_by_label("Set to 4").click();
+    h.run_steps(2);
+    assert_eq!(h.state().engine.indicator.thickness, 4, "live");
+    h.get_by_label("Set to 6").click();
+    h.run_steps(2);
+    assert_eq!(h.state().engine.indicator.thickness, 6);
+    h.key_press(egui::Key::Escape);
+    h.run_steps(3);
+    assert_eq!(h.state().engine.indicator.thickness, 1, "Escape restores");
+    assert!(h.query_by_label("Set to 4").is_none(), "closed");
+    h.get_by_label("Line Width: 1").click();
+    h.run_steps(3);
+    h.get_by_label("Set to 8").click();
+    h.run_steps(2);
+    h.key_press(egui::Key::Enter);
+    h.run_steps(3);
+    assert_eq!(h.state().engine.indicator.thickness, 8, "Return keeps");
+    assert!(h.query_by_label("Set to 4").is_none(), "closed");
+}
