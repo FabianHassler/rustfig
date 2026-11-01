@@ -1,6 +1,6 @@
 # RustFig roadmap
 
-**Status (2026-10-31):** Stage **Beta** (public pre-releases 0.9.0-beta.N). Overall xfig parity **≈94 %**
+**Status (2026-11-01):** Stage **Beta** (public pre-releases 0.9.0-beta.N). Overall xfig parity **≈95 %** (94.7)
 ([assessment](docs/target-app-parity.md)). The native app draws, edits,
 saves and exports. The web build compiles; it is not yet packaged or tested in a browser.
 
@@ -17,7 +17,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 
 | Measure | Value |
 |---------|-------|
-| Overall parity (weighted) | ≈94 % |
+| Overall parity (weighted) | ≈95 % (94.7) |
 | Commands (all reachable from the control channel and MCP) | 255 engine (incl. the tool modes and "no mode") + 43 UI |
 | Interactive tools (xfig modes) | 44 (xfig's 43 + Trim/Split/Extend) |
 | Tests | 598 (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-11-01 | Re-score: parity ≈94 → ≈95 % (94.7): Editing 98 (W22 round 3), File format 98 (old splines are converted as xfig converts them; the listed gap was not an xfig feature), Export 94 (B11 pass 9), Settings 93 (Global settings in tabs, Defaults). Also today, beyond xfig: start screen, Find objects, message history, Update checklist, Search Next/Previous, library favourites and recent figures. |
 | 2026-11-01 | **B11 done** (fig2dev v0.9.6, on crates.io): `-j` composite fonts (Japanese, Korean) in PS/EPS, netpbm's palette order, TIFF pictures with a palette, `-E utf-16`; W22 answers: Ctrl+wheel zooms in xfig's steps, RustFig's picking kept. |
 | 2026-11-01 | W22 round 3 (side-by-side with the real xfig: Shift and Ctrl variants of every mode's buttons, wheel and keys, two more fixtures; 210 scenarios, differences 45–64): 11 real fixed (Ctrl+Shift in drawing modes, refused Ctrl click's release, one job per button within a modifier set incl. ellipse drags, shape factor -0.5, re-append after Update/Add point/Delete point/Convert/shape factor, X-spline close factors, arrow add/delete on end points, box scale on edges, no "-0", dimension box points); 8 intended; two questions for the user. |
 | 2026-10-25 | D11 screen capture: File > Capture Screen… (`app.capture`; `rustfig_os::capture`: macOS `screencapture -i`, Linux portal Screenshot, Windows whole screen; Save names the PNG, a picture object is added), the arc's "N points, Length = …" message and the "Unit/Scale settings" title (W22 row 36 fully fixed); xfig function audit: 0 missing; Editing 95 → 97 %. The OS calls are manual checks (hardware-parity.md). |
