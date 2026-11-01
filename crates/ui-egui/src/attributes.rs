@@ -211,7 +211,7 @@ impl Attr {
             Attr::PenColor | Attr::FillColor => 82.0,
             // A one-line label, the value on the line below.
             Attr::FontSize => 64.0,
-            Attr::ArrowSize => 76.0,
+            Attr::ArrowSize => 104.0,
             Attr::TextFlags | Attr::TangentLength => 90.0,
             Attr::TextAngle => 104.0,
             Attr::Font => 170.0,
@@ -2404,11 +2404,12 @@ fn live_face(
         .image(tex.id(), r, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), tint);
 }
 
-/// Arrow Size's face: the arrow as it will look (current type, thickness,
-/// width and length; everything scaled down together to fit the button).
+/// Arrow Size's face: the arrow as it will look, at a fixed scale of one
+/// pixel per 1/80 inch (the default 4 x 8 head is 4 pixels wide and 8 long),
+/// its tip at the right end of the box; larger arrows are clipped at the box.
 fn arrow_size_face(ui: &Ui, ind: &Indicator, rect: Rect, tint: Color32) {
     use rustfig_model::{Arrow, Object, ObjectKind, PolyKind, Polyline, Style};
-    const W: usize = 64;
+    const W: usize = 44;
     const H: usize = 16;
     let u = rustfig_geom::FIG_PER_STYLE_UNIT;
     let lw = f64::from(ind.thickness.max(1));
@@ -2419,37 +2420,50 @@ fn arrow_size_face(ui: &Ui, ind: &Indicator, rect: Rect, tint: Color32) {
     };
     let sane = |v: f64| if v.is_finite() { v.clamp(0.0, 1000.0) } else { 0.0 };
     let (t, w, l) = (sane(t), sane(w), sane(l));
-    // The head must fit in the 64 x 16 face (a one-line value box).
-    let k = (14.0 / l.max(w).max(1.0)).min(1.0);
     let mut st = Style::default();
-    st.thickness = ((lw * k).round() as i32).clamp(1, 20);
+    st.thickness = ind.thickness.clamp(1, 20);
     let mut p = Polyline::new(
         PolyKind::Polyline,
         st,
         vec![
-            rustfig_geom::Point::new(2.0 * u, 8.0 * u),
-            rustfig_geom::Point::new((W as f64 - 2.0) * u, 8.0 * u),
+            rustfig_geom::Point::new(0.0, 8.0 * u),
+            rustfig_geom::Point::new((W as f64 - 1.0) * u, 8.0 * u),
         ],
     );
     p.forward_arrow = Some(Arrow {
         kind: ind.arrow.kind,
         style: ind.arrow.style,
-        thickness: t * k,
-        width: w * k * u,
-        height: l * k * u,
+        thickness: t,
+        width: w * u,
+        height: l * u,
     });
     let key = [
         i64::from(ind.arrow.kind) * 2 + i64::from(ind.arrow.style),
-        (t * k * 100.0) as i64 * 1_000_000 + (w * k * 100.0) as i64,
-        (l * k * 100.0) as i64,
+        (t * 100.0) as i64 * 1_000_000 + (w * 100.0) as i64,
+        (l * 100.0) as i64,
         i64::from(st.thickness),
     ];
+    // The three numbers as xfig shows them, small, at the left.
+    let nums = format!("{} {} {}", fmt_g(t), fmt_g(w), fmt_g(l));
+    let font = egui::FontId::proportional(9.0);
+    ui.painter().text(
+        pos2(rect.left(), rect.center().y),
+        egui::Align2::LEFT_CENTER,
+        nums,
+        font,
+        tint,
+    );
+    // Unscaled, the tip at the right end of the value box.
+    let pic = Rect::from_min_size(
+        pos2(rect.right() - W as f32, rect.center().y - H as f32 / 2.0),
+        vec2(W as f32, H as f32),
+    );
     live_face(
         ui,
         "arrow_size",
         key,
         (W, H),
-        rect,
+        pic,
         tint,
         vec![Object::new(ObjectKind::Polyline(p))],
     );
