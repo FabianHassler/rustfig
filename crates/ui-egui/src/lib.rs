@@ -51,6 +51,7 @@ pub fn install_open_handler() {
     rustfig_os::open_docs::install_open_handler();
 }
 pub mod spell_dialog;
+pub mod splash;
 pub mod styles;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod tex_gyre;
@@ -97,6 +98,8 @@ pub struct App {
     pub show_depths: bool,
     /// xfig's "Show info balloons" (Meta-Y): tooltips on or off.
     pub show_balloons: bool,
+    /// The start screen while it is up (xfig's splash; `-nosplash`).
+    pub splash: Option<splash::Splash>,
     /// A theme to switch to on the next frame (`app.theme`).
     pub theme_request: Option<egui::ThemePreference>,
     /// The screen capture command and its thread (D11).
@@ -227,6 +230,7 @@ impl App {
             messages: Vec::new(),
             show_depths: true,
             show_balloons: true,
+            splash: None,
             theme_request: None,
             capture: capture::Capture::default(),
             theme: "system".to_string(),
@@ -295,6 +299,8 @@ impl App {
         // Mutated only by the native control server below.
         #[cfg_attr(target_arch = "wasm32", allow(unused_mut))]
         let mut app = App::with_engine(engine);
+        // The start screen (off in tests, which build the app with `with_engine`).
+        app.splash = Some(splash::Splash::default());
         // TeX Gyre fonts installed earlier (F1) join the font lookup.
         #[cfg(not(target_arch = "wasm32"))]
         tex_gyre::register_installed();

@@ -444,9 +444,11 @@ mod tests {
 
     #[test]
     fn options_without_meaning_are_noted_not_applied() {
-        let r = p(&["-visual", "TrueColor", "-monochrome", "-debug", "-nosplash"]);
+        let r = p(&["-visual", "TrueColor", "-monochrome", "-debug"]);
         assert!(r.overrides.is_empty());
-        assert_eq!(r.notes.len(), 4);
+        assert_eq!(r.notes.len(), 3);
+        // -nosplash applies since G8 (the start screen).
+        assert!(has(&p(&["-nosplash"]), "splash", "false"));
     }
 
     #[test]

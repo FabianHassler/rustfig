@@ -123,6 +123,10 @@ fn main() -> eframe::Result<()> {
         options,
         Box::new(move |cc| {
             let mut app = rustfig_ui_egui::App::new(cc, engine, control);
+            if background {
+                // Scripts and agents drive a background window: no start screen.
+                app.splash = None;
+            }
             // xfig's options and X resources apply to this run only.
             rustfig_ui_egui::settings::start_session(&mut app, &xdefaults, &overrides);
             if let Some(e) = startup_error {

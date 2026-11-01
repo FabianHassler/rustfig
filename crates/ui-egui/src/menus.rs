@@ -266,6 +266,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}",
     },
     UiCommand {
+        id: "app.splash",
+        label: "Show Start Screen",
+        shortcut: "",
+        params: "{}  — the start screen again (shown for a few seconds at start-up unless -nosplash or the splash setting is off)",
+    },
+    UiCommand {
         id: "app.capture",
         label: "Capture Screen…",
         shortcut: "",
@@ -457,6 +463,7 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.redraw" => app.canvas.invalidate(),
         "app.commands" => app.dialogs.commands_open = true,
         "app.about" => app.dialogs.about_open = true,
+        "app.splash" => app.splash = Some(crate::splash::Splash::default()),
         "app.install_tex_gyre" => {
             #[cfg(not(target_arch = "wasm32"))]
             crate::tex_gyre::start(app)?;
@@ -1542,6 +1549,10 @@ mod tests {
     const MENU_LESS: &[(&str, &str)] = &[
         // A prefix ending in "." covers every command that starts with it.
         ("tool.", "the mode panel's buttons and the mode keys choose tools"),
+        (
+            "app.splash",
+            "the start screen comes up at start-up (xfig's splash); scripts can show it again",
+        ),
         // xfig has no selection (decided 2026-10-22): these work on the
         // given ids for scripts and MCP; the modes do the same by mouse.
         (

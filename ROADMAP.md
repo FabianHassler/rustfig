@@ -65,7 +65,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 1. W22 is done (three rounds, 64 differences; the user kept RustFig's picking and chose xfig's Ctrl+wheel zoom steps).
 2. E10: only a check by hand with a real input method is left.
 3. Checks by hand: Windows install and print hand-off (P3, Printing), Linux Wayland and HiDPI, the web demo in real browsers (C5).
-4. The accepted UI proposals (W10-25 to W10-38): Global settings in tabs, Search, spell check while typing, library browser, live value pop-ups, mode finder.
+4. The accepted UI proposals (W10-25 to W10-38): Global settings in tabs, Search, library browser, live value pop-ups, mode finder; each asked for separately (spell check dropped 2026-11-01).
 5. 1.0: what it needs is the user's decision (proposed: parity ≥ 95 % and no known regressions); then the web version (phase C).
 
 ## Progress log

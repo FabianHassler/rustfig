@@ -3329,35 +3329,10 @@ fn messages_dialog(app: &mut App, ctx: &egui::Context) {
     app.dialogs.messages_open = open && !dismiss && !(enter && !app.engine.is_typing());
 }
 
+/// Help > About RustFig: the start screen's card with the licence and
+/// xfig's copyrights (`w_help.c` lists them too).
 fn about_dialog(app: &mut App, ctx: &egui::Context) {
-    if !app.dialogs.about_open {
-        return;
-    }
-    let mut open = true;
-    egui::Window::new("About RustFig")
-        .open(&mut open)
-        .resizable(false)
-        .collapsible(false)
-        .show(ctx, |ui| crate::dialog_body(ui, |ui| {
-            ui.heading("RustFig");
-            ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
-            ui.label("A Rust-native reimplementation of xfig, close to the original in look and behaviour.");
-            ui.label("Reads and writes Fig 3.2 files; exports PDF, SVG, EPS, PNG and the LaTeX box (more of fig2dev's languages are being ported).");
-            ui.label("Licensed MIT OR Apache-2.0; ported parts also under the xfig licence.");
-            ui.separator();
-            // xfig's About lists the copyright holders (`w_help.c`); ported code keeps them.
-            for line in [
-                "Based on xfig 3.2.9a:",
-                "  Parts Copyright \u{a9} 2016-2024 by Thomas Loimer",
-                "  Parts Copyright \u{a9} 1989-2015 by Brian V. Smith",
-                "  Parts Copyright \u{a9} 1991 by Paul King",
-                "  Copyright \u{a9} 1985-1988 by Supoj Sutanthavibul",
-                "  See the xfig licence file and NOTICE for other copyrights",
-            ] {
-                ui.label(line);
-            }
-        }));
-    app.dialogs.about_open = open;
+    crate::splash::show_about(&mut app.dialogs.about_open, ctx);
 }
 
 /// The question asked before a PDF with several pages is opened or merged.

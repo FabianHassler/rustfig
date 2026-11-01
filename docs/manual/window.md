@@ -14,6 +14,10 @@ RustFig keeps xfig's arrangement of the main window.
 
 One button per mode: drawing modes first, then editing modes. Hover for the name and key. The same modes are available as keys, see [Keys](keys.md). The mode is highlighted while it is active. On a small screen the panel scrolls vertically (mouse wheel over it); the buttons keep their size.
 
+## Start screen
+
+When RustFig starts, a card with its name, version and credits shows over the canvas for three seconds, as xfig shows its splash graphic; Help › About RustFig shows the same card, with the licence and the copyrights, until you click or press a key. The first key or click fades it out and still does its job. Start with `-nosplash`, or turn off the `splash` setting in Global settings, to skip it. Scripts can show it again with the `app.splash` command (Show Start Screen).
+
 ## Canvas
 
 The drawing area with the page (page borders can be shown or hidden, View menu) and optional grid. Rulers at the top and left show the position; the scale follows the zoom. Scroll or use the rulers' arrows to pan; Z and Shift+Z zoom (see [Zoom and view](view.md)).

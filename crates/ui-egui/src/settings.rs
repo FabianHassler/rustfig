@@ -168,6 +168,10 @@ pub fn apply_ui(app: &mut App) {
     if let Some(b) = p.bool("showballoons") {
         app.show_balloons = b;
     }
+    // `-nosplash`: no start screen (it is shown only once, at the start).
+    if p.bool("splash") == Some(false) {
+        app.splash = None;
+    }
     if let Some(b) = p.bool("showdepthmanager") {
         app.show_depths = b;
     }

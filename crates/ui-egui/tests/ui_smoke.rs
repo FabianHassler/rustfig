@@ -3401,3 +3401,45 @@ fn pdf_with_several_pages_asks_for_the_page() {
         k => panic!("expected a compound, got {k:?}"),
     }
 }
+
+/// G8: the start screen goes on the first click, and `-nosplash` (the
+/// `splash` resource) keeps it away.
+#[test]
+fn start_screen_goes_on_a_click_and_nosplash_hides_it() {
+    let mut h = harness(app());
+    h.state_mut().run("app.splash", json!({}));
+    h.run_steps(2);
+    assert!(h.state().splash.is_some());
+    let p = pos2(700.0, 450.0);
+    h.event(egui::Event::PointerMoved(p));
+    h.event(egui::Event::PointerButton {
+        pos: p,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: egui::Modifiers::NONE,
+    });
+    h.event(egui::Event::PointerButton {
+        pos: p,
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: egui::Modifiers::NONE,
+    });
+    // It fades out (timing: the unit tests in `splash.rs`).
+    for _ in 0..60 {
+        h.run_steps(1);
+        if h.state().splash.is_none() {
+            break;
+        }
+    }
+    assert!(h.state().splash.is_none(), "gone after the fade");
+
+    let mut h = harness(app());
+    h.state_mut().run("app.splash", json!({}));
+    h.state_mut()
+        .engine
+        .prefs
+        .set("splash", rustfig_engine::prefs::TomlValue::Boolean(false))
+        .unwrap();
+    rustfig_ui_egui::settings::apply_ui(h.state_mut());
+    assert!(h.state().splash.is_none());
+}

@@ -672,6 +672,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     }
 
     handle_input(app, ui, &resp, rect);
+    crate::splash::show(&mut app.splash, ui.ctx(), rect);
     crate::rulers::show(app, ui, tk, rect, top, side, unit_box);
     for r in [top, side, unit_box] {
         app.context_help.zones.push((r, crate::context_help::RULER_TOPIC));
