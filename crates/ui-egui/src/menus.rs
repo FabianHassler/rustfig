@@ -188,6 +188,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}",
     },
     UiCommand {
+        id: "app.find_objects",
+        label: "Find Objects…",
+        shortcut: "",
+        params: "{}  — W10-39: the Find Objects window (criteria, matches outlined on the canvas, actions on all of them); script: edit.find_objects, then object.update, arrange.set_depth, edit.delete or object.group with the ids",
+    },
+    UiCommand {
         id: "app.spell_check",
         label: "Spell Check…",
         shortcut: "",
@@ -412,6 +418,7 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.messages" => return messages::run_messages(app, p),
         "app.copy_messages" => return messages::run_copy(app, p),
         "app.search" => app.dialogs.search.open = true,
+        "app.find_objects" => app.find.open = true,
         "app.spell_check" => {
             #[cfg(target_arch = "wasm32")]
             return Err("Spell check is not available on the web".into());
@@ -570,6 +577,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Paste Objects", "edit.paste"),
                 Cmd("Paste Text", "text.paste"),
                 Cmd("Search/Replace...", "app.search"),
+                Own("app.find_objects"),
                 #[cfg(not(target_arch = "wasm32"))]
                 Cmd("Spell Check...", "app.spell_check"),
                 #[cfg(target_arch = "wasm32")]
@@ -1632,6 +1640,7 @@ mod tests {
         ("edit.search_replace", "scripting API; Search/Replace... runs it"),
         ("edit.search_step", "the Next and Previous buttons of Search/Replace"),
         ("edit.show_object", "a click on a result line of Search/Replace"),
+        ("edit.find_objects", "the criteria of Edit > Find Objects; its actions run object.update, arrange.set_depth, edit.delete and object.group"),
         ("text.spell_check", "scripting API; Spell Check... runs it"),
         ("edit.paste_text", "the middle button of the Text tool"),
         (

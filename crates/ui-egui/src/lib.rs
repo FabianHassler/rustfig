@@ -25,6 +25,7 @@ pub mod dimline_panel;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod export_bg;
 pub mod file_panel;
+pub mod find_dialog;
 pub mod font_chooser;
 pub mod help;
 pub mod help_pages;
@@ -177,6 +178,8 @@ pub struct App {
     pub keys_sheet: keys_sheet::KeysSheet,
     /// Command search (W18).
     pub command_search: command_search::CommandSearch,
+    /// Edit > Find Objects (W10-39).
+    pub find: find_dialog::FindState,
     /// F1 context help notes (W18).
     pub context_help: context_help::ContextHelp,
     /// Which text flag the Text Flags button shows (xfig's `cur_flagshown`:
@@ -272,6 +275,7 @@ impl App {
             library: library::LibraryPanel::default(),
             keys_sheet: keys_sheet::KeysSheet::default(),
             command_search: command_search::CommandSearch::default(),
+            find: find_dialog::FindState::default(),
             context_help: context_help::ContextHelp::default(),
             flag_shown: 0,
             mouse_sheet: help_pages::MouseSheet::default(),
@@ -754,6 +758,7 @@ impl App {
         library::show(self, ctx);
         keys_sheet::show(self, ctx);
         command_search::show(self, ctx);
+        find_dialog::dialog(self, ctx);
         help_pages::show_mouse_sheet(self, ctx);
         help_pages::show_whats_new(self, ctx);
         reload::tick(self, ctx);

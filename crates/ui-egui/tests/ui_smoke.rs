@@ -3659,3 +3659,54 @@ fn search_window_whole_word_next_previous_and_click() {
     h.get_by_label_contains("Match 1 of 2");
     assert_ne!(h.state().engine.selection(), &sel[..]);
 }
+
+/// W10-39: Edit > Find Objects: a criterion gives a count and a list, the
+/// matches are the operands of the actions (each one undo step).
+#[test]
+fn find_objects_window_finds_and_acts() {
+    let mut h = harness(app());
+    {
+        let e = &mut h.state_mut().engine;
+        e.execute(
+            "shape.text",
+            &json!({"x": 100, "y": 300, "text": "Hello one", "depth": 40}),
+        )
+        .unwrap();
+        e.execute(
+            "shape.text",
+            &json!({"x": 100, "y": 900, "text": "Hello two", "depth": 40}),
+        )
+        .unwrap();
+        e.execute(
+            "shape.rectangle",
+            &json!({"x": 2000, "y": 0, "width": 600, "height": 300}),
+        )
+        .unwrap();
+    }
+    h.state_mut().run("app.find_objects", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Find Objects");
+    h.get_by_label_contains("3 objects found");
+    h.get_by_label("Find text").click();
+    h.get_by_label("Find text").type_text("hello");
+    h.run_steps(3);
+    h.get_by_label_contains("2 objects found");
+    assert_eq!(h.state().find.ids.len(), 2);
+    // Set depth: one command for both matches.
+    h.state_mut().find.new_depth = "9".to_string();
+    h.get_by_label("New depth");
+    h.run_steps(2);
+    h.get_by_label("Set depth").click();
+    h.run_steps(3);
+    let depths: Vec<i32> = h.state().engine.doc().objects.iter().map(|o| o.depth()).collect();
+    assert_eq!(depths.iter().filter(|d| **d == 9).count(), 2);
+    h.state_mut().engine.execute("edit.undo", &json!({})).unwrap();
+    let depths: Vec<i32> = h.state().engine.doc().objects.iter().map(|o| o.depth()).collect();
+    assert_eq!(depths.iter().filter(|d| **d == 40).count(), 2);
+    // Glue them into a compound.
+    h.run_steps(3);
+    h.get_by_label("Glue").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.doc().objects.len(), 2);
+    h.get_by_label_contains("glued");
+}

@@ -13,6 +13,7 @@ mod doc;
 mod edit;
 mod export_panel;
 pub(crate) mod file;
+mod find;
 mod indicator;
 mod joinsplit;
 mod library;
@@ -81,6 +82,7 @@ pub fn all() -> &'static [Command] {
         v.extend(export_panel::commands());
         v.extend(print::commands());
         v.extend(edit::commands());
+        v.extend(find::commands());
         v.extend(view::commands());
         v.extend(shape::commands());
         v.extend(picture::commands());
