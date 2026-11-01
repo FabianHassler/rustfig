@@ -4117,3 +4117,69 @@ fn number_popup_is_live_escape_restores_return_keeps() {
     assert_eq!(h.state().engine.indicator.thickness, 8, "Return keeps");
     assert!(h.query_by_label("Set to 4").is_none(), "closed");
 }
+
+/// Hovering a choice in the edit panel shows it on the object at once; moving
+/// away restores it; clicking keeps it as one undo step.
+#[test]
+fn edit_panel_hover_previews_fill_and_click_keeps_it() {
+    use rustfig_model::ObjectKind;
+    let mut h = edit_harness();
+    open_panel(&mut h, "polyline");
+    let area = |h: &Harness<'static, App>| match &first_of(h, "polyline").kind {
+        ObjectKind::Polyline(p) => p.style.area_fill,
+        _ => panic!(),
+    };
+    h.state_mut().dialogs.edit.as_mut().unwrap().fill = 4;
+    h.run_steps(2);
+    let rev = h.state().engine.revision();
+    let before = h.state().engine.doc().clone();
+    h.get_by_label("Fill style choices").click();
+    h.run_steps(3);
+    h.get_by_label("30").hover();
+    h.run_steps(4);
+    let ov = h.state().engine.overlay();
+    assert_eq!(ov.preview.len(), 1, "the object is shown with the hovered fill");
+    assert_eq!(ov.preview[0].style().unwrap().area_fill, 30);
+    assert_eq!(h.state().engine.doc(), &before, "the document is untouched");
+    assert_eq!(h.state().engine.revision(), rev);
+    // Moving the pointer off the choices restores the object.
+    h.get_by_label("Comments").hover();
+    h.run_steps(4);
+    assert!(h.state().engine.overlay().preview.is_empty());
+    assert_eq!(area(&h), -1);
+    // Hover again, then click: kept, no preview left, one undo step.
+    h.get_by_label("30").hover();
+    h.run_steps(3);
+    h.get_by_label("30").click();
+    h.run_steps(4);
+    assert_eq!(area(&h), 30);
+    assert!(h.state().engine.overlay().preview.is_empty());
+    // One undo step takes the kept choice back (the hover left none).
+    assert!(h.state_mut().engine.undo());
+    assert_eq!(area(&h), -1);
+})");
+}
+
+/// Hovering an arrow type shows the arrow on the object, also when the
+/// arrow's box is off.
+#[test]
+fn edit_panel_hover_previews_an_arrow_type() {
+    use rustfig_model::ObjectKind;
+    let mut h = edit_harness();
+    open_panel(&mut h, "polyline");
+    h.state_mut().dialogs.edit.as_mut().unwrap().back.on = false;
+    h.run_steps(2);
+    let back = |o: &rustfig_model::Object| match &o.kind {
+        ObjectKind::Polyline(p) => p.backward_arrow.is_some(),
+        _ => false,
+    };
+    assert!(!back(&first_of(&h, "polyline")));
+    h.get_all_by_label_contains("type").last().unwrap().click();
+    h.run_steps(3);
+    h.get_all_by_label("type 2 filled").next().unwrap().hover();
+    h.run_steps(4);
+    let ov = h.state().engine.overlay();
+    assert_eq!(ov.preview.len(), 1);
+    assert!(back(&ov.preview[0]) || matches!(&ov.preview[0].kind, ObjectKind::Polyline(p) if p.forward_arrow.is_some()));
+    assert!(!back(&first_of(&h, "polyline")), "the document keeps its arrows");
+}

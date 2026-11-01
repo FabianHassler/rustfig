@@ -24,6 +24,8 @@ mod outline;
 pub mod picture;
 pub(crate) mod plot;
 mod prefs;
+mod preview;
+pub(crate) use preview::Preview;
 mod print;
 mod region;
 mod sfactor;
@@ -106,6 +108,7 @@ pub fn all() -> &'static [Command] {
         v.extend(indicator::commands());
         v.extend(tool::commands());
         v.extend(prefs::commands());
+        v.extend(preview::commands());
         v.extend(styles::commands());
         v.extend(spell::commands());
         v

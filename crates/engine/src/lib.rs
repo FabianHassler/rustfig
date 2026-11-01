@@ -161,6 +161,9 @@ pub struct Engine {
     pub(crate) copy_pick: bool,
     /// Find mode's match set (top-level object ids, in the order added).
     pub(crate) find_set: Vec<ObjectId>,
+    /// A transient preview of attribute changes on objects (`preview.set`):
+    /// shown through the overlay, never part of the document.
+    pub(crate) preview: Option<cmd::Preview>,
     /// A Ctrl press was refused (a tool at work): its release must not finish anything.
     pub(crate) ignore_release: bool,
     /// Draw objects on hidden depths in gray (xfig's "Gray"); otherwise
@@ -228,6 +231,7 @@ impl Engine {
             read_scale: 1.0,
             copy_pick: false,
             find_set: Vec::new(),
+            preview: None,
             ignore_release: false,
             gray_hidden_depths: true,
             show_page_border: true,

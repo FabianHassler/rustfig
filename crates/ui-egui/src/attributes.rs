@@ -546,6 +546,22 @@ fn button(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) -> bool {
     hovered
 }
 
+/// In Find mode, show the matched objects as Update would leave them with
+/// this change to the current attributes (nothing changes until Update).
+fn find_preview(app: &mut App, change: Value) {
+    if let Some(ids) = find_targets(app) {
+        app.want_preview(json!({ "ids": ids, "indicator": change }));
+    }
+}
+
+/// The matched objects of Find mode, if that mode is on and has matches.
+fn find_targets(app: &App) -> Option<Vec<u64>> {
+    if app.engine.tool() != ToolKind::Find {
+        return None;
+    }
+    Some(app.engine.find_matches()).filter(|m| !m.is_empty())
+}
+
 fn set(app: &mut App, v: Value) {
     app.run("indicator.set", v);
 }
@@ -623,8 +639,8 @@ const V_ALIGN: [&str; 7] = [
     "abut",
 ];
 const JUSTIFY: [Justify; 3] = [Justify::Left, Justify::Center, Justify::Right];
-const JOINS: [JoinStyle; 3] = [JoinStyle::Miter, JoinStyle::Round, JoinStyle::Bevel];
-const CAPS: [CapStyle; 3] = [CapStyle::Butt, CapStyle::Round, CapStyle::Projecting];
+pub(crate) const JOINS: [JoinStyle; 3] = [JoinStyle::Miter, JoinStyle::Round, JoinStyle::Bevel];
+pub(crate) const CAPS: [CapStyle; 3] = [CapStyle::Butt, CapStyle::Round, CapStyle::Projecting];
 
 /// Grid choices (xfig's): none, then grid steps 1–4.
 fn grid_choices() -> Vec<(Option<SnapMode>, bool)> {
@@ -1196,6 +1212,21 @@ impl Pic {
     }
 }
 
+/// Remember that choice `value` of the picker `id` is under the pointer in
+/// this frame (read back with [`hovered`] right after the picker is drawn).
+pub(crate) fn note_hover(ctx: &egui::Context, id: &str, value: i64) {
+    let frame = ctx.cumulative_pass_nr();
+    ctx.data_mut(|d| d.insert_temp(egui::Id::new(("hover_choice", id)), (value, frame)));
+}
+
+/// The choice of picker `id` under the pointer in this frame, if any.
+pub(crate) fn hovered(ctx: &egui::Context, id: &str) -> Option<i64> {
+    let frame = ctx.cumulative_pass_nr();
+    ctx.data(|d| d.get_temp::<(i64, u64)>(egui::Id::new(("hover_choice", id))))
+        .filter(|(_, f)| *f == frame)
+        .map(|(v, _)| v)
+}
+
 fn icon_choices(ui: &mut Ui, id: &str, items: &[(bool, String, Pic)], per_row: usize) -> Option<usize> {
     let mut chosen = None;
     egui::Grid::new(("icon_choices", id))
@@ -1216,6 +1247,9 @@ fn icon_choices(ui: &mut Ui, id: &str, items: &[(bool, String, Pic)], per_row: u
                 }
                 if resp.clicked() {
                     chosen = Some(i);
+                }
+                if resp.hovered() {
+                    note_hover(ui.ctx(), id, i as i64);
                 }
                 resp.on_hover_text(name.as_str()).widget_info(|| {
                     egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, *selected, name)
@@ -1437,6 +1471,11 @@ fn fill_swatch(
 // ---- choice panels ---------------------------------------------------------
 
 /// A clickable cell with a picture; returns whether it was clicked.
+/// Whether the last [`cell`] drawn is under the pointer.
+fn last_cell_hovered(ui: &Ui) -> bool {
+    ui.ctx().data(|d| d.get_temp::<bool>(egui::Id::new("cell_hovered")).unwrap_or(false))
+}
+
 fn cell(ui: &mut Ui, size: egui::Vec2, selected: bool, name: &str, paint: impl FnOnce(&Painter, Rect)) -> bool {
     let (r, resp) = ui.allocate_exact_size(size, Sense::click());
     let v = ui.style().interact_selectable(&resp, selected);
@@ -1451,6 +1490,8 @@ fn cell(ui: &mut Ui, size: egui::Vec2, selected: bool, name: &str, paint: impl F
         );
     }
     let clicked = resp.clicked();
+    let hot = resp.hovered();
+    ui.ctx().data_mut(|d| d.insert_temp(egui::Id::new("cell_hovered"), hot));
     resp.on_hover_text(name)
         .widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, selected, name));
     clicked
@@ -1478,6 +1519,9 @@ pub(crate) fn fill_choices_grid(
             }) {
                 chosen = Some(f);
             }
+            if last_cell_hovered(ui) {
+                note_hover(ui.ctx(), "fill", i64::from(f));
+            }
             if i % 11 == 10 {
                 ui.end_row();
             }
@@ -1494,6 +1538,9 @@ pub(crate) fn fill_choices_grid(
                 fill_swatch(p, r, doc, (pen, fill), f, ink, tk)
             }) {
                 chosen = Some(f);
+            }
+            if last_cell_hovered(ui) {
+                note_hover(ui.ctx(), "fill", i64::from(f));
             }
             if i % 11 == 10 {
                 ui.end_row();
@@ -1734,6 +1781,8 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             let _ = ui.button("Cancel");
             if let Some(f) = chosen {
                 set(app, json!({ "area_fill": f }));
+            } else if let Some(f) = hovered(ui.ctx(), "fill") {
+                find_preview(app, json!({ "area_fill": f }));
             }
         }
         Attr::ArcType => {
@@ -1783,6 +1832,8 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                 .collect();
             if let Some(k) = icon_choices(ui, "line", &items, 6).and_then(|i| LineKind::ALL.get(i)) {
                 set(app, json!({ "line": k }));
+            } else if let Some(k) = hovered(ui.ctx(), "line").and_then(|i| LineKind::ALL.get(i as usize)) {
+                find_preview(app, json!({ "line": k }));
             }
             // xfig: "Default dash length" and "Default dot gap" (0..10000,
             // both shown; a value of 0 or less means the default).
@@ -1833,6 +1884,8 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                 .collect();
             if let Some(j) = icon_choices(ui, "join", &items, 3).and_then(|i| JOINS.get(i)) {
                 set(app, json!({ "join": j }));
+            } else if let Some(j) = hovered(ui.ctx(), "join").and_then(|i| JOINS.get(i as usize)) {
+                find_preview(app, json!({ "join": j }));
             }
         }
         Attr::CapStyle => {
@@ -1848,6 +1901,8 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                 .collect();
             if let Some(c) = icon_choices(ui, "cap", &items, 3).and_then(|i| CAPS.get(i)) {
                 set(app, json!({ "cap": c }));
+            } else if let Some(c) = hovered(ui.ctx(), "cap").and_then(|i| CAPS.get(i as usize)) {
+                find_preview(app, json!({ "cap": c }));
             }
         }
         Attr::ArrowMode => {
@@ -1876,6 +1931,12 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                 .collect();
             if let Some(n) = icon_choices(ui, "arrow_type", &items, 9) {
                 set_arrow_type(app, &ind, n as i32);
+            } else if let Some(n) = hovered(ui.ctx(), "arrow_type") {
+                let (kind, style) = arrow_choice(n as i32);
+                let mut a = ind.arrow;
+                a.kind = kind;
+                a.style = style;
+                find_preview(app, json!({ "arrow": a, "forward_arrow": true }));
             }
         }
         Attr::ArrowSize => {
@@ -2126,6 +2187,12 @@ fn value_entry(app: &mut App, ui: &mut Ui, ind: &Indicator, a: Attr) {
     if keep || cancel {
         nval_forget(ui, a);
         ui.close();
+    } else if let Some(ids) = find_targets(app) {
+        // Find mode: the matched objects follow the slider as a preview.
+        let value = if integer { json!(v.round() as i64) } else { json!(v) };
+        let mut m = serde_json::Map::new();
+        m.insert(field.into(), value);
+        app.want_preview(json!({ "ids": ids, "indicator": Value::Object(m) }));
     }
 }
 

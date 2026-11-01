@@ -867,6 +867,7 @@ impl Engine {
         self.tool = kind;
         // The match set belongs to Find mode: entering or leaving clears it.
         self.find_set.clear();
+        self.preview = None;
         // xfig puts the mode button's sentence in the message panel.
         self.set_status(kind.xfig_message().unwrap_or_else(|| kind.label()));
     }
@@ -3909,6 +3910,13 @@ impl Engine {
         // The set centre/anchor of Rotate/Flip (xfig's `center_marker`).
         if let Some(c) = self.set_point.filter(|_| self.tool.uses_set_point()) {
             ov.handles.push(c);
+        }
+        // A preview of attribute changes (`preview.set`) replaces the originals.
+        if let Some(p) = self.live_preview() {
+            for o in &p.objects {
+                ov.hide.push(o.id);
+                ov.preview.push(o.clone());
+            }
         }
         ov
     }

@@ -4,7 +4,7 @@
 // Ported from xfig src/e_edit.c (edit panel: compound, picture and point
 // rows, live apply) (xfig licence, see LICENSE-xfig).
 
-use crate::attributes::{arrow_menu, cap_menu, join_menu, line_menu};
+use crate::attributes::{arrow_menu, cap_menu, hovered, join_menu, line_menu};
 use crate::panels::{color_combo, font_combo, limit_fill};
 use crate::web_io::{WebInbox, WebPick};
 use crate::{menus, App};
@@ -2430,13 +2430,16 @@ fn xy_row_dec(ui: &mut egui::Ui, label: &str, p: &mut [f64; 2], scale: f64, min_
     ui.end_row();
 }
 
-fn arrow_rows(ui: &mut egui::Ui, id: &str, label: &str, a: &mut ArrowRows) {
+fn arrow_rows(ui: &mut egui::Ui, id: &str, label: &str, a: &mut ArrowRows) -> Option<i32> {
     rl(ui, label);
+    let mut hover = None;
     ui.horizontal(|ui| {
         let h = ui.spacing().interact_size.y;
         ui.checkbox(&mut a.on, "on");
         if let Some(n) = arrow_menu(ui, id, a.choice) {
             a.choice = n;
+        } else {
+            hover = hovered(ui.ctx(), id).map(|n| n as i32);
         }
         for (name, v) in [
             ("Thick", &mut a.thick),
@@ -2451,6 +2454,7 @@ fn arrow_rows(ui: &mut egui::Ui, id: &str, label: &str, a: &mut ArrowRows) {
         }
     });
     ui.end_row();
+    hover
 }
 
 /// xfig's arrow type menu: type 0, then types 1 to 14 hollow and filled.
@@ -2478,6 +2482,8 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
         }
     };
     let scale = if st.fig_units { 1.0 } else { doc_scale };
+    // What the pointer rests on in a choice pop-up: shown on the object.
+    let mut hover: Option<Value> = None;
     if st.is_picture {
         // W10-20: a file dropped on the window becomes the picture's file.
         let dropped = ctx.input(|i| i.raw.dropped_files.first().and_then(|f| f.path.clone()));
@@ -2542,6 +2548,8 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             rl(ui, "Pen colour");
                             if let Some(c) = color_combo(ui, "edit_tcolor", app.engine.doc(), st.pen) {
                                 st.pen = c;
+                            } else if let Some(c) = hovered(ui.ctx(), "edit_tcolor") {
+                                hover = Some(json!({"pen_color": c}));
                             }
                             ui.end_row();
                             rl(ui, "Angle");
@@ -2594,6 +2602,10 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             ui.horizontal(|ui| {
                                 if let Some(k) = line_menu(ui, "edit_line", st.line) {
                                     st.line = k;
+                                } else if let Some(k) = hovered(ui.ctx(), "edit_line")
+                                    .and_then(|i| LineKind::ALL.get(i as usize))
+                                {
+                                    hover = Some(json!({"line": k.name()}));
                                 }
                                 if st.line != LineKind::Solid {
                                     // xfig's edit panel names the one value by the style
@@ -2609,11 +2621,15 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             rl(ui, "Pen colour");
                             if let Some(c) = color_combo(ui, "edit_pen", app.engine.doc(), st.pen) {
                                 st.pen = c;
+                            } else if let Some(c) = hovered(ui.ctx(), "edit_pen") {
+                                hover = Some(json!({"pen_color": c}));
                             }
                             ui.end_row();
                             rl(ui, "Fill colour");
                             if let Some(c) = color_combo(ui, "edit_fill", app.engine.doc(), st.fill) {
                                 st.fill = c;
+                            } else if let Some(c) = hovered(ui.ctx(), "edit_fill") {
+                                hover = Some(json!({"fill_color": c}));
                             }
                             ui.end_row();
                             rl(ui, "Fill style");
@@ -2623,6 +2639,8 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                                 crate::attributes::fill_menu(ui, app.engine.doc(), (st.pen, st.fill), st.area)
                             {
                                 st.area = f;
+                            } else if let Some(f) = hovered(ui.ctx(), "fill") {
+                                hover = Some(json!({"area_fill": f}));
                             }
                             ui.end_row();
                             // xfig: cap style for arcs, open splines and polylines;
@@ -2642,11 +2660,19 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                                     if cap_ok {
                                         if let Some(c) = cap_menu(ui, "edit_cap", st.cap) {
                                             st.cap = c;
+                                        } else if let Some(c) = hovered(ui.ctx(), "edit_cap")
+                                            .and_then(|i| crate::attributes::CAPS.get(i as usize))
+                                        {
+                                            hover = Some(json!({"cap": format!("{c:?}").to_lowercase()}));
                                         }
                                     }
                                     if join_ok {
                                         if let Some(j) = join_menu(ui, "edit_join", st.join) {
                                             st.join = j;
+                                        } else if let Some(j) = hovered(ui.ctx(), "edit_join")
+                                            .and_then(|i| crate::attributes::JOINS.get(i as usize))
+                                        {
+                                            hover = Some(json!({"join": format!("{j:?}").to_lowercase()}));
                                         }
                                     }
                                 });
@@ -2654,8 +2680,16 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                             }
                         }
                         if st.has_arrows && !(st.is_arc && st.pie) {
-                            arrow_rows(ui, "edit_farrow", "Forward arrow", &mut st.fwd);
-                            arrow_rows(ui, "edit_barrow", "Backward arrow", &mut st.back);
+                            if let Some(n) = arrow_rows(ui, "edit_farrow", "Forward arrow", &mut st.fwd) {
+                                let mut a = st.fwd.clone();
+                                a.choice = n;
+                                hover = Some(json!({"forward_arrow": true, "forward_arrow_spec": a.spec()}));
+                            }
+                            if let Some(n) = arrow_rows(ui, "edit_barrow", "Backward arrow", &mut st.back) {
+                                let mut a = st.back.clone();
+                                a.choice = n;
+                                hover = Some(json!({"backward_arrow": true, "backward_arrow_spec": a.spec()}));
+                            }
                         }
                         if st.is_arcbox {
                             rl(ui, "Corner radius");
@@ -2826,6 +2860,9 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
         // The window was taken out of the state: restore the object.
         cancel_all(app, &mut st);
         return;
+    }
+    if let Some(h) = hover {
+        app.want_preview(json!({"ids": [st.id.0], "attrs": h}));
     }
     // A typed picture file name is loaded on Done (Reread loads it at once).
     if close && st.is_picture && st.picture_file != st.picture_saved_file {

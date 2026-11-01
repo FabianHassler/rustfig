@@ -114,8 +114,34 @@ fn every_command_with_hostile_params() {
             if r.is_err() && c.mutates {
                 assert_eq!(e.doc(), &before, "{} with {p} failed but changed the document", c.id);
             }
+            if c.id.starts_with("preview.") {
+                assert_eq!(e.doc(), &before, "{} with {p} changed the document", c.id);
+            }
             let _ = e.overlay();
         }
+    }
+}
+
+#[test]
+fn preview_with_hostile_params() {
+    let cases = vec![
+        json!({"attrs": {"line": "bogus"}}),
+        json!({"attrs": 5}),
+        json!({"attrs": {"area_fill": 1e308, "pen_color": "x"}}),
+        json!({"attrs": {"geometry": {"points": [[1e308, 0]]}}}),
+        json!({"attrs": {"thickness": 3}, "ids": []}),
+        json!({"attrs": {"thickness": 3}, "ids": [999999]}),
+        json!({"indicator": {"line": "bogus"}}),
+        json!({"indicator": {"thickness": 1e300, "arrow": 7}}),
+        json!({"indicator": [], "attrs": null}),
+        json!({"attrs": {"text": "x".repeat(300_000)}}),
+    ];
+    for p in cases {
+        let mut e = populated();
+        let before = e.doc().clone();
+        let _ = e.execute("preview.set", &p);
+        assert_eq!(e.doc(), &before, "{p}");
+        let _ = e.overlay();
     }
 }
 

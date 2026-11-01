@@ -151,6 +151,10 @@ pub struct App {
     depth_drag: Option<bool>,
     /// Mouse hints shown instead of the tool's while the pointer is over a
     /// panel with its own button functions (the attribute buttons).
+    /// What the pointer rests on this frame that should show on objects
+    /// (`preview.set` params), and what is showing.
+    pub(crate) preview_want: Option<Value>,
+    pub(crate) preview_shown: Option<(Value, u64)>,
     pub hint_override: Option<(&'static str, &'static str, &'static str)>,
     /// Alt + click as the middle button, Ctrl + click as the right one (macOS).
     pub ctrl_click: input::CtrlClick,
@@ -265,6 +269,8 @@ impl App {
             compose: menus::Compose::default(),
             file_edit: None,
             depth_drag: None,
+            preview_want: None,
+            preview_shown: None,
             hint_override: None,
             ctrl_click: input::CtrlClick::default(),
             chord: input::Chord::default(),
@@ -436,6 +442,38 @@ impl App {
     }
 
     /// Run a command (engine or UI-only). Errors are shown in the status bar.
+    /// Ask for a preview on objects this frame (`preview.set` params); when a
+    /// frame passes without one, the preview ends.
+    pub(crate) fn want_preview(&mut self, params: Value) {
+        self.preview_want = Some(params);
+    }
+
+    fn sync_preview(&mut self, ctx: &egui::Context) {
+        let want = self.preview_want.take();
+        let rev = self.engine.revision();
+        let same = match (&want, &self.preview_shown) {
+            (Some(w), Some((s, r))) => w == s && *r == rev && self.engine.preview_active(),
+            (None, None) => true,
+            _ => false,
+        };
+        if same {
+            return;
+        }
+        match want {
+            Some(w) => {
+                self.preview_shown = match self.engine.execute("preview.set", &w) {
+                    Ok(_) => Some((w, rev)),
+                    Err(_) => None,
+                };
+            }
+            None => {
+                let _ = self.engine.execute("preview.clear", &serde_json::json!({}));
+                self.preview_shown = None;
+            }
+        }
+        ctx.request_repaint();
+    }
+
     pub fn run(&mut self, id: &str, params: Value) -> Option<Value> {
         match self.try_run(id, &params) {
             Ok(v) => Some(v),
@@ -795,6 +833,7 @@ impl App {
                 ctx.request_repaint_after(wait);
             }
         }
+        self.sync_preview(ctx);
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(self.window_title()));
         if ctx.input(|i| i.viewport().close_requested()) && !self.quit_confirmed && self.engine.is_modified() {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);

@@ -258,7 +258,7 @@ fn walk_mut(o: &mut Object, f: &mut dyn FnMut(&mut Object)) {
     }
 }
 
-fn for_targets(e: &mut Engine, p: &Value, f: &mut dyn FnMut(&mut Object)) -> Result<usize, EngineError> {
+pub(super) fn for_targets(e: &mut Engine, p: &Value, f: &mut dyn FnMut(&mut Object)) -> Result<usize, EngineError> {
     let ids = e.target_ids(p)?;
     if ids.is_empty() {
         return Err(EngineError::bad_params("no objects selected"));
@@ -359,7 +359,7 @@ fn set_attributes(e: &mut Engine, p: &Value) -> CmdResult {
     Ok(r)
 }
 
-fn set_attributes_inner(e: &mut Engine, p: &Value) -> CmdResult {
+pub(super) fn set_attributes_inner(e: &mut Engine, p: &Value) -> CmdResult {
     // The edit panel's position rows travel with its attributes, so one
     // Apply is one undo step.
     if let Some(g) = p.get("geometry") {

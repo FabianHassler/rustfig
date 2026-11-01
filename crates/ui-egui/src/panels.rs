@@ -400,7 +400,11 @@ pub fn color_combo(ui: &mut egui::Ui, id: &str, doc: &Document, current: i32) ->
                     let (col, name) = color_label(doc, c);
                     ui.horizontal(|ui| {
                         swatch(ui, col);
-                        if ui.selectable_label(c == current, name).clicked() {
+                        let r = ui.selectable_label(c == current, name);
+                        if r.hovered() {
+                            crate::attributes::note_hover(ui.ctx(), id, i64::from(c));
+                        }
+                        if r.clicked() {
                             chosen = Some(c);
                         }
                     });
