@@ -1609,6 +1609,8 @@ mod tests {
         ("app.copy_messages", "the Copy button of the message history"),
         ("edit.select", "scripting API (xfig has no selection)"),
         ("edit.search_replace", "scripting API; Search/Replace... runs it"),
+        ("edit.search_step", "the Next and Previous buttons of Search/Replace"),
+        ("edit.show_object", "a click on a result line of Search/Replace"),
         ("text.spell_check", "scripting API; Spell Check... runs it"),
         ("edit.paste_text", "the middle button of the Text tool"),
         (

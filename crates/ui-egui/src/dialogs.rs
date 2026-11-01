@@ -260,6 +260,10 @@ pub struct SearchState {
     pub find: String,
     pub replace: String,
     pub case_sensitive: bool,
+    /// Match only whole words (W10-26).
+    pub whole_word: bool,
+    /// The object of each line in `results`, for clicking (W10-26).
+    pub result_ids: Vec<u64>,
     /// xfig's results list ("[x=.. y=..] text" per match) and its message line.
     pub results: Vec<String>,
     pub message: String,
@@ -3073,6 +3077,9 @@ fn search_dialog(app: &mut App, ctx: &egui::Context) {
     // Some(false) = search, Some(true) = replace, and the update button.
     let mut action: Option<bool> = None;
     let mut update = false;
+    // W10-26: Next / Previous, or a click on a result line.
+    let mut step: Option<&'static str> = None;
+    let mut clicked: Option<usize> = None;
     let st = &mut app.dialogs.search;
     let found = !st.found.is_empty();
     egui::Window::new("Search and Replace")
@@ -3098,7 +3105,26 @@ fn search_dialog(app: &mut App, ctx: &egui::Context) {
                 }
                 ui.end_row();
             });
-            ui.checkbox(&mut st.case_sensitive, "Case sensitive");
+            ui.horizontal(|ui| {
+                ui.checkbox(&mut st.case_sensitive, "Case sensitive");
+                ui.checkbox(&mut st.whole_word, "Whole word");
+            });
+            ui.horizontal(|ui| {
+                if ui
+                    .button("Next")
+                    .on_hover_text("Select the next text that matches and show it")
+                    .clicked()
+                {
+                    step = Some("next");
+                }
+                if ui
+                    .button("Previous")
+                    .on_hover_text("Select the previous text that matches and show it")
+                    .clicked()
+                {
+                    step = Some("previous");
+                }
+            });
             ui.horizontal(|ui| {
                 if ui.button("Search").clicked() {
                     action = Some(false);
@@ -3120,8 +3146,11 @@ fn search_dialog(app: &mut App, ctx: &egui::Context) {
                 st.message.as_str()
             });
             egui::ScrollArea::vertical().max_height(160.0).show(ui, |ui| {
-                for line in &st.results {
-                    ui.monospace(line);
+                for (i, line) in st.results.iter().enumerate() {
+                    let r = ui.selectable_label(false, egui::RichText::new(line).monospace());
+                    if r.on_hover_text("Click to select this text and show it").clicked() {
+                        clicked = Some(i);
+                    }
                 }
             });
         }));
@@ -3134,6 +3163,28 @@ fn search_dialog(app: &mut App, ctx: &egui::Context) {
             app.dialogs.search.found.clear();
         }
     }
+    if let Some(i) = clicked {
+        if let Some(id) = app.dialogs.search.result_ids.get(i).copied() {
+            if app.run("edit.show_object", json!({ "id": id })).is_some() {
+                app.dialogs.search.message = format!("Match {} of {}", i + 1, app.dialogs.search.results.len());
+            }
+        }
+    }
+    if let Some(dir) = step {
+        let st = &app.dialogs.search;
+        let p = json!({"find": st.find, "case_sensitive": st.case_sensitive, "whole_word": st.whole_word, "direction": dir});
+        if let Some(r) = app.run("edit.search_step", p) {
+            let count = r.get("count").and_then(Value::as_u64).unwrap_or(0);
+            let d = &mut app.dialogs.search;
+            if count == 0 {
+                d.message = "No match".to_string();
+            } else {
+                let index = r.get("index").and_then(Value::as_u64).unwrap_or(0);
+                d.message = format!("Match {index} of {count}");
+                d.found = r.get("id").and_then(Value::as_u64).map(|i| vec![i]).unwrap_or_default();
+            }
+        }
+    }
     if let Some(replace) = action {
         let st = app.dialogs.search.clone();
         if replace && st.replace.is_empty() && !st.empty_warned {
@@ -3143,7 +3194,7 @@ fn search_dialog(app: &mut App, ctx: &egui::Context) {
             return;
         }
         // Replace works on what the last search found: search first.
-        let mut p = json!({"find": st.find, "case_sensitive": st.case_sensitive});
+        let mut p = json!({"find": st.find, "case_sensitive": st.case_sensitive, "whole_word": st.whole_word});
         if replace {
             p["replace"] = json!(st.replace);
         }
@@ -3155,6 +3206,7 @@ fn search_dialog(app: &mut App, ctx: &egui::Context) {
             if replace {
                 d.message = format!("{n} object{} replaced", if n == 1 { "" } else { "s" });
                 d.results.clear();
+                d.result_ids.clear();
                 d.found.clear();
             } else {
                 d.results = r
@@ -3173,6 +3225,15 @@ fn search_dialog(app: &mut App, ctx: &egui::Context) {
                                 };
                                 format!("[x={:4.1}{u} y={:4.1}{u}] {text}", x / per, y / per)
                             })
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                d.result_ids = r
+                    .get("texts")
+                    .and_then(Value::as_array)
+                    .map(|a| {
+                        a.iter()
+                            .map(|t| t.get("id").and_then(Value::as_u64).unwrap_or(0))
                             .collect()
                     })
                     .unwrap_or_default();

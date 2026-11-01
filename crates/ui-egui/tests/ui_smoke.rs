@@ -3453,3 +3453,51 @@ fn message_history_filters_by_level_and_copies() {
         "the copy reached the clipboard path"
     );
 }
+
+/// W10-26: Whole word, Next/Previous and clicking a result in the Search window.
+#[test]
+fn search_window_whole_word_next_previous_and_click() {
+    let fig = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+4 0 0 50 -1 0 12 0.0000 4 150 600 1200 1200 cat\\001\n\
+4 0 0 50 -1 0 12 0.0000 4 150 600 1200 2400 concatenate\\001\n\
+4 0 0 50 -1 0 12 0.0000 4 150 600 90000 90000 far cat\\001\n";
+    let mut h = harness(app());
+    h.state_mut()
+        .engine
+        .execute("file.open_data", &json!({"data": fig}))
+        .unwrap();
+    h.state_mut().run("app.search", json!({}));
+    h.state_mut().dialogs.search.find = "cat".into();
+    h.run_steps(2);
+    // Without Whole word, "concatenate" matches too.
+    h.get_by_label("Search").click();
+    h.run_steps(2);
+    assert!(h.query_all_by_label_contains("] concatenate").count() >= 1);
+    h.get_by_label("Whole word").click();
+    h.run_steps(2);
+    h.get_by_label("Search").click();
+    h.run_steps(2);
+    assert_eq!(h.query_all_by_label_contains("] concatenate").count(), 0);
+    h.get_by_label_contains("] far cat");
+    // Clicking a result selects that text and scrolls to it.
+    h.state_mut().engine.view.size = (800.0, 600.0);
+    h.get_by_label_contains("] far cat").click();
+    h.run_steps(2);
+    let sel = h.state().engine.selection().to_vec();
+    assert_eq!(sel.len(), 1);
+    let vis = h.state().engine.view.visible();
+    assert!(vis.min.x < 90000.0 && vis.max.x > 90000.0, "scrolled to the far text");
+    // Next wraps from the last match to the first, Previous goes back.
+    h.state_mut().engine.set_selection(vec![]);
+    h.get_by_label("Next").click();
+    h.run_steps(2);
+    h.get_by_label_contains("Match 1 of 2");
+    h.get_by_label("Next").click();
+    h.run_steps(2);
+    h.get_by_label_contains("Match 2 of 2");
+    assert_eq!(h.state().engine.selection(), &sel[..]);
+    h.get_by_label("Previous").click();
+    h.run_steps(2);
+    h.get_by_label_contains("Match 1 of 2");
+    assert_ne!(h.state().engine.selection(), &sel[..]);
+}

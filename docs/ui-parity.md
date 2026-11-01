@@ -141,6 +141,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | 2026-10-22 | D3: Chop mode added to the editing-modes table (`tool.chop`, `object.chop`). |
 | 2026-11-01 | W10-29: message history with levels (info, warning, error), filter check boxes and Copy next to xfig's Dismiss and Clear. |
 | 2026-11-01 | W10-38: the Update Control box gets an "Update will change: …" line listing the attributes whose update flags are on. |
+| 2026-11-01 | W10-26: Search and Replace gets Whole word, Next/Previous and clickable results (regular expressions pending). |
 | 2026-10-13 | First checklist. |
 | 2026-10-13 | Added the main-window section (plan phase W). |
 | 2026-10-13 | W1: classic layout, message panel, mouse indicator, units box. |
