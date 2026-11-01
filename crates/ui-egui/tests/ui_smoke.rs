@@ -2613,6 +2613,9 @@ fn manage_styles_window_families_and_set() {
             h.state().styles.family_name
         );
         h.get_by_label("Family Report");
+        // The field is for new names only: Add empties it and selects the new family.
+        assert!(h.state().styles.family_name.is_empty());
+        assert_eq!(h.state().styles.family.as_deref(), Some("Report"));
         h.state_mut().engine.indicator.thickness = 7;
         h.get_by_label("Style name").click();
         h.get_by_label("Style name").type_text("Thick");
@@ -2620,6 +2623,8 @@ fn manage_styles_window_families_and_set() {
         h.get_by_label("Add style").click();
         h.run_steps(3);
         h.get_by_label("Style Thick");
+        assert!(h.state().styles.style_name.is_empty());
+        assert_eq!(h.state().styles.style.as_deref(), Some("Thick"));
         h.state_mut().engine.indicator.thickness = 1;
         h.get_by_label("Set style").click();
         h.run_steps(3);
