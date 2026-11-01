@@ -4316,3 +4316,26 @@ fn edit_panel_width_popup_is_live_and_escape_restores() {
     assert!(h.state_mut().engine.undo());
     assert_eq!(width(&h), start, "one undo step took the width back");
 }
+
+/// Arrow Size and Box Curve show the value as a drawing on their buttons;
+/// the faces follow the indicator.
+#[test]
+fn arrow_size_and_box_curve_faces_are_drawn_live() {
+    let mut h = harness(app());
+    h.state_mut().engine.set_tool(ToolKind::ArcBox);
+    h.run_steps(3);
+    h.state_mut().run("indicator.set", json!({"box_radius": 8}));
+    h.run_steps(3);
+    let tex = |h: &Harness<'static, App>, name: &str| {
+        let ctx = h.ctx.clone();
+        ctx.data(|d| d.get_temp::<(([i64; 4], u32), egui::TextureHandle)>(egui::Id::new(("live_face", name))))
+            .map(|(k, _)| k)
+    };
+    let a = tex(&h, "box_curve").expect("the Box Curve face is drawn");
+    h.state_mut().run("indicator.set", json!({"box_radius": 3}));
+    h.run_steps(3);
+    assert_ne!(tex(&h, "box_curve").unwrap(), a, "the face follows the radius");
+    h.state_mut().engine.set_tool(ToolKind::Polyline);
+    h.run_steps(3);
+    assert!(tex(&h, "arrow_size").is_some(), "the Arrow Size face is drawn");
+}
