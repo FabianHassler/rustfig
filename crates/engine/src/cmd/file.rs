@@ -35,7 +35,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Open…",
             menu: "",
             shortcut: "",
-            params: "{\"path\": string, \"offset_x\"?: number, \"offset_y\"?: number, \"page\"?: number, \"vectors\"?: bool}  — open a .fig or .rustfig file, or a PDF or SVG/SVGZ as editable Fig objects (page = the 1-based page, default 1; a PDF with an embedded figure opens that figure unless vectors is true; result warnings say what was dropped); the optional offset (Fig units) moves the figure, as xfig's Figure Offset. A name that does not exist yet opens an empty figure of that name (xfig's \"(new file)\"; result new_file: true); the first Save creates the file",
+            params: "{\"path\": string, \"offset_x\"?: number, \"offset_y\"?: number, \"page\"?: number, \"vectors\"?: bool}  — open a .fig or .rustfig file (also .fig.gz, .fig.Z, .fig.z, .fig.bz2, .fig.xz; a missing NAME opens NAME.gz etc. as xfig does), or a PDF or SVG/SVGZ as editable Fig objects (page = the 1-based page, default 1; a PDF with an embedded figure opens that figure unless vectors is true; result warnings say what was dropped); the optional offset (Fig units) moves the figure, as xfig's Figure Offset. A name that does not exist yet opens an empty figure of that name (xfig's \"(new file)\"; result new_file: true); the first Save creates the file",
             mutates: false,
             enabled: always,
             run: open,
@@ -135,7 +135,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "List folder",
             menu: "",
             shortcut: "",
-            params: "{\"dir\"?: string (default: the file's folder, else the working folder), \"mask\"?: string (blank-separated globs, default \"*.fig *.rustfig *.xfig *.fig.gz *.fig.Z\"), \"hidden\"?: bool}  — the file list of xfig's Open/Merge panel: {dir, dirs (first \"..\"), files}",
+            params: "{\"dir\"?: string (default: the file's folder, else the working folder), \"mask\"?: string (blank-separated globs, default \"*.fig *.rustfig *.xfig *.fig.gz *.fig.Z *.fig.z *.fig.bz2 *.fig.xz\"), \"hidden\"?: bool}  — the file list of xfig's Open/Merge panel: {dir, dirs (first \"..\"), files}",
             mutates: false,
             enabled: always,
             run: list_dir,
@@ -175,7 +175,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Save to data",
             menu: "",
             shortcut: "",
-            params: "{\"format\"?: \"fig\"|\"rustfig\", \"part\"?: bool (only the visible part while a compound is open)}  — returns {\"data\": string}",
+            params: "{\"format\"?: \"fig\"|\"rustfig\", \"part\"?: bool (only the visible part while a compound is open), \"name\"?: string (a compressed Fig name such as x.fig.gz returns the compressed bytes)}  — returns {\"data\": string} or {\"base64\": string}",
             mutates: false,
             enabled: always,
             run: save_data,
@@ -259,8 +259,32 @@ fn parse(bytes: &[u8]) -> Result<(Document, Vec<String>), EngineError> {
     Ok((doc, warnings))
 }
 
+/// xfig's `file_on_disk` (`f_picobj.c`): a name that doesn't exist but has a
+/// compressed twin (`name.gz`, `.Z`, `.z`, `.bz2`, `.xz`) means the twin.
+fn compressed_twin(path: &str) -> Option<String> {
+    if Path::new(path).exists() || path.is_empty() {
+        return None;
+    }
+    ["gz", "Z", "z", "bz2", "xz"].iter().find_map(|ext| {
+        let twin = format!("{path}.{ext}");
+        Path::new(&twin).is_file().then_some(twin)
+    })
+}
+
+/// The file's bytes with a compressed Fig file unpacked (`.fig.gz` etc.).
+fn read_unpacked(path: &str) -> Result<Vec<u8>, EngineError> {
+    let bytes = read_file(path)?;
+    match rustfig_format::unpack_file(&bytes, path).map_err(|err| EngineError::format(format!("{path}: {err}")))? {
+        std::borrow::Cow::Borrowed(_) => Ok(bytes),
+        std::borrow::Cow::Owned(inner) => Ok(inner),
+    }
+}
+
 fn open(e: &mut Engine, p: &Value) -> CmdResult {
-    let path = string(p, "path")?;
+    let mut path = string(p, "path")?;
+    if let Some(twin) = compressed_twin(&path) {
+        path = twin;
+    }
     // xfig opens a name that doesn't exist yet as an empty figure of that
     // name ("(new file)", f_load.c): the first Save creates it.
     if matches!(std::fs::metadata(&path), Err(err) if err.kind() == std::io::ErrorKind::NotFound) {
@@ -276,7 +300,7 @@ fn open(e: &mut Engine, p: &Value) -> CmdResult {
         e.set_status(format!("{path} (new file)"));
         return Ok(json!({"objects": 0, "warnings": [], "new_file": true}));
     }
-    let bytes = read_file(&path)?;
+    let bytes = read_unpacked(&path)?;
     if wants_pdf_import(&bytes, p)? {
         return open_pdf(e, &path, &bytes, p);
     }
@@ -617,7 +641,7 @@ fn pdf_pages(_: &mut Engine, p: &Value) -> CmdResult {
 
 /// A figure file read with its pictures (the Open/Merge panel's preview).
 pub(crate) fn read_figure(path: &str) -> Result<(Document, Vec<String>), EngineError> {
-    let bytes = read_file(path)?;
+    let bytes = read_unpacked(path)?;
     // A PDF without a figure inside: its first page, imported.
     if wants_pdf_import(&bytes, &json!({}))? {
         let base = Path::new(path).parent().map(Path::to_path_buf);
@@ -736,8 +760,11 @@ fn merge_doc(e: &mut Engine, mut other: Document, (dx, dy): (f64, f64)) -> CmdRe
 }
 
 fn merge(e: &mut Engine, p: &Value) -> CmdResult {
-    let path = string(p, "path")?;
-    let bytes = read_file(&path)?;
+    let mut path = string(p, "path")?;
+    if let Some(twin) = compressed_twin(&path) {
+        path = twin;
+    }
+    let bytes = read_unpacked(&path)?;
     let base = Path::new(&path).parent().map(Path::to_path_buf);
     if wants_pdf_import(&bytes, p)? {
         let stem = pdf_stem(&path);
@@ -809,6 +836,12 @@ fn save(e: &mut Engine, p: &Value) -> CmdResult {
         None => rustfig_format::write(&*scope_doc(e, p)?, format),
     }
     .map_err(|err| EngineError::format(err.to_string()))?;
+    // Saving to NAME.fig.gz/.Z/.bz2/.xz writes the same Fig text compressed.
+    let data = match rustfig_format::Compression::from_fig_path(&path) {
+        Some(kind) => rustfig_format::compress::compress(text.as_bytes(), kind)
+            .map_err(|err| EngineError::format(err.to_string()))?,
+        None => text.into_bytes(),
+    };
     // xfig's write_bak (w_file.c renamefile): the file saved over is kept
     // as NAME.bak. A copy, so a failing write leaves the original in place.
     let backup_error = if e.prefs.bool("write_bak").unwrap_or(true) {
@@ -828,7 +861,7 @@ fn save(e: &mut Engine, p: &Value) -> CmdResult {
             .and_then(|dir| crate::recovery::keep_version(&dir, &path, keep));
         backup_error.or(version_error)
     };
-    write_atomic(&path, text.as_bytes())?;
+    write_atomic(&path, &data)?;
     if let Some(f) = &rebase {
         if !part {
             rebase_pictures_doc(e.doc_mut(), f);
@@ -1161,6 +1194,13 @@ fn save_data(e: &mut Engine, p: &Value) -> CmdResult {
         other => return Err(EngineError::bad_params(format!("unknown format {other:?}"))),
     };
     let text = rustfig_format::write(&*scope_doc(e, p)?, format).map_err(|err| EngineError::format(err.to_string()))?;
+    // With the name of a compressed Fig file the result is the compressed
+    // bytes in base64 (the browser's Save downloads them).
+    if let Some(kind) = opt_str(p, "name")?.and_then(rustfig_format::Compression::from_fig_path) {
+        let packed = rustfig_format::compress::compress(text.as_bytes(), kind)
+            .map_err(|err| EngineError::format(err.to_string()))?;
+        return Ok(json!({"base64": crate::base64(&packed)}));
+    }
     Ok(json!({"data": text}))
 }
 

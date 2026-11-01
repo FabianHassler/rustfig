@@ -389,7 +389,10 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         }
         "app.save_as" => {
             let part = p.get("part").and_then(Value::as_bool).unwrap_or(false);
-            if let Some(p) = path.or_else(|| app.file_dialogs.save_file("figure.fig", "Figures", &["fig", "rustfig"])) {
+            if let Some(p) = path.or_else(|| {
+                app.file_dialogs
+                    .save_file("figure.fig", "Figures", &["fig", "rustfig", "gz", "Z", "bz2", "xz"])
+            }) {
                 let r = app
                     .engine
                     .execute("file.save", &json!({ "path": p, "part": part }))

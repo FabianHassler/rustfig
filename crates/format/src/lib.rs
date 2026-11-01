@@ -2,11 +2,13 @@
 //! 3.2) and the native `.rustfig` JSON format.
 
 pub mod bridge;
+pub mod compress;
 pub mod embed;
 mod fig_read;
 mod fig_write;
 mod native;
 
+pub use compress::{unpack, unpack_file, Compression, MAX_DECOMPRESSED_BYTES};
 pub use fig_read::{read_fig, read_fig_encoded, read_fig_messages, TextEncoding, MAX_NESTING, MAX_TEXT_BYTES};
 pub use fig_write::write_fig;
 pub use native::{read_native, write_native, NATIVE_VERSION};
@@ -99,6 +101,9 @@ pub fn read_any_messages(src: &[u8]) -> Result<(Document, Vec<String>), FormatEr
     if src.len() > MAX_FILE_BYTES {
         return Err(FormatError::new("file is too large"));
     }
+    // A compressed Fig file (.fig.gz, .Z, .bz2, .xz) reads as the Fig inside.
+    let unpacked = unpack(src, false)?;
+    let src: &[u8] = &unpacked;
     match FileFormat::sniff(src) {
         Some(FileFormat::Fig) => read_fig_messages(src, TextEncoding::Auto),
         Some(FileFormat::Native) => read_native(src).map(|d| (d, Vec::new())),

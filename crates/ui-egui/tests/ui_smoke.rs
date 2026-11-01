@@ -693,6 +693,30 @@ fn file_dialogs_save_open_merge_and_cancel() {
 }
 
 #[test]
+fn save_as_fig_gz_writes_gzip() {
+    let dir = std::env::temp_dir().join(format!("rustfig-ui-gz-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("x.fig.gz").to_string_lossy().into_owned();
+    let mut a = app();
+    a.file_dialogs = Box::new(ScriptedDialogs::new([Some(path.clone()), Some(path.clone())]));
+    let mut h = harness(a);
+    h.state_mut()
+        .engine
+        .execute("shape.rectangle", &json!({"x": 0, "y": 0, "width": 600, "height": 300}))
+        .unwrap();
+    h.state_mut().run("app.save_as", json!({}));
+    h.run_steps(2);
+    let bytes = std::fs::read(&path).unwrap();
+    assert_eq!(&bytes[..2], &[0x1f, 0x8b], "gzip magic");
+    assert!(!h.state().engine.is_modified());
+    assert_eq!(h.state().engine.path(), Some(path.as_str()));
+    h.state_mut().run("app.open", json!({}));
+    h.run_steps(2);
+    assert_eq!(h.state().engine.doc().objects.len(), 1);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn quit_asks_about_unsaved_changes() {
     let mut h = harness(app());
     h.state_mut().run("app.quit", json!({}));

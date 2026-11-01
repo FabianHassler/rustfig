@@ -47,6 +47,8 @@ epaint_default_fonts = "0.33"
 pdf-writer = "0.15"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "bmp", "pnm", "tiff"] }
 flate2 = "1"
+bzip2 = "0.6"
+lzma-rs = "0.3"
 sha2 = "0.10"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 egui = "0.33"

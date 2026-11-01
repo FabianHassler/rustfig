@@ -115,7 +115,8 @@ pub fn open_pick(app: &mut App, pick: &WebPick) {
     if name.is_empty() {
         name = "figure.fig".to_string();
     }
-    let embedded = !matches!(extension(&name).as_str(), "fig" | "xfig" | "rustfig");
+    let embedded = !matches!(extension(&name).as_str(), "fig" | "xfig" | "rustfig")
+        && rustfig_engine::Compression::from_fig_path(&name).is_none();
     if embedded {
         name = match name.rsplit_once('.') {
             Some((stem, _)) if !stem.is_empty() => format!("{stem}.fig"),
@@ -227,14 +228,22 @@ pub fn save(app: &mut App) {
     } else {
         "fig"
     };
-    let Some(r) = app.run("file.save_data", json!({ "format": format })) else {
+    // A .fig.gz/.bz2/.xz/.Z name downloads the compressed bytes.
+    let Some(r) = app.run("file.save_data", json!({ "format": format, "name": name })) else {
         return;
     };
-    let Some(text) = r.get("data").and_then(Value::as_str) else {
-        app.error("Save: no data");
-        return;
+    let bytes = match (
+        r.get("data").and_then(Value::as_str),
+        r.get("base64").and_then(Value::as_str),
+    ) {
+        (Some(text), _) => text.as_bytes().to_vec(),
+        (None, Some(b)) => rustfig_engine::base64_decode(b),
+        _ => {
+            app.error("Save: no data");
+            return;
+        }
     };
-    match app.file_dialogs.download(&name, text.as_bytes().to_vec()) {
+    match app.file_dialogs.download(&name, bytes) {
         Ok(()) => {
             app.engine.set_path(Some(name.clone()));
             app.engine.set_modified(false);
