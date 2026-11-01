@@ -515,6 +515,8 @@ fn press_key(h: &mut Harness<'static, App>, key: egui::Key, modifiers: egui::Mod
 #[test]
 fn xfig_keys_select_modes_and_run_menu_entries() {
     let mut h = harness(app());
+    // xfig's keys are a switch, off by default (2026-11-01).
+    h.state_mut().xfig_keys = true;
     press_key(&mut h, egui::Key::S, egui::Modifiers::NONE);
     assert_eq!(h.state().engine.tool(), ToolKind::SplineApprox, "xfig: s = spline");
     press_key(&mut h, egui::Key::A, egui::Modifiers::SHIFT);
@@ -764,6 +766,8 @@ fn escape_closes_panels() {
 #[test]
 fn xfig_menu_keys_and_letters() {
     let mut h = harness(app());
+    // xfig's keys are a switch, off by default (2026-11-01).
+    h.state_mut().xfig_keys = true;
     let z0 = h.state().engine.view.zoom;
     press_key(&mut h, egui::Key::V, egui::Modifiers::ALT);
     h.run_steps(2);
@@ -893,6 +897,8 @@ fn ctrl_wheel_zooms_in_xfig_steps_about_the_pointer() {
 #[test]
 fn balloons_toggle() {
     let mut h = harness(app());
+    // xfig's keys are a switch, off by default (2026-11-01).
+    h.state_mut().xfig_keys = true;
     assert!(h.ctx.style().interaction.tooltip_delay < 5.0);
     h.state_mut().run("app.toggle_balloons", json!({}));
     h.run_steps(2);

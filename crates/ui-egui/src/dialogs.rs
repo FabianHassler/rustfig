@@ -1823,7 +1823,8 @@ fn dialog_body_height(ctx: &egui::Context) -> f32 {
 /// Ok in Global settings: every value that changed goes through its command.
 fn apply_global(app: &mut App, was: &GlobalDraft, now: &GlobalDraft) {
     if now.reset_look {
-        if !app.xfig_keys {
+        // The default is the system's keys (decided 2026-11-01).
+        if app.xfig_keys {
             app.run("app.toggle_xfig_keys", json!({}));
         }
         app.run("app.button_style", json!({ "style": "3d" }));

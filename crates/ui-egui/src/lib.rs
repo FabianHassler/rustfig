@@ -277,7 +277,9 @@ impl App {
             mouse_sheet: help_pages::MouseSheet::default(),
             whats_new_open: false,
             point_entry: point_entry::PointEntry::default(),
-            xfig_keys: true,
+            // The system's keys by default (decided 2026-11-01); xfig's keys
+            // are a switch in Global settings.
+            xfig_keys: false,
             open_menu: None,
             pending: None,
             system_open_queue: Vec::new(),
