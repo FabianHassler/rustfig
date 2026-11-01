@@ -138,3 +138,32 @@ fn update_settings_honours_the_flags() {
     assert_eq!(e.indicator.pen_color, 1);
     assert_eq!(e.indicator.thickness, 1, "line width flag is off");
 }
+
+#[test]
+fn summary_checklist_agrees_with_the_flags() {
+    let mut e = engine();
+    // Every flag on: the summary and the flag list name all 18.
+    let r = e.execute("indicator.update_summary", &json!({})).unwrap();
+    assert_eq!(r["flags"].as_array().unwrap().len(), UpdateFlag::ALL.len());
+    for f in UpdateFlag::ALL {
+        assert!(r["text"].as_str().unwrap().contains(f.label()), "{}", f.name());
+    }
+    // None on.
+    e.execute("indicator.update_flags", &json!({"all": false})).unwrap();
+    let r = e.execute("indicator.update_summary", &json!({})).unwrap();
+    assert_eq!(r["text"], "Update will change: nothing");
+    assert!(r["flags"].as_array().unwrap().is_empty());
+    // One toggle at a time: the checklist follows each flag exactly.
+    for f in UpdateFlag::ALL {
+        e.execute("indicator.update_flags", &json!({"all": false})).unwrap();
+        e.execute("indicator.set_update_flag", &json!({"attr": f.name(), "on": true}))
+            .unwrap();
+        let r = e.execute("indicator.update_summary", &json!({})).unwrap();
+        assert_eq!(r["flags"], json!([f.name()]));
+        assert_eq!(r["text"], format!("Update will change: {}", f.label()));
+    }
+    // And the line is what Update really does: only the listed attribute changes.
+    only(&mut e, "line_width");
+    let r = e.execute("indicator.update_summary", &json!({})).unwrap();
+    assert_eq!(r["text"], "Update will change: line width");
+}

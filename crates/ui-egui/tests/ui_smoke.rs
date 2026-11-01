@@ -388,9 +388,14 @@ fn update_control_flags_in_update_mode() {
     assert!(h.query_by_label("Sets all update flags").is_none());
     h.state_mut().engine.set_tool(ToolKind::Update);
     h.run_steps(2);
+    // The checklist line names every flag that is on, and follows the boxes.
+    h.get_by_label_contains("Update will change: ");
+    h.get_by_label_contains("line width");
     h.get_by_label("Update Line Width").click();
     h.run_steps(2);
     assert!(!h.state().engine.indicator.updates(UpdateFlag::LineWidth));
+    assert!(h.query_by_label_contains("line width").is_none());
+    h.get_by_label_contains("Update will change: ");
     assert!(h.state().engine.indicator.updates(UpdateFlag::Depth));
     // The click did not open the button's pop-up or change its value.
     assert_eq!(h.state().engine.indicator.thickness, 1);
