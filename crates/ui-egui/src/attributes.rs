@@ -205,7 +205,7 @@ impl Attr {
             | Attr::ArrowMode
             | Attr::ArrowType
             | Attr::TextJust => 68.0,
-            Attr::BoxRadius => 62.0,
+            Attr::BoxRadius => 84.0,
             Attr::LineWidth => 72.0,
             Attr::RotnAngle => 76.0,
             Attr::PenColor | Attr::FillColor => 82.0,
@@ -1371,16 +1371,20 @@ fn draw_value(app: &App, ui: &Ui, p: &Painter, r: Rect, button: Rect, tk: &Token
         return;
     }
     match a {
-        Attr::ArrowSize | Attr::BoxRadius => {
-            let tall = Rect::from_min_max(
-                pos2(r.left(), button.top() + 1.0),
-                pos2(r.right(), button.bottom() - 1.0),
+        Attr::ArrowSize => {
+            // The value box under the one-line label, like Arrow Type's picture.
+            arrow_size_face(ui, ind, r, ink);
+        }
+        Attr::BoxRadius => {
+            // The picture right of the label, the radius as a number at the right.
+            let num = ind.box_radius.to_string();
+            text_right(&num);
+            let w = p.layout_no_wrap(num, small.clone(), ink).size().x;
+            let pic = Rect::from_min_max(
+                pos2(r.left(), button.top() + 2.0),
+                pos2((r.right() - w - 3.0).max(r.left() + 8.0), button.bottom() - 2.0),
             );
-            if a == Attr::ArrowSize {
-                arrow_size_face(ui, ind, tall, ink);
-            } else {
-                box_curve_face(ui, ind, tall, ink);
-            }
+            box_curve_face(ui, ind, pic, ink);
         }
         Attr::PenColor | Attr::FillColor => {
             let c = if a == Attr::PenColor {
@@ -2404,8 +2408,8 @@ fn live_face(
 /// width and length; everything scaled down together to fit the button).
 fn arrow_size_face(ui: &Ui, ind: &Indicator, rect: Rect, tint: Color32) {
     use rustfig_model::{Arrow, Object, ObjectKind, PolyKind, Polyline, Style};
-    const W: usize = 44;
-    const H: usize = 24;
+    const W: usize = 64;
+    const H: usize = 16;
     let u = rustfig_geom::FIG_PER_STYLE_UNIT;
     let lw = f64::from(ind.thickness.max(1));
     let (t, w, l) = if ind.arrow_absolute {
@@ -2415,16 +2419,16 @@ fn arrow_size_face(ui: &Ui, ind: &Indicator, rect: Rect, tint: Color32) {
     };
     let sane = |v: f64| if v.is_finite() { v.clamp(0.0, 1000.0) } else { 0.0 };
     let (t, w, l) = (sane(t), sane(w), sane(l));
-    // The head must fit in 20 x 20 pixels of the 44 x 24 face.
-    let k = (20.0 / l.max(w).max(1.0)).min(1.0);
+    // The head must fit in the 64 x 16 face (a one-line value box).
+    let k = (14.0 / l.max(w).max(1.0)).min(1.0);
     let mut st = Style::default();
     st.thickness = ((lw * k).round() as i32).clamp(1, 20);
     let mut p = Polyline::new(
         PolyKind::Polyline,
         st,
         vec![
-            rustfig_geom::Point::new(2.0 * u, 12.0 * u),
-            rustfig_geom::Point::new((W as f64 - 2.0) * u, 12.0 * u),
+            rustfig_geom::Point::new(2.0 * u, 8.0 * u),
+            rustfig_geom::Point::new((W as f64 - 2.0) * u, 8.0 * u),
         ],
     );
     p.forward_arrow = Some(Arrow {
@@ -2451,23 +2455,26 @@ fn arrow_size_face(ui: &Ui, ind: &Indicator, rect: Rect, tint: Color32) {
     );
 }
 
-/// Box Curve's face: a rounded rectangle with the current corner radius.
+/// Box Curve's face: a rounded rectangle with the current corner radius,
+/// drawn large and shown small, with radii up to 60 told apart (the number
+/// is beside it).
 fn box_curve_face(ui: &Ui, ind: &Indicator, rect: Rect, tint: Color32) {
     use rustfig_model::{Object, ObjectKind, PolyKind, Polyline, Style};
-    const W: usize = 30;
-    const H: usize = 22;
+    const W: usize = 88;
+    const H: usize = 64;
     let u = rustfig_geom::FIG_PER_STYLE_UNIT;
     let pt = |x: f64, y: f64| rustfig_geom::Point::new(x * u, y * u);
     let mut st = Style::default();
-    st.thickness = 2;
+    st.thickness = 6;
     let mut p = Polyline::new(
         PolyKind::ArcBox,
         st,
-        vec![pt(3.0, 3.0), pt(27.0, 3.0), pt(27.0, 19.0), pt(3.0, 19.0), pt(3.0, 3.0)],
+        vec![pt(4.0, 4.0), pt(84.0, 4.0), pt(84.0, 60.0), pt(4.0, 60.0), pt(4.0, 4.0)],
     );
-    // The radius is in 1/80 inch, one icon pixel; at most half the short side.
-    p.radius = ind.box_radius.clamp(0, 8);
-    let key = [i64::from(p.radius), 0, 0, 0];
+    // 0 to 60 map to square to fully round (half the short side, 28).
+    let shown = (f64::from(ind.box_radius.clamp(0, 60)) * 28.0 / 60.0).round() as i32;
+    p.radius = shown;
+    let key = [i64::from(shown), 0, 0, 0];
     live_face(
         ui,
         "box_curve",
