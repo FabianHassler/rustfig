@@ -246,6 +246,8 @@ pub struct LibRef {
 
 /// Most favourite library figures kept.
 pub const MAX_LIB_FAVOURITES: usize = 48;
+/// Most favourite modes kept.
+pub const MAX_MODE_FAVOURITES: usize = 8;
 /// Most recently placed library figures kept.
 pub const MAX_LIB_RECENT: usize = 8;
 /// Most favourite libraries kept.
@@ -293,6 +295,9 @@ pub struct RustFigPrefs {
     /// W10-30: favourite library figures (library panel's top row), oldest first.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub library_favourites: Vec<LibRef>,
+    /// Favourite modes (command ids such as `tool.box`, the mode panel's Favourites strip), oldest first.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub mode_favourites: Vec<String>,
     /// W10-30: library figures placed lately, newest first.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub library_recent: Vec<LibRef>,
@@ -370,6 +375,7 @@ impl Prefs {
         p.rustfig.user_colors.truncate(MAX_USER_COLORS);
         p.rustfig.recent_colors.truncate(MAX_RECENT_COLORS);
         p.rustfig.library_favourites.truncate(MAX_LIB_FAVOURITES);
+        p.rustfig.mode_favourites.truncate(MAX_MODE_FAVOURITES);
         p.rustfig.library_recent.truncate(MAX_LIB_RECENT);
         p.rustfig.library_favourite_libraries.truncate(MAX_LIB_FAV_LIBS);
         p.rustfig.library_hidden.truncate(MAX_LIB_HIDDEN);
@@ -456,6 +462,19 @@ impl Prefs {
                 return false;
             }
             f.push(library.to_string());
+        }
+        true
+    }
+
+    /// Mark or unmark a mode (tool command id) as a favourite; false when the list is full.
+    pub fn set_mode_favourite(&mut self, id: &str, on: bool) -> bool {
+        let f = &mut self.rustfig.mode_favourites;
+        f.retain(|x| x != id);
+        if on {
+            if f.len() >= MAX_MODE_FAVOURITES {
+                return false;
+            }
+            f.push(id.to_string());
         }
         true
     }

@@ -44,6 +44,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}  — the Character Map window: the characters of the text font (Latin, Greek, arrows, maths; the Symbol and ZapfDingbats tables for those fonts); clicking one inserts it at the caret of the text being typed (script: text.insert_char)",
     },
     UiCommand {
+        id: "app.find_mode",
+        label: "Find mode",
+        shortcut: "Ctrl+J",
+        params: "{}  — puts the caret in the Find mode field at the top of the mode panel: type part of a mode's name, Up/Down and Return pick one (mode.favourite and mode.favourites keep the Favourites strip below it)",
+    },
+    UiCommand {
         id: "app.keys",
         label: "Keys…",
         shortcut: "",
@@ -436,6 +442,7 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.styles" => app.styles.open = true,
         "app.character_map" => app.charmap.open = true,
         "app.keys" => app.keys_sheet.open = true,
+        "app.find_mode" => app.mode_finder.focus = true,
         "help.command_search" => app.command_search.show(),
         "app.mouse_sheet" => app.mouse_sheet.show(),
         "app.whats_new" => app.whats_new_open = true,
@@ -611,6 +618,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Unzoom", "view.zoom_actual"),
                 Cmd("Pan to origin", "view.pan_origin"),
                 Cmd("Character map...", "app.character_map"),
+                Cmd("Find mode", "app.find_mode"),
                 Sep,
                 Cmd("Show page borders", "view.toggle_page_border"),
                 Cmd("Typeset LaTeX text", "view.toggle_latex_preview"),
@@ -1372,6 +1380,11 @@ pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
         app.command_search.open = false;
         return;
     }
+    // The same for the Find mode field of the mode panel.
+    if app.mode_finder.active && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
+        app.mode_finder.escape = true;
+        return;
+    }
     if ctx.wants_keyboard_input() {
         return;
     }
@@ -1608,6 +1621,7 @@ mod tests {
         ("object.measure", "the measure modes; scripting API"),
         ("object.convert", "Convert mode; scripting API"),
         ("object.toggle_", "Open/close and Arrow modes; scripting API"),
+        ("mode.", "scripting API; right-click a mode button for its Favourites strip"),
         ("style.", "View > Manage Styles... (app.styles) is their window"),
         ("text.", "View > Character map... (app.character_map) is their window"),
         (

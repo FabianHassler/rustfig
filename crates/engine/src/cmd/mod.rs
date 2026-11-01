@@ -18,6 +18,7 @@ mod indicator;
 mod joinsplit;
 mod library;
 pub(crate) mod measure;
+mod modes;
 mod object;
 mod outline;
 pub mod picture;
@@ -97,6 +98,7 @@ pub fn all() -> &'static [Command] {
         v.extend(dimline::commands());
         v.extend(joinsplit::commands());
         v.extend(library::commands());
+        v.extend(modes::commands());
         v.extend(plot::commands());
         v.extend(region::commands());
         v.extend(doc::commands());
