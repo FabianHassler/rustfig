@@ -832,6 +832,58 @@ fn alt_wheel_pops_up_the_mode_menus() {
     assert!(h.state().mode_popup.is_none(), "Escape closes it");
 }
 
+/// W22: Ctrl+wheel zooms in xfig's steps (1, 1.41, 2, ...) about the
+/// pointer, one per notch; a trackpad's points add up to notches.
+#[test]
+fn ctrl_wheel_zooms_in_xfig_steps_about_the_pointer() {
+    let mut h = harness(app());
+    let p = pos2(700.0, 450.0);
+    h.event(egui::Event::PointerMoved(p));
+    h.run_steps(2);
+    h.state_mut().engine.view.zoom = 1.0;
+    let before = h.state().canvas.cursor.unwrap();
+    h.input_mut().modifiers = egui::Modifiers::COMMAND;
+    h.event(egui::Event::MouseWheel {
+        unit: egui::MouseWheelUnit::Line,
+        delta: vec2(0.0, 1.0),
+        modifiers: egui::Modifiers::COMMAND,
+    });
+    h.run_steps(2);
+    assert!(
+        (h.state().engine.view.zoom - 1.41).abs() < 1e-6,
+        "{}",
+        h.state().engine.view.zoom
+    );
+    let after = h.state().canvas.cursor.unwrap();
+    assert!(
+        (after.x - before.x).abs() < 2.0 && (after.y - before.y).abs() < 2.0,
+        "{before:?} {after:?}"
+    );
+    for _ in 0..4 {
+        h.event(egui::Event::MouseWheel {
+            unit: egui::MouseWheelUnit::Point,
+            delta: vec2(0.0, 12.5),
+            modifiers: egui::Modifiers::COMMAND,
+        });
+        h.run_steps(1);
+    }
+    assert!(
+        (h.state().engine.view.zoom - 2.0).abs() < 1e-6,
+        "four small deltas make one notch"
+    );
+    h.event(egui::Event::MouseWheel {
+        unit: egui::MouseWheelUnit::Line,
+        delta: vec2(0.0, -2.0),
+        modifiers: egui::Modifiers::COMMAND,
+    });
+    h.run_steps(2);
+    assert!(
+        (h.state().engine.view.zoom - 1.0).abs() < 1e-6,
+        "two notches, two steps out"
+    );
+    h.input_mut().modifiers = egui::Modifiers::NONE;
+}
+
 /// W8: View › Show info balloons (Meta-Y) switches the tooltips.
 #[test]
 fn balloons_toggle() {

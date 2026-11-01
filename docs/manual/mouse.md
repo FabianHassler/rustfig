@@ -53,4 +53,4 @@ Most placing operations work either way: press, drag and release, or click once 
 
 ## Wheel and trackpad
 
-Scrolling pans the canvas, Ctrl+scroll or pinching zooms, and holding Space while dragging pans. On a touch screen, two fingers pan and pinch zooms, and holding one finger still for half a second acts as the right mouse button.
+Scrolling pans the canvas. Ctrl+scroll (Cmd+scroll on macOS) zooms as xfig does: one step of the Zoom In and Zoom Out sequence (1, 1.41, 2, 2.83, 4, ...) per wheel notch, keeping the point under the pointer in place; pinching zooms continuously; and holding Space while dragging pans. On a touch screen, two fingers pan and pinch zooms, and holding one finger still for half a second acts as the right mouse button.

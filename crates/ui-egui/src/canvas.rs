@@ -70,7 +70,13 @@ pub struct CanvasState {
     pub render_ms: f64,
     /// A touch held down, waiting to become a right click.
     long_press: LongPress,
+    /// Ctrl+wheel notches not yet turned into a zoom step (a trackpad
+    /// sends fractions of one).
+    wheel_zoom: f32,
 }
+
+/// Trackpad points of Ctrl+scroll that make one zoom notch.
+const WHEEL_ZOOM_POINTS: f32 = 50.0;
 
 /// Seconds a touch must stay put to count as a right click.
 const LONG_PRESS_SECS: f64 = 0.5;
@@ -820,7 +826,14 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
             i.pointer.button_double_clicked(egui::PointerButton::Primary),
             i.pointer.button_triple_clicked(egui::PointerButton::Primary),
             i.smooth_scroll_delta,
-            i.zoom_delta(),
+            // Pinch only: Ctrl+wheel is counted in notches below.
+            i.events
+                .iter()
+                .filter_map(|e| match e {
+                    egui::Event::Zoom(f) => Some(*f),
+                    _ => None,
+                })
+                .product::<f32>(),
             i.key_down(egui::Key::Space),
         )
     });
@@ -865,10 +878,46 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
     }
     let long_press = app.canvas.long_press.poll(now);
 
-    // Zoom (pinch or Ctrl+scroll) and pan (scroll, space drag, and the
-    // middle button when it isn't a tool button).
+    // Ctrl+wheel in notches: a line is one, a trackpad's points count by
+    // WHEEL_ZOOM_POINTS, a page by four.
+    let notches: f32 = ui.input(|i| {
+        i.events
+            .iter()
+            .filter_map(|e| match e {
+                egui::Event::MouseWheel { unit, delta, modifiers } if modifiers.command => {
+                    let d = delta.x + delta.y;
+                    Some(match unit {
+                        egui::MouseWheelUnit::Line => d,
+                        egui::MouseWheelUnit::Point => d / WHEEL_ZOOM_POINTS,
+                        egui::MouseWheelUnit::Page => d * 4.0,
+                    })
+                }
+                _ => None,
+            })
+            .sum()
+    });
+
+    // Zoom (pinch, or Ctrl+wheel in xfig's steps) and pan (scroll, space
+    // drag, and the middle button when it isn't a tool button).
+    if !over {
+        app.canvas.wheel_zoom = 0.0;
+    }
     if over {
-        if (zoom - 1.0).abs() > 1e-4 {
+        app.canvas.wheel_zoom += notches;
+        if app.canvas.wheel_zoom.abs() >= 1.0 {
+            // xfig's wheel_inc_zoom/wheel_dec_zoom (w_indpanel.c): one
+            // √2 step per notch, the point under the pointer kept in place.
+            let n = app.canvas.wheel_zoom.trunc();
+            app.canvas.wheel_zoom -= n;
+            if let Some(p) = hover {
+                let anchor = Point::new(f64::from(p.x - rect.min.x), f64::from(p.y - rect.min.y));
+                let mut z = app.engine.view.zoom;
+                for _ in 0..(n.abs() as u32).min(64) {
+                    z = rustfig_engine::View::zoom_step(z, n > 0.0);
+                }
+                app.engine.view.zoom_about(z, anchor);
+            }
+        } else if (zoom - 1.0).abs() > 1e-4 {
             if let Some(p) = hover {
                 let anchor = Point::new(f64::from(p.x - rect.min.x), f64::from(p.y - rect.min.y));
                 let z = app.engine.view.zoom * f64::from(zoom);
