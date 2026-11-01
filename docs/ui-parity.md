@@ -83,7 +83,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | Attribute panel: graphical buttons, per-mode attributes | ✅ xfig's buttons and order, per-mode masks, choice panels; middle/right buttons step values; W19: xfig's labels and layout, each button narrowed to what its label and value need, wraps to a second row | — |
 | xfig accelerators (Meta-key) | ✅ xfig keymap (on by default): Meta = Alt/Option menu keys, physical Ctrl mode keys, xfig's mode letters; menus show "Meta-N"; platform shortcuts stay | — |
 | Colour picker and editor (xfig's colour panel `w_color.c`) | ✅ (E4b adds Pick from screen: macOS NSColorSampler, Windows live pick, Linux portal PickColor, greyed out on the web) Edit › Colours…, the colour pop-up's recent colours, More… and Eyedropper (E4, W10-36): hue/saturation square, RGB/HSV, hex and X11 names, user colours (add, change, delete, remove unused, keep under a name); mix memory and lock not built | — |
-| Preferences (xfig's resources, recent files, user colours) | ✅ `settings.toml`; Edit › Global settings › xfig resources… | — |
+| Preferences (xfig's resources, recent files, user colours) | ✅ `settings.toml`; Edit › Global settings (tabs, filter; Advanced tab: xfig's resources) | — |
 | Icons at HiDPI | ✅ every icon and picture is drawn as a vector at the screen's density (xfig's bitmaps optional); application icon | — |
 | Font menus (`w_fontpanel.c`): Text Font pop-up and the edit panel's font menu | ✅ font chooser (E11): PostScript/LaTeX switch, every name in its own font, search, size field, sample preview, current font marked | — |
 | Theme and scale | ✅ Global settings: Theme System/Light/Dark, UI scale 75 to 200 %, kept in the preferences; the paper stays white (E9) | — |
@@ -160,3 +160,4 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | 2026-10-21 | W10: link to window-parity.md. |
 | 2026-10-21 | W13, W14: the mouse-function box shows the new functions on the free buttons (xfig scheme), rubber bands are drawn for the regions, the three-point circle and the align reference. |
 | 2026-10-21 | W15: pressing the middle or right button and dragging in a region function (tag, delete, update, move, delete points) draws a freehand lasso; the mouse-function box says "(drag: lasso)" and "release: close lasso". |
+| 2026-11-01 | W10-25: Global settings in tabs (Window, Drawing, Files, Programs, Advanced = xfig's resources table) with a filter field and "Apply changes immediately". |

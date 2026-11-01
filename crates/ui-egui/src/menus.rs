@@ -194,6 +194,12 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         params: "{}",
     },
     UiCommand {
+        id: "app.apply_immediately",
+        label: "Apply changes immediately",
+        shortcut: "",
+        params: "{\"on\"?: bool}  — Global settings take effect as you change them instead of at Ok (persists); toggles when omitted",
+    },
+    UiCommand {
         id: "app.button_style",
         label: "Button style",
         shortcut: "",
@@ -435,6 +441,9 @@ pub fn run_ui(app: &mut App, id: &str, p: &Value) -> Result<Value, String> {
         "app.new_window" => {
             let file = p.get("path").and_then(Value::as_str);
             reload::new_window(file)?;
+        }
+        "app.apply_immediately" => {
+            app.apply_immediately = p.get("on").and_then(Value::as_bool).unwrap_or(!app.apply_immediately);
         }
         "app.button_style" => {
             app.button_3d = match p.get("style").and_then(Value::as_str) {
@@ -1595,6 +1604,7 @@ mod tests {
             "scripting API (zoom, pan, grid and snap by value); the View menu and the rulers have the rest",
         ),
         ("app.toggle_xfig_keys", "a checkbox in Global settings"),
+        ("app.apply_immediately", "a checkbox in Global settings"),
         ("app.button_style", "a choice in Global settings"),
         ("app.theme", "a choice in Global settings"),
         ("app.ui_scale", "a choice in Global settings"),

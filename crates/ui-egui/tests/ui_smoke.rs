@@ -2773,6 +2773,117 @@ fn global_settings_ok_and_cancel() {
     assert!(!h.state().dialogs.global_open);
 }
 
+/// W10-25: every xfig resource is in the Advanced tab; the filter finds
+/// rows by label, resource name and option, in every tab.
+#[test]
+fn global_settings_every_resource_is_reachable() {
+    use rustfig_ui_egui::dialogs::global_settings_matches;
+    for r in rustfig_engine::prefs::RESOURCES {
+        let rows = global_settings_matches(r.name);
+        assert!(
+            rows.iter().any(|(tab, label)| *tab == "Advanced" && label == r.name),
+            "{} is not in the Advanced tab",
+            r.name
+        );
+        if !r.option.is_empty() {
+            let first = r.option.split(',').next().unwrap_or("").trim();
+            assert!(global_settings_matches(first)
+                .iter()
+                .any(|(t, l)| *t == "Advanced" && l == r.name));
+        }
+    }
+    // Every row of xfig's panel is in a named tab, found by label (any case).
+    let all = global_settings_matches("");
+    for (tab, label) in [
+        ("Window", "Track mouse in rulers"),
+        ("Window", "Show vertex numbers"),
+        ("Drawing", "Freehand drawing resolution"),
+        ("Files", "Recently used files"),
+        ("Files", "Maximum image colors"),
+        ("Programs", "Spell checker"),
+        ("Programs", "PDF Viewer"),
+    ] {
+        assert!(all.iter().any(|(t, l)| *t == tab && l == label), "{label}");
+        assert!(global_settings_matches(&label.to_uppercase())
+            .iter()
+            .any(|(t, l)| *t == tab && l == label));
+    }
+    // A resource name finds the row that has it in a main tab, too.
+    assert!(global_settings_matches("shownums")
+        .iter()
+        .any(|(t, l)| *t == "Window" && l == "Show vertex numbers"));
+    assert!(global_settings_matches("zzzz-nothing").is_empty());
+}
+
+/// W10-25: tabs show their own rows; the filter field shows matches from
+/// every tab.
+#[test]
+fn global_settings_tabs_and_filter() {
+    let mut h = harness(app());
+    h.state_mut().run("app.global_settings", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Track mouse in rulers");
+    assert!(h.query_by_label("Image editor").is_none());
+    h.get_by_label("Programs").click();
+    h.run_steps(3);
+    assert!(h.query_all_by_label("Image editor").count() > 0);
+    assert!(h.query_by_label("Track mouse in rulers").is_none());
+    h.get_by_label("Advanced").click();
+    h.run_steps(3);
+    h.get_by_label("balloon_delay value");
+    // The filter looks in every tab: by label and by resource name.
+    h.get_by_label("Filter settings").click();
+    h.get_by_label("Filter settings").type_text("vertex");
+    h.run_steps(3);
+    h.get_by_label("Show vertex numbers");
+    assert!(h.query_by_label("Track mouse in rulers").is_none());
+    h.get_by_label("Filter settings").click();
+    h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
+    h.get_by_label("Filter settings").type_text("pdf_viewer");
+    h.run_steps(3);
+    assert!(h.query_all_by_label("PDF Viewer").count() > 0);
+    h.get_by_label("pdf_viewer value");
+}
+
+/// W10-25: an Advanced value is applied at Ok; "Apply changes immediately"
+/// applies at once and is kept in the preferences.
+#[test]
+fn global_settings_advanced_and_immediate() {
+    let mut h = harness(app());
+    h.state_mut().run("app.global_settings", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Advanced").click();
+    h.run_steps(3);
+    h.get_by_label("export_margin value").click();
+    h.get_by_label("export_margin value").type_text("7");
+    h.run_steps(3);
+    assert_eq!(h.state().engine.prefs.int("export_margin"), None);
+    h.get_by_label("Cancel").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.prefs.int("export_margin"), None);
+    // Ok applies.
+    h.state_mut().run("app.global_settings", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Advanced").click();
+    h.run_steps(3);
+    h.get_by_label("export_margin value").click();
+    h.get_by_label("export_margin value").type_text("7");
+    h.get_by_label("Ok").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.prefs.int("export_margin"), Some(7));
+    // Immediately: no Ok needed.
+    h.state_mut().run("app.global_settings", json!({}));
+    h.run_steps(3);
+    assert!(!h.state().apply_immediately);
+    h.get_by_label("Apply changes immediately").click();
+    h.run_steps(3);
+    assert!(h.state().apply_immediately);
+    h.get_by_label("Track mouse in rulers").click();
+    h.run_steps(3);
+    assert!(!h.state().engine.track_mouse());
+    assert_eq!(h.state().engine.prefs.rustfig.apply_immediately, Some(true));
+}
+
 /// W10-32: the Zoom pop-up has Integer zoom, Cancel and Set; Return sets and closes.
 #[test]
 fn zoom_popup_integer_zoom_and_return() {

@@ -193,6 +193,9 @@ pub fn apply_ui(app: &mut App) {
     if let Some(b) = r.xfig_keys {
         app.xfig_keys = b;
     }
+    if let Some(b) = r.apply_immediately {
+        app.apply_immediately = b;
+    }
     if let Some(style) = r.button_style.as_deref() {
         app.button_3d = style != "flat";
     }
@@ -223,6 +226,10 @@ pub fn collect_ui(app: &mut App) {
     upd(&mut r.theme, Some(app.theme.clone()));
     if r.ui_scale != Some(app.ui_scale) {
         r.ui_scale = Some(app.ui_scale);
+        changed = true;
+    }
+    if r.apply_immediately.unwrap_or(false) != app.apply_immediately {
+        r.apply_immediately = Some(app.apply_immediately);
         changed = true;
     }
     if r.xfig_keys != Some(app.xfig_keys) {
