@@ -181,6 +181,47 @@ proptest! {
         }
     }
 
+    /// G7b: compound paths (holes, either fill rule, strokes) and clip paths
+    /// with random, degenerate or huge coordinates never panic and make
+    /// objects that save.
+    #[test]
+    fn svg_compound_paths_and_clips(
+        rings in prop::collection::vec(prop::collection::vec((-50i32..200, -50i32..200), 0..7), 0..12),
+        clip in prop::collection::vec((-1000i32..1000, -1000i32..1000), 0..6),
+        huge in any::<bool>(),
+        evenodd in any::<bool>(),
+        stroke in any::<bool>(),
+        opacity in 0usize..3,
+    ) {
+        let scale = if huge { 1.0e5 } else { 1.0 };
+        let mut d = String::new();
+        for r in &rings {
+            for (i, (x, y)) in r.iter().enumerate() {
+                d.push_str(&format!("{}{},{} ", if i == 0 { "M" } else { "L" }, f64::from(*x) * scale, f64::from(*y) * scale));
+            }
+            d.push_str("Z ");
+        }
+        let clip_d: String = clip
+            .iter()
+            .enumerate()
+            .map(|(i, (x, y))| format!("{}{x},{y} ", if i == 0 { "M" } else { "L" }))
+            .collect();
+        let svg = format!(
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\">\
+             <defs><clipPath id=\"c\"><path d=\"{clip_d}Z\"/></clipPath></defs>\
+             <g clip-path=\"url(#c)\" opacity=\"{}\"><path d=\"{d}\" fill=\"#123\" fill-rule=\"{}\" stroke=\"{}\"/>\
+             <circle cx=\"20\" cy=\"20\" r=\"30\"/></g></svg>",
+            ["0", "0.5", "1"][opacity],
+            if evenodd { "evenodd" } else { "nonzero" },
+            if stroke { "red" } else { "none" },
+        );
+        let mut e = Engine::new();
+        if rustfig_engine::import::svg::import(svg.as_bytes(), "fuzz", None).is_ok() {
+            let _ = e.execute("file.open_data", &json!({"base64": rustfig_engine::base64(svg.as_bytes()), "vectors": true}));
+            let _ = e.execute("file.save_data", &json!({"format": "fig"}));
+        }
+    }
+
     /// E16: damaged or hostile embedded figures (PDF, SVG, PNG) never panic.
     #[test]
     fn embedded_figure_damaged(

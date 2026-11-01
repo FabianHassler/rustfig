@@ -252,7 +252,7 @@ fn transforms_text_and_units() {
 fn gradients_and_effects_warn_once() {
     let (e, r) = open_svg(&svg(
         "<defs><linearGradient id=\"g\"><stop offset=\"0\" stop-color=\"#ff0000\"/><stop offset=\"1\" stop-color=\"#0000ff\"/></linearGradient>\
-         <clipPath id=\"c\"><rect width=\"50\" height=\"50\"/></clipPath></defs>\
+         <clipPath id=\"c\"><path d=\"M0,0 L200,0 L100,100 L200,200 L0,200 Z\"/></clipPath></defs>\
          <rect width=\"40\" height=\"40\" fill=\"url(#g)\"/>\
          <rect x=\"50\" width=\"40\" height=\"40\" fill=\"url(#g)\" opacity=\"0.5\"/>\
          <g clip-path=\"url(#c)\"><rect x=\"100\" width=\"40\" height=\"40\"/></g>",

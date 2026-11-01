@@ -3,8 +3,9 @@
 //! hayro's interpreter walks the page and calls [`Importer`] (a hayro
 //! `Device`) for every path, glyph run and image; they become Fig lines,
 //! polygons, boxes, ellipses, texts and pictures. Curves are flattened
-//! (tolerance one Fig unit) except for axis-aligned ellipses; clip paths and
-//! transparency are dropped with one warning each. A PDF is untrusted input:
+//! (tolerance one Fig unit) except for axis-aligned ellipses. Convex clip
+//! paths cut the shapes; filled paths with holes become keyhole polygons
+//! (see [`resolve_holes`]); transparency is dropped with a warning. A PDF is untrusted input:
 //! object, point and image sizes are capped and everything returns `Result`.
 
 use hayro::hayro_interpret::font::{FontQuery, Glyph, GlyphRun};
@@ -383,7 +384,7 @@ impl Importer {
         let t = props.transform;
         let c = t.as_coeffs();
         let scale = (c[0] * c[3] - c[1] * c[2]).abs().sqrt();
-        let Some((style, fill, _)) = self.style_of(scale, &props.paint, mode) else {
+        let Some((style, fill, stroked)) = self.style_of(scale, &props.paint, mode) else {
             return;
         };
         self.group_warning(props.soft_mask.is_some(), props.blend_mode);
@@ -393,70 +394,53 @@ impl Importer {
         if !ok {
             return;
         }
-        if subpaths.len() > 1 && fill {
-            self.warn_once(
-                "holes",
-                "Filled shapes with holes become separate shapes (Fig has no holes)",
-            );
+        let evenodd = matches!(
+            mode,
+            DrawMode::Fill(hayro::hayro_interpret::FillRule::EvenOdd)
+                | DrawMode::FillAndStroke(hayro::hayro_interpret::FillRule::EvenOdd, _)
+        );
+        self.emit_subpaths(subpaths, style, fill, stroked, evenodd);
+    }
+
+    /// The Fig objects of the subpaths of one path: holes joined to their
+    /// outer rings, everything cut to the active clip paths.
+    fn emit_subpaths(&mut self, subpaths: Vec<SubPath>, style: Style, fill: bool, stroked: bool, evenodd: bool) {
+        let clips: Vec<Vec<(f64, f64)>> = self.clips.iter().flatten().cloned().collect();
+        let mut rings: Vec<Ring> = Vec::new();
+        let mut subs: Vec<Option<SubPath>> = Vec::new();
+        if fill && subpaths.len() > 1 {
+            match resolve_holes(&subpaths, evenodd, stroked) {
+                Holes::Done(r) => rings = r,
+                Holes::TooBig => self.warn_once(
+                    "holes",
+                    "Filled shapes with holes become separate shapes (Fig has no holes)",
+                ),
+                Holes::None => {}
+            }
         }
-        for sp in subpaths {
-            for sp in self.clipped(sp, fill) {
-                if let Some(o) = subpath_object(&sp, style, fill) {
+        if rings.is_empty() {
+            rings = (0..subpaths.len()).map(Ring::Plain).collect();
+        }
+        subs.extend(subpaths.into_iter().map(Some));
+        for ring in rings {
+            let (sp, f, l) = match ring {
+                Ring::Plain(i) => match subs.get_mut(i).and_then(Option::take) {
+                    Some(sp) => (sp, fill, stroked),
+                    None => continue,
+                },
+                Ring::Outline(i) => match subs.get(i).and_then(|s| s.as_ref()) {
+                    Some(sp) => (sp.clone(), false, true),
+                    None => continue,
+                },
+                Ring::Keyhole(sp) => (sp, true, false),
+            };
+            for piece in clip_pieces(sp, f, l, fill && f, &clips) {
+                if let Some(o) = piece_object(&piece, style) {
                     self.push(o);
                 }
             }
         }
     }
-
-    /// A subpath cut to the active clip paths: filled shapes by
-    /// Sutherland-Hodgman, open lines by parametric clipping.
-    fn clipped(&mut self, sp: SubPath, fill: bool) -> Vec<SubPath> {
-        let polys: Vec<Vec<(f64, f64)>> = self.clips.iter().flatten().cloned().collect();
-        if polys.is_empty() {
-            return vec![sp];
-        }
-        let (mut x0, mut y0, mut x1, mut y1) = (f64::MAX, f64::MAX, f64::MIN, f64::MIN);
-        for &(x, y) in &sp.points {
-            x0 = x0.min(x);
-            y0 = y0.min(y);
-            x1 = x1.max(x);
-            y1 = y1.max(y);
-        }
-        let inside = polys.iter().all(|c| {
-            // Inside when the bounding box's corners are all inside the convex clip.
-            [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
-                .iter()
-                .all(|&p| inside_convex(c, p))
-        });
-        if inside {
-            return vec![sp];
-        }
-        let closed = sp.closed || fill;
-        let mut parts: Vec<(Vec<(f64, f64)>, bool)> = vec![(sp.points, closed)];
-        for c in &polys {
-            let mut next = Vec::new();
-            for (pts, closed) in parts {
-                if closed {
-                    let q = clip_polygon(&pts, c);
-                    if q.len() >= 3 {
-                        next.push((q, true));
-                    }
-                } else {
-                    next.extend(clip_polyline(&pts, c).into_iter().map(|l| (l, false)));
-                }
-            }
-            parts = next;
-        }
-        parts
-            .into_iter()
-            .map(|(points, closed)| SubPath {
-                points,
-                closed,
-                ellipse: None,
-            })
-            .collect()
-    }
-
     fn glyph_outline(&mut self, outline: &BezPath, m: Affine, props: &DrawProps<'_>, mode: &DrawMode) {
         let mut p = outline.clone();
         p.apply_affine(m);
@@ -881,7 +865,7 @@ impl<'a> Device<'a> for Importer {
 
 /// The polygon (without a repeated end point) as counter-clockwise when it
 /// is convex, else `None`.
-fn convex_ccw(pts: &[(f64, f64)]) -> Option<Vec<(f64, f64)>> {
+pub(crate) fn convex_ccw(pts: &[(f64, f64)]) -> Option<Vec<(f64, f64)>> {
     let mut p: Vec<(f64, f64)> = pts.to_vec();
     if p.len() > 1 && p.first() == p.last() {
         p.pop();
@@ -1034,9 +1018,10 @@ fn apply_stroke(st: &mut Style, s: &StrokeProps, scale: f64) {
 
 /// A subpath in Fig units: its flattened points, whether it was closed and
 /// the ellipse it draws when it is an axis-aligned one.
+#[derive(Clone)]
 pub(crate) struct SubPath {
-    points: Vec<(f64, f64)>,
-    closed: bool,
+    pub(crate) points: Vec<(f64, f64)>,
+    pub(crate) closed: bool,
     ellipse: Option<((f64, f64), f64, f64)>,
 }
 
@@ -1207,6 +1192,360 @@ pub(crate) fn subpath_object(sp: &SubPath, style: Style, fill: bool) -> Option<O
     Some(Object::new(ObjectKind::Polyline(Polyline::new(kind, style, p))))
 }
 
+// ------------------------------------------------- clipping and holes
+
+/// A subpath ready to become one object: its fill (area fill) and line
+/// (pen) and whether a fill closes an open path.
+pub(crate) struct Piece {
+    pub(crate) sp: SubPath,
+    pub(crate) fill: bool,
+    pub(crate) line: bool,
+    pub(crate) close: bool,
+}
+
+/// The object of a piece in `style` (the style of the whole path).
+pub(crate) fn piece_object(p: &Piece, mut style: Style) -> Option<Object> {
+    if !p.line {
+        style.thickness = 0;
+    }
+    if !p.fill {
+        style.area_fill = -1;
+    }
+    subpath_object(&p.sp, style, p.close)
+}
+
+/// Whether the subpath lies inside every (convex) clip polygon.
+pub(crate) fn inside_clips(sp: &SubPath, clips: &[Vec<(f64, f64)>]) -> bool {
+    let (mut x0, mut y0, mut x1, mut y1) = (f64::MAX, f64::MAX, f64::MIN, f64::MIN);
+    for &(x, y) in &sp.points {
+        x0 = x0.min(x);
+        y0 = y0.min(y);
+        x1 = x1.max(x);
+        y1 = y1.max(y);
+    }
+    clips.iter().all(|c| {
+        // Inside when the bounding box's corners are all inside the convex clip.
+        [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+            .iter()
+            .all(|&p| inside_convex(c, p))
+    })
+}
+
+/// A subpath cut to the clip polygons (convex, counter-clockwise as
+/// [`convex_ccw`] makes them): the fill by Sutherland-Hodgman and the line,
+/// kept apart so that no line runs along the cut, by parametric clipping.
+/// Nothing is cut when the subpath is inside; nothing is left when it is
+/// outside. `close` is whether a fill closes an open subpath.
+pub(crate) fn clip_pieces(sp: SubPath, fill: bool, line: bool, close: bool, clips: &[Vec<(f64, f64)>]) -> Vec<Piece> {
+    if clips.is_empty() || inside_clips(&sp, clips) {
+        return vec![Piece { sp, fill, line, close }];
+    }
+    let mut out = Vec::new();
+    if fill {
+        let mut pts = sp.points.clone();
+        for c in clips {
+            pts = clip_polygon(&pts, c);
+            if pts.len() < 3 {
+                break;
+            }
+        }
+        if pts.len() >= 3 {
+            out.push(Piece {
+                sp: SubPath {
+                    points: pts,
+                    closed: true,
+                    ellipse: None,
+                },
+                fill: true,
+                line: false,
+                close: true,
+            });
+        }
+    }
+    if line {
+        let mut ring = sp.points;
+        if sp.closed {
+            if let Some(&first) = ring.first() {
+                ring.push(first);
+            }
+        }
+        let mut parts = vec![ring];
+        for c in clips {
+            parts = parts.iter().flat_map(|p| clip_polyline(p, c)).collect();
+        }
+        for points in parts {
+            out.push(Piece {
+                sp: SubPath {
+                    points,
+                    closed: false,
+                    ellipse: None,
+                },
+                fill: false,
+                line: true,
+                close: false,
+            });
+        }
+    }
+    out
+}
+
+/// Most rings and ring points one path's holes are worked out for.
+const MAX_RINGS: usize = 2_000;
+const MAX_RING_POINTS: usize = 60_000;
+/// Most point pairs looked at in all when joining holes to outer rings.
+const MAX_BRIDGE_WORK: usize = 400_000_000;
+
+/// What to draw for one ring of a path with holes.
+pub(crate) enum Ring {
+    /// The subpath as it is (index into the subpaths).
+    Plain(usize),
+    /// The subpath's line only, without fill.
+    Outline(usize),
+    /// An outer ring with its holes joined by zero-width bridges: fill only.
+    Keyhole(SubPath),
+}
+
+pub(crate) enum Holes {
+    /// No ring is a hole.
+    None,
+    /// Too many rings or points to work out.
+    TooBig,
+    /// Holes joined; draw these.
+    Done(Vec<Ring>),
+}
+
+fn signed_area(p: &[(f64, f64)]) -> f64 {
+    let n = p.len();
+    (0..n)
+        .map(|i| {
+            let (a, b) = (p[i], p[(i + 1) % n]);
+            a.0 * b.1 - b.0 * a.1
+        })
+        .sum::<f64>()
+        / 2.0
+}
+
+/// The winding number of a polygon around a point.
+fn winding(poly: &[(f64, f64)], p: (f64, f64)) -> i32 {
+    let n = poly.len();
+    let mut w = 0;
+    for i in 0..n {
+        let (a, b) = (poly[i], poly[(i + 1) % n]);
+        let left = (b.0 - a.0) * (p.1 - a.1) - (p.0 - a.0) * (b.1 - a.1);
+        if a.1 <= p.1 {
+            if b.1 > p.1 && left > 0.0 {
+                w += 1;
+            }
+        } else if b.1 <= p.1 && left < 0.0 {
+            w -= 1;
+        }
+    }
+    w
+}
+
+/// Whether the open segments a-b and c-d cross in a point of both interiors.
+fn segments_cross(a: (f64, f64), b: (f64, f64), c: (f64, f64), d: (f64, f64)) -> bool {
+    let o = |p: (f64, f64), q: (f64, f64), r: (f64, f64)| (q.0 - p.0) * (r.1 - p.1) - (q.1 - p.1) * (r.0 - p.0);
+    let (d1, d2, d3, d4) = (o(a, b, c), o(a, b, d), o(c, d, a), o(c, d, b));
+    d1 * d2 < 0.0 && d3 * d4 < 0.0
+}
+
+/// Which rings of a filled path are holes (even-odd: odd nesting depth;
+/// non-zero: the winding drops to zero inside them) and the pieces to draw
+/// instead: each outer ring with its holes joined to it by a zero-width
+/// bridge from the nearest vertex and back, so that one polygon fills
+/// around the holes. With a stroke the rings are also drawn as lines
+/// without fill, so the bridge shows no line. A hole that cannot be joined
+/// without crossing another ring stays a separate ring.
+pub(crate) fn resolve_holes(subs: &[SubPath], evenodd: bool, stroked: bool) -> Holes {
+    if subs.len() > MAX_RINGS || subs.iter().map(|s| s.points.len()).sum::<usize>() > MAX_RING_POINTS {
+        return Holes::TooBig;
+    }
+    // Each ring as a polygon without a repeated end point.
+    let polys: Vec<Option<Vec<(f64, f64)>>> = subs
+        .iter()
+        .map(|s| {
+            let mut p = s.points.clone();
+            if p.len() > 1 && p.first() == p.last() {
+                p.pop();
+            }
+            (p.len() >= 3 && signed_area(&p).abs() > 1e-9).then_some(p)
+        })
+        .collect();
+    let bbox = |p: &[(f64, f64)]| {
+        p.iter().fold((f64::MAX, f64::MAX, f64::MIN, f64::MIN), |b, q| {
+            (b.0.min(q.0), b.1.min(q.1), b.2.max(q.0), b.3.max(q.1))
+        })
+    };
+    let boxes: Vec<(f64, f64, f64, f64)> = polys
+        .iter()
+        .map(|p| p.as_deref().map_or((0.0, 0.0, 0.0, 0.0), bbox))
+        .collect();
+    let areas: Vec<f64> = polys.iter().map(|p| p.as_deref().map_or(0.0, signed_area)).collect();
+    let test: Vec<(f64, f64)> = polys
+        .iter()
+        .map(|p| p.as_deref().and_then(|p| p.first().copied()).unwrap_or((0.0, 0.0)))
+        .collect();
+    let near = |j: usize, p: (f64, f64)| {
+        let b = boxes[j];
+        p.0 >= b.0 && p.0 <= b.2 && p.1 >= b.1 && p.1 <= b.3
+    };
+    #[derive(Clone, Copy, PartialEq)]
+    enum Kind {
+        Outer,
+        Hole,
+        Other,
+    }
+    let kinds: Vec<Kind> = (0..polys.len())
+        .map(|i| {
+            if polys[i].is_none() {
+                return Kind::Other;
+            }
+            let w: i32 = (0..polys.len())
+                .filter(|&j| j != i && near(j, test[i]))
+                .filter_map(|j| polys[j].as_deref().map(|p| (j, p)))
+                .map(|(_, p)| {
+                    if evenodd {
+                        i32::from(winding(p, test[i]) != 0)
+                    } else {
+                        winding(p, test[i])
+                    }
+                })
+                .sum();
+            let s = if areas[i] > 0.0 { 1 } else { -1 };
+            if evenodd {
+                if w % 2 == 0 {
+                    Kind::Outer
+                } else {
+                    Kind::Hole
+                }
+            } else if w == 0 {
+                Kind::Outer
+            } else if w + s == 0 {
+                Kind::Hole
+            } else {
+                Kind::Other
+            }
+        })
+        .collect();
+    // The smallest outer ring around each hole.
+    let mut holes_of: Vec<Vec<usize>> = vec![Vec::new(); polys.len()];
+    let mut parent: Vec<Option<usize>> = vec![None; polys.len()];
+    for i in (0..polys.len()).filter(|&i| kinds[i] == Kind::Hole) {
+        let best = (0..polys.len())
+            .filter(|&j| j != i && kinds[j] == Kind::Outer && near(j, test[i]))
+            .filter(|&j| polys[j].as_deref().is_some_and(|p| winding(p, test[i]) != 0))
+            .min_by(|&a, &b| areas[a].abs().total_cmp(&areas[b].abs()));
+        if let Some(j) = best {
+            parent[i] = Some(j);
+            holes_of[j].push(i);
+        }
+    }
+    if parent.iter().all(Option::is_none) {
+        return Holes::None;
+    }
+    let mut work = 0usize;
+    let mut joined = vec![false; polys.len()];
+    let mut keyholes: Vec<Option<Vec<(f64, f64)>>> = vec![None; polys.len()];
+    for o in 0..polys.len() {
+        if holes_of[o].is_empty() {
+            continue;
+        }
+        let Some(outer) = polys[o].as_deref() else {
+            continue;
+        };
+        let mut cur: Vec<(f64, f64)> = outer.to_vec();
+        let sign = areas[o].signum();
+        let mut any = false;
+        for &h in &holes_of[o] {
+            let Some(hp) = polys[h].as_deref() else {
+                continue;
+            };
+            // The hole runs against the outer ring (needed for non-zero).
+            let mut hole: Vec<(f64, f64)> = hp.to_vec();
+            if areas[h].signum() == sign {
+                hole.reverse();
+            }
+            // Candidate bridges: from a few hole vertices to the nearest
+            // vertex of the polygon so far, nearest first.
+            let step = (hole.len() / 4).max(1);
+            let mut best: Vec<(f64, usize, usize)> = Vec::new();
+            for j in (0..hole.len()).step_by(step) {
+                let b = hole[j];
+                let near = cur
+                    .iter()
+                    .enumerate()
+                    .map(|(i, a)| ((a.0 - b.0).powi(2) + (a.1 - b.1).powi(2), i))
+                    .min_by(|x, y| x.0.total_cmp(&y.0));
+                if let Some((d, i)) = near {
+                    best.push((d, i, j));
+                }
+            }
+            best.sort_by(|x, y| x.0.total_cmp(&y.0));
+            work = work.saturating_add(cur.len().saturating_mul(best.len() + 2));
+            if work > MAX_BRIDGE_WORK {
+                break;
+            }
+            // The first of them whose bridge crosses no ring edge (only
+            // holes whose box meets the bridge's are looked at).
+            let clear = |a: (f64, f64), b: (f64, f64)| {
+                let edges_ok = |ring: &[(f64, f64)]| {
+                    let n = ring.len();
+                    (0..n).all(|k| {
+                        let (c, d) = (ring[k], ring[(k + 1) % n]);
+                        c == a || c == b || d == a || d == b || !segments_cross(a, b, c, d)
+                    })
+                };
+                let (bx0, by0, bx1, by1) = (a.0.min(b.0), a.1.min(b.1), a.0.max(b.0), a.1.max(b.1));
+                edges_ok(&cur)
+                    && edges_ok(&hole)
+                    && holes_of[o].iter().filter(|&&k| k != h).all(|&k| {
+                        let q = boxes[k];
+                        q.0 > bx1 || q.2 < bx0 || q.1 > by1 || q.3 < by0 || polys[k].as_deref().is_none_or(edges_ok)
+                    })
+            };
+            let pick = best.iter().find(|&&(_, i, j)| clear(cur[i], hole[j]));
+            let Some(&(_, i, j)) = pick else {
+                continue;
+            };
+            let m = hole.len();
+            let mut merged: Vec<(f64, f64)> = Vec::with_capacity(cur.len() + m + 2);
+            merged.extend_from_slice(&cur[..=i]);
+            merged.extend((0..=m).map(|k| hole[(j + k) % m]));
+            merged.extend_from_slice(&cur[i..]);
+            cur = merged;
+            joined[h] = true;
+            any = true;
+        }
+        if any {
+            keyholes[o] = Some(cur);
+        }
+    }
+    if !joined.iter().any(|&j| j) {
+        return Holes::None;
+    }
+    let mut out = Vec::new();
+    for i in 0..polys.len() {
+        if let Some(points) = keyholes[i].take() {
+            out.push(Ring::Keyhole(SubPath {
+                points,
+                closed: true,
+                ellipse: None,
+            }));
+            if stroked {
+                out.push(Ring::Outline(i));
+            }
+        } else if joined[i] {
+            if stroked {
+                out.push(Ring::Outline(i));
+            }
+        } else {
+            out.push(Ring::Plain(i));
+        }
+    }
+    Holes::Done(out)
+}
+
 /// The Fig font nearest to a PDF font and whether it is a PostScript font:
 /// by the font's name (`/BaseFont`, subset prefix removed), then by the
 /// descriptor flags (FixedPitch 1, Serif 2, Italic 64, ForceBold 1<<18), then
@@ -1372,5 +1711,43 @@ mod tests {
             1.0,
         );
         assert_eq!(st.thickness, 1);
+    }
+
+    /// A one-page PDF with the content stream, the xref left to the reader's
+    /// reconstruction.
+    fn pdf_with(content: &str) -> Vec<u8> {
+        format!(
+            "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n\
+             2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n\
+             3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 100 100]/Contents 4 0 R/Resources<<>>>>endobj\n\
+             4 0 obj<</Length {}>>stream\n{content}\nendstream endobj\ntrailer<</Root 1 0 R/Size 5>>\n%%EOF\n",
+            content.len()
+        )
+        .into_bytes()
+    }
+
+    #[test]
+    fn evenodd_donut_in_a_pdf_keeps_its_hole() {
+        let pdf = pdf_with("0 g 10 10 m 90 10 l 90 90 l 10 90 l h 30 30 m 70 30 l 70 70 l 30 70 l h f*");
+        let r = import(&pdf, 1, "t").unwrap();
+        assert_eq!(r.doc.objects.len(), 1, "{:?}", r.warnings);
+        let ObjectKind::Polyline(p) = &r.doc.objects[0].kind else {
+            panic!("a polygon");
+        };
+        assert!(p.points.len() >= 10, "outer ring, bridge and hole in one polygon");
+    }
+
+    #[test]
+    fn rectangular_clip_in_a_pdf_cuts_the_shape() {
+        let pdf = pdf_with("0 0 50 100 re W n 0 g 20 20 m 80 20 l 80 80 l 20 80 l h f");
+        let r = import(&pdf, 1, "t").unwrap();
+        let ObjectKind::Polyline(p) = &r.doc.objects[0].kind else {
+            panic!("a polygon");
+        };
+        assert!(
+            p.points.iter().all(|q| q.x <= 50.0 * 1200.0 / 72.0 + 1.0),
+            "{:?}",
+            p.points
+        );
     }
 }

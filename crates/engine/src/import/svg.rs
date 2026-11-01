@@ -5,12 +5,18 @@
 //! pictures from it. User units are CSS pixels (96 per inch) and become Fig
 //! units (1200 per inch) with y down, as in SVG. Curves are flattened
 //! (tolerance one Fig unit) except exact circles, ellipses and rounded
-//! rectangles. Gradients become their average colour; clip paths, masks,
-//! filters and transparency are dropped, one warning each. An SVG is
+//! rectangles. Fig has no holes: a filled path with holes becomes a keyhole
+//! polygon per outer ring (a zero-width bridge to each hole), with the rings
+//! also drawn as lines when stroked. Fully transparent and hidden content is
+//! skipped. A convex clip path (a rectangle, mostly) cuts the shapes under
+//! it; other clip paths, masks, filters and partial transparency are
+//! dropped, one warning each. Gradients become their average colour. An SVG is
 //! untrusted input: object, point and image sizes are capped, external files
 //! are read only from the SVG's own folder, and everything returns `Result`.
 
-use super::pdf::{map_font, split_subpaths, subpath_object};
+use super::pdf::{
+    clip_pieces, convex_ccw, inside_clips, map_font, piece_object, resolve_holes, split_subpaths, Holes, Ring, SubPath,
+};
 use hayro::kurbo::{Affine, BezPath, PathEl, Point as KPoint};
 use rustfig_geom::Point;
 use rustfig_model::{
@@ -238,6 +244,7 @@ fn import_inner(bytes: &[u8], stem: &str, dir: Option<&std::path::Path>) -> Resu
         image_pixels: 0,
         depth: 999,
         rank: 0,
+        clips: Vec::new(),
         out_of_colours: false,
         capped: false,
     };
@@ -256,6 +263,8 @@ struct Importer {
     /// The depth the next object goes to and the highest xfig type rank on it.
     depth: i32,
     rank: u8,
+    /// The convex clip polygons (Fig units) of the enclosing groups.
+    clips: Vec<Vec<(f64, f64)>>,
     out_of_colours: bool,
     capped: bool,
 }
@@ -378,8 +387,21 @@ impl Importer {
             self.warn_once("deep", "Groups nested too deeply were skipped");
             return;
         }
-        if g.clip_path().is_some() {
-            self.warn_once("clip", "Clipping is ignored: clipped drawings are shown whole");
+        if g.opacity().get() <= 0.0 {
+            return;
+        }
+        let mut clipped = false;
+        if let Some(c) = g.clip_path() {
+            match self.clip_polygon(c, g, base) {
+                Some(poly) => {
+                    self.clips.push(poly);
+                    clipped = true;
+                }
+                None => self.warn_once(
+                    "clip",
+                    "Clipping to a shape that is not convex is ignored: clipped drawings are shown whole",
+                ),
+            }
         }
         if g.mask().is_some() {
             self.warn_once("mask", "Masks are ignored");
@@ -402,6 +424,31 @@ impl Importer {
                 usvg::Node::Image(i) => self.image(i, base, depth),
             }
         }
+        if clipped {
+            self.clips.pop();
+        }
+    }
+
+    /// The clip path as one convex polygon in Fig units; `None` when it is
+    /// more than one convex shape (or has a clip path of its own).
+    fn clip_polygon(&self, c: &usvg::ClipPath, g: &usvg::Group, base: Affine) -> Option<Vec<(f64, f64)>> {
+        if c.clip_path().is_some() {
+            return None;
+        }
+        let mut shapes = c.root().children().iter();
+        let (Some(usvg::Node::Path(p)), None) = (shapes.next(), shapes.next()) else {
+            return None;
+        };
+        // The clip lives in the user space of the clipped element (its own transform included).
+        let t = Affine::scale(K) * base * affine(g.abs_transform()) * affine(c.transform()) * affine(p.abs_transform());
+        if !finite(t) {
+            return None;
+        }
+        let (subs, ok) = split_subpaths(&bez(p.data(), t));
+        match subs.as_slice() {
+            [one] if ok => convex_ccw(&one.points),
+            _ => None,
+        }
     }
 
     // ------------------------------------------------------------ paths
@@ -421,12 +468,6 @@ impl Importer {
         if fill.is_none() && stroke.is_none() {
             return;
         }
-        if p.fill().is_some_and(|f| f.rule() == usvg::FillRule::EvenOdd) && p.data().len() > 6 {
-            self.warn_once(
-                "holes",
-                "Filled shapes with holes become separate shapes (Fig has no holes)",
-            );
-        }
         let pen = stroke.map_or_else(|| fill.unwrap_or(Rgb::new(0, 0, 0)), |(_, c)| c);
         let pen_color = self.color(pen);
         let fill_color = fill.map_or(pen_color, |c| self.color(c));
@@ -442,22 +483,55 @@ impl Importer {
         }
         let m = Affine::scale(K) * t;
         let path = bez(p.data(), m);
-        for group in split_groups(&path) {
-            self.subpath(&group, style, fill.is_some());
+        let groups = split_groups(&path);
+        let stroked = stroke.is_some();
+        let evenodd = p.fill().is_some_and(|f| f.rule() == usvg::FillRule::EvenOdd);
+        let mut rings: Vec<Ring> = (0..groups.len()).map(Ring::Plain).collect();
+        if fill.is_some() && groups.len() > 1 {
+            let (subs, ok) = split_subpaths(&path);
+            if ok && subs.len() == groups.len() {
+                match resolve_holes(&subs, evenodd, stroked) {
+                    Holes::Done(r) => rings = r,
+                    Holes::TooBig => self.warn_once(
+                        "holes",
+                        "Filled shapes with holes become separate shapes (Fig has no holes)",
+                    ),
+                    Holes::None => {}
+                }
+            }
+        }
+        let outline = Style { area_fill: -1, ..style };
+        for ring in rings {
+            match ring {
+                Ring::Plain(i) => {
+                    if let Some(g) = groups.get(i) {
+                        self.subpath(g, style, fill.is_some(), stroked);
+                    }
+                }
+                Ring::Outline(i) => {
+                    if let Some(g) = groups.get(i) {
+                        self.subpath(g, outline, false, true);
+                    }
+                }
+                Ring::Keyhole(sp) => self.emit(sp, true, false, true, style),
+            }
         }
     }
 
-    /// One subpath: an exact rounded box or ellipse, else flattened.
-    fn subpath(&mut self, g: &[PathEl], style: Style, fill: bool) {
+    /// A subpath as objects, cut to the clip paths.
+    fn emit(&mut self, sp: SubPath, fill: bool, line: bool, close: bool, style: Style) {
+        let clips = self.clips.clone();
+        for piece in clip_pieces(sp, fill, line, close, &clips) {
+            if let Some(o) = piece_object(&piece, style) {
+                self.push(o);
+            }
+        }
+    }
+
+    /// One subpath: an exact rounded box or ellipse (when not cut by a
+    /// clip path), else flattened.
+    fn subpath(&mut self, g: &[PathEl], style: Style, fill: bool, stroked: bool) {
         if g.iter().any(|el| !el_finite(el)) {
-            return;
-        }
-        if let Some(o) = round_box(g, style) {
-            self.push(o);
-            return;
-        }
-        if let Some(o) = ellipse_object(g, style) {
-            self.push(o);
             return;
         }
         let (subs, ok) = split_subpaths(&BezPath::from_vec(g.to_vec()));
@@ -467,8 +541,29 @@ impl Importer {
         // An open path stays a polyline: Fig fills it as if closed and
         // strokes only the open line, as SVG does.
         let closed = matches!(g.last(), Some(PathEl::ClosePath));
+        let cut = !self.clips.is_empty() && subs.iter().any(|sp| !inside_clips(sp, &self.clips));
+        if !cut {
+            if let Some(o) = round_box(g, style) {
+                self.push(o);
+                return;
+            }
+            if let Some(o) = ellipse_object(g, style) {
+                self.push(o);
+                return;
+            }
+        }
         for sp in subs {
-            if let Some(o) = subpath_object(&sp, style, fill && closed) {
+            if cut {
+                self.emit(sp, fill, stroked || !fill, fill && closed, style);
+            } else if let Some(o) = piece_object(
+                &super::pdf::Piece {
+                    sp,
+                    fill,
+                    line: true,
+                    close: fill && closed,
+                },
+                style,
+            ) {
                 self.push(o);
             }
         }
@@ -1120,5 +1215,240 @@ mod tests {
             <circle cx="50" cy="50" r="10" fill="none" stroke="#000"/></svg>"##;
         let r = import(svg, "t", None).unwrap();
         assert_eq!(r.doc.objects.len(), 2);
+    }
+
+    // ------------------------------------------------ holes, hidden, clips
+
+    fn svg(body: &str) -> String {
+        format!(r#"<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96">{body}</svg>"#)
+    }
+
+    fn polys(r: &Imported) -> Vec<&Polyline> {
+        r.doc
+            .objects
+            .iter()
+            .filter_map(|o| match &o.kind {
+                ObjectKind::Polyline(p) => Some(p),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// Whether the point lies in the polygon by the even-odd rule.
+    fn even_odd(p: &Polyline, x: f64, y: f64) -> bool {
+        let n = p.points.len();
+        let mut inside = false;
+        for i in 0..n {
+            let (a, b) = (p.points[i], p.points[(i + 1) % n]);
+            if (a.y > y) != (b.y > y) && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x {
+                inside = !inside;
+            }
+        }
+        inside
+    }
+
+    const OUTER: &str = "M10,10 L80,10 L80,80 L10,80 Z";
+    const HOLE_SAME: &str = "M30,30 L60,30 L60,60 L30,60 Z";
+    const HOLE_REV: &str = "M30,30 L30,60 L60,60 L60,30 Z";
+
+    fn donut_check(r: &Imported, count: usize) {
+        let ps = polys(r);
+        assert_eq!(ps.len(), count, "{ps:?}");
+        let k = &ps[0];
+        assert_eq!(k.kind, PolyKind::Polygon);
+        assert!(k.points.len() >= 10, "the keyhole polygon joins both rings");
+        // The hole (centre 45,45 px = 562,562 Fig) is empty, the ring is filled.
+        assert!(!even_odd(k, 45.0 * K, 45.0 * K));
+        assert!(even_odd(k, 20.0 * K, 20.0 * K));
+        assert!(even_odd(k, 70.0 * K, 45.0 * K));
+    }
+
+    #[test]
+    fn evenodd_donut_keeps_its_hole() {
+        let r = import(
+            svg(&format!(
+                r##"<path fill-rule="evenodd" fill="#000" d="{OUTER} {HOLE_SAME}"/>"##
+            ))
+            .as_bytes(),
+            "t",
+            None,
+        )
+        .unwrap();
+        donut_check(&r, 1);
+    }
+
+    #[test]
+    fn nonzero_donut_with_reversed_hole() {
+        let r = import(
+            svg(&format!(r##"<path fill="#000" d="{OUTER} {HOLE_REV}"/>"##)).as_bytes(),
+            "t",
+            None,
+        )
+        .unwrap();
+        donut_check(&r, 1);
+    }
+
+    #[test]
+    fn nonzero_same_direction_is_no_hole() {
+        let r = import(
+            svg(&format!(r##"<path fill="#000" d="{OUTER} {HOLE_SAME}"/>"##)).as_bytes(),
+            "t",
+            None,
+        )
+        .unwrap();
+        assert_eq!(polys(&r).len(), 2, "both rings stay filled");
+    }
+
+    #[test]
+    fn stroked_donut_has_keyhole_fill_and_unfilled_rings() {
+        let r = import(
+            svg(&format!(
+                r##"<path fill-rule="evenodd" fill="#f00" stroke="#00f" stroke-width="2" d="{OUTER} {HOLE_SAME}"/>"##
+            ))
+            .as_bytes(),
+            "t",
+            None,
+        )
+        .unwrap();
+        let ps = polys(&r);
+        assert_eq!(ps.len(), 3);
+        assert_eq!(ps[0].style.thickness, 0, "the keyhole polygon has no line");
+        assert!(ps[0].style.area_fill >= 0);
+        for ring in &ps[1..] {
+            assert_eq!(ring.style.area_fill, -1);
+            assert!(ring.style.thickness > 0);
+        }
+    }
+
+    #[test]
+    fn island_in_a_hole_stays_filled() {
+        let island = "M40,40 L50,40 L50,50 L40,50 Z";
+        let r = import(
+            svg(&format!(
+                r##"<path fill-rule="evenodd" fill="#000" d="{OUTER} {HOLE_SAME} {island}"/>"##
+            ))
+            .as_bytes(),
+            "t",
+            None,
+        )
+        .unwrap();
+        let ps = polys(&r);
+        assert_eq!(ps.len(), 2, "keyhole polygon and island");
+        assert!(!even_odd(ps[0], 55.0 * K, 55.0 * K));
+    }
+
+    #[test]
+    fn invisible_content_is_skipped() {
+        for body in [
+            r#"<circle cx="50" cy="50" r="10" style="opacity:0"/>"#,
+            r#"<g opacity="0"><rect width="10" height="10"/></g>"#,
+            r#"<circle cx="50" cy="50" r="10" display="none"/>"#,
+            r#"<circle cx="50" cy="50" r="10" visibility="hidden"/>"#,
+            r#"<circle cx="50" cy="50" r="10" fill-opacity="0" stroke="none"/>"#,
+            r#"<circle cx="50" cy="50" r="10" fill="none" stroke="none"/>"#,
+        ] {
+            let r = import(svg(body).as_bytes(), "t", None).unwrap();
+            assert!(r.doc.objects.is_empty(), "{body}");
+        }
+        let r = import(
+            svg(r#"<circle cx="50" cy="50" r="10" opacity="0.5"/>"#).as_bytes(),
+            "t",
+            None,
+        )
+        .unwrap();
+        assert_eq!(r.doc.objects.len(), 1, "partial transparency is drawn solid");
+    }
+
+    fn bounds(p: &Polyline) -> (f64, f64, f64, f64) {
+        p.points.iter().fold((f64::MAX, f64::MAX, f64::MIN, f64::MIN), |b, q| {
+            (b.0.min(q.x), b.1.min(q.y), b.2.max(q.x), b.3.max(q.y))
+        })
+    }
+
+    #[test]
+    fn rectangular_clip_cuts_polygon_and_polyline() {
+        let clip = r#"<clipPath id="c"><rect x="0" y="0" width="50" height="96"/></clipPath>"#;
+        let r = import(
+            svg(&format!(
+                r##"<defs>{clip}</defs><g clip-path="url(#c)">
+                <polygon points="20,20 80,20 80,80 20,80" fill="#00f"/>
+                <polyline points="10,90 90,90" fill="none" stroke="#000"/>
+                <polygon points="60,10 90,10 90,40" fill="#00f"/></g>"##
+            ))
+            .as_bytes(),
+            "t",
+            None,
+        )
+        .unwrap();
+        let ps = polys(&r);
+        assert_eq!(ps.len(), 2, "the polygon outside is dropped: {ps:?}");
+        let b = bounds(ps[0]);
+        assert!((b.2 - 50.0 * K).abs() <= 1.0 && (b.0 - 20.0 * K).abs() <= 1.0, "{b:?}");
+        let b = bounds(ps[1]);
+        assert!((b.2 - 50.0 * K).abs() <= 1.0 && (b.0 - 10.0 * K).abs() <= 1.0, "{b:?}");
+        assert!(!r.warnings.iter().any(|w| w.contains("Clipping")));
+    }
+
+    #[test]
+    fn clip_keeps_shapes_inside_and_cuts_circles() {
+        let r = import(
+            svg(
+                r##"<defs><clipPath id="c"><rect width="60" height="96"/></clipPath></defs>
+                <g clip-path="url(#c)"><circle cx="20" cy="20" r="10"/><circle cx="60" cy="50" r="10"/></g>"##,
+            )
+            .as_bytes(),
+            "t",
+            None,
+        )
+        .unwrap();
+        assert_eq!(r.doc.objects.len(), 2);
+        assert!(
+            matches!(r.doc.objects[0].kind, ObjectKind::Ellipse(_)),
+            "inside stays exact"
+        );
+        let ObjectKind::Polyline(p) = &r.doc.objects[1].kind else {
+            panic!("a cut circle becomes a polygon");
+        };
+        assert!(bounds(p).2 <= 60.0 * K + 1.0);
+    }
+
+    #[test]
+    fn non_convex_clip_is_ignored_with_a_warning() {
+        let r = import(
+            svg(
+                r##"<defs><clipPath id="c"><path d="M0,0 L96,0 L48,48 L96,96 L0,96 Z"/></clipPath></defs>
+                <rect x="60" y="10" width="30" height="30" clip-path="url(#c)"/>"##,
+            )
+            .as_bytes(),
+            "t",
+            None,
+        )
+        .unwrap();
+        assert_eq!(r.doc.objects.len(), 1);
+        assert!(r.warnings.iter().any(|w| w.contains("Clipping")));
+    }
+
+    #[test]
+    fn clip_follows_the_transforms_of_its_element() {
+        // The clip (0..50 in user space) is under a flip and scale: it covers x 0..100 and y 50..100 px.
+        let r = import(
+            svg(
+                r##"<defs><clipPath id="c"><rect width="50" height="25"/></clipPath></defs>
+                <g transform="matrix(2,0,0,-2,0,100)"><g clip-path="url(#c)">
+                <polygon points="-10,-10 100,-10 100,100 -10,100" fill="#00f"/></g></g>"##,
+            )
+            .as_bytes(),
+            "t",
+            None,
+        )
+        .unwrap();
+        let ps = polys(&r);
+        assert_eq!(ps.len(), 1);
+        let b = bounds(ps[0]);
+        let near = |a: f64, v: f64| (a - v * K).abs() <= 1.5;
+        assert!(
+            near(b.0, 0.0) && near(b.2, 100.0) && near(b.1, 50.0) && near(b.3, 100.0),
+            "{b:?}"
+        );
     }
 }
