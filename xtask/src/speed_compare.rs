@@ -32,7 +32,10 @@ use crate::xfig_compare::{have, json_str, numbers_after, sh, sleep_ms, XF_CX, XF
 /// Centre of an editing-mode button in the 818-pixel-high window (xfig squeezes the mode panel:
 /// the first editing row is at y 351, rows 32.8 px apart, two columns at x 19 and 56).
 fn xfig_mode_xy(_draw: bool, idx: usize) -> (i32, i32) {
-    (if idx % 2 == 0 { 19 } else { 56 }, (351.0 + (idx / 2) as f64 * 32.8).round() as i32)
+    (
+        if idx.is_multiple_of(2) { 19 } else { 56 },
+        (351.0 + (idx / 2) as f64 * 32.8).round() as i32,
+    )
 }
 
 /// Xvfb screen size (the harness reads its frame buffer file, so the size must match).
@@ -40,8 +43,18 @@ const SCREEN_W: usize = 1400;
 const SCREEN_H: usize = 1000;
 /// The pixels of xfig's canvas that are watched (inside the 1128x686 canvas of the default
 /// geometry), and its message panel (the text changes when a figure is saved).
-const CANVAS: Rect = Rect { x: 80, y: 80, w: 1100, h: 640 };
-const MSG: Rect = Rect { x: 2, y: 26, w: 1040, h: 20 };
+const CANVAS: Rect = Rect {
+    x: 80,
+    y: 80,
+    w: 1100,
+    h: 640,
+};
+const MSG: Rect = Rect {
+    x: 2,
+    y: 26,
+    w: 1040,
+    h: 20,
+};
 /// A move is 30 steps over this many pixels.
 const MOVE_DX: f64 = 240.0;
 const MOVE_DY: f64 = 120.0;
@@ -87,7 +100,10 @@ enum Val {
 
 /// (key, label) of every measured task, in table order.
 const TASKS: &[(&str, &str)] = &[
-    ("open", "Open (xfig: main() to figure drawn; RustFig: process start to drawn)"),
+    (
+        "open",
+        "Open (xfig: main() to figure drawn; RustFig: process start to drawn)",
+    ),
     ("open_read", "Open, part 1: reading the file (xfig only)"),
     ("open_draw", "Open, part 2: first full canvas redraw (xfig only)"),
     ("zoom_in", "Zoom in (one step)"),
@@ -114,6 +130,9 @@ const EXT_KEYS: &[(&str, &str)] = &[
     ("undo", "x_undo"),
 ];
 
+/// A cluster of spans: start, end, the spans.
+type Cluster<'a> = (f64, f64, Vec<(&'a str, f64, f64)>);
+
 /// Spans printed by the instrumented xfig (`XT name start duration`, milliseconds).
 fn parse_xt(log: &str) -> BTreeMap<&'static str, f64> {
     let mut ev: Vec<(&str, f64, f64)> = Vec::new();
@@ -128,7 +147,7 @@ fn parse_xt(log: &str) -> BTreeMap<&'static str, f64> {
     ev.sort_by(|x, y| x.1.total_cmp(&y.1));
     // Clusters of spans closer than 250 ms: one user action (a zoom is a "zoom" span with the
     // grid set-up and the canvas redraws inside, or after it).
-    let mut clusters: Vec<(f64, f64, Vec<(&str, f64, f64)>)> = Vec::new();
+    let mut clusters: Vec<Cluster> = Vec::new();
     for e in &ev {
         if e.0 == "main_start" || e.0 == "move_step" {
             continue;
@@ -158,7 +177,7 @@ fn parse_xt(log: &str) -> BTreeMap<&'static str, f64> {
         .find(|c| c.2.iter().any(|e| e.0 == "read_fig"))
         .map_or(0.0, |c| c.1);
     clusters.retain(|c| c.0 > open_end);
-    let first = |c: &&(f64, f64, Vec<(&str, f64, f64)>)| c.2.first().map(|e| e.0.to_string()).unwrap_or_default();
+    let first = |c: &&Cluster| c.2.first().map(|e| e.0.to_string()).unwrap_or_default();
     let zooms: Vec<_> = clusters.iter().filter(|c| first(c) == "zoom").collect();
     if let Some(c) = zooms.first() {
         out.insert("zoom_in", c.1 - c.0);
@@ -267,7 +286,9 @@ fn stage_fig(src: &FigSrc, dir: &Path) -> Result<PathBuf, String> {
                 let p = e.path();
                 let ext = p.extension().and_then(|x| x.to_str()).unwrap_or("");
                 // Pictures a figure may reference (greece-1.png); not the preview PNG of the figure itself.
-                if matches!(ext, "png" | "jpg") && p.file_stem().and_then(|s| s.to_str()).is_some_and(|s| s.contains("-1")) {
+                if matches!(ext, "png" | "jpg")
+                    && p.file_stem().and_then(|s| s.to_str()).is_some_and(|s| s.contains("-1"))
+                {
                     if let Some(n) = p.file_name() {
                         let _ = std::fs::copy(&p, dir.join(n));
                     }
@@ -279,7 +300,13 @@ fn stage_fig(src: &FigSrc, dir: &Path) -> Result<PathBuf, String> {
 }
 
 fn parse_fig(text: &str) -> FigInfo {
-    let mut info = FigInfo { objects: 0, max_x: 0, max_y: 0, cands: Vec::new(), weak: Vec::new() };
+    let mut info = FigInfo {
+        objects: 0,
+        max_x: 0,
+        max_y: 0,
+        cands: Vec::new(),
+        weak: Vec::new(),
+    };
     let lines: Vec<&str> = text.lines().collect();
     let mut i = 0;
     let grow = |x: i64, y: i64, info: &mut FigInfo| {
@@ -291,7 +318,7 @@ fn parse_fig(text: &str) -> FigInfo {
         i += 1;
         if l.starts_with('\t') || l.starts_with(' ') {
             let t: Vec<i64> = l.split_whitespace().filter_map(|w| w.parse().ok()).collect();
-            if t.len() == l.split_whitespace().count() && t.len() % 2 == 0 {
+            if t.len() == l.split_whitespace().count() && t.len().is_multiple_of(2) {
                 for p in t.chunks(2) {
                     if let [x, y] = p {
                         grow(*x, *y, &mut info);
@@ -366,7 +393,7 @@ fn pick_point(info: &FigInfo, z: f64, cw: f64, ch: f64) -> Option<(i64, i64)> {
         .filter(|(x, y)| (*x as f64) * z / 15.0 < cw - 4.0 && (*y as f64) * z / 15.0 < ch - 4.0)
         .min_by(|a, b| {
             let d = |p: &&(i64, i64)| (p.0 as f64 - cx).powi(2) + (p.1 as f64 - cy).powi(2);
-            d(&a).total_cmp(&d(&b))
+            d(a).total_cmp(&d(b))
         })
         .copied()
 }
@@ -385,7 +412,8 @@ impl X11 {
     fn connect(display: &str) -> Result<X11, String> {
         let num = display.trim_start_matches(':').split('.').next().unwrap_or("0");
         let mut s = UnixStream::connect(format!("/tmp/.X11-unix/X{num}")).map_err(|e| format!("X socket: {e}"))?;
-        s.write_all(&[b'l', 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0]).map_err(|e| e.to_string())?;
+        s.write_all(&[b'l', 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+            .map_err(|e| e.to_string())?;
         let mut h = [0u8; 8];
         s.read_exact(&mut h).map_err(|e| e.to_string())?;
         if h[0] != 1 {
@@ -409,7 +437,13 @@ impl X11 {
         if r[0] != 1 || r[8] == 0 {
             return Err("X server has no XTEST extension".into());
         }
-        Ok(X11 { s, xtest: r[9], root, kmin, kmax })
+        Ok(X11 {
+            s,
+            xtest: r[9],
+            root,
+            kmin,
+            kmax,
+        })
     }
 
     fn fake(&mut self, kind: u8, detail: u8, x: i32, y: i32) -> Result<(), String> {
@@ -496,7 +530,11 @@ impl Fb {
         if len < pix {
             return Err("frame buffer file is smaller than the screen".into());
         }
-        Ok(Fb { f, off: len - pix, buf: RefCell::new(Vec::new()) })
+        Ok(Fb {
+            f,
+            off: len - pix,
+            buf: RefCell::new(Vec::new()),
+        })
     }
 
     fn hash(&self, r: Rect) -> u64 {
@@ -510,7 +548,7 @@ impl Fb {
         let mut h: u64 = 0xcbf2_9ce4_8422_2325;
         for row in buf.chunks_exact(stride) {
             if let Some(px) = row.get(r.x * 4..(r.x + r.w) * 4) {
-                for w in px.chunks_exact(8) {
+                for w in px.as_chunks::<8>().0 {
                     let v = u64::from_le_bytes([w[0], w[1], w[2], w[3], w[4], w[5], w[6], w[7]]);
                     h = (h ^ v).wrapping_mul(0x0000_0100_0000_01b3).rotate_left(17);
                 }
@@ -522,7 +560,10 @@ impl Fb {
 
 /// Accumulated CPU time of a process in milliseconds (`ps`, 10 ms resolution).
 fn cpu_ms(pid: u32) -> Option<f64> {
-    let o = Command::new("ps").args(["-o", "cputime=", "-p", &pid.to_string()]).output().ok()?;
+    let o = Command::new("ps")
+        .args(["-o", "cputime=", "-p", &pid.to_string()])
+        .output()
+        .ok()?;
     let t = String::from_utf8_lossy(&o.stdout);
     let t = t.trim();
     if t.is_empty() {
@@ -620,12 +661,20 @@ fn xfig_canvas_size(o: &Opts) -> (f64, f64) {
 
 fn trial_xfig(o: &Opts, env: &mut XEnv, src: &FigSrc, info: &FigInfo, run: usize) -> Result<Trial, String> {
     let r = trial_xfig_inner(o, env, src, info, run);
-    let _ = std::fs::remove_dir_all(o.work.join("xfig").join(format!("{}-{run}", src.name.split(' ').next().unwrap_or("f"))).join("fig"));
+    let _ = std::fs::remove_dir_all(
+        o.work
+            .join("xfig")
+            .join(format!("{}-{run}", src.name.split(' ').next().unwrap_or("f")))
+            .join("fig"),
+    );
     r
 }
 
 fn trial_xfig_inner(o: &Opts, env: &mut XEnv, src: &FigSrc, info: &FigInfo, run: usize) -> Result<Trial, String> {
-    let dir = o.work.join("xfig").join(format!("{}-{run}", src.name.split(' ').next().unwrap_or("f")));
+    let dir = o
+        .work
+        .join("xfig")
+        .join(format!("{}-{run}", src.name.split(' ').next().unwrap_or("f")));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("home")).map_err(|e| e.to_string())?;
     let fig = stage_fig(src, &dir.join("fig"))?;
@@ -750,9 +799,27 @@ fn xfig_tasks(o: &Opts, env: &mut XEnv, info: &FigInfo, pid: u32, t: &mut Trial,
     let (ks, ku) = (env.k.s, env.k.u);
     env.x.motion(centre.0, centre.1)?;
     sleep_ms(200);
-    let v = xmeasure(o, env, pid, CANVAS, 400, "zoom in", |_| Ok(()), |x| key_chord(x, &[shift], z))?;
+    let v = xmeasure(
+        o,
+        env,
+        pid,
+        CANVAS,
+        400,
+        "zoom in",
+        |_| Ok(()),
+        |x| key_chord(x, &[shift], z),
+    )?;
     t.insert("zoom_in", v);
-    let v = xmeasure(o, env, pid, CANVAS, 400, "zoom out", |_| Ok(()), |x| key_chord(x, &[], z))?;
+    let v = xmeasure(
+        o,
+        env,
+        pid,
+        CANVAS,
+        400,
+        "zoom out",
+        |_| Ok(()),
+        |x| key_chord(x, &[], z),
+    )?;
     t.insert("zoom_out", v);
     // Pan: middle button dragged along the top ruler; the canvas redraws when the button is released.
     let v = xmeasure(
@@ -786,7 +853,16 @@ fn xfig_tasks(o: &Opts, env: &mut XEnv, info: &FigInfo, pid: u32, t: &mut Trial,
     env.x.motion(corner.0, corner.1)?;
     sleep_ms(150);
     for _ in 0..n {
-        let r = xmeasure(o, env, pid, CANVAS, 400, "zoom to fit", |_| Ok(()), |x| key_chord(x, &[], z))?;
+        let r = xmeasure(
+            o,
+            env,
+            pid,
+            CANVAS,
+            400,
+            "zoom to fit",
+            |_| Ok(()),
+            |x| key_chord(x, &[], z),
+        )?;
         if !matches!(r, Val::Ms(_)) {
             for k in ["move_step", "move_step_max", "move_place", "save", "undo"] {
                 t.insert(k, Val::Na("zooming out for the move did not finish".into()));
@@ -810,13 +886,29 @@ fn xfig_tasks(o: &Opts, env: &mut XEnv, info: &FigInfo, pid: u32, t: &mut Trial,
         let base = env.fb.hash(CANVAS);
         let _ = base;
         // Tagging redraws every glued object in xfig's highlight colour: wait for it.
-        let w = Watch { fb: &env.fb, rect: CANVAS, pid, base: 0, quiet: Duration::from_millis(1000), first_change: Duration::from_millis(1500), limit: lim };
+        let w = Watch {
+            fb: &env.fb,
+            rect: CANVAS,
+            pid,
+            base: 0,
+            quiet: Duration::from_millis(1000),
+            first_change: Duration::from_millis(1500),
+            limit: lim,
+        };
         if matches!(settle(&w, Instant::now()), Settled::Timeout) {
             return Err("xfig: tagging the figure took longer than the timeout".into());
         }
         env.x.glide((x2, y2), (centre.0, centre.1), 6)?;
         env.x.click(3)?;
-        let w = Watch { fb: &env.fb, rect: CANVAS, pid, base: env.fb.hash(CANVAS), quiet: Duration::from_millis(1000), first_change: Duration::from_millis(1500), limit: lim };
+        let w = Watch {
+            fb: &env.fb,
+            rect: CANVAS,
+            pid,
+            base: env.fb.hash(CANVAS),
+            quiet: Duration::from_millis(1000),
+            first_change: Duration::from_millis(1500),
+            limit: lim,
+        };
         if matches!(settle(&w, Instant::now()), Settled::Timeout) {
             return Err("xfig: gluing the figure took longer than the timeout".into());
         }
@@ -877,7 +969,12 @@ fn xfig_tasks(o: &Opts, env: &mut XEnv, info: &FigInfo, pid: u32, t: &mut Trial,
         }
     }
     if steps.len() < MOVE_STEPS / 2 {
-        t.insert("move_step", Val::Na(format!("the display did not change in {lost} of 30 steps (object not picked?)")));
+        t.insert(
+            "move_step",
+            Val::Na(format!(
+                "the display did not change in {lost} of 30 steps (object not picked?)"
+            )),
+        );
         t.insert("move_step_max", Val::Na("-".into()));
         for k in ["move_place", "save", "undo"] {
             t.insert(k, Val::Na("move did not start".into()));
@@ -894,7 +991,16 @@ fn xfig_tasks(o: &Opts, env: &mut XEnv, info: &FigInfo, pid: u32, t: &mut Trial,
     env.x.motion(centre.0, centre.1)?;
     let v = xmeasure(o, env, pid, MSG, 500, "save", |_| Ok(()), |x| key_chord(x, &[alt], ks))?;
     t.insert("save", v);
-    let v = xmeasure(o, env, pid, CANVAS, 500, "undo", |_| Ok(()), |x| key_chord(x, &[alt], ku))?;
+    let v = xmeasure(
+        o,
+        env,
+        pid,
+        CANVAS,
+        500,
+        "undo",
+        |_| Ok(()),
+        |x| key_chord(x, &[alt], ku),
+    )?;
     t.insert("undo", v);
     Ok(())
 }
@@ -936,9 +1042,14 @@ impl Rf {
         let line = format!("{{\"id\":{},\"method\":\"{method}\",\"params\":{params}}}\n", self.id);
         self.stream.write_all(line.as_bytes()).map_err(|e| e.to_string())?;
         let mut reply = String::new();
-        self.reader.read_line(&mut reply).map_err(|e| format!("{method}: {e}"))?;
+        self.reader
+            .read_line(&mut reply)
+            .map_err(|e| format!("{method}: {e}"))?;
         if reply.contains("\"error\"") {
-            return Err(format!("{method} {params}: {}", reply.trim().chars().take(200).collect::<String>()));
+            return Err(format!(
+                "{method} {params}: {}",
+                reply.trim().chars().take(200).collect::<String>()
+            ));
         }
         Ok(reply)
     }
@@ -985,7 +1096,14 @@ impl Rf {
     /// polls: each poll sees the frame before it) from the action to the first idle poll, plus the
     /// time of a background render if one ran. The wall time cannot be shorter than one frame
     /// interval (16.7 ms at 60 Hz); the frame times can.
-    fn idle2(&mut self, t_ref: Instant, quiet_ms: u64, limit: Duration, has_pending: bool, use_max: bool) -> Result<Idle, String> {
+    fn idle2(
+        &mut self,
+        t_ref: Instant,
+        quiet_ms: u64,
+        limit: Duration,
+        has_pending: bool,
+        use_max: bool,
+    ) -> Result<Idle, String> {
         let mut since: Option<Instant> = None;
         let (mut busy, mut counting, mut pend_polls) = (0.0, true, 0);
         loop {
@@ -1010,16 +1128,26 @@ impl Rf {
                     }
                 }
                 // Builds without `canvas_pending` cannot tell: settle for a fixed 600 ms instead.
-                let q = if has_pending { Duration::from_millis(quiet_ms) } else { Duration::from_millis(600) };
+                let q = if has_pending {
+                    Duration::from_millis(quiet_ms)
+                } else {
+                    Duration::from_millis(600)
+                };
                 if now.duration_since(s) >= q {
                     let wall = s.duration_since(t_ref).as_secs_f64() * 1000.0;
-                    return Ok(Idle { wall: Val::Ms(wall), busy });
+                    return Ok(Idle {
+                        wall: Val::Ms(wall),
+                        busy,
+                    });
                 }
             } else {
                 since = None;
             }
             if now.duration_since(t_ref) >= limit {
-                return Ok(Idle { wall: Val::Timeout(limit.as_secs_f64()), busy });
+                return Ok(Idle {
+                    wall: Val::Timeout(limit.as_secs_f64()),
+                    busy,
+                });
             }
             std::thread::sleep(Duration::from_millis(3));
         }
@@ -1027,7 +1155,10 @@ impl Rf {
 
     fn pt(&self, x: f64, y: f64, zoom: f64) -> (f64, f64) {
         let s = zoom * 80.0 / 1200.0;
-        (self.canvas.0 + (x - self.origin.0) * s, self.canvas.1 + (y - self.origin.1) * s)
+        (
+            self.canvas.0 + (x - self.origin.0) * s,
+            self.canvas.1 + (y - self.origin.1) * s,
+        )
     }
 
     fn pointer(&mut self, action: &str, p: (f64, f64)) -> Result<(), String> {
@@ -1040,14 +1171,21 @@ impl Rf {
 
     /// Zoom and pan so that Fig (0, 0) is at the canvas corner, as in xfig.
     fn view_origin(&mut self, zoom: f64) -> Result<(), String> {
-        self.call("engine.execute", &format!(r#"{{"command":"view.zoom_set","params":{{"zoom":{zoom}}}}}"#))?;
+        self.call(
+            "engine.execute",
+            &format!(r#"{{"command":"view.zoom_set","params":{{"zoom":{zoom}}}}}"#),
+        )?;
         self.state()?;
         self.state()?;
         let (ox, oy) = self.origin;
         let s = zoom * 80.0 / 1200.0;
         self.call(
             "engine.execute",
-            &format!(r#"{{"command":"view.pan","params":{{"dx":{},"dy":{}}}}}"#, ox * s, oy * s),
+            &format!(
+                r#"{{"command":"view.pan","params":{{"dx":{},"dy":{}}}}}"#,
+                ox * s,
+                oy * s
+            ),
         )?;
         self.state()?;
         self.state()?;
@@ -1062,12 +1200,20 @@ impl Rf {
 fn trial_rf(o: &Opts, src: &FigSrc, info: &FigInfo, run: usize) -> Result<Trial, String> {
     let r = trial_rf_inner(o, src, info, run);
     // The staged copy of a big figure is not needed any more.
-    let _ = std::fs::remove_dir_all(o.work.join("rustfig").join(format!("{}-{run}", src.name.split(' ').next().unwrap_or("f"))).join("fig"));
+    let _ = std::fs::remove_dir_all(
+        o.work
+            .join("rustfig")
+            .join(format!("{}-{run}", src.name.split(' ').next().unwrap_or("f")))
+            .join("fig"),
+    );
     r
 }
 
 fn trial_rf_inner(o: &Opts, src: &FigSrc, info: &FigInfo, run: usize) -> Result<Trial, String> {
-    let dir = o.work.join("rustfig").join(format!("{}-{run}", src.name.split(' ').next().unwrap_or("f")));
+    let dir = o
+        .work
+        .join("rustfig")
+        .join(format!("{}-{run}", src.name.split(' ').next().unwrap_or("f")));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let fig = stage_fig(src, &dir.join("fig"))?;
@@ -1075,7 +1221,13 @@ fn trial_rf_inner(o: &Opts, src: &FigSrc, info: &FigInfo, run: usize) -> Result<
     let mut t = Trial::new();
     let t0 = Instant::now();
     let child = Command::new(&o.rustfig)
-        .args(["--control", &o.port.to_string(), "--background", "-geometry", "1400x1000+0+0"])
+        .args([
+            "--control",
+            &o.port.to_string(),
+            "--background",
+            "-geometry",
+            "1400x1000+0+0",
+        ])
         .arg(&fig)
         .current_dir(fig.parent().unwrap_or(&dir))
         .env("RUSTFIG_SETTINGS_DIR", dir.join("settings"))
@@ -1097,7 +1249,14 @@ fn trial_rf_inner(o: &Opts, src: &FigSrc, info: &FigInfo, run: usize) -> Result<
     };
     let _ = stream.set_read_timeout(Some(Duration::from_secs_f64(o.timeout + 30.0)));
     let reader = BufReader::new(stream.try_clone().map_err(|e| e.to_string())?);
-    let mut rf = Rf { child, stream, reader, id: 0, canvas: (0.0, 0.0), origin: (0.0, 0.0) };
+    let mut rf = Rf {
+        child,
+        stream,
+        reader,
+        id: 0,
+        canvas: (0.0, 0.0),
+        origin: (0.0, 0.0),
+    };
     let first = rf.state()?;
     let _ = first;
     let probe = rf.call("ui.state", "{}")?;
@@ -1115,7 +1274,11 @@ fn trial_rf_inner(o: &Opts, src: &FigSrc, info: &FigInfo, run: usize) -> Result<
     rf.view_origin(1.0)?;
     rf.idle(Instant::now(), 150, lim, has_pending)?;
 
-    let timed = |rf: &mut Rf, t: &mut Trial, name: &'static str, act: &dyn Fn(&mut Rf) -> Result<(), String>| -> Result<(), String> {
+    let timed = |rf: &mut Rf,
+                 t: &mut Trial,
+                 name: &'static str,
+                 act: &dyn Fn(&mut Rf) -> Result<(), String>|
+     -> Result<(), String> {
         // 130 idle frames push the earlier actions out of the window of recent frame times.
         for _ in 0..130 {
             rf.state()?;
@@ -1138,75 +1301,93 @@ fn trial_rf_inner(o: &Opts, src: &FigSrc, info: &FigInfo, run: usize) -> Result<
     timed(&mut rf, &mut t, "zoom_in", &|r| r.exec("view.zoom_in").map(|_| ()))?;
     timed(&mut rf, &mut t, "zoom_out", &|r| r.exec("view.zoom_out").map(|_| ()))?;
     timed(&mut rf, &mut t, "pan", &|r| {
-        r.call("engine.execute", &format!(r#"{{"command":"view.pan","params":{{"dx":{PAN_PX},"dy":0}}}}"#))
-            .map(|_| ())
+        r.call(
+            "engine.execute",
+            &format!(r#"{{"command":"view.pan","params":{{"dx":{PAN_PX},"dy":0}}}}"#),
+        )
+        .map(|_| ())
     })?;
 
-    // Move test.
-    let (cw, ch) = (rf.canvas.0, rf.canvas.1);
-    let _ = (cw, ch);
-    let st = rf.state()?;
-    let _ = st;
-    let (cvw, cvh) = {
-        let s = rf.call("ui.state", "{}")?;
-        let c = numbers_after(&s, "\"canvas\":[", 2).unwrap_or(vec![1128.0, 686.0]);
-        (c[0], c[1])
-    };
-    let n = steps_to_fit(info, cvw, cvh);
-    let zoom = zoom_after(n);
-    rf.view_origin(zoom)?;
-    rf.idle(Instant::now(), 150, lim, has_pending)?;
-    if info.objects > GLUE_ABOVE {
-        rf.exec("edit.select_all")?;
-        rf.exec("object.group")?;
+    // Move test (an error here keeps what was measured before it).
+    let mv = (|| -> Result<(), String> {
+        let (cw, ch) = (rf.canvas.0, rf.canvas.1);
+        let _ = (cw, ch);
+        let st = rf.state()?;
+        let _ = st;
+        let (cvw, cvh) = {
+            let s = rf.call("ui.state", "{}")?;
+            let c = numbers_after(&s, "\"canvas\":[", 2).unwrap_or(vec![1128.0, 686.0]);
+            (c[0], c[1])
+        };
+        let n = steps_to_fit(info, cvw, cvh);
+        let zoom = zoom_after(n);
+        rf.view_origin(zoom)?;
         rf.idle(Instant::now(), 150, lim, has_pending)?;
-    }
-    rf.exec("tool.move")?;
-    let Some((px, py)) = pick_point(info, zoom, cvw, cvh) else {
-        return Err("no polyline vertex to click on".into());
-    };
-    let start = rf.pt(px as f64, py as f64, zoom);
-    rf.pointer("move", start)?;
-    rf.pointer("click", start)?;
-    rf.idle(Instant::now(), 150, lim, has_pending)?;
-    let mut steps: Vec<f64> = Vec::new();
-    let mut walls: Vec<f64> = Vec::new();
-    for k in 1..=MOVE_STEPS {
-        let to = (
-            start.0 + MOVE_DX * k as f64 / MOVE_STEPS as f64,
-            start.1 + MOVE_DY * k as f64 / MOVE_STEPS as f64,
-        );
-        let t1 = Instant::now();
-        rf.pointer("move", to)?;
-        let i = rf.idle2(t1, 40, lim, has_pending, false)?;
-        match i.wall {
-            Val::Ms(w) => {
-                steps.push(i.busy);
-                walls.push(w);
+        if info.objects > GLUE_ABOVE {
+            rf.exec("edit.select_all")?;
+            rf.exec("object.group")?;
+            rf.idle(Instant::now(), 150, lim, has_pending)?;
+        }
+        rf.exec("tool.move")?;
+        let Some((px, py)) = pick_point(info, zoom, cvw, cvh) else {
+            return Err("no polyline vertex to click on".into());
+        };
+        let start = rf.pt(px as f64, py as f64, zoom);
+        rf.pointer("move", start)?;
+        rf.pointer("click", start)?;
+        rf.idle(Instant::now(), 150, lim, has_pending)?;
+        let mut steps: Vec<f64> = Vec::new();
+        let mut walls: Vec<f64> = Vec::new();
+        for k in 1..=MOVE_STEPS {
+            let to = (
+                start.0 + MOVE_DX * k as f64 / MOVE_STEPS as f64,
+                start.1 + MOVE_DY * k as f64 / MOVE_STEPS as f64,
+            );
+            let t1 = Instant::now();
+            rf.pointer("move", to)?;
+            let i = rf.idle2(t1, 40, lim, has_pending, false)?;
+            match i.wall {
+                Val::Ms(w) => {
+                    steps.push(i.busy);
+                    walls.push(w);
+                }
+                other => {
+                    t.insert("move_step", other);
+                    break;
+                }
             }
-            other => {
-                t.insert("move_step", other);
-                break;
+            if k == MOVE_STEPS / 2 {
+                if let Some(d) = &o.shots {
+                    let _ = std::fs::create_dir_all(d);
+                    let _ = rf.call(
+                        "ui.screenshot",
+                        &format!(
+                            r#"{{"path":{}}}"#,
+                            json_str(&d.join(format!("rustfig-{run}-mid-move.png")).display().to_string())
+                        ),
+                    );
+                }
             }
         }
-        if k == MOVE_STEPS / 2 {
-            if let Some(d) = &o.shots {
-                let _ = std::fs::create_dir_all(d);
-                let _ = rf.call("ui.screenshot", &format!(r#"{{"path":{}}}"#, json_str(&d.join(format!("rustfig-{run}-mid-move.png")).display().to_string())));
-            }
+        if !steps.is_empty() {
+            steps.sort_by(f64::total_cmp);
+            t.insert("move_step", Val::Ms(steps[steps.len() / 2]));
+            t.insert("move_step_max", Val::Ms(steps[steps.len() - 1]));
+            t.insert("x_move_step", Val::Ms(median(&mut walls)));
+            let end = (start.0 + MOVE_DX, start.1 + MOVE_DY);
+            timed(&mut rf, &mut t, "move_place", &|r| r.pointer("click", end))?;
+            let ts = Instant::now();
+            rf.exec("file.save")?;
+            t.insert("save", Val::Ms(ts.elapsed().as_secs_f64() * 1000.0));
+            timed(&mut rf, &mut t, "undo", &|r| r.exec("edit.undo").map(|_| ()))?;
         }
-    }
-    if !steps.is_empty() {
-        steps.sort_by(f64::total_cmp);
-        t.insert("move_step", Val::Ms(steps[steps.len() / 2]));
-        t.insert("move_step_max", Val::Ms(steps[steps.len() - 1]));
-        t.insert("x_move_step", Val::Ms(median(&mut walls)));
-        let end = (start.0 + MOVE_DX, start.1 + MOVE_DY);
-        timed(&mut rf, &mut t, "move_place", &|r| r.pointer("click", end))?;
-        let ts = Instant::now();
-        rf.exec("file.save")?;
-        t.insert("save", Val::Ms(ts.elapsed().as_secs_f64() * 1000.0));
-        timed(&mut rf, &mut t, "undo", &|r| r.exec("edit.undo").map(|_| ()))?;
+        Ok(())
+    })();
+    if let Err(e) = mv {
+        eprintln!("   rustfig: {e}");
+        for (k, _) in TASKS {
+            t.entry(k).or_insert_with(|| Val::Na(e.clone()));
+        }
     }
     Ok(t)
 }
@@ -1303,7 +1484,17 @@ fn shell_out(cmd: &str, args: &[&str]) -> String {
 fn render(o: &Opts, rows: &[Row]) -> String {
     let mut s = String::new();
     let mach = shell_out("sysctl", &["-n", "machdep.cpu.brand_string"]);
-    let chip = if mach.is_empty() { shell_out("sh", &["-c", "system_profiler SPHardwareDataType | grep -E 'Chip|Cores' | tr -s ' ' | paste -sd ';' -"]) } else { mach };
+    let chip = if mach.is_empty() {
+        shell_out(
+            "sh",
+            &[
+                "-c",
+                "system_profiler SPHardwareDataType | grep -E 'Chip|Cores' | tr -s ' ' | paste -sd ';' -",
+            ],
+        )
+    } else {
+        mach
+    };
     let os = shell_out("sw_vers", &["-productVersion"]);
     let xfig_v = shell_out(&o.xfig_bin, &["-v"]);
     let rf_v = shell_out(&o.rustfig.display().to_string(), &["--version"]);
@@ -1312,18 +1503,34 @@ fn render(o: &Opts, rows: &[Row]) -> String {
     s.push_str(&format!("- xfig: `{}` ({}), default options, scratch `HOME`, on `Xvfb {}` 1400x1000x24; window `{}` (canvas 1128x686 pixels)\n", o.xfig_bin, xfig_v.lines().next().unwrap_or("3.2.9a"), o.display, o.xfig_geom));
     s.push_str(&format!("- RustFig: `{}` ({}), release build, label: {}; `-geometry 1400x1000` (clipped to the screen), canvas 1128x686 points\n", o.rustfig.display(), rf_v.lines().next().unwrap_or("no --version"), o.label));
     s.push_str(&format!("- Each value is the median of {} run(s), a new process per run; timeout {:.0} s per measurement (\"> N s\": not finished in that time; the real time is longer)\n", o.runs, o.timeout));
-    s.push_str(&format!("- Generated {} by `cargo xtask speed-compare`\n\n", shell_out("date", &["+%Y-%m-%d %H:%M"])));
+    s.push_str(&format!(
+        "- Generated {} by `cargo xtask speed-compare`\n\n",
+        shell_out("date", &["+%Y-%m-%d %H:%M"])
+    ));
     s.push_str("### Results\n\n");
     s.push_str("xfig / RustFig is the speed-up of RustFig (above 1 = RustFig is faster).\n\n");
     for (key, label) in TASKS {
         if *key == "move_step_max" {
             continue;
         }
-        s.push_str(&format!("#### {label}\n\n| Figure | Size | xfig | RustFig | xfig / RustFig |\n|---|---|---|---|---|\n"));
+        s.push_str(&format!(
+            "#### {label}\n\n| Figure | Size | xfig | RustFig | xfig / RustFig |\n|---|---|---|---|---|\n"
+        ));
         for r in rows {
             let (x, f) = (aggregate(&r.xfig, key), aggregate(&r.rf, key));
-            let sz = if r.bytes >= 1_000_000 { format!("{:.1} MB, {} obj.", r.bytes as f64 / 1e6, r.objects) } else { format!("{} kB, {} obj.", r.bytes / 1000, r.objects) };
-            s.push_str(&format!("| {} | {} | {} | {} | {} |\n", r.fig, sz, fmt_val(&x), fmt_val(&f), ratio(&x, &f)));
+            let sz = if r.bytes >= 1_000_000 {
+                format!("{:.1} MB, {} obj.", r.bytes as f64 / 1e6, r.objects)
+            } else {
+                format!("{} kB, {} obj.", r.bytes / 1000, r.objects)
+            };
+            s.push_str(&format!(
+                "| {} | {} | {} | {} | {} |\n",
+                r.fig,
+                sz,
+                fmt_val(&x),
+                fmt_val(&f),
+                ratio(&x, &f)
+            ));
         }
         s.push('\n');
     }
@@ -1333,7 +1540,14 @@ fn render(o: &Opts, rows: &[Row]) -> String {
             let (a, b) = (aggregate(&r.xfig, k), aggregate(&r.xfig, xk));
             let (c, d) = (aggregate(&r.rf, k), aggregate(&r.rf, xk));
             if matches!(b, Val::Ms(_) | Val::Timeout(_)) || matches!(d, Val::Ms(_) | Val::Timeout(_)) {
-                s.push_str(&format!("| {} | {k} | {} | {} | {} | {} |\n", r.fig, fmt_val(&a), fmt_val(&b), fmt_val(&c), fmt_val(&d)));
+                s.push_str(&format!(
+                    "| {} | {k} | {} | {} | {} | {} |\n",
+                    r.fig,
+                    fmt_val(&a),
+                    fmt_val(&b),
+                    fmt_val(&c),
+                    fmt_val(&d)
+                ));
             }
         }
     }
@@ -1437,12 +1651,18 @@ pub fn run(root: &Path) -> Result<(), String> {
         return Err(format!("xfig not found at {}", o.xfig_bin));
     }
     if o.rf && !o.rustfig.is_file() {
-        return Err(format!("{} not found (build it with cargo build --release -p rustfig, or pass --rustfig)", o.rustfig.display()));
+        return Err(format!(
+            "{} not found (build it with cargo build --release -p rustfig, or pass --rustfig)",
+            o.rustfig.display()
+        ));
     }
     let figs = fig_sources(&o);
     for f in &figs {
         if !f.path.is_file() {
-            return Err(format!("{} not found (--examples DIR points at the figure folders)", f.path.display()));
+            return Err(format!(
+                "{} not found (--examples DIR points at the figure folders)",
+                f.path.display()
+            ));
         }
     }
     std::fs::create_dir_all(&o.work).map_err(|e| e.to_string())?;
@@ -1462,9 +1682,18 @@ pub fn run(root: &Path) -> Result<(), String> {
         }
         xvfb = Some(
             Command::new("Xvfb")
-                .args([o.display.as_str(), "-screen", "0", &format!("{SCREEN_W}x{SCREEN_H}x24"), "-fbdir"])
+                .args([
+                    o.display.as_str(),
+                    "-screen",
+                    "0",
+                    &format!("{SCREEN_W}x{SCREEN_H}x24"),
+                    "-fbdir",
+                ])
                 .arg(&fbdir)
-                .env("PATH", format!("/opt/X11/bin:{}", std::env::var("PATH").unwrap_or_default()))
+                .env(
+                    "PATH",
+                    format!("/opt/X11/bin:{}", std::env::var("PATH").unwrap_or_default()),
+                )
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
                 .spawn()
@@ -1480,7 +1709,11 @@ pub fn run(root: &Path) -> Result<(), String> {
             u: x.keycode(0x75)?,
             ctrl: x.keycode(0xffe3)?,
         };
-        env = Some(XEnv { x, fb: Fb::open(&fbdir.join("Xvfb_screen0"))?, k });
+        env = Some(XEnv {
+            x,
+            fb: Fb::open(&fbdir.join("Xvfb_screen0"))?,
+            k,
+        });
     }
     let result = (|| -> Result<(), String> {
         let mut rows: Vec<Row> = Vec::new();
@@ -1504,7 +1737,8 @@ pub fn run(root: &Path) -> Result<(), String> {
                 for run in 0..o.runs {
                     match trial_xfig(&o, env, src, &info, run) {
                         Ok(t) => {
-                            let slow = matches!(t.get("open"), Some(Val::Ms(v)) if *v > 60_000.0) || !matches!(t.get("open"), Some(Val::Ms(_)));
+                            let slow = matches!(t.get("open"), Some(Val::Ms(v)) if *v > 60_000.0)
+                                || !matches!(t.get("open"), Some(Val::Ms(_)));
                             eprintln!("   xfig run {run}: {:?}", t.get("open"));
                             row.xfig.push(t);
                             if slow {
@@ -1582,8 +1816,20 @@ mod tests {
 
     #[test]
     fn fit_steps_grow_with_the_figure() {
-        let small = FigInfo { objects: 1, max_x: 5000, max_y: 5000, cands: vec![], weak: vec![] };
-        let big = FigInfo { objects: 1, max_x: 60000, max_y: 40000, cands: vec![], weak: vec![] };
+        let small = FigInfo {
+            objects: 1,
+            max_x: 5000,
+            max_y: 5000,
+            cands: vec![],
+            weak: vec![],
+        };
+        let big = FigInfo {
+            objects: 1,
+            max_x: 60000,
+            max_y: 40000,
+            cands: vec![],
+            weak: vec![],
+        };
         assert_eq!(steps_to_fit(&small, 1128.0, 686.0), 0);
         assert!(steps_to_fit(&big, 1128.0, 686.0) >= 4);
     }
