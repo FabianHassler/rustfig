@@ -293,6 +293,11 @@ impl Document {
         self.objects.iter().find(|o| o.id == id).map(|o| &**o)
     }
 
+    /// The shared handle of the top-level object with the given id.
+    pub fn get_arc(&self, id: ObjectId) -> Option<&std::sync::Arc<Object>> {
+        self.objects.iter().find(|o| o.id == id)
+    }
+
     /// Top-level object with the given id, unshared from undo snapshots.
     pub fn get_mut(&mut self, id: ObjectId) -> Option<&mut Object> {
         self.objects

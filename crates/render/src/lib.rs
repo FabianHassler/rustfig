@@ -15,6 +15,73 @@ pub use fig2dev::scene::{
     font_px, head_at_end, line_width, pattern, raster, Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim,
 };
 
+
+/// Fewer primitives than this are rasterised on one thread: the bands cost
+/// more than they save.
+const PARALLEL_MIN_PRIMS: usize = 3000;
+/// Thinnest band (device rows) worth a thread of its own.
+const PARALLEL_MIN_BAND: usize = 48;
+
+/// Rasterise `scene` into a new `w` x `h` pixmap, in horizontal bands on
+/// several threads when the scene is large (P6): each band is a pixmap of its
+/// own drawn with the transform moved up by the band's first row, so the
+/// bands join pixel for pixel as one render would draw them (the rasteriser
+/// culls what is outside its pixmap). Native only; wasm draws on one thread.
+pub fn rasterize_banded(scene: &Scene, w: u32, h: u32, opts: &raster::RasterOptions) -> Option<raster::Pixmap> {
+    let mut pm = raster::Pixmap::new(w, h)?;
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let threads = std::thread::available_parallelism().map_or(1, |n| n.get()).min(16);
+        let bands = threads.min(h as usize / PARALLEL_MIN_BAND);
+        if bands >= 2 && scene.prims.len() >= PARALLEL_MIN_PRIMS {
+            // More bands than threads smooths out uneven density.
+            let n = (bands * 2).min(h as usize / PARALLEL_MIN_BAND).max(bands);
+            let rows = (h as usize).div_ceil(n);
+            let next = std::sync::atomic::AtomicUsize::new(0);
+            let done: std::sync::Mutex<Vec<(usize, raster::Pixmap)>> = std::sync::Mutex::new(Vec::new());
+            std::thread::scope(|sc| {
+                for _ in 0..bands {
+                    sc.spawn(|| loop {
+                        let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        let y0 = i * rows;
+                        if y0 >= h as usize {
+                            break;
+                        }
+                        let bh = rows.min(h as usize - y0) as u32;
+                        let Some(mut band) = raster::Pixmap::new(w, bh) else {
+                            continue;
+                        };
+                        let mut o = *opts;
+                        o.transform = opts.transform.then(&rustfig_geom::Affine::translate(0.0, -(y0 as f64)));
+                        raster::rasterize(scene, &mut band, &o);
+                        if let Ok(mut d) = done.lock() {
+                            d.push((y0, band));
+                        }
+                    });
+                }
+            });
+            let stride = w as usize * 4;
+            let bands = done.into_inner().unwrap_or_default();
+            if bands.is_empty() {
+                // Every band failed (a poisoned lock or no memory): draw plainly.
+                raster::rasterize(scene, &mut pm, opts);
+                return Some(pm);
+            }
+            let dst = pm.data_mut();
+            for (y0, band) in bands {
+                let at = y0 * stride;
+                let src = band.data();
+                if let Some(d) = dst.get_mut(at..at + src.len()) {
+                    d.copy_from_slice(src);
+                }
+            }
+            return Some(pm);
+        }
+    }
+    raster::rasterize(scene, &mut pm, opts);
+    Some(pm)
+}
+
 use fig2dev::scene::{fill, picture_prims, shape_prims, stroke, Shape};
 use rustfig_geom::{ArrowSpec, Point, Rect, Seg};
 use rustfig_model::{flatten_object, Arrow, ColorRef, Document, Object, ObjectKind, PolyKind, Style};
@@ -435,6 +502,44 @@ mod tests {
     use super::*;
     use rustfig_geom::Point;
     use rustfig_model::{Polyline, Style};
+
+    /// Bands join exactly as one render draws them (P6).
+    #[test]
+    fn banded_raster_equals_single_render() {
+        let mut doc = Document::new();
+        for i in 0..4000 {
+            let x = f64::from(i % 80) * 150.0;
+            let y = f64::from(i / 80) * 150.0;
+            let mut style = Style::default();
+            style.area_fill = [-1, 20, 41, 45, 50, 62][(i % 6) as usize]; // none, tint, patterns
+            style.fill_color = ColorRef::BLACK;
+            style.thickness = 1 + i % 3;
+            let p = Polyline::new(
+                rustfig_model::PolyKind::Box,
+                style,
+                vec![
+                    Point::new(x, y),
+                    Point::new(x + 120.0, y),
+                    Point::new(x + 120.0, y + 120.0),
+                    Point::new(x, y + 120.0),
+                    Point::new(x, y),
+                ],
+            );
+            doc.objects.push(std::sync::Arc::new(Object::new(ObjectKind::Polyline(p))));
+        }
+        let scene = build_scene(&doc, &SceneOptions::default());
+        let opts = raster::RasterOptions {
+            transform: rustfig_geom::Affine::scale(0.06, 0.06),
+            min_line_px: 1.0,
+            adjust_px: 0.0,
+            pattern_k: 1,
+            pattern: pattern::PatternFrame::screen(),
+        };
+        let banded = rasterize_banded(&scene, 700, 500, &opts).unwrap();
+        let mut single = raster::Pixmap::new(700, 500).unwrap();
+        raster::rasterize(&scene, &mut single, &opts);
+        assert!(banded.data() == single.data(), "bands differ from a single render");
+    }
 
     #[test]
     fn approx_latex_applies_to_special_text_only_when_asked() {

@@ -454,7 +454,11 @@ impl Engine {
 
     /// Undo the last change.
     pub fn undo(&mut self) -> bool {
-        let cur = (self.doc.clone(), self.selection.clone());
+        if !self.history.can_undo() {
+            return false;
+        }
+        // Moved into the history, not cloned (P6): O(change), not O(drawing).
+        let cur = (std::mem::take(&mut self.doc), std::mem::take(&mut self.selection));
         match self.history.undo(cur) {
             Some((doc, sel)) => {
                 self.doc = doc;
@@ -469,7 +473,11 @@ impl Engine {
     }
 
     pub fn redo(&mut self) -> bool {
-        let cur = (self.doc.clone(), self.selection.clone());
+        if !self.history.can_redo() {
+            return false;
+        }
+        // Moved into the history, not cloned (P6): O(change), not O(drawing).
+        let cur = (std::mem::take(&mut self.doc), std::mem::take(&mut self.selection));
         match self.history.redo(cur) {
             Some((doc, sel)) => {
                 self.doc = doc;

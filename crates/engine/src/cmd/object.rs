@@ -190,12 +190,14 @@ fn group(e: &mut Engine, p: &Value) -> CmdResult {
     if ids.len() < 2 {
         return Err(EngineError::bad_params("select at least two objects to group"));
     }
+    // One pass with a set: `ids.contains` on a Vec made this quadratic.
+    let set: std::collections::HashSet<_> = ids.iter().copied().collect();
     let doc = e.doc_mut();
-    let first = doc.objects.iter().position(|o| ids.contains(&o.id)).unwrap_or(0);
+    let first = doc.objects.iter().position(|o| set.contains(&o.id)).unwrap_or(0);
     let mut members = Vec::new();
     let mut rest = Vec::new();
     for o in std::mem::take(&mut doc.objects) {
-        if ids.contains(&o.id) {
+        if set.contains(&o.id) {
             members.push(Arc::unwrap_or_clone(o));
         } else {
             rest.push(o);

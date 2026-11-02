@@ -305,20 +305,15 @@ fn measure_doc(doc: &Document, report: &mut Report, scale_budget: f64) -> Result
     };
     view.fit(&bb);
     let render = |view: &rustfig_engine::View| -> Result<f64, String> {
-        let mut pm = raster::Pixmap::new(w, h).ok_or("cannot allocate pixmap")?;
-        let ((), ms) = time(|| {
-            raster::rasterize(
-                &scene,
-                &mut pm,
-                &raster::RasterOptions {
-                    transform: view.transform(),
-                    min_line_px: 1.0,
-                    adjust_px: 0.0,
-                    pattern_k: 1,
-                    pattern: rustfig_render::pattern::PatternFrame::screen(),
-                },
-            )
-        });
+        let opts = raster::RasterOptions {
+            transform: view.transform(),
+            min_line_px: 1.0,
+            adjust_px: 0.0,
+            pattern_k: 1,
+            pattern: rustfig_render::pattern::PatternFrame::screen(),
+        };
+        let (pm, ms) = time(|| rustfig_render::rasterize_banded(&scene, w, h, &opts));
+        pm.ok_or("cannot allocate pixmap")?;
         Ok(ms)
     };
     report.add("render (fit)", render(&view)?, 1500.0 * scale_budget);
@@ -375,6 +370,75 @@ fn measure_doc(doc: &Document, report: &mut Report, scale_budget: f64) -> Result
     Ok(())
 }
 
+/// The leaves of an object (compounds opened).
+fn leaves<'a>(o: &'a Object, out: &mut Vec<&'a Object>, cap: usize) {
+    if out.len() >= cap {
+        return;
+    }
+    match &o.kind {
+        ObjectKind::Compound(c) => c.objects.iter().for_each(|x| leaves(x, out, cap)),
+        _ => out.push(o),
+    }
+}
+
+/// P6: group everything into one compound, then drag it in Move mode as the
+/// canvas does (press on a member, pointer moves with `overlay()` asked for
+/// each, release): ms per move step and per grouping.
+fn measure_group_drag(doc: &Document, report: &mut Report, scale_budget: f64) -> Result<(), String> {
+    let mut e = Engine::new();
+    e.replace_document(doc.clone(), None);
+    if doc.objects.len() < 2 {
+        return Ok(());
+    }
+    e.execute("edit.select_all", &json!({})).map_err(|e| e.message)?;
+    let (r, ms) = time(|| e.execute("object.group", &json!({})));
+    r.map_err(|e| e.message)?;
+    report.add("group all", ms, 1000.0 * scale_budget);
+    let Some(group) = e.doc().objects.first().cloned() else {
+        return Ok(());
+    };
+    let mut ls = Vec::new();
+    leaves(&group, &mut ls, 300);
+    let tol = 40.0;
+    let press = ls
+        .iter()
+        .map(|o| {
+            let b = o.geometry_bbox();
+            Point::new(b.min.x, (b.min.y + b.max.y) / 2.0)
+        })
+        .find(|p| e.hit_test(*p, tol).is_some());
+    let Some(p0) = press else {
+        println!("drag: no pickable point found, skipped");
+        return Ok(());
+    };
+    let before = e.doc().objects.first().map(|o| o.geometry_bbox());
+    e.execute("tool.move", &json!({})).map_err(|e| e.message)?;
+    use rustfig_engine::tools::{Button, ToolEvent};
+    let ev = |e: &mut Engine, ev| e.tool_event(ev).map_err(|e| e.message);
+    ev(&mut e, ToolEvent::Press { pos: p0, button: Button::Left, shift: false })?;
+    let steps = 40usize;
+    let (r, ms) = time(|| {
+        for i in 1..=steps {
+            let pos = Point::new(p0.x + 40.0 * i as f64, p0.y + 20.0 * i as f64);
+            ev(&mut e, ToolEvent::Move { pos })?;
+            let _ = e.overlay();
+        }
+        Ok::<(), String>(())
+    });
+    r?;
+    report.add("drag (per move step)", ms / steps as f64, 20.0 * scale_budget);
+    let end = Point::new(p0.x + 40.0 * steps as f64, p0.y + 20.0 * steps as f64);
+    let (r, ms) = time(|| ev(&mut e, ToolEvent::Release { pos: end, button: Button::Left }));
+    r?;
+    report.add("drag release (commit)", ms, 100.0 * scale_budget);
+    let after = e.doc().objects.first().map(|o| o.geometry_bbox());
+    match (before, after) {
+        (Some(a), Some(b)) if (b.min.x - a.min.x - 40.0 * steps as f64).abs() < 300.0 => {}
+        (a, b) => return Err(format!("the drag did not move the group: {a:?} -> {b:?}")),
+    }
+    Ok(())
+}
+
 fn perf(args: &[String]) -> Result<(), String> {
     // Timings must not depend on the installed fonts (F1).
     rustfig_engine::text::set_builtin_fonts(true);
@@ -385,7 +449,9 @@ fn perf(args: &[String]) -> Result<(), String> {
     println!("synthetic document: {n} paths");
     let doc = synthetic(n);
     let mut report = Report { rows: Vec::new() };
-    measure_doc(&doc, &mut report, (n as f64 / 50_000.0).max(0.02))?;
+    let scale = (n as f64 / 50_000.0).max(0.02);
+    measure_doc(&doc, &mut report, scale)?;
+    measure_group_drag(&doc, &mut report, scale)?;
     if report.print() {
         Ok(())
     } else {
@@ -401,6 +467,7 @@ fn bench(args: &[String]) -> Result<(), String> {
     println!("open: {ms:.1} ms, {} objects", e.doc().leaf_count());
     let mut report = Report { rows: Vec::new() };
     measure_doc(e.doc(), &mut report, 1.0)?;
+    measure_group_drag(e.doc(), &mut report, 1.0)?;
     report.print();
     Ok(())
 }
