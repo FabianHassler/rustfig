@@ -12,6 +12,7 @@ members = [
     "crates/ui-egui",
     "apps/rustfig",
     "apps/cli",
+    "apps/quicklook",
     "xtask",
 ]
 default-members = ["apps/rustfig", "apps/cli"]

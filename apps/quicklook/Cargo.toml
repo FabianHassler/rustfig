@@ -1,0 +1,16 @@
+[package]
+name = "rustfig-quicklook"
+description = "macOS Quick Look thumbnail and preview extension for Fig files"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+rustfig-engine.workspace = true
+rustfig-os.workspace = true

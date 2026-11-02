@@ -3508,6 +3508,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustfig-quicklook"
+version = "0.9.0-beta.7"
+dependencies = [
+ "rustfig-engine",
+ "rustfig-os",
+]
+
+[[package]]
 name = "rustfig-render"
 version = "0.9.0-beta.7"
 dependencies = [
