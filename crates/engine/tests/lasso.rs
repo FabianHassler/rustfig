@@ -193,7 +193,8 @@ fn move_region_by_lasso_then_place() {
     // Move mode doesn't tag the region's objects (only the selecting modes
     // change the selection); its preview shows them.
     assert!(e.selection().is_empty());
-    assert_eq!(e.overlay().preview.len(), 2);
+    let ov = e.overlay();
+    assert_eq!(ov.preview.len() + ov.shifted.0.len(), 2);
     let before = e.doc().objects[0].geometry_bbox().min;
     // The region follows the pointer from the release point.
     click(&mut e, -200.0 + 300.0, 900.0, Button::Left);

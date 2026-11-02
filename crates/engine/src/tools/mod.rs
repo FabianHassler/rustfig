@@ -544,6 +544,11 @@ pub struct Overlay {
     pub preview: Vec<Object>,
     /// Extra guide lines (open polylines).
     pub guides: Vec<Vec<Point>>,
+    /// Objects shown moved by `shift` (Move/Copy drags): the originals, not
+    /// translated copies, so a drag costs nothing per pointer move however
+    /// big the objects are; the UI renders them once and slides the image.
+    pub shifted: Shifted,
+    pub shift: Point,
     /// Objects hidden while their preview is shown.
     pub hide: Vec<ObjectId>,
     /// Editable vertices to mark.
@@ -568,6 +573,16 @@ pub struct Overlay {
     /// draws full-window red lines while an operation is in progress.
     pub crosshair: Option<Point>,
     pub text: Option<OverlayText>,
+}
+
+/// Shared objects compared by identity (the drag layer's cache key).
+#[derive(Debug, Clone, Default)]
+pub struct Shifted(pub Vec<std::sync::Arc<Object>>);
+
+impl PartialEq for Shifted {
+    fn eq(&self, o: &Self) -> bool {
+        self.0.len() == o.0.len() && self.0.iter().zip(&o.0).all(|(a, b)| std::sync::Arc::ptr_eq(a, b))
+    }
 }
 
 /// An object picked out in a colour of its own: its markers drawn filled
@@ -3801,12 +3816,11 @@ impl Engine {
             } => {
                 let d = self.move_delta(*start, *cursor, *constrain);
                 for id in ids {
-                    if let Some(o) = self.doc().get(*id) {
-                        let mut c = o.clone();
-                        c.translate(d.x, d.y);
-                        ov.preview.push(c);
+                    if let Some(o) = self.doc().get_arc(*id) {
+                        ov.shifted.0.push(std::sync::Arc::clone(o));
                     }
                 }
+                ov.shift = d;
                 if !copy && d.len() > 0.0 {
                     ov.hide.clone_from(ids);
                 }
@@ -4826,6 +4840,30 @@ mod tests {
             panic!()
         };
         assert_eq!(el.radii.x, el.radii.y);
+    }
+
+    /// P6: a Move drag shows the original objects with a shift, not a
+    /// translated copy per pointer move.
+    #[test]
+    fn move_drag_overlay_shares_the_objects() {
+        let mut e = fixture(0);
+        e.set_tool(ToolKind::Move);
+        e.tool_event(ToolEvent::Press {
+            pos: Point::new(0.0, 0.0),
+            button: Button::Left,
+            shift: false,
+        })
+        .unwrap();
+        e.tool_event(ToolEvent::Move {
+            pos: Point::new(300.0, 200.0),
+        })
+        .unwrap();
+        let ov = e.overlay();
+        assert!(ov.preview.is_empty());
+        assert_eq!(ov.shifted.0.len(), 1);
+        assert!(std::sync::Arc::ptr_eq(&ov.shifted.0[0], &e.doc().objects[0]));
+        assert!(ov.shift.len() > 0.0);
+        assert_eq!(ov.hide.len(), 1);
     }
 
     #[test]

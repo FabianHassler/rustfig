@@ -7,7 +7,7 @@ use egui::{pos2, vec2, Color32, Pos2, Rect, Sense, Shape, Stroke, TextureHandle,
 use rustfig_engine::{Button, Overlay, ToolEvent};
 use rustfig_geom::{Affine, Point};
 use rustfig_model::{Document, ObjectId, ObjectKind};
-use rustfig_render::raster::{rasterize, RasterOptions};
+use rustfig_render::raster::RasterOptions;
 use rustfig_render::{Scene, SceneOptions};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -47,8 +47,62 @@ struct Job {
     rx: std::sync::mpsc::Receiver<(egui::ColorImage, f64)>,
 }
 
+/// The objects of a Move/Copy drag as one image with a margin, drawn
+/// shifted by the pointer's distance from where the image was made: a drag
+/// costs one render, not one per pointer move (P6).
+struct DragLayer {
+    key: DocKey,
+    shifted: rustfig_engine::tools::Shifted,
+    /// The shift (Fig units) the image was rendered with.
+    anchor: Point,
+    /// Margin around the canvas (physical pixels).
+    margin: (usize, usize),
+    tex: TextureHandle,
+}
+
+/// A drag layer being rendered on a background thread.
+#[cfg(not(target_arch = "wasm32"))]
+struct LayerJob {
+    key: DocKey,
+    shifted: rustfig_engine::tools::Shifted,
+    anchor: Point,
+    margin: (usize, usize),
+    rx: std::sync::mpsc::Receiver<(egui::ColorImage, f64)>,
+}
+
+/// Show `img` as the drag layer.
+fn set_drag_layer(
+    app: &mut App,
+    ctx: &egui::Context,
+    img: egui::ColorImage,
+    key: DocKey,
+    shifted: rustfig_engine::tools::Shifted,
+    anchor: Point,
+    margin: (usize, usize),
+) {
+    let tex = match app.canvas.drag_layer.take() {
+        Some(mut l) => {
+            l.tex.set(img, TextureOptions::NEAREST);
+            l.tex
+        }
+        None => ctx.load_texture("drag", img, TextureOptions::NEAREST),
+    };
+    app.canvas.drag_layer = Some(DragLayer {
+        key,
+        shifted,
+        anchor,
+        margin,
+        tex,
+    });
+}
+
 #[derive(Default)]
 pub struct CanvasState {
+    #[cfg(not(target_arch = "wasm32"))]
+    layer_job: Option<LayerJob>,
+    /// Milliseconds the last drag layer took (decides on a background thread).
+    #[cfg(not(target_arch = "wasm32"))]
+    layer_ms: f64,
     doc_tex: Option<TextureHandle>,
     /// What `doc_tex` shows (it may lag behind the view while a new raster
     /// is made; it is then drawn moved and scaled to the current view).
@@ -59,6 +113,8 @@ pub struct CanvasState {
     job: Option<Job>,
     ov_tex: Option<TextureHandle>,
     ov_key: Option<(Overlay, DocKey)>,
+    /// The objects being dragged, rendered once (P6).
+    drag_layer: Option<DragLayer>,
     /// Pointer position in Fig units, if over the canvas.
     pub cursor: Option<Point>,
     last_sent: Option<Point>,
@@ -133,6 +189,7 @@ impl CanvasState {
     pub fn invalidate(&mut self) {
         self.doc_key = None;
         self.ov_key = None;
+        self.drag_layer = None;
         self.scene = None;
     }
 }
@@ -177,21 +234,18 @@ fn set_doc_texture(app: &mut App, ctx: &egui::Context, img: egui::ColorImage, ke
 }
 
 fn rasterize_scene(scene: &Scene, t: Affine, w: usize, h: usize) -> egui::ColorImage {
-    let Some(mut pm) = tiny_skia_pixmap(w, h) else {
+    let (w, h) = (w.clamp(1, 16_384) as u32, h.clamp(1, 16_384) as u32);
+    let opts = RasterOptions {
+        transform: t,
+        min_line_px: 1.0,
+        adjust_px: 0.0,
+        pattern_k: 1,
+        pattern: rustfig_render::pattern::PatternFrame::screen(),
+    };
+    let Some(pm) = rustfig_render::rasterize_banded(scene, w, h, &opts) else {
         return egui::ColorImage::new([1, 1], vec![Color32::TRANSPARENT]);
     };
-    rasterize(
-        scene,
-        &mut pm,
-        &RasterOptions {
-            transform: t,
-            min_line_px: 1.0,
-            adjust_px: 0.0,
-            pattern_k: 1,
-            pattern: rustfig_render::pattern::PatternFrame::screen(),
-        },
-    );
-    egui::ColorImage::from_rgba_premultiplied([w, h], pm.data())
+    egui::ColorImage::from_rgba_premultiplied([w as usize, h as usize], pm.data())
 }
 
 /// The grid step (Fig units) and its spacing on screen (points). As xfig's
@@ -237,10 +291,6 @@ pub(crate) fn page_tiles(page: (f64, f64), vis: rustfig_geom::Rect) -> Vec<(f64,
         j += 1.0;
     }
     out
-}
-
-fn tiny_skia_pixmap(w: usize, h: usize) -> Option<rustfig_render::raster::Pixmap> {
-    rustfig_render::raster::Pixmap::new(w.clamp(1, 16_384) as u32, h.clamp(1, 16_384) as u32)
 }
 
 /// The raster's pixels per point: the screen's, but no more than fits the
@@ -542,10 +592,137 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         painter.image(tex.id(), r, uv, Color32::WHITE);
     }
 
+    // Dragged objects (Move, Copy): one image, slid by the pointer.
+    if overlay.shifted.0.is_empty() || overlay.shift.len() <= 0.0 {
+        app.canvas.drag_layer = None;
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            app.canvas.layer_job = None;
+        }
+    } else {
+        let zoom = view.zoom;
+        let rem = |anchor: Point| {
+            let (dx, dy) = ((overlay.shift.x - anchor.x) * zoom, (overlay.shift.y - anchor.y) * zoom);
+            (dx as f32, dy as f32)
+        };
+        // A layer rendered on a background thread: take it when it is done.
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(job) = &app.canvas.layer_job {
+            match job.rx.try_recv() {
+                Ok((img, ms)) => {
+                    let (key, shifted, anchor, margin) = (job.key.clone(), job.shifted.clone(), job.anchor, job.margin);
+                    app.canvas.layer_job = None;
+                    app.canvas.layer_ms = ms;
+                    set_drag_layer(app, ui.ctx(), img, key, shifted, anchor, margin);
+                }
+                Err(std::sync::mpsc::TryRecvError::Disconnected) => app.canvas.layer_job = None,
+                Err(std::sync::mpsc::TryRecvError::Empty) => {}
+            }
+        }
+        let valid = app.canvas.drag_layer.as_ref().is_some_and(|l| {
+            let (dx, dy) = rem(l.anchor);
+            l.key == key
+                && l.shifted == overlay.shifted
+                && dx.abs() * ppp <= l.margin.0 as f32
+                && dy.abs() * ppp <= l.margin.1 as f32
+        });
+        #[cfg(not(target_arch = "wasm32"))]
+        let job_running = app.canvas.layer_job.is_some();
+        #[cfg(target_arch = "wasm32")]
+        let job_running = false;
+        if !valid && !job_running {
+            // A quarter of the canvas on each side stays drawn for the drag
+            // to slide into; very large canvases get less (texture limit).
+            let room = |n: usize| ((8192usize.saturating_sub(n)) / 2).min(n / 4);
+            let margin = (room(w), room(h));
+            let doc = app.engine.doc();
+            let d = Document {
+                settings: doc.settings.clone(),
+                comments: Vec::new(),
+                export_on_save: doc.export_on_save.clone(),
+                colors: doc.colors.clone(),
+                objects: overlay.shifted.0.clone(),
+                next_id: 0,
+                open: Vec::new(),
+            };
+            let anchor = overlay.shift;
+            let typeset = scene_opts.typeset.clone();
+            let lt = Affine::translate(anchor.x, anchor.y)
+                .then(&t)
+                .then(&Affine::translate(margin.0 as f64, margin.1 as f64));
+            let render = move || {
+                let sc = rustfig_render::build_scene(
+                    &d,
+                    &SceneOptions {
+                        typeset,
+                        screen: true,
+                        ..SceneOptions::default()
+                    },
+                );
+                rasterize_scene(&sc, lt, w + 2 * margin.0, h + 2 * margin.1)
+            };
+            // Slow layers (many objects) render in the background (native).
+            #[cfg(not(target_arch = "wasm32"))]
+            let background = app.canvas.layer_ms >= SYNC_RENDER_MS;
+            #[cfg(target_arch = "wasm32")]
+            let background = false;
+            #[cfg(not(target_arch = "wasm32"))]
+            if background {
+                let (tx, rx) = std::sync::mpsc::channel();
+                let ctx = ui.ctx().clone();
+                let spawn = std::thread::Builder::new().name("rustfig-drag".into()).spawn(move || {
+                    let start = std::time::Instant::now();
+                    let img = render();
+                    // The canvas may be gone (drag ended): nothing to do.
+                    let _ = tx.send((img, start.elapsed().as_secs_f64() * 1000.0));
+                    ctx.request_repaint();
+                });
+                match spawn {
+                    Ok(_) => {
+                        app.canvas.layer_job = Some(LayerJob {
+                            key: key.clone(),
+                            shifted: overlay.shifted.clone(),
+                            anchor,
+                            margin,
+                            rx,
+                        });
+                    }
+                    // No thread: the closure went with the failed spawn; draw
+                    // nothing this frame and render synchronously next time.
+                    Err(_) => app.canvas.layer_ms = 0.0,
+                }
+            } else {
+                let start = web_time_now();
+                let img = render();
+                app.canvas.layer_ms = web_time_now() - start;
+                set_drag_layer(app, ui.ctx(), img, key.clone(), overlay.shifted.clone(), anchor, margin);
+            }
+            #[cfg(target_arch = "wasm32")]
+            {
+                let _ = background;
+                let img = render();
+                set_drag_layer(app, ui.ctx(), img, key.clone(), overlay.shifted.clone(), anchor, margin);
+            }
+        }
+        if let Some(l) = &app.canvas.drag_layer {
+            if l.key == key && l.shifted == overlay.shifted {
+                let (dx, dy) = rem(l.anchor);
+                let (mx, my) = (l.margin.0 as f32 / ppp, l.margin.1 as f32 / ppp);
+                let r = Rect::from_min_size(
+                    rect.min + vec2(dx - mx, dy - my),
+                    vec2(rect.width() + 2.0 * mx, rect.height() + 2.0 * my),
+                );
+                painter.image(l.tex.id(), r, uv, Color32::from_white_alpha(230));
+            }
+        }
+    }
+
     // Overlay raster (previews, text being typed).
     let has_overlay = !overlay.preview.is_empty() || overlay.text.is_some();
+    let mut ov_cmp = overlay.clone();
+    ov_cmp.shift = Point::ZERO;
     if has_overlay {
-        let ok = app.canvas.ov_key.as_ref() == Some(&(overlay.clone(), key.clone()));
+        let ok = app.canvas.ov_key.as_ref() == Some(&(ov_cmp.clone(), key.clone()));
         if !ok {
             let doc = app.engine.doc();
             let mut d = Document {
@@ -577,7 +754,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
                 Some(tex) => tex.set(img, TextureOptions::NEAREST),
                 None => app.canvas.ov_tex = Some(ui.ctx().load_texture("overlay", img, TextureOptions::NEAREST)),
             }
-            app.canvas.ov_key = Some((overlay.clone(), key));
+            app.canvas.ov_key = Some((ov_cmp, key));
         }
         if let Some(tex) = &app.canvas.ov_tex {
             painter.image(tex.id(), rect, uv, Color32::from_white_alpha(230));
