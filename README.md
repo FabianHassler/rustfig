@@ -5,6 +5,9 @@ in Rust for macOS, Windows, Linux and the web, with fig2dev built in: a
 modern xfig that runs natively on Windows and macOS, with no X server,
 XQuartz or WSL.
 
+**Website: <https://fabianhassler.github.io/rustfig/>** (overview, downloads,
+the manual, a comparison with xfig and other programs, and the web app).
+
 [![CI](https://github.com/FabianHassler/rustfig/actions/workflows/ci.yml/badge.svg)](https://github.com/FabianHassler/rustfig/actions/workflows/ci.yml)
 [![Licence: MIT OR Apache-2.0](https://img.shields.io/badge/licence-MIT%20OR%20Apache--2.0-blue)](#license)
 ![Status: beta](https://img.shields.io/badge/status-beta%2C%20%E2%89%8895%25%20xfig%20parity-yellow)
@@ -16,6 +19,10 @@ XQuartz or WSL.
   xfig and fig2dev read unchanged.
 - **It runs everywhere.** Native on macOS, Windows and Linux, no X11, X
   server or XQuartz needed; a web build for the browser is in testing.
+- **Lightning fast.** RustFig opens drawings 4 to 6 times faster than xfig
+  and zooms, pans, moves and saves faster on most drawings, with smooth
+  lines and text. Its fig2dev writes PDF up to 18 times faster than the C
+  fig2dev ([the measurements](docs/speed-compare.md)).
 - **LaTeX on the canvas.** Text with the TeX flag is typeset by your TeX installation
   and shown as it will print, formulas included; plots of functions and
   data with LaTeX labels.
