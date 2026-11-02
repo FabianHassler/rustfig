@@ -248,6 +248,11 @@ fn import_inner(bytes: &[u8], stem: &str, dir: Option<&std::path::Path>) -> Resu
         out_of_colours: false,
         capped: false,
     };
+    // The root viewport clips everything, as in browsers: a rectangular clip.
+    let (pw, ph) = (f64::from(size.width()) * K, f64::from(size.height()) * K);
+    if let Some(page) = convex_ccw(&[(0.0, 0.0), (pw, 0.0), (pw, ph), (0.0, ph)]) {
+        imp.clips.push(page);
+    }
     imp.group(tree.root(), Affine::IDENTITY, 0);
     Ok(imp.finish())
 }
@@ -427,6 +432,20 @@ impl Importer {
         if clipped {
             self.clips.pop();
         }
+    }
+
+    /// Whether a box (Fig units) lies wholly outside one of the active clips.
+    fn box_outside_clips(&self, x0: f64, y0: f64, x1: f64, y1: f64) -> bool {
+        self.clips.iter().any(|c| {
+            let (mut cx0, mut cy0, mut cx1, mut cy1) = (f64::MAX, f64::MAX, f64::MIN, f64::MIN);
+            for &(x, y) in c {
+                cx0 = cx0.min(x);
+                cy0 = cy0.min(y);
+                cx1 = cx1.max(x);
+                cy1 = cy1.max(y);
+            }
+            x1 < cx0 || x0 > cx1 || y1 < cy0 || y0 > cy1
+        })
     }
 
     /// The clip path as one convex polygon in Fig units; `None` when it is
@@ -688,6 +707,12 @@ impl Importer {
             self.warn_once("dxdy", "Letter offsets (dx, dy) in text are ignored");
         }
         for x in out {
+            // About how far the text reaches from its origin (Fig units).
+            let reach = x.text.chars().count() as f64 * x.size * 10.0 + x.size * 17.0;
+            let (ox, oy) = (x.origin.x, x.origin.y);
+            if self.box_outside_clips(ox - reach, oy - reach, ox + reach, oy + reach) {
+                continue;
+            }
             self.push(Object::new(ObjectKind::Text(x)));
         }
         true
@@ -770,6 +795,9 @@ impl Importer {
         let ys = pts.iter().map(|p| p.y);
         let (x0, x1) = (xs.clone().fold(f64::MAX, f64::min), xs.fold(f64::MIN, f64::max));
         let (y0, y1) = (ys.clone().fold(f64::MAX, f64::min), ys.fold(f64::MIN, f64::max));
+        if self.box_outside_clips(x0, y0, x1, y1) {
+            return;
+        }
         let st = Style {
             thickness: 0,
             ..Style::default()
@@ -1447,7 +1475,35 @@ mod tests {
         let b = bounds(ps[0]);
         let near = |a: f64, v: f64| (a - v * K).abs() <= 1.5;
         assert!(
-            near(b.0, 0.0) && near(b.2, 100.0) && near(b.1, 50.0) && near(b.3, 100.0),
+            near(b.0, 0.0) && near(b.2, 96.0) && near(b.1, 50.0) && near(b.3, 96.0),
+            "{b:?}"
+        );
+    }
+
+    #[test]
+    fn the_page_clips_everything() {
+        // 96 px square page: a line from far outside to inside is cut at the edge; shapes outside vanish.
+        let r = import(
+            svg(r##"<polyline points="-500,48 48,48" fill="none" stroke="#000"/>
+                <polygon points="-50,-50 200,-50 200,200 -50,200" fill="#00f"/>
+                <rect x="300" y="10" width="20" height="20"/>
+                <circle cx="-300" cy="10" r="5"/>
+                <text x="500" y="20">far away</text>"##)
+            .as_bytes(),
+            "t",
+            None,
+        )
+        .unwrap();
+        let ps = polys(&r);
+        assert_eq!(r.doc.objects.len(), 2, "{:?}", r.doc.objects.len());
+        let b = bounds(ps[0]);
+        assert!(
+            (b.0 - 0.0).abs() <= 1.0 && (b.2 - 48.0 * K).abs() <= 1.0,
+            "line cut at the left edge: {b:?}"
+        );
+        let b = bounds(ps[1]);
+        assert!(
+            b.0 >= -1.0 && b.2 <= 96.0 * K + 1.0 && b.1 >= -1.0 && b.3 <= 96.0 * K + 1.0,
             "{b:?}"
         );
     }
