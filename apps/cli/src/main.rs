@@ -392,7 +392,14 @@ fn measure_group_drag(doc: &Document, report: &mut Report, scale_budget: f64) ->
     if doc.objects.len() < 2 {
         return Ok(());
     }
-    e.execute("edit.select_all", &json!({})).map_err(|e| e.message)?;
+    // Commands on a large selection must stay linear (`Vec::contains` or
+    // `Document::get` per selected id made these take seconds).
+    let (r, ms) = time(|| e.execute("edit.select_all", &json!({})));
+    r.map_err(|e| e.message)?;
+    report.add("select all", ms, 200.0 * scale_budget);
+    let (r, ms) = time(|| e.execute("transform.move", &json!({"dx": 60, "dy": 0, "reappend": true})));
+    r.map_err(|e| e.message)?;
+    report.add("move all (selected)", ms, 500.0 * scale_budget);
     let (r, ms) = time(|| e.execute("object.group", &json!({})));
     r.map_err(|e| e.message)?;
     report.add("group all", ms, 1000.0 * scale_budget);

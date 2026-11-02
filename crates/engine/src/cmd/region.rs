@@ -253,7 +253,7 @@ fn add_end(e: &mut Engine, p: &Value) -> CmdResult {
 }
 
 fn reverse_arrows(e: &mut Engine, p: &Value) -> CmdResult {
-    let ids = e.target_ids(p)?;
+    let ids = e.target_set(p)?;
     if ids.is_empty() {
         return Err(EngineError::bad_params("no objects selected"));
     }
@@ -288,7 +288,7 @@ fn break_all(e: &mut Engine, p: &Value) -> CmdResult {
             _ => out.push(o),
         }
     }
-    let ids = e.target_ids(p)?;
+    let ids = e.target_set(p)?;
     let doc = e.doc_mut();
     let mut out = Vec::new();
     let mut freed = Vec::new();

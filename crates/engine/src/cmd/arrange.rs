@@ -318,7 +318,7 @@ enum Stack {
 }
 
 fn restack(e: &mut Engine, p: &Value, how: Stack) -> CmdResult {
-    let ids = e.target_ids(p)?;
+    let ids = e.target_set(p)?;
     let others: Vec<i32> = e
         .doc()
         .objects
@@ -345,7 +345,7 @@ fn restack(e: &mut Engine, p: &Value, how: Stack) -> CmdResult {
 }
 
 fn set_depth(e: &mut Engine, p: &Value) -> CmdResult {
-    let ids = e.target_ids(p)?;
+    let ids = e.target_set(p)?;
     let d = (num(p, "depth")?.round() as i32).clamp(0, MAX_DEPTH);
     for o in e.doc_mut().objects.iter_mut() {
         if ids.contains(&o.id) {

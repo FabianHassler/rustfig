@@ -207,7 +207,7 @@ pub(super) fn commands() -> Vec<Command> {
 }
 
 fn clone_targets(e: &Engine, p: &Value) -> Result<Vec<Object>, EngineError> {
-    let ids = e.target_ids(p)?;
+    let ids = e.target_set(p)?;
     Ok(e.doc()
         .objects
         .iter()
@@ -536,7 +536,7 @@ fn opt_count(p: &Value, key: &str) -> Result<Option<u32>, EngineError> {
 }
 
 fn delete(e: &mut Engine, p: &Value) -> CmdResult {
-    let ids = e.target_ids(p)?;
+    let ids = e.target_set(p)?;
     if ids.is_empty() {
         return Err(EngineError::bad_params("nothing to delete"));
     }

@@ -213,7 +213,7 @@ fn group(e: &mut Engine, p: &Value) -> CmdResult {
 }
 
 fn ungroup(e: &mut Engine, p: &Value) -> CmdResult {
-    let ids = e.target_ids(p)?;
+    let ids = e.target_set(p)?;
     let doc = e.doc_mut();
     let mut out = Vec::new();
     let mut freed = Vec::new();
@@ -261,7 +261,7 @@ fn walk_mut(o: &mut Object, f: &mut dyn FnMut(&mut Object)) {
 }
 
 pub(super) fn for_targets(e: &mut Engine, p: &Value, f: &mut dyn FnMut(&mut Object)) -> Result<usize, EngineError> {
-    let ids = e.target_ids(p)?;
+    let ids = e.target_set(p)?;
     if ids.is_empty() {
         return Err(EngineError::bad_params("no objects selected"));
     }
@@ -308,7 +308,7 @@ fn apply_local(t: &mut rustfig_model::Text, choice: &Option<(String, i32)>) {
 
 fn set_local_font(e: &mut Engine, p: &Value) -> CmdResult {
     let choice = local_choice(&json!({"local_font": p.get("name").cloned().unwrap_or(Value::Null)}))?.unwrap_or(None);
-    let ids = e.target_ids(p)?;
+    let ids = e.target_set(p)?;
     if let Some((name, font)) = &choice {
         e.indicator.local_font = Some(name.clone());
         e.indicator.font = *font;
@@ -574,7 +574,7 @@ pub(super) fn set_attributes_inner(e: &mut Engine, p: &Value) -> CmdResult {
         if list.iter().any(|t| t.len() > rustfig_format::MAX_TEXT_BYTES) {
             return Err(EngineError::bad_params("text is too long"));
         }
-        let ids = e.target_ids(p)?;
+        let ids = e.target_set(p)?;
         for o in e.doc_mut().objects.iter_mut() {
             if !ids.contains(&o.id) {
                 continue;
@@ -593,7 +593,7 @@ pub(super) fn set_attributes_inner(e: &mut Engine, p: &Value) -> CmdResult {
     // A comment belongs to the edited object itself (a compound's own
     // comment, not its members').
     if let Some(c) = &comment {
-        let ids = e.target_ids(p)?;
+        let ids = e.target_set(p)?;
         let lines: Vec<String> = if c.is_empty() {
             Vec::new()
         } else {
@@ -609,7 +609,7 @@ pub(super) fn set_attributes_inner(e: &mut Engine, p: &Value) -> CmdResult {
 }
 
 fn get(e: &mut Engine, p: &Value) -> CmdResult {
-    let ids = e.target_ids(p)?;
+    let ids = e.target_set(p)?;
     let objs: Vec<&Object> = e
         .doc()
         .objects

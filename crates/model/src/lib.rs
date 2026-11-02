@@ -293,6 +293,14 @@ impl Document {
         self.objects.iter().find(|o| o.id == id).map(|o| &**o)
     }
 
+    /// The top-level objects with the given ids, in the order of `ids`
+    /// (unknown ids are skipped): one pass, where `get` per id would be
+    /// quadratic for a large selection.
+    pub fn get_many(&self, ids: &[ObjectId]) -> Vec<&Object> {
+        let by_id: std::collections::HashMap<ObjectId, &Object> = self.objects.iter().map(|o| (o.id, &**o)).collect();
+        ids.iter().filter_map(|id| by_id.get(id).copied()).collect()
+    }
+
     /// The shared handle of the top-level object with the given id.
     pub fn get_arc(&self, id: ObjectId) -> Option<&std::sync::Arc<Object>> {
         self.objects.iter().find(|o| o.id == id)

@@ -57,12 +57,15 @@ use history::History;
 use rustfig_geom::{Point, Rect};
 use rustfig_model::{Document, Object, ObjectId, ObjectKind, Text};
 use serde_json::Value;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
 use std::sync::Arc;
 
 /// A cached box of a top-level object: the picking box (a superset of the
 /// drawn object) and, once asked for, fig2dev's bounds of it.
 type BoxEntry = (Arc<Object>, Rect, std::cell::Cell<Option<Rect>>);
+
+/// Objects per depth, by depth.
+type DepthCounts = Vec<(i32, usize)>;
 
 /// Something the engine asks the UI to do (open a dialog, pick a file).
 #[derive(Debug, Clone, PartialEq)]
@@ -185,6 +188,8 @@ pub struct Engine {
     /// belongs to: a changed object is a new `Arc`, so entries stay right
     /// even while a command runs.
     bbox_cache: std::cell::RefCell<Vec<BoxEntry>>,
+    /// [`Engine::depth_counts`] for the revision it was counted at.
+    depth_cache: std::cell::RefCell<Option<(u64, DepthCounts)>>,
 }
 
 impl Default for Engine {
@@ -243,6 +248,7 @@ impl Engine {
             status: "READY. Select a mode or load a file".to_string(),
             changed: false,
             bbox_cache: std::cell::RefCell::new(Vec::new()),
+            depth_cache: std::cell::RefCell::new(None),
         }
     }
 
@@ -315,11 +321,17 @@ impl Engine {
 
     /// Replace the selection (unknown ids are dropped).
     pub fn set_selection(&mut self, ids: Vec<ObjectId>) {
-        let mut seen = BTreeSet::new();
+        // A set, not `doc.get` per id: selecting everything stays linear.
+        let present = self.top_level_ids();
+        let mut seen = HashSet::new();
         self.selection = ids
             .into_iter()
-            .filter(|id| self.doc.get(*id).is_some() && seen.insert(*id))
+            .filter(|id| present.contains(id) && seen.insert(*id))
             .collect();
+    }
+
+    fn top_level_ids(&self) -> HashSet<ObjectId> {
+        self.doc.objects.iter().map(|o| o.id).collect()
     }
 
     pub fn path(&self) -> Option<&str> {
@@ -493,8 +505,17 @@ impl Engine {
     }
 
     fn prune_selection(&mut self) {
-        let doc = &self.doc;
-        self.selection.retain(|id| doc.get(*id).is_some());
+        if self.selection.is_empty() {
+            return;
+        }
+        let present = self.top_level_ids();
+        self.selection.retain(|id| present.contains(id));
+    }
+
+    /// [`Engine::target_ids`] as a set, for membership tests in a pass
+    /// over the document.
+    pub fn target_set(&self, params: &Value) -> Result<HashSet<ObjectId>, EngineError> {
+        Ok(self.target_ids(params)?.into_iter().collect())
     }
 
     /// Ids from a `"ids"` parameter, or the selection when absent.
@@ -502,13 +523,14 @@ impl Engine {
         match params.get("ids") {
             None | Some(Value::Null) => Ok(self.selection.clone()),
             Some(Value::Array(a)) => {
+                let present = self.top_level_ids();
                 let mut out = Vec::new();
                 for v in a {
                     let id = v
                         .as_u64()
                         .ok_or_else(|| EngineError::bad_params("ids must be an array of object ids"))?;
                     let id = ObjectId(id);
-                    if self.doc.get(id).is_none() {
+                    if !present.contains(&id) {
                         return Err(EngineError::bad_params(format!("no top-level object with id {}", id.0)));
                     }
                     out.push(id);
@@ -857,10 +879,19 @@ impl Engine {
 
     /// Number of objects (leaves) at each depth in use, front to back.
     pub fn depth_counts(&self) -> Vec<(i32, usize)> {
+        // The depth panel asks every frame: count once per revision.
+        let rev = self.revision();
+        if let Some((r, c)) = &*self.depth_cache.borrow() {
+            if *r == rev {
+                return c.clone();
+            }
+        }
         let mut m = std::collections::BTreeMap::new();
         self.doc
             .for_each_leaf(&mut |o| *m.entry(o.depth()).or_insert(0usize) += 1);
-        m.into_iter().collect()
+        let c: Vec<(i32, usize)> = m.into_iter().collect();
+        *self.depth_cache.borrow_mut() = Some((rev, c.clone()));
+        c
     }
 
     /// Whether any leaf of the object is on a visible depth.

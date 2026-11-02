@@ -102,7 +102,7 @@ fn changed_copies(
         }
         super::object::set_attributes_inner(e, &a)?;
     }
-    Ok(ids.iter().filter_map(|id| e.doc.get(*id).cloned()).collect())
+    Ok(e.doc.get_many(ids).into_iter().cloned().collect())
 }
 
 impl Engine {

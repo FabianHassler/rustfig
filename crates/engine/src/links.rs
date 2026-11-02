@@ -139,11 +139,7 @@ pub(crate) fn collect(e: &Engine, ids: &[ObjectId]) -> Vec<Link> {
     if e.indicator.linkmode == LinkMode::Off {
         return Vec::new();
     }
-    let targets: Vec<Target> = ids
-        .iter()
-        .filter_map(|id| e.doc().get(*id))
-        .filter_map(target_of)
-        .collect();
+    let targets: Vec<Target> = e.doc().get_many(ids).into_iter().filter_map(target_of).collect();
     collect_for(e, ids, &targets)
 }
 

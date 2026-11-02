@@ -114,7 +114,7 @@ pub(crate) fn apply(e: &mut Engine, p: &Value, t: Affine, scale_text: bool) -> C
     let links = crate::links::collect(e, &ids);
     let follow = |q: Point| t.apply(q);
     if opt_bool(p, "copy")?.unwrap_or(false) {
-        let copies: Vec<_> = ids.iter().filter_map(|i| e.doc().get(*i).cloned()).collect();
+        let copies: Vec<_> = e.doc().get_many(&ids).into_iter().cloned().collect();
         let mut new_ids = Vec::new();
         for mut o in copies {
             o.transform(&t, scale_text);
@@ -124,8 +124,9 @@ pub(crate) fn apply(e: &mut Engine, p: &Value, t: Affine, scale_text: bool) -> C
         e.set_selection(new_ids.clone());
         return Ok(json!({"count": new_ids.len(), "ids": super::ids_value(&new_ids)}));
     }
+    let set: std::collections::HashSet<_> = ids.iter().copied().collect();
     for o in e.doc_mut().objects.iter_mut() {
-        if ids.contains(&o.id) {
+        if set.contains(&o.id) {
             Arc::make_mut(o).transform(&t, scale_text);
         }
     }
@@ -135,9 +136,10 @@ pub(crate) fn apply(e: &mut Engine, p: &Value, t: Affine, scale_text: bool) -> C
 
 fn center(e: &Engine, p: &Value) -> Result<Point, EngineError> {
     let ids = e.target_ids(p)?;
-    let bb = ids
-        .iter()
-        .filter_map(|i| e.doc().get(*i))
+    let bb = e
+        .doc()
+        .get_many(&ids)
+        .into_iter()
         .fold(rustfig_geom::Rect::EMPTY, |r, o| r.union(&o.geometry_bbox()));
     let c = if bb.is_empty() { Point::ZERO } else { bb.center() };
     Ok(Point::new(num_or(p, "cx", c.x)?, num_or(p, "cy", c.y)?))
@@ -163,6 +165,7 @@ pub(super) fn reappend(e: &mut Engine, p: &Value) {
 
 /// Move the objects to the end of the list, keeping their order.
 pub(super) fn move_to_end(e: &mut Engine, ids: &[rustfig_model::ObjectId]) {
+    let ids: std::collections::HashSet<_> = ids.iter().copied().collect();
     let objs = &mut e.doc_mut().objects;
     let (moved, mut rest): (Vec<_>, Vec<_>) = std::mem::take(objs).into_iter().partition(|o| ids.contains(&o.id));
     rest.extend(moved);
