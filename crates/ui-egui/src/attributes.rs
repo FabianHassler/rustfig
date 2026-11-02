@@ -211,7 +211,7 @@ impl Attr {
             Attr::PenColor | Attr::FillColor => 82.0,
             // A one-line label, the value on the line below.
             Attr::FontSize => 64.0,
-            Attr::ArrowSize => 104.0,
+            Attr::ArrowSize => 68.0,
             Attr::TextFlags | Attr::TangentLength => 90.0,
             Attr::TextAngle => 104.0,
             Attr::Font => 170.0,
@@ -2443,16 +2443,6 @@ fn arrow_size_face(ui: &Ui, ind: &Indicator, rect: Rect, tint: Color32) {
         (l * 100.0) as i64,
         i64::from(st.thickness),
     ];
-    // The three numbers as xfig shows them, small, at the left.
-    let nums = format!("{} {} {}", fmt_g(t), fmt_g(w), fmt_g(l));
-    let font = egui::FontId::proportional(9.0);
-    ui.painter().text(
-        pos2(rect.left(), rect.center().y),
-        egui::Align2::LEFT_CENTER,
-        nums,
-        font,
-        tint,
-    );
     // Unscaled, the tip at the right end of the value box.
     let pic = Rect::from_min_size(
         pos2(rect.right() - W as f32, rect.center().y - H as f32 / 2.0),
@@ -2469,26 +2459,33 @@ fn arrow_size_face(ui: &Ui, ind: &Indicator, rect: Rect, tint: Color32) {
     );
 }
 
-/// Box Curve's face: a rounded rectangle with the current corner radius,
-/// drawn large and shown small, with radii up to 60 told apart (the number
-/// is beside it).
+/// Box Curve's face: one corner of a rounded box with the current corner
+/// radius (the rest of the box lies outside the picture), radii up to 60
+/// told apart; the number is beside it.
 fn box_curve_face(ui: &Ui, ind: &Indicator, rect: Rect, tint: Color32) {
     use rustfig_model::{Object, ObjectKind, PolyKind, Polyline, Style};
-    const W: usize = 88;
-    const H: usize = 64;
+    const W: usize = 64;
+    const H: usize = 48;
     let u = rustfig_geom::FIG_PER_STYLE_UNIT;
     let pt = |x: f64, y: f64| rustfig_geom::Point::new(x * u, y * u);
     let mut st = Style::default();
     st.thickness = 6;
+    // A box far larger than the picture: only its top-left corner shows.
     let mut p = Polyline::new(
         PolyKind::ArcBox,
         st,
-        vec![pt(4.0, 4.0), pt(84.0, 4.0), pt(84.0, 60.0), pt(4.0, 60.0), pt(4.0, 4.0)],
+        vec![
+            pt(6.0, 6.0),
+            pt(400.0, 6.0),
+            pt(400.0, 400.0),
+            pt(6.0, 400.0),
+            pt(6.0, 6.0),
+        ],
     );
-    // 0 to 60 map to square to fully round (half the short side, 28).
-    let shown = (f64::from(ind.box_radius.clamp(0, 60)) * 28.0 / 60.0).round() as i32;
+    // 0 to 60 map to a sharp corner to a quarter circle filling the picture's height.
+    let shown = (f64::from(ind.box_radius.clamp(0, 60)) * 40.0 / 60.0).round() as i32;
     p.radius = shown;
-    let key = [i64::from(shown), 0, 0, 0];
+    let key = [i64::from(shown), 1, 0, 0];
     live_face(
         ui,
         "box_curve",
