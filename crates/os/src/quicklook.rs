@@ -59,12 +59,18 @@ mod mac {
     use std::sync::OnceLock;
 
     #[link(name = "Foundation", kind = "framework")]
-    #[link(name = "QuickLook", kind = "framework")]
-    #[link(name = "QuickLookThumbnailing", kind = "framework")]
-    #[link(name = "UniformTypeIdentifiers", kind = "framework")]
     unsafe extern "C" {
         fn NSExtensionMain(argc: c_int, argv: *const *const c_char) -> c_int;
     }
+
+    // The provider classes come from these frameworks; one block each, as
+    // clippy rejects several `link` attributes on one block.
+    #[link(name = "QuickLook", kind = "framework")]
+    unsafe extern "C" {}
+    #[link(name = "QuickLookThumbnailing", kind = "framework")]
+    unsafe extern "C" {}
+    #[link(name = "UniformTypeIdentifiers", kind = "framework")]
+    unsafe extern "C" {}
 
     static RENDER: OnceLock<RenderFn> = OnceLock::new();
 
