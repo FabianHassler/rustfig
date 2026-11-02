@@ -84,7 +84,14 @@ impl Delta {
         let removed: Vec<Arc<Object>> = objects.splice(prefix..len - suffix, middle).collect();
         rest.objects = objects;
         cur.objects = removed;
-        (rest, Delta { rest: cur, prefix, suffix })
+        (
+            rest,
+            Delta {
+                rest: cur,
+                prefix,
+                suffix,
+            },
+        )
     }
 
     /// Memory this step holds that its base does not share (an estimate).

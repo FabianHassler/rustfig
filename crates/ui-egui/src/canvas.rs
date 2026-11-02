@@ -100,7 +100,8 @@ fn set_drag_layer(
 pub struct CanvasState {
     #[cfg(not(target_arch = "wasm32"))]
     layer_job: Option<LayerJob>,
-    /// Milliseconds the last drag layer took.
+    /// Milliseconds the last drag layer took (decides on a background thread).
+    #[cfg(not(target_arch = "wasm32"))]
     layer_ms: f64,
     doc_tex: Option<TextureHandle>,
     /// What `doc_tex` shows (it may lag behind the view while a new raster
@@ -291,7 +292,6 @@ pub(crate) fn page_tiles(page: (f64, f64), vis: rustfig_geom::Rect) -> Vec<(f64,
     }
     out
 }
-
 
 /// The raster's pixels per point: the screen's, but no more than fits the
 /// biggest texture (`max_side` pixels) for a canvas `longest_side` points long.
@@ -610,8 +610,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         if let Some(job) = &app.canvas.layer_job {
             match job.rx.try_recv() {
                 Ok((img, ms)) => {
-                    let (key, shifted, anchor, margin) =
-                        (job.key.clone(), job.shifted.clone(), job.anchor, job.margin);
+                    let (key, shifted, anchor, margin) = (job.key.clone(), job.shifted.clone(), job.anchor, job.margin);
                     app.canvas.layer_job = None;
                     app.canvas.layer_ms = ms;
                     set_drag_layer(app, ui.ctx(), img, key, shifted, anchor, margin);
@@ -667,7 +666,6 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
             let background = app.canvas.layer_ms >= SYNC_RENDER_MS;
             #[cfg(target_arch = "wasm32")]
             let background = false;
-            let mut sync = !background;
             #[cfg(not(target_arch = "wasm32"))]
             if background {
                 let (tx, rx) = std::sync::mpsc::channel();
@@ -688,15 +686,10 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
                             margin,
                             rx,
                         });
-                        sync = false;
                     }
-                    // No thread: the closure moved into the failed spawn; fall back below.
-                    Err(_) => sync = true,
-                }
-                if sync {
-                    // The closure is gone with the failed spawn; draw nothing
-                    // this frame and let the next try render synchronously.
-                    app.canvas.layer_ms = 0.0;
+                    // No thread: the closure went with the failed spawn; draw
+                    // nothing this frame and render synchronously next time.
+                    Err(_) => app.canvas.layer_ms = 0.0,
                 }
             } else {
                 let start = web_time_now();
@@ -706,10 +699,10 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
             }
             #[cfg(target_arch = "wasm32")]
             {
+                let _ = background;
                 let img = render();
                 set_drag_layer(app, ui.ctx(), img, key.clone(), overlay.shifted.clone(), anchor, margin);
             }
-            let _ = sync;
         }
         if let Some(l) = &app.canvas.drag_layer {
             if l.key == key && l.shifted == overlay.shifted {

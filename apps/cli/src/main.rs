@@ -415,7 +415,14 @@ fn measure_group_drag(doc: &Document, report: &mut Report, scale_budget: f64) ->
     e.execute("tool.move", &json!({})).map_err(|e| e.message)?;
     use rustfig_engine::tools::{Button, ToolEvent};
     let ev = |e: &mut Engine, ev| e.tool_event(ev).map_err(|e| e.message);
-    ev(&mut e, ToolEvent::Press { pos: p0, button: Button::Left, shift: false })?;
+    ev(
+        &mut e,
+        ToolEvent::Press {
+            pos: p0,
+            button: Button::Left,
+            shift: false,
+        },
+    )?;
     let steps = 40usize;
     let (r, ms) = time(|| {
         for i in 1..=steps {
@@ -428,7 +435,15 @@ fn measure_group_drag(doc: &Document, report: &mut Report, scale_budget: f64) ->
     r?;
     report.add("drag (per move step)", ms / steps as f64, 20.0 * scale_budget);
     let end = Point::new(p0.x + 40.0 * steps as f64, p0.y + 20.0 * steps as f64);
-    let (r, ms) = time(|| ev(&mut e, ToolEvent::Release { pos: end, button: Button::Left }));
+    let (r, ms) = time(|| {
+        ev(
+            &mut e,
+            ToolEvent::Release {
+                pos: end,
+                button: Button::Left,
+            },
+        )
+    });
     r?;
     report.add("drag release (commit)", ms, 100.0 * scale_budget);
     let after = e.doc().objects.first().map(|o| o.geometry_bbox());

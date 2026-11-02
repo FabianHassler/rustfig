@@ -15,11 +15,12 @@ pub use fig2dev::scene::{
     font_px, head_at_end, line_width, pattern, raster, Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim,
 };
 
-
 /// Fewer primitives than this are rasterised on one thread: the bands cost
 /// more than they save.
+#[cfg(not(target_arch = "wasm32"))]
 const PARALLEL_MIN_PRIMS: usize = 3000;
 /// Thinnest band (device rows) worth a thread of its own.
+#[cfg(not(target_arch = "wasm32"))]
 const PARALLEL_MIN_BAND: usize = 48;
 
 /// Rasterise `scene` into a new `w` x `h` pixmap, in horizontal bands on
@@ -525,7 +526,8 @@ mod tests {
                     Point::new(x, y),
                 ],
             );
-            doc.objects.push(std::sync::Arc::new(Object::new(ObjectKind::Polyline(p))));
+            doc.objects
+                .push(std::sync::Arc::new(Object::new(ObjectKind::Polyline(p))));
         }
         let scene = build_scene(&doc, &SceneOptions::default());
         let opts = raster::RasterOptions {
