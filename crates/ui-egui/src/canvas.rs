@@ -68,6 +68,9 @@ pub struct CanvasState {
     panning: bool,
     /// Milliseconds the last document render took.
     pub render_ms: f64,
+    /// The raster on screen is not the current view yet (a render is running or about to start);
+    /// the control channel reports it as `canvas_pending` (speed measurements wait for it).
+    pub pending: bool,
     /// A touch held down, waiting to become a right click.
     long_press: LongPress,
     /// Ctrl+wheel notches not yet turned into a zoom step (a trackpad
@@ -129,6 +132,11 @@ impl LongPress {
 }
 
 impl CanvasState {
+    /// The document raster on screen is not the current view yet, or nothing was drawn so far.
+    pub fn is_pending(&self) -> bool {
+        self.pending || self.doc_key.is_none()
+    }
+
     /// Drop cached rasters so the next frame redraws everything.
     pub fn invalidate(&mut self) {
         self.doc_key = None;
@@ -531,6 +539,11 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
             set_doc_texture(app, ui.ctx(), img, key.clone());
         }
     }
+    #[cfg(not(target_arch = "wasm32"))]
+    let render_running = app.canvas.job.is_some();
+    #[cfg(target_arch = "wasm32")]
+    let render_running = false;
+    app.canvas.pending = render_running || app.canvas.doc_key.as_ref() != Some(&key);
     let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
     if let (Some(tex), Some(shown)) = (&app.canvas.doc_tex, &app.canvas.doc_key) {
         // The raster where its view puts it in the current one: exact when

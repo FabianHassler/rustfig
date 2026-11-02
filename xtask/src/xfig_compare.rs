@@ -20,13 +20,13 @@ use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
 /// Window size in points / pixels, the same for both apps.
-const WIN_W: u32 = 1400;
-const WIN_H: u32 = 1000;
+pub(crate) const WIN_W: u32 = 1400;
+pub(crate) const WIN_H: u32 = 1000;
 /// xfig's canvas origin in the window (pixels) at zoom 1: Fig (0,0).
-const XF_CX: f64 = 75.0;
-const XF_CY: f64 = 74.0;
+pub(crate) const XF_CX: f64 = 75.0;
+pub(crate) const XF_CY: f64 = 74.0;
 /// Fig units per pixel at zoom 1 (1200 per inch, 80 pixels per inch).
-const FU_PER_PX: f64 = 15.0;
+pub(crate) const FU_PER_PX: f64 = 15.0;
 /// Canvas crop compared (pixels), and where xfig's menu entries sit (File menu, Save).
 const CROP_W: u32 = 1000;
 const CROP_H: u32 = 680;
@@ -235,7 +235,7 @@ const MODES: &[(&str, bool, usize, &str)] = &[
 ];
 
 /// xfig's mode button centre (window pixels).
-fn xfig_mode_xy(draw: bool, idx: usize) -> (i32, i32) {
+pub(crate) fn xfig_mode_xy(draw: bool, idx: usize) -> (i32, i32) {
     let (col, row) = (idx % 2, idx / 2);
     let x = if draw && idx == 14 {
         37
@@ -2333,18 +2333,18 @@ fn scenarios() -> Vec<Scenario> {
 
 // ---------------------------------------------------------------- tools
 
-fn have(tool: &str, extra_dirs: &[&str]) -> bool {
+pub(crate) fn have(tool: &str, extra_dirs: &[&str]) -> bool {
     let path = std::env::var("PATH").unwrap_or_default();
     path.split(':')
         .chain(extra_dirs.iter().copied())
         .any(|d| Path::new(d).join(tool).is_file())
 }
 
-fn sleep_ms(ms: u64) {
+pub(crate) fn sleep_ms(ms: u64) {
     std::thread::sleep(Duration::from_millis(ms));
 }
 
-fn sh(display: &str, script: &str) -> Result<(), String> {
+pub(crate) fn sh(display: &str, script: &str) -> Result<(), String> {
     let st = Command::new("sh")
         .arg("-c")
         .arg(script)
@@ -2418,7 +2418,7 @@ struct Rf {
     mods: Vec<String>,
 }
 
-fn json_str(s: &str) -> String {
+pub(crate) fn json_str(s: &str) -> String {
     let mut o = String::from("\"");
     for c in s.chars() {
         match c {
@@ -2431,7 +2431,7 @@ fn json_str(s: &str) -> String {
     o
 }
 
-fn numbers_after(s: &str, key: &str, n: usize) -> Option<Vec<f64>> {
+pub(crate) fn numbers_after(s: &str, key: &str, n: usize) -> Option<Vec<f64>> {
     let i = s.find(key)? + key.len();
     let rest = s.get(i..)?;
     let end = rest.find(']')?;

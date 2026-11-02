@@ -1,0 +1,251 @@
+--- a/src/f_load.c
++++ b/src/f_load.c
+@@ -16,6 +16,7 @@
+  *
+  */
+ 
++#include "xtiming.h"
+ #include "f_load.h"
+ 
+ #include <errno.h>
+@@ -88,7 +89,9 @@
+     /* object counters for depths */
+     clearallcounts();
+ 
++    { double xt0 = xt_begin();
+     s = read_figc(file, &c, DONT_MERGE, REMAP_IMAGES, xoff, yoff, &settings);
++    xt_end("read_fig", xt0); }
+     defer_update_layers = 1;	/* so update_layers() won't update for each object */
+     add_compound_depth(&c);	/* count objects at each depth */
+     defer_update_layers = 0;
+--- a/src/f_save.c
++++ b/src/f_save.c
+@@ -17,6 +17,7 @@
+  */
+ 
+ #ifdef HAVE_CONFIG_H
++#include "xtiming.h"
+ #include "config.h"
+ #endif
+ #include "f_save.h"
+@@ -87,7 +88,16 @@
+ 	return write_objects(fp);
+ }
+ 
++static int write_file_impl(char *file_name, Boolean update_recent);
+ int write_file(char *file_name, Boolean update_recent)
++{
++    double xt0 = xt_begin();
++    int xt_r = write_file_impl(file_name, update_recent);
++    xt_end("save", xt0);
++    return xt_r;
++}
++
++static int write_file_impl(char *file_name, Boolean update_recent)
+ {
+ 	FILE	   *fp;
+ 
+--- a/src/main.c
++++ b/src/main.c
+@@ -17,6 +17,7 @@
+  */
+ 
+ #ifdef HAVE_CONFIG_H
++#include "xtiming.h"
+ #include "config.h"
+ #endif
+ #include "main.h"
+@@ -634,6 +635,7 @@
+ 	char		tmpstr[PATH_MAX];
+ 
+ 
++	{ double xt0 = xt_begin(); xt_end("main_start", xt0); }
+ 	export_up = False;
+ 	geomspec = False;
+ 
+--- a/src/u_redraw.c
++++ b/src/u_redraw.c
+@@ -16,6 +16,7 @@
+  *
+  */
+ 
++#include "xtiming.h"
+ #include "u_redraw.h"
+ 
+ #include <string.h>
+@@ -448,8 +449,16 @@
+     }
+ }
+ 
++static void redisplay_region_impl(int xmin, int ymin, int xmax, int ymax);
+ void redisplay_region(int xmin, int ymin, int xmax, int ymax)
+ {
++    double xt0 = xt_begin();
++    redisplay_region_impl(xmin, ymin, xmax, ymax);
++    xt_end("redraw", xt0);
++}
++
++static void redisplay_region_impl(int xmin, int ymin, int xmax, int ymax)
++{
+     /* if we're generating a preview, don't redisplay the canvas
+        but set request flag so preview will call us with full canvas
+        after it is done generating the preview */
+--- a/src/u_undo.c
++++ b/src/u_undo.c
+@@ -20,6 +20,7 @@
+ 
+ /**************** IMPORTS ****************/
+ 
++#include "xtiming.h"
+ #include "u_undo.h"
+ 
+ #include <stdlib.h>
+@@ -111,8 +112,17 @@
+ void set_action_object (int action, int object);
+ void swap_newp_lastp (void);
+ 
++static void undo_impl(void);
+ void
+ undo(void)
++{
++    double xt0 = xt_begin();
++    undo_impl();
++    xt_end("undo", xt0);
++}
++
++static void
++undo_impl(void)
+ {
+     /* turn off Compose key LED */
+     setCompLED(0);
+--- a/src/w_canvas.c
++++ b/src/w_canvas.c
+@@ -17,6 +17,7 @@
+  */
+ 
+ #ifdef HAVE_CONFIG_H
++#include "xtiming.h"
+ #include "config.h"
+ #endif
+ #include "w_canvas.h"
+@@ -403,7 +404,9 @@
+ #endif /* SMOOTHMOTION */
+ 
+ 		set_rulermark(x, y);
++		{ double xt0 = xt_begin(); int xt_mv = (cur_mode == F_MOVE && action_on);
+ 		(*canvas_locmove_proc) (x, y);
++		if (xt_mv) xt_end("move_step", xt0); }
+ 		break;
+ 
+ 
+@@ -467,9 +470,12 @@
+ 			break;
+ 		}
+ 
+-		if (be->button == Button1)
++		if (be->button == Button1) {
+ 			/* left button proc */
++			double xt0 = xt_begin(); int xt_pl = (cur_mode == F_MOVE && action_on);
+ 			(*canvas_leftbut_proc) (x, y, be->state & ShiftMask);
++			if (xt_pl) xt_end("place", xt0);
++		}
+ 
+ 		else if (be->button == Button2)
+ 			/* middle button proc */
+--- a/src/w_grid.c
++++ b/src/w_grid.c
+@@ -16,6 +16,7 @@
+  *
+  */
+ 
++#include "xtiming.h"
+ #include "w_grid.h"
+ 
+ #include <X11/StringDefs.h>
+@@ -59,8 +60,16 @@
+ 
+ /* grid in X11 is simply the background of the canvas */			// isometric grid
+ 
++static void setup_grid_impl(void);
+ void setup_grid(void)
+ {
++    double xt0 = xt_begin();
++    setup_grid_impl();
++    xt_end("setup_grid", xt0);
++}
++
++static void setup_grid_impl(void)
++{
+     double	spacing;			/* grid spacing in pixels */
+     double	x, x0c, y, y0c, y1c;
+     int		grid, grid_unit;
+--- a/src/w_indpanel.c
++++ b/src/w_indpanel.c
+@@ -17,6 +17,7 @@
+  */
+ 
+ #ifdef HAVE_CONFIG_H
++#include "xtiming.h"
+ #include "config.h"
+ #endif
+ #include "w_indpanel.h"
+@@ -4670,6 +4671,7 @@
+ void
+ show_zoom(ind_sw_info *sw)
+ {
++    double xt_zoom0 = xt_begin();
+     /* turn off Compose key LED */
+     setCompLED(0);
+ 
+@@ -4712,6 +4714,7 @@
+     /* fix up the rulers and grid */
+     reset_rulers();
+     setup_grid();
++    xt_end("zoom", xt_zoom0);
+ }
+ 
+ /* DEPTH */
+--- a/src/xtiming.h
++++ b/src/xtiming.h
+@@ -0,0 +1,41 @@
++/* Timing hooks for speed measurements (not part of xfig 3.2.9a).
++ * Active only when the environment variable XFIG_TIMING is set to something other than "0";
++ * otherwise every hook does nothing.  Each measured span ends with XSync(), so the X server's
++ * drawing is included, and is printed to stderr as
++ *     XT <name> <start, CLOCK_MONOTONIC ms> <duration ms>
++ */
++#ifndef XTIMING_H
++#define XTIMING_H
++#include <stdio.h>
++#include <stdlib.h>
++#include <time.h>
++#include <X11/Xlib.h>
++extern Display *tool_d;
++static inline double xt_now(void)
++{
++    struct timespec ts;
++    clock_gettime(CLOCK_MONOTONIC, &ts);
++    return ts.tv_sec * 1e3 + ts.tv_nsec / 1e6;
++}
++static inline int xt_on(void)
++{
++    static int v = -1;
++    if (v < 0) {
++	const char *e = getenv("XFIG_TIMING");
++	v = (e && *e && *e != '0');
++    }
++    return v;
++}
++static inline double xt_begin(void) { return xt_on() ? xt_now() : 0.0; }
++static inline void xt_end(const char *what, double t0)
++{
++    double t1;
++    if (!xt_on())
++	return;
++    if (tool_d)
++	XSync(tool_d, False);
++    t1 = xt_now();
++    fprintf(stderr, "XT %s %.3f %.3f\n", what, t0, t1 - t0);
++    fflush(stderr);
++}
++#endif

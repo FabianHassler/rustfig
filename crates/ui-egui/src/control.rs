@@ -155,6 +155,8 @@ pub fn handle(app: &mut App, method: &str, p: &Value) -> Result<Value, (&'static
             "path": app.engine.path(),
             "message": app.message.as_ref().map(|m| m.text.clone()),
             "render_ms": app.canvas.render_ms,
+            "canvas_pending": app.canvas.is_pending(),
+            "revision": app.engine.revision(),
             "frame_ms": app.frame_times.back().copied().unwrap_or(0.0),
             "frame_ms_max_recent": app.frame_times.iter().copied().fold(0.0, f64::max),
         })),
