@@ -12,8 +12,7 @@
 //! check is fig2dev's own function from `fig2dev::read`
 //! ([`repair_line`](fig2dev::read::repair_line),
 //! [`repair_arc`](fig2dev::read::repair_arc), `*_invalid`,
-//! [`apply_font_size`](fig2dev::read::apply_font_size),
-//! [`trim_text_start`](fig2dev::read::trim_text_start)), not a copy.
+//! [`apply_font_size`](fig2dev::read::apply_font_size)), not a copy.
 
 use super::from_model::{
     comments, context, give_children, note_arc, note_ellipse, note_line, note_spline, note_text, object_at, FigObject,
@@ -196,9 +195,9 @@ fn fix(obj: FigObject, ctx: &mut Ctx) -> Option<FigObject> {
             if text.contains(['\r', '\0']) || (text.contains('\\') && (text.ends_with('\\') || text.contains("001"))) {
                 return None;
             }
-            let trimmed = rd::trim_text_start(&text);
-            t.cstring = trimmed.to_string();
-            t.raw = trimmed.as_bytes().to_vec();
+            // The reader keeps a text's leading blanks (fig2dev 0.9.7, as
+            // xfig's f_read.c), so the text stays as written.
+            t.raw = text.as_bytes().to_vec();
             rd::apply_font_size(ctx.font_size, &mut t);
             if rd::text_invalid(&t) {
                 return None;

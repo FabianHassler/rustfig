@@ -5,6 +5,8 @@ mod ctan;
 mod libraries;
 mod package;
 mod site;
+// Drives xfig under Xvfb: Unix only.
+#[cfg(unix)]
 mod speed_compare;
 mod xfig_compare;
 
@@ -518,7 +520,10 @@ fn main() -> ExitCode {
         "package" => package::run(&root(), cargo()),
         "source-audit" => audit::run(&root()),
         "xfig-compare" => xfig_compare::run(&root(), cargo()),
+        #[cfg(unix)]
         "speed-compare" => speed_compare::run(&root()),
+        #[cfg(not(unix))]
+        "speed-compare" => Err("speed-compare runs xfig under Xvfb: Unix only".into()),
         "libraries" => libraries::run(&root()),
         "site" => site::run(&root()),
         "ctan" => ctan::run(&root(), &std::env::args().nth(2).unwrap_or_else(|| "HEAD".into())),

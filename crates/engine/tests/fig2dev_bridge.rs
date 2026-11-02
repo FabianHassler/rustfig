@@ -598,6 +598,31 @@ mod identity {
         serde_json::from_value(v).ok()
     }
 
+    /// A text with leading blanks keeps them on both paths (fig2dev 0.9.7
+    /// reads them as xfig does); the random test below found this only on
+    /// Windows, where the fixtures are listed in another order.
+    #[test]
+    fn leading_blanks_export_identically() {
+        set_clock();
+        let fig = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+                   4 0 0 50 -1 0 12 0.0000 4 135 405 1200 1200   lead\\001\n\
+                   4 0 0 50 -1 0 12 0.0000 4 135 405 1200 2400 \ttab\\001\n";
+        let doc = rustfig_format::read_any(fig.as_bytes()).unwrap();
+        let texts: Vec<String> = doc
+            .objects
+            .iter()
+            .filter_map(|o| match &o.kind {
+                rustfig_model::ObjectKind::Text(t) => Some(t.text.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(texts, ["  lead", "\ttab"]);
+        assert!(objects_used(&doc));
+        for lang in ["eps", "svg", "pdf", "tikz", "latex", "box"] {
+            check(&doc, lang, &vec![], "leading blanks");
+        }
+    }
+
     /// Fixtures and sample figures with random fields changed: through
     /// objects or text, the output is the same (or both fail the same way).
     #[test]
