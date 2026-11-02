@@ -22,6 +22,25 @@ const PARALLEL_MIN_PRIMS: usize = 3000;
 /// Thinnest band (device rows) worth a thread of its own.
 #[cfg(not(target_arch = "wasm32"))]
 const PARALLEL_MIN_BAND: usize = 48;
+/// Path points that make a scene worth bands even with few primitives (a
+/// few long polylines, like a space-filling curve, cost per point).
+#[cfg(not(target_arch = "wasm32"))]
+const PARALLEL_MIN_POINTS: usize = 8000;
+
+/// Points of all paths of `scene`, counting up to `cap`.
+#[cfg(not(target_arch = "wasm32"))]
+fn path_points(scene: &Scene, cap: usize) -> usize {
+    let mut n = 0;
+    for p in &scene.prims {
+        if let Prim::Path { subpaths, .. } = p {
+            n += subpaths.iter().map(|s| s.pts.len()).sum::<usize>();
+            if n >= cap {
+                break;
+            }
+        }
+    }
+    n
+}
 
 /// Rasterise `scene` into a new `w` x `h` pixmap, in horizontal bands on
 /// several threads when the scene is large (P6): each band is a pixmap of its
@@ -34,7 +53,10 @@ pub fn rasterize_banded(scene: &Scene, w: u32, h: u32, opts: &raster::RasterOpti
     {
         let threads = std::thread::available_parallelism().map_or(1, |n| n.get()).min(16);
         let bands = threads.min(h as usize / PARALLEL_MIN_BAND);
-        if bands >= 2 && scene.prims.len() >= PARALLEL_MIN_PRIMS {
+        if bands >= 2
+            && (scene.prims.len() >= PARALLEL_MIN_PRIMS
+                || path_points(scene, PARALLEL_MIN_POINTS) >= PARALLEL_MIN_POINTS)
+        {
             // More bands than threads smooths out uneven density.
             let n = (bands * 2).min(h as usize / PARALLEL_MIN_BAND).max(bands);
             let rows = (h as usize).div_ceil(n);
@@ -541,6 +563,50 @@ mod tests {
         let mut single = raster::Pixmap::new(700, 500).unwrap();
         raster::rasterize(&scene, &mut single, &opts);
         assert!(banded.data() == single.data(), "bands differ from a single render");
+    }
+
+    #[test]
+    fn few_long_polylines_are_banded_and_match_a_single_render() {
+        let mut doc = Document::new();
+        for i in 0..20 {
+            let mut style = Style::default();
+            style.thickness = 2;
+            let pts: Vec<Point> = (0..500)
+                .map(|k| {
+                    let f = f64::from(k);
+                    Point::new(f * 20.0, 4000.0 + f64::from(i) * 300.0 + (f * 0.7).sin() * 200.0)
+                })
+                .collect();
+            let p = Polyline::new(rustfig_model::PolyKind::Polyline, style, pts);
+            doc.objects
+                .push(std::sync::Arc::new(Object::new(ObjectKind::Polyline(p))));
+        }
+        let scene = build_scene(&doc, &SceneOptions::default());
+        assert!(scene.prims.len() < PARALLEL_MIN_PRIMS && path_points(&scene, usize::MAX) >= PARALLEL_MIN_POINTS);
+        let opts = raster::RasterOptions {
+            transform: rustfig_geom::Affine::scale(0.1, 0.1),
+            min_line_px: 1.0,
+            adjust_px: 0.0,
+            pattern_k: 1,
+            pattern: pattern::PatternFrame::screen(),
+        };
+        let banded = rasterize_banded(&scene, 1000, 800, &opts).unwrap();
+        let mut single = raster::Pixmap::new(1000, 800).unwrap();
+        raster::rasterize(&scene, &mut single, &opts);
+        // Strokes are not bit-identical across band edges (the stroker
+        // works in floats from a moved origin): a few edge pixels differ in
+        // coverage by a few percent.
+        let (mut n, mut mx) = (0, 0i32);
+        for (a, b) in banded.data().iter().zip(single.data()) {
+            if a != b {
+                n += 1;
+                mx = mx.max((i32::from(*a) - i32::from(*b)).abs());
+            }
+        }
+        assert!(
+            n < 2000 && mx <= 32,
+            "bands differ from a single render: {n} bytes, max {mx}"
+        );
     }
 
     #[test]
