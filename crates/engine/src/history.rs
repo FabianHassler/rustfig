@@ -52,6 +52,7 @@ impl Delta {
     }
 
     /// The document, rebuilt on `base` (the state it was recorded against).
+    #[cfg(test)]
     fn apply(self, base: &Document) -> Document {
         let b = &base.objects;
         // A base changed outside the history (never expected) still gives
@@ -66,6 +67,31 @@ impl Delta {
         objects.extend(b.iter().skip(b.len() - suffix).cloned());
         doc.objects = objects;
         doc
+    }
+
+    /// Swap this step with the document `cur` it was recorded against: `cur`
+    /// becomes the restored document (its middle run replaced by the
+    /// step's), and the run taken out becomes the step that undoes it.
+    /// Moves objects instead of cloning the shared prefix and suffix, so it
+    /// costs the size of the change, not of the drawing (P6).
+    fn swap(self, mut cur: Document) -> (Document, Delta) {
+        let len = cur.objects.len();
+        let prefix = self.prefix.min(len);
+        let suffix = self.suffix.min(len - prefix);
+        let mut rest = self.rest;
+        let middle = std::mem::take(&mut rest.objects);
+        let mut objects = std::mem::take(&mut cur.objects);
+        let removed: Vec<Arc<Object>> = objects.splice(prefix..len - suffix, middle).collect();
+        rest.objects = objects;
+        cur.objects = removed;
+        (
+            rest,
+            Delta {
+                rest: cur,
+                prefix,
+                suffix,
+            },
+        )
     }
 
     /// Memory this step holds that its base does not share (an estimate).
@@ -94,6 +120,11 @@ struct Entry {
 }
 
 impl Entry {
+    fn from_delta(delta: Delta, sel: Vec<ObjectId>, base: &Document) -> Entry {
+        let bytes = delta.bytes(base);
+        Entry { delta, sel, bytes }
+    }
+
     fn new((doc, sel): Snap, base: &Document) -> Entry {
         let delta = Delta::new(doc, base);
         let bytes = delta.bytes(base);
@@ -138,8 +169,8 @@ impl History {
     pub fn undo(&mut self, cur: Snap) -> Option<Snap> {
         let prev = self.undo.pop_back()?;
         self.bytes = self.bytes.saturating_sub(prev.bytes);
-        let doc = prev.delta.apply(&cur.0);
-        let e = Entry::new(cur, &doc);
+        let (doc, delta) = prev.delta.swap(cur.0);
+        let e = Entry::from_delta(delta, cur.1, &doc);
         self.bytes = self.bytes.saturating_add(e.bytes);
         self.redo.push(e);
         Some((doc, prev.sel))
@@ -148,8 +179,8 @@ impl History {
     pub fn redo(&mut self, cur: Snap) -> Option<Snap> {
         let next = self.redo.pop()?;
         self.bytes = self.bytes.saturating_sub(next.bytes);
-        let doc = next.delta.apply(&cur.0);
-        let e = Entry::new(cur, &doc);
+        let (doc, delta) = next.delta.swap(cur.0);
+        let e = Entry::from_delta(delta, cur.1, &doc);
         self.bytes = self.bytes.saturating_add(e.bytes);
         self.undo.push_back(e);
         Some((doc, next.sel))
