@@ -16,6 +16,7 @@ const USAGE: &str = "usage:
         options by name or letter (border=10, g=lightblue, N=true, Z=4w)
   rustfig-cli formats [LANG]        list the export languages, or one language's options
   rustfig-cli info FILE
+  rustfig-cli thumbnail IN OUT.png [--size N]   fit the figure into N x N pixels (default 256; the file manager thumbnailer)
   rustfig-cli perf [--paths N]      check performance budgets on a synthetic document
   rustfig-cli bench FILE            time render, save and open for one file
   rustfig-cli mcp                   run the MCP server on stdio
@@ -32,6 +33,7 @@ fn main() -> ExitCode {
     let args: Vec<String> = rustfig_engine::fig2dev::process_args();
     let result = match args.first().map(String::as_str) {
         Some("convert") => convert(&args[1..]),
+        Some("thumbnail") => rustfig_engine::thumbnail::run(&args[1..]),
         Some("info") => info(&args[1..]),
         Some("formats") => formats(args.get(1).map(String::as_str)),
         Some("perf") => perf(&args[1..]),

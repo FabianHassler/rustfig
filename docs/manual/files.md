@@ -48,6 +48,14 @@ Running `rustfig FILE.fig` opens a file at start. See [Automation](automation.md
 
 Double-clicking a `.fig` file in Finder, choosing Open With > RustFig, `open -a RustFig FILE.fig` or dropping a file on the Dock icon opens it, whether RustFig is already running or is started by it. As with File > Open, RustFig asks before it discards unsaved changes; several files sent at once open one after the other.
 
+## Previews in the file manager
+
+File managers show a picture of the drawing instead of a generic icon.
+
+**Linux.** The `.deb` and the tarball's `install.sh` install a thumbnailer (`share/thumbnailers/rustfig.thumbnailer`) and a MIME type that also covers `.fig.gz`, `.fig.Z`, `.fig.bz2`, `.fig.xz` and `.rustfig`. GNOME Files, Dolphin, Thunar and others then show the drawing fitted into the thumbnail square on a white background. Thumbnails are cached by the desktop; if an old icon stays, delete `~/.cache/thumbnails`. The thumbnailer runs `rustfig thumbnail IN OUT.png --size N`; you can run the same by hand, or `rustfig-cli thumbnail IN OUT.png --size N` (default 256 pixels).
+
+**macOS.** `RustFig.app` contains two Quick Look extensions in `Contents/PlugIns`: a thumbnail extension (Finder icons, column and gallery view) and a preview extension (space bar, Finder's preview pane). They work for files of the type `org.xfig.fig` (`.fig`), which the app declares. After you copy RustFig to Applications and start it once, macOS registers the extensions; if a preview does not appear, enable them in System Settings > Privacy & Security > Extensions > Quick Look (or Added Extensions), run `pluginkit -m -p com.apple.quicklook.preview`, and `qlmanage -r` to reset Quick Look. The extensions are signed ad hoc, so macOS may ask you to allow them on the first run.
+
 ## The web version
 
 RustFig also runs in a browser (WebAssembly). Build it with `cargo xtask web` (needs `trunk`: `cargo install --locked trunk`) and serve the `dist/` folder with any static web server, or run `cargo xtask web --serve` and open http://127.0.0.1:8080. The page shows "Loading RustFig…" until the program has started.

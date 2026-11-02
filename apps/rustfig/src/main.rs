@@ -17,6 +17,17 @@ fn main() -> eframe::Result<()> {
         args.drain(..1.min(args.len()));
         std::process::exit(i32::from(rustfig_engine::fig2dev::run_cli(args)));
     }
+    // `thumbnail IN OUT.png [--size N]`: the file manager thumbnailer (Linux).
+    if rustfig_engine::fig2dev::process_args().first().map(String::as_str) == Some("thumbnail") {
+        let args = rustfig_engine::fig2dev::process_args();
+        match rustfig_engine::thumbnail::run(&args[1..]) {
+            Ok(()) => std::process::exit(0),
+            Err(e) => {
+                eprintln!("rustfig: {e}");
+                std::process::exit(1);
+            }
+        }
+    }
     // `--dump-icon SIZE`: the app icon as raw RGBA on stdout (used by `cargo xtask package`).
     {
         let a = rustfig_engine::fig2dev::process_args();

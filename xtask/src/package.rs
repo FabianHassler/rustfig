@@ -97,12 +97,94 @@ pub fn info_plist(version: &str, with_icon: bool) -> String {
     )
 }
 
+/// The two macOS Quick Look app extensions inside `RustFig.app/Contents/PlugIns`:
+/// (folder name, bundle id suffix, extension point, principal class, extra attributes).
+pub const APPEX: [(&str, &str, &str, &str, &str); 2] = [
+    (
+        "RustFigThumbnail.appex",
+        "thumbnail",
+        "com.apple.quicklook.thumbnail",
+        "RustFigThumbnailProvider",
+        "\t\t\t<key>QLThumbnailMinimumDimension</key>\n\t\t\t<integer>16</integer>\n",
+    ),
+    (
+        "RustFigPreview.appex",
+        "preview",
+        "com.apple.quicklook.preview",
+        "RustFigPreviewProvider",
+        "\t\t\t<key>QLIsDataBasedPreview</key>\n\t\t\t<true/>\n",
+    ),
+];
+
+/// `Info.plist` of one Quick Look extension (`index` into [`APPEX`]): an app extension
+/// (`NSExtension`) for the point, supporting the `.fig` type that the app exports.
+pub fn appex_plist(index: usize, version: &str) -> String {
+    let (name, suffix, point, class, extra) = APPEX[index.min(1)];
+    let title = name.trim_end_matches(".appex");
+    format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key>
+	<string>{title}</string>
+	<key>CFBundleDisplayName</key>
+	<string>{title}</string>
+	<key>CFBundleIdentifier</key>
+	<string>{BUNDLE_ID}.{suffix}</string>
+	<key>CFBundleExecutable</key>
+	<string>rustfig-quicklook</string>
+	<key>CFBundlePackageType</key>
+	<string>XPC!</string>
+	<key>CFBundleVersion</key>
+	<string>{version}</string>
+	<key>CFBundleShortVersionString</key>
+	<string>{version}</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>12.0</string>
+	<key>NSExtension</key>
+	<dict>
+		<key>NSExtensionPointIdentifier</key>
+		<string>{point}</string>
+		<key>NSExtensionPrincipalClass</key>
+		<string>{class}</string>
+		<key>NSExtensionAttributes</key>
+		<dict>
+			<key>QLSupportedContentTypes</key>
+			<array>
+				<string>{UTI}</string>
+			</array>
+{extra}		</dict>
+	</dict>
+</dict>
+</plist>
+"#
+    )
+}
+
+/// Sandbox entitlements of the extensions (required for app extensions): they read the
+/// file the system hands them, nothing else.
+pub fn appex_entitlements() -> String {
+    r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.files.user-selected.read-only</key>
+	<true/>
+</dict>
+</plist>
+"#
+    .into()
+}
+
 /// Freedesktop `.desktop` entry.
 pub fn desktop_file() -> String {
     "[Desktop Entry]\nType=Application\nName=RustFig\nGenericName=Vector drawing\n\
      Comment=Native reimplementation of xfig\nExec=rustfig %f\nIcon=rustfig\n\
      Terminal=false\nCategories=Graphics;2DGraphics;VectorGraphics;\n\
-     MimeType=image/x-xfig;\nStartupWMClass=rustfig\n"
+     MimeType=image/x-xfig;application/x-rustfig;\nStartupWMClass=rustfig\n"
         .into()
 }
 
@@ -118,10 +200,27 @@ pub fn mime_xml() -> String {
       <match type="string" offset="0" value="#FIG"/>
     </magic>
     <glob pattern="*.fig"/>
+    <glob pattern="*.fig.gz"/>
+    <glob pattern="*.fig.Z"/>
+    <glob pattern="*.fig.bz2"/>
+    <glob pattern="*.fig.xz"/>
+  </mime-type>
+  <mime-type type="application/x-rustfig">
+    <comment>RustFig drawing</comment>
+    <sub-class-of type="application/json"/>
+    <glob pattern="*.rustfig"/>
   </mime-type>
 </mime-info>
 "##
     .into()
+}
+
+/// Freedesktop thumbnailer entry: file managers (GNOME Files, Dolphin,
+/// Thunar, ...) run `Exec` to make a PNG thumbnail of a figure.
+pub fn thumbnailer_file() -> String {
+    "[Thumbnailer Entry]\nTryExec=rustfig\nExec=rustfig thumbnail %i %o --size %s\n\
+     MimeType=image/x-xfig;application/x-xfig;text/x-xfig;application/x-rustfig;\n"
+        .into()
 }
 
 /// Windows registry file associating `.fig` with `rustfig.exe` (per user).
@@ -163,6 +262,7 @@ fn install_script() -> String {
      command -v xfig >/dev/null 2>&1 || ln -sf rustfig \"$PREFIX/bin/xfig\"\n\
      install -Dm644 \"$d/rustfig.desktop\" \"$PREFIX/share/applications/rustfig.desktop\"\n\
      install -Dm644 \"$d/rustfig.xml\" \"$PREFIX/share/mime/packages/rustfig.xml\"\n\
+     install -Dm644 \"$d/rustfig.thumbnailer\" \"$PREFIX/share/thumbnailers/rustfig.thumbnailer\"\n\
      [ -f \"$d/rustfig.png\" ] && install -Dm644 \"$d/rustfig.png\" \"$PREFIX/share/icons/hicolor/256x256/apps/rustfig.png\"\n\
      update-mime-database \"$PREFIX/share/mime\" 2>/dev/null || true\n\
      update-desktop-database \"$PREFIX/share/applications\" 2>/dev/null || true\n\
@@ -309,6 +409,13 @@ pub fn run(root: &Path, mut cargo: Command) -> Result<(), String> {
     sh(cargo
         .current_dir(root)
         .args(["build", "--release", "-p", "rustfig", "-p", "rustfig-cli"]))?;
+    if cfg!(target_os = "macos") {
+        sh(
+            Command::new(std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()))
+                .current_dir(root)
+                .args(["build", "--release", "-p", "rustfig-quicklook"]),
+        )?;
+    }
     let target = std::env::var_os("CARGO_TARGET_DIR").map_or_else(|| root.join("target"), PathBuf::from);
     let rel = target.join("release");
     let out = target.join("package");
@@ -376,12 +483,28 @@ fn macos(root: &Path, rel: &Path, out: &Path, version: &str) -> Result<(), Strin
         eprintln!("warning: no app icon (iconutil missing or the icon could not be rendered)");
     }
     write(&app.join("Contents/Info.plist"), &info_plist(version, icon))?;
+    // Quick Look extensions (P5): thumbnails for Finder and a preview for the space bar,
+    // each an app extension with the same executable, sandboxed.
+    let plugins = app.join("Contents/PlugIns");
+    let ents = out.join("appex.entitlements");
+    write(&ents, &appex_entitlements())?;
+    for (i, (name, ..)) in APPEX.iter().enumerate() {
+        let dir = plugins.join(name).join("Contents");
+        fs::create_dir_all(dir.join("MacOS")).map_err(|e| e.to_string())?;
+        fs::copy(rel.join("rustfig-quicklook"), dir.join("MacOS/rustfig-quicklook"))
+            .map_err(|e| format!("rustfig-quicklook: {e}"))?;
+        write(&dir.join("Info.plist"), &appex_plist(i, version))?;
+        sh(Command::new("codesign")
+            .args(["--force", "--sign", "-", "--entitlements"])
+            .arg(&ents)
+            .arg(plugins.join(name)))?;
+    }
+    let _ = fs::remove_file(&ents);
     // Sign the whole bundle ad hoc (no certificate): the linker signed only
     // the binary, and a bundle whose signature misses its resources is
-    // reported as "damaged" by Gatekeeper after a download.
-    sh(Command::new("codesign")
-        .args(["--force", "--deep", "--sign", "-"])
-        .arg(&app))?;
+    // reported as "damaged" by Gatekeeper after a download. No `--deep`: it would
+    // sign the extensions again without their entitlements.
+    sh(Command::new("codesign").args(["--force", "--sign", "-"]).arg(&app))?;
     let dmg = out.join(format!("RustFig-{version}-macos.dmg"));
     let stage = out.join("dmg");
     fs::create_dir_all(&stage).map_err(|e| e.to_string())?;
@@ -423,6 +546,7 @@ fn linux(root: &Path, rel: &Path, out: &Path, version: &str) -> Result<(), Strin
     fs::copy(&exe, dir.join("rustfig")).map_err(|e| format!("rustfig: {e}"))?;
     write(&dir.join("rustfig.desktop"), &desktop_file())?;
     write(&dir.join("rustfig.xml"), &mime_xml())?;
+    write(&dir.join("rustfig.thumbnailer"), &thumbnailer_file())?;
     write(&dir.join("install.sh"), &install_script())?;
     copy_libraries(root, &dir.join("libraries"))?;
     let png = icon_png(&exe, 256);
@@ -465,6 +589,10 @@ fn linux(root: &Path, rel: &Path, out: &Path, version: &str) -> Result<(), Strin
     // xfig depends on it); `rustfig fig2dev …` runs the built-in one.
     write(&pkg.join("usr/share/applications/rustfig.desktop"), &desktop_file())?;
     write(&pkg.join("usr/share/mime/packages/rustfig.xml"), &mime_xml())?;
+    write(
+        &pkg.join("usr/share/thumbnailers/rustfig.thumbnailer"),
+        &thumbnailer_file(),
+    )?;
     if let Some(p) = png {
         let d = pkg.join("usr/share/icons/hicolor/256x256/apps");
         fs::create_dir_all(&d).map_err(|e| e.to_string())?;
@@ -568,9 +696,29 @@ mod tests {
     }
 
     #[test]
+    fn quicklook_extensions() {
+        let t = appex_plist(0, "1.2.3");
+        assert!(t.contains("com.apple.quicklook.thumbnail") && t.contains("RustFigThumbnailProvider"));
+        assert!(t.contains(&format!("<string>{UTI}</string>")) && t.contains("XPC!"));
+        assert!(t.contains(&format!("{BUNDLE_ID}.thumbnail")));
+        let p = appex_plist(1, "1.2.3");
+        assert!(p.contains("com.apple.quicklook.preview") && p.contains("QLIsDataBasedPreview"));
+        assert!(info_plist("1", false).contains(UTI));
+        assert!(appex_entitlements().contains("com.apple.security.app-sandbox"));
+    }
+
+    #[test]
     fn linux_files() {
         assert!(desktop_file().contains("MimeType=image/x-xfig;"));
         assert!(mime_xml().contains("*.fig"));
+        for g in ["*.fig.gz", "*.fig.Z", "*.fig.bz2", "*.fig.xz", "*.rustfig"] {
+            assert!(mime_xml().contains(g), "{g}");
+        }
+        let t = thumbnailer_file();
+        assert!(t.starts_with("[Thumbnailer Entry]\nTryExec=rustfig\n"));
+        assert!(t.contains("Exec=rustfig thumbnail %i %o --size %s\n"));
+        assert!(t.contains("MimeType=image/x-xfig;"));
+        assert!(install_script().contains("share/thumbnailers/rustfig.thumbnailer"));
         let c = deb_control("0.1.0", "amd64", 10);
         assert!(c.starts_with("Package: rustfig\nVersion: 0.1.0\n") && c.ends_with('\n'));
     }

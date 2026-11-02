@@ -33,6 +33,7 @@ pub mod recovery;
 mod region;
 pub mod snap;
 pub mod styles;
+pub mod thumbnail;
 pub mod tools;
 mod view;
 
