@@ -127,13 +127,27 @@ fn main() -> eframe::Result<()> {
                 .with_activate_ignoring_other_apps(false);
         }));
     }
+    // Testing option for speed measurements: `RUSTFIG_PIXELS_PER_POINT=1` draws at one device pixel
+    // per point on any display (a Retina screen draws 4 times the pixels otherwise) and reads
+    // `-geometry` as the window size in device pixels, so a canvas has the same pixel count as in
+    // xfig on a 1x display.
+    let fixed_ppp = std::env::var("RUSTFIG_PIXELS_PER_POINT")
+        .ok()
+        .and_then(|v| v.parse::<f32>().ok())
+        .filter(|v| v.is_finite() && *v > 0.0);
     // Finder double-click and `open -a` arrive as an Apple Event (P3); listen before the loop starts.
     rustfig_ui_egui::install_open_handler();
     eframe::run_native(
         "RustFig",
         options,
         Box::new(move |cc| {
+            if let (Some(p), Some(s)) = (fixed_ppp, size) {
+                // egui converts the size with its own density: device pixels / density.
+                cc.egui_ctx
+                    .send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(s[0] / p, s[1] / p)));
+            }
             let mut app = rustfig_ui_egui::App::new(cc, engine, control);
+            app.fixed_ppp = fixed_ppp;
             if background {
                 // Scripts and agents drive a background window: no start screen.
                 app.splash = None;

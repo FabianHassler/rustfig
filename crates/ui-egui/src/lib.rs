@@ -140,6 +140,8 @@ pub struct App {
     /// How long the last frames took on the UI thread (ms), newest last,
     /// at most 120 (native; `ui.state` reports them).
     pub frame_times: std::collections::VecDeque<f64>,
+    /// Testing option (`RUSTFIG_PIXELS_PER_POINT`): draw at this density whatever the display's.
+    pub fixed_ppp: Option<f32>,
     /// Where the preferences are kept (E1); nowhere until `App::new` or a
     /// test sets one.
     pub settings: settings::Settings,
@@ -265,6 +267,7 @@ impl App {
             web_restorable: None,
             recoverable: Vec::new(),
             frame_times: std::collections::VecDeque::new(),
+            fixed_ppp: None,
             settings: settings::Settings::default(),
             compose: menus::Compose::default(),
             file_edit: None,
@@ -720,8 +723,12 @@ impl App {
         if let Some(t) = self.theme_request.take() {
             ctx.set_theme(t);
         }
-        if (ctx.zoom_factor() - self.ui_scale).abs() > 1e-3 {
-            ctx.set_zoom_factor(self.ui_scale);
+        // `RUSTFIG_PIXELS_PER_POINT` (testing): the zoom factor that gives that density on this display.
+        let want = self.fixed_ppp.map_or(self.ui_scale, |p| {
+            p / ctx.native_pixels_per_point().unwrap_or(1.0).max(0.1)
+        });
+        if (ctx.zoom_factor() - want).abs() > 1e-3 {
+            ctx.set_zoom_factor(want);
         }
         #[cfg(not(target_arch = "wasm32"))]
         self.poll_control(ctx);

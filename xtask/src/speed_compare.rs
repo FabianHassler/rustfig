@@ -88,6 +88,9 @@ struct Opts {
     port: u16,
     xfig_bin: String,
     xfig_geom: String,
+    /// RustFig's window size (`-geometry`), and its drawing density (`RUSTFIG_PIXELS_PER_POINT`).
+    rf_geom: String,
+    rf_ppp: Option<f32>,
 }
 
 /// One measurement: milliseconds, a timeout (seconds waited) or a reason it is missing.
@@ -1220,16 +1223,17 @@ fn trial_rf_inner(o: &Opts, src: &FigSrc, info: &FigInfo, run: usize) -> Result<
     let lim = Duration::from_secs_f64(o.timeout);
     let mut t = Trial::new();
     let t0 = Instant::now();
-    let child = Command::new(&o.rustfig)
+    let child = Command::new(std::fs::canonicalize(&o.rustfig).unwrap_or_else(|_| o.rustfig.clone()))
         .args([
             "--control",
             &o.port.to_string(),
             "--background",
             "-geometry",
-            "1400x1000+0+0",
+            &format!("{}+0+0", o.rf_geom),
         ])
         .arg(&fig)
         .current_dir(fig.parent().unwrap_or(&dir))
+        .envs(o.rf_ppp.map(|p| ("RUSTFIG_PIXELS_PER_POINT", p.to_string())))
         .env("RUSTFIG_SETTINGS_DIR", dir.join("settings"))
         .env("RUSTFIG_RECOVERY_DIR", dir.join("recovery"))
         .stdout(Stdio::null())
@@ -1261,6 +1265,10 @@ fn trial_rf_inner(o: &Opts, src: &FigSrc, info: &FigInfo, run: usize) -> Result<
     let _ = first;
     let probe = rf.call("ui.state", "{}")?;
     let has_pending = probe.contains("canvas_pending");
+    if let Some(c) = numbers_after(&probe, "\"canvas\":[", 2) {
+        t.insert("cv_w", Val::Ms(c[0]));
+        t.insert("cv_h", Val::Ms(c[1]));
+    }
     let open = rf.idle(t0, 150, lim, has_pending)?;
     let ok = matches!(open, Val::Ms(_));
     t.insert("x_open", open.clone());
@@ -1501,12 +1509,29 @@ fn render(o: &Opts, rows: &[Row]) -> String {
     s.push_str("### Setup of this run\n\n");
     s.push_str(&format!("- Machine: {chip}, macOS {os}\n"));
     s.push_str(&format!("- xfig: `{}` ({}), default options, scratch `HOME`, on `Xvfb {}` 1400x1000x24; window `{}` (canvas 1128x686 pixels)\n", o.xfig_bin, xfig_v.lines().next().unwrap_or("3.2.9a"), o.display, o.xfig_geom));
-    s.push_str(&format!("- RustFig: `{}` ({}), release build, label: {}; `-geometry 1400x1000` (clipped to the screen), canvas 1128x686 points\n", o.rustfig.display(), rf_v.lines().next().unwrap_or("no --version"), o.label));
+    s.push_str(&format!(
+        "- RustFig: `{}` ({}), release build, label: {}; `-geometry {}`{}\n",
+        o.rustfig.display(),
+        rf_v.lines().next().unwrap_or("no --version"),
+        o.label,
+        o.rf_geom,
+        o.rf_ppp.map_or(String::new(), |p| format!(
+            ", `RUSTFIG_PIXELS_PER_POINT={p}` (window size in device pixels)"
+        ))
+    ));
     s.push_str(&format!("- Each value is the median of {} run(s), a new process per run; timeout {:.0} s per measurement (\"> N s\": not finished in that time; the real time is longer)\n", o.runs, o.timeout));
     s.push_str(&format!(
         "- Generated {} by `cargo xtask speed-compare`\n\n",
         shell_out("date", &["+%Y-%m-%d %H:%M"])
     ));
+    if let Some(t) = rows.iter().find_map(|r| r.rf.first()) {
+        if let (Some(Val::Ms(w)), Some(Val::Ms(h))) = (t.get("cv_w"), t.get("cv_h")) {
+            s.push_str(&format!(
+                "- RustFig canvas as reported by `ui.state` (points): {w:.0}x{h:.0}; density {} (xfig's canvas: 1128x686 pixels)\n",
+                o.rf_ppp.map_or("native (the display's)".to_string(), |p| format!("{p} device pixel per point")),
+            ));
+        }
+    }
     s.push_str("### Results\n\n");
     s.push_str("xfig / RustFig is the speed-up of RustFig (above 1 = RustFig is faster).\n\n");
     for (key, label) in TASKS {
@@ -1610,6 +1635,8 @@ fn parse_args(root: &Path) -> Result<Opts, String> {
         port: 7990,
         xfig_bin: std::env::var("XFIG_BIN").unwrap_or_else(|_| "/opt/homebrew/bin/xfig".into()),
         xfig_geom: "1322x818".into(),
+        rf_geom: "1400x1000".into(),
+        rf_ppp: None,
     };
     let mut a = std::env::args().skip(2);
     while let Some(k) = a.next() {
@@ -1628,6 +1655,8 @@ fn parse_args(root: &Path) -> Result<Opts, String> {
             "--port" => o.port = val()?.parse().map_err(|_| "--port N")?,
             "--xfig-geometry" => o.xfig_geom = val()?,
             "--xfig-bin" => o.xfig_bin = val()?,
+            "--rf-geometry" => o.rf_geom = val()?,
+            "--rf-ppp" => o.rf_ppp = Some(val()?.parse().map_err(|_| "--rf-ppp 1")?),
             "--no-xfig" => o.xfig = false,
             "--no-rustfig" => o.rf = false,
             other => return Err(format!("unknown option {other}")),
