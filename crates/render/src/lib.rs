@@ -26,6 +26,10 @@ const PARALLEL_MIN_BAND: usize = 48;
 /// few long polylines, like a space-filling curve, cost per point).
 #[cfg(not(target_arch = "wasm32"))]
 const PARALLEL_MIN_POINTS: usize = 8000;
+/// Leaves that make building the scene worth several threads (7,600
+/// Penrose tiles take under a millisecond on one).
+#[cfg(not(target_arch = "wasm32"))]
+const PARALLEL_MIN_LEAVES: usize = 20_000;
 
 /// Points of all paths of `scene`, counting up to `cap`.
 #[cfg(not(target_arch = "wasm32"))]
@@ -197,6 +201,47 @@ pub fn build_scene(doc: &Document, opts: &SceneOptions) -> Scene {
 }
 
 fn scene_prims(doc: &Document, opts: &SceneOptions) -> Vec<Prim> {
+    let leaves = sorted_leaves(doc, opts);
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        // A large drawing flattens its objects on several threads, in runs
+        // of leaves joined in order (P8): the scene is built on the UI
+        // thread whenever the drawing changes.
+        let threads = std::thread::available_parallelism().map_or(1, |n| n.get()).min(16);
+        if threads >= 2 && leaves.len() >= PARALLEL_MIN_LEAVES {
+            let run = leaves.len().div_ceil(threads * 4);
+            let runs: Vec<&[(&Object, bool)]> = leaves.chunks(run).collect();
+            let next = std::sync::atomic::AtomicUsize::new(0);
+            let done: std::sync::Mutex<Vec<(usize, Vec<Prim>)>> = std::sync::Mutex::new(Vec::new());
+            std::thread::scope(|sc| {
+                for _ in 0..threads {
+                    sc.spawn(|| loop {
+                        let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        let Some(part) = runs.get(i) else { break };
+                        let prims = leaf_prims(doc, part, opts);
+                        if let Ok(mut d) = done.lock() {
+                            d.push((i, prims));
+                        }
+                    });
+                }
+            });
+            let mut parts = done.into_inner().unwrap_or_default();
+            // Every run is there unless a lock was poisoned: then build plainly.
+            if parts.len() == runs.len() {
+                parts.sort_by_key(|(i, _)| *i);
+                let mut prims = Vec::with_capacity(leaves.len());
+                for (_, p) in parts {
+                    prims.extend(p);
+                }
+                return prims;
+            }
+        }
+    }
+    leaf_prims(doc, &leaves, opts)
+}
+
+/// The leaves to draw in drawing order, each with whether it is gray.
+fn sorted_leaves<'a>(doc: &'a Document, opts: &SceneOptions) -> Vec<(&'a Object, bool)> {
     let mut leaves: Vec<(&Object, bool)> = Vec::with_capacity(doc.leaf_count());
     doc.for_each_leaf_xfig_order(&mut |o| {
         let hidden = opts.hidden_depths.contains(&o.depth());
@@ -208,8 +253,13 @@ fn scene_prims(doc: &Document, opts: &SceneOptions) -> Vec<Prim> {
     // back to front; within a depth, the stable sort keeps xfig's type
     // order from the walk above (`u_redraw.c` `redisplay_objects`).
     leaves.sort_by_key(|(o, gray)| (!*gray, std::cmp::Reverse(o.depth())));
+    leaves
+}
+
+/// The primitives of `leaves` in order, gray where marked.
+fn leaf_prims(doc: &Document, leaves: &[(&Object, bool)], opts: &SceneOptions) -> Vec<Prim> {
     let mut prims = Vec::with_capacity(leaves.len());
-    for (o, gray) in leaves {
+    for &(o, gray) in leaves {
         let first = prims.len();
         object_prims(doc, o, opts, &mut prims);
         if gray {
@@ -525,6 +575,108 @@ mod tests {
     use super::*;
     use rustfig_geom::Point;
     use rustfig_model::{Polyline, Style};
+
+    fn circle(x: f64, y: f64, r: f64, depth: i32, fill: i32) -> Object {
+        let mut style = Style::default();
+        style.area_fill = fill;
+        style.depth = depth;
+        Object::new(ObjectKind::Ellipse(rustfig_model::Ellipse {
+            kind: rustfig_model::EllipseKind::CircleRadius,
+            style,
+            direction: 1,
+            angle: 0.0,
+            center: Point::new(x, y),
+            radii: Point::new(r, r),
+            start: Point::new(x, y),
+            end: Point::new(x + r, y),
+        }))
+    }
+
+    /// A scene built on several threads is the one a single thread builds,
+    /// primitive for primitive, gray depths and xfig's order included (P8).
+    #[test]
+    fn parallel_scene_equals_one_thread() {
+        let mut doc = Document::new();
+        for i in 0..(PARALLEL_MIN_LEAVES as i32 + 3000) {
+            let (x, y) = (f64::from(i % 150) * 80.0, f64::from(i / 150) * 80.0);
+            let o = if i % 3 == 0 {
+                circle(
+                    x,
+                    y,
+                    30.0 + f64::from(i % 7),
+                    40 + i % 5,
+                    [-1, 20, 41][(i % 3) as usize],
+                )
+            } else {
+                let mut style = Style::default();
+                style.depth = 40 + i % 5;
+                let pts = vec![
+                    Point::new(x, y),
+                    Point::new(x + 50.0, y + 20.0),
+                    Point::new(x + 10.0, y + 60.0),
+                ];
+                Object::new(ObjectKind::Polyline(Polyline::new(
+                    rustfig_model::PolyKind::Polyline,
+                    style,
+                    pts,
+                )))
+            };
+            doc.objects.push(std::sync::Arc::new(o));
+        }
+        let opts = SceneOptions {
+            hidden_depths: [42].into_iter().collect(),
+            gray_hidden: true,
+            ..SceneOptions::default()
+        };
+        let parallel = build_scene(&doc, &opts);
+        let one = leaf_prims(&doc, &sorted_leaves(&doc, &opts), &opts);
+        assert_eq!(parallel.prims.len(), one.len());
+        assert!(parallel.prims == one, "the parallel scene differs from one thread's");
+    }
+
+    /// Curves are drawn from their exact outline (fig2dev 0.9.9), which
+    /// differs from the flattened one only at edge pixels.
+    #[test]
+    fn exact_curves_draw_like_their_flattening() {
+        let mut doc = Document::new();
+        for (i, r) in [20.0, 45.0, 90.0, 300.0, 1200.0].into_iter().enumerate() {
+            let x = 400.0 + i as f64 * 2700.0;
+            doc.objects
+                .push(std::sync::Arc::new(circle(x + r, 1500.0, r, 50, [-1, 20][i % 2])));
+        }
+        let exact = build_scene(&doc, &SceneOptions::default());
+        assert!(exact
+            .prims
+            .iter()
+            .any(|p| matches!(p, Prim::Path { subpaths, .. } if subpaths.iter().any(|s| s.curve.is_some()))));
+        let mut flat = exact.clone();
+        for p in &mut flat.prims {
+            if let Prim::Path { subpaths, .. } = p {
+                subpaths.iter_mut().for_each(|s| s.curve = None);
+            }
+        }
+        let opts = raster::RasterOptions {
+            transform: rustfig_geom::Affine::scale(0.06, 0.06),
+            min_line_px: 1.0,
+            adjust_px: 0.0,
+            pattern_k: 1,
+            pattern: pattern::PatternFrame::screen(),
+        };
+        let (w, h) = (900, 220);
+        let mut a = raster::Pixmap::new(w, h).unwrap();
+        let mut b = raster::Pixmap::new(w, h).unwrap();
+        raster::rasterize(&exact, &mut a, &opts);
+        raster::rasterize(&flat, &mut b, &opts);
+        let drawn = a.data().chunks(4).filter(|p| p[3] > 0).count();
+        let off = a
+            .data()
+            .chunks(4)
+            .zip(b.data().chunks(4))
+            .filter(|(p, q)| p.iter().zip(q.iter()).any(|(x, y)| x.abs_diff(*y) > 96))
+            .count();
+        assert!(drawn > 1000, "nothing drawn");
+        assert!(off * 100 < drawn, "{off} of {drawn} pixels differ by more than 96");
+    }
 
     /// Bands join exactly as one render draws them (P6).
     #[test]

@@ -22,6 +22,25 @@ fn two_depths() -> Engine {
     e
 }
 
+/// The depth panel's counts (cached per revision) follow edits and undo.
+#[test]
+fn depth_counts_follow_edits_and_undo() {
+    let mut e = two_depths();
+    assert_eq!(e.depth_counts(), vec![(10, 1), (60, 1)]);
+    let id = e.doc().objects[0].id.0;
+    e.execute("arrange.set_depth", &json!({"ids": [id], "depth": 60}))
+        .unwrap();
+    assert_eq!(e.depth_counts(), vec![(60, 2)]);
+    e.execute("edit.undo", &json!({})).unwrap();
+    assert_eq!(e.depth_counts(), vec![(10, 1), (60, 1)]);
+    e.execute("edit.select_all", &json!({})).unwrap();
+    e.execute("edit.delete", &json!({})).unwrap();
+    assert_eq!(e.depth_counts(), vec![]);
+    e.execute("edit.redo", &json!({})).ok();
+    e.execute("edit.undo", &json!({})).unwrap();
+    assert_eq!(e.depth_counts(), vec![(10, 1), (60, 1)]);
+}
+
 fn hide(e: &mut Engine, d: i32) {
     e.execute("depth.set_visible", &json!({"depth": d, "visible": false}))
         .unwrap();
