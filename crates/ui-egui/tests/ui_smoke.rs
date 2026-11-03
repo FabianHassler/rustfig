@@ -600,6 +600,34 @@ fn export_on_save_checkbox_keeps_the_export_current() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// Unchecking "Also export on every save" turns the setting off at once,
+/// without exporting; the dialog shows which file is kept up to date.
+#[test]
+fn export_on_save_unchecked_turns_it_off_without_exporting() {
+    let mut a = app();
+    a.run("shape.rectangle", json!({"x": 0, "y": 0, "width": 600, "height": 300}));
+    a.run(
+        "file.export_on_save",
+        json!({"path": "/nonexistent/kept.pdf", "format": "pdf"}),
+    );
+    assert!(a.engine.doc().export_on_save.is_some());
+    let mut h = harness(a);
+    h.state_mut().run("app.export", json!({}));
+    h.run_steps(2);
+    h.get_by_label_contains("now kept up to date: kept.pdf");
+    h.get_by_label("Also export on every save").click();
+    h.run_steps(2);
+    assert!(
+        h.state().engine.doc().export_on_save.is_none(),
+        "unchecking turned it off"
+    );
+    assert!(h.query_by_label_contains("now kept up to date").is_none());
+    assert!(
+        h.query_by_label("Export…").is_some(),
+        "the dialog stays open: nothing was exported"
+    );
+}
+
 #[test]
 fn export_dialog_embed_checkbox_makes_an_editable_pdf() {
     let dir = std::env::temp_dir().join(format!("rustfig-ui-e16-{}", std::process::id()));

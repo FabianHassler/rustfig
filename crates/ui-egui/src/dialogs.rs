@@ -229,6 +229,9 @@ pub struct ExportState {
     /// Set once from the document when the panel opens, so typing in the
     /// panel is not overwritten.
     pub export_on_save_synced: bool,
+    /// The box was unchecked while export on save was on: turn it off now
+    /// (without exporting), after the window is drawn.
+    pub export_on_save_off: bool,
     /// Leave out depths that are off (xfig's "active layers only").
     pub active_layers_only: bool,
     /// With active layers only: size the page by the whole figure.
@@ -247,6 +250,7 @@ impl Default for ExportState {
             loaded: "",
             export_on_save: false,
             export_on_save_synced: false,
+            export_on_save_off: false,
             active_layers_only: false,
             whole_figure_bounds: false,
             preview: ExportPreview::default(),
@@ -3331,10 +3335,25 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
                         });
                         ui.end_row();
                         ui.label("On save");
-                        ui.checkbox(&mut st.export_on_save, "Also export on every save")
-                            .on_hover_text(
-                                "Whenever this figure is saved, write the chosen export file again with these options",
-                            );
+                        ui.vertical(|ui| {
+                            let r = ui
+                                .checkbox(&mut st.export_on_save, "Also export on every save")
+                                .on_hover_text(
+                                    "Whenever this figure is saved, write the chosen export file again with these options; unchecking turns it off at once",
+                                );
+                            // Unchecking turns it off at once, without exporting
+                            // (checking takes effect with Export: it needs the file).
+                            if r.changed() && !st.export_on_save && doc.export_on_save.is_some() {
+                                st.export_on_save_off = true;
+                            }
+                            if let Some(on) = doc.export_on_save.as_ref().filter(|_| st.export_on_save) {
+                                let name = std::path::Path::new(&on.path)
+                                    .file_name()
+                                    .map_or(on.path.clone(), |n| n.to_string_lossy().into_owned());
+                                ui.label(egui::RichText::new(format!("now kept up to date: {name}")).small().weak())
+                                    .on_hover_text(&on.path);
+                            }
+                        });
                         ui.end_row();
                     });
                 ui.separator();
@@ -3402,6 +3421,10 @@ fn export_apply(app: &mut App, ctx: &egui::Context, act: ExportActions, open: bo
         let s = rustfig_engine::export_panel::settings_for(&app.engine, format);
         app.dialogs.export.settings = s.clone();
         app.dialogs.export.stored = s;
+    }
+    if std::mem::take(&mut app.dialogs.export.export_on_save_off) {
+        app.run("file.export_on_save", json!({ "off": true }));
+        app.engine.set_status("Export on save is off.");
     }
     // Kept across sessions as soon as it changes.
     if app.dialogs.export.settings != app.dialogs.export.stored && app.dialogs.export.loaded == format {
