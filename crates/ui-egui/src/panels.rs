@@ -373,9 +373,25 @@ fn color_label(doc: &Document, c: i32) -> (Color32, String) {
     (Color32::from_rgb(rgb.r, rgb.g, rgb.b), name)
 }
 
+/// Fill `r` with colour `c`; `Color32::TRANSPARENT` is "no colour" (the
+/// export panel's Default background, None): white crossed by a red
+/// diagonal. A Default pen or fill colour draws black and shows black.
+fn paint_sample(p: &egui::Painter, r: egui::Rect, c: Color32) {
+    if c == Color32::TRANSPARENT {
+        p.rect_filled(r, 1.0, Color32::WHITE);
+        p.line_segment(
+            [r.left_bottom() + vec2(1.5, -1.5), r.right_top() + vec2(-1.5, 1.5)],
+            egui::Stroke::new(1.5_f32, Color32::from_rgb(220, 30, 30)),
+        );
+    } else {
+        p.rect_filled(r, 1.0, c);
+    }
+}
+
+/// A colour sample ([`paint_sample`]).
 fn swatch(ui: &mut egui::Ui, c: Color32) {
     let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::hover());
-    ui.painter().rect_filled(r, 2.0, c);
+    paint_sample(ui.painter(), r, c);
     ui.painter().rect_stroke(
         r,
         2.0,

@@ -185,7 +185,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Export…",
             menu: "",
             shortcut: "",
-            params: "{\"path\": string, \"part\"?: bool (only the visible part while a compound is open), \"format\"?: language id (see file.export_formats; default from the file name), \"magnification\"?: percent, \"margin\"?: fig units, \"dpi\"?: number, \"background\"?: \"#rrggbb\", \"active_layers_only\"?: bool, \"whole_figure_bounds\"?: bool, \"embed\"?: bool (PDF, SVG, PNG: store the figure's Fig text in the file, so File > Open reads it back; default false), \"options\"?: {key: value} fig2dev's options for the language, by key or letter (see file.export_formats), \"panel\"?: true | {…} the Export panel's settings kept for the language (export.settings) turned into options}  — active_layers_only leaves out depths that are off; whole_figure_bounds then still sizes the page by the whole figure; pspdf writes NAME.eps and NAME.pdf",
+            params: "{\"path\": string, \"part\"?: bool (only the visible part while a compound is open), \"format\"?: language id (see file.export_formats; default from the file name), \"magnification\"?: percent, \"margin\"?: fig units, \"dpi\"?: number, \"background\"?: \"#rrggbb\", \"active_layers_only\"?: bool, \"whole_figure_bounds\"?: bool, \"embed\"?: bool (PDF, SVG, PNG: store the figure's Fig text in the file, so File > Open reads it back; default false), \"typeset_latex\"?: bool (PDF, EPS/PS, SVG and the bitmaps: special texts typeset by the installed TeX, as on the canvas; default false), \"options\"?: {key: value} fig2dev's options for the language, by key or letter (see file.export_formats), \"panel\"?: true | {…} the Export panel's settings kept for the language (export.settings) turned into options}  — active_layers_only leaves out depths that are off; whole_figure_bounds then still sizes the page by the whole figure; pspdf writes NAME.eps and NAME.pdf",
             mutates: false,
             enabled: has_objects,
             run: export_file,
@@ -1003,6 +1003,7 @@ fn export_on_save_params(p: &Value) -> serde_json::Map<String, Value> {
         "active_layers_only",
         "whole_figure_bounds",
         "embed",
+        "typeset_latex",
         "options",
     ] {
         if let Some(value) = obj.get(key) {
@@ -1466,8 +1467,14 @@ fn write_part_of(e: &Engine, doc: &Document, part: &Part, p: &Value) -> Result<(
     if let Some(g) = &part.graphics {
         args.push(('p', Some(g.clone())));
     }
-    let (bytes, msgs) =
-        crate::fig2dev::export(doc, part.lang, &args, doc_dir(e).as_deref()).map_err(EngineError::format)?;
+    let (bytes, msgs) = crate::fig2dev::export_typeset(
+        doc,
+        part.lang,
+        &args,
+        doc_dir(e).as_deref(),
+        typesetter(e, part.lang, p)?,
+    )
+    .map_err(EngineError::format)?;
     // "Embed the figure" (E16): the Fig text goes into the finished file.
     if opt_bool(p, "embed")?.unwrap_or(false) && matches!(part.half, Half::Whole) {
         if !rustfig_format::embed::can_embed(part.lang) {
@@ -1561,6 +1568,22 @@ fn uses_picture_file(objects: &[rustfig_model::Object], dir: Option<&Path>, path
     })
 }
 
+/// The typesetter for `lang` when `p` asks for typeset LaTeX text and TeX
+/// is installed.
+fn typesetter(
+    e: &Engine,
+    lang: &str,
+    p: &Value,
+) -> Result<Option<std::sync::Arc<dyn rustfig_render::Typesetter>>, EngineError> {
+    Ok(
+        if opt_bool(p, "typeset_latex")?.unwrap_or(false) && crate::export_panel::typesets(lang) {
+            e.latex.export_typesetter()
+        } else {
+            None
+        },
+    )
+}
+
 fn export_file(e: &mut Engine, p: &Value) -> CmdResult {
     let job = export_job(e, p)?;
     let r = job.run(&AtomicBool::new(false))?;
@@ -1582,6 +1605,8 @@ pub struct ExportJob {
     dir: Option<std::path::PathBuf>,
     path: String,
     embed: bool,
+    /// Typesets special texts (`typeset_latex`), for the languages that take it.
+    typesetter: Option<std::sync::Arc<dyn rustfig_render::Typesetter>>,
     lang: &'static str,
     /// Target file, driver, share of the export, fig2dev's options.
     parts: Vec<JobPart>,
@@ -1612,8 +1637,13 @@ impl ExportJob {
             if let Some(g) = &part.graphics {
                 args.push(('p', Some(g.clone())));
             }
-            let (mut bytes, msgs) = crate::fig2dev::export(&self.doc, part.lang, &args, self.dir.as_deref())
-                .map_err(EngineError::format)?;
+            let typesetter = self
+                .typesetter
+                .clone()
+                .filter(|_| crate::export_panel::typesets(part.lang));
+            let (mut bytes, msgs) =
+                crate::fig2dev::export_typeset(&self.doc, part.lang, &args, self.dir.as_deref(), typesetter)
+                    .map_err(EngineError::format)?;
             if self.embed && matches!(part.half, Half::Whole) {
                 if !rustfig_format::embed::can_embed(part.lang) {
                     return Err(EngineError::bad_params(format!(
@@ -1667,6 +1697,11 @@ pub fn export_job(e: &Engine, p: &Value) -> Result<ExportJob, EngineError> {
         dir: doc_dir(e),
         path,
         embed: opt_bool(p, "embed")?.unwrap_or(false),
+        typesetter: if opt_bool(p, "typeset_latex")?.unwrap_or(false) {
+            e.latex.export_typesetter()
+        } else {
+            None
+        },
         lang: lang.id,
         parts: parts_with_args,
     })

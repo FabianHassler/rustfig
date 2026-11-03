@@ -18,8 +18,8 @@ use hayro::hayro_interpret::{
 use hayro::kurbo::{Affine, BezPath, Cap, Join, PathEl, Point as KPoint, Rect as KRect, Shape};
 use rustfig_geom::Point;
 use rustfig_model::{
-    text_flags, CapStyle, ColorRef, Document, Ellipse, EllipseKind, JoinStyle, LineKind, Object, ObjectKind, Picture,
-    PolyKind, Polyline, Rgb, Style, Text,
+    text_flags, CapStyle, ColorRef, Document, Ellipse, EllipseKind, JoinStyle, Justify, LineKind, Object, ObjectKind,
+    Picture, PolyKind, Polyline, Rgb, Style, Text,
 };
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
@@ -150,8 +150,154 @@ fn import_inner(bytes: &[u8], page: usize, stem: &str) -> Result<Imported, Strin
     let mut imp = Importer::new(stem, page, KRect::new(0.0, 0.0, f64::from(w), f64::from(h)));
     imp.font_names = names;
     imp.font_info = page_fonts(p);
+    imp.latex = page_latex_marks(p, init);
     interpret_page(p, &mut ctx, &mut imp);
+    imp.flush_text();
+    // The LaTeX texts in place of their glyphs, on top.
+    for m in std::mem::take(&mut imp.latex) {
+        let color = imp.color(m.rgb);
+        imp.objects.push(Object::new(ObjectKind::Text(m.text(color))));
+    }
     Ok(imp.finish())
+}
+
+/// The points that say where an imported object lies (Fig units).
+fn object_points(o: &Object) -> Vec<(f64, f64)> {
+    match &o.kind {
+        ObjectKind::Polyline(p) => p.points.iter().map(|p| (p.x, p.y)).collect(),
+        ObjectKind::Text(t) => vec![(t.origin.x, t.origin.y)],
+        ObjectKind::Ellipse(e) => vec![
+            (e.center.x - e.radii.x, e.center.y - e.radii.y),
+            (e.center.x + e.radii.x, e.center.y + e.radii.y),
+        ],
+        _ => Vec::new(),
+    }
+}
+
+/// A LaTeX text RustFig typeset into an export, read back from the source
+/// the export keeps (PDF: the page's `/RustFigLaTeX` list; SVG: the
+/// `data-rustfig-*` attributes of its group). Fig units, y down.
+#[derive(Debug, Clone)]
+pub(crate) struct LatexMark {
+    pub text: String,
+    pub font: i32,
+    pub ps: bool,
+    pub size: f64,
+    pub rgb: Rgb,
+    pub origin: (f64, f64),
+    pub angle: f64,
+    pub justify: Justify,
+    /// The typeset page's box: what is drawn inside it is the text's glyphs.
+    pub quad: Option<[(f64, f64); 4]>,
+}
+
+impl LatexMark {
+    /// The special text, its colour as `color` gives it.
+    pub fn text(&self, color: ColorRef) -> Text {
+        Text {
+            justify: self.justify,
+            color,
+            depth: 50,
+            pen_style: -1,
+            font: self.font,
+            size: self.size,
+            angle: self.angle,
+            flags: text_flags::SPECIAL | if self.ps { text_flags::POSTSCRIPT } else { 0 },
+            height: 0.0,
+            length: 0.0,
+            origin: Point::new(self.origin.0.round(), self.origin.1.round()),
+            text: self.text.clone(),
+            local_font: None,
+        }
+    }
+
+    /// Whether `p` lies in the typeset box (with `pad` Fig units around).
+    pub fn covers(&self, p: (f64, f64), pad: f64) -> bool {
+        let Some(q) = self.quad else { return false };
+        // Inside a convex quadrilateral either way round: the same side of
+        // every edge, edges moved outwards by `pad`.
+        let mut sign = 0.0;
+        for i in 0..4 {
+            let (a, b) = (q[i], q[(i + 1) % 4]);
+            let (ex, ey) = (b.0 - a.0, b.1 - a.1);
+            let len = (ex * ex + ey * ey).sqrt();
+            if !(len.is_finite() && len > 0.0) {
+                return false;
+            }
+            let cross = (ex * (p.1 - a.1) - ey * (p.0 - a.0)) / len;
+            if sign == 0.0 {
+                sign = if cross >= 0.0 { 1.0 } else { -1.0 };
+                if cross.abs() <= pad {
+                    continue;
+                }
+            }
+            if cross * sign < -pad {
+                return false;
+            }
+        }
+        true
+    }
+
+    /// A mark from the JSON object a RustFig PDF keeps, in PDF points of the
+    /// page; `to_fig` maps those to Fig units (y down).
+    fn from_pdf_json(v: &serde_json::Value, to_fig: &dyn Fn(f64, f64) -> (f64, f64)) -> Option<LatexMark> {
+        let num = |k: &str| v.get(k).and_then(serde_json::Value::as_f64).filter(|x| x.is_finite());
+        let text = v.get("text")?.as_str()?.to_string();
+        if text.is_empty() || text.len() > 10_000 {
+            return None;
+        }
+        let rgb = v
+            .get("color")
+            .and_then(serde_json::Value::as_str)
+            .and_then(Rgb::from_hex)?;
+        let (x, y) = (num("x")?, num("y")?);
+        let angle = num("angle").unwrap_or(0.0);
+        // The angle through the same mapping: a step along the baseline.
+        let o = to_fig(x, y);
+        let d = to_fig(x + angle.cos(), y + angle.sin());
+        let (dx, dy) = (d.0 - o.0, d.1 - o.1);
+        let scale = (dx * dx + dy * dy).sqrt() / K;
+        let quad = v.get("box").and_then(serde_json::Value::as_array).and_then(|b| {
+            let n: Vec<f64> = b.iter().filter_map(serde_json::Value::as_f64).collect();
+            let p = |i: usize| Some(to_fig(*n.get(2 * i)?, *n.get(2 * i + 1)?));
+            Some([p(0)?, p(1)?, p(2)?, p(3)?])
+        });
+        Some(LatexMark {
+            text,
+            font: i32::try_from(v.get("font").and_then(serde_json::Value::as_i64).unwrap_or(0)).unwrap_or(0),
+            ps: v.get("ps").and_then(serde_json::Value::as_bool).unwrap_or(false),
+            size: (num("size").unwrap_or(12.0) * if scale.is_finite() && scale > 0.0 { scale } else { 1.0 })
+                .clamp(0.1, 1000.0),
+            rgb,
+            origin: o,
+            angle: (-dy).atan2(dx),
+            justify: match v.get("justify").and_then(serde_json::Value::as_i64) {
+                Some(1) => Justify::Center,
+                Some(2) => Justify::Right,
+                _ => Justify::Left,
+            },
+            quad,
+        })
+    }
+}
+
+/// Most LaTeX texts read from one page.
+const MAX_LATEX_MARKS: usize = 10_000;
+
+/// The LaTeX texts a RustFig export keeps on the page (`/RustFigLaTeX`).
+fn page_latex_marks(page: &hayro::hayro_interpret::hayro_syntax::page::Page<'_>, init: Affine) -> Vec<LatexMark> {
+    use hayro::hayro_interpret::hayro_syntax::object::String as PdfString;
+    let Some(s) = page.raw().get::<PdfString<'_>>(b"RustFigLaTeX".as_slice()) else {
+        return Vec::new();
+    };
+    let Ok(serde_json::Value::Array(list)) = serde_json::from_slice::<serde_json::Value>(s.as_bytes()) else {
+        return Vec::new();
+    };
+    let to_fig = |x: f64, y: f64| fig(init * KPoint::new(x, y));
+    list.iter()
+        .take(MAX_LATEX_MARKS)
+        .filter_map(|v| LatexMark::from_pdf_json(v, &to_fig))
+        .collect()
 }
 
 /// A text collected from glyph runs, waiting to be joined with the next run.
@@ -230,6 +376,9 @@ struct Importer {
     /// Active clip paths in Fig units: convex polygons (counter-clockwise),
     /// or `None` for one that can't be applied.
     clips: Vec<Option<Vec<(f64, f64)>>>,
+    /// The LaTeX texts the page keeps (a RustFig export): their glyphs are
+    /// left out and the texts added.
+    latex: Vec<LatexMark>,
 }
 
 fn fig(p: KPoint) -> (f64, f64) {
@@ -257,6 +406,7 @@ impl Importer {
             fonts: HashMap::new(),
             font_info: HashMap::new(),
             clips: Vec::new(),
+            latex: Vec::new(),
         }
     }
 
@@ -288,6 +438,13 @@ impl Importer {
         if self.objects.len() >= MAX_OBJECTS {
             self.capped = true;
             return;
+        }
+        // Drawn inside a typeset LaTeX text: its glyphs, replaced by the text.
+        if !self.latex.is_empty() {
+            let pts = object_points(&o);
+            if !pts.is_empty() && self.latex.iter().any(|m| pts.iter().all(|p| m.covers(*p, K))) {
+                return;
+            }
         }
         let r = o.xfig_type_rank();
         if r < self.rank {

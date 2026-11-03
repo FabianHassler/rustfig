@@ -142,40 +142,10 @@ use rustfig_model::{flatten_object, Arrow, ColorRef, Document, Object, ObjectKin
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
-/// What a typesetter is asked for: one special (LaTeX) text.
-#[derive(Debug, Clone, PartialEq)]
-pub struct TypesetRequest<'a> {
-    pub text: &'a str,
-    pub font: i32,
-    /// Fig fonts of the PostScript set rather than the LaTeX set.
-    pub postscript: bool,
-    /// Points.
-    pub size: f64,
-    pub color: Rgba,
-}
-
-/// A special text typeset by TeX: the picture and its size (F8).
-#[derive(Debug, Clone)]
-pub struct Typeset {
-    /// TeX's page: the text's box with `margin_pt` on every side (ink may
-    /// reach outside the box); vector, so it stays sharp at every zoom (the
-    /// rasteriser renders it at the size shown).
-    pub pdf: Arc<fig2dev::util::pdfpic::PdfPicture>,
-    /// Width, height (including depth) and depth below the baseline, in
-    /// PostScript points.
-    pub width_pt: f64,
-    pub height_pt: f64,
-    pub depth_pt: f64,
-    /// Room around the box on the page, in PostScript points.
-    pub margin_pt: f64,
-}
-
-/// Source of typeset special texts. L3 never starts a process: the engine
-/// supplies one that runs TeX in the background and answers `None` until
-/// the picture is ready (or when TeX is missing or failed).
-pub trait Typesetter: Send + Sync + std::fmt::Debug {
-    fn typeset(&self, req: &TypesetRequest<'_>) -> Option<Typeset>;
-}
+// Special (LaTeX) texts typeset by TeX (F8): fig2dev's types, shared by the
+// canvas and the exports. L3 never starts a process: the engine provides
+// the typesetter.
+pub use fig2dev::scene::typeset::{TextTypesetter as Typesetter, Typeset, TypesetRequest};
 
 /// Options for building a scene.
 #[derive(Debug, Clone, Default)]
@@ -224,7 +194,10 @@ pub fn build_scene(doc: &Document, opts: &SceneOptions) -> Scene {
         prims.iter_mut().for_each(Prim::gray_out);
     }
     prims.extend(scene_prims(doc, opts));
-    Scene { prims }
+    Scene {
+        prims,
+        typeset: Vec::new(),
+    }
 }
 
 fn scene_prims(doc: &Document, opts: &SceneOptions) -> Vec<Prim> {
@@ -348,25 +321,7 @@ pub fn typeset_corners(
     ts: &Typeset,
     pad: f64,
 ) -> [Point; 4] {
-    const FIG_PER_PT: f64 = 1200.0 / 72.0;
-    let angle = if angle.is_finite() { angle } else { 0.0 };
-    let (w, h, d) = (
-        ts.width_pt * FIG_PER_PT,
-        ts.height_pt * FIG_PER_PT,
-        ts.depth_pt * FIG_PER_PT,
-    );
-    let u0 = match justify {
-        rustfig_model::Justify::Left => 0.0,
-        rustfig_model::Justify::Center => -w / 2.0,
-        rustfig_model::Justify::Right => -w,
-    };
-    let (c, s) = (angle.cos(), angle.sin());
-    // u along the baseline, v up (Fig's y grows downwards).
-    let at = |u: f64, v: f64| Point::new(origin.x + u * c - v * s, origin.y - u * s - v * c);
-    let pad = if pad.is_finite() { pad.max(0.0) } else { 0.0 };
-    let (u0, u1) = (u0 - pad, u0 + w + pad);
-    let (v0, v1) = (-d - pad, h - d + pad);
-    [at(u0, v1), at(u1, v1), at(u1, v0), at(u0, v0)]
+    fig2dev::scene::typeset::corners(origin, angle, justify, ts, pad)
 }
 
 /// The typeset text as a vector picture at the text's anchor, justification

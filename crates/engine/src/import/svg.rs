@@ -15,7 +15,8 @@
 //! are read only from the SVG's own folder, and everything returns `Result`.
 
 use super::pdf::{
-    clip_pieces, convex_ccw, inside_clips, map_font, piece_object, resolve_holes, split_subpaths, Holes, Ring, SubPath,
+    clip_pieces, convex_ccw, inside_clips, map_font, piece_object, resolve_holes, split_subpaths, Holes, LatexMark,
+    Ring, SubPath,
 };
 use hayro::kurbo::{Affine, BezPath, PathEl, Point as KPoint};
 use rustfig_geom::Point;
@@ -235,6 +236,7 @@ fn import_inner(bytes: &[u8], stem: &str, dir: Option<&std::path::Path>) -> Resu
         return Err("the drawing size is not usable".into());
     }
     let mut imp = Importer {
+        latex: latex_groups(&data),
         doc: Document::new(),
         objects: Vec::new(),
         images: Vec::new(),
@@ -258,6 +260,8 @@ fn import_inner(bytes: &[u8], stem: &str, dir: Option<&std::path::Path>) -> Resu
 }
 
 struct Importer {
+    /// The LaTeX texts RustFig typeset into the SVG, by their group's id.
+    latex: std::collections::HashMap<String, LatexMark>,
     doc: Document,
     objects: Vec<Object>,
     images: Vec<(String, Vec<u8>)>,
@@ -395,6 +399,11 @@ impl Importer {
         if g.opacity().get() <= 0.0 {
             return;
         }
+        // A LaTeX text RustFig typeset: the text instead of its glyphs.
+        if let Some(m) = self.latex.get(g.id()).cloned() {
+            self.latex_text(&m, base * affine(g.abs_transform()));
+            return;
+        }
         let mut clipped = false;
         if let Some(c) = g.clip_path() {
             match self.clip_polygon(c, g, base) {
@@ -432,6 +441,32 @@ impl Importer {
         if clipped {
             self.clips.pop();
         }
+    }
+
+    /// `m` (in the group's user units) as a special text; `t` maps user
+    /// units to CSS pixels.
+    fn latex_text(&mut self, m: &LatexMark, t: Affine) {
+        if !finite(t) {
+            return;
+        }
+        let at = |x: f64, y: f64| {
+            let p = t * KPoint::new(x, y);
+            (p.x * K, p.y * K)
+        };
+        let (x, y) = m.origin;
+        let o = at(x, y);
+        // The baseline direction through the transform (y down).
+        let d = at(x + m.angle.cos(), y - m.angle.sin());
+        let (dx, dy) = (d.0 - o.0, d.1 - o.1);
+        let scale = (dx * dx + dy * dy).sqrt();
+        let mut m = m.clone();
+        m.origin = o;
+        m.angle = (-dy).atan2(dx);
+        if scale.is_finite() && scale > 0.0 {
+            m.size = (m.size * scale).clamp(0.1, 1000.0);
+        }
+        let color = self.color(m.rgb);
+        self.push(Object::new(ObjectKind::Text(m.text(color))));
     }
 
     /// Whether a box (Fig units) lies wholly outside one of the active clips.
@@ -1220,6 +1255,107 @@ fn solve3(m: [[f64; 3]; 3], r: [f64; 3]) -> Option<[f64; 3]> {
         *o = det(&t) / d;
     }
     Some(out)
+}
+
+/// Most LaTeX groups read from one SVG.
+const MAX_LATEX_GROUPS: usize = 10_000;
+
+/// The groups RustFig writes around a typeset LaTeX text
+/// (`<g id="rustfig-latex-N" class="rustfig-latex" data-rustfig-…>`), by id.
+/// usvg keeps only the id, so their attributes are read from the file.
+/// Coordinates stay in the group's user units ([`Importer::latex_text`]).
+fn latex_groups(data: &[u8]) -> std::collections::HashMap<String, LatexMark> {
+    let mut out = std::collections::HashMap::new();
+    let text = String::from_utf8_lossy(data);
+    for (start, _) in text.match_indices("<g ").take(1_000_000) {
+        let Some(tag) = text.get(start..).and_then(|t| t.find('>').and_then(|end| t.get(..end))) else {
+            continue;
+        };
+        if !tag.contains("rustfig-latex") {
+            continue;
+        }
+        let attr = |name: &str| -> Option<String> {
+            let key = format!(" {name}=\"");
+            let from = tag.find(&key)? + key.len();
+            let len = tag.get(from..)?.find('"')?;
+            Some(xml_unescape(tag.get(from..from + len)?))
+        };
+        let num = |name: &str| {
+            attr(name)
+                .and_then(|v| v.trim().parse::<f64>().ok())
+                .filter(|v| v.is_finite())
+        };
+        let (Some(id), Some(text), Some(rgb)) = (
+            attr("id"),
+            attr("data-rustfig-text"),
+            attr("data-rustfig-color").and_then(|c| Rgb::from_hex(&c)),
+        ) else {
+            continue;
+        };
+        if text.is_empty() || text.len() > 10_000 {
+            continue;
+        }
+        out.insert(
+            id,
+            LatexMark {
+                text,
+                font: num("data-rustfig-font").map_or(0, |f| f as i32),
+                ps: attr("data-rustfig-ps").as_deref() == Some("1"),
+                size: num("data-rustfig-size").unwrap_or(12.0).clamp(0.1, 1000.0),
+                rgb,
+                origin: (
+                    num("data-rustfig-x").unwrap_or(0.0),
+                    num("data-rustfig-y").unwrap_or(0.0),
+                ),
+                angle: num("data-rustfig-angle").unwrap_or(0.0),
+                justify: match num("data-rustfig-justify").map(|j| j as i32) {
+                    Some(1) => Justify::Center,
+                    Some(2) => Justify::Right,
+                    _ => Justify::Left,
+                },
+                quad: None,
+            },
+        );
+        if out.len() >= MAX_LATEX_GROUPS {
+            break;
+        }
+    }
+    out
+}
+
+/// XML's character references and the five named entities.
+fn xml_unescape(s: &str) -> String {
+    let mut o = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(i) = rest.find('&') {
+        o.push_str(rest.get(..i).unwrap_or_default());
+        let tail = rest.get(i..).unwrap_or_default();
+        let Some(end) = tail.find(';').filter(|e| *e <= 10) else {
+            o.push('&');
+            rest = tail.get(1..).unwrap_or_default();
+            continue;
+        };
+        let ent = tail.get(1..end).unwrap_or_default();
+        let ch = match ent {
+            "amp" => Some('&'),
+            "lt" => Some('<'),
+            "gt" => Some('>'),
+            "quot" => Some('"'),
+            "apos" => Some('\''),
+            _ => ent
+                .strip_prefix("#x")
+                .and_then(|h| u32::from_str_radix(h, 16).ok())
+                .or_else(|| ent.strip_prefix('#').and_then(|d| d.parse().ok()))
+                .and_then(char::from_u32),
+        };
+        match ch {
+            Some(c) => o.push(c),
+            None => o.push_str(tail.get(..=end).unwrap_or_default()),
+        }
+        rest = tail.get(end + 1..).unwrap_or_default();
+    }
+    o.push_str(rest);
+    o
 }
 
 #[cfg(test)]

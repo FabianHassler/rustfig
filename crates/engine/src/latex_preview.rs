@@ -257,7 +257,6 @@ impl LatexPreview {
         if !matches!(lock(&self.inner.cache).map.get(&key), Some(Entry::Pending)) {
             return;
         }
-        static JOBS: AtomicU64 = AtomicU64::new(0);
         let n = JOBS.fetch_add(1, Ordering::Relaxed);
         let result = match program {
             Some(p) => std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -292,6 +291,84 @@ impl LatexPreview {
         }
         drop(c);
         self.inner.generation.fetch_add(1, Ordering::Relaxed);
+    }
+}
+
+/// Typesets for an export: waits for TeX instead of answering later. Uses
+/// the preview's program, preamble and cache, but not its on/off switch
+/// (the export's option decides). `None` on wasm and without TeX.
+impl LatexPreview {
+    pub fn export_typesetter(&self) -> Option<Arc<dyn Typesetter>> {
+        if cfg!(target_arch = "wasm32") {
+            return None;
+        }
+        self.program()
+            .map(|_| Arc::new(ExportHandle(self.clone())) as Arc<dyn Typesetter>)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn typeset_now(&self, req: &TypesetRequest<'_>) -> Option<Typeset> {
+        if req.text.trim().is_empty()
+            || req.text.len() > MAX_TEXT_BYTES
+            || !(req.size.is_finite() && req.size > 0.0 && req.size <= 1000.0)
+        {
+            return None;
+        }
+        let key = Self::base_key(req);
+        match lock(&self.inner.cache).map.get(&key) {
+            Some(Entry::Ready(t)) => return Some(t.clone()),
+            Some(Entry::Failed) => return None,
+            _ => {}
+        }
+        let program = self.program()?;
+        let settings = self.settings();
+        let result = {
+            let _one_at_a_time = lock(&self.inner.gate);
+            let n = JOBS.fetch_add(1, Ordering::Relaxed);
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                run_tex(&program, &settings.preamble, &key, n)
+            }))
+            .unwrap_or_else(|_| Err("internal error while typesetting".to_string()))
+        };
+        let mut c = lock(&self.inner.cache);
+        match result {
+            Ok(t) => {
+                if !matches!(c.map.get(&key), Some(Entry::Pending)) {
+                    c.map.insert(key.clone(), Entry::Ready(t.clone()));
+                    c.order.push_back(key);
+                    while c.order.len() > MAX_CACHE {
+                        if let Some(old) = c.order.pop_front() {
+                            c.map.remove(&old);
+                        }
+                    }
+                }
+                Some(t)
+            }
+            Err(e) => {
+                let first = key.text.lines().next().unwrap_or_default();
+                c.messages.push(format!("LaTeX text \"{}\": {e}", shorten(first, 30)));
+                None
+            }
+        }
+    }
+}
+
+/// Jobs started (each TeX run gets its own folder).
+#[cfg(not(target_arch = "wasm32"))]
+static JOBS: AtomicU64 = AtomicU64::new(0);
+
+#[derive(Debug)]
+struct ExportHandle(#[cfg_attr(target_arch = "wasm32", allow(dead_code))] LatexPreview);
+
+impl Typesetter for ExportHandle {
+    #[cfg(not(target_arch = "wasm32"))]
+    fn typeset(&self, req: &TypesetRequest<'_>) -> Option<Typeset> {
+        self.0.typeset_now(req)
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn typeset(&self, _req: &TypesetRequest<'_>) -> Option<Typeset> {
+        None
     }
 }
 

@@ -1925,14 +1925,24 @@ fn apply_global(app: &mut App, was: &GlobalDraft, now: &GlobalDraft) {
     // These commands flip: only when the row was changed here and the
     // switch is not already where the row says.
     let toggles = [
-        ("app.toggle_autorefresh", was.autorefresh, now.autorefresh, app.reload.on),
+        (
+            "app.toggle_autorefresh",
+            was.autorefresh,
+            now.autorefresh,
+            app.reload.on,
+        ),
         (
             "view.toggle_page_border",
             was.page_borders,
             now.page_borders,
             app.engine.show_page_border,
         ),
-        ("app.toggle_depths", was.depth_manager, now.depth_manager, app.show_depths),
+        (
+            "app.toggle_depths",
+            was.depth_manager,
+            now.depth_manager,
+            app.show_depths,
+        ),
         ("app.toggle_balloons", was.balloons, now.balloons, app.show_balloons),
     ];
     for (id, a, b, actual) in toggles {
@@ -3366,6 +3376,20 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
                                 "Store the figure (.fig text, with hidden depths and comments) inside the file, \
                                  so File > Open can edit it again",
                             );
+                            ui.end_row();
+                        }
+                        if rows.typeset_latex {
+                            ui.label("LaTeX text");
+                            let tex = app.engine.latex.program().is_some();
+                            ui.add_enabled(
+                                tex,
+                                egui::Checkbox::new(&mut st.settings.typeset_latex, "Typeset with TeX"),
+                            )
+                            .on_hover_text(if tex {
+                                "Texts with the TeX flag are typeset by pdflatex (as on the canvas) and drawn as vectors"
+                            } else {
+                                "No TeX found (pdflatex or lualatex): LaTeX texts are written as text"
+                            });
                             ui.end_row();
                         }
                         if rows.pdf_page_mode {

@@ -55,6 +55,9 @@ pub struct PanelSettings {
     pub quality: u32,
     /// PDF, SVG, PNG: store the figure's Fig text in the file (plan E16).
     pub embed: bool,
+    /// PDF, EPS/PS, SVG and the bitmaps: special (LaTeX) texts typeset by
+    /// the installed TeX ([`typesets`]).
+    pub typeset_latex: bool,
     /// HPGL: "Issue PCL Command to use HPGL" (`print_hpgl_pcl_switch`,
     /// fig2dev's `-k`).
     pub hpgl_pcl: bool,
@@ -69,6 +72,7 @@ impl Default for PanelSettings {
     fn default() -> Self {
         PanelSettings {
             smoothing: Some(4),
+            typeset_latex: true,
             ..PanelSettings::xfig()
         }
     }
@@ -94,6 +98,7 @@ impl PanelSettings {
             smoothing: Some(1),
             quality: 75,
             embed: false,
+            typeset_latex: false,
             hpgl_pcl: false,
             hpgl_font: false,
         }
@@ -143,6 +148,8 @@ pub struct Rows {
     pub quality: bool,
     /// PDF, SVG, PNG: "Embed the figure" (plan E16).
     pub embed: bool,
+    /// "Typeset LaTeX text" ([`typesets`]).
+    pub typeset_latex: bool,
     pub border: bool,
     /// The border is in pixels (bitmaps), else points.
     pub border_pixels: bool,
@@ -164,6 +171,17 @@ pub struct Rows {
     pub hpgl: bool,
 }
 
+/// Languages that draw special (LaTeX) texts as TeX typesets them when the
+/// export asks for it (`typeset_latex`): PDF, PostScript, SVG and the
+/// bitmaps. The LaTeX languages leave the texts to LaTeX anyway; the CAD
+/// and legacy languages keep them as text.
+pub fn typesets(lang: &str) -> bool {
+    matches!(
+        lang,
+        "pdf" | "eps" | "ps" | "svg" | "png" | "jpeg" | "tiff" | "gif" | "pcx" | "ppm" | "xbm" | "xpm"
+    )
+}
+
 /// The rows of language `id`.
 pub fn rows(id: &str) -> Rows {
     let bitmap = matches!(
@@ -175,6 +193,7 @@ pub fn rows(id: &str) -> Rows {
         transparent: id == "gif",
         quality: id == "jpeg",
         embed: rustfig_format::embed::can_embed(id),
+        typeset_latex: typesets(id) || id == "pspdf",
         border: ps || bitmap || matches!(id, "pict2e" | "tikz" | "asy" | "map"),
         border_pixels: bitmap,
         background: ps || bitmap || id == "tk",
@@ -326,6 +345,9 @@ pub fn params(e: &Engine, id: &str, s: &PanelSettings) -> Map<String, Value> {
     }
     if r.embed && s.embed {
         out.insert("embed".into(), json!(true));
+    }
+    if r.typeset_latex && s.typeset_latex {
+        out.insert("typeset_latex".into(), json!(true));
     }
     if r.quality {
         options.insert("quality".into(), json!(s.quality));

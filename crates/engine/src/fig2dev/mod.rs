@@ -59,10 +59,29 @@ pub fn export(
     options: &[(char, Option<String>)],
     dir: Option<&Path>,
 ) -> Result<(Vec<u8>, Vec<String>), String> {
+    export_typeset(doc, lang, options, dir, None)
+}
+
+/// [`export`] with special (LaTeX) texts drawn as `typesetter` typesets
+/// them (the scene languages and SVG; the others ignore it).
+pub fn export_typeset(
+    doc: &Document,
+    lang: &str,
+    options: &[(char, Option<String>)],
+    dir: Option<&Path>,
+    typesetter: Option<std::sync::Arc<dyn fig2dev::scene::typeset::TextTypesetter>>,
+) -> Result<(Vec<u8>, Vec<String>), String> {
     let (mut dev, mut ctx) = setup(lang, options, dir)?;
+    ctx.typesetter = typesetter.clone();
     match rustfig_format::bridge::export_objects(doc, &mut ctx) {
         Some(objects) => finish(lang, dev.as_mut(), &mut ctx, &objects),
-        None => export_via_text(doc, lang, options, dir),
+        None => {
+            let (mut dev, mut ctx) = setup(lang, options, dir)?;
+            ctx.typesetter = typesetter;
+            let fig = rustfig_format::write_fig(doc);
+            let objects = read::readfp_fig(&mut ctx, fig.as_bytes()).map_err(|_| ctx.messages.join("\n"))?;
+            finish(lang, dev.as_mut(), &mut ctx, &objects)
+        }
     }
 }
 
