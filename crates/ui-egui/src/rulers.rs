@@ -510,7 +510,7 @@ fn units_box(app: &mut App, ui: &mut Ui, tk: &Tokens, r: Rect) {
     }
     if !app.unit_panel_open {
         // Closed without Set (Cancel, Escape, the close box): forget the draft.
-        ui.data_mut(|data| data.remove::<UnitDraft>(egui::Id::new("unit_panel_draft")));
+        ui.data_mut(|data| data.remove::<(UnitDraft, UnitDraft)>(egui::Id::new("unit_panel_draft")));
     }
     resp.on_hover_text("Left: pan to the origin · right: Unit/Scale settings")
         .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, format!("Units: {label}")));
@@ -548,9 +548,15 @@ impl UnitDraft {
 /// scale (Unity or User defined with a factor), Cancel and Set.
 fn unit_panel(app: &mut App, ui: &mut Ui) {
     let id = egui::Id::new("unit_panel_draft");
-    let mut d: UnitDraft = ui
-        .data(|data| data.get_temp::<UnitDraft>(id))
-        .unwrap_or_else(|| UnitDraft::of(app));
+    // (the values the panel opened with, the panel's draft): Set applies
+    // only what was changed here, so a change made meanwhile another way
+    // (a script, another window) is kept.
+    let (base, mut d): (UnitDraft, UnitDraft) = ui
+        .data(|data| data.get_temp::<(UnitDraft, UnitDraft)>(id))
+        .unwrap_or_else(|| {
+            let now = UnitDraft::of(app);
+            (now.clone(), now)
+        });
     egui::Grid::new("unit_panel")
         .num_columns(2)
         .spacing(vec2(8.0, 4.0))
@@ -601,8 +607,7 @@ fn unit_panel(app: &mut App, ui: &mut Ui) {
         set |= ui.button("Set").clicked();
     });
     if set {
-        let current = UnitDraft::of(app);
-        if d.metric != current.metric {
+        if d.metric != base.metric {
             app.run(
                 "doc.set_units",
                 json!({ "units": if d.metric { "metric" } else { "inches" } }),
@@ -614,16 +619,26 @@ fn unit_panel(app: &mut App, ui: &mut Ui) {
             String::new()
         };
         let factor = if d.user_scale { d.factor } else { 1.0 };
-        app.run(
-            "view.set_scale",
-            json!({ "decimal": !d.fractions, "unit": unit, "scale": factor }),
-        );
+        let scale_changed = (d.fractions, d.user_unit, d.unit.trim(), d.user_scale, d.factor)
+            != (
+                base.fractions,
+                base.user_unit,
+                base.unit.trim(),
+                base.user_scale,
+                base.factor,
+            );
+        if scale_changed {
+            app.run(
+                "view.set_scale",
+                json!({ "decimal": !d.fractions, "unit": unit, "scale": factor }),
+            );
+        }
     }
     if set || cancel {
-        ui.data_mut(|data| data.remove::<UnitDraft>(id));
+        ui.data_mut(|data| data.remove::<(UnitDraft, UnitDraft)>(id));
         app.unit_panel_open = false;
     } else {
-        ui.data_mut(|data| data.insert_temp(id, d));
+        ui.data_mut(|data| data.insert_temp(id, (base, d)));
     }
 }
 

@@ -4638,3 +4638,22 @@ fn export_language_and_options_survive_a_restart() {
     assert!(rustfig_engine::export_panel::settings_for(&a.engine, "svg").embed);
     let _ = std::fs::remove_dir_all(path.parent().unwrap());
 }
+
+/// Set in the Unit/Scale panel applies only what was changed there: a scale
+/// set meanwhile by a script is kept.
+#[test]
+fn unit_panel_set_keeps_changes_made_meanwhile() {
+    let mut h = harness(app());
+    h.state_mut().run("app.unit_panel", json!({}));
+    h.run_steps(3);
+    h.state_mut()
+        .run("view.set_scale", json!({"decimal": true, "unit": "m", "scale": 50.0}));
+    h.run_steps(2);
+    h.get_by_label("Metric").click();
+    h.run_steps(2);
+    h.get_by_label("Set").click();
+    h.run_steps(3);
+    let s = h.state().engine.unit_scale.clone();
+    assert_eq!((s.unit.as_str(), s.factor), ("m", 50.0), "the script's scale is kept");
+    assert_eq!(h.state().engine.doc().settings.units, rustfig_model::Units::Metric);
+}
