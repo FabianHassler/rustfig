@@ -440,7 +440,7 @@ fn circle_through_three_points() {
     assert!(((b.x - a.x) - 2000.0).abs() < 60.0 && ((b.y - a.y) - 2000.0).abs() < 60.0);
     assert!(
         (a.x + b.x).abs() < 1.0 && (a.y + b.y).abs() < 1.0,
-        "centerd on the origin"
+        "centered on the origin"
     );
     one_undo_step(&mut e, &before);
     // Collinear points: refused, nothing drawn.

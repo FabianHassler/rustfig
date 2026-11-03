@@ -8,7 +8,7 @@ use std::collections::HashSet;
 use std::f64::consts::PI;
 use std::fmt::Write as _;
 
-/// Page: Letter landscape, 11 x 8.5 in = 13200 x 10200 Fig units; drawings centerd.
+/// Page: Letter landscape, 11 x 8.5 in = 13200 x 10200 Fig units; drawings centered.
 const W: f64 = 13200.0;
 const H: f64 = 10200.0;
 

@@ -1,11 +1,11 @@
 # Keys
 
 <!-- os: mac -->
-RustFig understands two sets of keys: xfig's own, and the usual ones of macOS. xfig's set can be switched off in Edit > Global settings ("xfig keyboard shortcuts in menus"). The macOS shortcuts use Cmd (written Ctrl in the tables below); xfig's Meta is the Option key. Where a table says "the physical Ctrl key", it means the Control key, not Cmd.
+RustFig understands two sets of keys: xfig's own, and the usual ones of macOS. xfig's set is a switch in Edit > Global settings ("xfig keyboard shortcuts in menus", off by default). The macOS shortcuts use Cmd (written Ctrl in the tables below); xfig's Meta is the Option key. Where a table says "the physical Ctrl key", it means the Control key, not Cmd.
 
 The menus show one key per entry: the system's (`⌘ Z` for Undo on macOS, `Ctrl+Z` elsewhere), or xfig's when you turn on xfig's keys in Edit > Global settings (off when RustFig is new). The mode letters (`s` for spline, `b` for box, …) work either way, and Help > Keys lists both sets. With xfig's keys on, Undo shows `⌥ U`, and `⌘ Z` undoes as well. Option and Cmd are written ⌥ and ⌘ (with Control ⌃ and Shift ⇧), with a thin space before the key, so `⌘ '` (Cmd and the apostrophe key), `⌘ -` and `⌘ =` stay readable.
 <!-- os: linux windows -->
-RustFig understands two sets of keys: xfig's own, and the usual ones of your system. xfig's set can be switched off in Edit > Global settings ("xfig keyboard shortcuts in menus"). xfig's Meta is the Alt key.
+RustFig understands two sets of keys: xfig's own, and the usual ones of your system. xfig's set is a switch in Edit > Global settings ("xfig keyboard shortcuts in menus", off by default). xfig's Meta is the Alt key.
 
 Where both sets want the same key (Ctrl+S, Ctrl+C and so on), xfig's meaning wins while xfig's keys are on. The menus show both keys of an entry where it has both, for example `Alt+U / Ctrl+Z`; modifiers are written Ctrl, Alt and Shift, and the key as its symbol (`Ctrl+'` is Ctrl and the apostrophe key, `Ctrl+-`, `Ctrl+=`).
 <!-- os: end -->
@@ -45,14 +45,19 @@ The complete list, searchable, is in Help > Keys...: every command with its key 
 | Meta+I | Search/Replace |
 | Meta+K | Spell check |
 | Meta+D | Delete all |
+| Meta+Z | Digitize |
+| Meta+P | Print; Shift+Meta+P prints at once |
 | Meta+R or Ctrl+L | Redraw |
 | Meta+C | Portrait/Landscape |
 | Meta+B | Show page borders |
+| Meta+L | Show line lengths |
 | Meta+Y | Show info balloons |
 | Meta+G | Global settings |
 | Shift+U | Set units |
 | Shift+Z, Z | Zoom in, zoom out |
 | Ctrl+Z (the physical Ctrl key) | Zoom to fit |
+| Ctrl+K (the physical Ctrl key) | Enter point |
+| Ctrl+Y (the physical Ctrl key) | Manage Styles |
 
 Meta+F, E, V and H open the File, Edit, View and Help menus (the Tools menu has no letter); while a menu is open, the underlined letter of an entry picks it (for example `i` for Zoom In in the View menu). In the Help menu `x` opens this manual and `k` the key list. In the View menu `c` opens the character map (also Ctrl+Shift+M, even while typing). Ctrl+J (Cmd+J on macOS) puts the caret in the Find mode field of the mode panel, in both key schemes (xfig has no key there).
 
@@ -67,11 +72,18 @@ Meta+F, E, V and H open the File, Edit, View and Help menus (the Tools menu has 
 | Ctrl+=, Ctrl+-, Ctrl+0, Ctrl+1 | Zoom in, out, to fit, actual size |
 | Ctrl+' , Ctrl+B | Show grid, show page border |
 | Ctrl+F | Search/Replace |
+| Ctrl+P | Print |
+| Ctrl+K | Enter point |
+| Ctrl+J | Go to mode |
+| Ctrl+Shift+L | Redraw |
+| Ctrl+Shift+M | Character map |
+| Ctrl+Shift+K | Command search |
+| Ctrl+Shift+P | Plot curve |
 
 ## Other keys
 
 - Arrow keys pan the canvas; Home returns to the origin.
-- Escape works one level per press: it closes an open panel; otherwise it (1) cancels what is in progress (a shape being drawn is dropped, a move, paste or zoom box stops; typed text is finished), then (2) clears what the mode has collected (Chop's axe list, the located object, the rotate or flip center, the selection), then (3) leaves the mode, as when RustFig starts. Edit > Select none still selects nothing.
+- Escape works one level per press: it closes an open panel; otherwise it (1) cancels what is in progress (a shape being drawn is dropped, a move, paste or zoom box stops; typed text is finished), then (2) clears what the mode has collected (Chop's axe list, the located object, the rotate or flip center), then (3) leaves the mode, as when RustFig starts.
 - Backspace (or Delete) while drawing a line, polygon or spline removes the last point, like Shift+left.
 - In Text mode: Left, Right, Home, End, Backspace and Delete edit, Enter ends the line and starts the next one below it. Shift extends the selection; word jumps and select all, copy, cut and paste follow the platform:
 <!-- os: mac -->

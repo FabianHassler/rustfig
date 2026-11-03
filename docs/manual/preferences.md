@@ -20,13 +20,13 @@ The rows of xfig's panel are spread over the tabs: **Window** has the display sw
 - **Allow negative coords**: when off, points are kept right of and below the origin and the view moves to the origin (`allownegcoords`).
 - **Draw axis lines**: pink lines through the origin (`showaxislines`).
 - **Freehand drawing resolution**: the least distance, in Fig units (1/1200 inch), between two points of a freehand stroke (`freehand_resolution`, default 25).
-- **Recently used files**: 0 to 9 entries in File > Open recent (`max_recent_files`).
+- **Recently used files**: 0 to 9 entries at the end of the File menu (`max_recent_files`).
 - **Image editor**: the program Edit Image starts (`image_editor`); `%f` stands for the picture file, and without `%f` the file is added at the end. The default (`open` on macOS, `start` on Windows, `xdg-open` on Linux) uses the system's own program for the file type.
-- **Spell checker**: the command Spell check runs (`spellcheckcommand`). `%f` stands for a file with the drawing's texts; the spell checker prints the misspelt words, one per line. The default is `aspell list < %f` (xfig's was `spell %f`, a Unix program most systems no longer have); `hunspell -l %f` works the same way. If `aspell` is not installed, `hunspell -l %f` is tried; the Edit menu's Spell check uses it (see [Draw text](draw-text-pictures.md)).
+- **Spell checker**: the command Spell check runs (`spellcheckcommand`). `%f` stands for a file with the drawing's texts; the spell checker prints the misspelled words, one per line. The default is `aspell list < %f` (xfig's was `spell %f`, a Unix program most systems no longer have); `hunspell -l %f` works the same way. If `aspell` is not installed, `hunspell -l %f` is tried; the Edit menu's Spell check uses it (see [Draw text](draw-text-pictures.md)).
 
 RustFig's own rows (Window tab, except as noted):
 
-- **xfig keyboard shortcuts in menus**: on by default; xfig's Meta and Ctrl keys ([Keys](keys.md)).
+- **xfig keyboard shortcuts in menus**: off by default; xfig's Meta and Ctrl keys ([Keys](keys.md)).
 - **Button style**: 3D (xfig's bevelled buttons) or flat.
 - **Theme**: System (follows the system's light or dark setting), Light or Dark. The drawing's paper stays white in every theme.
 - **UI scale**: 75 % to 200 % (a slider in steps of 5), for small or large screens. Both are kept for every start (`app.theme`, `app.ui_scale`).

@@ -117,7 +117,7 @@ fn a_special_text_becomes_a_picture_once_typeset_and_is_cached() {
         panic!("no picture");
     };
     assert!(pdf.size().0 > 1.0 && pdf.size().1 > 1.0);
-    // Centerd on x = 3000, the baseline (y = 900) inside the picture.
+    // Centered on x = 3000, the baseline (y = 900) inside the picture.
     let cx = (corners[0].x + corners[1].x) / 2.0;
     assert!((cx - 3000.0).abs() < 1.0, "{cx}");
     assert!(corners[3].y > 900.0 && corners[0].y < 900.0, "{corners:?}");
@@ -146,7 +146,7 @@ fn bounds_and_picking_follow_the_typeset_size() {
         })
         .unwrap()
         .id;
-    // Far right of the stored box (about 450 wide, centerd on 3000).
+    // Far right of the stored box (about 450 wide, centered on 3000).
     let far = rustfig_engine::geom::Point::new(3000.0 + 4000.0, 900.0);
     assert_eq!(e.hit_test(far, 10.0), None);
     let _ = scene_of(&e);

@@ -49,7 +49,7 @@ impl Splash {
     }
 }
 
-/// Draw the card centerd on the canvas `rect`, if it is still due; the
+/// Draw the card centered on the canvas `rect`, if it is still due; the
 /// first key or mouse press starts the fade-out (and still does its job).
 pub fn show(splash: &mut Option<Splash>, ctx: &egui::Context, rect: Rect) {
     let Some(s) = splash.as_mut() else { return };
@@ -101,7 +101,7 @@ pub fn show_about(open: &mut bool, ctx: &egui::Context) {
     }
 }
 
-/// The card in its own layer above the canvas, centerd on `center`; a
+/// The card in its own layer above the canvas, centered on `center`; a
 /// click on it goes to the card, not to the drawing below.
 fn card_area(ctx: &egui::Context, center: Pos2, alpha: f32, about: bool) -> egui::Response {
     let size = if about { ABOUT_CARD } else { CARD };

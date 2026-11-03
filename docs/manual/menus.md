@@ -1,10 +1,10 @@
 # Menus
 
-Entries xfig has are named as in xfig; RustFig's own entries follow them. An entry grayed out is not available in the current situation (nothing selected, nothing to undo).
+Entries xfig has are named as in xfig; RustFig's own entries follow them. An entry grayed out is not available in the current situation (nothing to undo, no text objects to check). Group, align, rotate and the other editing commands have no menu entry: they are modes in the mode panel, and every command can be found with Help > Command search.
 
 ## File
 
-Sections Open (New, Open, Merge, Open and Merge with preview, Digitize), Save (Save, Save As, Saved versions), Output (Export, Print), then New window and Exit, and the recent files (numbered; pick with the number key). See [Files](files.md) and [Export](export.md).
+Sections Open (New, Open, Merge, Open with preview, Merge with preview, Digitize), Save (Save, Save As, Saved versions), Output (Export, Print), then New window and Exit, and the recent files (numbered; pick with the number key). See [Files](files.md) and [Export](export.md).
 
 ## Edit
 
@@ -23,17 +23,16 @@ Sections Drawing (Manage Styles, Redraw, Portrait/Landscape), Zoom (Zoom in, Zoo
 
 Hold and Release, then the object snaps for the next clicked point: Endpoint, Midpoint, Nearest, Focus, Normal, Tangent, Intersection, Diameter. See [Snap and grid](snap-grid.md).
 
-## Object (RustFig)
-
-Commands that xfig has only as modes or keys: Group and Ungroup, Update, Convert, Open/Close, Arrows, Transform (rotate, flip), Arrange (align, distribute, depth order), Measure and Edit Attributes. They act on the selection.
-
 ## Tools
 
 RustFig's own menu, right after View. Find: Find Properties (see [Text](draw-text-pictures.md)) and Go to mode (Ctrl+J; puts the caret in the Go to mode field of the mode panel). Add to the drawing: Import picture, Capture Screen (native app only) and Enter point. Plots: Plot curve and Edit plot (see [Plot](plot.md)).
 
 ## Help
 
+Sections Learn (RustFig Manual, Keys, Mouse buttons, What's new) and Look up (RustFig Reference, Command search, Message history), then Install TeX Gyre fonts and About RustFig.
+
 - RustFig Manual: this manual (xfig's "Xfig Reference").
 - RustFig Reference (commands): every command with its id and shortcut, filterable. The same ids work in the [control channel and MCP](automation.md).
-- Install TeX Gyre fonts: downloads the TeX Gyre fonts from CTAN into RustFig's user data folder (native app; see [the font chooser](attributes.md)).
+- Keys...: every command with its keys in both sets ([Keys](keys.md)). Mouse buttons..., What's new... and Command search... are in [Finding help](help-tools.md); Message history... is the message panel's list ([The window](window.md)).
+- Install TeX Gyre fonts... downloads the TeX Gyre fonts from CTAN into RustFig's user data folder (native app; see [the font chooser](attributes.md)).
 - About RustFig: version and license; the xfig copyright holders.

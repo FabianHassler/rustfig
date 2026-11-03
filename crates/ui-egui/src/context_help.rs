@@ -37,16 +37,17 @@ pub const RULER_TOPIC: &str = "window.md";
 /// The topic of the open dialog (the first that is open), if any.
 pub fn dialog_topic(app: &App) -> Option<&'static str> {
     let d = &app.dialogs;
-    let table: [(bool, &'static str); 12] = [
+    let table: [(bool, &'static str); 13] = [
         (d.export.open, "export.md"),
         (d.print.open, "print.md"),
-        (d.search.open, "select-move.md"),
-        (d.settings_open, "files.md"),
+        (d.search.open, "draw-text-pictures.md"),
+        (d.settings_open, "view.md"),
         (d.global_open, "preferences.md"),
         (d.versions_open, "files.md"),
         (d.color.open, "attributes.md"),
         (app.styles.open, "attributes.md"),
-        (app.unit_panel_open, "preferences.md"),
+        (app.unit_panel_open, "view.md"),
+        (app.find.open, "draw-text-pictures.md"),
         (app.keys_sheet.open, "keys.md"),
         (app.mouse_sheet.open, "mouse.md"),
         (app.library.open, "libraries.md"),

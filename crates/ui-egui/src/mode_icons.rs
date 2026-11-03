@@ -93,7 +93,7 @@ impl Ic {
         self.push(ObjectKind::Polyline(b))
     }
 
-    /// A filled square of `size` pixels centerd on pixel (x, y): xfig's
+    /// A filled square of `size` pixels centered on pixel (x, y): xfig's
     /// point markers.
     fn marker(&mut self, x: f64, y: f64, size: f64) -> &mut Ic {
         let h = size / 2.0;

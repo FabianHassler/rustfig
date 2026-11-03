@@ -27,7 +27,7 @@ pub(super) fn commands() -> Vec<Command> {
         label: "Add tangent/normal line",
         menu: "",
         shortcut: "",
-        params: "{\"id\": circle, ellipse, arc, line, polygon, box or spline, \"x\", \"y\": the point on it (Fig units; the curve point nearest to it within \"tolerance\" is used), \"normal\"?: bool (default false: the tangent), \"length\"?: in inches or cm as the units box shows (default: the indicator's tangent_length, xfig's Tangent/Norm Length), \"tolerance\"?: Fig units (default: the pick tolerance), plus the style and arrow parameters of shape.polyline}  — add a line through the curve point, along its tangent or normal, centerd there (xfig's Tangent mode: left button tangent, middle button normal). Fails at a singularity (a vertex or a point where the curve has no direction). Returns {\"id\", \"x\", \"y\" (the curve point), \"points\"}",
+        params: "{\"id\": circle, ellipse, arc, line, polygon, box or spline, \"x\", \"y\": the point on it (Fig units; the curve point nearest to it within \"tolerance\" is used), \"normal\"?: bool (default false: the tangent), \"length\"?: in inches or cm as the units box shows (default: the indicator's tangent_length, xfig's Tangent/Norm Length), \"tolerance\"?: Fig units (default: the pick tolerance), plus the style and arrow parameters of shape.polyline}  — add a line through the curve point, along its tangent or normal, centered there (xfig's Tangent mode: left button tangent, middle button normal). Fails at a singularity (a vertex or a point where the curve has no direction). Returns {\"id\", \"x\", \"y\" (the curve point), \"points\"}",
         mutates: true,
         enabled: super::always,
         run: tangent_line,

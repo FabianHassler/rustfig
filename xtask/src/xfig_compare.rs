@@ -93,7 +93,7 @@ const FIXTURE3: &str =
 
 /// Round 3 fixture B: two pictures (one flipped), a pie-wedge arc and an arc with an arrow (both counter-
 /// clockwise), lines with each arrow type, a hatched polygon, a many-point line, a dash-dotted line,
-/// overlapping filled circles at two depths, a rotated ellipse, a centerd text and a compound in a
+/// overlapping filled circles at two depths, a rotated ellipse, a centered text and a compound in a
 /// compound (text, spline).
 const FIXTURE4: &str =
     "#FIG 3.2  Produced by xfig version 3.2.9a\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\

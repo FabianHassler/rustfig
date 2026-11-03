@@ -9,7 +9,7 @@ RustFig keeps xfig's arrangement of the main window.
 - **Message panel**: what to do next, errors and information. Click it to see the history of messages (also Help > Message history..., `app.messages`).
   - Each message has a level: information, warning (for example the notes after opening a file) or error (red). The window's **Info**, **Warning** and **Error** check boxes choose which levels are listed, **Copy** puts the listed messages on the clipboard one per line (warnings and errors start with their level), **Clear** empties the history and **Dismiss** (or Return) closes the window, as in xfig. Scripts use `app.messages` and `app.copy_messages` with `levels`, for example `["warning","error"]`.
 - **Mouse indicator**: three boxes, one per mouse button, say what each does in the current mode and step. Hold Shift to see the Shift meanings. Hovering shows the same as text.
-- **Units box**: shows the units (inches or centimeters, a scale); click it for the unit panel (Edit > Set units).
+- **Units box**: shows the units (inches or centimeters, a scale); a left click pans to the origin, a right click opens the Unit/Scale panel (Edit > Set units).
 
 ## Mode panel (left)
 

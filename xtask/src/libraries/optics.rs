@@ -115,7 +115,7 @@ fn hatch(a: Pt, b: Pt, n: Pt) -> Vec<Object> {
         .collect()
 }
 
-/// A thin plate of length `len` and thickness `th`, centerd on `c`, tilted
+/// A thin plate of length `len` and thickness `th`, centered on `c`, tilted
 /// 45 degrees up to the right.
 fn plate45(c: Pt, len: f64, th: f64, fill: Fill) -> Object {
     let (u, n) = ((R2, -R2), (R2, R2));

@@ -24,4 +24,4 @@ The Snap menu arms a snap for the next point you click:
 | Intersection | where two objects cross |
 | Diameter | the opposite end of a circle's diameter |
 
-**Hold** keeps the chosen snap after each point until you pick **Release**. The Snap Mode box next to the menu says which snap is armed.
+**Hold** keeps the chosen snap after each point until you pick **Release**. The Snap Mode box above the depth panel says which snap is armed; click it for the same list as the Snap menu.

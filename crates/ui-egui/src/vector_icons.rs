@@ -203,7 +203,7 @@ pub fn render_objects(objs: Vec<Object>, w: usize, h: usize, scale: f32) -> Opti
     })
 }
 
-/// Paint `icon` centerd in `rect` at its natural size (one icon pixel per
+/// Paint `icon` centered in `rect` at its natural size (one icon pixel per
 /// point, as xfig's bitmaps), shrunk if `rect` is smaller, tinted, at the
 /// screen's pixel density (made once per icon and scale, kept in egui's
 /// memory).

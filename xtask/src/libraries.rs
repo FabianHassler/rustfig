@@ -574,7 +574,7 @@ fn white_box(a: Point, b: Point) -> Object {
     Object::new(ObjectKind::Polyline(Polyline::rect(s, a, b)))
 }
 
-/// Gate box centerd at (`x`, `y`), `half_w` wide on each side, with a LaTeX
+/// Gate box centered at (`x`, `y`), `half_w` wide on each side, with a LaTeX
 /// label (none for the empty gate).
 fn gate_box(x: f64, y: f64, half_w: f64, tex: &str) -> Vec<Object> {
     let mut v = vec![white_box(p(x - half_w, y - GATE), p(x + half_w, y + GATE))];
@@ -720,7 +720,7 @@ fn qc_parts(out: &mut Vec<Part>) {
         out.push(qc_part(
             name,
             &format!("{what}, single-qubit gate on a wire"),
-            "Square box centerd on the wire. The label is LaTeX text with the TeX flag; edit it with the Text mode.",
+            "Square box centered on the wire. The label is LaTeX text with the TeX flag; edit it with the Text mode.",
             with_wire(gate_box(900.0, Y0, GATE, tex), &[Y0]),
             w1.clone(),
         ));
@@ -728,7 +728,7 @@ fn qc_parts(out: &mut Vec<Part>) {
     out.push(qc_part(
         "gate_rx",
         "rotation gate R_x(theta), single-qubit gate on a wire",
-        "Wide box centerd on the wire; LaTeX text with the TeX flag, change x and the angle as needed.",
+        "Wide box centered on the wire; LaTeX text with the TeX flag, change x and the angle as needed.",
         with_wire(gate_box(900.0, Y0, 330.0, "$R_x(\\theta)$"), &[Y0]),
         w1.clone(),
     ));

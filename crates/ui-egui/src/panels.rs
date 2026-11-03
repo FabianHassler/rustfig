@@ -946,7 +946,7 @@ pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
     let right_x = x0 + 4.0 * but_w;
     p.line_segment([egui::pos2(right_x, mid_y), egui::pos2(right_x + tick, mid_y)], line);
     // The left label ends at its tick, the right one starts at its tick, the
-    // middle one is centerd above its button; all truncated to fit.
+    // middle one is centered above its button; all truncated to fit.
     let gap = 3.0;
     let label = |s: &str, anchor: egui::Pos2, align: egui::Align2, max_w: f32| {
         let mut job = egui::text::LayoutJob::simple_singleline(s.to_string(), font.clone(), text);

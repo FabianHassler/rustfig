@@ -2584,7 +2584,7 @@ fn point_table(ui: &mut egui::Ui, st: &mut EditState, scale: f64) {
 }
 
 /// A coordinate field: shown in the panel's units (`scale` Fig units each).
-/// A row label of the edit panel: vertically centerd in a row of the common
+/// A row label of the edit panel: vertically centered in a row of the common
 /// height, so it lines up with the controls next to it.
 fn rl(ui: &mut egui::Ui, text: impl Into<egui::WidgetText>) {
     ui.horizontal(|ui| {

@@ -11,7 +11,7 @@ pub struct Xbm {
     pub bits: &'static [u8],
 }
 
-/// Paint `icon` centerd in `rect`, one bitmap pixel per point, tinted
+/// Paint `icon` centered in `rect`, one bitmap pixel per point, tinted
 /// (the texture is white where the bitmap is set; made once per icon and
 /// kept in egui's memory).
 pub fn paint(ui: &egui::Ui, icon: &'static Xbm, rect: egui::Rect, tint: egui::Color32) {

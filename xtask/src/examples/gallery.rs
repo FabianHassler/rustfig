@@ -501,7 +501,7 @@ impl T {
             big: false,
         }
     }
-    /// 0 left, 1 centerd, 2 right.
+    /// 0 left, 1 centered, 2 right.
     pub const fn j(mut self, v: usize) -> T {
         self.just = v;
         self

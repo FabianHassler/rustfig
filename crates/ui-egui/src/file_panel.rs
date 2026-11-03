@@ -415,7 +415,7 @@ fn preview_column(ui: &mut Ui, fp: &FilePanel) {
     );
     match fp.loaded.as_ref().map(|l| &l.result) {
         Some(Ok((_, Some(tex)))) => {
-            // Fit the picture in the box, centerd.
+            // Fit the picture in the box, centered.
             let sz = tex.size_vec2();
             let k = (PREVIEW / sz.x)
                 .min(PREVIEW / sz.y)
