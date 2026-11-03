@@ -99,6 +99,10 @@ mod mac {
 
     pub fn run(render: RenderFn) -> i32 {
         let _ = RENDER.set(render);
+        // The preview extension point's context class lives in QuickLookUI, which nothing
+        // here links to (the linker drops a framework whose symbols go unused): without it
+        // loaded, ExtensionFoundation stops the extension at its first connection.
+        load_framework("/System/Library/Frameworks/QuickLookUI.framework");
         if !declare() {
             eprintln!("rustfig-quicklook: Quick Look classes not available");
             return 1;
@@ -113,6 +117,21 @@ mod mac {
         // SAFETY: argv is a NULL-terminated array of NUL-terminated strings that outlive the
         // call, argc is its length; NSExtensionMain is Foundation's documented extension entry.
         unsafe { NSExtensionMain(args.len() as c_int, argv.as_ptr()) }
+    }
+
+    /// Load a system framework bundle by path (`NSBundle load`); a failure is left to the
+    /// class lookups that follow.
+    fn load_framework(path: &str) {
+        let path = NSString::from_str(path);
+        // SAFETY: NSBundle `bundleWithPath:` takes an NSString and returns a bundle or nil;
+        // `load` takes no arguments and returns a BOOL.
+        unsafe {
+            let Some(cls) = AnyClass::get(c"NSBundle") else { return };
+            let bundle: Option<Retained<AnyObject>> = msg_send![cls, bundleWithPath: &*path];
+            if let Some(b) = bundle {
+                let _loaded: bool = msg_send![&*b, load];
+            }
+        }
     }
 
     /// Register the two provider classes. False when a superclass is missing.
