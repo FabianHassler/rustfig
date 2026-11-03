@@ -1,7 +1,7 @@
-//! The colour picker and editor window (E4, W10-36).
+//! The color picker and editor window (E4, W10-36).
 //!
 //! A hue/saturation square, RGB and HSV fields, a hex or X11-name field,
-//! recently used colours and the drawing's user colours (xfig's colour
+//! recently used colors and the drawing's user colors (xfig's color
 //! panel: add, modify, delete, remove unused). Everything it does goes
 //! through the `color.*` commands.
 
@@ -11,7 +11,7 @@ use rustfig_engine::cmd::color::{from_hsv_values, to_hsv};
 use rustfig_model::{ColorRef, Rgb};
 use serde_json::{json, Value};
 
-/// The current colour the picker's "Use" buttons set.
+/// The current color the picker's "Use" buttons set.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorField {
     Pen,
@@ -24,9 +24,9 @@ pub struct ColorDialog {
     /// Hue 0-360, saturation and value 0-100 (the hue stays when saturation is 0).
     hsv: (f32, f32, f32),
     hex: String,
-    /// The user colour being edited.
+    /// The user color being edited.
     selected: Option<i32>,
-    /// A name for keeping the colour in the preferences.
+    /// A name for keeping the color in the preferences.
     name: String,
     /// A pick from the screen in progress (E4b).
     pub pick: crate::screen_pick::ScreenPicker,
@@ -63,7 +63,7 @@ impl ColorDialog {
     }
 }
 
-/// Open the window on colour `current` (a colour number; Default shows black).
+/// Open the window on color `current` (a color number; Default shows black).
 pub fn open(app: &mut App, current: i32) {
     let rgb = app.engine.doc().rgb(ColorRef(current.max(0)));
     let d = &mut app.dialogs.color;
@@ -103,8 +103,8 @@ fn field_name(f: ColorField) -> &'static str {
     }
 }
 
-/// Take the result of a pick from the screen: the picker shows the colour
-/// (the user applies it with "Use as pen/fill colour").
+/// Take the result of a pick from the screen: the picker shows the color
+/// (the user applies it with "Use as pen/fill color").
 pub(crate) fn poll_pick(app: &mut App, ctx: &egui::Context) {
     use crate::screen_pick::Outcome;
     match app.dialogs.color.pick.poll(ctx) {
@@ -113,13 +113,13 @@ pub(crate) fn poll_pick(app: &mut App, ctx: &egui::Context) {
             let hex = app.dialogs.color.rgb.to_hex();
             app.info(format!("Picked {hex} from the screen"));
         }
-        Some(Outcome::Cancelled) => app.info("Picking from the screen cancelled"),
+        Some(Outcome::Canceled) => app.info("Picking from the screen canceled"),
         Some(Outcome::Failed(e)) => app.error(e),
         None => {}
     }
 }
 
-/// Make the picker's colour the current pen or fill colour.
+/// Make the picker's color the current pen or fill color.
 fn use_for(app: &mut App, f: ColorField) {
     let hex = app.dialogs.color.rgb.to_hex();
     let number = match app.dialogs.color.selected {
@@ -134,7 +134,7 @@ fn use_for(app: &mut App, f: ColorField) {
     }
 }
 
-/// The SV square and hue strip; returns true when the colour changed.
+/// The SV square and hue strip; returns true when the color changed.
 fn picker(ui: &mut egui::Ui, d: &mut ColorDialog) -> bool {
     let mut changed = false;
     let (mut h, mut s, mut v) = d.hsv;
@@ -206,7 +206,7 @@ pub fn dialog(app: &mut App, ctx: &egui::Context) {
         return;
     }
     let mut open = true;
-    egui::Window::new("Colours")
+    egui::Window::new("Colors")
         .open(&mut open)
         .resizable(false)
         .collapsible(false)
@@ -275,8 +275,8 @@ fn body(app: &mut App, ui: &mut egui::Ui) {
             }
         });
     });
-    // Hex or X11 name: the colour follows while typing once the text is a
-    // whole colour; Enter (or leaving the field) makes it canonical; matching
+    // Hex or X11 name: the color follows while typing once the text is a
+    // whole color; Enter (or leaving the field) makes it canonical; matching
     // X11 names are offered while typing a name.
     let mut apply = None;
     let mut live = None;
@@ -285,7 +285,7 @@ fn body(app: &mut App, ui: &mut egui::Ui) {
         ui.label("Hex or name");
         let hex = &mut app.dialogs.color.hex;
         let resp = ui.add(egui::TextEdit::singleline(hex).desired_width(120.0));
-        resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Colour hex or X11 name"));
+        resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Color hex or X11 name"));
         if resp.lost_focus() {
             apply = Some(hex.clone());
         } else if resp.changed() {
@@ -298,7 +298,7 @@ fn body(app: &mut App, ui: &mut egui::Ui) {
     if let Some(text) = apply {
         match parse(app, &text) {
             Some(rgb) => app.dialogs.color.set_rgb(rgb),
-            // Not a colour: back to the current value.
+            // Not a color: back to the current value.
             None => app.dialogs.color.hex = app.dialogs.color.rgb.to_hex(),
         }
     } else if let Some(text) = live {
@@ -330,10 +330,10 @@ fn body(app: &mut App, ui: &mut egui::Ui) {
     }
     ui.separator();
     ui.horizontal(|ui| {
-        if ui.button("Use as pen colour").clicked() {
+        if ui.button("Use as pen color").clicked() {
             use_for(app, ColorField::Pen);
         }
-        if ui.button("Use as fill colour").clicked() {
+        if ui.button("Use as fill color").clicked() {
             use_for(app, ColorField::Fill);
         }
     });
@@ -342,9 +342,9 @@ fn body(app: &mut App, ui: &mut egui::Ui) {
         let picking = app.dialogs.color.pick.active();
         let b = ui
             .add_enabled(can && !picking, egui::Button::new("Pick from screen"))
-            .on_hover_text("Take the colour of any pixel on the screen, also in other programs")
+            .on_hover_text("Take the color of any pixel on the screen, also in other programs")
             .on_disabled_hover_text(if picking {
-                "Click a pixel to take its colour; Escape cancels"
+                "Click a pixel to take its color; Escape cancels"
             } else {
                 crate::screen_pick::unavailable_reason()
             });
@@ -353,7 +353,7 @@ fn body(app: &mut App, ui: &mut egui::Ui) {
             if let Err(e) = app.dialogs.color.pick.start(&ctx) {
                 app.error(e);
             } else if app.dialogs.color.pick.active() {
-                app.info("Click a pixel anywhere on the screen to take its colour; Escape cancels");
+                app.info("Click a pixel anywhere on the screen to take its color; Escape cancels");
             }
         }
         if let Some([r, g, b]) = app.dialogs.color.pick.live() {
@@ -362,7 +362,7 @@ fn body(app: &mut App, ui: &mut egui::Ui) {
             ui.label(Rgb::new(r, g, b).to_hex());
         }
     });
-    // Recent colours.
+    // Recent colors.
     let recent: Vec<Rgb> = app
         .engine
         .prefs
@@ -382,8 +382,8 @@ fn body(app: &mut App, ui: &mut egui::Ui) {
             }
         });
     }
-    // The drawing's user colours: the editor.
-    ui.label(egui::RichText::new("Colours in this drawing").small());
+    // The drawing's user colors: the editor.
+    ui.label(egui::RichText::new("Colors in this drawing").small());
     let user: Vec<(i32, Rgb)> = app.engine.doc().colors.iter().map(|u| (u.number, u.rgb)).collect();
     if user.is_empty() {
         ui.label(egui::RichText::new("None yet.").weak());
@@ -391,7 +391,7 @@ fn body(app: &mut App, ui: &mut egui::Ui) {
     ui.horizontal_wrapped(|ui| {
         for (n, c) in &user {
             let sel = app.dialogs.color.selected == Some(*n);
-            if swatch_button(ui, *c, sel, &format!("User colour {n} {}", c.to_hex())) {
+            if swatch_button(ui, *c, sel, &format!("User color {n} {}", c.to_hex())) {
                 app.dialogs.color.selected = Some(*n);
                 app.dialogs.color.set_rgb(*c);
             }
@@ -399,7 +399,7 @@ fn body(app: &mut App, ui: &mut egui::Ui) {
     });
     let hex = app.dialogs.color.rgb.to_hex();
     ui.horizontal(|ui| {
-        if ui.button("Add as new colour").clicked() {
+        if ui.button("Add as new color").clicked() {
             if let Some(n) = app
                 .run("color.new", json!({ "rgb": hex }))
                 .and_then(|r| r.get("color").and_then(Value::as_i64))
@@ -408,16 +408,16 @@ fn body(app: &mut App, ui: &mut egui::Ui) {
             }
         }
         if let Some(n) = app.dialogs.color.selected {
-            if ui.button(format!("Change colour {n}")).clicked() {
+            if ui.button(format!("Change color {n}")).clicked() {
                 app.run("color.edit", json!({ "color": n, "rgb": hex }));
             }
-            if ui.button(format!("Delete colour {n}")).clicked()
+            if ui.button(format!("Delete color {n}")).clicked()
                 && app.run("color.delete", json!({ "color": n })).is_some()
             {
                 app.dialogs.color.selected = None;
             }
         }
-        if ui.button("Remove unused colours").clicked() {
+        if ui.button("Remove unused colors").clicked() {
             app.run("color.remove_unused", json!({}));
             let still = app
                 .dialogs
@@ -429,18 +429,18 @@ fn body(app: &mut App, ui: &mut egui::Ui) {
             }
         }
     });
-    // Favourites: colours kept for every drawing (E1's list, Global settings >
-    // Drawing > Your colours), named or by their hex code.
+    // Favorites: colors kept for every drawing (E1's list, Global settings >
+    // Drawing > Your colors), named or by their hex code.
     ui.horizontal(|ui| {
         ui.add(
             egui::TextEdit::singleline(&mut app.dialogs.color.name)
                 .hint_text("Name (optional)")
                 .desired_width(110.0),
         )
-        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Colour name"));
+        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Color name"));
         if ui
             .button("Keep for all drawings")
-            .on_hover_text("A favourite: offered in every colour menu, kept for the next start")
+            .on_hover_text("A favorite: offered in every color menu, kept for the next start")
             .clicked()
         {
             let name = app.dialogs.color.name.trim().to_string();
@@ -463,7 +463,7 @@ fn body(app: &mut App, ui: &mut egui::Ui) {
             .collect();
         if ui
             .add_enabled(!new.is_empty(), egui::Button::new("Keep all for all drawings"))
-            .on_hover_text("Every colour of this drawing becomes a favourite (named by its hex code)")
+            .on_hover_text("Every color of this drawing becomes a favorite (named by its hex code)")
             .clicked()
         {
             let mut seen = Vec::new();

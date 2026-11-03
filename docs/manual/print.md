@@ -4,8 +4,8 @@ File > Print (Meta+P, Ctrl+P) opens the Print panel. RustFig makes a PDF of the 
 
 ## The panel
 
-- **Magnification** and **Fit to Page** (a half inch of margin all round); **Figure size** follows the magnification. The magnification, **Paper size**, **Orientation**, **Justification** (centred or flush left) and **Pages** (single or multiple, with **Overlap**) are the figure's own settings, stored in the .fig file as in xfig and shared with the Export panel.
-- **Background** colour, **Grid** (minor and major spacing), **Layers**: print all, or only the active ones (depths not switched off in the depth manager), optionally with the page sized by them.
+- **Magnification** and **Fit to Page** (a half inch of margin all round); **Figure size** follows the magnification. The magnification, **Paper size**, **Orientation**, **Justification** (centerd or flush left) and **Pages** (single or multiple, with **Overlap**) are the figure's own settings, stored in the .fig file as in xfig and shared with the Export panel.
+- **Background** color, **Grid** (minor and major spacing), **Layers**: print all, or only the active ones (depths not switched off in the depth manager), optionally with the page sized by them.
 - **Preview** shows the page as it prints, made again when you change an option; with several pages, step with the arrow buttons. Very large figures are not previewed.
 - **Print FIGURE** opens the system's print dialog with the page as the preview shows it; if you cancel the dialog nothing is printed. **Add to Batch** keeps the figure's PDF in the batch (with the settings it has now), **Print Batch** sends all figures as ONE print job (their PDFs joined into one multi-page PDF, one print dialog; cancel keeps the batch), and **Clear Batch** forgets them. The batch lives in memory until RustFig quits.
 - Shift+Meta+P (Quick print) prints with the kept settings without the panel; if figures wait in the batch it prints the batch instead, as xfig does.

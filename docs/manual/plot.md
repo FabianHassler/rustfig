@@ -38,7 +38,7 @@ The dialog has four groups: **Function** (the mode, its fields, samples), **Rang
 
 Too many ticks, a step of zero or less, and similar values are refused with an error. The settings are kept in the plot's comment like the rest.
 
-The line style, thickness, colour, depth and the font of the numbers and labels are the current ones in the attribute panel; set them before you plot.
+The line style, thickness, color, depth and the font of the numbers and labels are the current ones in the attribute panel; set them before you plot.
 
 Expressions use `+ - * / ^` (also × ÷ and `**`), parentheses, the constants `pi` and `e`, and the functions sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, exp, ln (also log: natural), log10, log2, sqrt, abs, floor, ceil, sign, and with two arguments atan2(y, x), min(a, b), max(a, b), pow(a, b). `-x^2` means -(x^2) and `2^3^2` is 2^(3^2). An expression of up to 500 characters and nested up to 64 deep is accepted; an error names the position.
 

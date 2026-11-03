@@ -130,7 +130,7 @@ mod mac {
             };
             let name = NSString::from_str("NSApplicationWillFinishLaunchingNotification");
             // SAFETY: `willFinishLaunching:` takes one object argument, as the notification
-            // centre passes; the handler is leaked below so the unretained observer stays valid.
+            // center passes; the handler is leaked below so the unretained observer stays valid.
             unsafe {
                 let center: Option<Retained<AnyObject>> = msg_send![center_cls, defaultCenter];
                 if let Some(center) = center {
@@ -144,7 +144,7 @@ mod mac {
                     ];
                 }
             }
-            // Lives for the whole run: AppKit and the notification centre keep unretained pointers.
+            // Lives for the whole run: AppKit and the notification center keep unretained pointers.
             std::mem::forget(handler);
         });
     }

@@ -2,7 +2,7 @@
 //! or interpolating, or the next of the three shapes, turning the spline into
 //! an X-spline.
 //
-// Ported from xfig src/e_edit.c (`change_sfactor`) (xfig licence, see
+// Ported from xfig src/e_edit.c (`change_sfactor`) (xfig license, see
 // LICENSE-xfig).
 
 use super::{num, opt_str, CmdResult, Command};

@@ -1,8 +1,8 @@
-//! Pick a colour from the screen (E4b), also from other programs' windows.
+//! Pick a color from the screen (E4b), also from other programs' windows.
 //!
 //! The OS calls below are `unsafe`, allowed per function; the API is safe and knows nothing of egui.
 //!
-//! - macOS: the system colour sampler (`NSColorSampler`), via [`start_sampler`].
+//! - macOS: the system color sampler (`NSColorSampler`), via [`start_sampler`].
 //! - Linux/BSD: the xdg-desktop-portal `Screenshot.PickColor` request on a
 //!   thread (no unsafe), via [`start_sampler`].
 //! - Windows: no system sampler; the caller polls [`poll_pixel`] every frame
@@ -14,10 +14,10 @@ use std::sync::mpsc::Receiver;
 /// How a pick ended.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Outcome {
-    /// The colour taken.
+    /// The color taken.
     Picked([u8; 3]),
-    /// The user cancelled (Escape, closed the sampler).
-    Cancelled,
+    /// The user canceled (Escape, closed the sampler).
+    Canceled,
     /// The system could not pick; the text goes to the message line.
     Failed(String),
 }
@@ -25,15 +25,15 @@ pub enum Outcome {
 /// What [`poll_pixel`] saw (Windows own picking).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct PixelPoll {
-    /// The colour under the pointer, when it could be read.
-    pub colour: Option<[u8; 3]>,
+    /// The color under the pointer, when it could be read.
+    pub color: Option<[u8; 3]>,
     /// Escape is held down.
     pub escape: bool,
     /// The left mouse button is held down.
     pub left: bool,
 }
 
-/// Whether this build can pick a colour from the screen.
+/// Whether this build can pick a color from the screen.
 pub const fn available() -> bool {
     !cfg!(target_arch = "wasm32")
 }
@@ -44,7 +44,7 @@ pub const fn polls_pixels() -> bool {
     cfg!(target_os = "windows")
 }
 
-/// Why the button is greyed out (empty when it works).
+/// Why the button is grayed out (empty when it works).
 pub const fn unavailable_reason() -> &'static str {
     if available() {
         ""
@@ -53,7 +53,7 @@ pub const fn unavailable_reason() -> &'static str {
     }
 }
 
-/// Colour component 0..=1 (as the system gives it) to a byte; non-finite counts as 0.
+/// Color component 0..=1 (as the system gives it) to a byte; non-finite counts as 0.
 #[cfg_attr(any(target_os = "windows", target_arch = "wasm32"), allow(dead_code))]
 pub fn unit_to_u8(v: f64) -> u8 {
     if !v.is_finite() {
@@ -62,7 +62,7 @@ pub fn unit_to_u8(v: f64) -> u8 {
     (v.clamp(0.0, 1.0) * 255.0).round() as u8
 }
 
-/// Start the system's colour sampler (macOS, Linux/BSD). `wake` is called
+/// Start the system's color sampler (macOS, Linux/BSD). `wake` is called
 /// (from any thread) when the result is in, so the UI can repaint; the result
 /// arrives on the receiver. Errors when the sampler cannot start, or when this
 /// platform has none (Windows: use [`poll_pixel`]; web).
@@ -86,7 +86,7 @@ fn platform_start(wake: impl Fn() + Send + 'static) -> Result<Receiver<Outcome>,
     use objc2::MainThreadMarker;
     use objc2_app_kit::NSColor;
     if MainThreadMarker::new().is_none() {
-        return Err("The colour sampler must start on the main thread".into());
+        return Err("The color sampler must start on the main thread".into());
     }
     let (tx, rx) = std::sync::mpsc::channel::<Outcome>();
     // The block must be `Fn`; the mutex makes the (Send, not Sync) channel and callback usable from it.
@@ -103,14 +103,14 @@ fn platform_start(wake: impl Fn() + Send + 'static) -> Result<Receiver<Outcome>,
     Ok(rx)
 }
 
-/// The block's colour as an outcome (nil is a cancel).
+/// The block's color as an outcome (nil is a cancel).
 #[cfg(target_os = "macos")]
 #[allow(unsafe_code)]
 fn sampled_outcome(color: *mut objc2_app_kit::NSColor) -> Outcome {
     use objc2_app_kit::NSColorSpace;
     // SAFETY: AppKit passes nil or a valid NSColor, used only inside the handler call.
     match unsafe { color.as_ref() } {
-        None => Outcome::Cancelled,
+        None => Outcome::Canceled,
         Some(c) => {
             let srgb = NSColorSpace::sRGBColorSpace();
             match c.colorUsingColorSpace(&srgb) {
@@ -119,7 +119,7 @@ fn sampled_outcome(color: *mut objc2_app_kit::NSColor) -> Outcome {
                     unit_to_u8(c.greenComponent()),
                     unit_to_u8(c.blueComponent()),
                 ]),
-                None => Outcome::Failed("The sampled colour has no sRGB value".into()),
+                None => Outcome::Failed("The sampled color has no sRGB value".into()),
             }
         }
     }
@@ -145,7 +145,7 @@ fn show_sampler(handler: &block2::RcBlock<dyn Fn(*mut objc2_app_kit::NSColor)>) 
 fn platform_start(wake: impl Fn() + Send + 'static) -> Result<Receiver<Outcome>, String> {
     let (tx, rx) = std::sync::mpsc::channel::<Outcome>();
     std::thread::Builder::new()
-        .name("colour-pick".into())
+        .name("color-pick".into())
         .spawn(move || {
             let r = pollster::block_on(async {
                 let req = ashpd::desktop::Color::pick().send().await?;
@@ -153,7 +153,7 @@ fn platform_start(wake: impl Fn() + Send + 'static) -> Result<Receiver<Outcome>,
             });
             let o = match r {
                 Ok(c) => Outcome::Picked([unit_to_u8(c.red()), unit_to_u8(c.green()), unit_to_u8(c.blue())]),
-                Err(ashpd::Error::Response(ashpd::desktop::ResponseError::Cancelled)) => Outcome::Cancelled,
+                Err(ashpd::Error::Response(ashpd::desktop::ResponseError::Cancelled)) => Outcome::Canceled,
                 Err(ashpd::Error::PortalNotFound(_)) => Outcome::Failed(
                     "Picking from the screen needs xdg-desktop-portal with a Screenshot backend, which was not found"
                         .into(),
@@ -165,7 +165,7 @@ fn platform_start(wake: impl Fn() + Send + 'static) -> Result<Receiver<Outcome>,
             wake();
         })
         .map(|_| rx)
-        .map_err(|e| format!("Could not start the colour pick: {e}"))
+        .map_err(|e| format!("Could not start the color pick: {e}"))
 }
 
 /// Windows: the pixel under the pointer and the Escape and left-button state.
@@ -218,7 +218,7 @@ mod win {
 
     pub fn poll() -> PixelPoll {
         PixelPoll {
-            colour: pixel_under_pointer(),
+            color: pixel_under_pointer(),
             escape: down(VK_ESCAPE),
             left: down(VK_LBUTTON),
         }

@@ -17,7 +17,7 @@
 //! driver, with the options xfig passes (`-F`; for the PNG `-m` for
 //! 150 dpi, `-g white` and `-S 4`, the export panel's smoothing).
 //!
-//! For each figure: fig2dev's EPS and RustFig's EPS, both rasterised by
+//! For each figure: fig2dev's EPS and RustFig's EPS, both rasterized by
 //! ghostscript without graphics anti-aliasing (so only the writers differ;
 //! ghostscript draws pattern tiles without it anyway); RustFig's own PNG against
 //! fig2dev's EPS; fig2dev's PDF against RustFig's PDF; the EPS bounding boxes.
@@ -36,7 +36,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 use support::{compare, fig2dev};
 
-/// Rasterising resolution.
+/// Rasterizing resolution.
 const DPI: u32 = 150;
 /// Figures shown with images in the report.
 const SHOWN: usize = 150;
@@ -188,14 +188,14 @@ fn run_one(path: &Path) -> (Outcome, Option<Rasters>) {
     match fig2dev::convert(&fig, "eps", &xfig_args(&fig), dir) {
         Err(e) => o.errors.push(e),
         Ok(ref_eps) => {
-            let ref_png = fig2dev::rasterise(&ref_eps, false, DPI, false);
+            let ref_png = fig2dev::rasterize(&ref_eps, false, DPI, false);
             let our_eps = rustfig(&doc, "eps", dir);
             match (&ref_png, &our_eps) {
                 (Ok(rp), Ok(oe)) => {
                     if let (Some((w1, h1)), Some((w2, h2))) = (bbox_size(&ref_eps), bbox_size(oe)) {
                         o.bbox = Some((w1 - w2).abs().max((h1 - h2).abs()));
                     }
-                    match fig2dev::rasterise(oe, false, DPI, false) {
+                    match fig2dev::rasterize(oe, false, DPI, false) {
                         Ok(op) => {
                             match compare::compare(rp, &op) {
                                 Ok(c) => o.eps = Some(c.score),
@@ -209,7 +209,7 @@ fn run_one(path: &Path) -> (Outcome, Option<Rasters>) {
                         Err(e) => o.errors.push(format!("RustFig's EPS: {e}")),
                     }
                     // RustFig's anti-aliased PNG against fig2dev's EPS, anti-aliased too.
-                    let png = fig2dev::rasterise(&ref_eps, false, DPI, true)
+                    let png = fig2dev::rasterize(&ref_eps, false, DPI, true)
                         .and_then(|aa| compare::compare(&aa, &rustfig(&doc, "png", dir)?));
                     match png {
                         Ok(c) => o.png = Some(c.score),
@@ -222,10 +222,10 @@ fn run_one(path: &Path) -> (Outcome, Option<Rasters>) {
         }
     }
     let pdf = fig2dev::convert(&fig, "pdf", &xfig_args(&fig), dir)
-        .and_then(|p| fig2dev::rasterise(&p, true, DPI, false))
+        .and_then(|p| fig2dev::rasterize(&p, true, DPI, false))
         .and_then(|rp| {
             let ours = rustfig(&doc, "pdf", dir)?;
-            let op = fig2dev::rasterise(&ours, true, DPI, false)?;
+            let op = fig2dev::rasterize(&ours, true, DPI, false)?;
             compare::compare(&rp, &op)
         });
     match pdf {
@@ -302,8 +302,8 @@ fn report(results: &[Outcome], images: &[(usize, String)], sum: &Value, versions
     h.push_str("<h1>RustFig compared with fig2dev</h1>");
     h.push_str(&format!("<p>{}</p>", esc(versions)));
     h.push_str(
-        "<p>Scores: mean grey difference after trimming, scaling and blurring (0 = identical). \
-        EPS: both EPS files rasterised by ghostscript. PNG: RustFig's renderer against fig2dev's EPS. \
+        "<p>Scores: mean gray difference after trimming, scaling and blurring (0 = identical). \
+        EPS: both EPS files rasterized by ghostscript. PNG: RustFig's renderer against fig2dev's EPS. \
         PDF: both PDFs through ghostscript. BBox: largest difference of the bounding box's width or height in points. \
         Diff images: red only in fig2dev, blue only in RustFig.</p>",
     );

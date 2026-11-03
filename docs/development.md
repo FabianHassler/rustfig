@@ -7,7 +7,7 @@
 ```sh
 cargo run --release -p rustfig -- [--control 7979] [file.fig]
 cargo run --release -p rustfig-cli -- convert in.fig out.pdf
-cargo xtask ci        # fmt, clippy -D warnings, tests, layers, assets, licences, wasm
+cargo xtask ci        # fmt, clippy -D warnings, tests, layers, assets, licenses, wasm
 UPDATE_REFERENCE=1 cargo test -p rustfig-engine --test fig2dev_reference -- --nocapture
                       # re-record the fig2dev comparison scores (needs fig2dev;
                       # set RUSTFIG_FIG2DEV if it isn't on PATH; RustFig's own fig2dev, e.g. Homebrew's rustfig --with-fig2dev link, is skipped)
@@ -68,9 +68,9 @@ it, so `cargo +toolchain xtask …` stays on that toolchain.
 
 ## Web version on GitHub Pages (C5)
 
-`cargo xtask ctan [REF]` writes the CTAN upload `target/ctan/rustfig.zip` for git revision `REF` (default `HEAD`): only what a CTAN user needs: the source that builds (workspace, assets, figure libraries, the manual's pages, licences; no dot files, which CTAN refuses, and no planning documents), CTAN's README (`packaging/ctan/README.md`) and the manual as `doc/rustfig-manual.pdf` (pandoc and LuaLaTeX; on macOS LuaLaTeX needs to run outside a sandbox to index the system fonts; `RUSTFIG_CTAN_FONTS=main,sans,mono,fallback` picks other fonts). Upload it at https://ctan.org/upload with the licences `mit`, `apache2` and `other-free` (xfig's notice), CTAN path `/graphics/rustfig`.
+`cargo xtask ctan [REF]` writes the CTAN upload `target/ctan/rustfig.zip` for git revision `REF` (default `HEAD`): only what a CTAN user needs: the source that builds (workspace, assets, figure libraries, the manual's pages, licenses; no dot files, which CTAN refuses, and no planning documents), CTAN's README (`packaging/ctan/README.md`) and the manual as `doc/rustfig-manual.pdf` (pandoc and LuaLaTeX; on macOS LuaLaTeX needs to run outside a sandbox to index the system fonts; `RUSTFIG_CTAN_FONTS=main,sans,mono,fallback` picks other fonts). Upload it at https://ctan.org/upload with the licenses `mit`, `apache2` and `other-free` (xfig's notice), CTAN path `/graphics/rustfig`.
 
-`cargo xtask web` builds the browser version with trunk into `dist/` (`--serve` serves it locally, `--public-url /PATH/` sets the address it is served from). `cargo xtask site [--out DIR] [--app DIR]` writes the project's web site (default `target/site/`): a landing page (features, downloads, a FAQ with schema.org data), the manual `docs/manual/*.md` as HTML pages (per-system blocks shown labelled), the screenshot, `sitemap.xml`, and with `--app` the web build under `app/`; static HTML and CSS, deterministic (tests in `xtask/src/site.rs`). `.github/workflows/pages.yml` runs `cargo xtask web --public-url /rustfig/app/` and `cargo xtask site --app dist` on every release tag (or by hand: `gh workflow run pages.yml`) and publishes the site at https://fabianhassler.github.io/rustfig/, the web app at https://fabianhassler.github.io/rustfig/app/ (the repository's Pages source is "GitHub Actions").
+`cargo xtask web` builds the browser version with trunk into `dist/` (`--serve` serves it locally, `--public-url /PATH/` sets the address it is served from). `cargo xtask site [--out DIR] [--app DIR]` writes the project's web site (default `target/site/`): a landing page (features, downloads, a FAQ with schema.org data), the manual `docs/manual/*.md` as HTML pages (per-system blocks shown labeled), the screenshot, `sitemap.xml`, and with `--app` the web build under `app/`; static HTML and CSS, deterministic (tests in `xtask/src/site.rs`). `.github/workflows/pages.yml` runs `cargo xtask web --public-url /rustfig/app/` and `cargo xtask site --app dist` on every release tag (or by hand: `gh workflow run pages.yml`) and publishes the site at https://fabianhassler.github.io/rustfig/, the web app at https://fabianhassler.github.io/rustfig/app/ (the repository's Pages source is "GitHub Actions").
 
 ## Homebrew
 

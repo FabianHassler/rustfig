@@ -9,16 +9,16 @@ lower layers; nothing below L6 may depend on egui, eframe, winit or rfd.
 
 | Layer | Crate | Role |
 |---|---|---|
-| ext | `figbase` (FabianHassler/fig2dev) | what fig2dev and RustFig share: points, X-splines, arcs, arrowheads, line widths; Fig font tables, metrics, glyph outlines (system fonts, TeX Gyre, or the built-in fallback); colour tables |
+| ext | `figbase` (FabianHassler/fig2dev) | what fig2dev and RustFig share: points, X-splines, arcs, arrowheads, line widths; Fig font tables, metrics, glyph outlines (system fonts, TeX Gyre, or the built-in fallback); color tables |
 | L0 | `rustfig-geom` | `figbase`'s geometry plus hit testing |
-| ext | `fig2dev` (FabianHassler/fig2dev) | fig2dev: reader (`read.c`, Fig 1.3–3.2), `bound.c`, `gendev` (`convert`), option and language tables, every ported driver; the scene drivers (EPS, PDF, SVG, bitmaps) draw a `Scene` with its rasteriser and fill patterns |
-| L1 | `rustfig-model` | document model: objects, styles, colours, ids, transforms, flattening |
+| ext | `fig2dev` (FabianHassler/fig2dev) | fig2dev: reader (`read.c`, Fig 1.3–3.2), `bound.c`, `gendev` (`convert`), option and language tables, every ported driver; the scene drivers (EPS, PDF, SVG, bitmaps) draw a `Scene` with its rasterizer and fill patterns |
+| L1 | `rustfig-model` | document model: objects, styles, colors, ids, transforms, flattening |
 | L1 | `rustfig-text` | `figbase`'s font tables and metrics plus text composition |
 | L2 | `rustfig-format` | Fig 1.3–3.2 reader (fig2dev's, through the bridge), Fig 3.2 writer, native JSON |
-| L3 | `rustfig-render` | the canvas scene: a document → fig2dev's `Scene` (depth order, gray layers), drawn by fig2dev's rasteriser |
+| L3 | `rustfig-render` | the canvas scene: a document → fig2dev's `Scene` (depth order, gray layers), drawn by fig2dev's rasterizer |
 | L4 | `rustfig-engine` | session: commands, undo, selection, indicator, view, tools, guard, picture import; exports through `fig2dev::convert` |
 | L5 | `rustfig-mcp` | MCP server over stdio |
-| L5 | `rustfig-os` | OS calls: pick a colour from the screen (E4b) and the native print dialog for a PDF (B5b): the only crate with `unsafe` (`deny` plus `allow` on the few OS-call functions: macOS NSColorSampler and PDFKit print operation, Windows GetPixel and `PrintDlgEx`); safe API, no egui |
+| L5 | `rustfig-os` | OS calls: pick a color from the screen (E4b) and the native print dialog for a PDF (B5b): the only crate with `unsafe` (`deny` plus `allow` on the few OS-call functions: macOS NSColorSampler and PDFKit print operation, Windows GetPixel and `PrintDlgEx`); safe API, no egui |
 | L6 | `rustfig-ui-egui` | egui app: canvas, panels, menus, dialogs, control channel |
 | L7 | `rustfig-cli` | the command line (library and program) |
 | L8 | `rustfig` (app; `rustfig-cli` and `fig2dev` as links to it) | binaries |
@@ -30,13 +30,13 @@ crates as git dependencies (a `[patch]` points at a local clone `../fig2dev`
 while it is not published). They use no RustFig crate. Who uses whom (workspace crates only):
 
 - `figbase` ← `rustfig-geom`, `rustfig-text`, `rustfig-model`, `fig2dev`
-- `fig2dev` ← `rustfig-render` (the `Scene` and its rasteriser), `rustfig-engine` (every export, old Fig files, pictures)
+- `fig2dev` ← `rustfig-render` (the `Scene` and its rasterizer), `rustfig-engine` (every export, old Fig files, pictures)
 - `rustfig-geom` + `rustfig-model` ← `rustfig-format` ← `rustfig-engine`
 - `rustfig-render` (canvas only) ← `rustfig-engine`, `rustfig-ui-egui`, `rustfig-cli`
 
 ## Everything is a command
 
-User-visible behaviour lives in `crates/engine/src/cmd/*`. A command has an id,
+User-visible behavior lives in `crates/engine/src/cmd/*`. A command has an id,
 label, menu path, shortcut, parameter docs, a `mutates` flag, `enabled` and
 `run`. `Engine::execute` snapshots the document before a mutating command;
 on error it restores the snapshot (commands are atomic), and on success it
@@ -71,7 +71,7 @@ The canvas: `rustfig_render::build_scene` flattens compounds, sorts leaves
 in xfig's order (depth, deepest first; object type within a depth; gray
 layers first) and turns each object into fig2dev's `Scene` primitives (paths
 with solid or pattern fill and stroke, arrowheads, text runs, pictures),
-which fig2dev's rasteriser (`fig2dev::scene::raster`) draws. The
+which fig2dev's rasterizer (`fig2dev::scene::raster`) draws. The
 canvas caches the raster per (revision, view) and draws overlays separately.
 
 WYSIWYG LaTeX text (F8): `engine::latex_preview` runs the installed TeX in a background thread per special text (cached, one at a time, 20 s limit), keeps the PDF as a vector picture (`Prim::PdfPicture`) and hands `rustfig_render::SceneOptions::typeset` a `Typesetter` the canvas passes in; the render crate (L3) only draws the picture, never starts a process; exports never set it.

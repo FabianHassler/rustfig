@@ -8,18 +8,18 @@ use std::collections::HashSet;
 use std::f64::consts::PI;
 use std::fmt::Write as _;
 
-/// Page: Letter landscape, 11 x 8.5 in = 13200 x 10200 Fig units; drawings centred.
+/// Page: Letter landscape, 11 x 8.5 in = 13200 x 10200 Fig units; drawings centerd.
 const W: f64 = 13200.0;
 const H: f64 = 10200.0;
 
 type Pt = (f64, f64);
 
-/// A figure under construction: header settings, user colours, body text.
+/// A figure under construction: header settings, user colors, body text.
 struct Fig {
     mag: f64,
     paper: &'static str,
     comment: String,
-    /// `#rrggbb` -> user colour number (32, 33, ...), in order of first use.
+    /// `#rrggbb` -> user color number (32, 33, ...), in order of first use.
     colors: Vec<(String, i32)>,
     body: String,
 }
@@ -56,7 +56,7 @@ impl Fig {
         }
     }
 
-    /// User colour number for (r, g, b) floats in 0..1.
+    /// User color number for (r, g, b) floats in 0..1.
     fn color(&mut self, rgb: (f64, f64, f64)) -> i32 {
         let ch = |c: f64| round_i(c * 255.0).clamp(0, 255);
         let (r, g, b) = (ch(rgb.0), ch(rgb.1), ch(rgb.2));
@@ -65,7 +65,7 @@ impl Fig {
             return *n;
         }
         if self.colors.len() >= 512 {
-            // nearest existing colour (the first one on a tie, as Python's min)
+            // nearest existing color (the first one on a tie, as Python's min)
             let dist = |h: &str| -> i64 {
                 [1usize, 3, 5]
                     .iter()
@@ -194,7 +194,7 @@ fn clifford() -> String {
     let s = ((W - 1200.0) / (x1 - x0)).min((H - 1200.0) / (y1 - y0));
     let ox = (W - s * (x1 - x0)) / 2.0;
     let oy = (H - s * (y1 - y0)) / 2.0;
-    // Black page, dots coloured by the direction of the last step (24 hues).
+    // Black page, dots colored by the direction of the last step (24 hues).
     page(&mut fig, 0);
     let hues: Vec<i32> = (0..24)
         .map(|k| fig.color(hsv_to_rgb(k as f64 / 24.0, 0.75, 1.0)))
@@ -220,11 +220,11 @@ fn clifford() -> String {
     fig.render()
 }
 
-/// One circle of the gasket: curvature, centre.
+/// One circle of the gasket: curvature, center.
 type Kz = (f64, Complex);
 
 /// Descartes' circle theorem in complex form: the curvature and the two
-/// candidate centres of the circles tangent to three given ones.
+/// candidate centers of the circles tangent to three given ones.
 fn solve(a: Kz, b: Kz, c: Kz) -> (f64, [Complex; 2]) {
     let ((ka, za), (kb, zb), (kc, zc)) = (a, b, c);
     let k4 = ka + kb + kc + 2.0 * (ka * kb + kb * kc + kc * ka).abs().sqrt();
@@ -240,7 +240,7 @@ fn solve(a: Kz, b: Kz, c: Kz) -> (f64, [Complex; 2]) {
     (k4, [s.add(root).div(k), s.sub(root).div(k)])
 }
 
-/// Is the circle (centre z, curvature k) tangent to the circle (za, ka)?
+/// Is the circle (center z, curvature k) tangent to the circle (za, ka)?
 fn tangent(z: Complex, k: f64, za: Complex, ka: f64) -> bool {
     let d = z.sub(za).abs();
     let (ra, r) = (1.0 / ka, 1.0 / k);
@@ -331,7 +331,7 @@ fn penrose() -> String {
     );
     let phi = (1.0 + 5.0f64.powf(0.5)) / 2.0;
     let phi_c = Complex::real(phi);
-    // Wheel of 10 red triangles around the centre.
+    // Wheel of 10 red triangles around the center.
     let mut tris: Vec<(i32, Complex, Complex, Complex)> = Vec::new();
     for i in 0..10 {
         let a1 = (2 * i - 1) as f64 * PI / 10.0;
@@ -446,7 +446,7 @@ fn gosper() -> String {
         .iter()
         .map(|&(px, py)| (ox + (px - x0) * sc, oy + (py - y0) * sc))
         .collect();
-    // One continuous curve, drawn as joined pieces so its colour runs through the spectrum.
+    // One continuous curve, drawn as joined pieces so its color runs through the spectrum.
     let dark = fig.color((0.07, 0.08, 0.12));
     page(&mut fig, dark);
     let piece = 120;

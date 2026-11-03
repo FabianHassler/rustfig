@@ -1,5 +1,5 @@
 //! xfig's attribute (indicator) panel. Ported from xfig's `w_indpanel.c`
-//! and the mode masks in `w_modepanel.c` / `w_indpanel.h` (xfig licence,
+//! and the mode masks in `w_modepanel.c` / `w_indpanel.h` (xfig license,
 //! see LICENSE-xfig): one button per attribute, in xfig's order, each with
 //! its label and a picture of the current value; only the attributes the
 //! current mode uses are shown. Left click opens a choice panel, the middle
@@ -570,7 +570,7 @@ fn units(app: &App) -> rustfig_model::Units {
     app.engine.doc().settings.units
 }
 
-/// Colours offered: Default, the 32 standard colours, then user colours.
+/// Colors offered: Default, the 32 standard colors, then user colors.
 pub(crate) fn colors(doc: &Document) -> Vec<i32> {
     let mut v: Vec<i32> = (-1..32).collect();
     v.extend(doc.colors.iter().map(|c| c.number));
@@ -950,7 +950,7 @@ fn step_text_step(cur: f64, dir: i32) -> f64 {
 }
 
 /// xfig's `darken_fill`/`lighten_fill`: -1 (none) to 62, wrapping; the tints
-/// 21..=40 are skipped for black, white and default fill colours.
+/// 21..=40 are skipped for black, white and default fill colors.
 fn step_fill(cur: i32, plain: bool, dir: i32) -> i32 {
     let mut v = cur + dir;
     if v > 62 {
@@ -1418,10 +1418,10 @@ fn draw_value(app: &App, ui: &Ui, p: &Painter, r: Rect, button: Rect, tk: &Token
     }
 }
 
-/// A swatch of an area fill: none, a shade or tint of the fill colour, or a
-/// pattern drawn in the pen colour over the fill colour.
+/// A swatch of an area fill: none, a shade or tint of the fill color, or a
+/// pattern drawn in the pen color over the fill color.
 /// A fill-style box as xfig's panel draws it: shades and tints in the fill
-/// colour, patterns in the pen colour on the fill colour (as fig2dev fills
+/// color, patterns in the pen color on the fill color (as fig2dev fills
 /// them), at a scale where the lines stay apart.
 fn fill_swatch(
     p: &Painter,
@@ -1514,8 +1514,8 @@ fn cell(ui: &mut Ui, size: egui::Vec2, selected: bool, name: &str, paint: impl F
 }
 
 /// The Fill Style choice panel's swatches (shared by the indicator and the edit
-/// panel): NONE, shades and tints of the fill colour (no tints for black,
-/// white and default), then the patterns in the pen colour.
+/// panel): NONE, shades and tints of the fill color (no tints for black,
+/// white and default), then the patterns in the pen color.
 pub(crate) fn fill_choices_grid(
     ui: &mut Ui,
     doc: &Document,
@@ -1725,10 +1725,10 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                         }
                     }
                 });
-            // The user's own colours (E1): picking one adds it to the drawing.
+            // The user's own colors (E1): picking one adds it to the drawing.
             let user = app.engine.prefs.rustfig.user_colors.clone();
             if !user.is_empty() {
-                ui.label(egui::RichText::new("Your colours").small());
+                ui.label(egui::RichText::new("Your colors").small());
                 egui::Grid::new(("user_colors", field))
                     .spacing(vec2(2.0, 2.0))
                     .show(ui, |ui| {
@@ -1751,7 +1751,7 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                         }
                     });
             }
-            // Colours used lately (E4, W10-36), kept in the preferences.
+            // Colors used lately (E4, W10-36), kept in the preferences.
             let recent: Vec<rustfig_model::Rgb> = app
                 .engine
                 .prefs

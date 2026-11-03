@@ -1,7 +1,7 @@
 //! B6: fig2dev's bitmap languages from RustFig's renderer, exported as
 //! `file.export` exports (Fig text through RustFig's fig2dev, plan B12).
 //! Every bitmap format carries the pixels of RustFig's PNG of the same
-//! figure, and the PNG matches RustFig's EPS rasterised by ghostscript
+//! figure, and the PNG matches RustFig's EPS rasterized by ghostscript
 //! (when installed): RustFig's own EPS is the reference, not fig2dev's
 //! ghostscript output.
 
@@ -64,7 +64,7 @@ fn mean_diff(a: &RgbImage, b: &RgbImage) -> f64 {
     sum as f64 / a.as_raw().len() as f64
 }
 
-fn colours(img: &RgbImage) -> usize {
+fn colors(img: &RgbImage) -> usize {
     img.pixels()
         .map(|p| p.0)
         .collect::<std::collections::HashSet<_>>()
@@ -174,9 +174,9 @@ fn every_bitmap_carries_the_pngs_pixels() {
             }
             assert_eq!(read_pcx(&get("pcx")), png, "pcx {ctx}");
             assert_eq!(read_xpm(&get("xpm")), png, "xpm {ctx}");
-            // GIF: exact up to 256 colours, quantised beyond.
+            // GIF: exact up to 256 colors, quantized beyond.
             let gif = on_white(&decode(&get("gif"), ImageFormat::Gif));
-            if colours(&png) <= 256 {
+            if colors(&png) <= 256 {
                 assert_eq!(gif, png, "gif {ctx}");
             } else {
                 let d = mean_diff(&gif, &png);
@@ -187,7 +187,7 @@ fn every_bitmap_carries_the_pngs_pixels() {
             let d = mean_diff(&jpeg, &png);
             assert!(d < 8.0, "jpeg {ctx}: mean difference {d}");
             // XBM: ppmtopgm and pgmtopbm's Floyd-Steinberg dithering: black
-            // and white stay, greys come out as the matching share of black.
+            // and white stay, grays come out as the matching share of black.
             let xbm = read_xbm(&get("xbm"));
             assert_eq!(xbm.dimensions(), png.dimensions(), "xbm {ctx}");
             let (mut want, mut got) = (0.0, 0.0);
@@ -234,9 +234,9 @@ fn smoothing_changes_the_edges() {
     let img = |s: &str| on_white(&decode(&render(&doc, "ppm", &[('S', s)]), ImageFormat::Pnm));
     let (hard, some, more) = (img("1"), img("2"), img("4"));
     assert_eq!(img("0"), hard, "0 and 1 both mean none");
-    // Hard edges keep the figure's few colours; smoothing adds grey levels.
-    assert!(colours(&hard) < colours(&some), "{} {}", colours(&hard), colours(&some));
-    assert!(colours(&some) < colours(&more), "{} {}", colours(&some), colours(&more));
+    // Hard edges keep the figure's few colors; smoothing adds gray levels.
+    assert!(colors(&hard) < colors(&some), "{} {}", colors(&hard), colors(&some));
+    assert!(colors(&some) < colors(&more), "{} {}", colors(&some), colors(&more));
     assert_ne!(some, more);
     // fig2dev's default (no -S) is hard edges.
     let plain = on_white(&decode(&render(&doc, "ppm", &[]), ImageFormat::Pnm));
@@ -256,7 +256,7 @@ fn background_border_and_grayscale() {
 }
 
 #[test]
-fn gif_transparent_colour_from_the_option_or_the_figure() {
+fn gif_transparent_color_from_the_option_or_the_figure() {
     let mut doc = fixture("lines");
     let corner_alpha = |doc: &Document, items: &[(char, &str)]| {
         let gif = decode(&render(doc, "gif", items), ImageFormat::Gif);
@@ -265,12 +265,12 @@ fn gif_transparent_colour_from_the_option_or_the_figure() {
     assert_eq!(corner_alpha(&doc, &[]), 255);
     assert_eq!(corner_alpha(&doc, &[('t', "#ffffff")]), 0);
     assert_eq!(corner_alpha(&doc, &[('t', "#ff0000")]), 255);
-    // The figure's own transparent colour (header line 9): 7 is white.
+    // The figure's own transparent color (header line 9): 7 is white.
     doc.settings.transparent_color = 7;
     assert_eq!(corner_alpha(&doc, &[]), 0);
     // -t overrides it.
     assert_eq!(corner_alpha(&doc, &[('t', "black")]), 255);
-    // None (-2), default (-1) and an undefined user colour give none.
+    // None (-2), default (-1) and an undefined user color give none.
     for n in [-2, -1, 40] {
         doc.settings.transparent_color = n;
         assert_eq!(corner_alpha(&doc, &[]), 255, "{n}");
@@ -336,7 +336,7 @@ fn bitmaps_flow_through_file_export() {
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
-/// RustFig's PNG against RustFig's EPS rasterised by ghostscript at the
+/// RustFig's PNG against RustFig's EPS rasterized by ghostscript at the
 /// same resolution (skipped without ghostscript).
 #[test]
 fn png_matches_rustfigs_eps() {
@@ -350,7 +350,7 @@ fn png_matches_rustfigs_eps() {
         // At 80 dpi (fig2dev's), on white, smoothed as the export panel does.
         let png = render(&doc, "png", &[('F', ""), ('g', "white"), ('S', "4")]);
         let eps = render(&doc, "eps", &[('F', "")]);
-        let gs = fig2dev::rasterise(&eps, false, dpi, true).unwrap();
+        let gs = fig2dev::rasterize(&eps, false, dpi, true).unwrap();
         let c = compare::compare(&gs, &png).unwrap();
         eprintln!("{name}: mean {:.4} strong {:.4}", c.score.mean, c.score.strong);
         assert!(c.score.mean < 0.04 && c.score.strong < 0.04, "{name}: {:?}", c.score);

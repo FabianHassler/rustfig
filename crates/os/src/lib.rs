@@ -2,7 +2,7 @@
 //! (`deny` crate-wide, `allow` on the few OS-call functions, each with a SAFETY
 //! comment). Its API is safe and knows nothing of egui.
 //!
-//! - [`screen`]: pick a colour from the screen.
+//! - [`screen`]: pick a color from the screen.
 //! - [`print`]: the platform's native print dialog for a PDF.
 //! - [`capture`]: screen capture of a window or an area into PNG bytes (D11).
 //! - [`quicklook`]: entry point of the macOS Quick Look thumbnail and preview extensions.

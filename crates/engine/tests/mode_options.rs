@@ -170,13 +170,13 @@ fn rotate_about_a_set_center_with_copies() {
     assert_eq!(e.mouse_hints().right, "set center");
     press(&mut e, 0.0, 0.0, Button::Right, false);
     assert_eq!(e.mouse_hints().right, "unset center");
-    assert!(!e.overlay().handles.is_empty(), "the centre is marked");
+    assert!(!e.overlay().handles.is_empty(), "the center is marked");
     // Copy & rotate: three copies at 90, 180 and 270 degrees about (0, 0).
     press(&mut e, 1000.0, 100.0, Button::Middle, false);
     assert_eq!(e.doc().objects.len(), 4);
     let (x0, y0, x1, y1) = bbox(&e, a);
     assert_eq!((x0, y0, x1, y1), (1000.0, 0.0, 1200.0, 200.0), "the original stays");
-    let mut centres: Vec<(i64, i64)> = e
+    let mut centers: Vec<(i64, i64)> = e
         .doc()
         .objects
         .iter()
@@ -188,8 +188,8 @@ fn rotate_about_a_set_center_with_copies() {
             )
         })
         .collect();
-    centres.sort();
-    assert_eq!(centres, vec![(-1100, -100), (-100, 1100), (100, -1100), (1100, 100)]);
+    centers.sort();
+    assert_eq!(centers, vec![(-1100, -100), (-100, 1100), (100, -1100), (1100, 100)]);
     // The right button again unsets it; changing the mode erases it too.
     press(&mut e, 5.0, 5.0, Button::Right, false);
     assert_eq!(e.mouse_hints().right, "set center");

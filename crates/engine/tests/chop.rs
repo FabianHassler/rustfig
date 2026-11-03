@@ -252,7 +252,7 @@ fn the_mode_collects_axes_chops_a_log_and_clears() {
     // Left click on the axe (away from the log) selects it.
     press(&mut e, 1000.0, 500.0, Button::Left);
     assert!(e.status().contains("Axe object 1"), "{}", e.status());
-    // The axe is highlighted in the axe colour; with the pointer on the
+    // The axe is highlighted in the axe color; with the pointer on the
     // other line, that one is highlighted as the log.
     assert_eq!(e.overlay().chop_axes.len(), 1);
     assert_eq!(e.overlay().markers.len(), 4, "the markers stay while picking");

@@ -69,12 +69,12 @@ fn circle_tangent_and_normal() {
     assert_eq!(t[1], Point::new(3000.0, 2000.0), "the middle point is the curve point");
     assert!(parallel(dir(&t), (1.0, 0.0)));
     assert!(close(length(&t), 1200.0, 2.0), "default length 1 inch: {}", length(&t));
-    // The normal through the same point is vertical, through the centre.
+    // The normal through the same point is vertical, through the center.
     let n = tangent(&mut e, c, 3000.0, 2000.0, true, json!({}));
     assert!(parallel(dir(&n), (0.0, 1.0)));
     assert!(close(n[1].x, 3000.0, 0.0) && close(n[1].y, 2000.0, 0.0));
     // A point at 45 degrees (click off the curve by a little: the curve
-    // point is on the circle, along the ray from the centre).
+    // point is on the circle, along the ray from the center).
     let r = 1000.0_f64;
     let (cx, cy) = (3000.0 + r * 0.5_f64.sqrt(), 3000.0 + r * 0.5_f64.sqrt());
     let t = tangent(&mut e, c, cx + 3.0, cy + 3.0, false, json!({"tolerance": 10}));
@@ -258,7 +258,7 @@ fn length_follows_the_indicator_and_the_units() {
     // The command's own length wins.
     let t = tangent(&mut e, l, 3000.0, 0.0, false, json!({"length": 0.5}));
     assert!(close(length(&t), 600.0, 1.0));
-    // Metric drawings: centimetres, 450 per cm.
+    // Metric drawings: centimeters, 450 per cm.
     e.doc_mut().settings.units = Units::Metric;
     let t = tangent(&mut e, l, 3000.0, 0.0, false, json!({"length": 2}));
     assert!(close(length(&t), 900.0, 1.0));

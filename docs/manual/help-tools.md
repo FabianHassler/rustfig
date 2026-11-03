@@ -4,7 +4,7 @@ Four helpers in the Help menu and on the keyboard.
 
 ## Command search
 
-Help > Command search... (`help.command_search`, `Ctrl+Shift+K`; on macOS `⌘ ⇧ K`) opens a small window with a text field. Type part of a command's name, its id or its menu path ("arrange", "export", "edit.undo"): the matching commands are listed with their keys, best match first. Commands that are not available now (nothing selected, nothing to undo) are greyed. The arrow keys move through the list, Enter (or a click) runs the highlighted command, Escape closes the window. The window finds the commands of the menus and also RustFig's own dialogs, such as Keys... and Global settings...
+Help > Command search... (`help.command_search`, `Ctrl+Shift+K`; on macOS `⌘ ⇧ K`) opens a small window with a text field. Type part of a command's name, its id or its menu path ("arrange", "export", "edit.undo"): the matching commands are listed with their keys, best match first. Commands that are not available now (nothing selected, nothing to undo) are grayed. The arrow keys move through the list, Enter (or a click) runs the highlighted command, Escape closes the window. The window finds the commands of the menus and also RustFig's own dialogs, such as Keys... and Global settings...
 
 `Ctrl+K` is not used for the search: in xfig it opens the keyboard panel (Enter point, `app.keyboard_entry`), and RustFig keeps that key.
 

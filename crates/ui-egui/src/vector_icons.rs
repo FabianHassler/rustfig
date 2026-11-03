@@ -1,10 +1,10 @@
 //! Attribute pictures drawn as vectors (plan W9): each is a small Fig
-//! drawing rendered by RustFig's own rasteriser at the screen's pixel
+//! drawing rendered by RustFig's own rasterizer at the screen's pixel
 //! density, so it is sharp at any scale and shows exactly what the canvas
 //! draws (dash patterns, joins, caps, arrowheads). The compositions follow
 //! xfig's 32×32 pictures (`w_icons.c`); xfig's bitmaps remain the fallback.
 //
-// Compositions after xfig src/w_icons.c (xfig licence, see LICENSE-xfig).
+// Compositions after xfig src/w_icons.c (xfig license, see LICENSE-xfig).
 
 use rustfig_geom::{Affine, Point};
 use rustfig_model::{
@@ -93,7 +93,7 @@ fn drawing(icon: VIcon) -> Vec<Object> {
         }
         VIcon::Join(join) => {
             // As xfig's pictures: a 6-pixel stroke (thickness 7) turning
-            // back at 35° (inside the rasteriser's miter limit), so the
+            // back at 35° (inside the rasterizer's miter limit), so the
             // miter's long point, the round and the bevel are plain to see.
             // Straight edges on whole pixels.
             let st = Style { join, ..style(7) };
@@ -203,7 +203,7 @@ pub fn render_objects(objs: Vec<Object>, w: usize, h: usize, scale: f32) -> Opti
     })
 }
 
-/// Paint `icon` centred in `rect` at its natural size (one icon pixel per
+/// Paint `icon` centerd in `rect` at its natural size (one icon pixel per
 /// point, as xfig's bitmaps), shrunk if `rect` is smaller, tinted, at the
 /// screen's pixel density (made once per icon and scale, kept in egui's
 /// memory).

@@ -5,7 +5,7 @@
 //!
 //! Exact pixel equality is not the goal: the two renderers differ in
 //! anti-aliasing, fonts and by a pixel here and there. Both images are
-//! trimmed to their ink, scaled to a common size, converted to grey and
+//! trimmed to their ink, scaled to a common size, converted to gray and
 //! blurred slightly, then compared. The scores catch real differences
 //! (a missing arrowhead, a wrong fill, a shifted text) and regressions.
 
@@ -24,7 +24,7 @@ const STRONG: u8 = 64;
 /// How different two renderings are; 0 means identical.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Score {
-    /// Mean absolute grey difference, 0–1.
+    /// Mean absolute gray difference, 0–1.
     pub mean: f64,
     /// Share of pixels that differ strongly, 0–1.
     pub strong: f64,
@@ -37,7 +37,7 @@ pub struct Comparison {
     pub reference: GrayImage,
     /// The candidate, trimmed and scaled to the common size.
     pub candidate: GrayImage,
-    /// Ink only in the reference is red, only in the candidate blue, in both grey.
+    /// Ink only in the reference is red, only in the candidate blue, in both gray.
     pub diff: RgbImage,
 }
 
@@ -86,7 +86,7 @@ pub fn compare(reference: &[u8], candidate: &[u8]) -> Result<Comparison, String>
     })
 }
 
-/// Decodes an image and flattens it onto white, in grey.
+/// Decodes an image and flattens it onto white, in gray.
 fn decode(bytes: &[u8]) -> Result<GrayImage, String> {
     let mut reader = ImageReader::new(Cursor::new(bytes))
         .with_guessed_format()
@@ -98,9 +98,9 @@ fn decode(bytes: &[u8]) -> Result<GrayImage, String> {
     let rgba = reader.decode().map_err(|e| e.to_string())?.to_rgba8();
     Ok(GrayImage::from_fn(rgba.width(), rgba.height(), |x, y| {
         let [r, g, b, al] = rgba.get_pixel(x, y).0;
-        let grey = (u32::from(r) * 299 + u32::from(g) * 587 + u32::from(b) * 114) / 1000;
+        let gray = (u32::from(r) * 299 + u32::from(g) * 587 + u32::from(b) * 114) / 1000;
         let a = u32::from(al);
-        let v = (grey * a + 255 * (255 - a)) / 255;
+        let v = (gray * a + 255 * (255 - a)) / 255;
         Luma([u8::try_from(v).unwrap_or(255)])
     }))
 }
@@ -138,7 +138,7 @@ fn common_size(a: &GrayImage, b: &GrayImage) -> (u32, u32) {
     (w as u32, h as u32)
 }
 
-/// Encodes a grey or colour image as PNG, for review output.
+/// Encodes a gray or color image as PNG, for review output.
 pub fn png<I>(img: &I) -> Result<Vec<u8>, String>
 where
     I: image::GenericImageView,

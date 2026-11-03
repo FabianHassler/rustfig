@@ -7,7 +7,7 @@
 //! settings (stored in the .fig file); everything else is kept per language
 //! in the settings file (`[rustfig.export.<language>]`), never in the figure.
 //!
-// Ported from xfig src/w_export.c, src/u_print.c, src/f_util.c (xfig licence, see LICENSE-xfig).
+// Ported from xfig src/w_export.c, src/u_print.c, src/f_util.c (xfig license, see LICENSE-xfig).
 
 use crate::{Engine, EngineError};
 use rustfig_geom::Rect;
@@ -15,9 +15,9 @@ use rustfig_model::{ColorRef, PaperSize, Units};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 
-/// xfig's `COLOR_NONE`: no background colour chosen.
+/// xfig's `COLOR_NONE`: no background color chosen.
 pub const COLOR_NONE: i32 = -1;
-/// xfig's `TRANSP_NONE` / `TRANSP_BACKGROUND` for the GIF transparent colour.
+/// xfig's `TRANSP_NONE` / `TRANSP_BACKGROUND` for the GIF transparent color.
 pub const TRANSP_NONE: i32 = -2;
 pub const TRANSP_BACKGROUND: i32 = -3;
 /// The most a grid, border or offset text may be (sanity cap).
@@ -29,13 +29,13 @@ const MAX_NUMBER: f64 = 1.0e6;
 pub struct PanelSettings {
     /// Border around the figure: points (1/72 inch), pixels for bitmaps.
     pub border: f64,
-    /// Background colour number, `COLOR_NONE` for none.
+    /// Background color number, `COLOR_NONE` for none.
     pub background: i32,
     /// Minor and major grid spacing as the menu gives them ("None", "1/4",
     /// "10" …), in the figure's unit (inches or mm).
     pub grid_minor: String,
     pub grid_major: String,
-    /// EPS/PS preview: 0 none, 1 ASCII (EPSI), 2 colour TIFF, 3 monochrome.
+    /// EPS/PS preview: 0 none, 1 ASCII (EPSI), 2 color TIFF, 3 monochrome.
     pub preview: u8,
     /// PDF: a full page of the paper size instead of a figure-sized one.
     pub pdf_page_mode: bool,
@@ -46,7 +46,7 @@ pub struct PanelSettings {
     pub y_offset: f64,
     pub x_unit: u8,
     pub y_unit: u8,
-    /// GIF transparent colour: a colour number, `TRANSP_NONE` or `TRANSP_BACKGROUND`.
+    /// GIF transparent color: a color number, `TRANSP_NONE` or `TRANSP_BACKGROUND`.
     pub transparent: i32,
     /// Bitmaps: resolution (RustFig's addition), smoothing (fig2dev's `-S`:
     /// 1 none, 2 some, 4 more) and JPEG quality.
@@ -142,7 +142,7 @@ impl PanelSettings {
 /// The rows of the panel for a language (xfig's `manage_optional`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize)]
 pub struct Rows {
-    /// GIF: transparent colour.
+    /// GIF: transparent color.
     pub transparent: bool,
     /// JPEG: image quality.
     pub quality: bool,
@@ -160,7 +160,7 @@ pub struct Rows {
     /// PDF: page mode.
     pub pdf_page_mode: bool,
     /// Paper size, orientation, justification and offsets: PostScript, PDF
-    /// (greyed unless in page mode) and HPGL.
+    /// (grayed unless in page mode) and HPGL.
     pub page: bool,
     /// Single/multiple pages and overlap (PostScript and PDF).
     pub multiple: bool,
@@ -353,8 +353,8 @@ pub fn params(e: &Engine, id: &str, s: &PanelSettings) -> Map<String, Value> {
         options.insert("quality".into(), json!(s.quality));
     }
     if r.transparent && s.transparent != TRANSP_NONE {
-        // "Background" makes the canvas colour (white) transparent and the
-        // background that colour too.
+        // "Background" makes the canvas color (white) transparent and the
+        // background that color too.
         let color = if s.transparent == TRANSP_BACKGROUND {
             "#ffffff".to_string()
         } else {

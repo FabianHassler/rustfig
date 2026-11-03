@@ -40,4 +40,4 @@ RustFig is a Rust reimplementation of xfig, the classic vector drawing program f
 
 xfig's Help menu opens an HTML reference, man pages and a How-To guide. In RustFig the Help menu opens this manual instead (Help > RustFig Manual). The command list (Help > RustFig Reference) shows every command with its id and shortcut. The command-line parts of xfig's man pages are in [Automation](automation.md).
 
-Parts of this manual are adapted from xfig's HTML manual (xfig licence, see LICENSE-xfig).
+Parts of this manual are adapted from xfig's HTML manual (xfig license, see LICENSE-xfig).

@@ -7,14 +7,14 @@ All of these act on the object you click; a compound is one object. With [Smart 
 No key (xfig key Ctrl+S). Resizes an object in proportion.
 
 - Left, “scale box”: press on the object, drag, release. The click picks the nearest of the eight handles of the bounding box. At a corner the fixed point is the opposite corner and the object grows in proportion: the factor is the larger of the width and height ratios of the drag (xfig's `adjust_box_pos`), so the corner may end up away from the pointer on the shorter side. At the middle of an edge only the size across that edge changes (the width for the left and right edges, the height for the top and bottom edges), about the opposite edge (xfig's one-dimension box scale).
-- Middle, “scale about center”: the same around the centre of the object, with the factor from the point you pressed on (a vertex when the press is near one) to the pointer, again the larger of the two axis ratios.
+- Middle, “scale about center”: the same around the center of the object, with the factor from the point you pressed on (a vertex when the press is near one) to the pointer, again the larger of the two axis ratios.
 - Right: cancels.
 
 ## Align
 
-Key `A`. Aligns the parts of a compound with each other, or one object with another. The indicator's Vert Align and Horiz Align choose how the edges or centres line up.
+Key `A`. Aligns the parts of a compound with each other, or one object with another. The indicator's Vert Align and Horiz Align choose how the edges or centers line up.
 
-The seven choices (each of the two indicators): **none**; **start**, **centre**, **end** (left, centre, right or top, centre, bottom: the edges or centres line up with those of the whole group); **distribute centres** (the centres of the objects are evenly spaced, the outer two stay); **distribute edges** (equal gaps between the objects, the outer two stay); **abut** (the objects are put edge to edge, starting from the first). Horizontal and vertical are independent. Command `arrange.align` (`h`, `v`: none, left, center, right, distribute_centres, distribute_edges, abut).
+The seven choices (each of the two indicators): **none**; **start**, **center**, **end** (left, center, right or top, center, bottom: the edges or centers line up with those of the whole group); **distribute centers** (the centers of the objects are evenly spaced, the outer two stay); **distribute edges** (equal gaps between the objects, the outer two stay); **abut** (the objects are put edge to edge, starting from the first). Horizontal and vertical are independent. Command `arrange.align` (`h`, `v`: none, left, center, right, distribute_centres, distribute_edges, abut).
 
 - Left, “align compound”: click a compound; its members are aligned with each other.
 - Middle, “align canvas”: every object in the figure is aligned to the page (the paper size, turned for landscape) by the indicator's Vert Align and Horiz Align (command `arrange.align_canvas`). Distribute and abut do not apply to the canvas.
@@ -41,9 +41,9 @@ Key `Shift+F`. As above but mirrors about a vertical line.
 Key `Shift+R`. Rotates the clicked object by the indicator's Rotn Angle (set in the indicator panel).
 
 - Left, “rotate object”.
-- Middle, “copy & rotate”: rotates a copy. The indicator's Num Copies (`num_copies`, 1 to 99) makes that many copies, the first turned by the angle, the second by twice the angle and so on, all about the same centre. The Num Copies button appears in the rotate modes (xfig's `I_ROTATE`): click it for a number field, right button increases, middle button decreases.
-- Right, “set center”: marks the point to rotate about; right again, “unset center”, removes it. Without a centre the object turns about the point you clicked, as in xfig.
-- Shift+left locates an object ([Mouse](mouse.md)); Shift+right sets the centre like the right button, as in xfig. To turn the other way use Rotate clockwise.
+- Middle, “copy & rotate”: rotates a copy. The indicator's Num Copies (`num_copies`, 1 to 99) makes that many copies, the first turned by the angle, the second by twice the angle and so on, all about the same center. The Num Copies button appears in the rotate modes (xfig's `I_ROTATE`): click it for a number field, right button increases, middle button decreases.
+- Right, “set center”: marks the point to rotate about; right again, “unset center”, removes it. Without a center the object turns about the point you clicked, as in xfig.
+- Shift+left locates an object ([Mouse](mouse.md)); Shift+right sets the center like the right button, as in xfig. To turn the other way use Rotate clockwise.
 
 ## Rotate clockwise
 

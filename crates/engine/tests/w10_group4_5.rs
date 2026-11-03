@@ -37,7 +37,7 @@ fn three(e: &mut Engine) -> [u64; 3] {
 }
 
 #[test]
-fn align_distribute_centres_spaces_the_centres_evenly() {
+fn align_distribute_centers_spaces_the_centers_evenly() {
     let mut e = Engine::new();
     let ids = three(&mut e);
     e.execute(

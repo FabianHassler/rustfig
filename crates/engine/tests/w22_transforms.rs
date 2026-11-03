@@ -41,11 +41,11 @@ fn box_scale_takes_the_larger_axis_factor() {
 }
 
 #[test]
-fn centre_scale_takes_the_larger_axis_factor_from_the_clicked_vertex() {
+fn center_scale_takes_the_larger_axis_factor_from_the_clicked_vertex() {
     let mut e = Engine::new();
     rect(&mut e, 0, 0, 1200, 600);
     e.set_tool(ToolKind::Scale);
-    // Vertex (1200, 600) about the centre (600, 300): to (1800, 750) is
+    // Vertex (1200, 600) about the center (600, 300): to (1800, 750) is
     // x 2.0, y 1.5 -> 2.0.
     click(&mut e, 1200.0, 600.0, Button::Middle);
     click(&mut e, 1800.0, 750.0, Button::Middle);

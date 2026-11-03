@@ -1,4 +1,4 @@
-//! Preferences (E1): xfig's resources, RustFig's settings, user colours.
+//! Preferences (E1): xfig's resources, RustFig's settings, user colors.
 
 use super::{always, string, CmdResult, Command};
 use crate::prefs::{resource, Kind, NamedColor, Status, MAX_USER_COLORS, RESOURCES};
@@ -33,7 +33,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Restore default preferences",
             menu: "",
             shortcut: "",
-            params: "{\"names\"?: [xfig resource name]}  — sets the named xfig resources (default: all that RustFig uses) back to xfig's defaults and applies them; your colours, recent files and the other RustFig settings stay",
+            params: "{\"names\"?: [xfig resource name]}  — sets the named xfig resources (default: all that RustFig uses) back to xfig's defaults and applies them; your colors, recent files and the other RustFig settings stay",
             mutates: false,
             enabled: always,
             run: reset,
@@ -50,17 +50,17 @@ pub(super) fn commands() -> Vec<Command> {
         },
         Command {
             id: "prefs.add_color",
-            label: "Add user colour",
+            label: "Add user color",
             menu: "",
             shortcut: "",
-            params: "{\"name\": string, \"rgb\": \"#rrggbb\"}  — a colour kept for every drawing (replaces one of the same name)",
+            params: "{\"name\": string, \"rgb\": \"#rrggbb\"}  — a color kept for every drawing (replaces one of the same name)",
             mutates: false,
             enabled: always,
             run: add_color,
         },
         Command {
             id: "prefs.remove_color",
-            label: "Remove user colour",
+            label: "Remove user color",
             menu: "",
             shortcut: "",
             params: "{\"name\": string}",
@@ -185,14 +185,14 @@ fn use_current(e: &mut Engine, _: &Value) -> CmdResult {
 fn add_color(e: &mut Engine, p: &Value) -> CmdResult {
     let name = string(p, "name")?.trim().to_string();
     if name.is_empty() || name.chars().count() > 64 || name.chars().any(char::is_control) {
-        return Err(EngineError::bad_params("a colour needs a name of 1-64 characters"));
+        return Err(EngineError::bad_params("a color needs a name of 1-64 characters"));
     }
     let rgb = Rgb::from_hex(&string(p, "rgb")?).ok_or_else(|| EngineError::bad_params("rgb must be #rrggbb"))?;
     let colors = &mut e.prefs.rustfig.user_colors;
     colors.retain(|c| c.name != name);
     if colors.len() >= MAX_USER_COLORS {
         return Err(EngineError::bad_params(format!(
-            "at most {MAX_USER_COLORS} user colours"
+            "at most {MAX_USER_COLORS} user colors"
         )));
     }
     colors.push(NamedColor {
@@ -209,7 +209,7 @@ fn remove_color(e: &mut Engine, p: &Value) -> CmdResult {
     let before = colors.len();
     colors.retain(|c| c.name != name);
     if colors.len() == before {
-        return Err(EngineError::bad_params(format!("no user colour {name:?}")));
+        return Err(EngineError::bad_params(format!("no user color {name:?}")));
     }
     e.prefs_dirty = true;
     Ok(json!({"count": colors.len()}))

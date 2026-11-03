@@ -7,7 +7,7 @@
 //! Snap menu) instead of xfig's quartic solver, within the flattening
 //! tolerance.
 //
-// Ported from xfig src/w_intersect.c (xfig licence, see LICENSE-xfig).
+// Ported from xfig src/w_intersect.c (xfig license, see LICENSE-xfig).
 
 use crate::{arc_from_three_points, flatten_ellipse, Affine, ArcGeom, Point, FLATTEN_TOL};
 use std::f64::consts::TAU;

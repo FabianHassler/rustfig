@@ -7,14 +7,14 @@ S0 ([`source-map.md`](source-map.md)) maps C files to RustFig modules; this file
 ## How the audit was done
 
 1. `cargo xtask source-audit` (`xtask/src/audit.rs`) strips comments, strings and preprocessor lines from each C file and lists every function definition (name, file, line) with a column-0 header at brace depth 0, K&R parameter lists included. It was checked against a second count of column-0 `{` lines; xfig's `xfigmain.c` is a generated copy of `main.c` and is listed with the same statuses.
-2. Each function was assigned a status by file, against the RustFig module that does the job (names in the notes are real items: tools, commands, dialogs, crates). Where a function could hide a behaviour that RustFig lacks, the C body was read and compared with RustFig's behaviour, mouse hints and docs (this found the S4-n gaps below). "Ported" means a counterpart with the same behaviour exists, not that the code was transliterated; ported C code is marked in the Rust file and `LICENSE-xfig`.
+2. Each function was assigned a status by file, against the RustFig module that does the job (names in the notes are real items: tools, commands, dialogs, crates). Where a function could hide a behavior that RustFig lacks, the C body was read and compared with RustFig's behavior, mouse hints and docs (this found the S4-n gaps below). "Ported" means a counterpart with the same behavior exists, not that the code was transliterated; ported C code is marked in the Rust file and `LICENSE-xfig`.
 
 ## Statuses
 
-- **ported**: RustFig has the function's behaviour (module and item in the note).
+- **ported**: RustFig has the function's behavior (module and item in the note).
 - **replaced**: a deliberate modern equivalent does the job, with the reason (Xt widget code → egui, `~/.xfigrc` → `settings.toml`, ghostscript calls → fig2dev's port, X11 drawing → the renderer, ...).
 - **not needed**: X11/Xt plumbing, memory management, platform workarounds. Where the function is visible to users the note starts with **PROPOSAL** (see below).
-- **partial**: part of the behaviour exists; the note says what is missing and the task adds it. (An addition to the four statuses the task named; a function that is half there would otherwise be hidden under "ported" or inflate "missing".)
+- **partial**: part of the behavior exists; the note says what is missing and the task adds it. (An addition to the four statuses the task named; a function that is half there would otherwise be hidden under "ported" or inflate "missing".)
 - **missing**: no counterpart; the Task column names the plan task that adds it. Where a modern replacement is planned but not built (printing, B5), the status is **missing**, not replaced.
 
 ## Summary
@@ -69,7 +69,7 @@ What is still missing or partial (nothing: 0 functions missing, none partial; 20
 
 | Area | Function | Functions | Task | Hours |
 |---|---|---|---|---:|
-| Editing | none (arc radius, neighbour lengths and scale box size messages, and the crosshair, are done) | | | 0 |
+| Editing | none (arc radius, neighbor lengths and scale box size messages, and the crosshair, are done) | | | 0 |
 | Attributes | none (the dimension-line preview already draws the chosen arrow types) | | | 0 |
 | Files | none (the Open/Merge panel with preview, comments, object count and Figure Offset is done; Capture is done: D11, `app.capture`) | | | 0 |
 | Text | none (Ctrl-key line editing, super- and subscripts are done) | | | 0 |
@@ -85,7 +85,7 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 |------|------|
 | 2026-10-21 | First version (S4): 2,126 function definitions of xfig 3.2.9a listed by `cargo xtask source-audit`, each with a status; S4-1 to S4-7 added; `source-map.md` statuses corrected. |
 | 2026-10-22 | D3: `e_chop.c`'s 14 functions and `w_modepanel.c`'s `stub_chop_selected` marked ported. |
-| 2026-10-25 | Refresh: 74 rows of `missing`/`partial` verified against the code and set to ported, replaced, not needed or kept (D8 smart links, E4 colours, F5 spell check, E5 character map, S4-1 highlights, S4-4 cursors, W10-2 help, W10-3 vertex numbers, D10 typed coordinates); summary counts regenerated (384 missing and 58 partial before; 21 and 6 now); section "Missing, by area". |
+| 2026-10-25 | Refresh: 74 rows of `missing`/`partial` verified against the code and set to ported, replaced, not needed or kept (D8 smart links, E4 colors, F5 spell check, E5 character map, S4-1 highlights, S4-4 cursors, W10-2 help, W10-3 vertex numbers, D10 typed coordinates); summary counts regenerated (384 missing and 58 partial before; 21 and 6 now); section "Missing, by area". |
 
 ## Table
 
@@ -93,12 +93,12 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 
 | File | Function | Line | Status | RustFig item or reason | Task |
 |---|---|---:|---|---|---|
-| `d_arc.c` | `arc_drawing_selected` | 73 | ported | tools: `ToolKind::Arc` (3 clicks, `points_event`, `arc_from_center` for centre mode) |  |
-| `d_arc.c` | `init_arc_drawing` | 87 | ported | tools: `ToolKind::Arc` (3 clicks, `points_event`, `arc_from_center` for centre mode) |  |
-| `d_arc.c` | `init_arc_c_drawing` | 128 | ported | tools: `ToolKind::Arc` (3 clicks, `points_event`, `arc_from_center` for centre mode) |  |
-| `d_arc.c` | `cancel_arc` | 144 | ported | tools: `ToolKind::Arc` (3 clicks, `points_event`, `arc_from_center` for centre mode) |  |
-| `d_arc.c` | `get_arcpoint` | 177 | ported | tools: `ToolKind::Arc` (3 clicks, `points_event`, `arc_from_center` for centre mode) |  |
-| `d_arc.c` | `create_arcobject` | 204 | ported | tools: `ToolKind::Arc` (3 clicks, `points_event`, `arc_from_center` for centre mode) |  |
+| `d_arc.c` | `arc_drawing_selected` | 73 | ported | tools: `ToolKind::Arc` (3 clicks, `points_event`, `arc_from_center` for center mode) |  |
+| `d_arc.c` | `init_arc_drawing` | 87 | ported | tools: `ToolKind::Arc` (3 clicks, `points_event`, `arc_from_center` for center mode) |  |
+| `d_arc.c` | `init_arc_c_drawing` | 128 | ported | tools: `ToolKind::Arc` (3 clicks, `points_event`, `arc_from_center` for center mode) |  |
+| `d_arc.c` | `cancel_arc` | 144 | ported | tools: `ToolKind::Arc` (3 clicks, `points_event`, `arc_from_center` for center mode) |  |
+| `d_arc.c` | `get_arcpoint` | 177 | ported | tools: `ToolKind::Arc` (3 clicks, `points_event`, `arc_from_center` for center mode) |  |
+| `d_arc.c` | `create_arcobject` | 204 | ported | tools: `ToolKind::Arc` (3 clicks, `points_event`, `arc_from_center` for center mode) |  |
 | `d_arc.c` | `resizing_arc` | 305 | replaced | rubber band drawn from `Engine::overlay()` |  |
 | `d_arc.c` | `elastic_arc` | 325 | replaced | rubber band drawn from `Engine::overlay()` |  |
 | `d_arcbox.c` | `arcbox_drawing_selected` | 43 | ported | tools: `ToolKind::ArcBox` (`drag_event`, `finish_drag`) |  |
@@ -211,9 +211,9 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `e_align.c` | `pos_spline` | 439 | ported | `cmd/arrange.rs` `arrange.align` and the Align tool (`ToolKind::Align`) |  |
 | `e_align.c` | `pos_text` | 476 | ported | `cmd/arrange.rs` `arrange.align` and the Align tool (`ToolKind::Align`) |  |
 | `e_align.c` | `pos_compound` | 512 | ported | `cmd/arrange.rs` `arrange.align` and the Align tool (`ToolKind::Align`) |  |
-| `e_align.c` | `init_distrib_centres` | 563 | ported | `arrange.align` (`spread`: distribute centres, distribute edges, abut) |  |
-| `e_align.c` | `init_distrib_edges` | 652 | ported | `arrange.align` (`spread`: distribute centres, distribute edges, abut) |  |
-| `e_align.c` | `adjust_object_pos` | 761 | ported | `arrange.align` (`spread`: distribute centres, distribute edges, abut) |  |
+| `e_align.c` | `init_distrib_centers` | 563 | ported | `arrange.align` (`spread`: distribute centers, distribute edges, abut) |  |
+| `e_align.c` | `init_distrib_edges` | 652 | ported | `arrange.align` (`spread`: distribute centers, distribute edges, abut) |  |
+| `e_align.c` | `adjust_object_pos` | 761 | ported | `arrange.align` (`spread`: distribute centers, distribute edges, abut) |  |
 | `e_align.c` | `distribute_horizontally` | 809 | ported | `arrange.align` with `distribute_centres`, `distribute_edges` and `abut` (`spread`), applied by the Align mode |  || `e_align.c` | `distribute_vertically` | 886 | ported | `arrange.align` with `distribute_centres`, `distribute_edges` and `abut` (`spread`), applied by the Align mode |  || `e_arrow.c` | `arrow_head_selected` | 50 | ported | tools: `ToolKind::Arrow`, commands `object.toggle_forward_arrow`, `object.toggle_backward_arrow` |  |
 | `e_arrow.c` | `add_arrow_head` | 66 | ported | tools: `ToolKind::Arrow`, commands `object.toggle_forward_arrow`, `object.toggle_backward_arrow` |  |
 | `e_arrow.c` | `delete_arrow_head` | 89 | ported | tools: `ToolKind::Arrow`, commands `object.toggle_forward_arrow`, `object.toggle_backward_arrow` |  |
@@ -339,9 +339,9 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `e_edit.c` | `set_font_image` | 4324 | replaced | pictorial menus in the edit panel are egui combo boxes; pictures for choices are W10-21 | W10-21 |
 | `e_edit.c` | `font_image_panel` | 4333 | replaced | pictorial menus in the edit panel are egui combo boxes; pictures for choices are W10-21 | W10-21 |
 | `e_edit.c` | `f_menu_popup` | 4365 | replaced | pictorial menus in the edit panel are egui combo boxes; pictures for choices are W10-21 | W10-21 |
-| `e_edit.c` | `pen_color_selection_panel` | 4372 | replaced | colour menus: the colour pop-up of the indicator (E4 for the editor) | E4 |
-| `e_edit.c` | `fill_color_selection_panel` | 4381 | replaced | colour menus: the colour pop-up of the indicator (E4 for the editor) | E4 |
-| `e_edit.c` | `color_selection_panel` | 4390 | replaced | colour menus: the colour pop-up of the indicator (E4 for the editor) | E4 |
+| `e_edit.c` | `pen_color_selection_panel` | 4372 | replaced | color menus: the color pop-up of the indicator (E4 for the editor) | E4 |
+| `e_edit.c` | `fill_color_selection_panel` | 4381 | replaced | color menus: the color pop-up of the indicator (E4 for the editor) | E4 |
+| `e_edit.c` | `color_selection_panel` | 4390 | replaced | color menus: the color pop-up of the indicator (E4 for the editor) | E4 |
 | `e_edit.c` | `int_panel` | 4432 | replaced | Xt panel helpers: egui widgets (`xy_row`, `coord`, `arrow_rows`, drag values) |  |
 | `e_edit.c` | `int_panel_callb` | 4440 | replaced | Xt panel helpers: egui widgets (`xy_row`, `coord`, `arrow_rows`, drag values) |  |
 | `e_edit.c` | `float_panel` | 4468 | replaced | Xt panel helpers: egui widgets (`xy_row`, `coord`, `arrow_rows`, drag values) |  |
@@ -370,9 +370,9 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `e_edit.c` | `for_arrow_type_select` | 5230 | replaced | pictorial menus in the edit panel are egui combo boxes; pictures for choices are W10-21 | W10-21 |
 | `e_edit.c` | `back_arrow_type_select` | 5248 | replaced | pictorial menus in the edit panel are egui combo boxes; pictures for choices are W10-21 | W10-21 |
 | `e_edit.c` | `line_style_select` | 5266 | replaced | pictorial menus in the edit panel are egui combo boxes; pictures for choices are W10-21 | W10-21 |
-| `e_edit.c` | `pen_color_select` | 5311 | replaced | colour menus: the colour pop-up of the indicator (E4 for the editor) | E4 |
-| `e_edit.c` | `fill_color_select` | 5325 | replaced | colour menus: the colour pop-up of the indicator (E4 for the editor) | E4 |
-| `e_edit.c` | `color_select` | 5339 | replaced | colour menus: the colour pop-up of the indicator (E4 for the editor) | E4 |
+| `e_edit.c` | `pen_color_select` | 5311 | replaced | color menus: the color pop-up of the indicator (E4 for the editor) | E4 |
+| `e_edit.c` | `fill_color_select` | 5325 | replaced | color menus: the color pop-up of the indicator (E4 for the editor) | E4 |
+| `e_edit.c` | `color_select` | 5339 | replaced | color menus: the color pop-up of the indicator (E4 for the editor) | E4 |
 | `e_edit.c` | `hidden_text_select` | 5375 | replaced | pictorial menus in the edit panel are egui combo boxes; pictures for choices are W10-21 | W10-21 |
 | `e_edit.c` | `rigid_text_select` | 5385 | replaced | pictorial menus in the edit panel are egui combo boxes; pictures for choices are W10-21 | W10-21 |
 | `e_edit.c` | `special_text_select` | 5395 | replaced | pictorial menus in the edit panel are egui combo boxes; pictures for choices are W10-21 | W10-21 |
@@ -540,49 +540,49 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `e_rotate.c` | `rotate_compound` | 500 | ported | commands `transform.rotate`, `transform.rotate_cw/ccw`; tools `RotateCw`, `RotateCcw` (also copy and rotate) |  |
 | `e_rotate.c` | `rotate_point` | 529 | ported | commands `transform.rotate`, `transform.rotate_cw/ccw`; tools `RotateCw`, `RotateCcw` (also copy and rotate) |  |
 | `e_rotate.c` | `rotate_xy` | 553 | ported | commands `transform.rotate`, `transform.rotate_cw/ccw`; tools `RotateCw`, `RotateCcw` (also copy and rotate) |  |
-| `e_scale.c` | `scale_selected` | 104 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `init_box_scale` | 124 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `init_center_scale` | 156 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `wrapup_scale` | 204 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `init_boxscale_ellipse` | 214 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `cancel_boxscale_ellipse` | 271 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `fix_boxscale_ellipse` | 284 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `boxrelocate_ellipsepoint` | 306 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `init_scale_ellipse` | 349 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `cancel_scale_ellipse` | 376 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `fix_scale_ellipse` | 385 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `relocate_ellipsepoint` | 400 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `init_scale_arc` | 428 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `cancel_scale_arc` | 448 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `fix_scale_arc` | 459 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `relocate_arcpoint` | 489 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `init_scale_spline` | 532 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `cancel_scale_spline` | 563 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `fix_scale_spline` | 572 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `init_boxscale_compound` | 595 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `cancel_boxscale_compound` | 682 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `fix_boxscale_compound` | 693 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `init_scale_compound` | 714 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `cancel_scale_compound` | 729 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `fix_scale_compound` | 740 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `prescale_compound` | 762 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `scale_compound` | 778 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `scale_selected` | 104 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `init_box_scale` | 124 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `init_center_scale` | 156 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `wrapup_scale` | 204 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `init_boxscale_ellipse` | 214 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `cancel_boxscale_ellipse` | 271 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `fix_boxscale_ellipse` | 284 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `boxrelocate_ellipsepoint` | 306 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `init_scale_ellipse` | 349 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `cancel_scale_ellipse` | 376 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `fix_scale_ellipse` | 385 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `relocate_ellipsepoint` | 400 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `init_scale_arc` | 428 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `cancel_scale_arc` | 448 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `fix_scale_arc` | 459 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `relocate_arcpoint` | 489 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `init_scale_spline` | 532 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `cancel_scale_spline` | 563 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `fix_scale_spline` | 572 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `init_boxscale_compound` | 595 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `cancel_boxscale_compound` | 682 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `fix_boxscale_compound` | 693 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `init_scale_compound` | 714 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `cancel_scale_compound` | 729 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `fix_scale_compound` | 740 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `prescale_compound` | 762 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `scale_compound` | 778 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
 | `e_scale.c` | `rescale_dimension_line` | 831 | ported | `dimline::recompute` (after `transform.scale`, on close, `object.recompute_dimension`) | D10 |
-| `e_scale.c` | `scale_line` | 1030 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `scale_spline` | 1058 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `scale_arc` | 1071 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `scale_ellipse` | 1113 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `scale_text` | 1136 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `init_boxscale_line` | 1158 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `cancel_boxscale_line` | 1256 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `fix_boxscale_line` | 1267 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `scale_radius` | 1301 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `init_scale_line` | 1320 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `cancel_scale_line` | 1354 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `fix_scale_line` | 1365 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `rescale_points` | 1397 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `scale_arrows` | 1424 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
-| `e_scale.c` | `scale_arrow` | 1434 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the centre), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `scale_line` | 1030 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `scale_spline` | 1058 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `scale_arc` | 1071 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `scale_ellipse` | 1113 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `scale_text` | 1136 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `init_boxscale_line` | 1158 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `cancel_boxscale_line` | 1256 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `fix_boxscale_line` | 1267 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `scale_radius` | 1301 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `init_scale_line` | 1320 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `cancel_scale_line` | 1354 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `fix_scale_line` | 1365 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `rescale_points` | 1397 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `scale_arrows` | 1424 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
+| `e_scale.c` | `scale_arrow` | 1434 | ported | tools: `ToolKind::Scale` (`scale_event`, `commit_scale`: about the opposite corner and about the center), `transform.scale`; scaling by an edge in one dimension is D10 | D10 |
 | `e_tangent.c` | `tangent_selected` | 49 | ported | `cmd/tangent.rs` (`object.tangent_line`), `tools/tangent.rs` (`tool.tangent`); the length is `Indicator::tangent_length` | |
 | `e_tangent.c` | `init_tangent_adding` | 68 | ported | `cmd/tangent.rs` (`object.tangent_line`), `tools/tangent.rs` (`tool.tangent`); the length is `Indicator::tangent_length` | |
 | `e_tangent.c` | `init_normal_adding` | 76 | ported | `cmd/tangent.rs` (`object.tangent_line`), `tools/tangent.rs` (`tool.tangent`); the length is `Indicator::tangent_length` | |
@@ -591,7 +591,7 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `e_update.c` | `update_selected` | 92 | ported | tools: `ToolKind::Update` (`click_event`), commands `object.update`, `indicator.*` (take attributes from the object) |  |
 | `e_update.c` | `get_arrow_mode` | 111 | ported | tools: `ToolKind::Update` (`click_event`), commands `object.update`, `indicator.*` (take attributes from the object) |  |
 | `e_update.c` | `get_arrow_type` | 124 | ported | tools: `ToolKind::Update` (`click_event`), commands `object.update`, `indicator.*` (take attributes from the object) |  |
-| `e_update.c` | `init_update_settings` | 143 | ported | Update settings (middle button) honour the update flags (`Indicator::take_from`) |  |
+| `e_update.c` | `init_update_settings` | 143 | ported | Update settings (middle button) honor the update flags (`Indicator::take_from`) |  |
 | `e_update.c` | `up_from_arrow` | 315 | ported | tools: `ToolKind::Update` (`click_event`), commands `object.update`, `indicator.*` (take attributes from the object) |  |
 | `e_update.c` | `init_update_object` | 334 | ported | tools: `ToolKind::Update` (`click_event`), commands `object.update`, `indicator.*` (take attributes from the object) |  |
 | `e_update.c` | `update_ellipse` | 433 | ported | tools: `ToolKind::Update` (`click_event`), commands `object.update`, `indicator.*` (take attributes from the object) |  |
@@ -611,26 +611,26 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `e_update.c` | `up_dashdot` | 815 | ported | tools: `ToolKind::Update` (`click_event`), commands `object.update`, `indicator.*` (take attributes from the object) |  |
 | `f_load.c` | `load_file` | 65 | ported | `cmd/file.rs` `file.open` (also keeps the figure offset and sets units, paper, grid from the file) |  |
 | `f_load.c` | `update_settings` | 150 | ported | `cmd/file.rs` `file.open` (also keeps the figure offset and sets units, paper, grid from the file) |  |
-| `f_load.c` | `merge_file` | 237 | ported | `cmd/file.rs` `file.merge` / `merge_doc` (colour mapping, one compound, offset) |  |
+| `f_load.c` | `merge_file` | 237 | ported | `cmd/file.rs` `file.merge` / `merge_doc` (color mapping, one compound, offset) |  |
 | `f_load.c` | `update_recent_list` | 302 | ported | recent files in `prefs` (`recent_files`, File menu 1 to 9) |  |
 | `f_load.c` | `read_fail_message` | 359 | ported | read errors reach the user as `EngineError`/`FormatError` messages |  |
-| `f_neuclrtab.c` | `neu_init` | 85 | not needed | NeuQuant colour quantisation to fit pictures into the X colormap; the renderer is true colour |  |
-| `f_neuclrtab.c` | `neu_init2` | 96 | not needed | NeuQuant colour quantisation to fit pictures into the X colormap; the renderer is true colour |  |
-| `f_neuclrtab.c` | `neu_pixel` | 135 | not needed | NeuQuant colour quantisation to fit pictures into the X colormap; the renderer is true colour |  |
-| `f_neuclrtab.c` | `neu_colrs` | 148 | not needed | NeuQuant colour quantisation to fit pictures into the X colormap; the renderer is true colour |  |
-| `f_neuclrtab.c` | `neu_clrtab` | 165 | not needed | NeuQuant colour quantisation to fit pictures into the X colormap; the renderer is true colour |  |
-| `f_neuclrtab.c` | `neu_map_pixel` | 184 | not needed | NeuQuant colour quantisation to fit pictures into the X colormap; the renderer is true colour |  |
-| `f_neuclrtab.c` | `neu_map_colrs` | 190 | not needed | NeuQuant colour quantisation to fit pictures into the X colormap; the renderer is true colour |  |
-| `f_neuclrtab.c` | `neu_dith_colrs` | 199 | not needed | NeuQuant colour quantisation to fit pictures into the X colormap; the renderer is true colour |  |
-| `f_neuclrtab.c` | `initnet` | 307 | not needed | NeuQuant colour quantisation to fit pictures into the X colormap; the renderer is true colour |  |
-| `f_neuclrtab.c` | `inxbuild` | 324 | not needed | NeuQuant colour quantisation to fit pictures into the X colormap; the renderer is true colour |  |
-| `f_neuclrtab.c` | `inxsearch` | 365 | not needed | NeuQuant colour quantisation to fit pictures into the X colormap; the renderer is true colour |  |
-| `f_neuclrtab.c` | `contest` | 421 | not needed | NeuQuant colour quantisation to fit pictures into the X colormap; the renderer is true colour |  |
-| `f_neuclrtab.c` | `altersingle` | 458 | not needed | NeuQuant colour quantisation to fit pictures into the X colormap; the renderer is true colour |  |
-| `f_neuclrtab.c` | `alterneigh` | 476 | not needed | NeuQuant colour quantisation to fit pictures into the X colormap; the renderer is true colour |  |
-| `f_neuclrtab.c` | `learn` | 514 | not needed | NeuQuant colour quantisation to fit pictures into the X colormap; the renderer is true colour |  |
-| `f_neuclrtab.c` | `unbiasnet` | 573 | not needed | NeuQuant colour quantisation to fit pictures into the X colormap; the renderer is true colour |  |
-| `f_neuclrtab.c` | `cpyclrtab` | 587 | not needed | NeuQuant colour quantisation to fit pictures into the X colormap; the renderer is true colour |  |
+| `f_neuclrtab.c` | `neu_init` | 85 | not needed | NeuQuant color quantization to fit pictures into the X colormap; the renderer is true color |  |
+| `f_neuclrtab.c` | `neu_init2` | 96 | not needed | NeuQuant color quantization to fit pictures into the X colormap; the renderer is true color |  |
+| `f_neuclrtab.c` | `neu_pixel` | 135 | not needed | NeuQuant color quantization to fit pictures into the X colormap; the renderer is true color |  |
+| `f_neuclrtab.c` | `neu_colrs` | 148 | not needed | NeuQuant color quantization to fit pictures into the X colormap; the renderer is true color |  |
+| `f_neuclrtab.c` | `neu_clrtab` | 165 | not needed | NeuQuant color quantization to fit pictures into the X colormap; the renderer is true color |  |
+| `f_neuclrtab.c` | `neu_map_pixel` | 184 | not needed | NeuQuant color quantization to fit pictures into the X colormap; the renderer is true color |  |
+| `f_neuclrtab.c` | `neu_map_colrs` | 190 | not needed | NeuQuant color quantization to fit pictures into the X colormap; the renderer is true color |  |
+| `f_neuclrtab.c` | `neu_dith_colrs` | 199 | not needed | NeuQuant color quantization to fit pictures into the X colormap; the renderer is true color |  |
+| `f_neuclrtab.c` | `initnet` | 307 | not needed | NeuQuant color quantization to fit pictures into the X colormap; the renderer is true color |  |
+| `f_neuclrtab.c` | `inxbuild` | 324 | not needed | NeuQuant color quantization to fit pictures into the X colormap; the renderer is true color |  |
+| `f_neuclrtab.c` | `inxsearch` | 365 | not needed | NeuQuant color quantization to fit pictures into the X colormap; the renderer is true color |  |
+| `f_neuclrtab.c` | `contest` | 421 | not needed | NeuQuant color quantization to fit pictures into the X colormap; the renderer is true color |  |
+| `f_neuclrtab.c` | `altersingle` | 458 | not needed | NeuQuant color quantization to fit pictures into the X colormap; the renderer is true color |  |
+| `f_neuclrtab.c` | `alterneigh` | 476 | not needed | NeuQuant color quantization to fit pictures into the X colormap; the renderer is true color |  |
+| `f_neuclrtab.c` | `learn` | 514 | not needed | NeuQuant color quantization to fit pictures into the X colormap; the renderer is true color |  |
+| `f_neuclrtab.c` | `unbiasnet` | 573 | not needed | NeuQuant color quantization to fit pictures into the X colormap; the renderer is true color |  |
+| `f_neuclrtab.c` | `cpyclrtab` | 587 | not needed | NeuQuant color quantization to fit pictures into the X colormap; the renderer is true color |  |
 | `f_picobj.c` | `init_stream` | 101 | replaced | picture files are read through fig2dev `util/readpics` (streams, `.gz`/`.Z` decompression) in `engine::import::load_picture` (DD5) |  |
 | `f_picobj.c` | `free_stream` | 112 | replaced | picture files are read through fig2dev `util/readpics` (streams, `.gz`/`.Z` decompression) in `engine::import::load_picture` (DD5) |  |
 | `f_picobj.c` | `file_on_disk` | 147 | replaced | `engine::import::load_picture` / `readpics` (type detection, size, status, picture cache per object) |  |
@@ -669,11 +669,11 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `f_read.c` | `fix_depth` | 1681 | ported | fig2dev `read.rs` (port of `read.c`) through `format/fig_read` and `bridge/to_model` (DD3) |  |
 | `f_read.c` | `shift_figure` | 1698 | ported | figure offset on load and merge (`cmd/file.rs` `offset`, `Object::translate`); resolution scaling is fig2dev reader |  |
 | `f_read.c` | `scale_figure` | 1754 | ported | figure offset on load and merge (`cmd/file.rs` `offset`, `Object::translate`); resolution scaling is fig2dev reader |  |
-| `f_read.c` | `check_color` | 1771 | ported | user colours are mapped by RGB on merge (`merge_doc`); the reader keeps the file's own |  |
-| `f_read.c` | `swap_colors` | 1785 | ported | user colours are mapped by RGB on merge (`merge_doc`); the reader keeps the file's own |  |
-| `f_read.c` | `merge_colors` | 1855 | ported | user colours are mapped by RGB on merge (`merge_doc`); the reader keeps the file's own |  |
-| `f_read.c` | `renumber_comp` | 1951 | ported | user colours are mapped by RGB on merge (`merge_doc`); the reader keeps the file's own |  |
-| `f_read.c` | `renumber` | 1987 | ported | user colours are mapped by RGB on merge (`merge_doc`); the reader keeps the file's own |  |
+| `f_read.c` | `check_color` | 1771 | ported | user colors are mapped by RGB on merge (`merge_doc`); the reader keeps the file's own |  |
+| `f_read.c` | `swap_colors` | 1785 | ported | user colors are mapped by RGB on merge (`merge_doc`); the reader keeps the file's own |  |
+| `f_read.c` | `merge_colors` | 1855 | ported | user colors are mapped by RGB on merge (`merge_doc`); the reader keeps the file's own |  |
+| `f_read.c` | `renumber_comp` | 1951 | ported | user colors are mapped by RGB on merge (`merge_doc`); the reader keeps the file's own |  |
+| `f_read.c` | `renumber` | 1987 | ported | user colors are mapped by RGB on merge (`merge_doc`); the reader keeps the file's own |  |
 | `f_read.c` | `count_lines_correctly` | 2008 | ported | fig2dev `read.rs` (port of `read.c`) through `format/fig_read` and `bridge/to_model` (DD3) |  |
 | `f_read.c` | `convert_arrow` | 2026 | ported | fig2dev `read.rs` (port of `read.c`) through `format/fig_read` and `bridge/to_model` (DD3) |  |
 | `f_readeps.c` | `scan_mediabox` | 60 | replaced | EPS/PDF pictures through fig2dev `util/{pdfpic,pdfps,gs}.rs` (PDF pages by hayro, ghostscript optional for EPS; B15) |  |
@@ -682,10 +682,10 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `f_readeps.c` | `read_eps` | 178 | replaced | EPS/PDF pictures through fig2dev `util/{pdfpic,pdfps,gs}.rs` (PDF pages by hayro, ghostscript optional for EPS; B15) |  |
 | `f_readeps.c` | `hex` | 327 | replaced | EPS/PDF pictures through fig2dev `util/{pdfpic,pdfps,gs}.rs` (PDF pages by hayro, ghostscript optional for EPS; B15) |  |
 | `f_readeps.c` | `lower` | 336 | replaced | EPS/PDF pictures through fig2dev `util/{pdfpic,pdfps,gs}.rs` (PDF pages by hayro, ghostscript optional for EPS; B15) |  |
-| `f_readgif.c` | `read_gif` | 89 | replaced | GIF through fig2dev `util/readpics` (transparent colour kept; DD5) |  |
-| `f_readgif.c` | `ReadColorMap` | 310 | replaced | GIF through fig2dev `util/readpics` (transparent colour kept; DD5) |  |
-| `f_readgif.c` | `DoGIFextension` | 328 | replaced | GIF through fig2dev `util/readpics` (transparent colour kept; DD5) |  |
-| `f_readgif.c` | `GetDataBlock` | 376 | replaced | GIF through fig2dev `util/readpics` (transparent colour kept; DD5) |  |
+| `f_readgif.c` | `read_gif` | 89 | replaced | GIF through fig2dev `util/readpics` (transparent color kept; DD5) |  |
+| `f_readgif.c` | `ReadColorMap` | 310 | replaced | GIF through fig2dev `util/readpics` (transparent color kept; DD5) |  |
+| `f_readgif.c` | `DoGIFextension` | 328 | replaced | GIF through fig2dev `util/readpics` (transparent color kept; DD5) |  |
+| `f_readgif.c` | `GetDataBlock` | 376 | replaced | GIF through fig2dev `util/readpics` (transparent color kept; DD5) |  |
 | `f_readjpg.c` | `read_jpg` | 89 | replaced | JPEG through fig2dev `util/readpics` (passthrough in PS/PDF) and the `image` crate |  |
 | `f_readjpg.c` | `read_JPEG_file` | 108 | replaced | JPEG through fig2dev `util/readpics` (passthrough in PS/PDF) and the `image` crate |  |
 | `f_readjpg.c` | `error_exit` | 323 | replaced | JPEG through fig2dev `util/readpics` (passthrough in PS/PDF) and the `image` crate |  |
@@ -722,18 +722,18 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `f_save.c` | `end_write_tmpfile` | 69 | replaced | `cmd/file.rs` `file.save` writes through `std::fs` (and `.bak` is W10-9); no temporary file descriptors | W10-9 |
 | `f_save.c` | `write_fd` | 77 | replaced | `cmd/file.rs` `file.save` writes through `std::fs` (and `.bak` is W10-9); no temporary file descriptors | W10-9 |
 | `f_save.c` | `write_file` | 90 | replaced | `cmd/file.rs` `file.save` writes through `std::fs` (and `.bak` is W10-9); no temporary file descriptors | W10-9 |
-| `f_save.c` | `write_objects` | 125 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, colour definitions, arrows, comments) |  |
-| `f_save.c` | `write_objects_close` | 183 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, colour definitions, arrows, comments) |  |
-| `f_save.c` | `write_fig_header` | 196 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, colour definitions, arrows, comments) |  |
-| `f_save.c` | `write_colordefs` | 275 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, colour definitions, arrows, comments) |  |
-| `f_save.c` | `write_arc` | 298 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, colour definitions, arrows, comments) |  |
-| `f_save.c` | `write_compound` | 352 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, colour definitions, arrows, comments) |  |
-| `f_save.c` | `write_ellipse` | 397 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, colour definitions, arrows, comments) |  |
-| `f_save.c` | `write_line` | 436 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, colour definitions, arrows, comments) |  |
-| `f_save.c` | `write_spline` | 520 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, colour definitions, arrows, comments) |  |
-| `f_save.c` | `write_text` | 572 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, colour definitions, arrows, comments) |  |
-| `f_save.c` | `write_arrows` | 601 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, colour definitions, arrows, comments) |  |
-| `f_save.c` | `write_comments` | 626 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, colour definitions, arrows, comments) |  |
+| `f_save.c` | `write_objects` | 125 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, color definitions, arrows, comments) |  |
+| `f_save.c` | `write_objects_close` | 183 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, color definitions, arrows, comments) |  |
+| `f_save.c` | `write_fig_header` | 196 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, color definitions, arrows, comments) |  |
+| `f_save.c` | `write_colordefs` | 275 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, color definitions, arrows, comments) |  |
+| `f_save.c` | `write_arc` | 298 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, color definitions, arrows, comments) |  |
+| `f_save.c` | `write_compound` | 352 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, color definitions, arrows, comments) |  |
+| `f_save.c` | `write_ellipse` | 397 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, color definitions, arrows, comments) |  |
+| `f_save.c` | `write_line` | 436 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, color definitions, arrows, comments) |  |
+| `f_save.c` | `write_spline` | 520 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, color definitions, arrows, comments) |  |
+| `f_save.c` | `write_text` | 572 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, color definitions, arrows, comments) |  |
+| `f_save.c` | `write_arrows` | 601 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, color definitions, arrows, comments) |  |
+| `f_save.c` | `write_comments` | 626 | ported | `format/fig_write` (Fig 3.2 text, xfig's type order, color definitions, arrows, comments) |  |
 | `f_save.c` | `emergency_save` | 646 | replaced | `engine::recovery` (autosave and recovery list, A6) instead of a crash handler writing `.fig.SAVE` |  |
 | `f_util.c` | `emptyname` | 77 | ported | empty-name and empty-figure checks and their messages in `cmd/file.rs` |  |
 | `f_util.c` | `emptyname_msg` | 87 | ported | empty-name and empty-figure checks and their messages in `cmd/file.rs` |  |
@@ -743,16 +743,16 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `f_util.c` | `get_directory` | 143 | replaced | native file dialogs keep the directory (`rfd`; `FileDialogs`) |  |
 | `f_util.c` | `ok_to_write` | 178 | ported | overwrite check of `file.save`/`file.rename` (`overwrite` parameter, unsaved/exists dialog) |  |
 | `f_util.c` | `xf_basename` | 223 | not needed | path helper (`Path::file_name`) |  |
-| `f_util.c` | `remap_imagecolors` | 244 | not needed | X colormap and image colour reduction (pixel allocation, palette mapping) |  |
-| `f_util.c` | `alloc_imagecolors` | 381 | not needed | X colormap and image colour reduction (pixel allocation, palette mapping) |  |
-| `f_util.c` | `count_colors` | 398 | not needed | X colormap and image colour reduction (pixel allocation, palette mapping) |  |
-| `f_util.c` | `count_pixels` | 410 | not needed | X colormap and image colour reduction (pixel allocation, palette mapping) |  |
-| `f_util.c` | `readjust_cmap` | 422 | not needed | X colormap and image colour reduction (pixel allocation, palette mapping) |  |
-| `f_util.c` | `free_pixmaps` | 443 | not needed | X colormap and image colour reduction (pixel allocation, palette mapping) |  |
-| `f_util.c` | `extract_cmap` | 468 | not needed | X colormap and image colour reduction (pixel allocation, palette mapping) |  |
-| `f_util.c` | `add_all_pixels` | 488 | not needed | X colormap and image colour reduction (pixel allocation, palette mapping) |  |
-| `f_util.c` | `remap_image_colormap` | 512 | not needed | X colormap and image colour reduction (pixel allocation, palette mapping) |  |
-| `f_util.c` | `map_to_mono` | 555 | not needed | X colormap and image colour reduction (pixel allocation, palette mapping) |  |
+| `f_util.c` | `remap_imagecolors` | 244 | not needed | X colormap and image color reduction (pixel allocation, palette mapping) |  |
+| `f_util.c` | `alloc_imagecolors` | 381 | not needed | X colormap and image color reduction (pixel allocation, palette mapping) |  |
+| `f_util.c` | `count_colors` | 398 | not needed | X colormap and image color reduction (pixel allocation, palette mapping) |  |
+| `f_util.c` | `count_pixels` | 410 | not needed | X colormap and image color reduction (pixel allocation, palette mapping) |  |
+| `f_util.c` | `readjust_cmap` | 422 | not needed | X colormap and image color reduction (pixel allocation, palette mapping) |  |
+| `f_util.c` | `free_pixmaps` | 443 | not needed | X colormap and image color reduction (pixel allocation, palette mapping) |  |
+| `f_util.c` | `extract_cmap` | 468 | not needed | X colormap and image color reduction (pixel allocation, palette mapping) |  |
+| `f_util.c` | `add_all_pixels` | 488 | not needed | X colormap and image color reduction (pixel allocation, palette mapping) |  |
+| `f_util.c` | `remap_image_colormap` | 512 | not needed | X colormap and image color reduction (pixel allocation, palette mapping) |  |
+| `f_util.c` | `map_to_mono` | 555 | not needed | X colormap and image color reduction (pixel allocation, palette mapping) |  |
 | `f_util.c` | `beep` | 666 | not needed | terminal bell on errors (egui has none; messages carry the news) |  |
 | `f_util.c` | `safe_strcpy` | 676 | not needed | path helper (`Path::file_name`) |  |
 | `f_util.c` | `read_xfigrc` | 693 | replaced | `~/.xfigrc` and `init_settings` become `settings.toml` (`engine::prefs`, E1); import of an old `~/.xfigrc` is S3 | E1, S3 |
@@ -765,7 +765,7 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `f_util.c` | `update_fig_files` | 975 | ported | `rustfig -update file.fig...` (`apps/rustfig`): rewrite the files in the current Fig version, keeping `.bak` | S3 |
 | `f_util.c` | `build_command` | 1048 | replaced | no external programs are spawned for exports (fig2dev is ported, B0); the image editor is W10-16 | W10-16 |
 | `f_util.c` | `strerror` | 1079 | not needed | path helper (`Path::file_name`) |  |
-| `f_util.c` | `map_to_palette` | 1090 | not needed | X colormap and image colour reduction (pixel allocation, palette mapping) |  |
+| `f_util.c` | `map_to_palette` | 1090 | not needed | X colormap and image color reduction (pixel allocation, palette mapping) |  |
 | `f_util.c` | `dimline_components` | 1156 | ported | `dimline::is_dimline`, `recompute` (by the comments) | D10 |
 | `f_util.c` | `find_smallest_depth` | 1182 | ported | depth range of a compound (`model` object depth queries; used by the compound edit panel) |  |
 | `f_util.c` | `find_largest_depth` | 1217 | ported | depth range of a compound (`model` object depth queries; used by the compound edit panel) |  |
@@ -807,15 +807,15 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `u_bound.c` | `points_bound` | 533 | ported | fig2dev `bound.rs` through `format/bridge/bounds.rs` (DD2); the model keeps `Object::geometry_bbox` and `approx_bbox` |  |
 | `u_bound.c` | `overlapping` | 554 | ported | fig2dev `bound.rs` through `format/bridge/bounds.rs` (DD2); the model keeps `Object::geometry_bbox` and `approx_bbox` |  |
 | `u_bound.c` | `arrow_bound` | 569 | ported | fig2dev `bound.rs` through `format/bridge/bounds.rs` (DD2); the model keeps `Object::geometry_bbox` and `approx_bbox` |  |
-| `u_colors.c` | `xtoxftcolor` | 95 | not needed | X/Xft colour allocation and pixel lookup; the colour tables (`colors`) are `figbase` colour tables |  |
-| `u_colors.c` | `write_xftcolor_true` | 107 | not needed | X/Xft colour allocation and pixel lookup; the colour tables (`colors`) are `figbase` colour tables |  |
-| `u_colors.c` | `write_xftcolor_nontrue` | 128 | not needed | X/Xft colour allocation and pixel lookup; the colour tables (`colors`) are `figbase` colour tables |  |
-| `u_colors.c` | `setcolor_fromXColor` | 148 | not needed | X/Xft colour allocation and pixel lookup; the colour tables (`colors`) are `figbase` colour tables |  |
-| `u_colors.c` | `check_colors` | 165 | not needed | X/Xft colour allocation and pixel lookup; the colour tables (`colors`) are `figbase` colour tables |  |
-| `u_colors.c` | `getpixel` | 285 | not needed | X/Xft colour allocation and pixel lookup; the colour tables (`colors`) are `figbase` colour tables |  |
-| `u_colors.c` | `getred` | 291 | not needed | X/Xft colour allocation and pixel lookup; the colour tables (`colors`) are `figbase` colour tables |  |
-| `u_colors.c` | `getgreen` | 297 | not needed | X/Xft colour allocation and pixel lookup; the colour tables (`colors`) are `figbase` colour tables |  |
-| `u_colors.c` | `getblue` | 303 | not needed | X/Xft colour allocation and pixel lookup; the colour tables (`colors`) are `figbase` colour tables |  |
+| `u_colors.c` | `xtoxftcolor` | 95 | not needed | X/Xft color allocation and pixel lookup; the color tables (`colors`) are `figbase` color tables |  |
+| `u_colors.c` | `write_xftcolor_true` | 107 | not needed | X/Xft color allocation and pixel lookup; the color tables (`colors`) are `figbase` color tables |  |
+| `u_colors.c` | `write_xftcolor_nontrue` | 128 | not needed | X/Xft color allocation and pixel lookup; the color tables (`colors`) are `figbase` color tables |  |
+| `u_colors.c` | `setcolor_fromXColor` | 148 | not needed | X/Xft color allocation and pixel lookup; the color tables (`colors`) are `figbase` color tables |  |
+| `u_colors.c` | `check_colors` | 165 | not needed | X/Xft color allocation and pixel lookup; the color tables (`colors`) are `figbase` color tables |  |
+| `u_colors.c` | `getpixel` | 285 | not needed | X/Xft color allocation and pixel lookup; the color tables (`colors`) are `figbase` color tables |  |
+| `u_colors.c` | `getred` | 291 | not needed | X/Xft color allocation and pixel lookup; the color tables (`colors`) are `figbase` color tables |  |
+| `u_colors.c` | `getgreen` | 297 | not needed | X/Xft color allocation and pixel lookup; the color tables (`colors`) are `figbase` color tables |  |
+| `u_colors.c` | `getblue` | 303 | not needed | X/Xft color allocation and pixel lookup; the color tables (`colors`) are `figbase` color tables |  |
 | `u_convert.c` | `get_local_charset` | 58 | replaced | Rust strings are UTF-8; Fig text bytes are kept raw (`Text::raw`) and the reader decodes them (fig2dev `-E` charsets) |  |
 | `u_convert.c` | `init_conversion` | 111 | replaced | Rust strings are UTF-8; Fig text bytes are kept raw (`Text::raw`) and the reader decodes them (fig2dev `-E` charsets) |  |
 | `u_convert.c` | `convert` | 142 | replaced | Rust strings are UTF-8; Fig text bytes are kept raw (`Text::raw`) and the reader decodes them (fig2dev `-E` charsets) |  |
@@ -886,31 +886,31 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `u_draw.c` | `init_point_array` | 225 | not needed | X point arrays, X error handler, debug aids, X-specific helpers |  |
 | `u_draw.c` | `add_point` | 231 | not needed | X point arrays, X error handler, debug aids, X-specific helpers |  |
 | `u_draw.c` | `draw_point_array` | 270 | not needed | X point arrays, X error handler, debug aids, X-specific helpers |  |
-| `u_draw.c` | `draw_arc` | 278 | replaced | the canvas draws the scene of `rustfig_render::build_scene` (fig2dev display list and rasteriser): arcs, ellipses, lines, arc boxes, splines, texts, compounds |  |
-| `u_draw.c` | `draw_ellipse` | 366 | replaced | the canvas draws the scene of `rustfig_render::build_scene` (fig2dev display list and rasteriser): arcs, ellipses, lines, arc boxes, splines, texts, compounds |  |
+| `u_draw.c` | `draw_arc` | 278 | replaced | the canvas draws the scene of `rustfig_render::build_scene` (fig2dev display list and rasterizer): arcs, ellipses, lines, arc boxes, splines, texts, compounds |  |
+| `u_draw.c` | `draw_ellipse` | 366 | replaced | the canvas draws the scene of `rustfig_render::build_scene` (fig2dev display list and rasterizer): arcs, ellipses, lines, arc boxes, splines, texts, compounds |  |
 | `u_draw.c` | `add_closepoint` | 404 | not needed | X point arrays, X error handler, debug aids, X-specific helpers |  |
 | `u_draw.c` | `angle_ellipse` | 520 | not needed | X point arrays, X error handler, debug aids, X-specific helpers |  |
 | `u_draw.c` | `newpoint` | 618 | not needed | X point arrays, X error handler, debug aids, X-specific helpers |  |
-| `u_draw.c` | `draw_line` | 641 | replaced | the canvas draws the scene of `rustfig_render::build_scene` (fig2dev display list and rasteriser): arcs, ellipses, lines, arc boxes, splines, texts, compounds |  |
-| `u_draw.c` | `draw_arcbox` | 807 | replaced | the canvas draws the scene of `rustfig_render::build_scene` (fig2dev display list and rasteriser): arcs, ellipses, lines, arc boxes, splines, texts, compounds |  |
+| `u_draw.c` | `draw_line` | 641 | replaced | the canvas draws the scene of `rustfig_render::build_scene` (fig2dev display list and rasterizer): arcs, ellipses, lines, arc boxes, splines, texts, compounds |  |
+| `u_draw.c` | `draw_arcbox` | 807 | replaced | the canvas draws the scene of `rustfig_render::build_scene` (fig2dev display list and rasterizer): arcs, ellipses, lines, arc boxes, splines, texts, compounds |  |
 | `u_draw.c` | `subset` | 843 | not needed | X point arrays, X error handler, debug aids, X-specific helpers |  |
-| `u_draw.c` | `draw_pic_pixmap` | 849 | replaced | pictures are rasterised by the renderer and cached as textures per object |  |
-| `u_draw.c` | `create_pic_pixmap` | 953 | replaced | pictures are rasterised by the renderer and cached as textures per object |  |
-| `u_draw.c` | `clr_mask_bit` | 1309 | replaced | pictures are rasterised by the renderer and cached as textures per object |  |
-| `u_draw.c` | `draw_text` | 1323 | replaced | the canvas draws the scene of `rustfig_render::build_scene` (fig2dev display list and rasteriser): arcs, ellipses, lines, arc boxes, splines, texts, compounds |  |
+| `u_draw.c` | `draw_pic_pixmap` | 849 | replaced | pictures are rasterized by the renderer and cached as textures per object |  |
+| `u_draw.c` | `create_pic_pixmap` | 953 | replaced | pictures are rasterized by the renderer and cached as textures per object |  |
+| `u_draw.c` | `clr_mask_bit` | 1309 | replaced | pictures are rasterized by the renderer and cached as textures per object |  |
+| `u_draw.c` | `draw_text` | 1323 | replaced | the canvas draws the scene of `rustfig_render::build_scene` (fig2dev display list and rasterizer): arcs, ellipses, lines, arc boxes, splines, texts, compounds |  |
 | `u_draw.c` | `greek_text` | 1410 | replaced | Symbol/Dingbats text through the `text` crate glyph outlines |  |
-| `u_draw.c` | `draw_compoundelements` | 1460 | replaced | the canvas draws the scene of `rustfig_render::build_scene` (fig2dev display list and rasteriser): arcs, ellipses, lines, arc boxes, splines, texts, compounds |  |
+| `u_draw.c` | `draw_compoundelements` | 1460 | replaced | the canvas draws the scene of `rustfig_render::build_scene` (fig2dev display list and rasterizer): arcs, ellipses, lines, arc boxes, splines, texts, compounds |  |
 | `u_draw.c` | `compute_arcarrow_angle` | 1511 | ported | arrowheads: `figbase` `geom/arrow.rs` from fig2dev `bound.c` (`calc_arrow`, `clip_arrows`; D9) |  |
 | `u_draw.c` | `tempXErrorHandler` | 1545 | not needed | X point arrays, X error handler, debug aids, X-specific helpers |  |
 | `u_draw.c` | `clip_arrows` | 1571 | ported | arrowheads: `figbase` `geom/arrow.rs` from fig2dev `bound.c` (`calc_arrow`, `clip_arrows`; D9) |  |
 | `u_draw.c` | `calc_arrow` | 1723 | ported | arrowheads: `figbase` `geom/arrow.rs` from fig2dev `bound.c` (`calc_arrow`, `clip_arrows`; D9) |  |
 | `u_draw.c` | `draw_arrow` | 1948 | ported | arrowheads: `figbase` `geom/arrow.rs` from fig2dev `bound.c` (`calc_arrow`, `clip_arrows`; D9) |  |
-| `u_draw.c` | `curve` | 2008 | replaced | the canvas draws the scene of `rustfig_render::build_scene` (fig2dev display list and rasteriser): arcs, ellipses, lines, arc boxes, splines, texts, compounds |  |
-| `u_draw.c` | `redraw_images` | 2127 | replaced | pictures are rasterised by the renderer and cached as textures per object |  |
+| `u_draw.c` | `curve` | 2008 | replaced | the canvas draws the scene of `rustfig_render::build_scene` (fig2dev display list and rasterizer): arcs, ellipses, lines, arc boxes, splines, texts, compounds |  |
+| `u_draw.c` | `redraw_images` | 2127 | replaced | pictures are rasterized by the renderer and cached as textures per object |  |
 | `u_draw.c` | `too_many_points` | 2141 | not needed | X point arrays, X error handler, debug aids, X-specific helpers |  |
 | `u_draw.c` | `debug_depth` | 2146 | not needed | X point arrays, X error handler, debug aids, X-specific helpers |  |
-| `u_draw.c` | `draw_spline` | 2166 | replaced | the canvas draws the scene of `rustfig_render::build_scene` (fig2dev display list and rasteriser): arcs, ellipses, lines, arc boxes, splines, texts, compounds |  |
-| `u_draw.c` | `quick_draw_spline` | 2217 | replaced | the canvas draws the scene of `rustfig_render::build_scene` (fig2dev display list and rasteriser): arcs, ellipses, lines, arc boxes, splines, texts, compounds |  |
+| `u_draw.c` | `draw_spline` | 2166 | replaced | the canvas draws the scene of `rustfig_render::build_scene` (fig2dev display list and rasterizer): arcs, ellipses, lines, arc boxes, splines, texts, compounds |  |
+| `u_draw.c` | `quick_draw_spline` | 2217 | replaced | the canvas draws the scene of `rustfig_render::build_scene` (fig2dev display list and rasterizer): arcs, ellipses, lines, arc boxes, splines, texts, compounds |  |
 | `u_draw_spline.c` | `f_blend` | 49 | replaced | X-spline evaluation written from the paper in `figbase` `geom/xspline.rs` and fig2dev `trans_spline.rs` (port of `trans_spline.c`); review of the step size is open (S0 note) |  |
 | `u_draw_spline.c` | `g_blend` | 59 | replaced | X-spline evaluation written from the paper in `figbase` `geom/xspline.rs` and fig2dev `trans_spline.rs` (port of `trans_spline.c`); review of the step size is open (S0 note) |  |
 | `u_draw_spline.c` | `h_blend` | 66 | replaced | X-spline evaluation written from the paper in `figbase` `geom/xspline.rs` and fig2dev `trans_spline.rs` (port of `trans_spline.c`); review of the step size is open (S0 note) |  |
@@ -1200,9 +1200,9 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `u_print.c` | `pass_environment` | 357 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
 | `u_print.c` | `print_export` | 383 | replaced | export runs fig2dev's ported drivers in process (`engine::fig2dev::export`, `file.export`); options map in `driver_args` |  |
 | `u_print.c` | `print_spawn_printcmd` | 769 | replaced | Print panel and PDF to the OS print system (B5): `print.rs`, `cmd/print.rs`, `print_dialog.rs` | B5 |
-| `u_print.c` | `make_rgb_string` | 825 | ported | background colour and active layers as export options (`driver_args`, `active_layers_only`) |  |
-| `u_print.c` | `build_layer_list` | 840 | ported | background colour and active layers as export options (`driver_args`, `active_layers_only`) |  |
-| `u_print.c` | `append_group` | 915 | ported | background colour and active layers as export options (`driver_args`, `active_layers_only`) |  |
+| `u_print.c` | `make_rgb_string` | 825 | ported | background color and active layers as export options (`driver_args`, `active_layers_only`) |  |
+| `u_print.c` | `build_layer_list` | 840 | ported | background color and active layers as export options (`driver_args`, `active_layers_only`) |  |
+| `u_print.c` | `append_group` | 915 | ported | background color and active layers as export options (`driver_args`, `active_layers_only`) |  |
 | `u_quartic.c` | `quadratic` | 29 | replaced | intersections and tangents on flattened outlines (`engine/snap.rs`), no quartic solver |  |
 | `u_quartic.c` | `cubic` | 99 | replaced | intersections and tangents on flattened outlines (`engine/snap.rs`), no quartic solver |  |
 | `u_quartic.c` | `quartic` | 170 | replaced | intersections and tangents on flattened outlines (`engine/snap.rs`), no quartic solver |  |
@@ -1445,63 +1445,63 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `w_cmdpanel.c` | `refresh_view_menu` | 1828 | replaced | menu bar and menu items from `menus::XFIG_MENUS` and `LAYOUT` (egui menus) |  |
 | `w_color.c` | `alloc_or_store_color` | 264 | not needed | X colormap cell allocation and private colormaps |  |
 | `w_color.c` | `alloc_or_store_colors` | 306 | not needed | X colormap cell allocation and private colormaps |  |
-| `w_color.c` | `create_color_panel` | 314 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `pen_fill_activate` | 872 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `create_color_panel` | 314 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `pen_fill_activate` | 872 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
 | `w_color.c` | `xftcolor_fromcolor` | 884 | not needed | X colormap cell allocation and private colormaps |  |
-| `w_color.c` | `restore_mixed_colors` | 893 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
-| `w_color.c` | `set_mixed_color` | 943 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
-| `w_color.c` | `set_user_color` | 957 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `pick_contrast` | 973 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
-| `w_color.c` | `set_mixed_name` | 989 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
-| `w_color.c` | `cancel_color_popup` | 1014 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `add_color` | 1026 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colours created, listed, counted and pruned when unused |  |
-| `w_color.c` | `del_color` | 1047 | ported | `color.delete` (refused while an object uses the colour; undo restores it) | |
-| `w_color.c` | `undel_color` | 1089 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
-| `w_color.c` | `count_user_colors` | 1112 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colours created, listed, counted and pruned when unused |  |
-| `w_color.c` | `c_user_colors` | 1139 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colours created, listed, counted and pruned when unused |  |
-| `w_color.c` | `count_one` | 1174 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colours created, listed, counted and pruned when unused |  |
-| `w_color.c` | `del_unused_user_colors` | 1183 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colours created, listed, counted and pruned when unused |  |
-| `w_color.c` | `lookup_color` | 1231 | ported | colour names: `figbase` `x_color` (`lookup_X_color`) |  |
+| `w_color.c` | `restore_mixed_colors` | 893 | replaced | recent colors (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
+| `w_color.c` | `set_mixed_color` | 943 | replaced | recent colors (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
+| `w_color.c` | `set_user_color` | 957 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `pick_contrast` | 973 | replaced | recent colors (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
+| `w_color.c` | `set_mixed_name` | 989 | replaced | recent colors (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
+| `w_color.c` | `cancel_color_popup` | 1014 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `add_color` | 1026 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colors created, listed, counted and pruned when unused |  |
+| `w_color.c` | `del_color` | 1047 | ported | `color.delete` (refused while an object uses the color; undo restores it) | |
+| `w_color.c` | `undel_color` | 1089 | replaced | recent colors (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
+| `w_color.c` | `count_user_colors` | 1112 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colors created, listed, counted and pruned when unused |  |
+| `w_color.c` | `c_user_colors` | 1139 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colors created, listed, counted and pruned when unused |  |
+| `w_color.c` | `count_one` | 1174 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colors created, listed, counted and pruned when unused |  |
+| `w_color.c` | `del_unused_user_colors` | 1183 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colors created, listed, counted and pruned when unused |  |
+| `w_color.c` | `lookup_color` | 1231 | ported | color names: `figbase` `x_color` (`lookup_X_color`) |  |
 | `w_color.c` | `add_color_cell` | 1264 | not needed | X colormap cell allocation and private colormaps |  |
 | `w_color.c` | `create_cell` | 1355 | not needed | X colormap cell allocation and private colormaps |  |
 | `w_color.c` | `alloc_color_cells` | 1387 | not needed | X colormap cell allocation and private colormaps |  |
 | `w_color.c` | `switch_colormap` | 1424 | not needed | X colormap cell allocation and private colormaps |  |
 | `w_color.c` | `del_color_cell` | 1449 | not needed | X colormap cell allocation and private colormaps |  |
-| `w_color.c` | `color_used` | 1474 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colours created, listed, counted and pruned when unused |  |
-| `w_color.c` | `switch_edit` | 1506 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `set_slider_sensitivity` | 1539 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `set_color_ok` | 1550 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `_set_std_color` | 1569 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `set_std_color` | 1577 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `_pick_memory` | 1631 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
-| `w_color.c` | `pick_memory` | 1646 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
-| `w_color.c` | `lock_toggle` | 1697 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
-| `w_color.c` | `draw_boxed` | 1739 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `erase_boxed` | 1751 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `color_borders` | 1765 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `WhichButton` | 1776 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `update_from_triple` | 1789 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `update_scrl_triple` | 1834 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `update_triple` | 1842 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `move_scroll` | 1868 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `StoreMix_and_Mem` | 1940 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
-| `w_color.c` | `Scrolled` | 1965 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `Update_HSV` | 2017 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `ThumbHSV` | 2037 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `Thumbed` | 2060 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `move_lock` | 2106 | replaced | recent colours (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
-| `w_color.c` | `next_pencolor` | 2119 | ported | stepping the pen/fill colour with the wheel on the indicator button (`attributes`) |  |
-| `w_color.c` | `prev_pencolor` | 2131 | ported | stepping the pen/fill colour with the wheel on the indicator button (`attributes`) |  |
-| `w_color.c` | `show_pencolor` | 2144 | ported | stepping the pen/fill colour with the wheel on the indicator button (`attributes`) |  |
-| `w_color.c` | `next_fillcolor` | 2193 | ported | stepping the pen/fill colour with the wheel on the indicator button (`attributes`) |  |
-| `w_color.c` | `prev_fillcolor` | 2205 | ported | stepping the pen/fill colour with the wheel on the indicator button (`attributes`) |  |
-| `w_color.c` | `show_fillcolor` | 2218 | ported | stepping the pen/fill colour with the wheel on the indicator button (`attributes`) |  |
+| `w_color.c` | `color_used` | 1474 | ported | `color.add`, `prefs.add_color`, `color.remove_unused`: user colors created, listed, counted and pruned when unused |  |
+| `w_color.c` | `switch_edit` | 1506 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `set_slider_sensitivity` | 1539 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `set_color_ok` | 1550 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `_set_std_color` | 1569 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `set_std_color` | 1577 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `_pick_memory` | 1631 | replaced | recent colors (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
+| `w_color.c` | `pick_memory` | 1646 | replaced | recent colors (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
+| `w_color.c` | `lock_toggle` | 1697 | replaced | recent colors (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
+| `w_color.c` | `draw_boxed` | 1739 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `erase_boxed` | 1751 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `color_borders` | 1765 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `WhichButton` | 1776 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `update_from_triple` | 1789 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `update_scrl_triple` | 1834 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `update_triple` | 1842 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `move_scroll` | 1868 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `StoreMix_and_Mem` | 1940 | replaced | recent colors (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
+| `w_color.c` | `Scrolled` | 1965 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `Update_HSV` | 2017 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `ThumbHSV` | 2037 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `Thumbed` | 2060 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `move_lock` | 2106 | replaced | recent colors (`ui-egui/src/color_dialog.rs`), the eyedropper and Undo cover the mix memory, lock and contrast pick (E4) | E4 |
+| `w_color.c` | `next_pencolor` | 2119 | ported | stepping the pen/fill color with the wheel on the indicator button (`attributes`) |  |
+| `w_color.c` | `prev_pencolor` | 2131 | ported | stepping the pen/fill color with the wheel on the indicator button (`attributes`) |  |
+| `w_color.c` | `show_pencolor` | 2144 | ported | stepping the pen/fill color with the wheel on the indicator button (`attributes`) |  |
+| `w_color.c` | `next_fillcolor` | 2193 | ported | stepping the pen/fill color with the wheel on the indicator button (`attributes`) |  |
+| `w_color.c` | `prev_fillcolor` | 2205 | ported | stepping the pen/fill color with the wheel on the indicator button (`attributes`) |  |
+| `w_color.c` | `show_fillcolor` | 2218 | ported | stepping the pen/fill color with the wheel on the indicator button (`attributes`) |  |
 | `w_color.c` | `set_cmap` | 2268 | not needed | X colormap cell allocation and private colormaps |  |
-| `w_color.c` | `HSVToRGB` | 2319 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `RGBToHSV` | 2363 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `PctToRGB` | 2406 | replaced | the Colours window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colours) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
-| `w_color.c` | `DoGrabPixel` | 2451 | replaced | the eyedropper: `color.eyedropper`, the next canvas click takes an object's colour (engine `eyedropper.rs`) | W10-36 |
-| `w_color.c` | `doGrab` | 2496 | replaced | the eyedropper: `color.eyedropper`, the next canvas click takes an object's colour (engine `eyedropper.rs`) | W10-36 |
+| `w_color.c` | `HSVToRGB` | 2319 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `RGBToHSV` | 2363 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `PctToRGB` | 2406 | replaced | the Colors window (`color_dialog.rs`: picker, RGB/HSV, hex and X11 names, user colors) with `color.new`, `color.edit`, `color.delete`, `color.parse` | E4 |
+| `w_color.c` | `DoGrabPixel` | 2451 | replaced | the eyedropper: `color.eyedropper`, the next canvas click takes an object's color (engine `eyedropper.rs`) | W10-36 |
+| `w_color.c` | `doGrab` | 2496 | replaced | the eyedropper: `color.eyedropper`, the next canvas click takes an object's color (engine `eyedropper.rs`) | W10-36 |
 | `w_color.c` | `xyToWindowCmap` | 2558 | not needed | X colormap cell allocation and private colormaps |  |
 | `w_cursor.c` | `init_cursor` | 44 | replaced | `Engine::cursor_kind` (`tools/cursor.rs`) per mode and state, mapped to egui cursor icons by `canvas::cursor_icon` (S4-4) |  |
 | `w_cursor.c` | `recolor_cursors` | 90 | replaced | `Engine::cursor_kind` (`tools/cursor.rs`) per mode and state, mapped to egui cursor icons by `canvas::cursor_icon` (S4-4) |  |
@@ -1619,10 +1619,10 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `w_file.c` | `clear_preview` | 1345 | ported | the panel clears its preview when the file name changes (`FilePanel`) | W10-12 |
 | `w_file.c` | `file_preview_stop` | 1368 | replaced | no Stop Preview button: the preview is synchronous and capped | W10-12 |
 | `w_file.c` | `preview_figure` | 1379 | ported | `file_panel::preview_figure` (size, object count, comments, picture) and `file.preview`; the panel is `app.open_panel` and `app.merge_panel` | W10-12 |
-| `w_file.c` | `save_user_colors` | 1677 | not needed | saving user colours around a preview (the preview will use its own document) |  |
-| `w_file.c` | `save_nuser_colors` | 1701 | not needed | saving user colours around a preview (the preview will use its own document) |  |
-| `w_file.c` | `restore_user_colors` | 1722 | not needed | saving user colours around a preview (the preview will use its own document) |  |
-| `w_file.c` | `restore_nuser_colors` | 1776 | not needed | saving user colours around a preview (the preview will use its own document) |  |
+| `w_file.c` | `save_user_colors` | 1677 | not needed | saving user colors around a preview (the preview will use its own document) |  |
+| `w_file.c` | `save_nuser_colors` | 1701 | not needed | saving user colors around a preview (the preview will use its own document) |  |
+| `w_file.c` | `restore_user_colors` | 1722 | not needed | saving user colors around a preview (the preview will use its own document) |  |
+| `w_file.c` | `restore_nuser_colors` | 1776 | not needed | saving user colors around a preview (the preview will use its own document) |  |
 | `w_fontpanel.c` | `init_fontmenu` | 85 | replaced | font menus: the font chooser `font_chooser` (E11: PostScript/LaTeX lists, search, size, preview) in the Text Font pop-up and the edit panel | E11 |
 | `w_fontpanel.c` | `setup_fontmenu` | 278 | replaced | font menus: the font chooser `font_chooser` (E11: PostScript/LaTeX lists, search, size, preview) in the Text Font pop-up and the edit panel | E11 |
 | `w_fontpanel.c` | `fontpane_popup` | 343 | replaced | font menus: the font chooser `font_chooser` (E11: PostScript/LaTeX lists, search, size, preview) in the Text Font pop-up and the edit panel | E11 |
@@ -1640,7 +1640,7 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `w_help.c` | `check_docfile` | 131 | not needed | no external document files: the manual is compiled in |  |
 | `w_help.c` | `help_ok` | 140 | not needed | Help dialog plumbing (the manual window has its own close) |  |
 | `w_help.c` | `launch_about` | 149 | ported | About dialog (`dialogs::about_dialog`) |  |
-| `w_i18n.c` | `setlocale` | 401 | not needed | Xt locale initialisation; RustFig's localisation is F4 | F4 |
+| `w_i18n.c` | `setlocale` | 401 | not needed | Xt locale initialization; RustFig's localization is F4 | F4 |
 | `w_icons.c` | `populate_icons_big` | 2156 | ported | all 107 bitmaps verbatim in `ui-egui/xfig_icons.rs`, vector versions in `vector_icons.rs`/`mode_icons.rs` (W9) |  |
 | `w_icons.c` | `populate_icons_small` | 2245 | ported | all 107 bitmaps verbatim in `ui-egui/xfig_icons.rs`, vector versions in `vector_icons.rs`/`mode_icons.rs` (W9) |  |
 | `w_icons.c` | `setup_icons_small` | 3258 | ported | all 107 bitmaps verbatim in `ui-egui/xfig_icons.rs`, vector versions in `vector_icons.rs`/`mode_icons.rs` (W9) |  |
@@ -1720,7 +1720,7 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `w_indpanel.c` | `show_linestyle` | 3676 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `show_valign` | 3713 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `show_halign` | 3744 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
-| `w_indpanel.c` | `show_gridmode` | 3775 | ported | Grid Mode with nine choices, four isometric (`grid_iso`) |  || `w_indpanel.c` | `show_pointposn` | 3799 | ported | Point Posn choices act on every point (`Indicator::snap_point`); a mode never hides the button (xfig's forced on/off only greys it) |  |
+| `w_indpanel.c` | `show_gridmode` | 3775 | ported | Grid Mode with nine choices, four isometric (`grid_iso`) |  || `w_indpanel.c` | `show_pointposn` | 3799 | ported | Point Posn choices act on every point (`Indicator::snap_point`); a mode never hides the button (xfig's forced on/off only grays it) |  |
 | `w_indpanel.c` | `show_linkmode` | 3824 | ported | Smart Links indicator button off/move/slide (`ui-egui/attributes.rs`) |  |
 | `w_indpanel.c` | `show_textjust` | 3843 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `dec_boxradius` | 3862 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
@@ -1761,22 +1761,22 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `w_indpanel.c` | `inc_numycopies` | 4436 | ported | indicator buttons Num Copies (rotate), Num X / Num Y Copies (copy) in `ui-egui/attributes.rs`; `indicator.set` | D10 |
 | `w_indpanel.c` | `dec_numycopies` | 4443 | ported | indicator buttons Num Copies (rotate), Num X / Num Y Copies (copy) in `ui-egui/attributes.rs`; `indicator.set` | D10 |
 | `w_indpanel.c` | `show_numycopies` | 4450 | ported | indicator buttons Num Copies (rotate), Num X / Num Y Copies (copy) in `ui-egui/attributes.rs`; `indicator.set` | D10 |
-| `w_indpanel.c` | `inc_zoom` | 4476 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
-| `w_indpanel.c` | `dec_zoom` | 4506 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
-| `w_indpanel.c` | `zoom_focus` | 4523 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
-| `w_indpanel.c` | `inc_zoom_centered` | 4547 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
-| `w_indpanel.c` | `dec_zoom_centered` | 4554 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
-| `w_indpanel.c` | `wheel_inc_zoom` | 4562 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
-| `w_indpanel.c` | `wheel_dec_zoom` | 4584 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
-| `w_indpanel.c` | `fit_zoom` | 4606 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
-| `w_indpanel.c` | `show_zoom` | 4671 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
+| `w_indpanel.c` | `inc_zoom` | 4476 | ported | zoom button: step, centerd step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
+| `w_indpanel.c` | `dec_zoom` | 4506 | ported | zoom button: step, centerd step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
+| `w_indpanel.c` | `zoom_focus` | 4523 | ported | zoom button: step, centerd step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
+| `w_indpanel.c` | `inc_zoom_centered` | 4547 | ported | zoom button: step, centerd step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
+| `w_indpanel.c` | `dec_zoom_centered` | 4554 | ported | zoom button: step, centerd step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
+| `w_indpanel.c` | `wheel_inc_zoom` | 4562 | ported | zoom button: step, centerd step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
+| `w_indpanel.c` | `wheel_dec_zoom` | 4584 | ported | zoom button: step, centerd step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
+| `w_indpanel.c` | `fit_zoom` | 4606 | ported | zoom button: step, centerd step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
+| `w_indpanel.c` | `show_zoom` | 4671 | ported | zoom button: step, centerd step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
 | `w_indpanel.c` | `inc_depth` | 4720 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `dec_depth` | 4727 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `show_depth` | 4734 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `inc_textstep` | 4752 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `dec_textstep` | 4769 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
 | `w_indpanel.c` | `show_textstep` | 4787 | ported | indicator buttons with step and show for: arrow mode and type, line width, arc type, join, cap and line style, vertical and horizontal align, text justification, box radius, fill style, font, font size, text angle, rotation angle, number of sides, depth, text step |  |
-| `w_indpanel.c` | `zoom_to_fit` | 4805 | ported | zoom button: step, centred step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
+| `w_indpanel.c` | `zoom_to_fit` | 4805 | ported | zoom button: step, centerd step, wheel, fit, focus (`view.zoom_*`, `view.set_scale`); Integer zoom `view.set_integer_zoom` |  |
 | `w_indpanel.c` | `make_pulldown_menu_images` | 4821 | replaced | attribute (indicator) panel `ui-egui/attributes` and `engine::Indicator`: construction, update, pixmaps and button selection |  |
 | `w_indpanel.c` | `tog_selective_update` | 4846 | ported | `cmd/indicator.rs` `indicator.set_update_flag`, `indicator.update_flags`; `ui-egui/attributes.rs` update boxes (Update mode only) |  |
 | `w_intersect.c` | `is_point_on_segment` | 42 | ported | `engine/snap.rs` (W4): intersection of every pair of object kinds, on flattened outlines instead of the analytic ellipse solvers |  |
@@ -1893,8 +1893,8 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `w_modepanel.c` | `setup_mode_panel` | 459 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `update_modepanel` | 499 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
 | `w_modepanel.c` | `sel_mode_but` | 522 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
-| `w_modepanel.c` | `force_positioning` | 601 | ported | Point Posn choices act on every point (`Indicator::snap_point`); a mode never hides the button (xfig's forced on/off only greys it) |  |
-| `w_modepanel.c` | `force_nopositioning` | 608 | ported | Point Posn choices act on every point (`Indicator::snap_point`); a mode never hides the button (xfig's forced on/off only greys it) |  |
+| `w_modepanel.c` | `force_positioning` | 601 | ported | Point Posn choices act on every point (`Indicator::snap_point`); a mode never hides the button (xfig's forced on/off only grays it) |  |
+| `w_modepanel.c` | `force_nopositioning` | 608 | ported | Point Posn choices act on every point (`Indicator::snap_point`); a mode never hides the button (xfig's forced on/off only grays it) |  |
 | `w_modepanel.c` | `force_anglegeom` | 615 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
 | `w_modepanel.c` | `force_noanglegeom` | 621 | ported | `engine/anglegeom.rs` (`constrain`, `latex_endpoint`), `Engine::angle_constrained` / `angle_anchor` (tools), Angle Geom button in `ui-egui/attributes` |  |
 | `w_modepanel.c` | `turn_on` | 627 | ported | mode panel (`panels::mode_panel`), mode switching (`Engine::set_tool`), per-mode masks and attribute sets (`attributes_for`) |  |
@@ -2147,14 +2147,14 @@ Nothing is missing (0 h). Everything in xfig's 2,122 function definitions is por
 | `w_util.c` | `accept_part` | 223 | replaced | yes/no/cancel queries: `dialogs::unsaved_dialog` and egui dialogs |  |
 | `w_util.c` | `accept_all` | 231 | replaced | yes/no/cancel queries: `dialogs::unsaved_dialog` and egui dialogs |  |
 | `w_util.c` | `popup_query` | 239 | replaced | yes/no/cancel queries: `dialogs::unsaved_dialog` and egui dialogs |  |
-| `w_util.c` | `make_pulldown_menu` | 376 | replaced | pull-down and colour pop-up menus, colour buttons: egui combo boxes and the colour pop-up (`attributes`) |  |
+| `w_util.c` | `make_pulldown_menu` | 376 | replaced | pull-down and color pop-up menus, color buttons: egui combo boxes and the color pop-up (`attributes`) |  |
 | `w_util.c` | `CvtStringToFloat` | 402 | not needed | Xt resource converters |  |
 | `w_util.c` | `CvtIntToFloat` | 417 | not needed | Xt resource converters |  |
 | `w_util.c` | `fix_converters` | 429 | not needed | Xt resource converters |  |
-| `w_util.c` | `cancel_color` | 437 | replaced | pull-down and colour pop-up menus, colour buttons: egui combo boxes and the colour pop-up (`attributes`) |  |
-| `w_util.c` | `make_color_popup_menu` | 444 | replaced | pull-down and colour pop-up menus, colour buttons: egui combo boxes and the colour pop-up (`attributes`) |  |
-| `w_util.c` | `set_color_name` | 581 | replaced | pull-down and colour pop-up menus, colour buttons: egui combo boxes and the colour pop-up (`attributes`) |  |
-| `w_util.c` | `set_but_col` | 598 | replaced | pull-down and colour pop-up menus, colour buttons: egui combo boxes and the colour pop-up (`attributes`) |  |
+| `w_util.c` | `cancel_color` | 437 | replaced | pull-down and color pop-up menus, color buttons: egui combo boxes and the color pop-up (`attributes`) |  |
+| `w_util.c` | `make_color_popup_menu` | 444 | replaced | pull-down and color pop-up menus, color buttons: egui combo boxes and the color pop-up (`attributes`) |  |
+| `w_util.c` | `set_color_name` | 581 | replaced | pull-down and color pop-up menus, color buttons: egui combo boxes and the color pop-up (`attributes`) |  |
+| `w_util.c` | `set_but_col` | 598 | replaced | pull-down and color pop-up menus, color buttons: egui combo boxes and the color pop-up (`attributes`) |  |
 | `w_util.c` | `inc_flt_spinner` | 612 | replaced | spinners: egui `DragValue` and number pop-ups |  |
 | `w_util.c` | `dec_flt_spinner` | 636 | replaced | spinners: egui `DragValue` and number pop-ups |  |
 | `w_util.c` | `inc_int_spinner` | 661 | replaced | spinners: egui `DragValue` and number pop-ups |  |

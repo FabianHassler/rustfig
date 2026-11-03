@@ -62,7 +62,7 @@ fn update_with_only_fill_style_changes_only_the_fill_style() {
 }
 
 #[test]
-fn update_region_honours_the_flags() {
+fn update_region_honors_the_flags() {
     let mut e = engine();
     let (_, color0, _, pen0) = style(&e);
     only(&mut e, "line_width");
@@ -101,7 +101,7 @@ fn all_cleared_changes_nothing_and_toggle_inverts() {
 }
 
 #[test]
-fn update_settings_honours_the_flags() {
+fn update_settings_honors_the_flags() {
     let mut e = engine();
     e.execute(
         "indicator.set",

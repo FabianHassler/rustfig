@@ -46,7 +46,7 @@ pub fn start(app: &mut App, p: &Value, after: After) -> Result<(), String> {
                 Ok(r) => r,
                 Err(m) => Err(format!("internal error (please report): {m}")),
             };
-            let _ = tx.send(r); // the UI may be gone (cancelled)
+            let _ = tx.send(r); // the UI may be gone (canceled)
         })
         .map_err(|e| format!("cannot start the export: {e}"))?;
     app.export_bg = Some(Running {
@@ -65,7 +65,7 @@ pub fn start(app: &mut App, p: &Value, after: After) -> Result<(), String> {
 pub fn cancel(app: &mut App) {
     if let Some(r) = app.export_bg.take() {
         r.cancel.store(true, Ordering::Relaxed);
-        app.info("Export cancelled");
+        app.info("Export canceled");
     }
 }
 

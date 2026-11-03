@@ -33,7 +33,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Scale",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id], \"sx\", \"sy\"?, \"cx\"?, \"cy\"?, \"scale_text\"?: bool, \"reappend\"?: bool}  — (reappend as for transform.move) about the centre of the objects by default",
+            params: "{\"ids\"?: [id], \"sx\", \"sy\"?, \"cx\"?, \"cy\"?, \"scale_text\"?: bool, \"reappend\"?: bool}  — (reappend as for transform.move) about the center of the objects by default",
             mutates: true,
             enabled: has_selection_or_ids,
             run: scale,
@@ -223,7 +223,7 @@ fn rotate_by(e: &mut Engine, p: &Value, deg: f64) -> CmdResult {
         return r;
     }
     // xfig's copy & rotate (`init_copynrotate`, `e_rotate.c`): `n` copies of
-    // the originals, the k-th turned by k times the angle about one centre.
+    // the originals, the k-th turned by k times the angle about one center.
     let ids = e.target_ids(p)?;
     let ids_v = super::ids_value(&ids);
     let mut all = Vec::new();

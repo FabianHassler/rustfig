@@ -44,7 +44,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Save style",
             menu: "",
             shortcut: "",
-            params: "{\"family\": text, \"name\": text (1-64 characters)}  — keep the indicator's attributes (depth, line width/style/join/cap/dash/dot gap, pen and fill colour/fill, box radius, arrows, text font/size/flags/justification, arc type) under the name in the family, in the settings file (not in the drawing); an existing style of that name is replaced; at most 64 styles per family (xfig: 16). Returns {count, replaced}",
+            params: "{\"family\": text, \"name\": text (1-64 characters)}  — keep the indicator's attributes (depth, line width/style/join/cap/dash/dot gap, pen and fill color/fill, box radius, arrows, text font/size/flags/justification, arc type) under the name in the family, in the settings file (not in the drawing); an existing style of that name is replaced; at most 64 styles per family (xfig: 16). Returns {count, replaced}",
             mutates: false,
             enabled: always,
             run: save,

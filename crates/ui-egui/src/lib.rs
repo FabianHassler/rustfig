@@ -164,7 +164,7 @@ pub struct App {
     pub chord: input::Chord,
     /// Input queued by the control channel (`ui.pointer`, `ui.key`).
     pub injector: inject::Injector,
-    /// Labelled widgets of the last frame (filled once `attach` ran).
+    /// Labeled widgets of the last frame (filled once `attach` ran).
     pub widgets: inject::Registry,
     /// Requests waiting for their injected input to be fed: reply, id, result, sequence.
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
@@ -663,7 +663,7 @@ impl eframe::App for App {
 }
 
 impl App {
-    /// Start collecting the labelled widgets for `ui.state` and `ui.click_label`.
+    /// Start collecting the labeled widgets for `ui.state` and `ui.click_label`.
     pub fn attach(&mut self, ctx: &egui::Context) {
         self.widgets = inject::install_registry(ctx);
     }

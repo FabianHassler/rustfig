@@ -1,7 +1,7 @@
 //! The PhysicsCircuits library (plan D13): lumped circuit elements the way
 //! physics papers draw them (superconducting circuits, rf and lab
 //! electronics), and three examples. Every part is drawn in a 1800 x 1800
-//! frame (1.5 inch) around the centre (900, 900), horizontal first.
+//! frame (1.5 inch) around the center (900, 900), horizontal first.
 //!
 //! * Two-terminal parts: the pins are (300, 900) and (1500, 900), exactly
 //!   one inch apart, on the 1/4-inch grid. The `_v` version is the part turned
@@ -21,7 +21,7 @@ use rustfig_geom::Affine;
 type Pt = (f64, f64);
 type Entry = (String, String, Vec<Object>, Vec<Pt>);
 
-/// Frame centre and the two pins of a horizontal two-terminal part.
+/// Frame center and the two pins of a horizontal two-terminal part.
 const C: f64 = 900.0;
 const PIN_A: Pt = (300.0, 900.0);
 const PIN_B: Pt = (1500.0, 900.0);
@@ -395,7 +395,7 @@ fn port() -> Vec<Object> {
 }
 
 /// Rotate frame objects by `deg` (counter-clockwise on screen) about the
-/// frame centre, then move them by `d`.
+/// frame center, then move them by `d`.
 fn place(objs: &[Object], d: Pt, deg: f64) -> Vec<Object> {
     let t = Affine::about(Affine::rotate(deg.to_radians()), Point::new(C, C)).then(&Affine::translate(d.0, d.1));
     objs.iter()
@@ -407,7 +407,7 @@ fn place(objs: &[Object], d: Pt, deg: f64) -> Vec<Object> {
         .collect()
 }
 
-/// A frame point turned by `deg` about the frame centre.
+/// A frame point turned by `deg` about the frame center.
 fn rot_pt(q: Pt, deg: f64) -> Pt {
     let (s, c) = deg.to_radians().sin_cos();
     let (x, y) = (q.0 - C, q.1 - C);
@@ -488,14 +488,14 @@ fn catalog() -> Vec<Entry> {
     }
     add(
         "terminal".into(),
-        "terminal: open circle, the pin is its centre".into(),
+        "terminal: open circle, the pin is its center".into(),
         vec![ring((C, C), 90.0, 2)],
         &[(C, C)],
         0.0,
     );
     add(
         "junction".into(),
-        "wire junction: filled dot, the pin is its centre".into(),
+        "wire junction: filled dot, the pin is its center".into(),
         vec![filled_dot((C, C), 60.0)],
         &[(C, C)],
         0.0,
@@ -509,7 +509,7 @@ fn wires(v: &[&[Pt]]) -> Vec<Object> {
 
 fn examples(out: &mut Vec<Part>) {
     let cat = catalog();
-    // A part by file name, moved so that its centre is at `c` (parts with
+    // A part by file name, moved so that its center is at `c` (parts with
     // one pin: so that the pin is at `c`).
     let at = |name: &str, c: Pt| -> Vec<Object> {
         let Some(e) = cat.iter().find(|e| e.0 == name) else {

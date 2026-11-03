@@ -12,16 +12,16 @@ Original work for RustFig (MIT OR Apache-2.0), written by `cargo xtask examples`
 
 | Folder | Drawing | Objects |
 |---|---|---|
-| `clifford-attractor/` | Clifford attractor: 250,000 dots coloured by step direction, on a black page | 250,001 |
-| `apollonian-gasket/` | Apollonian gasket (Descartes' circle theorem), circles coloured by generation; drawn at twice the size with the file's magnification at 50 %, so the outlines export at 1/320 inch | 4,221 |
+| `clifford-attractor/` | Clifford attractor: 250,000 dots colored by step direction, on a black page | 250,001 |
+| `apollonian-gasket/` | Apollonian gasket (Descartes' circle theorem), circles colored by generation; drawn at twice the size with the file's magnification at 50 %, so the outlines export at 1/320 inch | 4,221 |
 | `penrose-tiling/` | Penrose P3 tiling of rhombs after 7 deflations, gold and teal | 7,615 |
-| `gosper-curve/` | Gosper curve (flowsnake) of order 5: one continuous line in 142 joined pieces, rainbow coloured | 142 (16,808 points) |
+| `gosper-curve/` | Gosper curve (flowsnake) of order 5: one continuous line in 142 joined pieces, rainbow colored | 142 (16,808 points) |
 
 ## Imported from SVG
 
-RustFig's own conversions (File › Open on the SVG), from public-domain and CC0 sources; `SOURCE.txt` in each folder names the original. Fig 3.2 has no gradients or transparency, so gradients become one colour and transparent areas are drawn solid.
+RustFig's own conversions (File › Open on the SVG), from public-domain and CC0 sources; `SOURCE.txt` in each folder names the original. Fig 3.2 has no gradients or transparency, so gradients become one color and transparent areas are drawn solid.
 
-| Folder | Drawing | Objects | Source, licence |
+| Folder | Drawing | Objects | Source, license |
 |---|---|---|---|
 | `ne-countries/` | Country borders of the world at 1:10m (Natural Earth) | 4,233 | Natural Earth, public domain |
 | `ne-coast/` | Coastlines of the world at 1:10m (Natural Earth) | 4,069 | Natural Earth, public domain |

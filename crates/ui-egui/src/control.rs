@@ -223,7 +223,7 @@ pub fn input_steps(app: &App, method: &str, p: &Value) -> Result<(Vec<crate::inj
                 let list = app.widgets.lock().map_err(|_| "widget list unavailable")?;
                 inject::find_label(&list, label, index)
             }
-            .ok_or_else(|| format!("no widget labelled {label:?} on screen"))?;
+            .ok_or_else(|| format!("no widget labeled {label:?} on screen"))?;
             let c = w.center();
             let mut q = serde_json::Map::new();
             q.insert(

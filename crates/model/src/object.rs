@@ -1,7 +1,7 @@
 //! Drawing objects and their attributes.
 //
 // Ported in parts from xfig src/u_redraw.c and src/f_save.c (object type
-// order) (xfig licence, see LICENSE-xfig).
+// order) (xfig license, see LICENSE-xfig).
 
 use rustfig_geom::{arc_from_three_points, flatten_round_rect, Affine, Point, Rect};
 use serde::{Deserialize, Serialize};
@@ -14,7 +14,7 @@ pub use figbase::style::{CapStyle, JoinStyle, Justify, LineKind};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Serialize, Deserialize)]
 pub struct ObjectId(pub u64);
 
-/// A Fig colour number: -1 default, 0–31 standard, 32–543 user colours.
+/// A Fig color number: -1 default, 0–31 standard, 32–543 user colors.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ColorRef(pub i32);
 
@@ -84,7 +84,7 @@ pub const MAX_DEPTH: i32 = 999;
 pub struct Arrow {
     /// 0 stick, 1 triangle, 2 indented, 3 pointed, 4+ extended shapes.
     pub kind: i32,
-    /// 0 hollow (white), 1 filled with pen colour.
+    /// 0 hollow (white), 1 filled with pen color.
     pub style: i32,
     /// Outline thickness in 1/80 inch.
     pub thickness: f64,
@@ -456,7 +456,7 @@ impl Arc {
         })
     }
 
-    /// Recompute centre and direction from the three points.
+    /// Recompute center and direction from the three points.
     pub fn refit(&mut self) {
         if let Some(g) = arc_from_three_points(self.points[0], self.points[1], self.points[2]) {
             self.center = g.center;

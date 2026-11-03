@@ -1,7 +1,7 @@
 //! Dimension lines (plan D10): create one, recompute after edits.
 //
 // Ported from xfig src/d_line.c (`create_lineobject` with Shift) and
-// src/e_scale.c (`rescale_dimension_line`) (xfig licence, see LICENSE-xfig).
+// src/e_scale.c (`rescale_dimension_line`) (xfig license, see LICENSE-xfig).
 
 use super::{ids_value, num, opt_str, CmdResult, Command};
 use crate::dimline::{self, DimlineDefaults};

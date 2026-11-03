@@ -1,4 +1,4 @@
-//! Document settings, colours and depth visibility.
+//! Document settings, colors and depth visibility.
 
 use super::{always, num, opt_bool, opt_num, string, CmdResult, Command};
 use crate::{Engine, EngineError};
@@ -104,28 +104,28 @@ pub(super) fn commands() -> Vec<Command> {
         },
         Command {
             id: "color.add",
-            label: "Add user colour",
+            label: "Add user color",
             menu: "",
             shortcut: "",
-            params: "{\"rgb\": \"#rrggbb\" | X11 colour name}  — the colour's number (a standard or user colour with that value, else a new user colour)",
+            params: "{\"rgb\": \"#rrggbb\" | X11 color name}  — the color's number (a standard or user color with that value, else a new user color)",
             mutates: true,
             enabled: always,
             run: |e, p| {
                 let s = string(p, "rgb")?;
                 let rgb = rustfig_model::x_color(s.trim())
-                    .ok_or_else(|| EngineError::bad_params("rgb must be #rrggbb, #rgb or an X11 colour name"))?;
+                    .ok_or_else(|| EngineError::bad_params("rgb must be #rrggbb, #rgb or an X11 color name"))?;
                 e.prefs.add_recent_color(&rgb.to_hex());
                 e.prefs_dirty = true;
                 let c = e
                     .doc_mut()
                     .color_for_rgb(rgb)
-                    .ok_or_else(|| EngineError::bad_params("all 512 user colours are in use"))?;
+                    .ok_or_else(|| EngineError::bad_params("all 512 user colors are in use"))?;
                 Ok(json!({"color": c.0}))
             },
         },
         Command {
             id: "color.remove_unused",
-            label: "Remove unused colours",
+            label: "Remove unused colors",
             menu: "",
             shortcut: "",
             params: "{}",

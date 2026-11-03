@@ -19,7 +19,7 @@ use std::fmt;
 /// Largest file accepted by [`read_any`] (bytes).
 pub const MAX_FILE_BYTES: usize = 512 << 20;
 
-/// A parse or serialisation error.
+/// A parse or serialization error.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FormatError {
     /// 1-based line number, 0 if unknown.
@@ -112,13 +112,13 @@ pub fn read_any_messages(src: &[u8]) -> Result<(Document, Vec<String>), FormatEr
             Some(fig) => read_fig_messages(fig.as_bytes(), TextEncoding::Auto),
             None if embed::is_embedding_container(src) => Err(FormatError::new("no embedded figure in this file")),
             None => Err(FormatError::new(
-                "unrecognised file format (expected a Fig or RustFig document)",
+                "unrecognized file format (expected a Fig or RustFig document)",
             )),
         },
     }
 }
 
-/// Serialise a document in the given format.
+/// Serialize a document in the given format.
 pub fn write(doc: &Document, format: FileFormat) -> Result<String, FormatError> {
     match format {
         FileFormat::Fig => Ok(write_fig(doc)),

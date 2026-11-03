@@ -71,7 +71,7 @@ Meta+F, E, V and H open the File, Edit, View and Help menus (the Tools menu has 
 ## Other keys
 
 - Arrow keys pan the canvas; Home returns to the origin.
-- Escape works one level per press: it closes an open panel; otherwise it (1) cancels what is in progress (a shape being drawn is dropped, a move, paste or zoom box stops; typed text is finished), then (2) clears what the mode has collected (Chop's axe list, the located object, the rotate or flip centre, the selection), then (3) leaves the mode, as when RustFig starts. Edit > Select none still selects nothing.
+- Escape works one level per press: it closes an open panel; otherwise it (1) cancels what is in progress (a shape being drawn is dropped, a move, paste or zoom box stops; typed text is finished), then (2) clears what the mode has collected (Chop's axe list, the located object, the rotate or flip center, the selection), then (3) leaves the mode, as when RustFig starts. Edit > Select none still selects nothing.
 - Backspace (or Delete) while drawing a line, polygon or spline removes the last point, like Shift+left.
 - In Text mode: Left, Right, Home, End, Backspace and Delete edit, Enter ends the line and starts the next one below it. Shift extends the selection; word jumps and select all, copy, cut and paste follow the platform:
 <!-- os: mac -->

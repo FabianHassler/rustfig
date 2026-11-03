@@ -2,7 +2,7 @@
 //! typing text, then two characters, give one (`CompKeyDB`).
 //
 // Ported from xfig CompKeyDB (the compose key database) and src/w_canvas.c
-// (`setup_canvas` reading it) (xfig licence, see LICENSE-xfig).
+// (`setup_canvas` reading it) (xfig license, see LICENSE-xfig).
 
 /// The two characters after Meta and the character they make.
 #[rustfmt::skip]

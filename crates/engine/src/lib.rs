@@ -131,7 +131,7 @@ pub struct Engine {
     tool_state: tools::ToolState,
     /// Super/subscript state of the text being typed.
     text_sub: tools::TextSub,
-    /// Rotate's centre or Flip's anchor set with the right button (xfig's
+    /// Rotate's center or Flip's anchor set with the right button (xfig's
     /// `setcenter` / `setanchor`).
     set_point: Option<Point>,
     clipboard: Vec<Object>,
@@ -789,7 +789,7 @@ impl Engine {
                 continue;
             }
             let in_box = self.pick_bbox(o, bb).expand(tol).contains(p);
-            // Only splines (control points) and arcs (centre) have markers
+            // Only splines (control points) and arcs (center) have markers
             // outside their box: skip the rest early (big drawings).
             if !in_box && !matches!(o.kind, ObjectKind::Spline(_) | ObjectKind::Arc(_)) {
                 continue;

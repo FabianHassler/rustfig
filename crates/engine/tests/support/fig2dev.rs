@@ -3,7 +3,7 @@
 //! fig2dev or ghostscript (decided 2026-10-14; fig2dev's drivers are being
 //! ported instead). Both are optional; [`find`] and [`ghostscript`] return
 //! `None` when they aren't installed and the tests skip. A8 uses fig2dev's
-//! SVG, so it needs no ghostscript; A10 rasterises EPS and PDF with it.
+//! SVG, so it needs no ghostscript; A10 rasterizes EPS and PDF with it.
 
 #![allow(dead_code)]
 
@@ -194,7 +194,7 @@ pub fn ghostscript() -> Option<&'static Fig2dev> {
 /// `dpi` with ghostscript; text is always anti-aliased, graphics when
 /// `antialias` (ghostscript draws pattern tiles without it in any case, so
 /// comparisons of two PostScript files turn it off for both).
-pub fn rasterise(doc: &[u8], pdf: bool, dpi: u32, antialias: bool) -> Result<Vec<u8>, String> {
+pub fn rasterize(doc: &[u8], pdf: bool, dpi: u32, antialias: bool) -> Result<Vec<u8>, String> {
     let gs = ghostscript().ok_or("ghostscript is not installed (set RUSTFIG_GS to its path)")?;
     let dir = TempDir::new()?;
     let input = dir.0.join(if pdf { "in.pdf" } else { "in.eps" });

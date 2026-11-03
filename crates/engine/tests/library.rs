@@ -518,7 +518,7 @@ fn a_list_file_that_is_binary_or_huge_is_harmless() {
 
 #[test]
 fn a_scan_can_be_stopped() {
-    use rustfig_engine::library::{scan, scan_cancellable, LibRoot};
+    use rustfig_engine::library::{scan, scan_cancelable, LibRoot};
     use std::sync::atomic::AtomicBool;
     let d = scratch("stop");
     for i in 0..20 {
@@ -531,7 +531,7 @@ fn a_scan_can_be_stopped() {
     }];
     assert_eq!(scan(&roots).len(), 20);
     let stop = AtomicBool::new(true);
-    assert!(scan_cancellable(&roots, &stop).is_empty(), "stopped before it began");
+    assert!(scan_cancelable(&roots, &stop).is_empty(), "stopped before it began");
     let _ = std::fs::remove_dir_all(&d);
 }
 
@@ -552,10 +552,10 @@ fn comments_after_the_resolution_line_are_the_objects() {
     assert!(comments_of_bytes(bare.as_bytes()).is_empty());
 }
 
-/// W10-30: favourites toggle, persist through the preferences and tolerate a
+/// W10-30: favorites toggle, persist through the preferences and tolerate a
 /// figure whose file is gone; placed figures are remembered, newest first.
 #[test]
-fn library_favourites_and_recent_persist() {
+fn library_favorites_and_recent_persist() {
     let user = scratch("fav");
     let fig = std::fs::read_to_string(
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../libraries/Arrows/3darrow1.fig"),
@@ -650,10 +650,10 @@ fn library_favourites_and_recent_persist() {
     let _ = std::fs::remove_dir_all(&user);
 }
 
-/// W10-30: favourite libraries toggle, show in library.list, persist through
+/// W10-30: favorite libraries toggle, show in library.list, persist through
 /// the preferences and tolerate a library that is gone.
 #[test]
-fn favourite_libraries_toggle_and_persist() {
+fn favorite_libraries_toggle_and_persist() {
     let user = scratch("favlib");
     let mut e = engine_with_user_dir(&user);
     let r = e
@@ -684,8 +684,8 @@ fn favourite_libraries_toggle_and_persist() {
         back.rustfig.library_favourite_libraries,
         e.prefs.rustfig.library_favourite_libraries
     );
-    // A stored favourite that no longer exists is kept quietly and can be removed.
-    e.prefs.set_favourite_library("Gone", true);
+    // A stored favorite that no longer exists is kept quietly and can be removed.
+    e.prefs.set_favorite_library("Gone", true);
     assert!(e.execute("library.list", &json!({})).is_ok());
     let r = e
         .execute("library.favourite_library", &json!({"library": "Gone"}))

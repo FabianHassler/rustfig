@@ -24,7 +24,7 @@ The chord works like xfig on a two-button mouse: press both buttons within a mom
 
 The three functions of each mode are listed in the mode's section ([shapes](draw-shapes.md), [splines](draw-splines.md), [move, copy, delete](select-move.md) and the other editing topics). Typical patterns:
 
-- Drawing: left adds the next point or starts the shape, middle is a variation (freehand, from the centre) or the final point, right cancels.
+- Drawing: left adds the next point or starts the shape, middle is a variation (freehand, from the center) or the final point, right cancels.
 - Editing: left acts on the object clicked, middle often acts on a copy or restricts a move to horizontal or vertical, right is a variation or region action.
 - Regions: every region action ("tag region", "delete region", "move region", "update region", "delete in region") takes either a rectangle or a lasso. Click two corners for a rectangle, or press and drag to draw a free-hand loop (the lasso); everything inside is used.
 
@@ -33,9 +33,9 @@ The three functions of each mode are listed in the mode's section ([shapes](draw
 Holding Shift changes a button's job in some modes. While Shift is held, the mouse indicator shows the Shift meanings (likewise Ctrl, and Ctrl+Shift, show those buttons' meanings):
 
 - While drawing a polyline, polygon, spline or arc: Shift+left removes the last point ("del point"). Shift+middle (not for arcs) finishes the object at the last point placed, without adding the clicked point ("finish here", a RustFig addition).
-- Box, Arc-box, Picture: Shift+middle draws a square from its centre.
+- Box, Arc-box, Picture: Shift+middle draws a square from its center.
 - Edit attributes: Shift+middle shows the object's comments in the message panel.
-- Locate object: in every mode that picks an object (Move, Copy, Delete, Edit, Flip, Rotate, Scale, Convert, Align, Break, Open compound, Join/Split, Chop, Add/Move/Delete point, Update, Arrow, Open/close, Tangent, Find properties), Shift+left click highlights the object under the pointer (its markers turn filled) without acting on it. Shift+left again highlights the next object under the pointer, front to back; after the last one the pointer position itself is marked, and the next Shift+left starts over. A click without Shift then acts on the highlighted object, not on the front-most one. This is how you reach an object hidden under another one. Changing the mode forgets the highlight. Shift+middle and Shift+right do nothing in these modes (xfig locates with every button; RustFig keeps them free for later use), except where xfig gives them their own meaning: in Edit Shift+middle shows the object's comments, and in Rotate and Flip Shift+right sets the centre or anchor, like the right button.
+- Locate object: in every mode that picks an object (Move, Copy, Delete, Edit, Flip, Rotate, Scale, Convert, Align, Break, Open compound, Join/Split, Chop, Add/Move/Delete point, Update, Arrow, Open/close, Tangent, Find properties), Shift+left click highlights the object under the pointer (its markers turn filled) without acting on it. Shift+left again highlights the next object under the pointer, front to back; after the last one the pointer position itself is marked, and the next Shift+left starts over. A click without Shift then acts on the highlighted object, not on the front-most one. This is how you reach an object hidden under another one. Changing the mode forgets the highlight. Shift+middle and Shift+right do nothing in these modes (xfig locates with every button; RustFig keeps them free for later use), except where xfig gives them their own meaning: in Edit Shift+middle shows the object's comments, and in Rotate and Flip Shift+right sets the center or anchor, like the right button.
 
 ## Ctrl
 

@@ -175,13 +175,13 @@ fn move_point_constrains_end_points_only() {
     let mut e = engine(AngleGeom::Manhattan);
     let id = line_with_three_points(&mut e);
     e.set_tool(ToolKind::MovePoint);
-    // The end point, dragged: kept horizontal or vertical from its neighbour.
+    // The end point, dragged: kept horizontal or vertical from its neighbor.
     press(&mut e, 1200.0, 300.0, Button::Left);
     mv(&mut e, 1500.0, 80.0);
     mv(&mut e, 1500.0, 700.0);
     release(&mut e, 1500.0, 700.0, Button::Left);
     assert_eq!(pts_of(&e, id), [p(0.0, 0.0), p(600.0, 0.0), p(1500.0, 0.0)]);
-    // A point in the middle has two neighbours: free.
+    // A point in the middle has two neighbors: free.
     press(&mut e, 600.0, 0.0, Button::Left);
     mv(&mut e, 700.0, 250.0);
     release(&mut e, 700.0, 250.0, Button::Left);
@@ -197,7 +197,7 @@ fn move_point_preview_shows_the_constrained_point() {
     mv(&mut e, -200.0, 900.0);
     let ov = e.overlay();
     let o = ov.preview.first().unwrap();
-    // From the neighbour (600, 0): 135 degrees, down and to the left.
+    // From the neighbor (600, 0): 135 degrees, down and to the left.
     assert_eq!(o.points().unwrap()[0], p(600.0 - 900.0, 900.0));
 }
 

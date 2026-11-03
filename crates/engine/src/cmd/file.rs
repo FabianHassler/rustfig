@@ -3,7 +3,7 @@
 // Ported from xfig src/u_print.c (the fig2dev options an export passes),
 // src/f_picobj.c (relative picture names) and src/u_scale.c
 // (`read_scale_compound`, xfig's `-scale_factor`)
-// (xfig licence, see LICENSE-xfig).
+// (xfig license, see LICENSE-xfig).
 
 use super::{always, has_objects, num_or, opt_bool, opt_num, opt_str, string, CmdResult, Command};
 use crate::fig2dev::languages::{language, language_for_path, Language, Status, LANGUAGES};
@@ -672,10 +672,10 @@ fn list_dir(e: &mut Engine, p: &Value) -> CmdResult {
     Ok(json!({"dir": l.dir, "dirs": l.dirs, "files": l.files}))
 }
 
-/// The objects of `other` with its user colours mapped into the document
+/// The objects of `other` with its user colors mapped into the document
 /// (shared by Merge and the clipboard's Paste).
 pub(crate) fn mapped_objects(e: &mut Engine, other: Document) -> Vec<rustfig_model::Object> {
-    // Map user colours of the merged document into this one.
+    // Map user colors of the merged document into this one.
     let mut map = std::collections::BTreeMap::new();
     for c in &other.colors {
         let n = e
@@ -1623,15 +1623,15 @@ impl ExportJob {
 
     /// Convert and write every file. `cancel` is checked between the
     /// conversion steps and before any file is touched (fig2dev's drivers
-    /// have no cancel hook inside one conversion): a cancelled job writes
+    /// have no cancel hook inside one conversion): a canceled job writes
     /// nothing and returns an error.
     pub fn run(self, cancel: &AtomicBool) -> CmdResult {
-        let cancelled = || EngineError::bad_params("Export cancelled");
+        let canceled = || EngineError::bad_params("Export canceled");
         let mut outputs = Vec::with_capacity(self.parts.len());
         let mut warnings = Vec::new();
         for (target, part, args) in &self.parts {
             if cancel.load(Ordering::Relaxed) {
-                return Err(cancelled());
+                return Err(canceled());
             }
             let mut args = args.clone();
             if let Some(g) = &part.graphics {
@@ -1660,7 +1660,7 @@ impl ExportJob {
             outputs.push((target.clone(), bytes));
         }
         if cancel.load(Ordering::Relaxed) {
-            return Err(cancelled());
+            return Err(canceled());
         }
         // Every part is converted before a file is touched, so a failure leaves none.
         let mut written = Vec::new();

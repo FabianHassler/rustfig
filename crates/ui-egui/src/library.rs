@@ -5,7 +5,7 @@
 //! pointer (library mode of the engine). Thumbnails are the objects drawn by
 //! the canvas renderer.
 //
-// Ported from xfig src/w_library.c (panel layout and texts; xfig licence, see LICENSE-xfig).
+// Ported from xfig src/w_library.c (panel layout and texts; xfig license, see LICENSE-xfig).
 
 use crate::App;
 use egui::{vec2, Color32, Sense, TextureOptions};
@@ -63,7 +63,7 @@ pub struct LibraryPanel {
     message: String,
     /// The small list of hidden libraries is open.
     hidden_open: bool,
-    /// Favourite and hidden libraries (the preferences, synced before each scan and frame).
+    /// Favorite and hidden libraries (the preferences, synced before each scan and frame).
     fav_libs: Vec<String>,
     hidden_libs: Vec<String>,
     /// The library whose right-click menu is open in the chooser.
@@ -74,11 +74,11 @@ pub struct LibraryPanel {
     /// Search results: library, figure, found by comment.
     hits: Vec<(String, String, bool)>,
     truncated: bool,
-    /// Whether a favourite or recent figure's file is still there, by (library, figure).
+    /// Whether a favorite or recent figure's file is still there, by (library, figure).
     exists: HashMap<(String, String), bool>,
 }
 
-/// Side of the thumbnails in the Favourites and Recent rows, in points.
+/// Side of the thumbnails in the Favorites and Recent rows, in points.
 const STRIP_ICON: f32 = 34.0;
 
 impl LibraryPanel {
@@ -102,7 +102,7 @@ impl LibraryPanel {
                 .name("library-scan".into())
                 .spawn(move || {
                     // The panel may be gone by now: nobody to tell then.
-                    let _ = tx.send(library::scan_cancellable(&r, &c));
+                    let _ = tx.send(library::scan_cancelable(&r, &c));
                 })
                 .is_ok();
             if spawned {
@@ -189,9 +189,9 @@ impl LibraryPanel {
         self.stopped = true;
     }
 
-    /// Take the favourite and hidden libraries from the preferences.
-    pub fn sync_prefs(&mut self, favourites: &[String], hidden: &[String]) {
-        self.fav_libs = favourites.to_vec();
+    /// Take the favorite and hidden libraries from the preferences.
+    pub fn sync_prefs(&mut self, favorites: &[String], hidden: &[String]) {
+        self.fav_libs = favorites.to_vec();
         self.hidden_libs = hidden.to_vec();
     }
 
@@ -211,7 +211,7 @@ impl LibraryPanel {
             }
         }
         if self.current.is_none() {
-            // The first favourite library, else the first one that is not hidden.
+            // The first favorite library, else the first one that is not hidden.
             let visible = |l: &&Library| !self.hidden_libs.contains(&l.name);
             let first = self
                 .libs
@@ -368,7 +368,7 @@ fn star_button(ui: &mut egui::Ui, on: bool, enabled: bool, label: &str) -> egui:
     resp
 }
 
-/// One row of figures from any library (Favourites, Recent): thumbnails in
+/// One row of figures from any library (Favorites, Recent): thumbnails in
 /// Icon View, names in List View. Returns the figure clicked and the one
 /// double-clicked.
 fn strip(
@@ -601,7 +601,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     let mut set_view: Option<bool> = None;
     let mut set_size: Option<u32> = None;
     let have_objects = !app.engine.doc().objects.is_empty();
-    let favourites = app.engine.prefs.rustfig.library_favourites.clone();
+    let favorites = app.engine.prefs.rustfig.library_favourites.clone();
     let recent = app.engine.prefs.rustfig.library_recent.clone();
     let mut toggle_fav: Option<(String, String)> = None;
     let mut toggle_fav_lib: Option<String> = None;
@@ -625,13 +625,13 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                 };
                 let combo = egui::ComboBox::from_id_salt("library_choice").selected_text(text).width(270.0).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside);
                 let r = combo.show_ui(ui, |ui| {
-                    // Favourite libraries first (a favourite no longer found is skipped), then the rest.
+                    // Favorite libraries first (a favorite no longer found is skipped), then the rest.
                     // Hidden libraries are left out (a name that no longer exists is ignored).
                     let is_fav = |n: &str| fav_libs.iter().any(|f| f == n);
                     let is_hidden = |n: &str| hidden_libs.iter().any(|f| f == n);
                     let any_fav = p.libs.iter().any(|l| is_fav(&l.name) && !is_hidden(&l.name));
                     if any_fav {
-                        ui.weak("Favourites");
+                        ui.weak("Favorites");
                     }
                     for pass in [true, false] {
                         if !pass && any_fav {
@@ -660,7 +660,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                                         set_hidden = Some((l.name.clone(), true));
                                         p.menu_for = None;
                                     }
-                                    let t = if is_fav(&l.name) { "Remove from favourites" } else { "Add to favourites" };
+                                    let t = if is_fav(&l.name) { "Remove from favorites" } else { "Add to favorites" };
                                     if ui.button(t).clicked() {
                                         toggle_fav_lib = Some(l.name.clone());
                                         p.menu_for = None;
@@ -683,7 +683,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                     .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, "Library"));
                 let cur = p.current.clone();
                 let fav = cur.as_ref().is_some_and(|c| fav_libs.iter().any(|f| f == c));
-                let tip = if fav { "Remove library from favourites" } else { "Add library to favourites" };
+                let tip = if fav { "Remove library from favorites" } else { "Add library to favorites" };
                 let r = star_button(ui, fav, cur.is_some(), tip).on_hover_text(tip);
                 if r.clicked() {
                     toggle_fav_lib = cur;
@@ -723,14 +723,14 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                 let cur = p.current.clone().filter(|_| !name.is_empty());
                 let fav = cur
                     .as_ref()
-                    .is_some_and(|c| favourites.iter().any(|f| &f.library == c && f.name == name));
+                    .is_some_and(|c| favorites.iter().any(|f| &f.library == c && f.name == name));
                 let r = star_button(
                     ui,
                     fav,
                     cur.is_some(),
-                    if fav { "Remove from favourites" } else { "Add to favourites" },
+                    if fav { "Remove from favorites" } else { "Add to favorites" },
                 )
-                .on_hover_text(if fav { "Remove from favourites" } else { "Add to favourites" });
+                .on_hover_text(if fav { "Remove from favorites" } else { "Add to favorites" });
                 if r.clicked() {
                     if let Some(c) = cur {
                         toggle_fav = Some((c, name));
@@ -781,7 +781,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
             let n = p.objects.len();
             let budget = std::cell::Cell::new(PER_FRAME);
             let pending = std::cell::Cell::new(false);
-            for (title, items) in [("Favourites", &favourites), ("Recent", &recent)] {
+            for (title, items) in [("Favorites", &favorites), ("Recent", &recent)] {
                 if items.is_empty() {
                     continue;
                 }

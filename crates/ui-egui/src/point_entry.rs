@@ -1,5 +1,5 @@
 //! Typed coordinates (xfig's keyboard panel, `w_keyboard.c`, Ctrl+K in xfig;
-//! xfig licence, see LICENSE-xfig): a small window with a text field; Enter
+//! xfig license, see LICENSE-xfig): a small window with a text field; Enter
 //! (or a button) runs `tool.point`, which uses the typed point as if the
 //! canvas had been clicked with that mouse button. The last entries are
 //! kept as a history to click.

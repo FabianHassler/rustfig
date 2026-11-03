@@ -85,7 +85,7 @@ fn pythagoras() -> Result<Fig, String> {
             &fr.ps(&[C, A, B]),
             St::new()
                 .pen(k)
-                .fill(c.lgrey)
+                .fill(c.lgray)
                 .pat(44)
                 .closed()
                 .depth(D_FILL - 20)
@@ -136,7 +136,7 @@ fn pythagoras() -> Result<Fig, String> {
             T::s(16).big(),
         );
         f.text(x0, 3900, "Areas for $a = 3$, $b = 4$, $c = 5$:", T::s(12));
-        for (k, (sym, val, col)) in [("a", 9, c.lred), ("b", 16, c.lblue), ("c", 25, c.lgrey)]
+        for (k, (sym, val, col)) in [("a", 9, c.lred), ("b", 16, c.lblue), ("c", 25, c.lgray)]
             .into_iter()
             .enumerate()
         {
@@ -174,7 +174,7 @@ fn unit_circle() -> Result<Fig, String> {
     let (O, P, Cx, T_, X1) = (fr.p(0, 0), fr.p(cs, sn), fr.p(cs, 0), fr.p(1, tn), fr.p(1, 0));
     f.group(|f| {
         // the circle, filled lightly
-        f.circle(O, RR, St::new().pen(0).thick(2).fill(c.lgrey).pat(20).depth(D_FILL));
+        f.circle(O, RR, St::new().pen(0).thick(2).fill(c.lgray).pat(20).depth(D_FILL));
         f.circle(O, RR, St::new().pen(0).thick(2).depth(D_CURVE));
     });
     f.group(|f| {
@@ -199,7 +199,7 @@ fn unit_circle() -> Result<Fig, String> {
         // radius and projections
         vec(f, O, (P.0 - O.0, P.1 - O.1), 0, St::v().thick(3).fwd(A_TRI));
         // radius extended to the tangent
-        seg(f, O, T_, St::new().pen(c.grey).thick(1).st(1, 5.0).depth(D_CURVE));
+        seg(f, O, T_, St::new().pen(c.gray).thick(1).st(1, 5.0).depth(D_CURVE));
         seg(f, O, Cx, St::new().pen(c.blue).thick(4).depth(D_MARK));
         seg(f, Cx, P, St::new().pen(c.red).thick(4).depth(D_MARK));
         seg(f, X1, T_, St::new().pen(c.green).thick(4).depth(D_MARK));
@@ -447,7 +447,7 @@ fn normal() -> Result<Fig, String> {
             f,
             fr.p(0, 0),
             fr.p(0, pdf(0.0)),
-            St::new().thick(1).st(1, 5.0).depth(D_AXIS).pen(c.grey),
+            St::new().thick(1).st(1, 5.0).depth(D_AXIS).pen(c.gray),
         );
     });
     let base = fr.p(0, 0).1;
@@ -463,8 +463,8 @@ fn normal() -> Result<Fig, String> {
                 &[(a, y), (b, y)],
                 St::new().thick(2).fwd(A_SMALL).back(A_SMALL).pen(c.blue),
             );
-            seg(f, (a, base + 120.0), (a, y), St::new().thick(1).st(2, 3.0).pen(c.grey));
-            seg(f, (b, base + 120.0), (b, y), St::new().thick(1).st(2, 3.0).pen(c.grey));
+            seg(f, (a, base + 120.0), (a, y), St::new().thick(1).st(2, 3.0).pen(c.gray));
+            seg(f, (b, base + 120.0), (b, y), St::new().thick(1).st(2, 3.0).pen(c.gray));
             f.text((a + b) / 2.0, y - 80.0, vec![H(pct)], T::s(12).j(1));
         });
     }
@@ -633,9 +633,9 @@ fn complex_plane() -> Result<Fig, String> {
         f.circle(
             O,
             RR,
-            St::new().pen(c.grey).thick(1).fill(c.lgrey).pat(20).depth(D_FILL),
+            St::new().pen(c.gray).thick(1).fill(c.lgray).pat(20).depth(D_FILL),
         );
-        f.circle(O, RR, St::new().pen(c.grey).thick(1).depth(D_CURVE));
+        f.circle(O, RR, St::new().pen(c.gray).thick(1).depth(D_CURVE));
     });
     f.group(|f| {
         axis(f, fr.p(-1.4, 0), fr.p(1.4, 0), St::new());
@@ -739,7 +739,7 @@ fn inclined_plane() -> Result<Fig, String> {
             A.1,
             B.0 + 700.0,
             A.1 + 380.0,
-            St::new().pen(c.hp).thick(1).fill(c.lgrey).pat(45).depth(D_FILL),
+            St::new().pen(c.hp).thick(1).fill(c.lgray).pat(45).depth(D_FILL),
         );
         let h_ = 6200.0 * al.tan();
         let strip = [
@@ -753,7 +753,7 @@ fn inclined_plane() -> Result<Fig, String> {
             St::new()
                 .pen(c.hp)
                 .thick(1)
-                .fill(c.lgrey)
+                .fill(c.lgray)
                 .pat(44)
                 .closed()
                 .depth(D_FILL),
@@ -811,13 +811,13 @@ fn inclined_plane() -> Result<Fig, String> {
             f,
             (Cb.0 + v_par.0, Cb.1 + v_par.1),
             tip,
-            St::new().pen(c.grey).thick(1).st(2, 3.0).depth(D_AXIS + 5),
+            St::new().pen(c.gray).thick(1).st(2, 3.0).depth(D_AXIS + 5),
         );
         seg(
             f,
             (Cb.0 + v_perp.0, Cb.1 + v_perp.1),
             tip,
-            St::new().pen(c.grey).thick(1).st(2, 3.0).depth(D_AXIS + 5),
+            St::new().pen(c.gray).thick(1).st(2, 3.0).depth(D_AXIS + 5),
         );
         f.text(
             Cb.0 + v_par.0 - 120.0,
@@ -854,7 +854,7 @@ fn inclined_plane() -> Result<Fig, String> {
             f,
             Cb,
             (Cb.0, Cb.1 - 1250.0),
-            St::new().pen(c.grey).thick(1).st(1, 5.0).depth(D_CURVE),
+            St::new().pen(c.gray).thick(1).st(1, 5.0).depth(D_CURVE),
         ); // vertical reference
         f.arc(
             Cb,
@@ -902,7 +902,7 @@ fn pendulum() -> Result<Fig, String> {
             P0.1 - 450.0,
             P0.0 + 1700.0,
             P0.1,
-            St::new().pen(c.hp).thick(1).fill(c.lgrey).pat(45).depth(D_FILL),
+            St::new().pen(c.hp).thick(1).fill(c.lgray).pat(45).depth(D_FILL),
         );
         f.box_(
             P0.0 - 1700.0,
@@ -919,17 +919,17 @@ fn pendulum() -> Result<Fig, String> {
             f,
             P0,
             (P0.0, P0.1 + L + 500.0),
-            St::new().pen(c.grey).thick(1).st(1, 6.0).depth(D_CURVE),
+            St::new().pen(c.gray).thick(1).st(1, 6.0).depth(D_CURVE),
         );
         f.arc(
             P0,
             L,
             -90.0 - 28.0 - 12.0,
             -90.0 + 28.0 + 12.0,
-            St::new().pen(c.grey).thick(1).st(2, 3.0).depth(D_CURVE),
+            St::new().pen(c.gray).thick(1).st(2, 3.0).depth(D_CURVE),
         );
-        f.circle(bob2, 330.0, St::new().pen(c.grey).thick(1).st(1, 4.0).depth(D_CURVE));
-        seg(f, P0, bob2, St::new().pen(c.grey).thick(1).st(1, 4.0).depth(D_CURVE));
+        f.circle(bob2, 330.0, St::new().pen(c.gray).thick(1).st(1, 4.0).depth(D_CURVE));
+        seg(f, P0, bob2, St::new().pen(c.gray).thick(1).st(1, 4.0).depth(D_CURVE));
     });
     f.group(|f| {
         seg(f, P0, bob, St::new().thick(3).depth(D_AXIS + 10));
@@ -967,8 +967,8 @@ fn pendulum() -> Result<Fig, String> {
             c.red,
             St::v().thick(2).fwd(A_SMALL).st(1, 5.0).depth(D_AXIS + 5),
         );
-        seg(f, a, tip, St::new().pen(c.grey).thick(1).st(2, 3.0).depth(D_AXIS + 5));
-        seg(f, b, tip, St::new().pen(c.grey).thick(1).st(2, 3.0).depth(D_AXIS + 5));
+        seg(f, a, tip, St::new().pen(c.gray).thick(1).st(2, 3.0).depth(D_AXIS + 5));
+        seg(f, b, tip, St::new().pen(c.gray).thick(1).st(2, 3.0).depth(D_AXIS + 5));
         f.text(tip.0 + 120.0, tip.1 + 100.0, vec![I("m"), I("g")], T::s(15).c(c.red));
         f.text(
             bob.0 - r.0 * mg * th.cos() - 450.0,
@@ -1047,7 +1047,7 @@ fn snell() -> Result<Fig, String> {
             Y0,
             X1,
             O.1,
-            St::new().pen(c.lgrey).thick(0).fill(c.lgrey).depth(D_FILL + 20),
+            St::new().pen(c.lgray).thick(0).fill(c.lgray).depth(D_FILL + 20),
         );
         f.box_(
             X0,
@@ -1248,7 +1248,7 @@ fn double_slit() -> Result<Fig, String> {
         // wavefronts
         for (sgn, col) in [(-1.0f64, c.blue), (1.0, c.red)] {
             let cy = Ym + sgn * d / 2.0;
-            let off = -sgn * d / 2.0; // slit centre height relative to Ym, math (up positive)
+            let off = -sgn * d / 2.0; // slit center height relative to Ym, math (up positive)
             let mut k = 1.0;
             while k * lam <= D - 50.0 {
                 let r = k * lam;
@@ -1303,7 +1303,7 @@ fn double_slit() -> Result<Fig, String> {
             (x0 + sc + 200.0, Ym + HH),
             St::new().thick(1).depth(D_AXIS),
         );
-        f.spline(&env, St::new().pen(c.grey).thick(1).st(1, 5.0).depth(D_CURVE + 5));
+        f.spline(&env, St::new().pen(c.gray).thick(1).st(1, 5.0).depth(D_CURVE + 5));
         f.spline(&pts, St::new().pen(c.red).thick(3).depth(D_CURVE));
         f.text(
             x0 + sc / 2.0,
@@ -1344,7 +1344,7 @@ fn double_slit() -> Result<Fig, String> {
             f,
             (bx + 90.0, Ym),
             (xs, Ym),
-            St::new().pen(c.grey).thick(1).st(2, 3.0).depth(D_AXIS),
+            St::new().pen(c.gray).thick(1).st(2, 3.0).depth(D_AXIS),
         );
         let y1 = D * (lam / d).asin().tan();
         seg(
@@ -1501,13 +1501,13 @@ fn carnot() -> Result<Fig, String> {
                 f,
                 (x, y),
                 (x, ax0.1),
-                St::new().pen(c.grey).thick(1).st(2, 3.0).depth(D_GRID),
+                St::new().pen(c.gray).thick(1).st(2, 3.0).depth(D_GRID),
             );
             seg(
                 f,
                 (x, y),
                 (ax0.0, y),
-                St::new().pen(c.grey).thick(1).st(2, 3.0).depth(D_GRID),
+                St::new().pen(c.gray).thick(1).st(2, 3.0).depth(D_GRID),
             );
             f.text(x, ax0.1 + 420.0, format!("$V_{nm}$"), T::s(12).j(1));
             f.text(ax0.0 - 150.0, y + 60.0, format!("$p_{nm}$"), T::s(12).j(2));
@@ -1597,7 +1597,7 @@ fn rlc() -> Result<Fig, String> {
     });
     f.group(|f| {
         // AC source
-        f.circle((xL, ymid), SRC_R, St::new().pen(0).thick(3).fill(c.lgrey).depth(D_MARK));
+        f.circle((xL, ymid), SRC_R, St::new().pen(0).thick(3).fill(c.lgray).depth(D_MARK));
         let pts: Vec<Pt> = (0..41)
             .map(|k| {
                 let k = k as f64;
@@ -1685,7 +1685,7 @@ fn rlc() -> Result<Fig, String> {
                     f,
                     (x, if nm == "V_R" { yT - 480.0 } else { yT - 120.0 }),
                     (x, ya - 60.0),
-                    St::new().pen(c.grey).thick(1).st(2, 3.0).depth(D_GRID),
+                    St::new().pen(c.gray).thick(1).st(2, 3.0).depth(D_GRID),
                 );
             }
             f.text((xa + xb) / 2.0, ya - 140.0, format!("${nm}$"), T::s(12).j(1).c(col));
@@ -1786,11 +1786,11 @@ fn feynman() -> Result<Fig, String> {
                 f,
                 (x, 2300.0),
                 (x, 8400.0),
-                St::new().pen(c.grey).thick(1).st(2, 3.0).depth(D_GRID),
+                St::new().pen(c.gray).thick(1).st(2, 3.0).depth(D_GRID),
             );
         }
-        f.text(V1.0, 2200, r"$e^-e^+$ annihilate", T::s(10).j(1).c(c.grey));
-        f.text(V2.0, 2200, vec![H("pair created")], T::s(10).j(1).c(c.grey));
+        f.text(V1.0, 2200, r"$e^-e^+$ annihilate", T::s(10).j(1).c(c.gray));
+        f.text(V2.0, 2200, vec![H("pair created")], T::s(10).j(1).c(c.gray));
     });
     f.group(|f| {
         let x0 = 9800;
@@ -1841,8 +1841,8 @@ fn minkowski() -> Result<Fig, String> {
         );
         f.tp(fr.p(-0.9, 3.0), vec![H("future")], T::s(13).j(1).c(c.blue));
         f.tp(fr.p(-0.9, -3.2), vec![H("past")], T::s(13).j(1).c(c.orange));
-        f.tp(fr.p(-3.0, 0.4), vec![H("elsewhere")], T::s(12).j(1).c(c.grey));
-        f.tp(fr.p(3.0, 0.4), vec![H("elsewhere")], T::s(12).j(1).c(c.grey));
+        f.tp(fr.p(-3.0, 0.4), vec![H("elsewhere")], T::s(12).j(1).c(c.gray));
+        f.tp(fr.p(3.0, 0.4), vec![H("elsewhere")], T::s(12).j(1).c(c.gray));
     });
     f.group(|f| {
         // light lines
@@ -2000,7 +2000,7 @@ fn loglog() -> Result<Fig, String> {
                 f,
                 (lx(ten(d)), y0),
                 (lx(ten(d)), y0 - h),
-                St::new().pen(c.lgrey).thick(1).depth(D_GRID),
+                St::new().pen(c.lgray).thick(1).depth(D_GRID),
             );
         }
         for d in -3..3 {
@@ -2008,7 +2008,7 @@ fn loglog() -> Result<Fig, String> {
                 f,
                 (x0, ly(ten(d))),
                 (x0 + w, ly(ten(d))),
-                St::new().pen(c.lgrey).thick(1).depth(D_GRID),
+                St::new().pen(c.lgray).thick(1).depth(D_GRID),
             );
         }
     });
@@ -2136,7 +2136,7 @@ fn loglog() -> Result<Fig, String> {
 }
 
 fn damped() -> Result<Fig, String> {
-    let mut f = Fig::new("Damped harmonic oscillator x(t) = x0 exp(-t/tau) cos(omega t) with the dashed exponential envelope +-x0 exp(-t/tau); axes labelled with units, the period T and 1/e time tau marked.");
+    let mut f = Fig::new("Damped harmonic oscillator x(t) = x0 exp(-t/tau) cos(omega t) with the dashed exponential envelope +-x0 exp(-t/tau); axes labeled with units, the period T and 1/e time tau marked.");
     let c = pal(&mut f);
     title(
         &mut f,
@@ -2154,7 +2154,7 @@ fn damped() -> Result<Fig, String> {
                 f,
                 fr.p(0, v),
                 fr.p(Tmax, v),
-                St::new().pen(c.lgrey).thick(1).depth(D_GRID),
+                St::new().pen(c.lgray).thick(1).depth(D_GRID),
             );
         }
         for t in [2, 4, 6, 8, 10] {
@@ -2162,7 +2162,7 @@ fn damped() -> Result<Fig, String> {
                 f,
                 fr.p(t, -1.1),
                 fr.p(t, 1.1),
-                St::new().pen(c.lgrey).thick(1).depth(D_GRID),
+                St::new().pen(c.lgray).thick(1).depth(D_GRID),
             );
         }
     });
@@ -2221,7 +2221,7 @@ fn damped() -> Result<Fig, String> {
                 f,
                 fr.p(t, xf(t)),
                 fr.p(t, -1.2),
-                St::new().pen(c.grey).thick(1).st(2, 3.0).depth(D_GRID),
+                St::new().pen(c.gray).thick(1).st(2, 3.0).depth(D_GRID),
             );
         }
     });

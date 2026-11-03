@@ -8,7 +8,7 @@
 //! option changes. Everything it does is a command (`print.*`, `doc.set_*`,
 //! `export.fit_page`).
 //
-// Ported from xfig src/w_print.c (the panel's rows) (xfig licence, see LICENSE-xfig).
+// Ported from xfig src/w_print.c (the panel's rows) (xfig license, see LICENSE-xfig).
 
 use crate::dialogs::{text_combo, GRID_INCH, GRID_MM};
 use crate::App;
@@ -75,7 +75,7 @@ impl print::Spooler for OsSpooler {
     fn submit(&mut self, job: &print::PrintJob) -> Result<Option<String>, String> {
         match rustfig_os::print::print_pdf(&job.pdf, &job.name)? {
             rustfig_os::print::PrintOutcome::Printed => Ok(Some(String::new())),
-            rustfig_os::print::PrintOutcome::Cancelled => Ok(None),
+            rustfig_os::print::PrintOutcome::Canceled => Ok(None),
         }
     }
 }

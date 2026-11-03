@@ -9,7 +9,7 @@ Single
 -2
 1200 2
 # Optics lab: vacuum chamber: circle with four flanged ports
-# The two ports on the axis end on the 1/4-inch grid. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+# The two ports on the axis end on the 1/4-inch grid. Optical axis through the center. Keywords: optics laser lens mirror beam fibre detector lab
 6 300 300 1500 1500
 1 3 0 0 0 0 70 -1 36 0.000 1 0.0000 900 900 450 450 900 900 1350 900
 2 1 0 3 0 7 50 -1 -1 0.000 0 0 -1 0 0 13

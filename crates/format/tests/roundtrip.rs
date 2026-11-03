@@ -191,7 +191,7 @@ fn text_encodings() {
 }
 
 #[test]
-fn old_versions_are_recognised() {
+fn old_versions_are_recognized() {
     use rustfig_format::FileFormat;
     for src in [&b"#FIG 2.1\n80 2\n"[..], b"#FIG 1.4\n", b"1200 2 9 9\n", b"#FIG 3.2\n"] {
         assert_eq!(FileFormat::sniff(src), Some(FileFormat::Fig));

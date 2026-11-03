@@ -1,7 +1,7 @@
 //! Editing the text being typed (plan E10): a selection (anchor and caret),
 //! word jumps, replacing the selection, and the caret under the mouse.
 //!
-//! RustFig's modernisation of xfig's text mode (`d_text.c`): xfig's keys and
+//! RustFig's modernization of xfig's text mode (`d_text.c`): xfig's keys and
 //! buttons stay; selection with the mouse and Shift+arrows, word jumps and
 //! the clipboard are added. All positions are in characters (never bytes),
 //! so multi-byte text is safe.

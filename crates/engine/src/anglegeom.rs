@@ -3,7 +3,7 @@
 //! Ported from xfig src/u_elastic.c (`latex_line`, `constrainedangle_line`,
 //! `angle0_line` ... `angle135_line`), src/u_geom.c (`get_slope`,
 //! `latex_endpoint`, the slope tables) and src/w_indpanel.c (`show_anglegeom`)
-//! (xfig licence, see LICENSE-xfig).
+//! (xfig license, see LICENSE-xfig).
 
 use rustfig_geom::Point;
 use serde::{Deserialize, Serialize};

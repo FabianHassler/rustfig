@@ -38,7 +38,7 @@
 //! `M_TEXT_HIDDEN` (every mask with text but the Text mode's).
 //
 // Ported from xfig src/u_markers.c, src/w_modepanel.c and src/object.h
-// (xfig licence, see LICENSE-xfig).
+// (xfig license, see LICENSE-xfig).
 
 use super::{ToolKind, ToolState};
 use crate::Engine;

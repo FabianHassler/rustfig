@@ -6,7 +6,7 @@
 //! The conversion undoes what the reader does to the file's numbers:
 //! coordinates go to 1200 per inch (the file's `ppi` scaled), thicknesses
 //! and arc-box radii back to 1/80 inch, arrowhead thicknesses back to
-//! 1/80 inch, user colours back to their numbers in the file, closed
+//! 1/80 inch, user colors back to their numbers in the file, closed
 //! polylines and old closed splines lose their repeated end point (as
 //! RustFig's own reader keeps them), and boxes become their corners.
 //!
@@ -20,8 +20,8 @@
 //! - Objects come in fig2dev's list order (per compound: arcs, compounds,
 //!   ellipses, lines, splines, texts), which is xfig's drawing order within
 //!   a depth, but not necessarily the file's order.
-//! - The transparent-colour number of the header: `read.c` keeps only its
-//!   colour, so it is found again by colour (`Ctx::header_transparent`, not
+//! - The transparent-color number of the header: `read.c` keeps only its
+//!   color, so it is found again by color (`Ctx::header_transparent`, not
 //!   in fig2dev, tells "none" from "background"; "default" comes back as
 //!   none).
 //! - With fig2dev's `-m`, `-l`/`-p`, `-z`, `-M` given, the header's
@@ -110,8 +110,8 @@ fn settings(ctx: &Ctx) -> DocSettings {
     }
 }
 
-/// The colour number of `gif_transparent` (a standard colour's name, or a
-/// user colour as `read.c` formats it), −2 (none) otherwise.
+/// The color number of `gif_transparent` (a standard color's name, or a
+/// user color as `read.c` formats it), −2 (none) otherwise.
 fn transparent_number(ctx: &Ctx) -> i32 {
     let name = ctx.gif_transparent.as_str();
     if name.is_empty() {
@@ -168,7 +168,7 @@ impl Conv<'_> {
         }
     }
 
-    /// The colour number in the file: user colours were renumbered to
+    /// The color number in the file: user colors were renumbered to
     /// `NUM_STD_COLS` + their index.
     fn color(&self, c: i32) -> ColorRef {
         if c < NUM_STD_COLS as i32 {
@@ -268,7 +268,7 @@ impl Conv<'_> {
             a.cap_style,
             0,
         );
-        // The file's centre (floats) and direction are kept, not refitted
+        // The file's center (floats) and direction are kept, not refitted
         // from the rounded points.
         Arc {
             pie: a.type_ == f::T_PIE_WEDGE_ARC,
@@ -496,7 +496,7 @@ mod tests {
     }
 
     #[test]
-    fn fig_3_2_header_colours_and_pictures() {
+    fn fig_3_2_header_colors_and_pictures() {
         let src = "#FIG 3.2\nPortrait\nFlush left\nMetric\nA4\n50.00\nMultiple\n32\n# whole figure\n1200 2\n\
             0 32 #123456\n\
             2 5 0 1 0 -1 50 -1 -1 0.000 0 0 -1 0 0 5\n\t0 pics/a.png\n\t 0 0 1200 0 1200 600 0 600 0 0\n\

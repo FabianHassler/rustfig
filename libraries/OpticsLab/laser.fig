@@ -9,7 +9,7 @@ Single
 -2
 1200 2
 # Optics lab: laser (box with output aperture and beam)
-# Red beam leaves at the right, on the grid. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+# Red beam leaves at the right, on the grid. Optical axis through the center. Keywords: optics laser lens mirror beam fibre detector lab
 6 300 675 1500 1125
 2 2 0 2 0 0 50 -1 36 0.000 0 0 -1 0 0 5
 	300 675 1050 675 1050 1125 300 1125 300 675

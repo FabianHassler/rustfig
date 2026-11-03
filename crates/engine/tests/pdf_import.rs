@@ -144,7 +144,7 @@ fn shapes_text_and_images_map_to_fig_objects() {
                     e.doc().rgb(p.style.fill_color),
                     rustfig_engine::model::Rgb::new(255, 0, 0)
                 );
-                assert_eq!(p.style.fill_color.0, 4, "red is the standard colour 4");
+                assert_eq!(p.style.fill_color.0, 4, "red is the standard color 4");
                 assert_eq!(p.style.area_fill, 20);
             }
             ObjectKind::Polyline(p) if p.kind == PolyKind::Polyline => {

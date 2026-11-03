@@ -662,7 +662,7 @@ fn export_dialog_lists_xfigs_languages() {
     h.run_steps(2);
     h.get_by_label("PDF (Portable Document Format)").click();
     h.run_steps(2);
-    // Languages not ported yet are listed but greyed out.
+    // Languages not ported yet are listed but grayed out.
     h.get_by_label("TeX/LaTeX + tikz macros");
     h.get_by_label("LaTeX box (figure boundary)").click();
     h.run_steps(2);
@@ -697,7 +697,7 @@ fn file_dialogs_save_open_merge_and_cancel() {
         Some(path.clone()), // Save As
         Some(path.clone()), // Open
         Some(path.clone()), // Merge
-        None,               // Import picture: cancelled
+        None,               // Import picture: canceled
     ]));
     let mut h = harness(a);
     h.state_mut()
@@ -878,8 +878,8 @@ fn edit_popup_keys() {
 #[test]
 fn alt_wheel_pops_up_the_mode_menus() {
     let mut h = harness(app());
-    let centre = pos2(700.0, 450.0);
-    h.event(egui::Event::PointerMoved(centre));
+    let center = pos2(700.0, 450.0);
+    h.event(egui::Event::PointerMoved(center));
     h.run_steps(2);
     h.input_mut().modifiers = egui::Modifiers::ALT;
     h.event(egui::Event::MouseWheel {
@@ -1041,10 +1041,10 @@ fn export_runs_in_the_background_and_writes_the_file() {
 
 /// W10-13: Cancel discards the result: no file appears.
 #[test]
-fn cancelling_a_background_export_discards_it() {
+fn canceling_a_background_export_discards_it() {
     let dir = std::env::temp_dir().join(format!("rustfig-export-cancel-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
-    let out = dir.join("cancelled.pdf").to_string_lossy().into_owned();
+    let out = dir.join("canceled.pdf").to_string_lossy().into_owned();
     let mut a = app();
     a.file_dialogs = Box::new(ScriptedDialogs::new([Some(out.clone())]));
     a.run("shape.rectangle", json!({"x": 0, "y": 0, "width": 600, "height": 300}));
@@ -1064,7 +1064,7 @@ fn cancelling_a_background_export_discards_it() {
     std::thread::sleep(std::time::Duration::from_millis(500));
     h.run_steps(2);
     if running {
-        assert!(h.state().last_export.is_none(), "a cancelled export reports nothing");
+        assert!(h.state().last_export.is_none(), "a canceled export reports nothing");
         assert_eq!(h.query_all_by_label("Show in folder").count(), 0);
     }
     let _ = std::fs::remove_dir_all(&dir);
@@ -2026,8 +2026,8 @@ fn picture_panel_rows_relink_and_drop() {
         "Browse",
         "Type",
         "Size (pixels)",
-        "Colours",
-        "Transparent colour",
+        "Colors",
+        "Transparent color",
         "Rotation",
         "Shrink to orig",
         "Expand to orig",
@@ -2324,7 +2324,7 @@ fn live_edit_panel_is_one_undo_step_and_cancel_restores() {
     assert_eq!(*h.state().engine.doc(), doc_before);
 }
 
-/// W10-17: xfig offers no tints for a black, white or default fill colour.
+/// W10-17: xfig offers no tints for a black, white or default fill color.
 #[test]
 fn black_and_white_fill_has_no_tints() {
     use rustfig_model::ObjectKind;
@@ -2351,7 +2351,7 @@ fn black_and_white_fill_has_no_tints() {
     assert_eq!(
         h.state().dialogs.edit.as_ref().unwrap().area,
         30,
-        "a colour keeps its tints"
+        "a color keeps its tints"
     );
     use rustfig_ui_egui::panels::{limit_fill, plain_fill_color};
     assert!(plain_fill_color(0) && plain_fill_color(-1) && !plain_fill_color(4));
@@ -2590,24 +2590,24 @@ fn edit_panel_fill_style_uses_the_pictorial_panel() {
 }
 
 #[test]
-fn colour_picker_hex_input_sets_the_pen_colour() {
+fn color_picker_hex_input_sets_the_pen_color() {
     let mut h = harness(app());
     h.state_mut().run("app.colors", json!({}));
     h.run_steps(3);
-    let hex = h.get_by_label("Colour hex or X11 name");
+    let hex = h.get_by_label("Color hex or X11 name");
     hex.click();
     h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
     hex.type_text("#336699");
     h.key_press(egui::Key::Enter);
     h.run_steps(3);
-    h.get_by_label("Use as pen colour").click();
+    h.get_by_label("Use as pen color").click();
     h.run_steps(3);
     let e = &h.state().engine;
     assert_eq!(
         e.doc().rgb(rustfig_model::ColorRef(e.indicator.pen_color)).to_hex(),
         "#336699"
     );
-    // The colour is now a user colour of the drawing and the most recent one.
+    // The color is now a user color of the drawing and the most recent one.
     assert_eq!(e.doc().colors.len(), 1);
     assert_eq!(
         e.prefs.rustfig.recent_colors.first().map(String::as_str),
@@ -2616,24 +2616,24 @@ fn colour_picker_hex_input_sets_the_pen_colour() {
 }
 
 #[test]
-fn colour_editor_creates_edits_and_deletes_user_colours() {
+fn color_editor_creates_edits_and_deletes_user_colors() {
     let mut h = harness(app());
     h.state_mut().run("app.colors", json!({}));
     h.run_steps(3);
-    h.get_by_label("Add as new colour").click();
+    h.get_by_label("Add as new color").click();
     h.run_steps(3);
     assert_eq!(h.state().engine.doc().colors.len(), 1);
-    let hex = h.get_by_label("Colour hex or X11 name");
+    let hex = h.get_by_label("Color hex or X11 name");
     hex.click();
     h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
     hex.type_text("Dark Orange");
     h.key_press(egui::Key::Enter);
     h.run_steps(3);
-    h.get_by_label("Change colour 32").click();
+    h.get_by_label("Change color 32").click();
     h.run_steps(3);
     assert_eq!(h.state().engine.doc().colors[0].rgb.to_hex(), "#ff8c00");
     // Keep it under a name for every drawing.
-    let name = h.get_by_label("Colour name");
+    let name = h.get_by_label("Color name");
     name.click();
     name.type_text("Sunset");
     h.run_steps(2);
@@ -2649,7 +2649,7 @@ fn colour_editor_creates_edits_and_deletes_user_colours() {
             .map(|c| c.name.as_str()),
         Some("Sunset")
     );
-    h.get_by_label("Delete colour 32").click();
+    h.get_by_label("Delete color 32").click();
     h.run_steps(3);
     assert!(h.state().engine.doc().colors.is_empty());
 }
@@ -3531,7 +3531,7 @@ fn escape_closes_the_command_search() {
 }
 
 /// D11: a finished screen capture asks for the file name, writes the PNG and adds a picture
-/// object; cancelling the capture or the file dialog adds nothing. (The OS selector itself is
+/// object; canceling the capture or the file dialog adds nothing. (The OS selector itself is
 /// a manual check, see docs/hardware-parity.md.)
 #[test]
 fn screen_capture_becomes_a_picture() {
@@ -3542,7 +3542,7 @@ fn screen_capture_becomes_a_picture() {
     let mut a = app();
     a.file_dialogs = Box::new(ScriptedDialogs::new([None, Some(path.to_string_lossy().into_owned())]));
     let mut h = harness(a);
-    // The user cancelled the selector.
+    // The user canceled the selector.
     h.state_mut().capture.inject(Ok(None));
     h.run_steps(2);
     assert!(h.state().engine.doc().objects.is_empty());
@@ -3550,7 +3550,7 @@ fn screen_capture_becomes_a_picture() {
     h.state_mut().capture.inject(Err("no screen".into()));
     h.run_steps(2);
     assert!(h.state().engine.doc().objects.is_empty());
-    // An image, but the file dialog is cancelled.
+    // An image, but the file dialog is canceled.
     h.state_mut().capture.inject(Ok(Some(png.clone())));
     h.run_steps(2);
     assert!(h.state().engine.doc().objects.is_empty());
@@ -3943,12 +3943,12 @@ fn find_mode_shows_update_boxes_and_ends_with_the_mode() {
     assert!(h.query_by_label("Find Properties").is_none());
 }
 
-/// W10-30: the star next to Selected object marks a favourite; the
-/// Favourites row shows it from any library, a click picks it, Select object
-/// (or a double-click) puts it in hand; a favourite whose figure is gone is shown but inert; a
+/// W10-30: the star next to Selected object marks a favorite; the
+/// Favorites row shows it from any library, a click picks it, Select object
+/// (or a double-click) puts it in hand; a favorite whose figure is gone is shown but inert; a
 /// placed figure appears in the Recent row.
 #[test]
-fn library_panel_favourites_row_picks_figures_from_any_library() {
+fn library_panel_favorites_row_picks_figures_from_any_library() {
     let user = std::env::temp_dir().join(format!("rustfig-ui-library-fav-{}", std::process::id()));
     let mut h = harness(app());
     h.state_mut().run(
@@ -3966,20 +3966,20 @@ fn library_panel_favourites_row_picks_figures_from_any_library() {
         .expect("floppy_lg is in Computers");
     h.state_mut().library.pick_index(i);
     h.run_steps(2);
-    h.get_by_label("Add to favourites").click();
+    h.get_by_label("Add to favorites").click();
     h.run_steps(2);
-    assert!(h.state().engine.prefs.is_library_favourite("Computers", "floppy_lg"));
-    h.get_by_label("Remove from favourites");
-    // A favourite whose figure is gone does not break the panel.
+    assert!(h.state().engine.prefs.is_library_favorite("Computers", "floppy_lg"));
+    h.get_by_label("Remove from favorites");
+    // A favorite whose figure is gone does not break the panel.
     h.state_mut()
         .engine
         .prefs
-        .set_library_favourite("Computers", "gone_for_good", true);
+        .set_library_favorite("Computers", "gone_for_good", true);
     h.state_mut().library.load("Optics");
     h.run_steps(3);
-    h.get_by_label("Favourites gone_for_good in Computers");
+    h.get_by_label("Favorites gone_for_good in Computers");
     // Click picks the figure and loads its library.
-    h.get_by_label("Favourites floppy_lg in Computers").click();
+    h.get_by_label("Favorites floppy_lg in Computers").click();
     h.run_steps(3);
     assert_eq!(h.state().library.current.as_deref(), Some("Computers"));
     assert!(h.state().library.selected.is_some());
@@ -4005,10 +4005,10 @@ fn library_panel_favourites_row_picks_figures_from_any_library() {
     let _ = std::fs::remove_dir_all(&user);
 }
 
-/// Favourite libraries: the star next to Library marks the loaded library and
+/// Favorite libraries: the star next to Library marks the loaded library and
 /// the chooser lists it first.
 #[test]
-fn library_chooser_lists_favourite_libraries_first() {
+fn library_chooser_lists_favorite_libraries_first() {
     let user = std::env::temp_dir().join(format!("rustfig-ui-library-favlib-{}", std::process::id()));
     let mut h = harness(app());
     h.state_mut().run(
@@ -4020,17 +4020,17 @@ fn library_chooser_lists_favourite_libraries_first() {
     h.run_steps(3);
     h.state_mut().library.load("Optics");
     h.run_steps(2);
-    h.get_by_label("Add library to favourites").click();
+    h.get_by_label("Add library to favorites").click();
     h.run_steps(2);
-    assert!(h.state().engine.prefs.is_favourite_library("Optics"));
-    h.get_by_label("Remove library from favourites");
+    assert!(h.state().engine.prefs.is_favorite_library("Optics"));
+    h.get_by_label("Remove library from favorites");
     let listed = h.state_mut().engine.execute("library.list", &json!({})).unwrap();
     let first_in_list = listed["libraries"][0]["name"].as_str().map(str::to_string);
     assert_ne!(first_in_list.as_deref(), Some("Optics"));
     h.get_by_role_and_label(egui::accesskit::Role::ComboBox, "Library")
         .click();
     h.run_steps(4);
-    h.get_by_label("Favourites");
+    h.get_by_label("Favorites");
     let y_of =
         |h: &Harness<'static, App>, l: &str| h.get_all_by_label(l).map(|n| n.rect().min.y).fold(f32::MAX, f32::min);
     let first = first_in_list.unwrap_or_default();
@@ -4083,10 +4083,10 @@ fn library_chooser_hides_libraries_and_shows_them_again() {
     let _ = std::fs::remove_dir_all(&user);
 }
 
-/// The library panel opens on the first favourite library; without favourites
+/// The library panel opens on the first favorite library; without favorites
 /// on the first library that is not hidden.
 #[test]
-fn library_panel_opens_on_a_favourite_or_the_first_visible_library() {
+fn library_panel_opens_on_a_favorite_or_the_first_visible_library() {
     let user = std::env::temp_dir().join(format!("rustfig-ui-library-open-{}", std::process::id()));
     let set_dir = |h: &mut Harness<'static, App>| {
         h.state_mut().run(
@@ -4100,7 +4100,7 @@ fn library_panel_opens_on_a_favourite_or_the_first_visible_library() {
         l["libraries"][0]["name"].as_str().unwrap_or("").to_string()
     };
     assert!(!first.is_empty());
-    // A favourite wins over the first library.
+    // A favorite wins over the first library.
     let mut h = harness(app());
     set_dir(&mut h);
     h.state_mut()
@@ -4109,7 +4109,7 @@ fn library_panel_opens_on_a_favourite_or_the_first_visible_library() {
     h.get_by_label("Library").click();
     h.run_steps(3);
     assert_eq!(h.state().library.current.as_deref(), Some("Optics"));
-    // No favourite: the first one, or the next when it is hidden.
+    // No favorite: the first one, or the next when it is hidden.
     let mut h = harness(app());
     set_dir(&mut h);
     h.state_mut()
@@ -4193,29 +4193,29 @@ fn mode_finder_click_picks_and_the_key_focuses_the_field() {
 }
 
 #[test]
-fn favourite_modes_by_right_click_and_the_strip_picks_the_mode() {
+fn favorite_modes_by_right_click_and_the_strip_picks_the_mode() {
     let mut h = harness(app());
-    assert!(h.query_by_label("Favourite Box").is_none(), "hidden while empty");
+    assert!(h.query_by_label("Favorite Box").is_none(), "hidden while empty");
     h.get_by_label("Box").click_secondary();
     h.run_steps(2);
-    h.get_by_label("Add to favourites").click();
+    h.get_by_label("Add to favorites").click();
     h.run_steps(2);
     assert_eq!(h.state().engine.prefs.rustfig.mode_favourites, vec!["tool.box"]);
-    h.get_by_label("Favourite Box").click();
+    h.get_by_label("Favorite Box").click();
     h.run_steps(2);
     assert_eq!(h.state().engine.tool(), ToolKind::Box);
-    h.get_by_label("Favourite Box"); // shown as the active mode too
-                                     // The panel button is unchanged and removes it again.
+    h.get_by_label("Favorite Box"); // shown as the active mode too
+                                    // The panel button is unchanged and removes it again.
     h.get_by_label("Box").click_secondary();
     h.run_steps(2);
-    h.get_by_label("Remove from favourites").click();
+    h.get_by_label("Remove from favorites").click();
     h.run_steps(2);
-    assert!(h.query_by_label("Favourite Box").is_none());
+    assert!(h.query_by_label("Favorite Box").is_none());
     assert!(h.state().engine.prefs.rustfig.mode_favourites.is_empty());
 }
 
 #[test]
-fn favourite_modes_survive_a_restart() {
+fn favorite_modes_survive_a_restart() {
     let path = settings_file("modefav");
     {
         let mut h = harness(app_with_settings(&path));
@@ -4226,8 +4226,8 @@ fn favourite_modes_survive_a_restart() {
     let text = std::fs::read_to_string(&path).unwrap();
     assert!(text.contains("mode_favourites"), "{text}");
     let mut h = harness(app_with_settings(&path));
-    h.get_by_label("Favourite Arc");
-    h.get_by_label("Favourite Move");
+    h.get_by_label("Favorite Arc");
+    h.get_by_label("Favorite Move");
     let r = h.state_mut().run("mode.favourites", json!({}));
     assert!(format!("{r:?}").contains("tool.move"));
     let _ = std::fs::remove_dir_all(path.parent().unwrap());
@@ -4532,10 +4532,10 @@ fn export_preview_of_an_empty_drawing() {
     h.get_by_label_contains("the drawing is empty");
 }
 
-/// Favourites without a name are named by their hex code; "Keep all for all
-/// drawings" keeps every colour of the drawing once.
+/// Favorites without a name are named by their hex code; "Keep all for all
+/// drawings" keeps every color of the drawing once.
 #[test]
-fn colour_favourites_unnamed_and_all() {
+fn color_favorites_unnamed_and_all() {
     let mut h = harness(app());
     h.state_mut().run("color.new", json!({ "rgb": "#123456" }));
     h.state_mut().run("color.new", json!({ "rgb": "#abcdef" }));
@@ -4560,7 +4560,7 @@ fn colour_favourites_unnamed_and_all() {
     assert_eq!(names(&h).len(), 2);
     h.get_by_label("Keep for all drawings").click();
     h.run_steps(3);
-    assert_eq!(names(&h).len(), 3, "the current colour, by its hex code");
+    assert_eq!(names(&h).len(), 3, "the current color, by its hex code");
 }
 
 /// Global settings > New drawings: units and page, chosen with the mouse

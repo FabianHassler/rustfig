@@ -1,7 +1,7 @@
 //! Picture edit panel commands (plan W10-16, W10-20): size helpers, rotation,
 //! reread / relink, file information, "Edit Image".
 
-// Ported from xfig src/e_edit.c (xfig licence, see LICENSE-xfig).
+// Ported from xfig src/e_edit.c (xfig license, see LICENSE-xfig).
 
 use super::{num, opt_num, string, CmdResult, Command};
 use crate::{import, Engine, EngineError};
@@ -22,8 +22,8 @@ pub struct PictureInfo {
     pub kind: String,
     pub width: u32,
     pub height: u32,
-    /// Distinct colours (counting stops at 257).
-    pub colours: usize,
+    /// Distinct colors (counting stops at 257).
+    pub colors: usize,
     /// Some pixel is fully transparent.
     pub transparent: bool,
 }
@@ -81,7 +81,7 @@ pub fn info(pic: &Picture) -> PictureInfo {
     let path = std::path::Path::new(&pic.file);
     let exists =
         path.is_file() || import::stored_picture(&pic.file).is_some() || (pic.image.is_some() && path.is_relative());
-    let (mut width, mut height, mut colours, mut transparent) = (0, 0, 0, false);
+    let (mut width, mut height, mut colors, mut transparent) = (0, 0, 0, false);
     if let Some(img) = &pic.image {
         width = img.width;
         height = img.height;
@@ -94,14 +94,14 @@ pub fn info(pic: &Picture) -> PictureInfo {
                 set.insert((r, g, b));
             }
         }
-        colours = set.len();
+        colors = set.len();
     }
     PictureInfo {
         exists,
         kind: picture_type(&pic.file),
         width,
         height,
-        colours,
+        colors,
         transparent,
     }
 }
@@ -238,7 +238,7 @@ pub(super) fn commands() -> Vec<Command> {
         cmd(
             "picture.info",
             "Picture information",
-            "{\"id\"} -> {file, exists, type, width, height, colours, transparent, rotation, flipped}",
+            "{\"id\"} -> {file, exists, type, width, height, colors, transparent, rotation, flipped}",
             false,
             info_cmd,
         ),
@@ -360,7 +360,7 @@ fn info_cmd(e: &mut Engine, p: &Value) -> CmdResult {
     let i = info(&pic);
     Ok(json!({
         "id": id.0, "file": pic.file, "exists": i.exists, "type": i.kind,
-        "width": i.width, "height": i.height, "colours": i.colours,
+        "width": i.width, "height": i.height, "colours": i.colors,
         "transparent": i.transparent, "rotation": rotation_of(a, b), "flipped": pic.flipped,
     }))
 }

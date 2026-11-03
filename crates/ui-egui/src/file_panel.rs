@@ -5,7 +5,7 @@
 //! `file.merge` with the offset and its unit. Desktop only (the browser has
 //! no folders).
 //
-// Ported from xfig src/w_file.c (xfig licence, see LICENSE-xfig).
+// Ported from xfig src/w_file.c (xfig license, see LICENSE-xfig).
 
 use crate::App;
 use egui::Ui;
@@ -415,7 +415,7 @@ fn preview_column(ui: &mut Ui, fp: &FilePanel) {
     );
     match fp.loaded.as_ref().map(|l| &l.result) {
         Some(Ok((_, Some(tex)))) => {
-            // Fit the picture in the box, centred.
+            // Fit the picture in the box, centerd.
             let sz = tex.size_vec2();
             let k = (PREVIEW / sz.x)
                 .min(PREVIEW / sz.y)

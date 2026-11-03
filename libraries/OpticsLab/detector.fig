@@ -8,8 +8,8 @@ Letter
 Single
 -2
 1200 2
-# Optics lab: photodetector (grey box, sensitive face at the centre)
-# The beam hits the face from the left. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+# Optics lab: photodetector (gray box, sensitive face at the center)
+# The beam hits the face from the left. Optical axis through the center. Keywords: optics laser lens mirror beam fibre detector lab
 6 900 675 1200 1125
 2 2 0 2 0 0 50 -1 36 0.000 0 0 -1 0 0 5
 	900 675 1200 675 1200 1125 900 1125 900 675

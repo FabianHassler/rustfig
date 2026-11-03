@@ -1,5 +1,5 @@
 //! xfig's object snaps (the Snap menu). Ported from xfig's `w_snap.c` and
-//! `w_intersect.c` (xfig licence, see LICENSE-xfig): the next clicked point
+//! `w_intersect.c` (xfig license, see LICENSE-xfig): the next clicked point
 //! moves to a feature of the object under it — an endpoint, a midpoint, the
 //! nearest point, a focus, the point diametrically opposite the current
 //! point, the foot of the normal or the tangent point from the current
@@ -221,7 +221,7 @@ fn outline_tangents(o: &Object, from: Point) -> Vec<Point> {
 }
 
 fn circle_normal(center: Point, r: f64, click: Point, from: Point) -> Point {
-    // From the centre itself any radius is normal: use the click's.
+    // From the center itself any radius is normal: use the click's.
     let dir = if (from - center).len() < 1e-9 {
         center - click
     } else {
@@ -375,7 +375,7 @@ fn snap_exact(mode: ObjectSnap, o: &Object, click: Point, current: Option<Point>
                 nearest_of(outline_tangents(o, cur()?), click).ok_or("No tangent can be drawn from the current point.")
             }
             ObjectSnap::Midpoint => Err("Spline midpoints are not defined."),
-            ObjectSnap::Diameter => Err("Splines have no centre."),
+            ObjectSnap::Diameter => Err("Splines have no center."),
             ObjectSnap::Intersect => Err("Select two objects."),
         },
         ObjectKind::Compound(_) => Err("No point found."),

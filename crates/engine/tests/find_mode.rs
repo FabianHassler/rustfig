@@ -133,7 +133,7 @@ fn actions_are_one_undo_step_and_the_set_follows() {
     assert_eq!(count(&mut e), 3);
     e.execute("edit.undo", &json!({})).unwrap();
     assert_eq!(e.doc().objects.iter().filter(|o| o.depth() == 7).count(), 0);
-    // Update with the indicator's pen colour.
+    // Update with the indicator's pen color.
     e.execute("indicator.set", &json!({"pen_color": 2})).unwrap();
     e.execute("find.apply", &json!({"action": "update"})).unwrap();
     assert_eq!(count(&mut e), 3);

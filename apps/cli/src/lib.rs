@@ -173,7 +173,7 @@ fn formats(lang: Option<&str>) -> Result<(), String> {
 }
 
 /// Whether `formats LANG` lists option `o` (from `file.export_formats`)
-/// of language `lang`: only options RustFig honours and that do something
+/// of language `lang`: only options RustFig honors and that do something
 /// for `lang` (fig2dev accepts some and ignores them, like the page
 /// options for EPS).
 fn option_shown(lang: &str, o: &Value) -> bool {

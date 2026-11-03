@@ -162,8 +162,8 @@ fn align(e: &mut Engine, p: &Value) -> CmdResult {
 /// How objects are spread along one axis (xfig's last three align choices).
 #[derive(Clone, Copy)]
 enum Spread {
-    /// Equal distance between the objects' centres.
-    Centres,
+    /// Equal distance between the objects' centers.
+    Centers,
     /// Equal gaps between the objects' edges.
     Edges,
     /// Edge to edge, from the first object on.
@@ -173,7 +173,7 @@ enum Spread {
 impl Spread {
     fn from_name(s: &str) -> Option<Spread> {
         match s {
-            "distribute_centres" => Some(Spread::Centres),
+            "distribute_centres" => Some(Spread::Centers),
             "distribute_edges" => Some(Spread::Edges),
             "abut" => Some(Spread::Abut),
             _ => None,
@@ -187,7 +187,7 @@ fn spread(items: &[(ObjectId, Rect)], horizontal: bool, mode: Spread) -> Vec<f64
     let size = |r: &Rect| if horizontal { r.width() } else { r.height() };
     let mid = |r: &Rect| lo(r) + size(r) / 2.0;
     let key = |i: usize| match (items.get(i), mode) {
-        (Some((_, r)), Spread::Centres) => mid(r),
+        (Some((_, r)), Spread::Centers) => mid(r),
         (Some((_, r)), _) => lo(r),
         _ => 0.0,
     };
@@ -215,7 +215,7 @@ fn spread(items: &[(ObjectId, Rect)], horizontal: bool, mode: Spread) -> Vec<f64
     for (k, i) in order.iter().enumerate() {
         let Some((_, r)) = items.get(*i) else { continue };
         let d = match mode {
-            Spread::Centres => mid(rf) + step * k as f64 - mid(r),
+            Spread::Centers => mid(rf) + step * k as f64 - mid(r),
             _ => pos - lo(r),
         };
         pos += size(r) + gap;

@@ -2,7 +2,7 @@
 //! command list, about, unsaved changes.
 //
 // Ported from xfig src/e_edit.c (edit panel: compound, picture and point
-// rows, live apply) (xfig licence, see LICENSE-xfig).
+// rows, live apply) (xfig license, see LICENSE-xfig).
 
 use crate::attributes::{arrow_menu, cap_menu, hovered, join_menu, line_menu, number_popup, number_popup_ext, spec};
 use crate::panels::{color_combo, font_combo, limit_fill};
@@ -25,7 +25,7 @@ pub enum Geo {
     Points(Vec<[f64; 2]>),
     /// Arc: three points.
     Arc([[f64; 2]; 3]),
-    /// Ellipse or circle: centre, radii (a circle has one radius, in `x`)
+    /// Ellipse or circle: center, radii (a circle has one radius, in `x`)
     /// and, for an ellipse, the angle in degrees.
     Ellipse {
         center: [f64; 2],
@@ -302,7 +302,7 @@ pub struct Dialogs {
     pub global_open: bool,
     /// File > Saved versions (W10-14).
     pub versions_open: bool,
-    /// The colour picker and editor (E4).
+    /// The color picker and editor (E4).
     pub color: crate::color_dialog::ColorDialog,
     /// The xfig resources window (E1).
     pub resources_open: bool,
@@ -314,7 +314,7 @@ pub struct Dialogs {
     resource_filter: String,
     /// Values being typed into the resources window, by resource.
     resource_edits: std::collections::BTreeMap<&'static str, String>,
-    /// The user colour being added: name and colour.
+    /// The user color being added: name and color.
     new_color: (String, [u8; 3]),
     command_filter: String,
 }
@@ -701,7 +701,7 @@ pub const PICTURE_EXTS: &[&str] = &[
 /// `pick_web` (the answer arrives later in a [`WebInbox`]) and Save and Export
 /// through `download` (see `web_io`).
 pub trait FileDialogs {
-    /// Choose an existing file (`None` when cancelled or unavailable).
+    /// Choose an existing file (`None` when canceled or unavailable).
     fn pick_file(&self, what: &str, exts: &[&str]) -> Option<String>;
     /// Choose where to save.
     fn save_file(&self, default_name: &str, what: &str, exts: &[&str]) -> Option<String>;
@@ -709,7 +709,7 @@ pub trait FileDialogs {
     fn is_web(&self) -> bool {
         false
     }
-    /// Browser: ask for a file; it arrives in `inbox` (not at all when cancelled).
+    /// Browser: ask for a file; it arrives in `inbox` (not at all when canceled).
     fn pick_web(&self, _what: &str, _exts: &[&str], _inbox: &WebInbox) {}
     /// Browser: give `bytes` to the user as a download named `name`.
     fn download(&self, _name: &str, _bytes: Vec<u8>) -> Result<(), String> {
@@ -1425,7 +1425,7 @@ const GLOBAL_ROWS: &[(GlobalTab, &str, &str)] = &[
     (GlobalTab::Window, "Draw axis lines", "showaxislines -showaxislines"),
     (GlobalTab::Window, "xfig keyboard shortcuts in menus", "keys meta ctrl"),
     (GlobalTab::Window, "Button style", "3d flat bevel"),
-    (GlobalTab::Window, "Theme", "light dark system colour"),
+    (GlobalTab::Window, "Theme", "light dark system color"),
     (GlobalTab::Window, "UI scale", "zoom size scale"),
     (
         GlobalTab::Window,
@@ -1443,7 +1443,7 @@ const GLOBAL_ROWS: &[(GlobalTab, &str, &str)] = &[
         "start startfontsize startlinewidth startfillstyle",
     ),
     (GlobalTab::Drawing, "LaTeX text", "tex latex preamble typeset program"),
-    (GlobalTab::Drawing, "Your colours", "colors user palette"),
+    (GlobalTab::Drawing, "Your colors", "colors user palette"),
     (GlobalTab::Files, "Recently used files", "max_recent_files recent open"),
     (
         GlobalTab::Files,
@@ -1648,7 +1648,7 @@ fn global_tab_rows(app: &mut App, ui: &mut egui::Ui, d: &mut GlobalDraft, tab: G
                 }
                 latex_settings(app, ui);
             }
-            if show("Your colours") {
+            if show("Your colors") {
                 if filter.is_empty() {
                     ui.separator();
                 }
@@ -2056,7 +2056,7 @@ fn new_drawing_settings(app: &mut App, ui: &mut egui::Ui, d: &mut GlobalDraft) {
     }
 }
 
-/// The colours kept for every drawing (E1): offered in every colour menu.
+/// The colors kept for every drawing (E1): offered in every color menu.
 /// RustFig's LaTeX settings (F8): typeset texts with the TeX flag on the canvas, the
 /// Where the LaTeX section keeps its drafts: (program, preamble, program
 /// edited, preamble edited).
@@ -2161,10 +2161,10 @@ fn latex_settings(app: &mut App, ui: &mut egui::Ui) {
 }
 
 fn user_colors_editor(app: &mut App, ui: &mut egui::Ui) {
-    ui.label(egui::RichText::new("Your colours").strong());
+    ui.label(egui::RichText::new("Your colors").strong());
     let colors = app.engine.prefs.rustfig.user_colors.clone();
     if colors.is_empty() {
-        ui.label(egui::RichText::new("None yet: add colours to have them in every drawing.").weak());
+        ui.label(egui::RichText::new("None yet: add colors to have them in every drawing.").weak());
     }
     let mut remove = None;
     egui::Grid::new("user_colors").num_columns(3).show(ui, |ui| {
@@ -2188,12 +2188,12 @@ fn user_colors_editor(app: &mut App, ui: &mut egui::Ui) {
         ui.color_edit_button_srgb(rgb);
         ui.add(
             egui::TextEdit::singleline(name)
-                .hint_text("New colour name")
+                .hint_text("New color name")
                 .desired_width(120.0),
         );
         let hex = format!("#{:02x}{:02x}{:02x}", rgb[0], rgb[1], rgb[2]);
         let ready = !name.trim().is_empty();
-        if ui.add_enabled(ready, egui::Button::new("Add colour")).clicked() {
+        if ui.add_enabled(ready, egui::Button::new("Add color")).clicked() {
             let p = json!({ "name": name.trim(), "rgb": hex });
             app.dialogs.new_color.0.clear();
             app.run("prefs.add_color", p);
@@ -2584,7 +2584,7 @@ fn point_table(ui: &mut egui::Ui, st: &mut EditState, scale: f64) {
 }
 
 /// A coordinate field: shown in the panel's units (`scale` Fig units each).
-/// A row label of the edit panel: vertically centred in a row of the common
+/// A row label of the edit panel: vertically centerd in a row of the common
 /// height, so it lines up with the controls next to it.
 fn rl(ui: &mut egui::Ui, text: impl Into<egui::WidgetText>) {
     ui.horizontal(|ui| {
@@ -2758,7 +2758,7 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                                 st.size = v;
                             }
                             ui.end_row();
-                            rl(ui, "Pen colour");
+                            rl(ui, "Pen color");
                             if let Some(c) = color_combo(ui, "edit_tcolor", app.engine.doc(), st.pen) {
                                 st.pen = c;
                             } else if let Some(c) = hovered(ui.ctx(), "edit_tcolor") {
@@ -2840,14 +2840,14 @@ fn edit_dialog(app: &mut App, ctx: &egui::Context) {
                                 }
                             });
                             ui.end_row();
-                            rl(ui, "Pen colour");
+                            rl(ui, "Pen color");
                             if let Some(c) = color_combo(ui, "edit_pen", app.engine.doc(), st.pen) {
                                 st.pen = c;
                             } else if let Some(c) = hovered(ui.ctx(), "edit_pen") {
                                 hover = Some(json!({"pen_color": c}));
                             }
                             ui.end_row();
-                            rl(ui, "Fill colour");
+                            rl(ui, "Fill color");
                             if let Some(c) = color_combo(ui, "edit_fill", app.engine.doc(), st.fill) {
                                 st.fill = c;
                             } else if let Some(c) = hovered(ui.ctx(), "edit_fill") {
@@ -3919,7 +3919,7 @@ fn search_dialog(app: &mut App, ctx: &egui::Context) {
                 }
                 if ui
                     .add_enabled(found, egui::Button::new("Update settings"))
-                    .on_hover_text("Give the found texts the attribute panel's font, size, colour and flags (xfig: UPDATE settings)")
+                    .on_hover_text("Give the found texts the attribute panel's font, size, color and flags (xfig: UPDATE settings)")
                     .clicked()
                 {
                     update = true;
@@ -4197,7 +4197,7 @@ fn messages_dialog(app: &mut App, ctx: &egui::Context) {
     app.dialogs.messages_open = open && !dismiss && !(enter && !app.engine.is_typing());
 }
 
-/// Help > About RustFig: the start screen's card with the licence and
+/// Help > About RustFig: the start screen's card with the license and
 /// xfig's copyrights (`w_help.c` lists them too).
 fn about_dialog(app: &mut App, ctx: &egui::Context) {
     crate::splash::show_about(&mut app.dialogs.about_open, ctx);
@@ -4406,14 +4406,14 @@ fn picture_rows(ui: &mut egui::Ui, ctx: &egui::Context, app: &mut App, st: &mut 
         rl(ui, "Size (pixels)");
         rl(ui, format!("{} x {}", i.width, i.height));
         ui.end_row();
-        rl(ui, "Colours");
-        ui.label(if i.colours > 256 {
+        rl(ui, "Colors");
+        ui.label(if i.colors > 256 {
             "more than 256".to_string()
         } else {
-            i.colours.to_string()
+            i.colors.to_string()
         });
         ui.end_row();
-        rl(ui, "Transparent colour");
+        rl(ui, "Transparent color");
         rl(ui, if i.transparent { "yes" } else { "none" });
         ui.end_row();
     }
@@ -4518,7 +4518,7 @@ fn picture_rows(ui: &mut egui::Ui, ctx: &egui::Context, app: &mut App, st: &mut 
     ui.checkbox(&mut st.flipped, "Flipped about diagonal");
     ui.end_row();
     if info.as_ref().is_some_and(|i| i.kind == "XBM") {
-        rl(ui, "XBM pen colour");
+        rl(ui, "XBM pen color");
         if let Some(c) = color_combo(ui, "edit_xbm_pen", app.engine.doc(), st.pen) {
             st.pen = c;
         }

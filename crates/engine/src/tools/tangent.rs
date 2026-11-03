@@ -3,7 +3,7 @@
 //
 // Ported from xfig src/e_tangent.c (`tangent_selected`,
 // `init_tangent_adding`, `init_normal_adding`) and src/u_smartsearch.c
-// (`do_smart_object_search`: the search order) (xfig licence, see
+// (`do_smart_object_search`: the search order) (xfig license, see
 // LICENSE-xfig).
 
 use super::{markers::ObjMask, Button, ToolEvent, ToolKind};

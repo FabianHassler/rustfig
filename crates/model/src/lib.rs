@@ -1,7 +1,7 @@
 //! RustFig document model (layer L1).
 //!
 //! The model mirrors the concepts of the Fig 3.2 format (ellipses,
-//! polylines, splines, text, arcs, compounds, user colours) with typed
+//! polylines, splines, text, arcs, compounds, user colors) with typed
 //! fields, stable object ids and geometry helpers. It knows nothing about
 //! files, rendering or the UI.
 
@@ -130,7 +130,7 @@ pub struct DocSettings {
     /// Export and print magnification in percent.
     pub magnification: f64,
     pub multiple_pages: bool,
-    /// Transparent colour for GIF export (-3 background, -2 none, -1 default, or a colour number).
+    /// Transparent color for GIF export (-3 background, -2 none, -1 default, or a color number).
     pub transparent_color: i32,
 }
 
@@ -161,16 +161,16 @@ pub struct ExportOnSave {
     pub params: serde_json::Map<String, serde_json::Value>,
 }
 
-/// A user-defined colour (Fig colour numbers 32–543).
+/// A user-defined color (Fig color numbers 32–543).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UserColor {
     pub number: i32,
     pub rgb: Rgb,
 }
 
-/// First user colour number.
+/// First user color number.
 pub const FIRST_USER_COLOR: i32 = 32;
-/// Last user colour number.
+/// Last user color number.
 pub const LAST_USER_COLOR: i32 = 543;
 
 /// A whole drawing.
@@ -260,7 +260,7 @@ impl Document {
         }
     }
 
-    /// RGB value of a colour number (default/unknown colours are black).
+    /// RGB value of a color number (default/unknown colors are black).
     pub fn rgb(&self, c: ColorRef) -> Rgb {
         match c.0 {
             n if (0..32).contains(&n) => STANDARD_COLORS.get(n as usize).copied().unwrap_or(Rgb::BLACK),
@@ -274,8 +274,8 @@ impl Document {
         }
     }
 
-    /// Find a colour number for `rgb`, adding a user colour if needed.
-    /// Returns `None` when all user colour slots are taken.
+    /// Find a color number for `rgb`, adding a user color if needed.
+    /// Returns `None` when all user color slots are taken.
     pub fn color_for_rgb(&mut self, rgb: Rgb) -> Option<ColorRef> {
         if let Some(i) = STANDARD_COLORS.iter().position(|c| *c == rgb) {
             return Some(ColorRef(i as i32));
@@ -461,13 +461,13 @@ impl Document {
         v
     }
 
-    /// Drop user colours no object refers to.
+    /// Drop user colors no object refers to.
     pub fn remove_unused_colors(&mut self) {
         let used = self.used_colors();
         self.colors.retain(|c| used.contains(&c.number));
     }
 
-    /// Colour numbers that some object uses (pen, fill, text).
+    /// Color numbers that some object uses (pen, fill, text).
     pub fn used_colors(&self) -> std::collections::BTreeSet<i32> {
         let mut used = std::collections::BTreeSet::new();
         self.for_each_leaf(&mut |o| {
@@ -482,8 +482,8 @@ impl Document {
         used
     }
 
-    /// Add a user colour in the lowest free slot, even when another slot
-    /// holds the same RGB (xfig's colour editor "Add"). `None` when all
+    /// Add a user color in the lowest free slot, even when another slot
+    /// holds the same RGB (xfig's color editor "Add"). `None` when all
     /// 512 slots are taken.
     pub fn new_user_color(&mut self, rgb: Rgb) -> Option<ColorRef> {
         let number = (FIRST_USER_COLOR..=LAST_USER_COLOR).find(|n| !self.colors.iter().any(|u| u.number == *n))?;

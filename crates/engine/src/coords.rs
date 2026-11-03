@@ -1,7 +1,7 @@
 //! Typed coordinates for the next point: xfig's keyboard point entry.
 //
 // Ported from xfig src/w_keyboard.c (`handle_keyboard_input`, its grammar
-// and conversions; xfig licence, see LICENSE-xfig).
+// and conversions; xfig license, see LICENSE-xfig).
 
 use rustfig_geom::Point;
 use rustfig_model::Units;

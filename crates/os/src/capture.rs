@@ -35,7 +35,7 @@ pub const fn needs_window_hidden() -> bool {
 const MAX_EDGE: usize = 16_384;
 
 /// Let the user pick a window or an area of the screen; the PNG bytes, or `None` when the user
-/// cancelled. Blocks (macOS and Linux wait for the user, Windows for the window to hide).
+/// canceled. Blocks (macOS and Linux wait for the user, Windows for the window to hide).
 pub fn capture_region() -> Result<Option<Vec<u8>>, String> {
     platform_capture()
 }
@@ -54,7 +54,7 @@ fn temp_png() -> std::path::PathBuf {
     std::env::temp_dir().join(format!("rustfig-capture-{}-{stamp}.png", std::process::id()))
 }
 
-/// The PNG the capture program wrote; `None` when there is none or it is empty (cancelled).
+/// The PNG the capture program wrote; `None` when there is none or it is empty (canceled).
 /// The file is removed.
 #[cfg(any(
     target_os = "macos",
@@ -144,7 +144,7 @@ fn platform_capture() -> Result<Option<Vec<u8>>, String> {
 
 #[cfg(target_os = "windows")]
 fn platform_capture() -> Result<Option<Vec<u8>>, String> {
-    // The caller's window is minimising; its animation takes a moment.
+    // The caller's window is minimizing; its animation takes a moment.
     std::thread::sleep(std::time::Duration::from_millis(500));
     let (w, h, rgb) = win::grab_screen()?;
     encode_png_rgb(w, h, &rgb).map(Some)
@@ -267,7 +267,7 @@ pub fn encode_png_rgb(width: usize, height: usize, rgb: &[u8]) -> Result<Vec<u8>
     let mut ihdr = Vec::with_capacity(13);
     ihdr.extend_from_slice(&(width as u32).to_be_bytes());
     ihdr.extend_from_slice(&(height as u32).to_be_bytes());
-    ihdr.extend_from_slice(&[8, 2, 0, 0, 0]); // 8 bit, truecolour, deflate, no filter, no interlace
+    ihdr.extend_from_slice(&[8, 2, 0, 0, 0]); // 8 bit, truecolor, deflate, no filter, no interlace
     chunk(&mut png, b"IHDR", &ihdr);
     chunk(&mut png, b"IDAT", &z);
     chunk(&mut png, b"IEND", &[]);
@@ -348,7 +348,7 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn missing_or_empty_file_means_cancelled() {
+    fn missing_or_empty_file_means_canceled() {
         #[cfg(not(target_arch = "wasm32"))]
         {
             let dir = std::env::temp_dir();

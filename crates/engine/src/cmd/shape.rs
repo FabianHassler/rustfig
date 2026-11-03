@@ -150,7 +150,7 @@ fn rectangle(e: &mut Engine, p: &Value) -> CmdResult {
 
 /// The vertices of xfig's regular polygon (`create_regpoly`, `d_regpoly.c`):
 /// the point clicked last first, then one vertex per step of `2 pi / sides`
-/// against the angle of that point seen from the centre (y down), each
+/// against the angle of that point seen from the center (y down), each
 /// rounded to whole Fig units like xfig's integers.
 pub(crate) fn xfig_regular_polygon(center: Point, first: Point, sides: usize) -> Vec<Point> {
     let n = sides.clamp(3, 1000);

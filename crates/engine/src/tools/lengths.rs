@@ -1,10 +1,10 @@
 //! The lengths shown while drawing: the message panel's length, dx, dy and
 //! angle of the segment being drawn, and with `show_lengths` the triangle
-//! with its two sides labelled on the canvas.
+//! with its two sides labeled on the canvas.
 //
 // Ported from xfig src/w_msgpanel.c (`length_msg`, `altlength_msg`,
 // `boxsize_msg`, `boxsize_scale_msg`, `length_msg2`, `arc_msg`) (xfig
-// licence, see LICENSE-xfig).
+// license, see LICENSE-xfig).
 
 use super::{Overlay, ToolKind, ToolState};
 use crate::Engine;
@@ -213,7 +213,7 @@ pub(crate) fn arc_msg(p1: Point, p2: Point, p3: Point, fmt: &dyn Fn(f64) -> Stri
 
 /// `boxsize_scale_msg`: width, length and scale factor of the box being
 /// scaled about `fix`, from `from` to `cur`; `fact` is 1, or 2 when the
-/// scaling is about the centre.
+/// scaling is about the center.
 pub(crate) fn boxsize_scale_msg(fix: Point, from: Point, cur: Point, fact: f64, fmt: &dyn Fn(f64) -> String) -> String {
     let (old_dx, old_dy) = ((from.x - fix.x).abs(), (from.y - fix.y).abs());
     let (new_dx, new_dy) = ((cur.x - fix.x).abs(), (cur.y - fix.y).abs());

@@ -6,7 +6,7 @@
 // Ported from xfig src/e_measure.c (`anglemeas_selected`,
 // `init_anglemeas_threepoints`, `anglemeas_second`, `anglemeas_third`,
 // `cancel_anglemeas`, `lenmeas_selected`, `areameas_selected`) and
-// src/u_search.c (`do_object_search`, `do_point_search`) (xfig licence, see
+// src/u_search.c (`do_object_search`, `do_point_search`) (xfig license, see
 // LICENSE-xfig).
 
 use super::{markers::ObjMask, Button, ToolEvent, ToolKind, ToolState};

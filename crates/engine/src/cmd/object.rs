@@ -77,7 +77,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Set geometry",
             menu: "",
             shortcut: "",
-            params: "{\"id\", \"points\"?: [[x, y]...] (box/arc-box/picture: two opposite corners; polyline/polygon/spline: all points, same count; arc: three points; ellipse/circle: [centre]; text: [origin]), \"radii\"?: [rx, ry], \"angle\"?: degrees (ellipse), \"shapes\"?: [factor per spline point], \"resize\"?: bool (polyline/polygon/spline: the number of points may change; a spline then takes one shape factor per point or none), compound: points [top-left, bottom-right] repositions and rescales it}  — xfig's edit panel rows, Fig units",
+            params: "{\"id\", \"points\"?: [[x, y]...] (box/arc-box/picture: two opposite corners; polyline/polygon/spline: all points, same count; arc: three points; ellipse/circle: [center]; text: [origin]), \"radii\"?: [rx, ry], \"angle\"?: degrees (ellipse), \"shapes\"?: [factor per spline point], \"resize\"?: bool (polyline/polygon/spline: the number of points may change; a spline then takes one shape factor per point or none), compound: points [top-left, bottom-right] repositions and rescales it}  — xfig's edit panel rows, Fig units",
             mutates: true,
             enabled: |_| true,
             run: set_geometry,
@@ -1012,7 +1012,7 @@ fn point_move_object(e: &mut Engine, id: ObjectId, idx: usize, pt: Point) -> Cmd
             }
         }
         ObjectKind::Ellipse(el) => {
-            // Point 0 is the centre, point 1 the corner of the bounding box.
+            // Point 0 is the center, point 1 the corner of the bounding box.
             match idx {
                 0 => {
                     let d = pt - el.center;

@@ -19,8 +19,8 @@
 pub enum PrintOutcome {
     /// The job was handed to the system's print system.
     Printed,
-    /// The user cancelled the dialog.
-    Cancelled,
+    /// The user canceled the dialog.
+    Canceled,
 }
 
 /// Show the platform's print dialog for `pdf`; `job_name` is the job's title.
@@ -87,11 +87,11 @@ fn platform_print(pdf: &[u8], job_name: &str) -> Result<PrintOutcome, String> {
     op.setJobTitle(Some(&NSString::from_str(job_name)));
     op.setShowsPrintPanel(true);
     op.setShowsProgressPanel(true);
-    // YES: printed (or saved as PDF from the panel); NO: cancelled or failed.
+    // YES: printed (or saved as PDF from the panel); NO: canceled or failed.
     if op.runOperation() {
         Ok(PrintOutcome::Printed)
     } else {
-        Ok(PrintOutcome::Cancelled)
+        Ok(PrintOutcome::Canceled)
     }
 }
 
@@ -148,7 +148,7 @@ fn platform_print(pdf: &[u8], job_name: &str) -> Result<PrintOutcome, String> {
         })
         .map(|()| PrintOutcome::Printed)
         .or_else(|e| match e {
-            ashpd::Error::Response(ResponseError::Cancelled) => Ok(PrintOutcome::Cancelled),
+            ashpd::Error::Response(ResponseError::Cancelled) => Ok(PrintOutcome::Canceled),
             ashpd::Error::PortalNotFound(_) => Err(
                 "Printing needs xdg-desktop-portal with a Print backend (GTK or KDE portal), which was not found"
                     .to_string(),
@@ -164,7 +164,7 @@ fn platform_print(pdf: &[u8], job_name: &str) -> Result<PrintOutcome, String> {
 #[cfg(target_os = "windows")]
 fn platform_print(pdf: &[u8], job_name: &str) -> Result<PrintOutcome, String> {
     let Some(printer) = win::choose_printer()? else {
-        return Ok(PrintOutcome::Cancelled);
+        return Ok(PrintOutcome::Canceled);
     };
     // The viewer reads the file after this returns, so it stays in the temp folder (rustfig-print).
     let path = write_temp(pdf, job_name)?;
@@ -190,7 +190,7 @@ mod win {
         s.encode_wide().chain(std::iter::once(0)).collect()
     }
 
-    /// Show the common print dialog; the chosen printer's name, `None` when cancelled.
+    /// Show the common print dialog; the chosen printer's name, `None` when canceled.
     #[allow(unsafe_code)]
     pub fn choose_printer() -> Result<Option<String>, String> {
         // SAFETY: CoInitializeEx takes a null reserved pointer; a failure (COM already set up in
@@ -219,7 +219,7 @@ mod win {
         dlg.nMaxPage = 9999;
         dlg.nCopies = 1;
         dlg.nStartPage = START_PAGE_GENERAL;
-        // SAFETY: `dlg` is initialised as the API requires and `ranges` outlives the call.
+        // SAFETY: `dlg` is initialized as the API requires and `ranges` outlives the call.
         let hr = unsafe { PrintDlgExW(&mut dlg) };
         if hr < 0 {
             return Err(format!("The print dialog failed (HRESULT {hr:#x})"));

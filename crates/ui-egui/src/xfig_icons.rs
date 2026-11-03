@@ -1,5 +1,5 @@
 //! xfig's mode panel icons: the 36×36 ("big", xfig's default) XBM bitmaps
-//! from xfig's `src/w_icons.c`, copied verbatim (xfig licence, see
+//! from xfig's `src/w_icons.c`, copied verbatim (xfig license, see
 //! LICENSE-xfig). Bits are XBM: rows padded to whole bytes, least
 //! significant bit leftmost.
 
@@ -11,7 +11,7 @@ pub struct Xbm {
     pub bits: &'static [u8],
 }
 
-/// Paint `icon` centred in `rect`, one bitmap pixel per point, tinted
+/// Paint `icon` centerd in `rect`, one bitmap pixel per point, tinted
 /// (the texture is white where the bitmap is set; made once per icon and
 /// kept in egui's memory).
 pub fn paint(ui: &egui::Ui, icon: &'static Xbm, rect: egui::Rect, tint: egui::Color32) {

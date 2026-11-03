@@ -1,7 +1,7 @@
 //! xfig's sentence for each mode (`mode_switches`, `w_modepanel.c`): the
 //! balloon text of the mode button, and what xfig puts in the message panel
 //! when the mode is selected.
-// Ported from xfig src/w_modepanel.c (xfig licence, see LICENSE-xfig).
+// Ported from xfig src/w_modepanel.c (xfig license, see LICENSE-xfig).
 
 use super::ToolKind;
 

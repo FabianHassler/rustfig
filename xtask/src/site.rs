@@ -30,7 +30,7 @@ fn esc(s: &str) -> String {
 }
 
 /// The manual's per-system blocks (`<!-- os: mac -->` … `<!-- os: end -->`,
-/// which the program shows only on that system) as labelled boxes.
+/// which the program shows only on that system) as labeled boxes.
 fn os_blocks(md: &str) -> String {
     let mut out = String::with_capacity(md.len());
     let mut open = false;
@@ -209,7 +209,7 @@ fn nav(prefix: &str) -> String {
 
 fn footer() -> String {
     format!(
-        "<footer>RustFig is open source (MIT OR Apache-2.0; parts ported from xfig and fig2dev under the xfig licence). \
+        "<footer>RustFig is open source (MIT OR Apache-2.0; parts ported from xfig and fig2dev under the xfig license). \
          <a href=\"{REPO}\">Source on GitHub</a> · <a href=\"{REPO}/releases\">Releases</a> · \
          <a href=\"https://github.com/FabianHassler/fig2dev\">fig2dev in Rust</a></footer>\n</body>\n</html>\n"
     )
@@ -310,11 +310,11 @@ pub fn landing() -> String {
 <h2>Examples</h2>
 <p>Drawings made with RustFig or imported into it, to open and take apart: <a href="{REPO}/tree/main/examples">the examples folder</a>.</p>
 <div class="examples">
-<figure><a href="{REPO}/tree/main/examples/gallery"><img src="examples/double-slit.jpg" width="640" height="465" alt="Young's double-slit experiment: wavefronts from two slits, the interference fringes on the screen and the intensity curve, labelled in LaTeX" loading="lazy"></a><figcaption>Young's double slit, labels typeset by LaTeX (from the science gallery)</figcaption></figure>
-<figure><a href="{REPO}/tree/main/examples/clifford-attractor"><img src="examples/clifford-attractor.jpg" width="640" height="495" alt="A Clifford attractor in rainbow colours on black" loading="lazy"></a><figcaption>Clifford attractor: 250,000 dots</figcaption></figure>
+<figure><a href="{REPO}/tree/main/examples/gallery"><img src="examples/double-slit.jpg" width="640" height="465" alt="Young's double-slit experiment: wavefronts from two slits, the interference fringes on the screen and the intensity curve, labeled in LaTeX" loading="lazy"></a><figcaption>Young's double slit, labels typeset by LaTeX (from the science gallery)</figcaption></figure>
+<figure><a href="{REPO}/tree/main/examples/clifford-attractor"><img src="examples/clifford-attractor.jpg" width="640" height="495" alt="A Clifford attractor in rainbow colors on black" loading="lazy"></a><figcaption>Clifford attractor: 250,000 dots</figcaption></figure>
 <figure><a href="{REPO}/tree/main/examples/penrose-tiling"><img src="examples/penrose-tiling.jpg" width="640" height="489" alt="A Penrose tiling of gold and teal rhombs" loading="lazy"></a><figcaption>Penrose tiling: 7,615 rhombs</figcaption></figure>
-<figure><a href="{REPO}/tree/main/examples/apollonian-gasket"><img src="examples/apollonian-gasket.jpg" width="640" height="640" alt="An Apollonian gasket: circles inside circles, coloured by generation" loading="lazy"></a><figcaption>Apollonian gasket: 4,221 circles</figcaption></figure>
-<figure><a href="{REPO}/tree/main/examples/gosper-curve"><img src="examples/gosper-curve.jpg" width="640" height="495" alt="A Gosper curve: one continuous line folded into a snowflake-like island, coloured like a rainbow" loading="lazy"></a><figcaption>Gosper curve: one line of 16,808 points</figcaption></figure>
+<figure><a href="{REPO}/tree/main/examples/apollonian-gasket"><img src="examples/apollonian-gasket.jpg" width="640" height="640" alt="An Apollonian gasket: circles inside circles, colored by generation" loading="lazy"></a><figcaption>Apollonian gasket: 4,221 circles</figcaption></figure>
+<figure><a href="{REPO}/tree/main/examples/gosper-curve"><img src="examples/gosper-curve.jpg" width="640" height="495" alt="A Gosper curve: one continuous line folded into a snowflake-like island, colored like a rainbow" loading="lazy"></a><figcaption>Gosper curve: one line of 16,808 points</figcaption></figure>
 <figure><a href="{REPO}/tree/main/examples/greece"><img src="examples/greece.jpg" width="640" height="480" alt="A topographic map of Greece and the Aegean with relief shading" loading="lazy"></a><figcaption>Topographic map of Greece, imported from SVG</figcaption></figure>
 </div>
 </section>
@@ -345,7 +345,7 @@ pub fn landing() -> String {
 }
 
 /// One row of the comparison: program, platforms, X server, `.fig`, LaTeX,
-/// licence, notes.
+/// license, notes.
 type Row = (
     &'static str,
     &'static str,
@@ -374,7 +374,7 @@ const COMPARE: &[Row] = &[
         "Yes (X11)",
         "Its own format",
         "Through fig2dev, installed separately",
-        "Open source (xfig licence)",
+        "Open source (xfig license)",
         "The original, still maintained",
     ),
     (
@@ -383,7 +383,7 @@ const COMPARE: &[Row] = &[
         "No",
         "Its own format (it is xfig 3.2.9a)",
         "Through fig2dev, installed separately",
-        "Open source (xfig licence, MIT)",
+        "Open source (xfig license, MIT)",
         "xfig's own code on Qt instead of X11",
     ),
     (
@@ -393,7 +393,7 @@ const COMPARE: &[Row] = &[
         "Aims at xfig's format and rendering",
         "Exports through fig2dev",
         "Shareware",
-        "An independent program modelled on xfig",
+        "An independent program modeled on xfig",
     ),
     (
         "jfig",
@@ -402,7 +402,7 @@ const COMPARE: &[Row] = &[
         "Reads and writes Fig files",
         "Several export formats",
         "Shareware (registration)",
-        "Java editor modelled on xfig; last releases are years old",
+        "Java editor modeled on xfig; last releases are years old",
     ),
     (
         "Ipe",
@@ -429,7 +429,7 @@ const COMPARE: &[Row] = &[
 pub fn compare() -> String {
     let mut s = head(
         "RustFig, xfig, WinFIG, jfig, Ipe, Inkscape compared – xfig alternatives",
-        "Which program for xfig figures on Windows, macOS and Linux? RustFig, xfig, xfig-qt, WinFIG, jfig, Ipe and Inkscape compared: platforms, X server, .fig files, LaTeX, licence.",
+        "Which program for xfig figures on Windows, macOS and Linux? RustFig, xfig, xfig-qt, WinFIG, jfig, Ipe and Inkscape compared: platforms, X server, .fig files, LaTeX, license.",
         &format!("{BASE}compare.html"),
         "style.css",
     );
@@ -441,7 +441,7 @@ pub fn compare() -> String {
          but it needs an X server: XQuartz on macOS, Cygwin/X or WSL on Windows. \
          These programs open xfig's <code>.fig</code> files or do a similar job.</p>\n<table class=\"compare\">\n\
          <tr><th>Program</th><th>Systems</th><th>Needs an X server</th><th>xfig's <code>.fig</code> files</th>\
-         <th>LaTeX</th><th>Licence</th><th>Notes</th></tr>\n",
+         <th>LaTeX</th><th>License</th><th>Notes</th></tr>\n",
     );
     // The programs' own sites (none listed where unsure).
     let site = |name: &str| match name {
@@ -453,7 +453,7 @@ pub fn compare() -> String {
         "Inkscape" => Some("https://inkscape.org/"),
         _ => None,
     };
-    for (name, systems, x, fig, tex, licence, notes) in COMPARE {
+    for (name, systems, x, fig, tex, license, notes) in COMPARE {
         let name_html = match site(name) {
             Some(url) => format!("<a href=\"{url}\">{}</a>", esc(name)),
             None => esc(name),
@@ -466,7 +466,7 @@ pub fn compare() -> String {
             esc(x),
             esc(fig),
             esc(tex),
-            esc(licence),
+            esc(license),
             esc(notes)
         );
     }
@@ -690,7 +690,7 @@ mod tests {
     }
 
     #[test]
-    fn os_blocks_are_labelled_and_closed() {
+    fn os_blocks_are_labeled_and_closed() {
         let s = os_blocks("a\n<!-- os: mac -->\nm\n<!-- os: linux windows -->\nw\n<!-- os: end -->\nb\n");
         assert!(s.contains("On macOS</p>") && s.contains("On Linux and Windows</p>"));
         assert_eq!(s.matches("<div class=\"os\">").count(), s.matches("</div>").count());

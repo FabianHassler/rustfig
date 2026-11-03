@@ -15,7 +15,7 @@
 //! xfig's check for the end point of a spline to join also lets the second
 //! point through (`prev_point != spline->points`), which the port does not.
 //
-// Ported from xfig src/e_joinsplit.c (xfig licence, see LICENSE-xfig).
+// Ported from xfig src/e_joinsplit.c (xfig license, see LICENSE-xfig).
 
 use super::{num, opt_num, opt_str, CmdResult, Command};
 use crate::{Engine, EngineError};

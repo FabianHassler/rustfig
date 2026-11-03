@@ -4,13 +4,13 @@
 //! table in `xfig.man.in`, `app-defaults/Fig`): a settings file reads like
 //! an X resource file, and xfig's command-line options (S3) set the same
 //! keys for one run. `[rustfig]` holds RustFig's switches, recent files and
-//! the user's colours. Unknown keys are kept, so a newer file survives an
+//! the user's colors. Unknown keys are kept, so a newer file survives an
 //! older RustFig. The engine applies the drawing-related resources; the UI
 //! reads its own (panels, balloons, export panel).
 //
 // Ported from xfig src/main.c (`application_resources`, `options`),
 // src/f_util.c (`read_xfigrc`) and doc/xfig.man.in (the resource table)
-// (xfig licence, see LICENSE-xfig).
+// (xfig license, see LICENSE-xfig).
 
 use crate::{Engine, SnapMode};
 use rustfig_model::{Justify, Orientation, PaperSize, Units};
@@ -32,12 +32,12 @@ pub fn config_path() -> Option<std::path::PathBuf> {
     config_dir(HostOs::current(), &process_env).map(|d| d.join("settings.toml"))
 }
 
-/// Recently used colours kept (E4).
+/// Recently used colors kept (E4).
 pub const MAX_RECENT_COLORS: usize = 12;
 
 /// Most recent files kept (xfig's `MAX_RECENT_FILES`).
 pub const MAX_RECENT: usize = 9;
-/// Most user colours kept.
+/// Most user colors kept.
 pub const MAX_USER_COLORS: usize = 512;
 
 /// The type of a resource's value.
@@ -228,7 +228,7 @@ pub fn resource(name: &str) -> Option<&'static Resource> {
     RESOURCES.iter().find(|r| r.name.eq_ignore_ascii_case(name))
 }
 
-/// A colour the user keeps for all drawings (E1).
+/// A color the user keeps for all drawings (E1).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NamedColor {
     pub name: String,
@@ -236,7 +236,7 @@ pub struct NamedColor {
     pub rgb: String,
 }
 
-/// A library figure by library name and figure name (W10-30: favourites and
+/// A library figure by library name and figure name (W10-30: favorites and
 /// recently placed figures).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LibRef {
@@ -244,13 +244,13 @@ pub struct LibRef {
     pub name: String,
 }
 
-/// Most favourite library figures kept.
-pub const MAX_LIB_FAVOURITES: usize = 48;
-/// Most favourite modes kept.
-pub const MAX_MODE_FAVOURITES: usize = 8;
+/// Most favorite library figures kept.
+pub const MAX_LIB_FAVORITES: usize = 48;
+/// Most favorite modes kept.
+pub const MAX_MODE_FAVORITES: usize = 8;
 /// Most recently placed library figures kept.
 pub const MAX_LIB_RECENT: usize = 8;
-/// Most favourite libraries kept.
+/// Most favorite libraries kept.
 pub const MAX_LIB_FAV_LIBS: usize = 32;
 /// Most hidden libraries kept.
 pub const MAX_LIB_HIDDEN: usize = 64;
@@ -292,23 +292,23 @@ pub struct RustFigPrefs {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub whats_new_seen: Option<String>,
     pub recent_files: Vec<String>,
-    /// W10-30: favourite library figures (library panel's top row), oldest first.
+    /// W10-30: favorite library figures (library panel's top row), oldest first.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub library_favourites: Vec<LibRef>,
-    /// Favourite modes (command ids such as `tool.box`, the mode panel's Favourites strip), oldest first.
+    /// Favorite modes (command ids such as `tool.box`, the mode panel's Favorites strip), oldest first.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub mode_favourites: Vec<String>,
     /// W10-30: library figures placed lately, newest first.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub library_recent: Vec<LibRef>,
-    /// W10-30: favourite libraries (listed first in the library chooser), oldest first.
+    /// W10-30: favorite libraries (listed first in the library chooser), oldest first.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub library_favourite_libraries: Vec<String>,
     /// W10-30: hidden libraries (not in the chooser or in Search), oldest first.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub library_hidden: Vec<String>,
     pub user_colors: Vec<NamedColor>,
-    /// Colours used lately (`#rrggbb`, newest first), offered in the colour pop-ups (E4).
+    /// Colors used lately (`#rrggbb`, newest first), offered in the color pop-ups (E4).
     pub recent_colors: Vec<String>,
     /// Style families of named attribute sets (E6), kept for all drawings.
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -346,7 +346,7 @@ const RETIRED: [&str; 4] = ["layout", "mouse", "show_attribute_panel", "vector_i
 const HEADER: &str = "# RustFig settings.
 # [xfig] holds xfig's resources under xfig's names (see xfig(1)); xfig's
 # command-line options override them for one run. [rustfig] holds RustFig's
-# own switches, recent files and colours. Edit freely; unknown keys are kept.
+# own switches, recent files and colors. Edit freely; unknown keys are kept.
 
 ";
 
@@ -374,8 +374,8 @@ impl Prefs {
         p.rustfig.recent_files.truncate(MAX_RECENT);
         p.rustfig.user_colors.truncate(MAX_USER_COLORS);
         p.rustfig.recent_colors.truncate(MAX_RECENT_COLORS);
-        p.rustfig.library_favourites.truncate(MAX_LIB_FAVOURITES);
-        p.rustfig.mode_favourites.truncate(MAX_MODE_FAVOURITES);
+        p.rustfig.library_favourites.truncate(MAX_LIB_FAVORITES);
+        p.rustfig.mode_favourites.truncate(MAX_MODE_FAVORITES);
         p.rustfig.library_recent.truncate(MAX_LIB_RECENT);
         p.rustfig.library_favourite_libraries.truncate(MAX_LIB_FAV_LIBS);
         p.rustfig.library_hidden.truncate(MAX_LIB_HIDDEN);
@@ -390,7 +390,7 @@ impl Prefs {
         }
     }
 
-    /// Set xfig resource `name` (validated by the catalogue's type).
+    /// Set xfig resource `name` (validated by the catalog's type).
     pub fn set(&mut self, name: &str, value: toml::Value) -> Result<(), String> {
         let r = resource(name).ok_or_else(|| format!("unknown xfig resource {name:?}"))?;
         let value = coerce(r.kind, value).ok_or_else(|| format!("{} takes a {:?} value", r.name, r.kind))?;
@@ -425,7 +425,7 @@ impl Prefs {
         self.get(name).and_then(|v| v.as_str().map(str::to_string))
     }
 
-    /// Note `rgb` as the most recently used colour.
+    /// Note `rgb` as the most recently used color.
     /// How many recently used files are kept (xfig's `max_recent_files`, 0 to 9).
     pub fn recent_max(&self) -> usize {
         self.int("max_recent_files")
@@ -453,8 +453,8 @@ impl Prefs {
         r.truncate(MAX_LIB_RECENT);
     }
 
-    /// Mark or unmark a library as a favourite; false when the list is full.
-    pub fn set_favourite_library(&mut self, library: &str, on: bool) -> bool {
+    /// Mark or unmark a library as a favorite; false when the list is full.
+    pub fn set_favorite_library(&mut self, library: &str, on: bool) -> bool {
         let f = &mut self.rustfig.library_favourite_libraries;
         f.retain(|x| x != library);
         if on {
@@ -466,12 +466,12 @@ impl Prefs {
         true
     }
 
-    /// Mark or unmark a mode (tool command id) as a favourite; false when the list is full.
-    pub fn set_mode_favourite(&mut self, id: &str, on: bool) -> bool {
+    /// Mark or unmark a mode (tool command id) as a favorite; false when the list is full.
+    pub fn set_mode_favorite(&mut self, id: &str, on: bool) -> bool {
         let f = &mut self.rustfig.mode_favourites;
         f.retain(|x| x != id);
         if on {
-            if f.len() >= MAX_MODE_FAVOURITES {
+            if f.len() >= MAX_MODE_FAVORITES {
                 return false;
             }
             f.push(id.to_string());
@@ -497,25 +497,25 @@ impl Prefs {
         self.rustfig.library_hidden.iter().any(|x| x == library)
     }
 
-    /// Whether a library is a favourite.
-    pub fn is_favourite_library(&self, library: &str) -> bool {
+    /// Whether a library is a favorite.
+    pub fn is_favorite_library(&self, library: &str) -> bool {
         self.rustfig.library_favourite_libraries.iter().any(|x| x == library)
     }
 
-    /// Whether a library figure is a favourite.
-    pub fn is_library_favourite(&self, library: &str, name: &str) -> bool {
+    /// Whether a library figure is a favorite.
+    pub fn is_library_favorite(&self, library: &str, name: &str) -> bool {
         self.rustfig
             .library_favourites
             .iter()
             .any(|x| x.library == library && x.name == name)
     }
 
-    /// Mark or unmark a library figure as a favourite; false when the list is full.
-    pub fn set_library_favourite(&mut self, library: &str, name: &str, on: bool) -> bool {
+    /// Mark or unmark a library figure as a favorite; false when the list is full.
+    pub fn set_library_favorite(&mut self, library: &str, name: &str, on: bool) -> bool {
         let f = &mut self.rustfig.library_favourites;
         f.retain(|x| !(x.library == library && x.name == name));
         if on {
-            if f.len() >= MAX_LIB_FAVOURITES {
+            if f.len() >= MAX_LIB_FAVORITES {
                 return false;
             }
             f.push(LibRef {
@@ -831,7 +831,7 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn catalogue_is_unique_and_known() {
+    fn catalog_is_unique_and_known() {
         for (i, a) in RESOURCES.iter().enumerate() {
             for b in &RESOURCES[i + 1..] {
                 assert!(!a.name.eq_ignore_ascii_case(b.name), "{}", a.name);

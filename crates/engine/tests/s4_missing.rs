@@ -1,6 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 //! S4: the audit's last missing functions: the drawing messages (arc radius,
-//! neighbour lengths, scale box size), the crosshair.
+//! neighbor lengths, scale box size), the crosshair.
 
 use rustfig_engine::geom::Point;
 use rustfig_engine::{Button, Engine, ToolEvent, ToolKind};
@@ -20,7 +20,7 @@ fn mv(e: &mut Engine, x: f64, y: f64) {
 }
 
 #[test]
-fn moving_a_line_point_reports_both_neighbour_lengths() {
+fn moving_a_line_point_reports_both_neighbor_lengths() {
     let mut e = Engine::new();
     e.execute("shape.polyline", &json!({"points": [[0, 0], [1200, 1200], [2400, 0]]}))
         .unwrap();

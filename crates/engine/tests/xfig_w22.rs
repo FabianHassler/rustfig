@@ -89,7 +89,7 @@ fn rotate_turns_about_the_clicked_point() {
     press(&mut e, 0.0, 500.0);
     release(&mut e, 0.0, 500.0);
     let c = e.doc().objects[0].geometry_bbox().center();
-    // 90 degrees about (0, 500): the centre (500, 500) moves to (0, 0) or (0, 1000).
+    // 90 degrees about (0, 500): the center (500, 500) moves to (0, 0) or (0, 1000).
     assert!(
         c.x.abs() < 1.0 && (c.y.abs() < 1.0 || (c.y - 1000.0).abs() < 1.0),
         "{c:?}"
@@ -156,7 +156,7 @@ fn circles_keep_the_clicked_points() {
     let ObjectKind::Ellipse(c) = &e.doc().objects[1].kind else {
         panic!()
     };
-    assert_eq!(c.center, Point::new(10987.0, 4.0), "xfig truncates the centre");
+    assert_eq!(c.center, Point::new(10987.0, 4.0), "xfig truncates the center");
     assert_eq!((c.start, c.end), (Point::new(0.0, 0.0), Point::new(21975.0, 8.0)));
 }
 

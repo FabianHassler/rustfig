@@ -24,7 +24,7 @@ unimplemented = "deny"
 field_reassign_with_default = "allow"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-# NSColorSampler, the system colour sampler (versions already in the lock through winit and rfd).
+# NSColorSampler, the system color sampler (versions already in the lock through winit and rfd).
 objc2 = "0.6"
 objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSColor", "NSColorSampler", "NSColorSpace", "NSPrintInfo", "NSPrintOperation", "NSPrintPanel", "block2", "objc2-core-foundation"] }
 block2 = "0.6"

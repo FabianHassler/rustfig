@@ -1,7 +1,7 @@
 //! F1 (2b): "Install TeX Gyre fonts…". The TeX Gyre fonts are metric clones
 //! of xfig's PostScript fonts (GUST Font License). Nothing is bundled: this
 //! downloads CTAN's archive, checks its pinned SHA-256, unpacks only the OTF
-//! files and the licence into RustFig's user data folder (next to the
+//! files and the license into RustFig's user data folder (next to the
 //! settings; `RUSTFIG_SETTINGS_DIR` moves it) and registers that folder with
 //! figbase's font lookup. It runs on a thread (like [`crate::export_bg`]);
 //! a failure or a cancel leaves no partial files: everything is unpacked in a
@@ -79,7 +79,7 @@ fn temp_sibling(dest: &Path, tag: &str) -> PathBuf {
 }
 
 /// Verify `zip_path` against `expected` (SHA-256 hex) and unpack its OTF
-/// files and the GUST licence flat into `dest`. Returns the number of fonts.
+/// files and the GUST license flat into `dest`. Returns the number of fonts.
 /// On any error (or `cancel`) `dest` is left as it was.
 pub fn install_from_zip(zip_path: &Path, expected: &str, dest: &Path, cancel: &AtomicBool) -> Result<usize, String> {
     let expected = expected.trim().to_ascii_lowercase();
@@ -93,7 +93,7 @@ pub fn install_from_zip(zip_path: &Path, expected: &str, dest: &Path, cancel: &A
         ));
     }
     if cancel.load(Ordering::Relaxed) {
-        return Err("cancelled".into());
+        return Err("canceled".into());
     }
     let tmp = temp_sibling(dest, "tmp");
     let _ = fs::remove_dir_all(&tmp); // a leftover of a crashed run
@@ -121,7 +121,7 @@ fn unpack(zip_path: &Path, tmp: &Path, cancel: &AtomicBool) -> Result<usize, Str
     let mut total = 0u64;
     for i in 0..ar.len() {
         if cancel.load(Ordering::Relaxed) {
-            return Err("cancelled".into());
+            return Err("canceled".into());
         }
         let mut entry = ar.by_index(i).map_err(|e| format!("bad archive entry: {e}"))?;
         if entry.is_dir() {
@@ -134,8 +134,8 @@ fn unpack(zip_path: &Path, tmp: &Path, cancel: &AtomicBool) -> Result<usize, Str
         let lower = base.to_ascii_lowercase();
         let in_opentype = name.split('/').any(|c| c == "opentype");
         let is_font = in_opentype && lower.ends_with(".otf") && lower.starts_with("texgyre");
-        let is_licence = lower == "gust-font-license.txt";
-        if !(is_font || is_licence) || base.contains("..") {
+        let is_license = lower == "gust-font-license.txt";
+        if !(is_font || is_license) || base.contains("..") {
             continue;
         }
         if entry.size() > MAX_FILE {
@@ -177,9 +177,9 @@ fn download(url: &str, to: &Path, cancel: &AtomicBool) -> Result<(), String> {
         .map_err(|e| format!("cannot run curl (needed for the download): {e}"))?;
     loop {
         if cancel.load(Ordering::Relaxed) {
-            let _ = child.kill(); // we are cancelling: the exit status no longer matters
+            let _ = child.kill(); // we are canceling: the exit status no longer matters
             let _ = child.wait();
-            return Err("cancelled".into());
+            return Err("canceled".into());
         }
         match child.try_wait() {
             Ok(Some(status)) => {
@@ -291,7 +291,7 @@ pub fn tick(app: &mut App, ctx: &egui::Context) {
                 if let Some(r) = app.tex_gyre.take() {
                     r.cancel.store(true, Ordering::Relaxed);
                 }
-                app.info("Install cancelled");
+                app.info("Install canceled");
             }
         }
     }
@@ -325,7 +325,7 @@ mod tests {
     }
 
     #[test]
-    fn installs_only_otf_and_licence_after_checksum() {
+    fn installs_only_otf_and_license_after_checksum() {
         let d = scratch("ok");
         let z = d.join("a.zip");
         make_zip(&z);
@@ -378,7 +378,7 @@ mod tests {
         fs::write(dest.join("old.otf"), b"old").unwrap();
         let _ = install_from_zip(&z, &"1".repeat(64), &dest, &AtomicBool::new(false)).unwrap_err();
         assert!(dest.join("old.otf").exists());
-        // cancelled after a good checksum
+        // canceled after a good checksum
         let sum = sha256_file(&z).unwrap();
         let _ = install_from_zip(&z, &sum, &dest, &AtomicBool::new(true)).unwrap_err();
         assert!(dest.join("old.otf").exists());

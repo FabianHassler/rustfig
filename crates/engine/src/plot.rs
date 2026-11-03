@@ -731,7 +731,7 @@ fn tr(v: f64, log: bool) -> Option<f64> {
 
 struct Refiner<'a> {
     f: &'a dyn Fn(f64) -> Option<P>,
-    /// Normalising spans of the two axes (curvature is judged on screen).
+    /// Normalizing spans of the two axes (curvature is judged on screen).
     sx: f64,
     sy: f64,
     budget: usize,

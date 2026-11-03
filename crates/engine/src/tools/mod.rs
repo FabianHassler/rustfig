@@ -5,8 +5,8 @@
 //! command, so every edit is undoable and scriptable.
 //
 // Ported in parts from xfig src/w_modepanel.c (mode keys), the drawing and
-// editing modes src/d_*.c and src/e_*.c (button behaviour, `set_mousefun`
-// wording) and src/w_canvas.c (snapping) (xfig licence, see LICENSE-xfig).
+// editing modes src/d_*.c and src/e_*.c (button behavior, `set_mousefun`
+// wording) and src/w_canvas.c (snapping) (xfig license, see LICENSE-xfig).
 
 mod chop;
 mod ctrl;
@@ -295,7 +295,7 @@ impl ToolKind {
         }
     }
 
-    /// Whether the right button sets a centre (Rotate) or anchor (Flip).
+    /// Whether the right button sets a center (Rotate) or anchor (Flip).
     pub fn uses_set_point(self) -> bool {
         matches!(
             self,
@@ -585,7 +585,7 @@ impl PartialEq for Shifted {
     }
 }
 
-/// An object picked out in a colour of its own: its markers drawn filled
+/// An object picked out in a color of its own: its markers drawn filled
 /// and its box outlined.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Highlight {
@@ -619,7 +619,7 @@ pub(crate) enum ToolState {
         cursor: Point,
         /// Points follow the pointer (xfig: middle button).
         freehand: bool,
-        /// Arc by centre (xfig: middle button first).
+        /// Arc by center (xfig: middle button first).
         center: Option<Point>,
         /// A dimension line: Shift+left first, then the second point
         /// (`dimension_line` in `d_line.c`).
@@ -633,7 +633,7 @@ pub(crate) enum ToolState {
         /// middle button).
         kind: ToolKind,
         button: Button,
-        /// Shift was held when the drag began (centre boxes: a square).
+        /// Shift was held when the drag began (center boxes: a square).
         square: bool,
     },
     /// Circle through three points (right button, W14).
@@ -717,11 +717,11 @@ pub(crate) enum ToolState {
     },
     Scale {
         id: ObjectId,
-        /// The fixed point (opposite corner, or the centre).
+        /// The fixed point (opposite corner, or the center).
         center: Point,
         start: Point,
         /// xfig's `from_x`/`from_y`: the corner (box scale) or the object
-        /// point (centre scale) the factors are measured from.
+        /// point (center scale) the factors are measured from.
         from: Point,
         cursor: Point,
         button: Button,
@@ -746,7 +746,7 @@ pub enum ScaleAxis {
 /// puts the cursor on the diagonal, the factor is the larger of the two axis
 /// ratios (W22-19). A box scale (`signed`, the left button) keeps the side of
 /// the cursor per axis as `fix_boxscale_*` does, so a drag across the fixed
-/// corner mirrors; the centre scale (`prescale_compound`) uses the distance.
+/// corner mirrors; the center scale (`prescale_compound`) uses the distance.
 fn scale_factors(center: Point, start: Point, cursor: Point, axis: ScaleAxis, signed: bool) -> Option<(f64, f64)> {
     let ratio = |a: f64, b: f64, c: f64| {
         let d = b - a;
@@ -793,7 +793,7 @@ const PICK_PX: f64 = 6.0;
 /// Cap on the points one freehand stroke collects.
 const MAX_FREEHAND_POINTS: usize = 10_000;
 
-/// Editable vertices of an object (ellipses: centre and corner).
+/// Editable vertices of an object (ellipses: center and corner).
 pub fn edit_points(o: &Object) -> Vec<Point> {
     match &o.kind {
         ObjectKind::Ellipse(e) => vec![e.center, e.center + e.radii],
@@ -813,9 +813,9 @@ fn region_points(o: &Object, r: &Region) -> Option<usize> {
     o.points().map(|p| p.iter().filter(|q| r.contains(**q)).count())
 }
 
-/// The centre of a regular polygon of `sides` sides that has the side from
+/// The center of a regular polygon of `sides` sides that has the side from
 /// `a` to `b`, on the side where `b` follows `a` in `regular_polygon`'s order.
-/// The centre of a diameter drag: xfig's integer `(fix + x) / 2` truncates.
+/// The center of a diameter drag: xfig's integer `(fix + x) / 2` truncates.
 fn xfig_center(a: Point, b: Point) -> Point {
     Point::new(((a.x + b.x) / 2.0).trunc(), ((a.y + b.y) / 2.0).trunc())
 }
@@ -856,7 +856,7 @@ fn constrain_delta(d: Point) -> Point {
     }
 }
 
-/// The three arc points for xfig's arc by centre: `pts` are the first
+/// The three arc points for xfig's arc by center: `pts` are the first
 /// point (which sets the radius), the mid angle and the final angle.
 fn arc_from_center(c: Point, pts: &[Point]) -> Option<[Point; 3]> {
     let [a, m, b] = pts else { return None };
@@ -877,7 +877,7 @@ impl Engine {
         }
         self.tool_state = ToolState::Idle;
         self.locate = None;
-        // Choosing Rotate or Flip erases any centre / anchor (`rotate_cw_selected`).
+        // Choosing Rotate or Flip erases any center / anchor (`rotate_cw_selected`).
         self.set_point = None;
         self.tool = kind;
         // The match set belongs to Find mode: entering or leaving clears it.
@@ -891,12 +891,12 @@ impl Engine {
     /// on the canvas): (1) cancel what is in progress (a shape being drawn,
     /// a move, paste, zoom box…; text input is finished instead), (2) clear
     /// what the mode has collected (Chop's axe list, the located object,
-    /// the rotate/flip centre, the selection), (3) leave the mode. Returns
+    /// the rotate/flip center, the selection), (3) leave the mode. Returns
     /// what was done.
     pub fn escape(&mut self) -> Result<&'static str, EngineError> {
         if std::mem::take(&mut self.copy_pick) {
-            self.set_status("Copy as picture cancelled.");
-            return Ok("cancelled");
+            self.set_status("Copy as picture canceled.");
+            return Ok("canceled");
         }
         match &self.tool_state {
             ToolState::Idle => {}
@@ -912,8 +912,8 @@ impl Engine {
             }
             _ => {
                 self.tool_state = ToolState::Idle;
-                self.set_status("Cancelled.");
-                return Ok("cancelled");
+                self.set_status("Canceled.");
+                return Ok("canceled");
             }
         }
         if self.locate.take().is_some() || self.set_point.take().is_some() {
@@ -1049,7 +1049,7 @@ impl Engine {
                 }
                 ToolEvent::Key(_) => {
                     self.copy_pick = false;
-                    self.set_status("Copy as picture cancelled.");
+                    self.set_status("Copy as picture canceled.");
                     return Ok(());
                 }
                 _ => {}
@@ -1141,7 +1141,7 @@ impl Engine {
                     }
                     Button::Middle => (0.0, 0.0),
                     Button::Right => {
-                        self.set_status("Paste cancelled.");
+                        self.set_status("Paste canceled.");
                         return Ok(());
                     }
                 };
@@ -1149,7 +1149,7 @@ impl Engine {
             }
             ToolEvent::Key(Key::Escape) => {
                 self.tool_state = ToolState::Idle;
-                self.set_status("Paste cancelled.");
+                self.set_status("Paste canceled.");
             }
             _ => {}
         }
@@ -1165,7 +1165,7 @@ impl Engine {
 
     /// xfig's own Shift meanings in the locating modes, which pass the
     /// click on: Edit's Shift+middle shows comments, and Rotate's and
-    /// Flip's Shift+right sets the centre / anchor like the right button.
+    /// Flip's Shift+right sets the center / anchor like the right button.
     fn shift_keeps_button(&self, button: Button) -> bool {
         match button {
             Button::Middle => self.tool == ToolKind::Edit,
@@ -1735,7 +1735,7 @@ impl Engine {
             Button::Left => Some(t),
             Button::Middle if by_radius => Some(ToolKind::EllipseRadii),
             Button::Middle if by_diameter => Some(ToolKind::EllipseDiameter),
-            // Boxes and pictures from the centre, a regular polygon by one side.
+            // Boxes and pictures from the center, a regular polygon by one side.
             Button::Middle
                 if matches!(
                     t,
@@ -1820,7 +1820,7 @@ impl Engine {
     }
 
     /// The two points a drag shape is made from. The middle button draws
-    /// a box or picture from its centre (Shift: a square) and a regular
+    /// a box or picture from its center (Shift: a square) and a regular
     /// polygon by the ends of one side (W14); otherwise the points are the
     /// ones dragged.
     fn drag_span(&self, kind: ToolKind, button: Button, square: bool, a: Point, b: Point) -> (Point, Point) {
@@ -2627,7 +2627,7 @@ impl Engine {
     }
 
     /// The fixed point Angle Geom constrains a dragged point from: the
-    /// neighbour of an end point of an open polyline or spline, or the end a
+    /// neighbor of an end point of an open polyline or spline, or the end a
     /// point is added to. Points in the middle or of closed shapes have
     /// none (xfig's `force_noanglegeom`).
     fn angle_anchor(&self, id: ObjectId, index: usize, insert: bool) -> Option<Point> {
@@ -2937,7 +2937,7 @@ impl Engine {
                 if let Some(o) = self.doc().get(id) {
                     let bb = o.geometry_bbox();
                     // Left: about the corner opposite the one nearest the
-                    // click; middle: about the centre (xfig's scale modes).
+                    // click; middle: about the center (xfig's scale modes).
                     let (center, axis) = if button == Button::Middle {
                         (bb.center(), ScaleAxis::Both)
                     } else {
@@ -3299,7 +3299,7 @@ impl Engine {
                 if copy {
                     params["copies"] = json!(self.indicator.num_copies);
                 }
-                // About the clicked point unless a centre was set with the
+                // About the clicked point unless a center was set with the
                 // right button (`init_rotate`, W22-2).
                 let c = self.set_point.unwrap_or(pos);
                 if let Some(m) = params.as_object_mut() {
@@ -3730,7 +3730,7 @@ impl Engine {
                 all.push(*cursor);
                 if self.tool == ToolKind::Arc && all.len() < 3 {
                     match center {
-                        // Radii from the centre to each point.
+                        // Radii from the center to each point.
                         Some(c) => ov.guides.extend(all.iter().map(|p| vec![*c, *p])),
                         None => ov.guides.push(all.clone()),
                     }
@@ -3921,7 +3921,7 @@ impl Engine {
         }
         self.length_overlay(&mut ov);
         ov.crosshair = self.crosshair_point();
-        // The set centre/anchor of Rotate/Flip (xfig's `center_marker`).
+        // The set center/anchor of Rotate/Flip (xfig's `center_marker`).
         if let Some(c) = self.set_point.filter(|_| self.tool.uses_set_point()) {
             ov.handles.push(c);
         }
@@ -4620,10 +4620,10 @@ mod tests {
     }
 
     /// The indicator must tell the truth: in every tool and state,
-    /// a button with no label does nothing, and a labelled button does
+    /// a button with no label does nothing, and a labeled button does
     /// something in at least one of the fixture documents.
     #[test]
-    fn mouse_hints_match_behaviour() {
+    fn mouse_hints_match_behavior() {
         use std::collections::BTreeMap;
         const BUTTONS: [Button; 3] = [Button::Left, Button::Middle, Button::Right];
         let p = (0.0, 0.0);
@@ -4691,7 +4691,7 @@ mod tests {
             .filter(|(k, a)| !**a && !(k.0 == "tool.glue" && k.3 == "compound tagged"))
             .map(|(k, _)| k)
             .collect();
-        assert!(silent.is_empty(), "labelled buttons that did nothing: {silent:#?}");
+        assert!(silent.is_empty(), "labeled buttons that did nothing: {silent:#?}");
     }
 
     #[test]
@@ -4804,7 +4804,7 @@ mod tests {
         e.set_tool(ToolKind::Arc);
         click(&mut e, 0.0, 0.0, Button::Middle);
         click(&mut e, 1200.0, 0.0, Button::Left);
-        // Mid and final angles: only the direction from the centre counts.
+        // Mid and final angles: only the direction from the center counts.
         click(&mut e, 0.0, 300.0, Button::Left);
         click(&mut e, -5000.0, 0.0, Button::Left);
         let ObjectKind::Arc(a) = objects_of(&e)[0] else {
@@ -4976,7 +4976,7 @@ mod tests {
     }
 
     #[test]
-    fn scale_about_opposite_corner_and_centre() {
+    fn scale_about_opposite_corner_and_center() {
         let mut e = Engine::new();
         e.execute(
             "shape.rectangle",

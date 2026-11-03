@@ -10,7 +10,7 @@
 //! also drawn as lines when stroked. Fully transparent and hidden content is
 //! skipped. A convex clip path (a rectangle, mostly) cuts the shapes under
 //! it; other clip paths, masks, filters and partial transparency are
-//! dropped, one warning each. Gradients become their average colour. An SVG is
+//! dropped, one warning each. Gradients become their average color. An SVG is
 //! untrusted input: object, point and image sizes are capped, external files
 //! are read only from the SVG's own folder, and everything returns `Result`.
 
@@ -46,7 +46,7 @@ const MAX_EXTERNAL_BYTES: u64 = 64 << 20;
 
 /// What the import made.
 pub struct Imported {
-    /// The figure: objects and user colours.
+    /// The figure: objects and user colors.
     pub doc: Document,
     /// The SVG's raster images as PNG files: (file name, bytes); the picture
     /// objects name them.
@@ -247,7 +247,7 @@ fn import_inner(bytes: &[u8], stem: &str, dir: Option<&std::path::Path>) -> Resu
         depth: 999,
         rank: 0,
         clips: Vec::new(),
-        out_of_colours: false,
+        out_of_colors: false,
         capped: false,
     };
     // The root viewport clips everything, as in browsers: a rectangular clip.
@@ -274,7 +274,7 @@ struct Importer {
     rank: u8,
     /// The convex clip polygons (Fig units) of the enclosing groups.
     clips: Vec<Vec<(f64, f64)>>,
-    out_of_colours: bool,
+    out_of_colors: bool,
     capped: bool,
 }
 
@@ -350,18 +350,18 @@ impl Importer {
         match self.doc.color_for_rgb(rgb) {
             Some(c) => c,
             None => {
-                if !self.out_of_colours {
-                    self.out_of_colours = true;
+                if !self.out_of_colors {
+                    self.out_of_colors = true;
                     self.warnings
-                        .push("More than 512 colours: the rest is drawn in black".into());
+                        .push("More than 512 colors: the rest is drawn in black".into());
                 }
                 ColorRef::BLACK
             }
         }
     }
 
-    /// The colour of a paint; gradients become the average of their stops,
-    /// patterns grey, each with a warning.
+    /// The color of a paint; gradients become the average of their stops,
+    /// patterns gray, each with a warning.
     fn paint_rgb(&mut self, paint: &usvg::Paint, opacity: f32) -> Option<Rgb> {
         if opacity <= 0.0 {
             return None;
@@ -374,14 +374,14 @@ impl Importer {
             usvg::Paint::LinearGradient(g) => self.gradient(g.stops()),
             usvg::Paint::RadialGradient(g) => self.gradient(g.stops()),
             usvg::Paint::Pattern(p) => {
-                self.warn_once("pattern", "Patterns are drawn in their ink colour, solid");
+                self.warn_once("pattern", "Patterns are drawn in their ink color, solid");
                 Some(pattern_ink(p.root(), 0).unwrap_or(Rgb::new(128, 128, 128)))
             }
         }
     }
 
     fn gradient(&mut self, stops: &[usvg::Stop]) -> Option<Rgb> {
-        self.warn_once("gradient", "Gradients are drawn in their average colour");
+        self.warn_once("gradient", "Gradients are drawn in their average color");
         if stops.is_empty() {
             return None;
         }
@@ -910,7 +910,7 @@ fn fig_font(f: &usvg::Font) -> (i32, bool) {
     map_font(Some(&name), None, None)
 }
 
-/// The colour of the first solid fill or stroke in a pattern's tile.
+/// The color of the first solid fill or stroke in a pattern's tile.
 fn pattern_ink(g: &usvg::Group, depth: usize) -> Option<Rgb> {
     if depth > 20 {
         return None;
@@ -1186,7 +1186,7 @@ fn ellipse_object(g: &[PathEl], style: Style) -> Option<Object> {
         .iter()
         .fold((f64::MAX, f64::MIN), |a, p| (a.0.min(p.1), a.1.max(p.1)));
     let (cx, cy) = ((x0 + x1) / 2.0, (y0 + y1) / 2.0);
-    // Least squares for a x^2 + 2 b x y + c y^2 = 1 around the centre.
+    // Least squares for a x^2 + 2 b x y + c y^2 = 1 around the center.
     let (mut s, mut r) = ([[0.0f64; 3]; 3], [0.0f64; 3]);
     for &(px, py) in &pts {
         let (u, v) = (px - cx, py - cy);
@@ -1456,7 +1456,7 @@ mod tests {
         let k = &ps[0];
         assert_eq!(k.kind, PolyKind::Polygon);
         assert!(k.points.len() >= 10, "the keyhole polygon joins both rings");
-        // The hole (centre 45,45 px = 562,562 Fig) is empty, the ring is filled.
+        // The hole (center 45,45 px = 562,562 Fig) is empty, the ring is filled.
         assert!(!even_odd(k, 45.0 * K, 45.0 * K));
         assert!(even_odd(k, 20.0 * K, 20.0 * K));
         assert!(even_odd(k, 70.0 * K, 45.0 * K));

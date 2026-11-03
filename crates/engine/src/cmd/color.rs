@@ -1,9 +1,9 @@
-//! Colours (E4): parsing hex and X11 names, the colour editor (new, edit,
-//! delete user colours), recently used colours.
+//! Colors (E4): parsing hex and X11 names, the color editor (new, edit,
+//! delete user colors), recently used colors.
 //!
-//! The editor follows xfig's colour panel (`w_color.c`: Add, Modify, Delete;
-//! a colour in use is not deleted, as xfig's `del_color` keeps it).
-// Ported from xfig src/w_color.c (xfig licence, see LICENSE-xfig).
+//! The editor follows xfig's color panel (`w_color.c`: Add, Modify, Delete;
+//! a color in use is not deleted, as xfig's `del_color` keeps it).
+// Ported from xfig src/w_color.c (xfig license, see LICENSE-xfig).
 
 use super::{always, num, opt_num, opt_str, string, CmdResult, Command};
 use crate::{Engine, EngineError};
@@ -14,17 +14,17 @@ pub(super) fn commands() -> Vec<Command> {
     vec![
         Command {
             id: "color.parse",
-            label: "Parse colour",
+            label: "Parse color",
             menu: "",
             shortcut: "",
-            params: "{\"text\": \"#rrggbb\" | \"#rgb\" | X11 colour name}  — {\"rgb\": \"#rrggbb\", \"r\", \"g\", \"b\", \"h\" (0-360), \"s\", \"v\" (0-100), \"name\"?: the X11 name of exactly that colour}",
+            params: "{\"text\": \"#rrggbb\" | \"#rgb\" | X11 color name}  — {\"rgb\": \"#rrggbb\", \"r\", \"g\", \"b\", \"h\" (0-360), \"s\", \"v\" (0-100), \"name\"?: the X11 name of exactly that color}",
             mutates: false,
             enabled: always,
             run: parse,
         },
         Command {
             id: "color.from_hsv",
-            label: "Colour from HSV",
+            label: "Color from HSV",
             menu: "",
             shortcut: "",
             params: "{\"h\": 0-360, \"s\": 0-100, \"v\": 0-100}  — the same reply as color.parse",
@@ -34,7 +34,7 @@ pub(super) fn commands() -> Vec<Command> {
         },
         Command {
             id: "color.names",
-            label: "X11 colour names",
+            label: "X11 color names",
             menu: "",
             shortcut: "",
             params: "{\"prefix\"?: string, \"limit\"?: 1-1000 (default 50)}  — {\"names\": [...]} the X11 names starting with the prefix (any case)",
@@ -44,50 +44,50 @@ pub(super) fn commands() -> Vec<Command> {
         },
         Command {
             id: "color.new",
-            label: "New user colour",
+            label: "New user color",
             menu: "",
             shortcut: "",
-            params: "{\"rgb\": \"#rrggbb\" | X11 name}  — adds a user colour in the lowest free slot (32-543) even if its value exists; returns {\"color\": number}",
+            params: "{\"rgb\": \"#rrggbb\" | X11 name}  — adds a user color in the lowest free slot (32-543) even if its value exists; returns {\"color\": number}",
             mutates: true,
             enabled: always,
             run: new_color,
         },
         Command {
             id: "color.edit",
-            label: "Change user colour",
+            label: "Change user color",
             menu: "",
             shortcut: "",
-            params: "{\"color\": 32-543, \"rgb\": \"#rrggbb\" | X11 name}  — gives an existing user colour a new value; objects that use it change with it",
+            params: "{\"color\": 32-543, \"rgb\": \"#rrggbb\" | X11 name}  — gives an existing user color a new value; objects that use it change with it",
             mutates: true,
             enabled: always,
             run: edit,
         },
         Command {
             id: "color.delete",
-            label: "Delete user colour",
+            label: "Delete user color",
             menu: "",
             shortcut: "",
-            params: "{\"color\": 32-543}  — removes a user colour; refused while an object uses it",
+            params: "{\"color\": 32-543}  — removes a user color; refused while an object uses it",
             mutates: true,
             enabled: always,
             run: delete,
         },
         Command {
             id: "color.recent",
-            label: "Recent colours",
+            label: "Recent colors",
             menu: "",
             shortcut: "",
-            params: "{}  — {\"colors\": [\"#rrggbb\", …]} the colours used lately, newest first (kept in the preferences)",
+            params: "{}  — {\"colors\": [\"#rrggbb\", …]} the colors used lately, newest first (kept in the preferences)",
             mutates: false,
             enabled: always,
             run: recent,
         },
         Command {
             id: "color.use",
-            label: "Note colour as used",
+            label: "Note color as used",
             menu: "",
             shortcut: "",
-            params: "{\"color\": colour number | \"rgb\": \"#rrggbb\"}  — puts the colour first in the recent colours",
+            params: "{\"color\": color number | \"rgb\": \"#rrggbb\"}  — puts the color first in the recent colors",
             mutates: false,
             enabled: always,
             run: use_color,
@@ -98,10 +98,10 @@ pub(super) fn commands() -> Vec<Command> {
 fn rgb_param(p: &Value, key: &str) -> Result<Rgb, EngineError> {
     let s = string(p, key)?;
     if s.chars().count() > 64 {
-        return Err(EngineError::bad_params("colour text too long"));
+        return Err(EngineError::bad_params("color text too long"));
     }
     rustfig_model::x_color(s.trim())
-        .ok_or_else(|| EngineError::bad_params(format!("{s:?} is neither #rrggbb nor an X11 colour name")))
+        .ok_or_else(|| EngineError::bad_params(format!("{s:?} is neither #rrggbb nor an X11 color name")))
 }
 
 /// RGB to hue (0-360), saturation and value (0-100).
@@ -176,7 +176,7 @@ fn user_number(p: &Value) -> Result<i32, EngineError> {
     let n = num(p, "color")?;
     if n.fract() != 0.0 || n < f64::from(FIRST_USER_COLOR) || n > f64::from(LAST_USER_COLOR) {
         return Err(EngineError::bad_params(format!(
-            "color must be a user colour number {FIRST_USER_COLOR}-{LAST_USER_COLOR}"
+            "color must be a user color number {FIRST_USER_COLOR}-{LAST_USER_COLOR}"
         )));
     }
     Ok(n as i32)
@@ -192,7 +192,7 @@ fn new_color(e: &mut Engine, p: &Value) -> CmdResult {
     let c = e
         .doc_mut()
         .new_user_color(rgb)
-        .ok_or_else(|| EngineError::bad_params("all 512 user colours are in use"))?;
+        .ok_or_else(|| EngineError::bad_params("all 512 user colors are in use"))?;
     note_recent(e, rgb);
     Ok(json!({"color": c.0}))
 }
@@ -205,7 +205,7 @@ fn edit(e: &mut Engine, p: &Value) -> CmdResult {
         .colors
         .iter_mut()
         .find(|u| u.number == n)
-        .ok_or_else(|| EngineError::bad_params(format!("no user colour {n}")))?;
+        .ok_or_else(|| EngineError::bad_params(format!("no user color {n}")))?;
     u.rgb = rgb;
     note_recent(e, rgb);
     Ok(json!({"color": n}))
@@ -214,10 +214,10 @@ fn edit(e: &mut Engine, p: &Value) -> CmdResult {
 fn delete(e: &mut Engine, p: &Value) -> CmdResult {
     let n = user_number(p)?;
     if !e.doc().colors.iter().any(|u| u.number == n) {
-        return Err(EngineError::bad_params(format!("no user colour {n}")));
+        return Err(EngineError::bad_params(format!("no user color {n}")));
     }
     if e.doc().used_colors().contains(&n) {
-        return Err(EngineError::bad_params(format!("colour {n} is used by an object")));
+        return Err(EngineError::bad_params(format!("color {n} is used by an object")));
     }
     e.doc_mut().colors.retain(|u| u.number != n);
     Ok(json!({"color": n}))
@@ -233,11 +233,11 @@ fn use_color(e: &mut Engine, p: &Value) -> CmdResult {
     } else {
         let n = num(p, "color")?;
         if n.fract() != 0.0 || !(0.0..=f64::from(LAST_USER_COLOR)).contains(&n) {
-            return Err(EngineError::bad_params("color must be a colour number 0-543"));
+            return Err(EngineError::bad_params("color must be a color number 0-543"));
         }
         let n = n as i32;
         if n >= FIRST_USER_COLOR && !e.doc().colors.iter().any(|u| u.number == n) {
-            return Err(EngineError::bad_params(format!("no user colour {n}")));
+            return Err(EngineError::bad_params(format!("no user color {n}")));
         }
         e.doc().rgb(ColorRef(n))
     };

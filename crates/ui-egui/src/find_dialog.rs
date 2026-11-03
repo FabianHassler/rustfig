@@ -282,13 +282,13 @@ pub fn dialog(app: &mut App, ctx: &egui::Context) {
                         });
                         ui.end_row();
 
-                        ui.checkbox(&mut st.on_pen, "Pen colour");
+                        ui.checkbox(&mut st.on_pen, "Pen color");
                         ui.add_enabled_ui(st.on_pen, |ui| {
                             if let Some(c) = color_menu(ui, "find_pen", doc, st.pen, &[]) {
                                 st.pen = c;
                             }
                         });
-                        ui.checkbox(&mut st.on_fill_color, "Fill colour");
+                        ui.checkbox(&mut st.on_fill_color, "Fill color");
                         ui.add_enabled_ui(st.on_fill_color, |ui| {
                             if let Some(c) = color_menu(ui, "find_fill", doc, st.fill_color, &[]) {
                                 st.fill_color = c;

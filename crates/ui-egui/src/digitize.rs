@@ -3,7 +3,7 @@
 //! append). RustFig writes the points of the selected polylines and splines
 //! through `file.digitize`, optionally in the data units of a calibrated plot.
 
-// Ported from xfig src/w_digitize.c (xfig licence, see LICENSE-xfig).
+// Ported from xfig src/w_digitize.c (xfig license, see LICENSE-xfig).
 
 use crate::App;
 use serde_json::{json, Value};

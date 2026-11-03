@@ -4,7 +4,7 @@
 //! one file); RustFig writes the points of chosen polylines and splines, in
 //! figure units or, with two calibration points, in the plot's data units.
 //
-// Ported from xfig src/w_digitize.c (xfig licence, see LICENSE-xfig).
+// Ported from xfig src/w_digitize.c (xfig license, see LICENSE-xfig).
 
 use super::{has_objects, num_or, opt_bool, opt_str, CmdResult, Command};
 use crate::{Engine, EngineError};

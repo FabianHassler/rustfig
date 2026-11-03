@@ -1,5 +1,5 @@
 //! Injected mouse and keyboard input (control channel `ui.pointer`, `ui.key`,
-//! `ui.click_label`) and the per-frame registry of labelled widgets.
+//! `ui.click_label`) and the per-frame registry of labeled widgets.
 //!
 //! Input is queued as steps, one step per frame, and added to egui's raw
 //! input in `App::raw_input_hook` before the platform conventions
@@ -301,7 +301,7 @@ impl egui::Plugin for RegistryPlugin {
     }
 }
 
-/// Start collecting labelled widgets (turns accessibility output on).
+/// Start collecting labeled widgets (turns accessibility output on).
 pub fn install_registry(ctx: &egui::Context) -> Registry {
     let reg = Registry::default();
     ctx.enable_accesskit();

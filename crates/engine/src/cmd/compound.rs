@@ -7,7 +7,7 @@
 //! every command and tool works on it unchanged; saving and exporting go
 //! through `Engine::whole_doc`.
 //
-// Ported from xfig src/e_compound.c (xfig licence, see LICENSE-xfig).
+// Ported from xfig src/e_compound.c (xfig license, see LICENSE-xfig).
 
 use super::{opt_bool, CmdResult, Command};
 use crate::tools::ToolKind;

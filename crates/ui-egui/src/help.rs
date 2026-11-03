@@ -271,7 +271,7 @@ fn list_item(line: &str) -> Option<(bool, &str)> {
 }
 
 /// Parse the Markdown subset into blocks. Never fails: what isn't
-/// recognised is a paragraph.
+/// recognized is a paragraph.
 pub fn parse(src: &str) -> Vec<Block> {
     let mut blocks = Vec::new();
     let mut para = String::new();

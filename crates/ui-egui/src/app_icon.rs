@@ -1,7 +1,7 @@
 //! RustFig's application icon (plan W9 d): an original drawing made for
-//! RustFig, generated in code and rendered by RustFig's own rasteriser, so
+//! RustFig, generated in code and rendered by RustFig's own rasterizer, so
 //! there is no image file: a sheet of paper on a dark rounded square, with
-//! a rust-coloured spline, a teal box and a circle, as drawn with xfig's
+//! a rust-colored spline, a teal box and a circle, as drawn with xfig's
 //! tools. MIT OR Apache-2.0, like the code.
 
 use rustfig_geom::{Affine, Point};
@@ -107,7 +107,7 @@ fn drawing() -> Document {
         start: q(40.0, 41.0),
         end: q(46.0, 41.0),
     }));
-    // The rust-coloured spline across the sheet.
+    // The rust-colored spline across the sheet.
     objs.push(ObjectKind::Spline(Spline::new(
         SplineKind::Interpolated,
         false,
@@ -169,7 +169,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn icon_renders_with_its_colours() {
+    fn icon_renders_with_its_colors() {
         let px = rgba(64).unwrap();
         assert_eq!(px.len(), 64 * 64 * 4);
         let at = |x: usize, y: usize| &px[(y * 64 + x) * 4..(y * 64 + x) * 4 + 4];

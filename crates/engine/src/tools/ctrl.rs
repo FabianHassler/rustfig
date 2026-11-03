@@ -5,7 +5,7 @@
 // Ported from xfig src/w_zoom.c (`zoom_selected`, `init_zoombox_drawing`,
 // `do_zoom`, `cancel_zoom`), src/w_canvas.c (the Ctrl and Ctrl+Shift cases of
 // `canvas_selected`), src/e_edit.c (`change_sfactor`) and src/u_search.c
-// (`get_spline_point`) (xfig licence, see LICENSE-xfig).
+// (`get_spline_point`) (xfig license, see LICENSE-xfig).
 
 use super::{nearest_vertex, Button, ToolState};
 use crate::{Engine, EngineError};

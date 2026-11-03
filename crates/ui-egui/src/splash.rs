@@ -16,11 +16,11 @@ const FADE_SECS: f64 = 0.35;
 /// The card's size in points, at the start and as Help > About.
 const CARD: egui::Vec2 = vec2(500.0, 260.0);
 const ABOUT_CARD: egui::Vec2 = vec2(540.0, 340.0);
-/// Width of the coloured band with the icon.
+/// Width of the colored band with the icon.
 const BAND: f32 = 180.0;
 /// The icon's side in points.
 const ICON: f32 = 128.0;
-/// The icon's colours (`app_icon`): its slate square and its rust spline.
+/// The icon's colors (`app_icon`): its slate square and its rust spline.
 const SLATE: Color32 = Color32::from_rgb(0x2b, 0x30, 0x3b);
 const SLATE_LIGHT: Color32 = Color32::from_rgb(0x46, 0x4e, 0x5e);
 const RUST: Color32 = Color32::from_rgb(0xd2, 0x69, 0x2a);
@@ -49,7 +49,7 @@ impl Splash {
     }
 }
 
-/// Draw the card centred on the canvas `rect`, if it is still due; the
+/// Draw the card centerd on the canvas `rect`, if it is still due; the
 /// first key or mouse press starts the fade-out (and still does its job).
 pub fn show(splash: &mut Option<Splash>, ctx: &egui::Context, rect: Rect) {
     let Some(s) = splash.as_mut() else { return };
@@ -81,7 +81,7 @@ pub fn show(splash: &mut Option<Splash>, ctx: &egui::Context, rect: Rect) {
     card_area(ctx, rect.center() + vec2(0.0, lift), alpha, false);
 }
 
-/// Help > About RustFig: the same card with the licence and xfig's
+/// Help > About RustFig: the same card with the license and xfig's
 /// copyrights, until a click or a key (Escape too) closes it.
 pub fn show_about(open: &mut bool, ctx: &egui::Context) {
     if !*open {
@@ -101,7 +101,7 @@ pub fn show_about(open: &mut bool, ctx: &egui::Context) {
     }
 }
 
-/// The card in its own layer above the canvas, centred on `center`; a
+/// The card in its own layer above the canvas, centerd on `center`; a
 /// click on it goes to the card, not to the drawing below.
 fn card_area(ctx: &egui::Context, center: Pos2, alpha: f32, about: bool) -> egui::Response {
     let size = if about { ABOUT_CARD } else { CARD };
@@ -217,7 +217,7 @@ fn paint_card(p: &Painter, card: Rect, dark: bool, icon: Option<&egui::TextureHa
     let lines: &[&str] = if about {
         &[
             "Licensed MIT OR Apache-2.0; the parts from xfig and",
-            "fig2dev keep the xfig licence (see NOTICE).",
+            "fig2dev keep the xfig license (see NOTICE).",
             "",
             "xfig: \u{a9} 1985\u{2013}1988 Supoj Sutanthavibul,",
             "\u{a9} 1989\u{2013}2015 Brian V. Smith, \u{a9} 1991 Paul King,",

@@ -283,7 +283,7 @@ fn assets() -> Result<(), String> {
 
 /// Every Rust file with code ported from xfig or fig2dev names its sources
 /// and points to LICENSE-xfig, and LICENSE-xfig lists exactly those files.
-fn licences() -> Result<(), String> {
+fn licenses() -> Result<(), String> {
     let root = root();
     let notice = std::fs::read_to_string(root.join("LICENSE-xfig")).map_err(|e| format!("LICENSE-xfig: {e}"))?;
     let listed: Vec<String> = notice
@@ -323,10 +323,10 @@ fn licences() -> Result<(), String> {
         }
     }
     if errors.is_empty() {
-        println!("licences: ok ({} files derived from xfig and fig2dev)", cited.len());
+        println!("licenses: ok ({} files derived from xfig and fig2dev)", cited.len());
         Ok(())
     } else {
-        Err(format!("licence problems:\n  {}", errors.join("\n  ")))
+        Err(format!("license problems:\n  {}", errors.join("\n  ")))
     }
 }
 
@@ -523,7 +523,7 @@ fn ci() -> Result<(), String> {
         .args(["test", "--workspace", "--no-fail-fast"]))?;
     layers()?;
     assets()?;
-    licences()?;
+    licenses()?;
     wasm()?;
     println!("ci: all gates passed");
     Ok(())
@@ -535,7 +535,7 @@ fn main() -> ExitCode {
         "ci" => ci(),
         "layers" => layers(),
         "assets" => assets(),
-        "licences" => licences(),
+        "licences" => licenses(),
         "wasm" => wasm(),
         "web" => web(),
         "package" => package::run(&root(), cargo()),

@@ -43,8 +43,8 @@ fn special_text_flag_roundtrips_raw() {
 }
 
 #[test]
-fn an_arc_centre_of_negative_zero_is_written_as_zero() {
-    // W22 round 3: a flipped arc's centre came out as "-0.000"; xfig writes 0.
+fn an_arc_center_of_negative_zero_is_written_as_zero() {
+    // W22 round 3: a flipped arc's center came out as "-0.000"; xfig writes 0.
     let src = format!("{HEAD}5 1 0 1 0 7 50 -1 -1 0.000 0 0 0 0 3000.000 0.000 1200 0 3000 1800 4800 0\n");
     let mut doc = read_fig(src.as_bytes()).unwrap();
     for o in &mut doc.objects {

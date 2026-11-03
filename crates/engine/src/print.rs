@@ -1,4 +1,4 @@
-//! Printing (plan B5, B5b): xfig's Print panel, modernised.
+//! Printing (plan B5, B5b): xfig's Print panel, modernized.
 //!
 //! xfig pipes fig2dev's PostScript to `lpr` (`print_to_printer`, `print_to_batchfile`
 //! and `do_print` of `u_print.c` and `w_print.c`). RustFig makes a PDF of the
@@ -14,7 +14,7 @@
 //! can look at a job instead of sending it; the app installs the one that
 //! calls the system dialog.
 //!
-// Ported from xfig src/u_print.c, src/w_print.c (xfig licence, see LICENSE-xfig).
+// Ported from xfig src/u_print.c, src/w_print.c (xfig license, see LICENSE-xfig).
 
 use crate::export_panel::{self, PanelSettings, COLOR_NONE};
 use crate::{Engine, EngineError};
@@ -34,7 +34,7 @@ pub const MAX_PREVIEW_EDGE: u32 = 2048;
 pub struct PrintSettings {
     /// Multiple pages overlap ("Overlap" / "No Overlap").
     pub overlap: bool,
-    /// Background colour number, `COLOR_NONE` for none.
+    /// Background color number, `COLOR_NONE` for none.
     pub background: i32,
     /// Minor and major grid spacing as the menus give them ("None", "1/4", "10" …).
     pub grid_minor: String,
@@ -122,7 +122,7 @@ pub struct PrintJob {
 /// [`RecordingSpooler`]; an engine without a front end has [`NoSpooler`].
 pub trait Spooler: Send {
     /// Hand `job` over: `Some(message)` when it went to the print system,
-    /// `None` when the user cancelled the dialog.
+    /// `None` when the user canceled the dialog.
     fn submit(&mut self, job: &PrintJob) -> Result<Option<String>, String>;
 }
 

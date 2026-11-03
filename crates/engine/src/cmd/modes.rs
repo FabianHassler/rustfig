@@ -1,4 +1,4 @@
-//! Favourite modes: the mode panel's Favourites strip (kept in the preferences).
+//! Favorite modes: the mode panel's Favorites strip (kept in the preferences).
 
 use super::{always, opt_bool, string, CmdResult, Command};
 use crate::tools::ToolKind;
@@ -9,20 +9,20 @@ pub(super) fn commands() -> Vec<Command> {
     vec![
         Command {
             id: "mode.favourite",
-            label: "Favourite mode",
+            label: "Favorite mode",
             menu: "",
             shortcut: "",
-            params: "{\"mode\": tool id (\"tool.box\" or \"box\"), \"on\"?: bool (default: toggle)}  — adds the mode to the Favourites strip at the top of the mode panel or removes it (right-click a mode button; at most 8, kept in the preferences): {\"favourite\": bool, \"count\": n}",
+            params: "{\"mode\": tool id (\"tool.box\" or \"box\"), \"on\"?: bool (default: toggle)}  — adds the mode to the Favorites strip at the top of the mode panel or removes it (right-click a mode button; at most 8, kept in the preferences): {\"favorite\": bool, \"count\": n}",
             mutates: false,
             enabled: always,
-            run: favourite,
+            run: favorite,
         },
         Command {
             id: "mode.favourites",
-            label: "List favourite modes",
+            label: "List favorite modes",
             menu: "",
             shortcut: "",
-            params: "{}  — the favourite modes, oldest first: {\"modes\": [{\"id\", \"label\"}]}",
+            params: "{}  — the favorite modes, oldest first: {\"modes\": [{\"id\", \"label\"}]}",
             mutates: false,
             enabled: always,
             run: |e, _| Ok(json!({"modes": listed(e)})),
@@ -30,7 +30,7 @@ pub(super) fn commands() -> Vec<Command> {
     ]
 }
 
-/// Whether a mode has a button in the mode panel (and so can be a favourite).
+/// Whether a mode has a button in the mode panel (and so can be a favorite).
 fn has_button(t: ToolKind) -> bool {
     !matches!(
         t,
@@ -54,7 +54,7 @@ fn listed(e: &Engine) -> Vec<Value> {
         .collect()
 }
 
-fn favourite(e: &mut Engine, p: &Value) -> CmdResult {
+fn favorite(e: &mut Engine, p: &Value) -> CmdResult {
     let name = string(p, "mode")?;
     let id = if name.starts_with("tool.") {
         name.clone()
@@ -66,8 +66,8 @@ fn favourite(e: &mut Engine, p: &Value) -> CmdResult {
         .ok_or_else(|| EngineError::bad_params(format!("no mode {name:?} in the mode panel")))?;
     let now = e.prefs.rustfig.mode_favourites.iter().any(|x| x == tool.id());
     let on = opt_bool(p, "on")?.unwrap_or(!now);
-    if !e.prefs.set_mode_favourite(tool.id(), on) {
-        return Err(EngineError::bad_params("too many favourite modes: remove one first"));
+    if !e.prefs.set_mode_favorite(tool.id(), on) {
+        return Err(EngineError::bad_params("too many favorite modes: remove one first"));
     }
     e.prefs_dirty = true;
     Ok(json!({"favourite": on, "count": e.prefs.rustfig.mode_favourites.len()}))
@@ -80,17 +80,17 @@ mod tests {
     #[test]
     fn add_remove_toggle_and_limit() {
         let mut e = Engine::new();
-        let r = favourite(&mut e, &json!({"mode": "box"})).unwrap();
+        let r = favorite(&mut e, &json!({"mode": "box"})).unwrap();
         assert_eq!(r["favourite"], true);
-        favourite(&mut e, &json!({"mode": "tool.arc", "on": true})).unwrap();
+        favorite(&mut e, &json!({"mode": "tool.arc", "on": true})).unwrap();
         assert_eq!(listed(&e).len(), 2);
-        favourite(&mut e, &json!({"mode": "tool.box"})).unwrap();
+        favorite(&mut e, &json!({"mode": "tool.box"})).unwrap();
         assert_eq!(listed(&e)[0]["id"], "tool.arc");
-        assert!(favourite(&mut e, &json!({"mode": "none"})).is_err());
-        assert!(favourite(&mut e, &json!({"mode": "xspline"})).is_err());
+        assert!(favorite(&mut e, &json!({"mode": "none"})).is_err());
+        assert!(favorite(&mut e, &json!({"mode": "xspline"})).is_err());
         for m in ["box", "move", "copy", "text", "glue", "align", "scale"] {
-            favourite(&mut e, &json!({"mode": m, "on": true})).unwrap();
+            favorite(&mut e, &json!({"mode": m, "on": true})).unwrap();
         }
-        assert!(favourite(&mut e, &json!({"mode": "flip_vertical"})).is_err());
+        assert!(favorite(&mut e, &json!({"mode": "flip_vertical"})).is_err());
     }
 }

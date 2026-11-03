@@ -85,7 +85,7 @@ pub fn stored_picture(file: &str) -> Option<Arc<Vec<u8>>> {
 }
 
 /// Read and decode a picture file as fig2dev's `readpics` does (PNG
-/// gamma and transparency, GIF transparent colour, XBM, XPM, PCX, `name.gz`
+/// gamma and transparency, GIF transparent color, XBM, XPM, PCX, `name.gz`
 /// for `name`), so the canvas shows the pixels the exports show; what
 /// `readpics` refuses (BMP, palette TIFF) goes to the `image` crate.
 /// A PDF picture is its first page rendered (B15); an EPS picture is
@@ -311,7 +311,7 @@ mod tests {
         let image_crate = decode_picture(&with_gamma).unwrap();
         eprintln!("gAMA png: image crate == readpics: {}", image_crate == via_readpics(&p));
 
-        // GIF with a transparent colour.
+        // GIF with a transparent color.
         let gif = encode(
             &image::RgbaImage::from_fn(5, 5, |x, _| {
                 image::Rgba([x as u8 * 50, 0, 0, if x == 0 { 0 } else { 255 }])

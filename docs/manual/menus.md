@@ -1,6 +1,6 @@
 # Menus
 
-Entries xfig has are named as in xfig; RustFig's own entries follow them. An entry greyed out is not available in the current situation (nothing selected, nothing to undo).
+Entries xfig has are named as in xfig; RustFig's own entries follow them. An entry grayed out is not available in the current situation (nothing selected, nothing to undo).
 
 ## File
 
@@ -8,7 +8,7 @@ Sections Open (New, Open, Merge, Open and Merge with preview, Digitize), Save (S
 
 ## Edit
 
-Sections Undo (Undo, Redo), Paste (Paste objects, Paste text, Copy as picture), Text (Search/Replace, Spell check, native app only), then Delete all and Settings (Global settings, User colours, Set units, Page setup). Find Properties, Enter point and the plots are in the Tools menu. xfig has no selection, so there is no Cut, Copy or Select all: the modes act on the object you click, and the cut buffer is filled by Copy mode or Delete mode (right button).
+Sections Undo (Undo, Redo), Paste (Paste objects, Paste text, Copy as picture), Text (Search/Replace, Spell check, native app only), then Delete all and Settings (Global settings, User colors, Set units, Page setup). Find Properties, Enter point and the plots are in the Tools menu. xfig has no selection, so there is no Cut, Copy or Select all: the modes act on the object you click, and the cut buffer is filled by Copy mode or Delete mode (right button).
 
 - Undo and Redo have many levels.
 - Paste objects attaches the cut buffer to the pointer as an outline, its top-left corner at the pointer. Left places the objects there (“place object”), middle at the position they were cut or copied from (“place at orig posn”), right or Escape cancels (“cancel paste”). One placement is one undo step. If the system clipboard holds a figure copied in another RustFig window, that is pasted instead of the cut buffer; if it holds an image (PNG, for example from a browser or a screenshot), it is pasted as a picture object, saved as `clipboard-<number>.png` next to the figure (in the temporary folder while the figure has no file name) and referenced by that path like any picture in a .fig file. The web version has only the cut buffer. Scripts and MCP give `dx` and `dy` to `edit.paste` to place the objects at once, moved by that offset.
@@ -36,4 +36,4 @@ RustFig's own menu, right after View. Find: Find Properties (see [Text](draw-tex
 - RustFig Manual: this manual (xfig's "Xfig Reference").
 - RustFig Reference (commands): every command with its id and shortcut, filterable. The same ids work in the [control channel and MCP](automation.md).
 - Install TeX Gyre fonts: downloads the TeX Gyre fonts from CTAN into RustFig's user data folder (native app; see [the font chooser](attributes.md)).
-- About RustFig: version and licence; the xfig copyright holders.
+- About RustFig: version and license; the xfig copyright holders.

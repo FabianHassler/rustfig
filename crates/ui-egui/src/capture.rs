@@ -68,7 +68,7 @@ impl App {
                     self.error(e);
                 }
             }
-            Ok(None) => self.info("Capture cancelled"),
+            Ok(None) => self.info("Capture canceled"),
             Err(e) => self.error(e),
         }
     }
@@ -107,7 +107,7 @@ impl App {
     }
 
     /// The captured PNG: ask where to save it (default: `<figure>_<seconds>.png`), write it and
-    /// add the picture object. Cancelling the file dialog drops the image.
+    /// add the picture object. Canceling the file dialog drops the image.
     pub fn finish_capture(&mut self, png: &[u8]) -> Result<Value, String> {
         let secs = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

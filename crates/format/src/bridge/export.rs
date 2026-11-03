@@ -5,7 +5,7 @@
 //!
 //! [`export_objects`] returns `None` wherever the reader would say
 //! something about the file (a repair it announces, an object it rejects, a
-//! colour that doesn't exist, text it can't read back as written) or the
+//! color that doesn't exist, text it can't read back as written) or the
 //! text would be read differently from what the model holds (a carriage
 //! return, a NUL, a backslash at the end). The caller then writes the Fig
 //! text and reads it, so the messages and failures are fig2dev's. Every
@@ -28,7 +28,7 @@ use std::cell::Cell;
 /// the file of `doc`: `ctx` comes with the options applied (and
 /// `font_size` multiplied by the magnification), exactly as before
 /// reading; on return it has the header's values where no option gave
-/// them, the colours and what the objects use.
+/// them, the colors and what the objects use.
 ///
 /// `None`: use the text path (see the module doc); `ctx` is then
 /// unspecified.
@@ -88,7 +88,7 @@ pub fn export_objects(doc: &Document, ctx: &mut Ctx) -> Option<Compound> {
     Some(objects)
 }
 
-/// Colour definitions the reader takes as they are: in range, each number
+/// Color definitions the reader takes as they are: in range, each number
 /// once, not more than it keeps.
 fn colors_regular(doc: &Document) -> bool {
     let mut numbers: Vec<i32> = doc.colors.iter().map(|c| c.number).collect();

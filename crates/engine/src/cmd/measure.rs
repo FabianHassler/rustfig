@@ -11,7 +11,7 @@
 // `compute_line_angle`, `compute_arc_angle`, `compute_poly_length`,
 // `compute_arc_length`, `compute_poly_area`, `compute_arc_area`,
 // `compute_ellipse_area`) and src/w_msgpanel.c (`lenmeas_msg`,
-// `areameas_msg`, `make_dimension_string`) (xfig licence, see
+// `areameas_msg`, `make_dimension_string`) (xfig license, see
 // LICENSE-xfig).
 
 use super::{opt_bool, opt_num, CmdResult, Command};
@@ -42,7 +42,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Measure angle",
             menu: "",
             shortcut: "",
-            params: "{\"points\": [[x, y], [x, y], [x, y]]} the angle at the second point between the lines to the first and the third, or {\"id\": line, polygon or arc, \"x\", \"y\": the corner clicked (a vertex within \"tolerance\", default the pick tolerance; not needed for an arc: its angle at the centre), \"tolerance\"?}; \"save\"?: bool also stores it as the indicator's rotation angle (xfig's middle button). Shows \"Angle defined by three points: 45.00 Degrees\" (or at a polyline corner, at the arc centre) in the message panel; nothing is changed. Returns {\"degrees\", \"kind\", \"text\"}",
+            params: "{\"points\": [[x, y], [x, y], [x, y]]} the angle at the second point between the lines to the first and the third, or {\"id\": line, polygon or arc, \"x\", \"y\": the corner clicked (a vertex within \"tolerance\", default the pick tolerance; not needed for an arc: its angle at the center), \"tolerance\"?}; \"save\"?: bool also stores it as the indicator's rotation angle (xfig's middle button). Shows \"Angle defined by three points: 45.00 Degrees\" (or at a polyline corner, at the arc center) in the message panel; nothing is changed. Returns {\"degrees\", \"kind\", \"text\"}",
             mutates: false,
             enabled: super::always,
             run: measure_angle,

@@ -1,5 +1,5 @@
 //! xfig's "Dimension Line Settings" panel (`popup_dimline_panel` in
-//! `w_indpanel.c`, xfig licence, see LICENSE-xfig): a window of its own,
+//! `w_indpanel.c`, xfig license, see LICENSE-xfig): a window of its own,
 //! opened from the indicator's "Dimension line" button in Polyline mode,
 //! with the line, box, arrow, tick and text settings of new dimension
 //! lines. OK stores the draft in the indicator (`indicator.set`), Cancel

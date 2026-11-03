@@ -1,4 +1,4 @@
-//! The mode panel's Go to mode field and Favourites strip: type part of a
+//! The mode panel's Go to mode field and Favorites strip: type part of a
 //! mode's name to pick it, keep the modes you use most within reach.
 
 use crate::panels;
@@ -10,7 +10,7 @@ use serde_json::json;
 
 /// Most matches listed.
 const MAX_MATCHES: usize = 10;
-/// Size of a Favourites button.
+/// Size of a Favorites button.
 const FAV_SIZE: egui::Vec2 = vec2(17.0, 16.0);
 
 /// State of the Go to mode field.
@@ -76,8 +76,8 @@ pub fn mode_keys(t: ToolKind, mac: bool) -> String {
     }
 }
 
-/// The favourite modes that have a button, in the order they were added.
-pub fn favourites(app: &App) -> Vec<ToolKind> {
+/// The favorite modes that have a button, in the order they were added.
+pub fn favorites(app: &App) -> Vec<ToolKind> {
     let panel = panels::panel_tools();
     app.engine
         .prefs
@@ -89,7 +89,7 @@ pub fn favourites(app: &App) -> Vec<ToolKind> {
         .collect()
 }
 
-/// The finder and the Favourites strip, above the scrolling buttons.
+/// The finder and the Favorites strip, above the scrolling buttons.
 pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     finder(app, ui, tk);
     strip(app, ui, tk);
@@ -210,12 +210,12 @@ fn finder(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
 }
 
 fn strip(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
-    let favs = favourites(app);
+    let favs = favorites(app);
     if favs.is_empty() {
         return;
     }
     ui.add_space(2.0);
-    ui.label(egui::RichText::new("Favourites").small().color(tk.muted));
+    ui.label(egui::RichText::new("Favorites").small().color(tk.muted));
     ui.spacing_mut().item_spacing = vec2(2.0, 2.0);
     ui.horizontal_wrapped(|ui| {
         for t in favs {
@@ -226,13 +226,13 @@ fn strip(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
             crate::bevel::paint(ui.painter(), rect, tk, state);
             let ink = if active { tk.icon_active } else { tk.icon };
             panels::paint_mode_icon(ui, icon, rect.shrink(1.0), ink);
-            let label = format!("Favourite {}", t.label());
+            let label = format!("Favorite {}", t.label());
             resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, active, &label));
             let resp = resp.on_hover_text(t.label());
             if resp.clicked() {
                 app.run(t.id(), json!({}));
             }
-            panels::favourite_menu(app, &resp, t);
+            panels::favorite_menu(app, &resp, t);
         }
     });
 }

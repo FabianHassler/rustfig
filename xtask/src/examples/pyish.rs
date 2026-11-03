@@ -1,4 +1,4 @@
-//! The few Python behaviours the figure generators rely on, so that the Rust
+//! The few Python behaviors the figure generators rely on, so that the Rust
 //! port writes the very same bytes as the scripts it replaces: `round()` rounds
 //! half to even, `%d` of a float truncates, complex arithmetic follows
 //! CPython's formulas (including the sign of zero), `colorsys.hsv_to_rgb`, and

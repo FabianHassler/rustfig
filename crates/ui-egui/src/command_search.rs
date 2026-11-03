@@ -1,7 +1,7 @@
 //! Command search (W18, Help › Command search…, Ctrl+Shift+K / Cmd+Shift+K):
 //! a small window with a text field and the commands that match what is
 //! typed, by label, id or menu path, each with its key; disabled ones are
-//! greyed. Arrow keys move, Enter runs the command through `app.run`, so the
+//! grayed. Arrow keys move, Enter runs the command through `app.run`, so the
 //! UI's own commands work too. Ctrl+K itself is xfig's keyboard panel
 //! (`app.keyboard_entry`), so the search took Shift with it.
 //! The matching is a pure function ([`matches`]); the window draws it.

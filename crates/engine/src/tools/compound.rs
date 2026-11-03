@@ -2,7 +2,7 @@
 //! `e_compound.c` and `e_joinsplit.c`. The work is done by the commands
 //! `compound.open`, `object.join` and `object.split`.
 //
-// Ported from xfig src/e_compound.c and src/e_joinsplit.c (xfig licence, see LICENSE-xfig).
+// Ported from xfig src/e_compound.c and src/e_joinsplit.c (xfig license, see LICENSE-xfig).
 
 use super::{markers::ObjMask, Button, ToolEvent, ToolKind, ToolState};
 use crate::{Engine, EngineError};

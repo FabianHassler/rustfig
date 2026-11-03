@@ -863,15 +863,15 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         painter.rect_filled(r, 0.0, tk.handle_fill);
         painter.rect_stroke(r, 0.0, Stroke::new(1.0_f32, tk.handle_stroke), egui::StrokeKind::Middle);
     }
-    // Chop: the axes in one colour, the log object under the pointer (what
+    // Chop: the axes in one color, the log object under the pointer (what
     // the middle button cuts) in another.
     let chop = overlay.chop_axes.iter().map(|h| (h, tk.chop_axe));
-    for (h, colour) in chop.chain(overlay.chop_log.iter().map(|h| (h, tk.chop_log))) {
+    for (h, color) in chop.chain(overlay.chop_log.iter().map(|h| (h, tk.chop_log))) {
         let outline: Vec<Pos2> = h.outline.iter().map(|p| to_screen(*p)).collect();
-        painter.extend(Shape::dashed_line(&outline, Stroke::new(1.5_f32, colour), 5.0, 3.0));
+        painter.extend(Shape::dashed_line(&outline, Stroke::new(1.5_f32, color), 5.0, 3.0));
         for m in &h.markers {
             let r = Rect::from_center_size(to_screen(*m), vec2(MARKER, MARKER));
-            painter.rect_filled(r, 0.0, colour);
+            painter.rect_filled(r, 0.0, color);
         }
     }
     // Join/Split: a magenta square around the first end point (xfig's
@@ -1343,7 +1343,7 @@ mod tests {
     }
 
     #[test]
-    fn long_press_cancelled_by_movement_or_early_lift() {
+    fn long_press_canceled_by_movement_or_early_lift() {
         let p = egui::pos2(10.0, 10.0);
         let mut l = LongPress::default();
         l.begin(p, 0.0);

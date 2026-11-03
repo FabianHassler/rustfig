@@ -46,7 +46,7 @@ const MAX_IMAGE_PIXELS: u64 = 100_000_000;
 
 /// What the import made.
 pub struct Imported {
-    /// The figure: objects and user colours.
+    /// The figure: objects and user colors.
     pub doc: Document,
     /// The page's pictures as PNG files: (file name, bytes); the picture
     /// objects name them.
@@ -192,7 +192,7 @@ pub(crate) struct LatexMark {
 }
 
 impl LatexMark {
-    /// The special text, its colour as `color` gives it.
+    /// The special text, its color as `color` gives it.
     pub fn text(&self, color: ColorRef) -> Text {
         Text {
             justify: self.justify,
@@ -366,7 +366,7 @@ struct Importer {
     /// The depth the next object goes to and the highest xfig type rank on it.
     depth: i32,
     rank: u8,
-    out_of_colours: bool,
+    out_of_colors: bool,
     capped: bool,
     /// Font names the resolver saw and the fig font chosen per hayro font.
     font_names: Arc<Mutex<VecDeque<String>>>,
@@ -400,7 +400,7 @@ impl Importer {
             image_pixels: 0,
             depth: 999,
             rank: 0,
-            out_of_colours: false,
+            out_of_colors: false,
             capped: false,
             font_names: Arc::default(),
             fonts: HashMap::new(),
@@ -467,18 +467,18 @@ impl Importer {
         match self.doc.color_for_rgb(rgb) {
             Some(c) => c,
             None => {
-                if !self.out_of_colours {
-                    self.out_of_colours = true;
+                if !self.out_of_colors {
+                    self.out_of_colors = true;
                     self.warnings
-                        .push("More than 512 colours: the rest is drawn in black".into());
+                        .push("More than 512 colors: the rest is drawn in black".into());
                 }
                 ColorRef::BLACK
             }
         }
     }
 
-    /// The colour of a paint and whether it is visible; patterns and
-    /// gradients become grey with a warning.
+    /// The color of a paint and whether it is visible; patterns and
+    /// gradients become gray with a warning.
     fn paint_rgb(&mut self, paint: &Paint<'_>) -> Option<Rgb> {
         match paint {
             Paint::Color(c) => {
@@ -492,7 +492,7 @@ impl Importer {
                 Some(Rgb::new(r, g, b))
             }
             Paint::Pattern(_) => {
-                self.warn_once("pattern", "Patterns and gradients are drawn in grey");
+                self.warn_once("pattern", "Patterns and gradients are drawn in gray");
                 Some(Rgb::new(128, 128, 128))
             }
         }

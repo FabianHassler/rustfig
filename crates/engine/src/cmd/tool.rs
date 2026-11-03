@@ -28,7 +28,7 @@ pub(super) fn commands() -> Vec<Command> {
         label: "Escape",
         menu: "",
         shortcut: "Escape",
-        params: "{}  — one level per press: cancel what is in progress (text input is finished), else clear what the mode collected (Chop's axes, the located object, the rotate/flip centre, the selection), else leave the mode; returns {\"done\": cancelled|text finished|axes cleared|cleared|selection cleared|mode left|nothing}",
+        params: "{}  — one level per press: cancel what is in progress (text input is finished), else clear what the mode collected (Chop's axes, the located object, the rotate/flip center, the selection), else leave the mode; returns {\"done\": canceled|text finished|axes cleared|cleared|selection cleared|mode left|nothing}",
         mutates: false,
         enabled: always,
         run: |e, _| Ok(json!({"done": e.escape()?})),

@@ -105,7 +105,7 @@ fn angle_at_a_corner_and_save() {
         json!({"id": g, "x": 0, "y": 0, "save": false}),
     );
     near(&r["degrees"], 90.0, 1e-9);
-    // An arc: the angle at its centre.
+    // An arc: the angle at its center.
     let a = add(
         &mut e,
         "shape.arc",

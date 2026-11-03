@@ -114,7 +114,7 @@ fn an_ellipse_chops_into_spline_wedges_whose_ends_are_the_cut_points() {
             panic!("not a spline")
         };
         assert!(s.closed);
-        // Wedge: the points include the centre as a sharp corner.
+        // Wedge: the points include the center as a sharp corner.
         assert!(s.points.contains(&p(1000.0, 1000.0)));
         tips.push(s.points[0]);
         // The curve stays on the ellipse: every flattened point is close to it.

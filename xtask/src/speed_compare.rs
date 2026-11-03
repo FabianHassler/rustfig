@@ -29,7 +29,7 @@ use std::time::{Duration, Instant};
 
 use crate::xfig_compare::{have, json_str, numbers_after, sh, sleep_ms, XF_CX, XF_CY};
 
-/// Centre of an editing-mode button in the 818-pixel-high window (xfig squeezes the mode panel:
+/// Center of an editing-mode button in the 818-pixel-high window (xfig squeezes the mode panel:
 /// the first editing row is at y 351, rows 32.8 px apart, two columns at x 19 and 56).
 fn xfig_mode_xy(_draw: bool, idx: usize) -> (i32, i32) {
     (
@@ -388,7 +388,7 @@ fn steps_to_fit(info: &FigInfo, cw: f64, ch: f64) -> u32 {
     12
 }
 
-/// The vertex nearest the canvas centre at zoom `z` (origin 0), in Fig units.
+/// The vertex nearest the canvas center at zoom `z` (origin 0), in Fig units.
 fn pick_point(info: &FigInfo, z: f64, cw: f64, ch: f64) -> Option<(i64, i64)> {
     let (cx, cy) = (cw / 2.0 * 15.0 / z, ch / 2.0 * 15.0 / z);
     let list = if info.cands.is_empty() { &info.weak } else { &info.cands };
@@ -420,7 +420,7 @@ impl X11 {
         let mut h = [0u8; 8];
         s.read_exact(&mut h).map_err(|e| e.to_string())?;
         if h[0] != 1 {
-            return Err("X server refused the connection (needs no authorisation)".into());
+            return Err("X server refused the connection (needs no authorization)".into());
         }
         let mut d = vec![0u8; usize::from(u16::from_le_bytes([h[6], h[7]])) * 4];
         s.read_exact(&mut d).map_err(|e| e.to_string())?;
@@ -796,11 +796,11 @@ fn shot_xfig(o: &Opts, name: &str) {
 
 fn xfig_tasks(o: &Opts, env: &mut XEnv, info: &FigInfo, pid: u32, t: &mut Trial, run: usize) -> Result<(), String> {
     let (cw, ch) = xfig_canvas_size(o);
-    let centre = (76 + (cw / 2.0) as i32, 76 + (ch / 2.0) as i32);
+    let center = (76 + (cw / 2.0) as i32, 76 + (ch / 2.0) as i32);
     let corner = (80, 80);
     let (z, shift, alt) = (env.k.z, env.k.shift, env.k.alt);
     let (ks, ku) = (env.k.s, env.k.u);
-    env.x.motion(centre.0, centre.1)?;
+    env.x.motion(center.0, center.1)?;
     sleep_ms(200);
     let v = xmeasure(
         o,
@@ -833,7 +833,7 @@ fn xfig_tasks(o: &Opts, env: &mut XEnv, info: &FigInfo, pid: u32, t: &mut Trial,
         400,
         "pan",
         |x| {
-            x.glide(centre, (800, 62), 4)?;
+            x.glide(center, (800, 62), 4)?;
             x.button(2, true)?;
             x.glide((800, 62), (800 - PAN_PX, 62), 25)
         },
@@ -841,7 +841,7 @@ fn xfig_tasks(o: &Opts, env: &mut XEnv, info: &FigInfo, pid: u32, t: &mut Trial,
     )?;
     t.insert("pan", v);
     // Back to the origin: Ctrl + middle button on the canvas ("pan to origin").
-    env.x.motion(centre.0, centre.1)?;
+    env.x.motion(center.0, center.1)?;
     sleep_ms(100);
     let ctrl = env.k.ctrl;
     env.x.key(ctrl, true)?;
@@ -888,7 +888,7 @@ fn xfig_tasks(o: &Opts, env: &mut XEnv, info: &FigInfo, pid: u32, t: &mut Trial,
         env.x.button(2, false)?;
         let base = env.fb.hash(CANVAS);
         let _ = base;
-        // Tagging redraws every glued object in xfig's highlight colour: wait for it.
+        // Tagging redraws every glued object in xfig's highlight color: wait for it.
         let w = Watch {
             fb: &env.fb,
             rect: CANVAS,
@@ -901,7 +901,7 @@ fn xfig_tasks(o: &Opts, env: &mut XEnv, info: &FigInfo, pid: u32, t: &mut Trial,
         if matches!(settle(&w, Instant::now()), Settled::Timeout) {
             return Err("xfig: tagging the figure took longer than the timeout".into());
         }
-        env.x.glide((x2, y2), (centre.0, centre.1), 6)?;
+        env.x.glide((x2, y2), (center.0, center.1), 6)?;
         env.x.click(3)?;
         let w = Watch {
             fb: &env.fb,
@@ -915,7 +915,7 @@ fn xfig_tasks(o: &Opts, env: &mut XEnv, info: &FigInfo, pid: u32, t: &mut Trial,
         if matches!(settle(&w, Instant::now()), Settled::Timeout) {
             return Err("xfig: gluing the figure took longer than the timeout".into());
         }
-        env.x.glide(centre, (mx, my), 6)?;
+        env.x.glide(center, (mx, my), 6)?;
         env.x.click(1)?;
     } else {
         let (mx, my) = xfig_mode_xy(false, 8);
@@ -991,7 +991,7 @@ fn xfig_tasks(o: &Opts, env: &mut XEnv, info: &FigInfo, pid: u32, t: &mut Trial,
     t.insert("move_place", v);
     shot_xfig(o, &format!("xfig-{run}-placed.png"));
     // Save (Alt-S) is seen in the message panel; undo (Alt-U) on the canvas.
-    env.x.motion(centre.0, centre.1)?;
+    env.x.motion(center.0, center.1)?;
     let v = xmeasure(o, env, pid, MSG, 500, "save", |_| Ok(()), |x| key_chord(x, &[alt], ks))?;
     t.insert("save", v);
     let v = xmeasure(

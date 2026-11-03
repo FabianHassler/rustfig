@@ -5,23 +5,23 @@
 //! What the conversion does, as the writer and the reader do together:
 //! - numbers are rounded as the file prints them (coordinates to integers,
 //!   arrowhead sizes to 0.01, style values to 0.001, angles to 0.0001,
-//!   arc centres to 0.001), so a figure exports the same through either
+//!   arc centers to 0.001), so a figure exports the same through either
 //!   path;
 //! - thicknesses and corner radii (1/80 inch) and arrowhead thicknesses
 //!   are multiplied by the context's `thick_scale` (15 at 1200 ppi);
 //! - closed polylines get their first point again at the end, boxes keep
 //!   their four corners plus the repeat, arrowheads of closed shapes, of
 //!   closed splines and of pie arcs are left out (the file has none);
-//! - user colours are numbered `NUM_STD_COLS` + index in the order of the
-//!   colour definitions (sorted by number); a user colour that isn't
-//!   defined becomes the default colour, as the reader makes it;
+//! - user colors are numbered `NUM_STD_COLS` + index in the order of the
+//!   color definitions (sorted by number); a user color that isn't
+//!   defined becomes the default color, as the reader makes it;
 //! - texts lose `\u{1}` and stop at a NUL, comments split at newlines;
 //! - `Ctx::std_color_used`, `pattern_used` and `arrow_used` are noted as
 //!   the reader notes them ([`note_usage`]).
 //!
 //! Not done here, as the reader's repairs are for files: consecutive equal
 //! points are not dropped, invalid objects are not rejected, a text keeps
-//! its leading blanks, and the unfilled objects' fill colour is mapped like
+//! its leading blanks, and the unfilled objects' fill color is mapped like
 //! any other (the reader leaves it as the file has it). [`super::export`]
 //! does what the reader does, for the exports (plan D7).
 
@@ -99,8 +99,8 @@ fn fpoint(p: Point) -> f::Point {
     f::Point::new(i(p.x), i(p.y))
 }
 
-/// The header values and colours of `doc` as a context for fig2dev (1200
-/// ppi, the settings the reader takes from the header, user colours as the
+/// The header values and colors of `doc` as a context for fig2dev (1200
+/// ppi, the settings the reader takes from the header, user colors as the
 /// reader numbers them).
 pub fn context(doc: &Document) -> Ctx {
     let mut colors: Vec<_> = doc
@@ -129,8 +129,8 @@ pub fn context(doc: &Document) -> Ctx {
     ctx
 }
 
-/// What the reader makes of the header's transparent colour: a standard
-/// colour's name, a user colour as `#rrggbb` (blank padded, as `read.c`
+/// What the reader makes of the header's transparent color: a standard
+/// color's name, a user color as `#rrggbb` (blank padded, as `read.c`
 /// formats it), nothing for none, default and background.
 fn transparent_name(ctx: &Ctx, number: i32) -> String {
     if let Some(name) = usize::try_from(number).ok().and_then(|n| FIG_COLOR_NAMES.get(n)) {
@@ -182,7 +182,7 @@ fn repair_lines(c: &mut Compound) {
         }
     }
     // `sanitize_arc`: the last point goes onto the circle about the file's
-    // centre (an arc the reader rejects is left as it is).
+    // center (an arc the reader rejects is left as it is).
     for a in &mut c.arcs {
         let saved = a.clone();
         if fig2dev::read::repair_arc(a).is_err() {
@@ -240,7 +240,7 @@ fn object_below(o: &rustfig_model::Object, ctx: &Ctx, depth: usize) -> FigObject
 }
 
 /// One object as fig2dev's; `odd` is set where the Fig file the writer
-/// makes would draw a message from the reader (a colour that doesn't exist,
+/// makes would draw a message from the reader (a color that doesn't exist,
 /// an arrowhead it drops), which an export through objects must not hide.
 pub(super) fn object_at(o: &rustfig_model::Object, ctx: &Ctx, odd: &Cell<bool>) -> FigObject {
     let c = Conv { ctx, odd };
@@ -422,7 +422,7 @@ impl Conv<'_> {
         fig2dev::round(f64::from(self.ctx.thick_scale))
     }
 
-    /// A colour number as the objects carry it: user colours become
+    /// A color number as the objects carry it: user colors become
     /// `NUM_STD_COLS` + their index, an undefined one the default.
     fn color(&self, c: ColorRef) -> i32 {
         if c.0 < NUM_STD_COLS as i32 {
@@ -468,7 +468,7 @@ impl Conv<'_> {
     }
 }
 
-/// Note the standard colours, fill patterns and arrowheads `objects` use
+/// Note the standard colors, fill patterns and arrowheads `objects` use
 /// in `ctx`, as the reader does (`fix_and_note_color`, `note_fill`,
 /// `make_arrow`); drivers write only what is noted.
 pub fn note_usage(ctx: &mut Ctx, objects: &Compound) {

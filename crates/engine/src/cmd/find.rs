@@ -70,7 +70,7 @@ pub(super) fn commands() -> Vec<Command> {
         label: "Find properties",
         menu: "",
         shortcut: "",
-        params: "{\"kind\"?: line|box|polygon|spline|arc|ellipse|text|picture|compound (or a list of them), \"pen_color\"?: colour number, \"fill_color\"?: colour number, \"fill\"?: none|filled|pattern, \"depth\"?: n, \"depth_min\"?, \"depth_max\"?: 0-999, \"thickness\"?: n, \"line\"?: line style name, \"arrows\"?: any|none, \"font\"?: font number, \"font_size\"?: points, \"text\"?: substring (case-insensitive), \"inside\"?: bool (also match members of compounds; the result names the top-level compound)}  — read-only; criteria combine with AND; returns {count, ids, items: [{id, type, depth, label}]}; act on the matches with object.update, arrange.set_depth, edit.delete or object.group and \"ids\"",
+        params: "{\"kind\"?: line|box|polygon|spline|arc|ellipse|text|picture|compound (or a list of them), \"pen_color\"?: color number, \"fill_color\"?: color number, \"fill\"?: none|filled|pattern, \"depth\"?: n, \"depth_min\"?, \"depth_max\"?: 0-999, \"thickness\"?: n, \"line\"?: line style name, \"arrows\"?: any|none, \"font\"?: font number, \"font_size\"?: points, \"text\"?: substring (case-insensitive), \"inside\"?: bool (also match members of compounds; the result names the top-level compound)}  — read-only; criteria combine with AND; returns {count, ids, items: [{id, type, depth, label}]}; act on the matches with object.update, arrange.set_depth, edit.delete or object.group and \"ids\"",
         mutates: false,
         enabled: |e| !e.doc().objects.is_empty(),
         run: find_objects,

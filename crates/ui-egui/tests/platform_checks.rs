@@ -1,5 +1,5 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-//! P2: checks of platform behaviour that run on any system: HiDPI scales,
+//! P2: checks of platform behavior that run on any system: HiDPI scales,
 //! non-ASCII file names through the real menus, the three buttons.
 
 use egui::{pos2, vec2};

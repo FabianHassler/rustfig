@@ -4,7 +4,7 @@ These modes change objects that already exist.
 
 ## Update attributes
 
-Key `U`. Gives an object the current attributes of the [indicator panel](attributes.md) (colours, width, style, fill, arrows and so on). Which attributes are applied is set by the Update Control box shown in this mode: all, none or toggled flags, and individual ones. Under the buttons the line "Update will change: pen colour, line width, …" lists the attributes whose flags are on, so you can read what a click will do without checking every button (script: `indicator.update_summary`).
+Key `U`. Gives an object the current attributes of the [indicator panel](attributes.md) (colors, width, style, fill, arrows and so on). Which attributes are applied is set by the Update Control box shown in this mode: all, none or toggled flags, and individual ones. Under the buttons the line "Update will change: pen color, line width, …" lists the attributes whose flags are on, so you can read what a click will do without checking every button (script: `indicator.update_summary`).
 
 - Left, “update object”: click an object.
 - Middle, “update settings”: the reverse: the clicked object's attributes become the indicator's current ones.
@@ -17,10 +17,10 @@ No key (xfig key Ctrl+E). Opens the edit panel for an object with all of its att
 
 Number fields of the panel (Width, Dash length or Dot gap, Corner radius, Depth, Text Size and Angle, an ellipse's Angle, the arrow Thick, Width and Length, a picture's Scale) are buttons showing the value. Click one for a small pop-up with the number field, preset values and, where a range helps, a slider (angles have preset chips for 0 to 270 degrees; Depth has -10/-1/+1/+10 buttons). The object follows as you drag or type; Return or a click outside keeps the value, Escape puts back the value the pop-up opened with. Point coordinates stay plain fields.
 
-Pointing at a choice in a pop-up grid (Line style, Cap, Join, Fill style, Pen and Fill colour, Forward and Backward arrow type) shows it on the object at once without changing the drawing; moving away puts the object back, a click keeps the choice. The arrow shows even while its **on** box is off.
+Pointing at a choice in a pop-up grid (Line style, Cap, Join, Fill style, Pen and Fill color, Forward and Backward arrow type) shows it on the object at once without changing the drawing; moving away puts the object back, a click keeps the choice. The arrow shows even while its **on** box is off.
 
 - Line style, cap style, join style and the arrow types are pictorial menus: the button shows the picture of the current value, its pop-up lists every value as a picture (the same pictures as the attribute panel). Every row of the panel has the same height, labels sit on the left and controls in one column, and the point table has headings (#, X, Y, Shape) over its columns.
-- Fill style (indicator and edit panel): the edit panel's "Fill style" row is a button showing the current fill; it opens the same choice panel as the indicator (NONE, shades and tints of the fill colour, patterns) and a label beside it says "No fill", "Filled 50 %" or "Pattern 3" as xfig's panel does. For the fill colours black, white and default the menu has no tints, as in xfig (a tint set earlier becomes the full colour).
+- Fill style (indicator and edit panel): the edit panel's "Fill style" row is a button showing the current fill; it opens the same choice panel as the indicator (NONE, shades and tints of the fill color, patterns) and a label beside it says "No fill", "Filled 50 %" or "Pattern 3" as xfig's panel does. For the fill colors black, white and default the menu has no tints, as in xfig (a tint set earlier becomes the full color).
 - Points of a polyline, polygon or spline are a table: edit the X and Y of a row, Insert adds a point before that row, Delete removes it (the object keeps its minimum number of points), Add point appends one. Open Paste points, type or paste a list (one point per pair of numbers: `x y`, `x, y` or `(x, y)`, in the units shown in the panel) and choose Replace points or Append points. X-splines have a Shape column with each point's shape factor (-0.5 interpolated, 0 angular, 1 approximated; xfig's panel scale runs from -1 to 1).
 - A compound has its own panel, see [Compounds](compounds.md).
 

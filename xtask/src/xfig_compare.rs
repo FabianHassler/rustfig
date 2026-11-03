@@ -93,7 +93,7 @@ const FIXTURE3: &str =
 
 /// Round 3 fixture B: two pictures (one flipped), a pie-wedge arc and an arc with an arrow (both counter-
 /// clockwise), lines with each arrow type, a hatched polygon, a many-point line, a dash-dotted line,
-/// overlapping filled circles at two depths, a rotated ellipse, a centred text and a compound in a
+/// overlapping filled circles at two depths, a rotated ellipse, a centerd text and a compound in a
 /// compound (text, spline).
 const FIXTURE4: &str =
     "#FIG 3.2  Produced by xfig version 3.2.9a\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
@@ -234,7 +234,7 @@ const MODES: &[(&str, bool, usize, &str)] = &[
     ("area_measure", false, 24, "Measure area"),
 ];
 
-/// xfig's mode button centre (window pixels).
+/// xfig's mode button center (window pixels).
 pub(crate) fn xfig_mode_xy(draw: bool, idx: usize) -> (i32, i32) {
     let (col, row) = (idx % 2, idx / 2);
     let x = if draw && idx == 14 {
@@ -814,7 +814,7 @@ fn scenarios_r2() -> Vec<Scenario> {
         };
         let _ = base;
         let steps = match steps_fn {
-            // scale about the centre
+            // scale about the center
             0 => vec![
                 Step::Mode(mode),
                 Step::Click(on_poly.0, on_poly.1, M),
@@ -883,7 +883,7 @@ fn scenarios_r2() -> Vec<Scenario> {
             Step::Mode("box"),
             Step::Click(9000.0, 9000.0, L),
             Step::Click(10500.0, 10200.0, R),
-            Step::Shot("cancelled"),
+            Step::Shot("canceled"),
         ],
         true,
         "right cancels the box in progress",
@@ -936,7 +936,7 @@ fn scenarios_r2() -> Vec<Scenario> {
             Step::Mode("ellipse_radius"),
             Step::Click(9000.0, 9000.0, L),
             Step::Click(10500.0, 10200.0, R),
-            Step::Shot("cancelled"),
+            Step::Shot("canceled"),
         ],
         true,
         "",
@@ -949,7 +949,7 @@ fn scenarios_r2() -> Vec<Scenario> {
             Step::Click(9000.0, 9000.0, L),
             Step::Click(10500.0, 8400.0, L),
             Step::Click(12000.0, 9000.0, R),
-            Step::Shot("cancelled"),
+            Step::Shot("canceled"),
         ],
         true,
         "",
@@ -2259,7 +2259,7 @@ fn scenarios() -> Vec<Scenario> {
         );
     }
 
-    // Indicator pop-ups (box mode: line width, style, fill, colours, depth, join, cap, grid, point position).
+    // Indicator pop-ups (box mode: line width, style, fill, colors, depth, join, cap, grid, point position).
     for (id, x, label) in [
         ("line-width", 532, "Line Width"),
         ("line-style", 597, "Line Style"),
@@ -2560,7 +2560,7 @@ impl Rf {
     fn click_label(&mut self, label: &str) -> Result<(), String> {
         let r = self.call("ui.click_label", &format!(r#"{{"label":{}}}"#, json_str(label)))?;
         if r.contains("\"error\"") {
-            self.log.push(format!("no widget labelled {label:?}"));
+            self.log.push(format!("no widget labeled {label:?}"));
         }
         Ok(())
     }
@@ -2584,7 +2584,7 @@ impl Drop for Rf {
 // ---------------------------------------------------------------- .fig comparison
 
 /// The objects of a .fig file as one string each (object line, then its point lines after " / ";
-/// header, comments and blank lines dropped, whitespace and number formats normalised).
+/// header, comments and blank lines dropped, whitespace and number formats normalized).
 fn fig_objects(text: &str) -> Vec<String> {
     let mut lines = text.lines().map(str::trim_end);
     // header: up to the "<resolution> <coord system>" line
@@ -2607,7 +2607,7 @@ fn fig_objects(text: &str) -> Vec<String> {
                 last.push_str(&nums.join(" "));
             }
         } else {
-            out.push(normalise(l));
+            out.push(normalize(l));
         }
     }
     out
@@ -2615,7 +2615,7 @@ fn fig_objects(text: &str) -> Vec<String> {
 
 /// Numbers printed alike ("12.00" = "12"); a text's height and length (fields 9 and 10) depend on
 /// the fonts of the machine and are left out.
-fn normalise(line: &str) -> String {
+fn normalize(line: &str) -> String {
     let t: Vec<&str> = line.split_whitespace().collect();
     let is_text = t.first() == Some(&"4");
     let mut out: Vec<String> = Vec::new();
@@ -2638,7 +2638,7 @@ fn normalise(line: &str) -> String {
 
 fn kind(line: &str) -> &'static str {
     match line.split_whitespace().next() {
-        Some("0") => "colour",
+        Some("0") => "color",
         Some("1") => "ellipse",
         Some("2") => "polyline",
         Some("3") => "spline",

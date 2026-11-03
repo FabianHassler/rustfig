@@ -501,7 +501,7 @@ impl T {
             big: false,
         }
     }
-    /// 0 left, 1 centred, 2 right.
+    /// 0 left, 1 centerd, 2 right.
     pub const fn j(mut self, v: usize) -> T {
         self.just = v;
         self
@@ -563,7 +563,7 @@ impl Fig {
         }
     }
 
-    // ---- colours ----
+    // ---- colors ----
     pub fn color(&mut self, hx: &str) -> i32 {
         if let Some((_, n)) = self.colors.iter().find(|(h, _)| h == hx) {
             return *n;
@@ -837,7 +837,7 @@ impl Fig {
         self.text(p.0, p.1, txt, o)
     }
 
-    /// The file's text: header, comment, colours, objects, and the invisible
+    /// The file's text: header, comment, colors, objects, and the invisible
     /// white frame that fixes the cropped page (padding for text that LaTeX
     /// sets wider than estimated).
     pub fn render(&self) -> String {
@@ -884,7 +884,7 @@ impl Fr {
     }
 }
 
-/// The gallery palette: ink black, four accents, a grey, and light tints of
+/// The gallery palette: ink black, four accents, a gray, and light tints of
 /// them for fills.
 #[derive(Clone, Copy)]
 pub struct Pal {
@@ -892,11 +892,11 @@ pub struct Pal {
     pub red: i32,
     pub green: i32,
     pub orange: i32,
-    pub grey: i32,
+    pub gray: i32,
     pub lblue: i32,
     pub lred: i32,
     pub lorange: i32,
-    pub lgrey: i32,
+    pub lgray: i32,
     pub hatch: i32,
     pub hp: i32,
 }
@@ -906,12 +906,12 @@ pub fn pal(f: &mut Fig) -> Pal {
     let red = f.color("#c0392b");
     let green = f.color("#2e8b57");
     let orange = f.color("#d98a1f");
-    let grey = f.color("#7f7f7f");
+    let gray = f.color("#7f7f7f");
     let lblue = f.color("#cfe0f3");
     let lred = f.color("#f3d3cf");
     let _lgreen = f.color("#d3ebdd");
     let lorange = f.color("#f6e2c2");
-    let lgrey = f.color("#e4e4e4");
+    let lgray = f.color("#e4e4e4");
     let hatch = f.color("#b4b4b4");
     let hp = f.color("#a0a0a0");
     Pal {
@@ -919,11 +919,11 @@ pub fn pal(f: &mut Fig) -> Pal {
         red,
         green,
         orange,
-        grey,
+        gray,
         lblue,
         lred,
         lorange,
-        lgrey,
+        lgray,
         hatch,
         hp,
     }
@@ -931,8 +931,8 @@ pub fn pal(f: &mut Fig) -> Pal {
 
 pub fn title(f: &mut Fig, name: &str, caption: &str) {
     f.text(900, 1050, format!("\\textbf{{{name}}}"), T::s(14).big().d(20));
-    let grey = f.color("#6f6f6f");
-    f.text(900, 1380, caption, T::s(10).c(grey).d(20));
+    let gray = f.color("#6f6f6f");
+    f.text(900, 1380, caption, T::s(10).c(gray).d(20));
 }
 
 pub fn axis(f: &mut Fig, a: Pt, b: Pt, s: St) {

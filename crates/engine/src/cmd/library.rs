@@ -1,7 +1,7 @@
 //! Library mode (plan D6): list the figure libraries and their objects,
 //! place an object, copy objects to a library of your own.
 //
-// Ported from xfig src/w_library.c and src/e_placelib.c (xfig licence, see LICENSE-xfig).
+// Ported from xfig src/w_library.c and src/e_placelib.c (xfig license, see LICENSE-xfig).
 
 #[cfg(not(target_arch = "wasm32"))]
 use super::opt_str;
@@ -30,7 +30,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "List libraries",
             menu: "",
             shortcut: "",
-            params: "{}  — the bundled libraries and the ones in the preference library_dir: {\"libraries\": [{\"name\": \"Electronic / Schematic / Classic\", \"objects\": n, \"user\": bool, \"favourite\": bool}]}",
+            params: "{}  — the bundled libraries and the ones in the preference library_dir: {\"libraries\": [{\"name\": \"Electronic / Schematic / Classic\", \"objects\": n, \"user\": bool, \"favorite\": bool}]}",
             mutates: false,
             enabled: always,
             run: list,
@@ -67,23 +67,23 @@ pub(super) fn commands() -> Vec<Command> {
         },
         Command {
             id: "library.favourite",
-            label: "Library favourite",
+            label: "Library favorite",
             menu: "",
             shortcut: "",
-            params: "{\"library\": name, \"name\": figure, \"on\"?: bool (default: toggle)}  — marks the figure as a favourite or removes the mark (kept in the preferences, shown in the library panel's Favourites row); only an existing figure can be added: {\"favourite\": bool, \"count\": n}",
+            params: "{\"library\": name, \"name\": figure, \"on\"?: bool (default: toggle)}  — marks the figure as a favorite or removes the mark (kept in the preferences, shown in the library panel's Favorites row); only an existing figure can be added: {\"favorite\": bool, \"count\": n}",
             mutates: false,
             enabled: always,
-            run: favourite,
+            run: favorite,
         },
         Command {
             id: "library.favourite_library",
-            label: "Library favourite (whole library)",
+            label: "Library favorite (whole library)",
             menu: "",
             shortcut: "",
-            params: "{\"library\": name, \"on\"?: bool (default: toggle)}  — marks the library as a favourite or removes the mark (kept in the preferences, listed first in the library chooser); only an existing library can be added: {\"favourite\": bool, \"count\": n}",
+            params: "{\"library\": name, \"on\"?: bool (default: toggle)}  — marks the library as a favorite or removes the mark (kept in the preferences, listed first in the library chooser); only an existing library can be added: {\"favorite\": bool, \"count\": n}",
             mutates: false,
             enabled: always,
-            run: favourite_library,
+            run: favorite_library,
         },
         Command {
             id: "library.hide_library",
@@ -97,13 +97,13 @@ pub(super) fn commands() -> Vec<Command> {
         },
         Command {
             id: "library.favourites",
-            label: "List library favourites",
+            label: "List library favorites",
             menu: "",
             shortcut: "",
-            params: "{\"recent\"?: bool}  — the favourite figures (or, with recent, the last figures placed, newest first) from any library: {\"figures\": [{\"library\", \"name\", \"exists\": bool}]}; a figure whose file is gone has exists false; \"clear\": true empties the list first (recent only)",
+            params: "{\"recent\"?: bool}  — the favorite figures (or, with recent, the last figures placed, newest first) from any library: {\"figures\": [{\"library\", \"name\", \"exists\": bool}]}; a figure whose file is gone has exists false; \"clear\": true empties the list first (recent only)",
             mutates: false,
             enabled: always,
-            run: favourites,
+            run: favorites,
         },
         Command {
             id: "library.objects",
@@ -120,7 +120,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Place library object",
             menu: "",
             shortcut: "",
-            params: "{\"library\": name, \"name\": object, \"x\", \"y\" (Fig units: where its top-left corner goes) or \"orig\": true (at its position in the library file), \"ops\"?: [rotate_cw|rotate_ccw|flip_h|flip_v|smaller|larger] (xfig's keys r, l, h, v, s, S, applied about the object's centre)}  — adds the object as one compound and selects it; returns {\"id\", \"ids\"}",
+            params: "{\"library\": name, \"name\": object, \"x\", \"y\" (Fig units: where its top-left corner goes) or \"orig\": true (at its position in the library file), \"ops\"?: [rotate_cw|rotate_ccw|flip_h|flip_v|smaller|larger] (xfig's keys r, l, h, v, s, S, applied about the object's center)}  — adds the object as one compound and selects it; returns {\"id\", \"ids\"}",
             mutates: true,
             enabled: always,
             run: place,
@@ -251,10 +251,10 @@ fn search(e: &mut Engine, p: &Value) -> CmdResult {
     Ok(json!({"query": query, "hits": hits, "truncated": truncated}))
 }
 
-fn favourite(e: &mut Engine, p: &Value) -> CmdResult {
+fn favorite(e: &mut Engine, p: &Value) -> CmdResult {
     let library = string(p, "library")?;
     let name = string(p, "name")?;
-    let now = e.prefs.is_library_favourite(&library, &name);
+    let now = e.prefs.is_library_favorite(&library, &name);
     let on = opt_bool(p, "on")?.unwrap_or(!now);
     if on && !now {
         let lib = e.find_library(&library)?;
@@ -262,24 +262,22 @@ fn favourite(e: &mut Engine, p: &Value) -> CmdResult {
             return Err(EngineError::bad_params(format!("no figure {name:?} in {library:?}")));
         }
     }
-    if !e.prefs.set_library_favourite(&library, &name, on) {
-        return Err(EngineError::bad_params("too many favourites: remove one first"));
+    if !e.prefs.set_library_favorite(&library, &name, on) {
+        return Err(EngineError::bad_params("too many favorites: remove one first"));
     }
     e.prefs_dirty = true;
     Ok(json!({"favourite": on, "count": e.prefs.rustfig.library_favourites.len()}))
 }
 
-fn favourite_library(e: &mut Engine, p: &Value) -> CmdResult {
+fn favorite_library(e: &mut Engine, p: &Value) -> CmdResult {
     let library = string(p, "library")?;
-    let now = e.prefs.is_favourite_library(&library);
+    let now = e.prefs.is_favorite_library(&library);
     let on = opt_bool(p, "on")?.unwrap_or(!now);
     if on && !now {
         e.find_library(&library)?;
     }
-    if !e.prefs.set_favourite_library(&library, on) {
-        return Err(EngineError::bad_params(
-            "too many favourite libraries: remove one first",
-        ));
+    if !e.prefs.set_favorite_library(&library, on) {
+        return Err(EngineError::bad_params("too many favorite libraries: remove one first"));
     }
     e.prefs_dirty = true;
     Ok(json!({"favourite": on, "count": e.prefs.rustfig.library_favourite_libraries.len()}))
@@ -299,7 +297,7 @@ fn hide_library(e: &mut Engine, p: &Value) -> CmdResult {
     Ok(json!({"hidden": on, "count": e.prefs.rustfig.library_hidden.len()}))
 }
 
-fn favourites(e: &mut Engine, p: &Value) -> CmdResult {
+fn favorites(e: &mut Engine, p: &Value) -> CmdResult {
     let recent = opt_bool(p, "recent")?.unwrap_or(false);
     if recent && opt_bool(p, "clear")?.unwrap_or(false) {
         e.prefs.rustfig.library_recent.clear();

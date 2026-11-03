@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 
 /// A box (red, filled, depth 20), a dashed polygon (depth 60), a thick line
 /// with an arrow (depth 30), an ellipse with a pattern, an arc, a spline, a
-/// text "Hello World" (font 16, 14 pt, colour 4) and a compound holding a
+/// text "Hello World" (font 16, 14 pt, color 4) and a compound holding a
 /// green box and a text "inner".
 fn engine() -> Engine {
     let mut e = Engine::new();
@@ -96,7 +96,7 @@ fn kinds() {
 }
 
 #[test]
-fn colours_fill_depth_width_style_arrows() {
+fn colors_fill_depth_width_style_arrows() {
     let mut e = engine();
     assert_eq!(find(&mut e, json!({"pen_color": 4})), ["box", "text"]);
     assert_eq!(find(&mut e, json!({"fill_color": 2})), ["box"]);

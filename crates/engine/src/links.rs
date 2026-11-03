@@ -1,7 +1,7 @@
 //! Smart links (xfig's linked move): when a shape is moved, the end points
 //! of lines attached to it follow. Ported from xfig src/u_list.c
 //! (`get_links`, `point_on_perim`, `get_interior_links`, `point_on_inside`,
-//! `adjust_links`) and src/u_elastic.c (`elastic_links`; xfig licence, see
+//! `adjust_links`) and src/u_elastic.c (`elastic_links`; xfig license, see
 //! LICENSE-xfig).
 //!
 //! xfig links the lines of a moved box, arc-box or picture (end within
@@ -34,7 +34,7 @@ pub(crate) struct Link {
     end: usize,
     /// The point next to the end point, moved by [`LinkMode::Slide`]. `None`
     /// for a single-point line and for a line attached at both ends (both
-    /// ends follow their shapes, so no neighbour has to slide).
+    /// ends follow their shapes, so no neighbor has to slide).
     prev: Option<usize>,
 }
 
@@ -290,7 +290,7 @@ pub(crate) fn preview_with(e: &Engine, links: &[Link], f: &dyn Fn(Point) -> Poin
     out
 }
 
-/// Move one linked end point (and in slide mode its neighbour).
+/// Move one linked end point (and in slide mode its neighbor).
 fn shift(points: &mut [Point], link: &Link, mode: LinkMode, f: &dyn Fn(Point) -> Point) {
     let Some(old) = points.get(link.end).copied() else {
         return;

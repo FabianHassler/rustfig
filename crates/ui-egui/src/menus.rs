@@ -2,7 +2,7 @@
 //
 // Ported from xfig src/w_cmdpanel.c (menu entries, order and dividers),
 // app-defaults/Fig (`Fig*accelerators`) and src/w_modepanel.c (mode keys)
-// (xfig licence, see LICENSE-xfig).
+// (xfig license, see LICENSE-xfig).
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::spell_dialog;
@@ -27,9 +27,9 @@ pub const UI_COMMANDS: &[UiCommand] = &[
     },
     UiCommand {
         id: "app.colors",
-        label: "User colours…",
+        label: "User colors…",
         shortcut: "",
-        params: "{\"color\"?: colour number}  — the colour picker and editor (hue/saturation square, RGB/HSV, hex and X11 names, recent and user colours)",
+        params: "{\"color\"?: color number}  — the color picker and editor (hue/saturation square, RGB/HSV, hex and X11 names, recent and user colors)",
     },
     UiCommand {
         id: "app.styles",
@@ -47,7 +47,7 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         id: "app.find_mode",
         label: "Go to mode…",
         shortcut: "Ctrl+J",
-        params: "{}  — puts the caret in the Go to mode field at the top of the mode panel: type part of a mode's name, Up/Down and Return pick one (mode.favourite and mode.favourites keep the Favourites strip below it)",
+        params: "{}  — puts the caret in the Go to mode field at the top of the mode panel: type part of a mode's name, Up/Down and Return pick one (mode.favourite and mode.favourites keep the Favorites strip below it)",
     },
     UiCommand {
         id: "app.keys",
@@ -59,7 +59,7 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         id: "help.command_search",
         label: "Command search…",
         shortcut: "Ctrl+Shift+K",
-        params: "{}  — a small window to find any command or menu entry by label, id or menu path; shows its keys, greys out the ones not available now, Enter runs it (Ctrl+K is xfig's Enter point)",
+        params: "{}  — a small window to find any command or menu entry by label, id or menu path; shows its keys, grays out the ones not available now, Enter runs it (Ctrl+K is xfig's Enter point)",
     },
     UiCommand {
         id: "app.mouse_sheet",
@@ -233,7 +233,7 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         id: "app.theme",
         label: "Theme",
         shortcut: "",
-        params: "{\"theme\": \"light\"|\"dark\"|\"system\"}  — colour theme (a choice in Global settings; persists; the paper stays white)",
+        params: "{\"theme\": \"light\"|\"dark\"|\"system\"}  — color theme (a choice in Global settings; persists; the paper stays white)",
     },
     UiCommand {
         id: "app.ui_scale",
@@ -549,7 +549,7 @@ pub enum XfigItem {
     Cmd(&'static str, &'static str),
     /// An entry RustFig doesn't have yet: label, xfig's accelerator, plan task.
     Missing(&'static str, &'static str, &'static str),
-    /// A RustFig command xfig has no entry for, labelled as the command is.
+    /// A RustFig command xfig has no entry for, labeled as the command is.
     Own(&'static str),
     /// A submenu.
     Sub(&'static str, &'static [XfigItem]),
@@ -607,7 +607,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Delete All", "edit.delete_all"),
                 H("Settings"),
                 Cmd("Global settings...", "app.global_settings"),
-                Cmd("User colours...", "app.colors"),
+                Cmd("User colors...", "app.colors"),
                 Cmd("Set units...", "app.unit_panel"),
                 Own("app.document_settings"),
             ],
@@ -1678,7 +1678,7 @@ mod tests {
         ("object.measure", "the measure modes; scripting API"),
         ("object.convert", "Convert mode; scripting API"),
         ("object.toggle_", "Open/close and Arrow modes; scripting API"),
-        ("mode.", "scripting API; right-click a mode button for its Favourites strip"),
+        ("mode.", "scripting API; right-click a mode button for its Favorites strip"),
         ("style.", "View > Manage Styles... (app.styles) is their window"),
         ("text.", "View > Character map... (app.character_map) is their window"),
         (
@@ -1690,7 +1690,7 @@ mod tests {
         ("compound.", "the Open compound tool and the Close Compound popup"),
         ("prefs.", "scripting API; Global settings and the resources window"),
         ("indicator.", "scripting API; the attribute panel sets them"),
-        ("color.", "scripting API; the colour dialogs"),
+        ("color.", "scripting API; the color dialogs"),
         (
             "doc.",
             "scripting API; Units and Page, Set units and the document dialogs",

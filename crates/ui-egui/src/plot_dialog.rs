@@ -323,7 +323,7 @@ fn field(ui: &mut egui::Ui, label: &str, text: &mut String, width: f32) {
 }
 
 /// A checkbox without text, found by its accessible label.
-fn labelled_check(ui: &mut egui::Ui, on: &mut bool, label: &str) {
+fn labeled_check(ui: &mut egui::Ui, on: &mut bool, label: &str) {
     let r = ui.checkbox(on, "");
     r.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Checkbox, true, *on, label));
 }
@@ -435,12 +435,12 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                         ui.label("Numbers");
                         ui.end_row();
                         ui.label("x axis");
-                        labelled_check(ui, &mut d.xticks.ticks, "Plot x ticks");
-                        labelled_check(ui, &mut d.xticks.numbers, "Plot x numbers");
+                        labeled_check(ui, &mut d.xticks.ticks, "Plot x ticks");
+                        labeled_check(ui, &mut d.xticks.numbers, "Plot x numbers");
                         ui.end_row();
                         ui.label("y axis");
-                        labelled_check(ui, &mut d.yticks.ticks, "Plot y ticks");
-                        labelled_check(ui, &mut d.yticks.numbers, "Plot y numbers");
+                        labeled_check(ui, &mut d.yticks.ticks, "Plot y ticks");
+                        labeled_check(ui, &mut d.yticks.numbers, "Plot y numbers");
                         ui.end_row();
                     });
                 ui.horizontal(|ui| {

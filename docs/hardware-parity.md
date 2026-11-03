@@ -35,7 +35,7 @@ Automated by `cargo xtask ci` on every system: the folders per OS (`crates/engin
 | Clipboard: Copy as picture, Paste Text (E14, E7) | [ ] | [ ] | [ ] | [ ] |
 | Keyboard: xfig's keys next to the platform's (Cmd or Ctrl), the Alt/Meta menu keys | [ ] | [ ] | [ ] | [ ] |
 | File > Print… > Print FIGURE opens the system's print dialog (macOS print panel; Windows print dialog then the PDF viewer's `printto`; Linux portal dialog); Cancel prints nothing (B5b) | [ ] 2026-10-23 Print FIGURE blocks the app in the system panel (not seen: no screen capture permission); printing to paper [ ] | [ ] | [ ] | [ ] |
-| File > Capture Screen… (D11): the window minimises, the system selector appears (macOS `screencapture -i`: drag an area or Space for a window, Escape cancels; Linux portal Screenshot; Windows: whole screen, no selector), Save asks for the PNG name, the picture lands in the drawing, the window comes back; the logic after the capture is tested, the OS call is not | [ ] manual (needs Screen Recording permission) | [ ] | [ ] X11 portal | [ ] Wayland portal |
+| File > Capture Screen… (D11): the window minimizes, the system selector appears (macOS `screencapture -i`: drag an area or Space for a window, Escape cancels; Linux portal Screenshot; Windows: whole screen, no selector), Save asks for the PNG name, the picture lands in the drawing, the window comes back; the logic after the capture is tested, the OS call is not | [ ] manual (needs Screen Recording permission) | [ ] | [ ] X11 portal | [ ] Wayland portal |
 | Emoji in a file name: the file-name box draws a replacement glyph (no emoji font; known, cosmetic) | seen | [ ] | [ ] | [ ] |
 
 ## Web checklist (C1, C2): Chrome, Firefox, Safari

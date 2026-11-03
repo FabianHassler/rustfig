@@ -152,7 +152,7 @@ pub fn functions(src: &str) -> Vec<Func> {
             col += 1;
         }
         // `#if`/`#else` branches that both open a block unbalance the count; xfig closes
-        // every function with a `}` in column 0, so that resynchronises.
+        // every function with a `}` in column 0, so that resynchronizes.
         if c == b'}' && at_col0 && depth > 0 {
             depth = 0;
             header.clear();

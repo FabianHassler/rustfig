@@ -374,7 +374,7 @@ fn align_to(e: &mut Engine, p: &Value) -> CmdResult {
     Ok(json!({"count": moved}))
 }
 
-/// The circle through three points: centre and radius.
+/// The circle through three points: center and radius.
 pub(crate) fn circumcircle(a: Point, b: Point, c: Point) -> Option<(Point, f64)> {
     let d = 2.0 * (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y));
     if !d.is_finite() || d.abs() < 1e-9 {

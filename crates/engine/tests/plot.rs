@@ -473,7 +473,7 @@ fn the_largest_expression_with_the_most_samples_finishes() {
 }
 
 #[test]
-fn tick_settings_are_kept_and_honoured_by_redraw() {
+fn tick_settings_are_kept_and_honored_by_redraw() {
     let mut e = Engine::new();
     let r = e
         .execute(
@@ -497,7 +497,7 @@ fn tick_settings_are_kept_and_honoured_by_redraw() {
             .collect()
     };
     assert_eq!(numbers(&e), ["\u{3c0}/2", "\u{3c0}", "3\u{3c0}/2", "2\u{3c0}"]);
-    // Redraw keeps the settings; changing one is honoured.
+    // Redraw keeps the settings; changing one is honored.
     e.execute("plot.update", &json!({"id": id, "grid": true})).unwrap();
     assert_eq!(numbers(&e).len(), 4);
     let got = e.execute("plot.get", &json!({"id": id})).unwrap();

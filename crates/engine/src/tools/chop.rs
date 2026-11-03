@@ -8,7 +8,7 @@
 //! the clicked line's nearest end to the nearest boundary (every other
 //! object).
 //
-// Ported from xfig src/e_chop.c (xfig licence, see LICENSE-xfig).
+// Ported from xfig src/e_chop.c (xfig license, see LICENSE-xfig).
 
 use super::{markers::ObjMask, Button, ToolEvent, ToolKind, ToolState};
 use crate::{Engine, EngineError};

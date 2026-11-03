@@ -341,7 +341,7 @@ fn align_right_aligns_to_the_first_object() {
 }
 
 #[test]
-fn centre_box_and_square() {
+fn center_box_and_square() {
     let mut e = engine();
     e.set_tool(ToolKind::Box);
     assert_eq!(hints(&e)[1], "center point");
@@ -440,7 +440,7 @@ fn circle_through_three_points() {
     assert!(((b.x - a.x) - 2000.0).abs() < 60.0 && ((b.y - a.y) - 2000.0).abs() < 60.0);
     assert!(
         (a.x + b.x).abs() < 1.0 && (a.y + b.y).abs() < 1.0,
-        "centred on the origin"
+        "centerd on the origin"
     );
     one_undo_step(&mut e, &before);
     // Collinear points: refused, nothing drawn.

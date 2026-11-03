@@ -1,6 +1,6 @@
 //! Writer for the Fig 3.2 format.
 //
-// Object order ported from xfig src/f_save.c (xfig licence, see
+// Object order ported from xfig src/f_save.c (xfig license, see
 // LICENSE-xfig).
 
 use rustfig_geom::Point;
@@ -22,7 +22,7 @@ fn i(v: f64) -> i64 {
 }
 
 /// `v` for printing with `prec` decimals: 0 when not finite, and 0 (not
-/// "-0.000") when it prints as zero (a flipped arc's centre was written
+/// "-0.000") when it prints as zero (a flipped arc's center was written
 /// "-0" where xfig writes 0).
 fn f(v: f64, prec: usize) -> f64 {
     if !v.is_finite() || format!("{v:.prec$}").parse::<f64>().is_ok_and(|r| r == 0.0) {
@@ -255,7 +255,7 @@ fn object(out: &mut String, o: &Object) {
     }
 }
 
-/// Serialise a document as Fig 3.2.
+/// Serialize a document as Fig 3.2.
 pub fn write_fig(doc: &Document) -> String {
     let mut out = String::new();
     out.push_str("#FIG 3.2  Produced by RustFig\n#encoding: UTF-8\n");
@@ -290,7 +290,7 @@ pub fn write_fig(doc: &Document) -> String {
 
 /// The one-line representation of [`Document::export_on_save`]. The JSON is
 /// compact and escaped, so it stays on one line; `serde_json` failing to
-/// serialise the already-JSON values it holds is impossible, and a missing
+/// serialize the already-JSON values it holds is impossible, and a missing
 /// setting writes nothing.
 fn write_export_on_save(out: &mut String, doc: &Document) {
     let Some(setting) = &doc.export_on_save else {

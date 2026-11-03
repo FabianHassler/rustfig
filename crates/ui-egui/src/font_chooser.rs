@@ -82,7 +82,7 @@ fn rendered(ctx: &egui::Context, font: i32, ps: bool, local: Option<&str>, text:
     if let Some(t) = map.get(&key) {
         return t.clone();
     }
-    let img = rasterise(font, ps, local, text, px * ppp);
+    let img = rasterize(font, ps, local, text, px * ppp);
     let tex = img.map(|(image, w, h)| Tex {
         tex: ctx.load_texture("font_sample", image, egui::TextureOptions::LINEAR),
         size: vec2(w as f32 / ppp, h as f32 / ppp),
@@ -93,7 +93,7 @@ fn rendered(ctx: &egui::Context, font: i32, ps: bool, local: Option<&str>, text:
 
 /// Flatten the outlines, fill them (non-zero rule, 4 sub-scanlines, exact
 /// horizontal coverage) and return the alpha image with its size in pixels.
-fn rasterise(
+fn rasterize(
     font: i32,
     ps: bool,
     local: Option<&str>,
@@ -509,14 +509,14 @@ mod tests {
                 rustfig_text::LATEX_FONT_COUNT
             };
             for f in 0..n {
-                let (img, w, h) = rasterise(f, ps, None, &list_name(f, ps), 15.0).unwrap();
+                let (img, w, h) = rasterize(f, ps, None, &list_name(f, ps), 15.0).unwrap();
                 assert!(w > 4 && h > 4);
                 assert!(img.pixels.iter().any(|p| p.a() > 100), "font {f} {ps}");
             }
         }
-        assert!(rasterise(0, true, None, "x", f32::NAN).is_none());
-        let _ = rasterise(9999, true, None, "\u{0}", 12.0);
+        assert!(rasterize(0, true, None, "x", f32::NAN).is_none());
+        let _ = rasterize(9999, true, None, "\u{0}", 12.0);
         // An installed font that is missing is drawn as its Fig font.
-        assert!(rasterise(0, true, Some("No Such Family"), "abc", 15.0).is_some());
+        assert!(rasterize(0, true, Some("No Such Family"), "abc", 15.0).is_some());
     }
 }

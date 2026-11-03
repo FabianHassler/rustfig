@@ -8,7 +8,7 @@
 //! RustFig process, optionally with a file. Both are native only: a browser
 //! tab has no file on disk to watch and cannot start a program.
 
-// Ported from xfig src/main.c and src/w_file.c (xfig licence, see LICENSE-xfig).
+// Ported from xfig src/main.c and src/w_file.c (xfig license, see LICENSE-xfig).
 
 use crate::App;
 use serde_json::json;

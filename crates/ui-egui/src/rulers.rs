@@ -1,5 +1,5 @@
 //! xfig's rulers and units box. Ported from xfig's `w_rulers.c` and
-//! `u_pan.c` (xfig licence, see LICENSE-xfig): tick and label spacing chosen
+//! `u_pan.c` (xfig license, see LICENSE-xfig): tick and label spacing chosen
 //! from xfig's tables by zoom and units, a marker following the cursor, the
 //! left and right buttons panning by half an inch (1 cm) of the drawing and
 //! the middle button dragging (five times faster with Shift); the units box
@@ -657,7 +657,7 @@ mod tests {
         assert_eq!(labels(&t).first().map(String::as_str), Some("0cm"));
         assert!(labels(&t).contains(&"3".to_string()));
         assert_eq!(labels(&t).last().map(String::as_str), Some("10cm"));
-        // Millimetre ticks at zoom 1, longest at whole centimetres.
+        // Millimeter ticks at zoom 1, longest at whole centimeters.
         let at = |f: f64| t.iter().find(|x| x.at == f).map(|x| x.len);
         assert_eq!(at(45.0), Some(MM_MARK));
         assert_eq!(at(225.0), Some(HALFCM_MARK));

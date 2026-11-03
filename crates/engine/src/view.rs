@@ -1,7 +1,7 @@
 //! Canvas view: zoom and pan.
 //
 // Ported from xfig src/w_indpanel.c (`inc_zoom`, `dec_zoom`, `show_zoom`)
-// (xfig licence, see LICENSE-xfig).
+// (xfig license, see LICENSE-xfig).
 
 use rustfig_geom::{Affine, Point, Rect};
 
@@ -132,7 +132,7 @@ impl View {
     }
 
     /// With Integer zoom on, make the zoom a whole number about the canvas
-    /// centre: rounded above 1.99 after the pop-up sets it, truncated above 1
+    /// center: rounded above 1.99 after the pop-up sets it, truncated above 1
     /// after Fit (xfig's `show_zoom` and `zoom_to_fit`).
     pub fn apply_integer_zoom(&mut self, truncate: bool) {
         if !self.integer_zoom || !self.zoom.is_finite() {

@@ -12,7 +12,7 @@
 //! compounds can be axes, arrowheads stay only at the original ends, and
 //! the pieces replace the log object at its place in the drawing order.
 //
-// Ported from xfig src/e_chop.c and src/w_intersect.c (xfig licence, see
+// Ported from xfig src/e_chop.c and src/w_intersect.c (xfig license, see
 // LICENSE-xfig).
 
 use super::outline::{self, Mode};

@@ -9,7 +9,7 @@ Single
 -2
 1200 2
 # Optics lab: half-wave plate (lambda over 2)
-# Thin yellow plate, label as LaTeX text. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+# Thin yellow plate, label as LaTeX text. Optical axis through the center. Keywords: optics laser lens mirror beam fibre detector lab
 6 240 600 1560 1414
 2 2 0 2 0 6 50 -1 30 0.000 0 0 -1 0 0 5
 	840 600 960 600 960 1200 840 1200 840 600

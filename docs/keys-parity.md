@@ -95,7 +95,7 @@ How keys are written (W21): macOS ⌃ ⌥ ⇧ ⌘ plus a thin space ("⌥ U"), W
 | Font panel | Escape | cancel | ✅ (egui popup) |
 | Message panel | Return, Escape | dismiss | ✅ |
 | File panel, directory browser | Return, double-click, right click (parent) | load/save/merge, change directory | ↻ the system's file dialogs |
-| Colour panel (`w_color.c`) | Return, double-click, lock toggles | set colour | ❌ E4 (colour editor) |
+| Color panel (`w_color.c`) | Return, double-click, lock toggles | set color | ❌ E4 (color editor) |
 | Library panel | Return, double-click, Escape | place object, dismiss | ✅ D6 (double-click an object; Escape closes the window; keys r l h v s S and Shift-l in library mode) |
 | Keyboard panel (`w_keyboard.c`) | Return, Escape, Up/Down, Ctrl-P/N | enter, ignore, history | ❌ D11 |
 | Spell check panel | Escape, u, v, x | close, update, convert, chop | 🟡 Escape closes (F5); the other keys do not apply to RustFig's panel |
@@ -117,6 +117,6 @@ How keys are written (W21): macOS ⌃ ⌥ ⇧ ⌘ plus a thin space ("⌥ U"), W
 | 2026-10-15 | Menus: Meta-F/E/V/H and the letters inside them; plain-letter shortcuts are off while a menu or popup is open. |
 | 2026-10-15 | First audit (W8): arrows, Home, Home/End in text, Shift-Meta-X, wheel on indicator buttons, Escape in panels and Return in the search panel added. |
 | 2026-10-21 | W16: no modern scheme: Shift+left in Open compound and the right-button split in Join/Split went with it; the left+right chord, Option/Alt+click and macOS Ctrl+click remain. |
-| 2026-10-21 | Mouse buttons xfig leaves free now do something (W13, W14): Update right = region; Move right = region move; Delete point middle = region; Add point middle = point at an end; Arrow right = reverse; Break right = all levels; Align right = to first object; Box/ArcBox/Picture middle = from the centre (Shift: square); Picture right = keep aspect; Regular polygon middle = by one side; Circle right = through three points; Text middle (clipboard holds text) = paste. xfig's own meanings are unchanged; the modern scheme has none of them. |
+| 2026-10-21 | Mouse buttons xfig leaves free now do something (W13, W14): Update right = region; Move right = region move; Delete point middle = region; Add point middle = point at an end; Arrow right = reverse; Break right = all levels; Align right = to first object; Box/ArcBox/Picture middle = from the center (Shift: square); Picture right = keep aspect; Regular polygon middle = by one side; Circle right = through three points; Text middle (clipboard holds text) = paste. xfig's own meanings are unchanged; the modern scheme has none of them. |
 | 2026-10-21 | Region selections (Glue middle, Delete middle, Update right, Move right, Delete point middle): press and drag draws a lasso (W15); click, move, click keeps xfig's rectangle. |
 | 2026-10-23 | W21: modifiers as ⌃ ⌥ ⇧ ⌘ (macOS) or Ctrl+Alt+Shift, punctuation keys spelled, both keys per menu entry, Help > Keys for the running system only. |

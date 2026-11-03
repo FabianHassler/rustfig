@@ -44,12 +44,12 @@ fig2dev's own command line as `rustfig-cli fig2dev`).
 RustFig ships no fonts: texts use the fonts installed on the system (the
 TeX Gyre fonts of a TeX installation if present), with built-in fallbacks.
 
-## Licence
+## License
 
-RustFig is free software, licensed under the MIT licence or the Apache
-licence 2.0, at your option (`LICENSE-MIT`, `LICENSE-APACHE`). The parts
+RustFig is free software, licensed under the MIT license or the Apache
+license 2.0, at your option (`LICENSE-MIT`, `LICENSE-APACHE`). The parts
 ported from xfig and fig2dev, and xfig's figure libraries, keep the xfig
-licence (`LICENSE-xfig`, a permissive notice). See `NOTICE` and `ASSETS.md`
+license (`LICENSE-xfig`, a permissive notice). See `NOTICE` and `ASSETS.md`
 for details.
 
 ## Author

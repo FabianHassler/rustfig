@@ -8,7 +8,7 @@
 //! `library_dir` preference. The web build has no file system: it reads the
 //! bundle from the served `libraries/` folder through an index ([`web`]).
 //
-// Ported from xfig src/w_library.c and src/e_placelib.c (xfig licence, see LICENSE-xfig).
+// Ported from xfig src/w_library.c and src/e_placelib.c (xfig license, see LICENSE-xfig).
 
 use crate::tools::{Button, Key, ToolEvent, ToolKind, ToolState};
 use crate::{Engine, EngineError, UiRequest};
@@ -331,12 +331,12 @@ pub fn user_roots(pref: &str) -> Vec<LibRoot> {
 
 /// Every library under the folders.
 pub fn scan(roots: &[LibRoot]) -> Vec<Library> {
-    scan_cancellable(roots, &AtomicBool::new(false))
+    scan_cancelable(roots, &AtomicBool::new(false))
 }
 
 /// `scan`, stopping early (with what was found so far) once `cancel` is
 /// set: xfig's Stop button while a big library loads.
-pub fn scan_cancellable(roots: &[LibRoot], cancel: &AtomicBool) -> Vec<Library> {
+pub fn scan_cancelable(roots: &[LibRoot], cancel: &AtomicBool) -> Vec<Library> {
     let mut out: Vec<Library> = Vec::new();
     for LibRoot { path: root, user, name } in roots {
         if cancel.load(Ordering::Relaxed) {
@@ -490,7 +490,7 @@ fn comments_of_lines(lines: Vec<String>) -> Vec<String> {
     let mut out = Vec::new();
     // The `#FIG` line (and `#encoding`), then seven header lines (orientation,
     // justification, units, paper size, magnification, pages, transparent
-    // colour); the figure's comment lines follow.
+    // color); the figure's comment lines follow.
     // When the figure has none, the comments of its first object (after the
     // resolution line, e.g. a library part's compound) are shown instead.
     let first = lines.iter().take_while(|l| l.starts_with('#')).count();
@@ -520,7 +520,7 @@ fn is_resolution_line(l: &str) -> bool {
 /// Read a library figure as one drawing whose only object is one compound:
 /// the file's compound where it holds nothing else, else all of its objects
 /// in a new one; the figure's comments become the compound's. Pictures it
-/// names are loaded from the library folder. The user colours stay the
+/// names are loaded from the library folder. The user colors stay the
 /// file's own.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn read_figure(dir: &Path, name: &str) -> Result<Document, String> {
@@ -598,7 +598,7 @@ fn absolutize_pictures(objs: &mut [std::sync::Arc<Object>], dir: &Path) {
     }
 }
 
-/// The compound with `ops` applied about its centre (xfig applies them about
+/// The compound with `ops` applied about its center (xfig applies them about
 /// the pointer, which is the same up to where the result is placed).
 pub fn with_ops(obj: &Object, ops: &[LibOp]) -> Object {
     let mut o = obj.clone();
@@ -660,7 +660,7 @@ impl Engine {
             .ok_or_else(|| EngineError::bad_params(format!("no library {name:?} (see library.list)")))
     }
 
-    /// Read a library object for placing, its user colours mapped into the
+    /// Read a library object for placing, its user colors mapped into the
     /// drawing (as xfig's merge does).
     pub fn library_object(&mut self, library: &str, name: &str) -> Result<LibObject, EngineError> {
         let lib = self.find_library(library)?;
@@ -777,12 +777,12 @@ impl Engine {
                 }
                 (Button::Right, false) => {
                     self.tool_state = ToolState::Idle;
-                    self.set_status("Library mode cancelled.");
+                    self.set_status("Library mode canceled.");
                 }
             },
             ToolEvent::Key(Key::Escape) => {
                 self.tool_state = ToolState::Idle;
-                self.set_status("Library mode cancelled.");
+                self.set_status("Library mode canceled.");
             }
             ToolEvent::Text(t) => {
                 for c in t.chars().take(16) {

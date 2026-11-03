@@ -9,7 +9,7 @@
 //! value consume the next argument, whatever it looks like.
 //
 // Ported from xfig src/main.c (`options`, `help_list`, argument handling)
-// and doc/xfig.man.in (xfig licence, see LICENSE-xfig).
+// and doc/xfig.man.in (xfig license, see LICENSE-xfig).
 
 use crate::prefs::{resource, Prefs, NOT_APPLICABLE};
 

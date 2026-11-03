@@ -14,14 +14,14 @@ struct Envelope {
     document: Document,
 }
 
-/// Serialise a document in the native format.
+/// Serialize a document in the native format.
 pub fn write_native(doc: &Document) -> Result<String, FormatError> {
     let env = Envelope {
         format: "rustfig".into(),
         version: NATIVE_VERSION,
         document: doc.clone(),
     };
-    serde_json::to_string_pretty(&env).map_err(|e| FormatError::new(format!("cannot serialise: {e}")))
+    serde_json::to_string_pretty(&env).map_err(|e| FormatError::new(format!("cannot serialize: {e}")))
 }
 
 /// Parse a native document.

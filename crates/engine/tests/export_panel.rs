@@ -116,7 +116,7 @@ fn eps_options_reach_fig2dev() {
     // Explicit parameters win over the panel.
     let own = text(&mut e, json!({"format": "eps", "panel": true, "options": {"b": 0}}));
     assert_eq!(bbox(&own), b0);
-    // Preview and background colour.
+    // Preview and background color.
     set(&mut e, "eps", json!({"border": 0, "preview": 1, "background": 4}));
     let epsi = text(&mut e, json!({"format": "eps", "panel": true}));
     assert!(epsi.contains("%%BeginPreview"), "no preview");

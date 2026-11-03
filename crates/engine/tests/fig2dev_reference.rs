@@ -1,7 +1,7 @@
 //! A8: compares RustFig's rendering of each fixture with fig2dev's.
 //!
 //! fig2dev (xfig's converter) is the reference. It is optional: without it
-//! the test prints a note and passes. Its SVG output is rasterised with
+//! the test prints a note and passes. Its SVG output is rasterized with
 //! resvg, so ghostscript isn't needed. Each fixture's score is checked
 //! against `fixtures/scores.json`; a run with `UPDATE_REFERENCE=1` rewrites
 //! the baselines. The images go to `target/fig2dev-reference/<fixture>/`
@@ -18,7 +18,7 @@ use support::{compare, fig2dev};
 
 /// How much worse than its baseline a score may get.
 const MARGIN: f64 = 0.02;
-/// Longest side of the rasterised images, in pixels.
+/// Longest side of the rasterized images, in pixels.
 const SIDE: f64 = 1000.0;
 
 fn fixtures() -> PathBuf {
@@ -32,7 +32,7 @@ fn out_dir() -> PathBuf {
     target.join("fig2dev-reference")
 }
 
-/// fig2dev's SVG, rasterised on white.
+/// fig2dev's SVG, rasterized on white.
 fn reference_png(fig: &[u8], dir: &Path) -> Vec<u8> {
     let svg = fig2dev::convert(fig, "svg", &[], Some(dir)).unwrap();
     let mut opt = resvg::usvg::Options::default();

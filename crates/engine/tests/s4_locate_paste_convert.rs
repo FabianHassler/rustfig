@@ -74,7 +74,7 @@ fn shift_click_cycles_through_overlapping_objects_and_a_plain_click_acts_on_the_
 }
 
 #[test]
-fn shift_right_sets_the_centre_in_rotate_as_in_xfig() {
+fn shift_right_sets_the_center_in_rotate_as_in_xfig() {
     let mut e = Engine::new();
     e.set_tool(ToolKind::RotateCw);
     let h = e.mouse_hints_with(true);

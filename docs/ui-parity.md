@@ -1,6 +1,6 @@
 # UI parity checklist
 
-2026-11-01 (W10-40: menu sections and a Tools menu; W10-39: Edit > Find Properties; W10-29: message history levels, filter, copy); 2026-10-23 (W10-13: background export; D10: dimension line example preview; W10-14: Saved versions window; W9: cap/join pictures redrawn); 2026-10-23 (E5: character map lists only drawable characters, in the text's font); 2026-10-22 (E4, W10-36: colour picker and editor, recent colours, eyedropper); 2026-10-22 (E10: text editing); 2026-10-22 (S4-3, S4-8, S4-9: Digitize, New window, Autorefresh); 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: live edit panel, compound panel, point table, pictorial menus); 2026-10-22 (W10-16, W10-20: picture edit panel); 2026-10-22 (D5: measure modes); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: Tangent mode and its length button). ✅ done · 🟡 partial · ❌ missing
+2026-11-01 (W10-40: menu sections and a Tools menu; W10-39: Edit > Find Properties; W10-29: message history levels, filter, copy); 2026-10-23 (W10-13: background export; D10: dimension line example preview; W10-14: Saved versions window; W9: cap/join pictures redrawn); 2026-10-23 (E5: character map lists only drawable characters, in the text's font); 2026-10-22 (E4, W10-36: color picker and editor, recent colors, eyedropper); 2026-10-22 (E10: text editing); 2026-10-22 (S4-3, S4-8, S4-9: Digitize, New window, Autorefresh); 2026-10-22 (W10-15, W10-17 to W10-19, W10-21: live edit panel, compound panel, point table, pictorial menus); 2026-10-22 (W10-16, W10-20: picture edit panel); 2026-10-22 (D5: measure modes); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (D4: Tangent mode and its length button). ✅ done · 🟡 partial · ❌ missing
 
 ## Drawing modes
 
@@ -17,7 +17,7 @@ File > Saved versions… (W10-14, 2026-10-23, an extra beyond xfig's `.bak`): wi
 | Box, arc-box | `tool.box`, `tool.arc_box` | ✅ |
 | Regular polygon | `tool.regular_polygon` | ✅ |
 | Arc | `tool.arc` (three clicks) | ✅ |
-| Picture edit panel | Reread, Browse/Relink, drop a file, type, size, colours, transparency, thumbnail, width/length, rotation, h/w ratios, Shrink/Expand/Original/Scale %, Edit Image, XBM pen colour (W10-16, W10-20) | ✅ |
+| Picture edit panel | Reread, Browse/Relink, drop a file, type, size, colors, transparency, thumbnail, width/length, rotation, h/w ratios, Shrink/Expand/Original/Scale %, Edit Image, XBM pen color (W10-16, W10-20) | ✅ |
 | Picture | `tool.picture` (xfig's types: EPS/PS, PDF, GIF, JPEG, PCX, PNG, PPM, TIFF, XBM, XPM, `.gz`/`.Z`; also BMP) | ✅ |
 | Text | `tool.text`: caret by click, selection (mouse, Shift+arrows), word jumps, clipboard, IME (E10) | ✅ character map (E5: View > Character map, inserts at the caret; Symbol and Dingbats tables; only characters the font can draw, shown in that font) |
 | Library object | — | ❌ |
@@ -62,7 +62,7 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | View: depth manager | right panel | ✅ |
 | View: character map | `app.character_map`, Ctrl+Shift+M | ✅ |
 | View: Manage Styles… (Ctrl+Y): style families as in xfig's panel (Family and Style lists, Add, Delete, Set), kept in the settings | ✅ E6 (`crates/ui-egui/src/styles.rs`); xfig's `~/.xfigrcstyle` file is replaced by settings.toml |
-| Indicator panel (line, colours, fill, depth, arrows, caps, joins, fonts, justification, angle, radius, sides, rotation, grid, positioning, arc type, text step, text flags, smart links) | xfig's buttons, per mode | ✅ Angle Geom (D7), copy counts (D10: Num Copies in the rotate modes, Num X / Y Copies in Copy) |
+| Indicator panel (line, colors, fill, depth, arrows, caps, joins, fonts, justification, angle, radius, sides, rotation, grid, positioning, arc type, text step, text flags, smart links) | xfig's buttons, per mode | ✅ Angle Geom (D7), copy counts (D10: Num Copies in the rotate modes, Num X / Y Copies in Copy) |
 | S4 editing functions | Ctrl+click zoom box, pan to origin and unzoom (E3), Ctrl+Shift+click shape factor (S4-6), `Engine::mouse_hints_for(shift, ctrl)`; Shift+click locate object (S4-1), Paste attached to the pointer (S4-2), system clipboard for the cut buffer and images (E7), a cursor per mode (S4-4), Convert box/arc-box (S4-5) | ✅ |
 | Object markers in editing modes | per-mode masks as xfig (`u_markers.c`, `w_modepanel.c`) | ✅ |
 | Rulers | top and side, xfig's ticks and labels, cursor marker, pan buttons | ✅ |
@@ -71,23 +71,23 @@ The window-by-window comparison with the real xfig (what each window offers and 
 ## Main window (xfig screen map)
 | xfig | RustFig | Plan |
 |---|---|---|
-| Main menus File, Edit, View, Tools (RustFig's), Snap, Help; entries grouped under section titles (W10-40) | ✅ classic layout: xfig's menus word for word and in order (`w_cmdpanel.c`), missing entries greyed with their task, RustFig preferences under Edit › Global settings; RustFig's extras after xfig's entries in Edit, View and File and an Object menu between Snap and Help (W17); Snap: Hold, Release, Endpoint, Midpoint, Nearest, Focus, Normal, Tangent, Intersection, Diameter, with the Snap Mode box | — |
+| Main menus File, Edit, View, Tools (RustFig's), Snap, Help; entries grouped under section titles (W10-40) | ✅ classic layout: xfig's menus word for word and in order (`w_cmdpanel.c`), missing entries grayed with their task, RustFig preferences under Edit › Global settings; RustFig's extras after xfig's entries in Edit, View and File and an Object menu between Snap and Help (W17); Snap: Hold, Release, Endpoint, Midpoint, Nearest, Focus, Normal, Tangent, Intersection, Diameter, with the Snap Mode box | — |
 | Current file name | ✅ next to the menus, marks unsaved changes | — |
 | Message panel | ✅ under the menus; click for the history | — |
 | Mouse-function indicator | ✅ xfig's layout and wording, each button's current function per tool and state, checked against the tools by a test | — |
 | Indicator: Num Copies (rotate), Num X / Num Y Copies (copy), Dimension line (Polyline; settings window as `popup_dimline_panel`); typed-coordinate window (Tools > Enter point…, Ctrl+K); View > Show line lengths; the settings window has a live example-line preview and arrow pictures with "none" per end (2026-10-23; preview draws plain triangles) | ✅ (D10) | D |
-| Three-button mouse semantics | ✅ xfig's per-mode functions, the only scheme (W16); Alt+click = middle, Ctrl+click = right. Dimension lines (Shift+left), rotate/flip anchor and centre (right button), array copy (middle while placing), align to canvas (middle) work (D10); the indicator buttons and the dimension-line panel too | D |
+| Three-button mouse semantics | ✅ xfig's per-mode functions, the only scheme (W16); Alt+click = middle, Ctrl+click = right. Dimension lines (Shift+left), rotate/flip anchor and center (right button), array copy (middle while placing), align to canvas (middle) work (D10); the indicator buttons and the dimension-line panel too | D |
 | Units box | ✅ "1cm = 1.00cm" in the ruler corner; left: pan to origin, right: Unit/Scale panel with Cancel/Set, Show fractions, User defined unit and scale (W10-24) | — |
 | Top and side rulers | ✅ ported from `w_rulers.c` | — |
 | Depth panel: checkboxes, drag-toggle, All On/Off/Toggle, Gray/Blank | ✅ with object counts; hidden depths can't be picked; export of active layers only | — |
-| Update Control: update box on every attribute button in Update mode, Set/Clear/Toggle all buttons, flags honoured by Update, update region, lasso and update settings (W10-1) | ✅ | — |
+| Update Control: update box on every attribute button in Update mode, Set/Clear/Toggle all buttons, flags honored by Update, update region, lasso and update settings (W10-1) | ✅ | — |
 | Attribute panel: graphical buttons, per-mode attributes | ✅ xfig's buttons and order, per-mode masks, choice panels; middle/right buttons step values; W19: xfig's labels and layout, each button narrowed to what its label and value need, wraps to a second row | — |
 | xfig accelerators (Meta-key) | ✅ xfig keymap (on by default): Meta = Alt/Option menu keys, physical Ctrl mode keys, xfig's mode letters; menus show "Meta-N"; platform shortcuts stay | — |
-| Colour picker and editor (xfig's colour panel `w_color.c`) | ✅ (E4b adds Pick from screen: macOS NSColorSampler, Windows live pick, Linux portal PickColor, greyed out on the web) Edit › Colours…, the colour pop-up's recent colours, More… and Eyedropper (E4, W10-36): hue/saturation square, RGB/HSV, hex and X11 names, user colours (add, change, delete, remove unused, keep under a name); mix memory and lock not built | — |
-| Preferences (xfig's resources, recent files, user colours) | ✅ `settings.toml`; Edit › Global settings (tabs, filter; Advanced tab: xfig's resources) | — |
+| Color picker and editor (xfig's color panel `w_color.c`) | ✅ (E4b adds Pick from screen: macOS NSColorSampler, Windows live pick, Linux portal PickColor, grayed out on the web) Edit › Colors…, the color pop-up's recent colors, More… and Eyedropper (E4, W10-36): hue/saturation square, RGB/HSV, hex and X11 names, user colors (add, change, delete, remove unused, keep under a name); mix memory and lock not built | — |
+| Preferences (xfig's resources, recent files, user colors) | ✅ `settings.toml`; Edit › Global settings (tabs, filter; Advanced tab: xfig's resources) | — |
 | Icons at HiDPI | ✅ every icon and picture is drawn as a vector at the screen's density (xfig's bitmaps optional); application icon | — |
 | Number pop-ups (`popup_nval_panel`): non-modal, field + presets + slider where a range helps (angles: chips; depth and counts: steppers), live, Escape restores; also for the Edit panel's number fields and Arrow Size (W10-34; Zoom keeps Set/Cancel) | ✅ | — |
-| Hover preview of choices in the Edit panel (fill, colours, line style, cap, join, arrow type) and in Find mode (W10-35): shown on the object, no undo entry | ✅ | — |
+| Hover preview of choices in the Edit panel (fill, colors, line style, cap, join, arrow type) and in Find mode (W10-35): shown on the object, no undo entry | ✅ | — |
 | Font menus (`w_fontpanel.c`): Text Font pop-up and the edit panel's font menu | ✅ font chooser (E11): PostScript/LaTeX switch, every name in its own font, search, size field, sample preview, current font marked | — |
 | Theme and scale | ✅ Global settings: Theme System/Light/Dark, UI scale 75 to 200 %, kept in the preferences; the paper stays white (E9) | — |
 | 3D (bevelled) buttons, Global setting "Button style: 3D / Flat" | ✅ raised light/dark edges and soft shading, sunken when pressed or selected; mode, depth, snap, attribute and top-strip buttons; `app.button_style`, saved in the preferences (W11) | — |
@@ -132,8 +132,8 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | 2026-10-23 | W10-13 background export with progress, cancel, Show in folder. D10 settings window preview and arrow pictures; W10-14 Saved versions window; W9 cap and join pictures redrawn. |
 | 2026-10-23 | E5: character map hides characters the font cannot draw and draws each in the text's font. |
 | 2026-10-22 | E7 done: the cut buffer on the system clipboard (Fig text + pictures), Paste takes a figure from another window or an image. |
-| 2026-10-22 | E4, W10-36 done: colour picker and editor (Edit > Colours…), recent colours, eyedropper, `color.*` commands. |
-| 2026-10-22 | E4b done: Pick from screen in the Colours window (macOS, Windows, Linux portal; web greyed out). |
+| 2026-10-22 | E4, W10-36 done: color picker and editor (Edit > Colors…), recent colors, eyedropper, `color.*` commands. |
+| 2026-10-22 | E4b done: Pick from screen in the Colors window (macOS, Windows, Linux portal; web grayed out). |
 | 2026-10-22 | S4-3, S4-8, S4-9: Digitize window, New window, Autorefresh mode; relative picture names follow Save As. |
 | 2026-10-22 | S3: every option of `xfig.man.in` accepted (table above): per-run overrides of the preferences, abbreviations as in Xt, X toolkit options mapped or ignored with a note, `-update`, `-geometry`, `~/.Xdefaults` resources. |
 | 2026-10-22 | W10-28, W10-2: Help > RustFig Manual opens the bundled manual window (topic list, search, rendered page); Help letter `x` opens it, `c` the command list. |
@@ -161,11 +161,11 @@ The window-by-window comparison with the real xfig (what each window offers and 
 | 2026-10-15 | W9: attribute pictures as vectors; arrow types 10–14. |
 | 2026-10-15 | W9 done: mode icons traced; application icon. |
 | 2026-10-21 | W11: 3D buttons and button style setting, mode panel fits, snap chooser and hold mark, editable file-name box, compact Mouse Buttons box, rulers follow the button events. |
-| 2026-10-14 | Mode panel: xfig's icons and order; modes not yet available shown greyed. |
+| 2026-10-14 | Mode panel: xfig's icons and order; modes not yet available shown grayed. |
 | 2026-10-14 | Main menus cloned from xfig. |
 | 2026-10-21 | W10: link to window-parity.md. |
 | 2026-10-21 | W13, W14: the mouse-function box shows the new functions on the free buttons (xfig scheme), rubber bands are drawn for the regions, the three-point circle and the align reference. |
 | 2026-10-21 | W15: pressing the middle or right button and dragging in a region function (tag, delete, update, move, delete points) draws a freehand lasso; the mouse-function box says "(drag: lasso)" and "release: close lasso". |
 | 2026-11-01 | W10-25: Global settings in tabs (Window, Drawing, Files, Programs, Advanced = xfig's resources table) with a filter field and "Apply changes immediately". |
 | 2026-11-01 | W10-40: menus grouped under section titles; new Tools menu after View (Find Properties, Go to mode… (was Find mode), Import Picture, Capture Screen, Enter point, plots). |
-| 2026-11-01 | W10-39: Edit > Find Properties… finds objects by kind, colours, fill, depth, width, line style, arrows, font, size and text; lists and outlines the matches; Update, Delete, Glue, Set depth act on all of them. |
+| 2026-11-01 | W10-39: Edit > Find Properties… finds objects by kind, colors, fill, depth, width, line style, arrows, font, size and text; lists and outlines the matches; Update, Delete, Glue, Set depth act on all of them. |

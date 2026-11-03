@@ -13,7 +13,7 @@ The button is shown in the modes where it applies: Polyline, Polygon, the spline
 | Manhattan | horizontal or vertical only |
 | Mountain | 45 degree diagonals only |
 
-How it works: the point you click, and the rubber band you see while moving, are placed in the nearest allowed direction from the previous point. When you move or add the end point of an open line, the constraint is taken from its neighbouring point. Points in the middle of a line, and points of closed shapes, are not constrained when moved.
+How it works: the point you click, and the rubber band you see while moving, are placed in the nearest allowed direction from the previous point. When you move or add the end point of an open line, the constraint is taken from its neighboring point. Points in the middle of a line, and points of closed shapes, are not constrained when moved.
 
 xfig has no Shift key for 45 degree lines (Shift+left removes the last point while drawing), so there is none here: use Mount-hattan.
 

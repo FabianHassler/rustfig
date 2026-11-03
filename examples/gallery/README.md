@@ -23,7 +23,7 @@ pdftoppm -r 150 -png -singlefile X-figure.pdf X     # preview X.png
 
 ## Style
 
-Common style: LaTeX text at 10-12 pt (titles 14 pt), axes 2 wide, a palette of blue, red, green, orange and greys, depths: fills 150, grid 90, curves 60, axes 50, markers 40, labels 30; every logical part is a compound.
+Common style: LaTeX text at 10-12 pt (titles 14 pt), axes 2 wide, a palette of blue, red, green, orange and grays, depths: fills 150, grid 90, curves 60, axes 50, markers 40, labels 30; every logical part is a compound.
 
 ## Drawings
 
@@ -33,12 +33,12 @@ Common style: LaTeX text at 10-12 pt (titles 14 pt), axes 2 wide, a palette of b
 | `unit-circle.fig` | unit circle with theta, sin, cos, tan segments | circle, arc with arrow, thick segments |
 | `riemann.fig` | left Riemann sum, 8 rectangles under f(x) = 1.2 + 2.2 sin(pi x / 4) | X-spline curve, boxes, axes with ticks, dotted guides, depth layering |
 | `normal.fig` | normal density with 1, 2, 3 sigma regions (68.27 / 95.45 / 99.73 %) | X-spline, filled polygons in three tints, double-headed arrows |
-| `fourier.fig` | square wave and partial sums N = 1, 3, 5, 15 with Gibbs overshoot | many X-splines, colours, legend, leader arrow |
+| `fourier.fig` | square wave and partial sums N = 1, 3, 5, 15 with Gibbs overshoot | many X-splines, colors, legend, leader arrow |
 | `complex-plane.fig` | Euler's formula e^(i theta) on the unit circle | arc arrow, dashed projections, display formulas |
 | `inclined-plane.fig` | free-body diagram on a 30 degree incline: mg, N, f, components | hatch patterns (44, 45) as a layer under the slope and as ground, arrows with styles, labels on clear white space |
 | `pendulum.fig` | pendulum with weight, tension, components, angle | circles, dashed arcs and lines, hatched ceiling, arc with arrow |
 | `snell.fig` | refraction air to glass (n = 1.0 to 1.5, 50 deg to 30.7 deg) with reflected ray | tinted media, dashed normal, angle arcs with arrows, mid-line arrowheads |
-| `double-slit.fig` | Young's double slit with wavefronts, screen fringes, cos^2 x sinc^2 intensity | about 40 arcs, grey-level fill steps, X-spline plot, hatched barrier |
+| `double-slit.fig` | Young's double slit with wavefronts, screen fringes, cos^2 x sinc^2 intensity | about 40 arcs, gray-level fill steps, X-spline plot, hatched barrier |
 | `carnot.fig` | Carnot cycle in the p-V plane, gamma = 1.4, shaded work area | X-splines for isotherms and adiabats, direction arrows, indented-butt arrows, dotted guides |
 | `rlc.fig` | series RLC circuit with source, current and voltage drops | polyline zigzag, arc coils, plates, double-headed arrows |
 | `feynman.fig` | e- e+ to gamma* to mu- mu+ | wavy photon as X-spline, indented arrows, vertices, time arrow |

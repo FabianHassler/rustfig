@@ -5,7 +5,7 @@
 //!
 // Ported from xfig src/w_file.c (`file_panel_dismiss`, `file_getxyoff`, the
 // mask and directory lists, `preview_figure`, `clear_preview`,
-// `check_cancel`) (xfig licence, see LICENSE-xfig).
+// `check_cancel`) (xfig license, see LICENSE-xfig).
 
 use crate::{Engine, EngineError};
 use rustfig_geom::{Affine, Rect};

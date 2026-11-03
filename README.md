@@ -9,7 +9,7 @@ XQuartz or WSL.
 the manual, a comparison with xfig and other programs, and the web app).
 
 [![CI](https://github.com/FabianHassler/rustfig/actions/workflows/ci.yml/badge.svg)](https://github.com/FabianHassler/rustfig/actions/workflows/ci.yml)
-[![Licence: MIT OR Apache-2.0](https://img.shields.io/badge/licence-MIT%20OR%20Apache--2.0-blue)](#license)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)
 ![Status: beta](https://img.shields.io/badge/status-beta%2C%20%E2%89%8895%25%20xfig%20parity-yellow)
 
 ![RustFig's window: a plot with LaTeX labels, LaTeX formulas typeset on the canvas, and a block diagram, in xfig's layout](docs/images/rustfig-window.png)
@@ -142,8 +142,8 @@ bundled). `FIG2DEV_BUILTIN_FONTS=1` forces the built-in fonts.
   flip, edit attributes with live panels, update, add/move/delete points,
   glue/break/open compounds, join/split, chop, trim/split/extend, align,
   convert, open/close, arrows, tangent/normal, measure, multi-level undo.
-- Settings: preferences, xfig's command line, styles with families, colours
-  (picker, user colours, pick from screen).
+- Settings: preferences, xfig's command line, styles with families, colors
+  (picker, user colors, pick from screen).
 - Files: reads Fig 1.3–3.2, writes Fig 3.2 and a native JSON format.
 - Export (every format through fig2dev's drivers, ported to Rust): PDF, SVG, EPS, PNG, GIF, JPEG, TIFF, PPM, PCX, XBM, XPM, LaTeX box (all 22 xfig fill patterns, arrowheads and dashes as fig2dev draws them); from fig2dev's ported drivers LaTeX picture, epic/eepic/eepicemu, PiCTeX, TeXtyl, tpic, pic, pstex/pdftex, pict2e, CGM, HPGL, DXF, MetaPost, METAFONT, ge, image map, Gerber, shape, TikZ, PSTricks, EMF, Tk/Perl-Tk and AutoCAD slides (every fig2dev language).
 - Automation: every action is a command, reachable from a JSON control
@@ -220,7 +220,7 @@ an object's comment, with a plain Fig fallback), never extend or break it.
 
 From the source tree without installing:
 `cargo run --release -p rustfig -- drawing.fig`. `cargo xtask ci` runs the
-quality gates (format, lints, tests, layering, asset and licence checks, the
+quality gates (format, lints, tests, layering, asset and license checks, the
 web build); `cargo xtask package` builds the app bundle for your system;
 `cargo xtask web` builds the web version. See [Development](docs/development.md)
 and [Architecture](docs/architecture.md).
@@ -232,5 +232,5 @@ and [Architecture](docs/architecture.md).
 
 ## License
 
-Code is licensed under MIT OR Apache-2.0 (`LICENSE-MIT`, `LICENSE-APACHE`). Parts ported from xfig and fig2dev also carry the xfig licence notice (`LICENSE-xfig`).
+Code is licensed under MIT OR Apache-2.0 (`LICENSE-MIT`, `LICENSE-APACHE`). Parts ported from xfig and fig2dev also carry the xfig license notice (`LICENSE-xfig`).
 See `NOTICE` and `ASSETS.md`.

@@ -69,7 +69,7 @@ pub fn read_fig_messages(src: &[u8], enc: TextEncoding) -> Result<(Document, Vec
         input_encoding: enc.ctx_name().map(String::from),
         // Read as xfig does for an editor: X-splines stay splines, texts keep their blanks.
         editing: true,
-        // xfig's default when the file has no centring line.
+        // xfig's default when the file has no centering line.
         center: true,
         ..Ctx::default()
     };

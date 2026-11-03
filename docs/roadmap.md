@@ -11,7 +11,7 @@
 | M4 | Exports: LaTeX family, PostScript/print, more bitmaps | in progress (every fig2dev language but `sld` done; page layout, previews, hardening left) |
 | M5 | Web build verified and packaged; browser file I/O | planned |
 | M6 | Libraries (open compound, join/split, chop, tangent/normal, measure modes done) | planned |
-| M7 | Settings, rulers, colour editor, character map | planned |
+| M7 | Settings, rulers, color editor, character map | planned |
 | M8 | Beta: parity ≥ 85 % | planned |
 
 ## Revision history

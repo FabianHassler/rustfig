@@ -1,6 +1,6 @@
 //! The OpticsLab library (plan D13): optical-table parts the way physics
 //! papers draw them, and three example setups. Every part is drawn in a
-//! frame whose optical axis is the line y = 900, with the part's centre at
+//! frame whose optical axis is the line y = 900, with the part's center at
 //! (900, 900); parts that sit in the beam have their beam ports on the
 //! 1/4-inch grid at (300, 900) and (1500, 900), so they line up when placed
 //! on the same height.
@@ -19,8 +19,8 @@ type Pt = (f64, f64);
 type Fill = Option<(ColorRef, i32)>;
 type Entry = (&'static str, &'static str, &'static str, Vec<Object>);
 
-/// Light grey (a tint of black), dark, white and light blue fills.
-const GREY: Fill = Some((ColorRef::BLACK, 36));
+/// Light gray (a tint of black), dark, white and light blue fills.
+const GRAY: Fill = Some((ColorRef::BLACK, 36));
 const DARK: Fill = Some((ColorRef::BLACK, 20));
 const WHITE: Fill = Some((ColorRef::WHITE, 20));
 const GLASSF: Fill = Some((GLASS, 20));
@@ -115,7 +115,7 @@ fn hatch(a: Pt, b: Pt, n: Pt) -> Vec<Object> {
         .collect()
 }
 
-/// A thin plate of length `len` and thickness `th`, centred on `c`, tilted
+/// A thin plate of length `len` and thickness `th`, centerd on `c`, tilted
 /// 45 degrees up to the right.
 fn plate45(c: Pt, len: f64, th: f64, fill: Fill) -> Object {
     let (u, n) = ((R2, -R2), (R2, R2));
@@ -151,7 +151,7 @@ fn concave_lens(x: f64, h: f64) -> Object {
     poly(2, GLASSF, &outline)
 }
 
-/// A curved mirror surface with its hatching: vertex at (`vx`, AX), centre of
+/// A curved mirror surface with its hatching: vertex at (`vx`, AX), center of
 /// curvature `r` to the right (`dir` = 1) or left (-1).
 fn curved_mirror(vx: f64, dir: f64, half: f64, r: f64, hatched: bool) -> Vec<Object> {
     let th_max = (half / r).asin();
@@ -193,7 +193,7 @@ fn cube(fill: Fill) -> Object {
 
 fn laser() -> Vec<Object> {
     vec![
-        rect(2, GREY, (300.0, 675.0), (1050.0, 1125.0)),
+        rect(2, GRAY, (300.0, 675.0), (1050.0, 1125.0)),
         rect(2, DARK, (1050.0, 825.0), (1110.0, 975.0)),
         line(1, &[(360.0, 750.0), (360.0, 1050.0)]),
         beam((1110.0, AX), (1500.0, AX)),
@@ -216,7 +216,7 @@ fn coupler() -> Vec<Object> {
         convex_lens(540.0, 180.0, 36.0, 6.0),
         poly(
             2,
-            GREY,
+            GRAY,
             &[(660.0, 735.0), (1020.0, 825.0), (1020.0, 975.0), (660.0, 1065.0)],
         ),
         line(2, &[(1020.0, AX), (1500.0, AX)]),
@@ -228,7 +228,7 @@ fn coupler() -> Vec<Object> {
 fn photodiode() -> Vec<Object> {
     vec![
         disc((AX, AX), 225.0, 2, WHITE),
-        poly(2, GREY, &[(840.0, 765.0), (840.0, 1035.0), (1020.0, AX)]),
+        poly(2, GRAY, &[(840.0, 765.0), (840.0, 1035.0), (1020.0, AX)]),
         line(3, &[(1020.0, 765.0), (1020.0, 1035.0)]),
         line(2, &[(675.0, AX), (840.0, AX)]),
         line(2, &[(1020.0, AX), (1125.0, AX)]),
@@ -237,14 +237,14 @@ fn photodiode() -> Vec<Object> {
 
 fn detector() -> Vec<Object> {
     vec![
-        rect(2, GREY, (900.0, 675.0), (1200.0, 1125.0)),
+        rect(2, GRAY, (900.0, 675.0), (1200.0, 1125.0)),
         line(4, &[(900.0, 675.0), (900.0, 1125.0)]),
     ]
 }
 
 fn camera() -> Vec<Object> {
     vec![
-        rect(2, GREY, (900.0, 675.0), (1260.0, 1125.0)),
+        rect(2, GRAY, (900.0, 675.0), (1260.0, 1125.0)),
         rect(2, DARK, (720.0, 780.0), (900.0, 1020.0)),
         line(4, &[(930.0, 720.0), (930.0, 1080.0)]),
         line(
@@ -323,7 +323,7 @@ fn grating() -> Vec<Object> {
     }
     outline.push((1140.0, 1050.0));
     outline.push((660.0, 1050.0));
-    vec![poly(2, GREY, &outline)]
+    vec![poly(2, GRAY, &outline)]
 }
 
 fn cavity() -> Vec<Object> {
@@ -342,7 +342,7 @@ fn vacuum_chamber() -> Vec<Object> {
     let half: f64 = 120.0;
     let gap = (half / r).asin();
     // The fill: a circle without an outline.
-    let mut v = vec![circle(p(AX, AX), r, with_fill(solid(0, 70), GREY))];
+    let mut v = vec![circle(p(AX, AX), r, with_fill(solid(0, 70), GRAY))];
     // Four arcs between the ports (at 0, 90, 180 and 270 degrees).
     for k in 0..4 {
         let start = k as f64 * PI / 2.0 + gap;
@@ -382,7 +382,7 @@ fn cryostat() -> Vec<Object> {
         rect(2, GLASSF, (570.0, 570.0), (1230.0, 1230.0)),
         rect(2, WHITE, (780.0, 780.0), (1020.0, 1020.0)),
         // Cold finger from the top plate down to the stage.
-        rect(2, GREY, (870.0, 450.0), (930.0, 780.0)),
+        rect(2, GRAY, (870.0, 450.0), (930.0, 780.0)),
     ];
     for x in [450.0, 570.0, 1230.0, 1350.0] {
         v.push(rect(2, GLASSF, (x - 24.0, 780.0), (x + 24.0, 1020.0)));
@@ -394,7 +394,7 @@ fn cryostat() -> Vec<Object> {
 
 fn viewport() -> Vec<Object> {
     vec![
-        rect(2, GREY, (810.0, 600.0), (990.0, 1200.0)),
+        rect(2, GRAY, (810.0, 600.0), (990.0, 1200.0)),
         rect(2, GLASSF, (870.0, 750.0), (930.0, 1050.0)),
         line(2, &[(810.0, 750.0), (990.0, 750.0)]),
         line(2, &[(810.0, 1050.0), (990.0, 1050.0)]),
@@ -403,8 +403,8 @@ fn viewport() -> Vec<Object> {
 
 fn flange() -> Vec<Object> {
     let mut v = vec![
-        rect(2, GREY, (720.0, 600.0), (870.0, 1200.0)),
-        rect(2, GREY, (930.0, 600.0), (1080.0, 1200.0)),
+        rect(2, GRAY, (720.0, 600.0), (870.0, 1200.0)),
+        rect(2, GRAY, (930.0, 600.0), (1080.0, 1200.0)),
         rect(1, DARK, (870.0, 660.0), (930.0, 1140.0)),
     ];
     for y in [660.0, 1140.0] {
@@ -416,8 +416,8 @@ fn flange() -> Vec<Object> {
 fn sample_holder() -> Vec<Object> {
     vec![
         rect(2, Some((GOLD, 20)), (870.0, 750.0), (930.0, 1050.0)),
-        rect(2, GREY, (840.0, 1050.0), (960.0, 1110.0)),
-        rect(2, GREY, (885.0, 1110.0), (915.0, 1320.0)),
+        rect(2, GRAY, (840.0, 1050.0), (960.0, 1110.0)),
+        rect(2, GRAY, (885.0, 1110.0), (915.0, 1320.0)),
         rect(2, DARK, (780.0, 1320.0), (1020.0, 1380.0)),
     ]
 }
@@ -431,7 +431,7 @@ fn waveplate(tex: &str) -> Vec<Object> {
 }
 
 fn polarizer(dot: bool) -> Vec<Object> {
-    let mut v = vec![rect(2, GREY, (840.0, 600.0), (960.0, 1200.0))];
+    let mut v = vec![rect(2, GRAY, (840.0, 600.0), (960.0, 1200.0))];
     if dot {
         v.push(disc((900.0, AX), 24.0, 1, DARK));
         v.push(disc((900.0, AX), 60.0, 1, None));
@@ -453,7 +453,7 @@ fn pbs() -> Vec<Object> {
         cube(GLASSF),
         line(2, &[(705.0, 1125.0), (1125.0, 705.0)]),
         line(2, &[(675.0, 1095.0), (1095.0, 675.0)]),
-        // Polarisation marks outside: in the plane (arrow), out of it (dot).
+        // Polarization marks outside: in the plane (arrow), out of it (dot).
         double_arrow((1215.0, 660.0), (1215.0, 780.0)),
         disc((1215.0, 1020.0), 24.0, 1, DARK),
         disc((1215.0, 1020.0), 60.0, 1, None),
@@ -604,7 +604,7 @@ fn catalog() -> Vec<Entry> {
         e(
             "polarizing_beam_splitter",
             "polarizing beam splitter cube (PBS)",
-            "Double diagonal; the marks outside show the transmitted (arrow) and reflected (dot) polarisation.",
+            "Double diagonal; the marks outside show the transmitted (arrow) and reflected (dot) polarization.",
             pbs(),
         ),
         e(
@@ -622,13 +622,13 @@ fn catalog() -> Vec<Entry> {
         e(
             "polarizer",
             "linear polarizer, transmission axis in the plane (arrow)",
-            "Grey plate with a double arrow.",
+            "Gray plate with a double arrow.",
             polarizer(false),
         ),
         e(
             "polarizer_perpendicular",
             "linear polarizer, transmission axis out of the plane (dot)",
-            "Grey plate with a dotted circle.",
+            "Gray plate with a dotted circle.",
             polarizer(true),
         ),
         e("iris", "iris (aperture)", "Two jaws around the axis.", iris()),
@@ -652,7 +652,7 @@ fn catalog() -> Vec<Entry> {
         ),
         e(
             "detector",
-            "photodetector (grey box, sensitive face at the centre)",
+            "photodetector (gray box, sensitive face at the center)",
             "The beam hits the face from the left.",
             detector(),
         ),
@@ -735,17 +735,17 @@ fn beam_ends(name: &str) -> Vec<Point> {
     }
 }
 
-/// Put a part's objects at `c` (the part's centre moves there), mirrored
+/// Put a part's objects at `c` (the part's center moves there), mirrored
 /// left-right first if `flip`, then turned by `deg` degrees counter-clockwise
 /// on screen.
 fn place(objs: Vec<Object>, c: Pt, deg: f64, flip: bool) -> Vec<Object> {
-    let centre = Point::new(AX, AX);
+    let center = Point::new(AX, AX);
     let mut t = Affine::translate(0.0, 0.0);
     if flip {
-        t = Affine::about(Affine::scale(-1.0, 1.0), centre);
+        t = Affine::about(Affine::scale(-1.0, 1.0), center);
     }
     t = t
-        .then(&Affine::about(Affine::rotate(deg.to_radians()), centre))
+        .then(&Affine::about(Affine::rotate(deg.to_radians()), center))
         .then(&Affine::translate(c.0 - AX, c.1 - AX));
     objs.into_iter()
         .map(|mut o| {
@@ -838,7 +838,7 @@ pub fn optics_lab() -> Vec<Part> {
         .map(|(name, what, how, objs)| {
             let c1 = format!("Optics lab: {what}");
             let c2 = format!(
-                "{how} Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab"
+                "{how} Optical axis through the center. Keywords: optics laser lens mirror beam fibre detector lab"
             );
             part(name, objs, &[&c1, &c2], beam_ends(name))
         })

@@ -6,7 +6,7 @@
 //!
 //! [`from_model::from_model`] gives the objects as `read.c` returns them
 //! for the Fig 3.2 text [`crate::write_fig`] writes (same rounding, same
-//! closed-path points, same arrowhead rules, colours renumbered the way the
+//! closed-path points, same arrowhead rules, colors renumbered the way the
 //! reader renumbers them), except that splines stay splines with their
 //! shape factors, so that [`to_model::to_document`] gets the document back.
 //! Hand them to fig2dev's drivers through [`from_model::driver_objects`],

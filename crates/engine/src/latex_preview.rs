@@ -2,9 +2,9 @@
 //!
 //! The canvas asks [`LatexPreview::typesetter`] for a [`Typesetter`]; it
 //! answers `None` for a text until a background job has run
-//! `pdflatex`/`lualatex` on it and kept the PDF as a vector picture (the rasteriser renders it at the size shown, so it is sharp at every zoom), so the raw
+//! `pdflatex`/`lualatex` on it and kept the PDF as a vector picture (the rasterizer renders it at the size shown, so it is sharp at every zoom), so the raw
 //! source shows meanwhile (and when TeX is missing, off, or failed). Results
-//! are cached per text, font, size and colour. Nothing here touches the
+//! are cached per text, font, size and color. Nothing here touches the
 //! drawing or the exports. Native only: on wasm no job ever starts.
 
 use rustfig_render::{Typeset, TypesetRequest, Typesetter};

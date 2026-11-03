@@ -3,7 +3,7 @@
 //
 // Ported from xfig src/w_modepanel.c (mode order, tooltips) and
 // src/w_mousefun.c (mouse-function indicator); the depth panel follows
-// src/w_layers.c and the Snap Mode indicator src/w_snap.c (xfig licence, see
+// src/w_layers.c and the Snap Mode indicator src/w_snap.c (xfig license, see
 // LICENSE-xfig).
 
 use crate::theme::Tokens;
@@ -14,7 +14,7 @@ use rustfig_model::{Document, LineKind, Rgb, STANDARD_COLORS, STANDARD_COLOR_NAM
 use serde_json::json;
 
 /// A mode panel button: one of RustFig's tools with xfig's icon, or an xfig
-/// mode RustFig doesn't have yet (shown greyed out, with the plan task).
+/// mode RustFig doesn't have yet (shown grayed out, with the plan task).
 /// RustFig's tools without an xfig mode (Select, Open/close, X-splines,
 /// separate ellipse tools) are in the Tools menu only.
 #[derive(Clone, Copy)]
@@ -114,16 +114,16 @@ pub(crate) fn icon_of(t: ToolKind) -> Option<&'static xfig_icons::Xbm> {
     })
 }
 
-/// The right-click menu of a mode button: add the mode to the Favourites
+/// The right-click menu of a mode button: add the mode to the Favorites
 /// strip or remove it.
-pub(crate) fn favourite_menu(app: &mut App, resp: &egui::Response, t: ToolKind) {
+pub(crate) fn favorite_menu(app: &mut App, resp: &egui::Response, t: ToolKind) {
     let on = app.engine.prefs.rustfig.mode_favourites.iter().any(|x| x == t.id());
-    let full = app.engine.prefs.rustfig.mode_favourites.len() >= rustfig_engine::prefs::MAX_MODE_FAVOURITES;
+    let full = app.engine.prefs.rustfig.mode_favourites.len() >= rustfig_engine::prefs::MAX_MODE_FAVORITES;
     resp.context_menu(|ui| {
         let text = if on {
-            "Remove from favourites"
+            "Remove from favorites"
         } else {
-            "Add to favourites"
+            "Add to favorites"
         };
         if ui.add_enabled(on || !full, egui::Button::new(text)).clicked() {
             app.run("mode.favourite", json!({"mode": t.id(), "on": !on}));
@@ -153,7 +153,7 @@ pub fn mode_panel(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     let size = SLOT;
     // A floating scroll bar takes no width from the 2-column grid.
     ui.spacing_mut().scroll = egui::style::ScrollStyle::floating();
-    // The finder and the Favourites strip stay on top while the buttons scroll.
+    // The finder and the Favorites strip stay on top while the buttons scroll.
     crate::mode_finder::show(app, ui, tk);
     ui.add_space(2.0);
     egui::ScrollArea::vertical()
@@ -273,7 +273,7 @@ fn tool_button(
         app.context_help.hovered = crate::context_help::mode_topic(t);
     }
     let tip = tip_text(t, crate::platform::Os::current(ui.ctx()) == crate::platform::Os::Mac);
-    favourite_menu(app, &resp, t);
+    favorite_menu(app, &resp, t);
     if resp.on_hover_text(tip).clicked() {
         app.run(t.id(), json!({}));
     }
@@ -360,7 +360,7 @@ fn command_button(
     }
 }
 
-/// Colour swatch + name.
+/// Color swatch + name.
 fn color_label(doc: &Document, c: i32) -> (Color32, String) {
     let rgb = doc.rgb(rustfig_model::ColorRef(c));
     let name = if c < 0 {
@@ -373,9 +373,9 @@ fn color_label(doc: &Document, c: i32) -> (Color32, String) {
     (Color32::from_rgb(rgb.r, rgb.g, rgb.b), name)
 }
 
-/// Fill `r` with colour `c`; `Color32::TRANSPARENT` is "no colour" (the
+/// Fill `r` with color `c`; `Color32::TRANSPARENT` is "no color" (the
 /// export panel's Default background, None): white crossed by a red
-/// diagonal. A Default pen or fill colour draws black and shows black.
+/// diagonal. A Default pen or fill color draws black and shows black.
 fn paint_sample(p: &egui::Painter, r: egui::Rect, c: Color32) {
     if c == Color32::TRANSPARENT {
         p.rect_filled(r, 1.0, Color32::WHITE);
@@ -388,7 +388,7 @@ fn paint_sample(p: &egui::Painter, r: egui::Rect, c: Color32) {
     }
 }
 
-/// A colour sample ([`paint_sample`]).
+/// A color sample ([`paint_sample`]).
 fn swatch(ui: &mut egui::Ui, c: Color32) {
     let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::hover());
     paint_sample(ui.painter(), r, c);
@@ -400,7 +400,7 @@ fn swatch(ui: &mut egui::Ui, c: Color32) {
     );
 }
 
-/// A colour picker combo; returns the chosen colour number.
+/// A color picker combo; returns the chosen color number.
 pub fn color_combo(ui: &mut egui::Ui, id: &str, doc: &Document, current: i32) -> Option<i32> {
     let mut chosen = None;
     let (col, name) = color_label(doc, current);
@@ -430,7 +430,7 @@ pub fn color_combo(ui: &mut egui::Ui, id: &str, doc: &Document, current: i32) ->
     chosen
 }
 
-/// [`color_combo`] with its own choices ahead of the colours (the export
+/// [`color_combo`] with its own choices ahead of the colors (the export
 /// panel's "None" and "Background"): `extras` are (value, label), negative
 /// values.
 pub fn color_menu(ui: &mut egui::Ui, id: &str, doc: &Document, current: i32, extras: &[(i32, &str)]) -> Option<i32> {
@@ -478,13 +478,13 @@ pub fn fill_choices() -> Vec<(i32, String)> {
     v
 }
 
-/// xfig shows no tints for the fill colours black, white and default
+/// xfig shows no tints for the fill colors black, white and default
 /// (`w_indpanel.c`: tints of them are shades or white again).
 pub fn plain_fill_color(fill_color: i32) -> bool {
     matches!(fill_color, -1 | 0 | 7)
 }
 
-/// The fill value a plain fill colour allows (tints become the full colour,
+/// The fill value a plain fill color allows (tints become the full color,
 /// shade 20).
 pub fn limit_fill(area: i32, fill_color: i32) -> i32 {
     if plain_fill_color(fill_color) && (21..=40).contains(&area) {
@@ -498,7 +498,7 @@ pub fn fill_combo(ui: &mut egui::Ui, id: &str, current: i32) -> Option<i32> {
     fill_combo_for(ui, id, current, false)
 }
 
-/// The fill menu; with `plain` (fill colour black, white or default) the
+/// The fill menu; with `plain` (fill color black, white or default) the
 /// tints are left out.
 pub fn fill_combo_for(ui: &mut egui::Ui, id: &str, current: i32, plain: bool) -> Option<i32> {
     let mut chosen = None;
@@ -546,7 +546,7 @@ pub fn font_combo(
     postscript: bool,
     local: Option<&str>,
 ) -> Option<crate::font_chooser::Outcome> {
-    // E11: the font chooser in a pop-up under a button labelled with the font.
+    // E11: the font chooser in a pop-up under a button labeled with the font.
     let name = match local {
         Some(n) => n.to_string(),
         None => crate::font_chooser::list_name(font, postscript),
@@ -893,10 +893,10 @@ const INDICATOR_SIZE: egui::Vec2 = vec2(290.0, 46.0);
 /// xfig's mouse-function indicator: a small three-button mouse in the
 /// middle, the left button's function left of it, the middle one's above
 /// and the right one's to the right, each button with a tick pointing at its
-/// label. Geometry from xfig's `w_mousefun.c` (xfig licence, see
+/// label. Geometry from xfig's `w_mousefun.c` (xfig license, see
 /// LICENSE-xfig): buttons 4.5 % of the width wide and half the height high,
 /// starting at 45 % of the height; the box is compact and the left and
-/// right labels sit next to the ticks (xfig centres them in the free space).
+/// right labels sit next to the ticks (xfig centers them in the free space).
 pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
     // xfig shows the Shift meanings while Shift is held (S4-7).
     let os = crate::platform::Os::current(ui.ctx());
@@ -946,7 +946,7 @@ pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
     let right_x = x0 + 4.0 * but_w;
     p.line_segment([egui::pos2(right_x, mid_y), egui::pos2(right_x + tick, mid_y)], line);
     // The left label ends at its tick, the right one starts at its tick, the
-    // middle one is centred above its button; all truncated to fit.
+    // middle one is centerd above its button; all truncated to fit.
     let gap = 3.0;
     let label = |s: &str, anchor: egui::Pos2, align: egui::Align2, max_w: f32| {
         let mut job = egui::text::LayoutJob::simple_singleline(s.to_string(), font.clone(), text);
@@ -997,12 +997,12 @@ pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, summary.clone()));
 }
 
-/// RGB of a colour number, for UI swatches.
+/// RGB of a color number, for UI swatches.
 pub fn rgb_of(doc: &Document, c: i32) -> Rgb {
     doc.rgb(rustfig_model::ColorRef(c))
 }
 
-/// The standard colours (for tests and pickers).
+/// The standard colors (for tests and pickers).
 pub fn standard_colors() -> &'static [Rgb; 32] {
     &STANDARD_COLORS
 }

@@ -14,7 +14,7 @@ use std::process::Command;
 
 /// What goes into the archive: the workspace (`xtask` is a member, so the
 /// locked build needs it), the assets, the figure libraries, the manual's
-/// pages (compiled into the help and the PDF's source) and the licences.
+/// pages (compiled into the help and the PDF's source) and the licenses.
 const INCLUDED: &[&str] = &[
     "Cargo.toml",
     "Cargo.lock",

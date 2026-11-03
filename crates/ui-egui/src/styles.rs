@@ -23,13 +23,13 @@ pub struct StylesWindow {
     pub style: Option<String>,
 }
 
-fn labelled(r: egui::Response, label: &str) -> egui::Response {
+fn labeled(r: egui::Response, label: &str) -> egui::Response {
     let label = label.to_string();
     r.widget_info(move || egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label.clone()));
     r
 }
 
-/// A name field with a grey hint; true when Return was pressed in it.
+/// A name field with a gray hint; true when Return was pressed in it.
 fn field(ui: &mut egui::Ui, text: &mut String, label: &str, hint: &str) -> bool {
     let r = ui.add(egui::TextEdit::singleline(text).hint_text(hint));
     r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, label));
@@ -87,7 +87,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                     .show(ui, |ui| {
                         for (n, _) in &families {
                             let sel = app.styles.family.as_ref() == Some(n);
-                            if labelled(ui.selectable_label(sel, n), &format!("Family {n}")).clicked() {
+                            if labeled(ui.selectable_label(sel, n), &format!("Family {n}")).clicked() {
                                 app.styles.family = Some(n.clone());
                                 app.styles.style = None;
                             }
@@ -98,7 +98,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                 let enter = field(ui, &mut app.styles.family_name, "Family name", "New family name");
                 let named = !app.styles.family_name.trim().is_empty();
                 ui.horizontal(|ui| {
-                    let add = labelled(ui.add_enabled(named, egui::Button::new("Add")), "Add family").clicked();
+                    let add = labeled(ui.add_enabled(named, egui::Button::new("Add")), "Add family").clicked();
                     if named && (add || enter) {
                         let name = std::mem::take(&mut app.styles.family_name).trim().to_string();
                         actions.push(("style.family_add", json!({"name": name})));
@@ -106,7 +106,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                         app.styles.style = None;
                     }
                     let can = app.styles.family.is_some();
-                    if labelled(ui.add_enabled(can, egui::Button::new("Delete")), "Delete family").clicked() {
+                    if labeled(ui.add_enabled(can, egui::Button::new("Delete")), "Delete family").clicked() {
                         if let Some(f) = app.styles.family.take() {
                             actions.push(("style.family_delete", json!({"family": f})));
                         }
@@ -121,7 +121,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                     .show(ui, |ui| {
                         for n in &styles {
                             let sel = app.styles.style.as_ref() == Some(n);
-                            if labelled(ui.selectable_label(sel, n), &format!("Style {n}")).clicked() {
+                            if labeled(ui.selectable_label(sel, n), &format!("Style {n}")).clicked() {
                                 app.styles.style = Some(n.clone());
                             }
                         }
@@ -136,7 +136,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                 let enter = field(ui, &mut app.styles.style_name, "Style name", hint);
                 let named = !app.styles.style_name.trim().is_empty();
                 ui.horizontal(|ui| {
-                    let add = labelled(ui.add_enabled(has_family && named, egui::Button::new("Add")), "Add style")
+                    let add = labeled(ui.add_enabled(has_family && named, egui::Button::new("Add")), "Add style")
                         .clicked();
                     if named && (add || enter) {
                         if let Some(f) = &app.styles.family {
@@ -146,7 +146,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                         }
                     }
                     let sel = app.styles.family.clone().zip(app.styles.style.clone());
-                    if labelled(
+                    if labeled(
                         ui.add_enabled(sel.is_some(), egui::Button::new("Delete")),
                         "Delete style",
                     )
@@ -157,7 +157,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                             app.styles.style = None;
                         }
                     }
-                    if labelled(ui.add_enabled(sel.is_some(), egui::Button::new("Set")), "Set style")
+                    if labeled(ui.add_enabled(sel.is_some(), egui::Button::new("Set")), "Set style")
                         .clicked()
                     {
                         if let Some((f, s)) = &sel {
@@ -168,7 +168,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
             });
             ui.separator();
             ui.label("Add keeps the current attributes of the indicator panel; Set makes the selected style the indicator's.");
-            if labelled(ui.button("Close"), "Close styles").clicked() {
+            if labeled(ui.button("Close"), "Close styles").clicked() {
                 close = true;
             }
         }));

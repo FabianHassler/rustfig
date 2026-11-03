@@ -3,7 +3,7 @@
 //! xfig opens these by piping the file through `gunzip`, `uncompress`,
 //! `bunzip2` or `unxz` (`file_on_disk`/`open_stream`, `f_picobj.c`) and never
 //! saves them compressed; RustFig reads all of them without an external
-//! program and also writes them. A stream is recognised by its magic bytes
+//! program and also writes them. A stream is recognized by its magic bytes
 //! (the file name's suffix is only a hint), and what comes out is capped
 //! at [`MAX_DECOMPRESSED_BYTES`] so that a decompression bomb fails with an
 //! error. All codecs are pure Rust (they also run in the browser).

@@ -12,7 +12,7 @@
 | Arrow types 0–14 | ✅ ported from fig2dev `bound.c`; checked by the A8 reference test |
 | Arrows on pie-wedge arcs | ✅ |
 | Hollow/filled arrows | ✅ |
-| GIF transparent colour | ❌ |
+| GIF transparent color | ❌ |
 
 ## Revision history
 | Date | Note |

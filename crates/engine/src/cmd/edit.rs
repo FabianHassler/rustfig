@@ -732,7 +732,7 @@ fn show_object_cmd(e: &mut Engine, p: &Value) -> CmdResult {
     Ok(json!({"id": id.0}))
 }
 
-/// Select `id` and, when its box is not wholly visible, centre the view on it.
+/// Select `id` and, when its box is not wholly visible, center the view on it.
 fn show_object(e: &mut Engine, id: ObjectId) {
     e.set_selection(vec![id]);
     let Some(b) = e.object_fig_bounds(id) else { return };

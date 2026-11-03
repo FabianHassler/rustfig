@@ -36,7 +36,7 @@ fn norm(doc: &Document) -> Document {
             ObjectKind::Spline(s) => s.style.join = join,
             ObjectKind::Arc(a) => {
                 a.style.join = join;
-                // The file has the centre to three decimals, rounded as the
+                // The file has the center to three decimals, rounded as the
                 // writer's `{:.3}` rounds (an exact half goes to even, which
                 // `f64::round` would not do: -7876.8125).
                 let r = |v: f64| format!("{v:.3}").parse().unwrap_or(v);
@@ -105,7 +105,7 @@ fn ctx_key(c: &Ctx) -> String {
     )
 }
 
-/// Unfilled objects keep the file's fill colour number in the reader and
+/// Unfilled objects keep the file's fill color number in the reader and
 /// get a mapped one from the bridge; equal them for the comparison.
 fn unfill(c: &mut FigCompound) {
     for a in &mut c.arcs {
@@ -288,7 +288,7 @@ fn coords() -> impl Strategy<Value = (i32, i32)> {
     (-5000..20000, -5000..20000)
 }
 
-/// Strictly increasing x, so that no two neighbours coincide.
+/// Strictly increasing x, so that no two neighbors coincide.
 fn points(min: usize, max: usize) -> impl Strategy<Value = Vec<Point>> {
     prop::collection::vec((1..500, -3000..3000), min..max).prop_map(|v| {
         let mut x = 0;
@@ -637,7 +637,7 @@ fn hostile_documents_do_not_panic() {
 }
 
 #[test]
-fn arcs_keep_centre_and_pie_arrows() {
+fn arcs_keep_center_and_pie_arrows() {
     let arrow = Arrow {
         kind: 1,
         style: 1,
@@ -646,7 +646,7 @@ fn arcs_keep_centre_and_pie_arrows() {
         height: 120.0,
     };
     let mut doc = Document::default();
-    // Centre deliberately off the circle through the rounded points.
+    // Center deliberately off the circle through the rounded points.
     for (pie, c) in [(true, pt(1000, 1000)), (false, pt(2000, 2000))] {
         let mut a = Arc::through(Style::default(), pt(0, 100), pt(100, 0), pt(200, 100), pie).unwrap();
         a.center = Point::new(c.x + 0.375, c.y - 0.25);
@@ -669,7 +669,7 @@ fn arcs_keep_centre_and_pie_arrows() {
             );
             assert!(
                 (a.center.x.fract().abs() - 0.375).abs() < 1e-9,
-                "{what}: centre {:?}",
+                "{what}: center {:?}",
                 a.center
             );
         }

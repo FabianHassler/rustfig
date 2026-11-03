@@ -1,21 +1,21 @@
 //! RustFig rendering (layer L3): the scene of a document.
 //!
 //! [`build_scene`] turns a document into fig2dev's display list
-//! ([`Scene`], from `fig2dev`), which the canvas rasterises
-//! ([`raster`], the same rasteriser fig2dev's bitmap languages use). The
+//! ([`Scene`], from `fig2dev`), which the canvas rasterizes
+//! ([`raster`], the same rasterizer fig2dev's bitmap languages use). The
 //! exports don't come from here: the engine writes the document as Fig
 //! text and runs fig2dev (plan B12), whose scene builder draws fig2dev's
 //! objects with the same primitives.
 //
 // Ported from xfig src/u_redraw.c (drawing order, gray depths) and fig2dev
-// dev/genps.c (`PSFONTMAG` text sizes, arrows on pie arcs) (xfig licence,
+// dev/genps.c (`PSFONTMAG` text sizes, arrows on pie arcs) (xfig license,
 // see LICENSE-xfig).
 
 pub use fig2dev::scene::{
     font_px, head_at_end, line_width, pattern, raster, Fill, Prim, Rgba, Scene, Stroke, SubPath, TextPrim,
 };
 
-/// Fewer primitives than this are rasterised on one thread: the bands cost
+/// Fewer primitives than this are rasterized on one thread: the bands cost
 /// more than they save.
 #[cfg(not(target_arch = "wasm32"))]
 const PARALLEL_MIN_PRIMS: usize = 3000;
@@ -50,7 +50,7 @@ fn path_points(scene: &Scene, cap: usize) -> usize {
 /// several threads when the scene is large (P6): each band is a pixmap of its
 /// own, drawn with the transform moved up by its first row and a few rows
 /// more on both sides ([`BAND_PAD`]), so the bands join as one render draws
-/// them (within one antialiasing step of rounding; the rasteriser culls what
+/// them (within one antialiasing step of rounding; the rasterizer culls what
 /// is outside its pixmap). Native only; wasm draws on one thread.
 pub fn rasterize_banded(scene: &Scene, w: u32, h: u32, opts: &raster::RasterOptions) -> Option<raster::Pixmap> {
     #[cfg(not(target_arch = "wasm32"))]
@@ -71,7 +71,7 @@ pub fn rasterize_banded(scene: &Scene, w: u32, h: u32, opts: &raster::RasterOpti
     Some(pm)
 }
 
-/// Rows drawn above and below each band and thrown away: the rasteriser
+/// Rows drawn above and below each band and thrown away: the rasterizer
 /// clips at a pixmap's edge, which changes the antialiasing of the rows next
 /// to it, so each band is drawn taller and only its own rows are kept.
 #[cfg(not(target_arch = "wasm32"))]

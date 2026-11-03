@@ -4,7 +4,7 @@
 //!
 // Ported from xfig src/d_line.c, src/u_create.c (`create_dimension_line`), src/e_scale.c
 // (`rescale_dimension_line`), src/f_util.c (`dimline_components`) and src/w_msgpanel.c
-// (`make_dimension_string`) (xfig licence, see LICENSE-xfig).
+// (`make_dimension_string`) (xfig license, see LICENSE-xfig).
 
 use crate::view::UnitScale;
 use rustfig_geom::Point;
@@ -183,7 +183,7 @@ pub fn create(
         fill_color: ColorRef(s.box_color),
         depth: depth - 1,
         pen_style: -1,
-        // Full saturation of the fill colour.
+        // Full saturation of the fill color.
         area_fill: 20,
         style_val: 0.0,
         cap: CapStyle::Butt,
@@ -373,7 +373,7 @@ pub fn recompute(o: &mut Object, s: &DimlineSettings, fmt: &dyn Fn(f64) -> Strin
     let at = |origin: Point, a: f64, b: f64| {
         Point::new(round(origin.x + a * ux - b * uy), round(origin.y + a * uy + b * ux))
     };
-    let centre = Point::new(cx, cy);
+    let center = Point::new(cx, cy);
     let mut ticks_done = 0;
     for m in &mut c.objects {
         let tag = m.comments.first().map(String::as_str);
@@ -383,10 +383,10 @@ pub fn recompute(o: &mut Object, s: &DimlineSettings, fmt: &dyn Fn(f64) -> Strin
         match tag {
             Some(BOX) => {
                 pl.points = vec![
-                    at(centre, -tlen2, -tht2),
-                    at(centre, -tlen2, tht2),
-                    at(centre, tlen2, tht2),
-                    at(centre, tlen2, -tht2),
+                    at(center, -tlen2, -tht2),
+                    at(center, -tlen2, tht2),
+                    at(center, tlen2, tht2),
+                    at(center, tlen2, -tht2),
                 ];
             }
             Some(TICK) => {

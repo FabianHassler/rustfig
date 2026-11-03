@@ -9,7 +9,7 @@ Single
 -2
 1200 2
 # Optics lab: fibre coupler: launch lens, holder and fibre
-# Beam enters at the left, the fibre leaves at the right; flip it for an output coupler. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+# Beam enters at the left, the fibre leaves at the right; flip it for an output coupler. Optical axis through the center. Keywords: optics laser lens mirror beam fibre detector lab
 6 300 720 1500 1080
 2 3 0 2 0 11 50 -1 20 0.000 0 0 -1 0 0 68
 	546 720 550 731 553 743 556 754 559 765 562 776

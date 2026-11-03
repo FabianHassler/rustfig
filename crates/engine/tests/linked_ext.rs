@@ -85,7 +85,7 @@ fn every_target_kind_drags_the_ends() {
             if mode == LinkMode::Move {
                 near(p[0], x + 2000.0, y - 1500.0);
             } else {
-                // Slide: the neighbour of the last segment moves along the axis it keeps
+                // Slide: the neighbor of the last segment moves along the axis it keeps
                 // (the segment is oblique, so its y).
                 near(p[0], x + 2000.0, y - 1500.0 + 70.0);
             }
@@ -206,7 +206,7 @@ fn rotate_flip_scale_transform_the_attached_end() {
         json!({"x": 0, "y": 0, "width": 1000, "height": 1000}),
     ));
     let l = line(&mut e, json!([[3000, 500], [1000, 500]]));
-    // Rotate 90 degrees counter-clockwise about the box's centre (500, 500):
+    // Rotate 90 degrees counter-clockwise about the box's center (500, 500):
     // the point (1000, 500) goes to (500, 0).
     run(&mut e, "transform.rotate", json!({"ids": [r], "angle": 90}));
     near(pts(&e, l)[1], 500.0, 0.0);
@@ -237,7 +237,7 @@ fn slide_after_a_scale_keeps_the_last_segment_axis_aligned() {
         "shape.rectangle",
         json!({"x": 0, "y": 0, "width": 1000, "height": 1000}),
     ));
-    // A horizontal last segment (y kept): the neighbour moves in y only.
+    // A horizontal last segment (y kept): the neighbor moves in y only.
     let l = line(&mut e, json!([[3000, 500], [1000, 500]]));
     run(
         &mut e,

@@ -1,6 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-//! E4: colour commands: parsing, editor, recent colours, and
-//! user colours surviving a save and reopen in the Fig file.
+//! E4: color commands: parsing, editor, recent colors, and
+//! user colors surviving a save and reopen in the Fig file.
 
 use rustfig_engine::Engine;
 use serde_json::json;
@@ -37,12 +37,12 @@ fn editor_new_edit_delete() {
     let b = run(&mut e, "color.new", json!({"rgb": "#102030"}))["color"]
         .as_i64()
         .unwrap();
-    assert_eq!((a, b), (32, 33), "new colours get new slots even with equal values");
+    assert_eq!((a, b), (32, 33), "new colors get new slots even with equal values");
     run(&mut e, "color.edit", json!({"color": 32, "rgb": "red"}));
     assert_eq!(e.doc().colors[0].rgb.to_hex(), "#ff0000");
     assert!(e.execute("color.edit", &json!({"color": 40, "rgb": "red"})).is_err());
     assert!(e.execute("color.edit", &json!({"color": 5, "rgb": "red"})).is_err());
-    // A colour in use is not deleted.
+    // A color in use is not deleted.
     run(
         &mut e,
         "shape.rectangle",
@@ -51,13 +51,13 @@ fn editor_new_edit_delete() {
     assert!(e.execute("color.delete", &json!({"color": 33})).is_err());
     run(&mut e, "color.delete", json!({"color": 32}));
     assert_eq!(e.doc().colors.len(), 1);
-    // Undo restores the colour.
+    // Undo restores the color.
     run(&mut e, "edit.undo", json!({}));
     assert_eq!(e.doc().colors.len(), 2);
 }
 
 #[test]
-fn recent_colours_newest_first_unique_capped() {
+fn recent_colors_newest_first_unique_capped() {
     let mut e = Engine::new();
     for i in 0..20 {
         run(&mut e, "color.use", json!({"rgb": format!("#0000{i:02x}")}));
@@ -74,7 +74,7 @@ fn recent_colours_newest_first_unique_capped() {
 }
 
 #[test]
-fn user_colours_survive_save_and_reopen() {
+fn user_colors_survive_save_and_reopen() {
     let mut e = Engine::new();
     let c = run(&mut e, "color.new", json!({"rgb": "#336699"}))["color"]
         .as_i64()

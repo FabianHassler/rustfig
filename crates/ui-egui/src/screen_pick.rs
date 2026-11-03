@@ -1,10 +1,10 @@
-//! Pick a colour from the screen (E4b): the egui side. The OS calls (macOS
+//! Pick a color from the screen (E4b): the egui side. The OS calls (macOS
 //! `NSColorSampler`, Windows `GetPixel`, the Linux portal) are in
 //! `rustfig-os`; this keeps the pick in progress and repaints.
 //!
 //! Windows has no system sampler: while picking, every frame reads the pixel
 //! under the pointer, the picker shows it live, the next left click takes it
-//! and Escape cancels. The web build has no pick: the button is greyed out.
+//! and Escape cancels. The web build has no pick: the button is grayed out.
 
 use std::sync::mpsc::Receiver;
 
@@ -14,7 +14,7 @@ pub use rustfig_os::screen::{available, unavailable_reason, Outcome};
 #[derive(Default)]
 pub struct ScreenPicker {
     rx: Option<Receiver<Outcome>>,
-    /// Windows: the colour under the pointer, shown live.
+    /// Windows: the color under the pointer, shown live.
     live: Option<[u8; 3]>,
     /// Windows: picking is on.
     own: bool,
@@ -34,7 +34,7 @@ impl ScreenPicker {
         self.rx.is_some() || self.own
     }
 
-    /// The colour under the pointer while picking (Windows only).
+    /// The color under the pointer while picking (Windows only).
     pub fn live(&self) -> Option<[u8; 3]> {
         self.live
     }
@@ -80,7 +80,7 @@ impl ScreenPicker {
             Err(std::sync::mpsc::TryRecvError::Empty) => None,
             Err(std::sync::mpsc::TryRecvError::Disconnected) => {
                 self.rx = None;
-                Some(Outcome::Failed("The colour sampler ended without a colour".into()))
+                Some(Outcome::Failed("The color sampler ended without a color".into()))
             }
         }
     }
@@ -89,9 +89,9 @@ impl ScreenPicker {
     fn poll_own(&mut self, ctx: &egui::Context) -> Option<Outcome> {
         ctx.request_repaint_after(std::time::Duration::from_millis(16));
         let s = rustfig_os::screen::poll_pixel();
-        self.live = s.colour;
+        self.live = s.color;
         if s.escape {
-            return Some(self.end_own(Outcome::Cancelled));
+            return Some(self.end_own(Outcome::Canceled));
         }
         if self.wait_release {
             self.wait_release = s.left;

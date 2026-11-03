@@ -9,7 +9,7 @@ Single
 -2
 1200 2
 # Optics lab: electro-optic modulator (EOM, Pockels cell)
-# Crystal between two electrodes, driven by a voltage source. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+# Crystal between two electrodes, driven by a voltage source. Optical axis through the center. Keywords: optics laser lens mirror beam fibre detector lab
 6 720 540 1350 1260
 1 3 0 1 0 7 50 -1 20 0.000 1 0.0000 1275 900 75 75 1275 900 1350 900
 2 2 0 2 0 11 50 -1 20 0.000 0 0 -1 0 0 5

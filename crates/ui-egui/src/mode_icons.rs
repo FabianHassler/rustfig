@@ -1,11 +1,11 @@
 //! xfig's mode panel icons redrawn as vectors (plan W9 b): each is a small
 //! Fig drawing traced from xfig's bitmap (`w_icons.c`), rendered by
-//! RustFig's rasteriser at the screen's density. Geometry (lines, curves,
+//! RustFig's rasterizer at the screen's density. Geometry (lines, curves,
 //! ellipses, arcs) is smooth at any scale; tiny lettering and pictures that
 //! are pixel art by nature are copied from the bitmap as one square per
 //! pixel, so they stay crisp at whole-number scales and match xfig at 1×.
 //
-// Traced from xfig src/w_icons.c (xfig licence, see LICENSE-xfig).
+// Traced from xfig src/w_icons.c (xfig license, see LICENSE-xfig).
 
 use crate::xfig_icons::{self as xi, Xbm};
 use rustfig_geom::Point;
@@ -16,7 +16,7 @@ use rustfig_model::{
 /// Fig units per icon pixel.
 pub const U: f64 = 15.0;
 
-/// Pixel centre of pixel column `x`, row `y`, in Fig units.
+/// Pixel center of pixel column `x`, row `y`, in Fig units.
 fn c(x: f64, y: f64) -> Point {
     Point::new((x + 0.5) * U, (y + 0.5) * U)
 }
@@ -57,7 +57,7 @@ impl Ic {
         self.push(ObjectKind::Polyline(Polyline::new(kind, st, pts)))
     }
 
-    /// An open polyline through pixel centres.
+    /// An open polyline through pixel centers.
     fn line(&mut self, pts: &[(f64, f64)]) -> &mut Ic {
         self.poly(PolyKind::Polyline, pen(PX), pts)
     }
@@ -67,7 +67,7 @@ impl Ic {
         self.poly(PolyKind::Polyline, pen(3), pts)
     }
 
-    /// A dotted line through pixel centres: one pixel on, one off.
+    /// A dotted line through pixel centers: one pixel on, one off.
     fn dotted(&mut self, pts: &[(f64, f64)]) -> &mut Ic {
         let st = Style {
             line: LineKind::Dotted,
@@ -81,7 +81,7 @@ impl Ic {
         self.poly(PolyKind::Polygon, pen(PX), pts)
     }
 
-    /// A box through the centres of its corner pixels.
+    /// A box through the centers of its corner pixels.
     fn rect(&mut self, x0: f64, y0: f64, x1: f64, y1: f64) -> &mut Ic {
         self.poly(PolyKind::Box, pen(PX), &[(x0, y0), (x1, y0), (x1, y1), (x0, y1)])
     }
@@ -93,7 +93,7 @@ impl Ic {
         self.push(ObjectKind::Polyline(b))
     }
 
-    /// A filled square of `size` pixels centred on pixel (x, y): xfig's
+    /// A filled square of `size` pixels centerd on pixel (x, y): xfig's
     /// point markers.
     fn marker(&mut self, x: f64, y: f64, size: f64) -> &mut Ic {
         let h = size / 2.0;
@@ -376,7 +376,7 @@ fn glue_contents(ic: &mut Ic) -> &mut Ic {
 }
 
 /// The rotate icons: a curved band ending in an arrowhead; `mirror` for
-/// counter-clockwise (x mirrored about the icon's centre).
+/// counter-clockwise (x mirrored about the icon's center).
 fn rotate(ic: &mut Ic, mirror: bool) -> &mut Ic {
     let m = |(x, y): (f64, f64)| if mirror { (36.0 - x, y) } else { (x, y) };
     ic.arc(m((19.0, 5.0)), m((11.0, 12.0)), m((24.0, 15.5)))
@@ -402,7 +402,7 @@ fn grid(b: &'static Xbm, xs: &[f64], ys: &[f64], x: (f64, f64), y: (f64, f64)) -
 /// been traced; others keep their bitmap.
 pub fn drawing(name: &str) -> Option<Vec<Object>> {
     Some(match name {
-        // Ellipse by radii: the ellipse, its centre cross and dotted radii.
+        // Ellipse by radii: the ellipse, its center cross and dotted radii.
         "ellrad" => Ic::new(&xi::ELLRAD)
             .ellipse(18.0, 15.0, 13.0, 9.0)
             .line(&[(16.0, 15.0), (20.0, 15.0)])
@@ -479,7 +479,7 @@ pub fn drawing(name: &str) -> Option<Vec<Object>> {
             .done(),
         "box" => Ic::new(&xi::BOX).rect(7.0, 8.0, 28.0, 23.0).done(),
         "arc_box" => Ic::new(&xi::ARC_BOX).round_rect(6.0, 7.0, 29.0, 24.0, 4).done(),
-        // A hexagon with its centre and the radius drawn to a corner.
+        // A hexagon with its center and the radius drawn to a corner.
         "regpoly" => Ic::new(&xi::REGPOLY)
             .polygon(&[
                 (11.0, 3.0),
@@ -777,7 +777,7 @@ pub fn drawing(name: &str) -> Option<Vec<Object>> {
             (0.0, 31.0),
         ),
         "grid4" => grid(&xi::GRID4, &[6.0, 26.0], &[6.0, 26.0], (0.0, 31.0), (0.0, 31.0)),
-        // … and alignment: two boxes and the arrow pointing at the edge or centre.
+        // … and alignment: two boxes and the arrow pointing at the edge or center.
         "valignt" => Ic::new(&xi::VALIGNT)
             .rect(3.0, 3.0, 12.0, 12.0)
             .rect(24.0, 3.0, 28.0, 20.0)

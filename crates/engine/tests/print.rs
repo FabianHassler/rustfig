@@ -120,7 +120,7 @@ fn print_goes_to_the_spooler() {
 }
 
 #[test]
-fn a_cancelled_dialog_prints_nothing_and_keeps_the_batch() {
+fn a_canceled_dialog_prints_nothing_and_keeps_the_batch() {
     let (mut e, _) = engine();
     let rec = RecordingSpooler {
         cancel: true,

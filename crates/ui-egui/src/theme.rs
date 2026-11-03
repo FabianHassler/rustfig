@@ -1,4 +1,4 @@
-//! Design tokens: every colour the UI uses comes from here.
+//! Design tokens: every color the UI uses comes from here.
 
 use egui::Color32;
 
@@ -41,7 +41,7 @@ pub struct Tokens {
 }
 
 impl Tokens {
-    /// The colour a history message is drawn in (`normal` for info).
+    /// The color a history message is drawn in (`normal` for info).
     pub fn message_color(&self, l: crate::messages::Level, normal: Color32) -> Color32 {
         match l {
             crate::messages::Level::Info => normal,

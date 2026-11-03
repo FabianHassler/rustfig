@@ -9,7 +9,7 @@ Single
 -2
 1200 2
 # Optics lab: beam splitter cube, 50/50
-# Diagonal splitting surface; a beam from the left goes on and upwards. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+# Diagonal splitting surface; a beam from the left goes on and upwards. Optical axis through the center. Keywords: optics laser lens mirror beam fibre detector lab
 6 675 675 1125 1125
 2 2 0 2 0 11 50 -1 20 0.000 0 0 -1 0 0 5
 	675 675 1125 675 1125 1125 675 1125 675 675

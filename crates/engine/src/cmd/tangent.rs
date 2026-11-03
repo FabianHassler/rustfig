@@ -4,7 +4,7 @@
 // Ported from xfig src/e_tangent.c (`tangent_or_normal`,
 // `tangent_normal_line`), src/u_smartsearch.c (`smart_next_*_found`) and
 // src/u_geom.c (`close_to_ellipse`, `close_to_arc`, `close_to_polyline`,
-// `close_to_spline`, `close_to_vector`) (xfig licence, see LICENSE-xfig).
+// `close_to_spline`, `close_to_vector`) (xfig license, see LICENSE-xfig).
 
 use super::shape::{added, arrows_from, style_from};
 use super::{opt_bool, opt_num, CmdResult, Command};
@@ -27,7 +27,7 @@ pub(super) fn commands() -> Vec<Command> {
         label: "Add tangent/normal line",
         menu: "",
         shortcut: "",
-        params: "{\"id\": circle, ellipse, arc, line, polygon, box or spline, \"x\", \"y\": the point on it (Fig units; the curve point nearest to it within \"tolerance\" is used), \"normal\"?: bool (default false: the tangent), \"length\"?: in inches or cm as the units box shows (default: the indicator's tangent_length, xfig's Tangent/Norm Length), \"tolerance\"?: Fig units (default: the pick tolerance), plus the style and arrow parameters of shape.polyline}  — add a line through the curve point, along its tangent or normal, centred there (xfig's Tangent mode: left button tangent, middle button normal). Fails at a singularity (a vertex or a point where the curve has no direction). Returns {\"id\", \"x\", \"y\" (the curve point), \"points\"}",
+        params: "{\"id\": circle, ellipse, arc, line, polygon, box or spline, \"x\", \"y\": the point on it (Fig units; the curve point nearest to it within \"tolerance\" is used), \"normal\"?: bool (default false: the tangent), \"length\"?: in inches or cm as the units box shows (default: the indicator's tangent_length, xfig's Tangent/Norm Length), \"tolerance\"?: Fig units (default: the pick tolerance), plus the style and arrow parameters of shape.polyline}  — add a line through the curve point, along its tangent or normal, centerd there (xfig's Tangent mode: left button tangent, middle button normal). Fails at a singularity (a vertex or a point where the curve has no direction). Returns {\"id\", \"x\", \"y\" (the curve point), \"points\"}",
         mutates: true,
         enabled: super::always,
         run: tangent_line,
@@ -100,7 +100,7 @@ fn close_to_ellipse(e: &Ellipse, xp: f64, yp: f64, d: f64) -> Option<CurvePoint>
     if (dis - r).abs() > d {
         return None;
     }
-    // On the centre of a (tiny) ellipse there is no direction.
+    // On the center of a (tiny) ellipse there is no direction.
     let (qx, qy) = if dis == 0.0 {
         (0.0, 0.0)
     } else {

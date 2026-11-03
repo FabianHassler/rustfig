@@ -9,7 +9,7 @@ Single
 -2
 1200 2
 # Optics lab: camera (CCD or CMOS) with lens barrel
-# The beam enters on the left. Optical axis through the centre. Keywords: optics laser lens mirror beam fibre detector lab
+# The beam enters on the left. Optical axis through the center. Keywords: optics laser lens mirror beam fibre detector lab
 6 720 675 1260 1125
 2 2 0 2 0 0 50 -1 36 0.000 0 0 -1 0 0 5
 	900 675 1260 675 1260 1125 900 1125 900 675

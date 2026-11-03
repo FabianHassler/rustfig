@@ -11,7 +11,7 @@
 | Text in PDF | ✅ standard-14 fonts (WinAnsi) |
 | Text in EPS | ✅ PostScript fonts re-encoded ISO-Latin-1 |
 | Text in SVG | ✅ CSS font families |
-| Left/centre/right justification, rotation | ✅ |
+| Left/center/right justification, rotation | ✅ |
 | Multi-line text | ✅ |
 | Hidden text | ✅ shown as `<<>>` on screen |
 | Rigid text | ✅ not scaled with compounds |

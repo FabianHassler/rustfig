@@ -2,7 +2,7 @@
 //! (the character map, E5), and the reverse, so typing a Unicode character
 //! in a Symbol-font text stores its Symbol byte.
 //!
-// Ported from fig2dev dev/gensvg.c (`symbolchar`, `dingbatchar`; xfig licence, see LICENSE-xfig).
+// Ported from fig2dev dev/gensvg.c (`symbolchar`, `dingbatchar`; xfig license, see LICENSE-xfig).
 
 /// gensvg.c `symbolchar[256]`: Unicode of each Fig Symbol code, 0 where none.
 pub const SYMBOL_CHAR: [u32; 256] = [

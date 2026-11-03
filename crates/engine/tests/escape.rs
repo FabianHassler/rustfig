@@ -39,7 +39,7 @@ fn escape_cancels_then_clears_then_leaves_the_mode() {
     click(&mut e, 600.0, 2000.0);
     assert!(e.tool_busy());
     let n = e.doc().objects.len();
-    assert_eq!(escape(&mut e), "cancelled");
+    assert_eq!(escape(&mut e), "canceled");
     assert!(!e.tool_busy());
     assert_eq!(e.doc().objects.len(), n, "the line in progress is dropped");
     assert_eq!(escape(&mut e), "selection cleared");

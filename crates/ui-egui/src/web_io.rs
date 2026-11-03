@@ -32,7 +32,7 @@ pub enum WebPurpose {
     Merge,
     /// Picture mode: a picture in the box the user drew.
     PictureBox { rect: [f64; 4], keep_aspect: bool },
-    /// Import a picture at the centre of the view.
+    /// Import a picture at the center of the view.
     PictureImport,
     /// The picture panel's Browse / Relink.
     PictureRelink,

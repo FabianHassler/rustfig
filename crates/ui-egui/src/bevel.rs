@@ -1,6 +1,6 @@
 //! The "3D" button style: raised, bevelled buttons (light top-left edge,
 //! dark bottom-right edge, soft shading) that sink when pressed or selected,
-//! a modern take on xfig's Xaw3d look. Colours come from [`Tokens`]; the
+//! a modern take on xfig's Xaw3d look. Colors come from [`Tokens`]; the
 //! "Flat" style (Global settings) paints a plain face with a thin outline.
 //! Edge widths are whole device pixels, so the bevel stays crisp at every
 //! scale.

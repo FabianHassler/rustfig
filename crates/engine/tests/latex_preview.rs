@@ -117,7 +117,7 @@ fn a_special_text_becomes_a_picture_once_typeset_and_is_cached() {
         panic!("no picture");
     };
     assert!(pdf.size().0 > 1.0 && pdf.size().1 > 1.0);
-    // Centred on x = 3000, the baseline (y = 900) inside the picture.
+    // Centerd on x = 3000, the baseline (y = 900) inside the picture.
     let cx = (corners[0].x + corners[1].x) / 2.0;
     assert!((cx - 3000.0).abs() < 1.0, "{cx}");
     assert!(corners[3].y > 900.0 && corners[0].y < 900.0, "{corners:?}");
@@ -146,7 +146,7 @@ fn bounds_and_picking_follow_the_typeset_size() {
         })
         .unwrap()
         .id;
-    // Far right of the stored box (about 450 wide, centred on 3000).
+    // Far right of the stored box (about 450 wide, centerd on 3000).
     let far = rustfig_engine::geom::Point::new(3000.0 + 4000.0, 900.0);
     assert_eq!(e.hit_test(far, 10.0), None);
     let _ = scene_of(&e);
@@ -247,7 +247,7 @@ fn files_and_exports_do_not_depend_on_the_preview() {
 }
 
 #[test]
-fn the_document_has_the_export_preamble_and_the_colour() {
+fn the_document_has_the_export_preamble_and_the_color() {
     let d = latex_document("\\usepackage{bm}", "$x$", 4, false, 12.0, [255, 0, 0]);
     for want in [
         "amsmath,amssymb,color,graphicx",

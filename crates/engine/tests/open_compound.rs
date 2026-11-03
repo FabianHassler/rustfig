@@ -291,7 +291,7 @@ fn the_rest_is_gray_only_when_kept_visible() {
         "gray backdrop: {first:?}"
     );
     let last = strokes.last().unwrap();
-    assert_eq!((last.r, last.g, last.b), (0, 0, 0), "members in their colours");
+    assert_eq!((last.r, last.g, last.b), (0, 0, 0), "members in their colors");
 }
 
 #[test]
