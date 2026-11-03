@@ -1,11 +1,11 @@
 # Keys
 
 <!-- os: mac -->
-RustFig understands two sets of keys: xfig's own, and the usual ones of macOS. xfig's set can be switched off in Edit > Global settings ("xfig keyboard shortcuts"). The macOS shortcuts use Cmd (written Ctrl in the tables below); xfig's Meta is the Option key. Where a table says "the physical Ctrl key", it means the Control key, not Cmd.
+RustFig understands two sets of keys: xfig's own, and the usual ones of macOS. xfig's set can be switched off in Edit > Global settings ("xfig keyboard shortcuts in menus"). The macOS shortcuts use Cmd (written Ctrl in the tables below); xfig's Meta is the Option key. Where a table says "the physical Ctrl key", it means the Control key, not Cmd.
 
 The menus show one key per entry: the system's (`⌘ Z` for Undo on macOS, `Ctrl+Z` elsewhere), or xfig's when you turn on xfig's keys in Edit > Global settings (off when RustFig is new). The mode letters (`s` for spline, `b` for box, …) work either way, and Help > Keys lists both sets. With xfig's keys on, Undo shows `⌥ U`, and `⌘ Z` undoes as well. Option and Cmd are written ⌥ and ⌘ (with Control ⌃ and Shift ⇧), with a thin space before the key, so `⌘ '` (Cmd and the apostrophe key), `⌘ -` and `⌘ =` stay readable.
 <!-- os: linux windows -->
-RustFig understands two sets of keys: xfig's own, and the usual ones of your system. xfig's set can be switched off in Edit > Global settings ("xfig keyboard shortcuts"). xfig's Meta is the Alt key.
+RustFig understands two sets of keys: xfig's own, and the usual ones of your system. xfig's set can be switched off in Edit > Global settings ("xfig keyboard shortcuts in menus"). xfig's Meta is the Alt key.
 
 Where both sets want the same key (Ctrl+S, Ctrl+C and so on), xfig's meaning wins while xfig's keys are on. The menus show both keys of an entry where it has both, for example `Alt+U / Ctrl+Z`; modifiers are written Ctrl, Alt and Shift, and the key as its symbol (`Ctrl+'` is Ctrl and the apostrophe key, `Ctrl+-`, `Ctrl+=`).
 <!-- os: end -->

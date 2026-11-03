@@ -87,7 +87,7 @@ pub const UI_COMMANDS: &[UiCommand] = &[
     },
     UiCommand {
         id: "app.toggle_xfig_keys",
-        label: "xfig keyboard shortcuts",
+        label: "xfig keyboard shortcuts in menus",
         shortcut: "",
         params: "{\"on\"?: bool}  — xfig's Meta keys (Alt, macOS Option) and Ctrl mode keys",
     },

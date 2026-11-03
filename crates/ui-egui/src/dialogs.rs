@@ -1423,7 +1423,7 @@ const GLOBAL_ROWS: &[(GlobalTab, &str, &str)] = &[
         "allownegcoords -allownegcoords",
     ),
     (GlobalTab::Window, "Draw axis lines", "showaxislines -showaxislines"),
-    (GlobalTab::Window, "xfig keyboard shortcuts", "keys meta ctrl"),
+    (GlobalTab::Window, "xfig keyboard shortcuts in menus", "keys meta ctrl"),
     (GlobalTab::Window, "Button style", "3d flat bevel"),
     (GlobalTab::Window, "Theme", "light dark system colour"),
     (GlobalTab::Window, "UI scale", "zoom size scale"),
@@ -1577,9 +1577,9 @@ fn global_tab_rows(app: &mut App, ui: &mut egui::Ui, d: &mut GlobalDraft, tab: G
             if filter.is_empty() {
                 ui.separator();
             }
-            if show("xfig keyboard shortcuts") {
+            if show("xfig keyboard shortcuts in menus") {
                 let mut keys = app.xfig_keys;
-                if ui.checkbox(&mut keys, "xfig keyboard shortcuts").changed() {
+                if ui.checkbox(&mut keys, "xfig keyboard shortcuts in menus").changed() {
                     app.run("app.toggle_xfig_keys", json!({}));
                 }
             }
@@ -1614,8 +1614,8 @@ fn global_tab_rows(app: &mut App, ui: &mut egui::Ui, d: &mut GlobalDraft, tab: G
                     }
                 });
             }
-            if show("Units and page") && ui.button("Units and page…").clicked() {
-                app.run("app.document_settings", json!({}));
+            if show("Units and page") {
+                new_drawing_settings(app, ui);
             }
         }
         GlobalTab::Drawing => {
@@ -1764,6 +1764,7 @@ fn advanced_rows(app: &mut App, ui: &mut egui::Ui, d: &mut GlobalDraft, filter: 
 fn global_dialog(app: &mut App, ctx: &egui::Context) {
     let id = egui::Id::new("global_settings_draft");
     if !app.dialogs.global_open {
+        flush_latex_drafts(app, ctx);
         ctx.data_mut(|d| d.remove::<GlobalDraft>(id));
         return;
     }
@@ -1773,6 +1774,7 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
         .unwrap_or_else(|| current.clone());
     let mut open = true;
     let (mut ok, mut cancel) = (false, false);
+    let mut latex_hidden = false;
     let body_h = (dialog_body_height(ctx)).clamp(160.0, 440.0);
     egui::Window::new("Global settings")
         .open(&mut open)
@@ -1793,6 +1795,15 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
                 }
             });
             let filter = d.filter.trim().to_lowercase();
+            // The LaTeX fields are drawn on the Drawing tab, or when a filter matches them.
+            let latex_shown = if filter.is_empty() {
+                d.tab == GlobalTab::Drawing
+            } else {
+                filter_matches(&filter, "LaTeX text", "tex latex preamble typeset program")
+            };
+            if !latex_shown {
+                latex_hidden = true;
+            }
             if filter.is_empty() {
                 ui.horizontal(|ui| {
                     for tab in GlobalTab::ALL {
@@ -1865,6 +1876,11 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
                 ok = ui.button("Ok").clicked();
             });
         });
+    // The LaTeX fields apply when left (they are not part of Ok/Cancel): an
+    // edit whose field is not on screen any more takes effect now.
+    if latex_hidden || ok || cancel || !open {
+        flush_latex_drafts(app, ctx);
+    }
     if ok || (app.apply_immediately && open && !cancel) {
         apply_global(app, &current, &d);
         apply_advanced(app, &current, &d);
@@ -1947,8 +1963,87 @@ fn apply_global(app: &mut App, was: &GlobalDraft, now: &GlobalDraft) {
     }
 }
 
+/// Units, paper and orientation of new drawings (xfig's `inches`,
+/// `paper_size` and `landscape` resources), kept for the next start; the open
+/// drawing's own settings are in Document Settings.
+fn new_drawing_settings(app: &mut App, ui: &mut egui::Ui) {
+    let p = &app.engine.prefs;
+    let inches = p.bool("inches").unwrap_or(true);
+    let landscape = p.bool("landscape").unwrap_or(true);
+    let paper = p
+        .str("paper_size")
+        .and_then(|n| PaperSize::from_name(&n))
+        .unwrap_or_else(|| app.engine.doc().settings.paper);
+    let mut set: Option<(&str, Value)> = None;
+    ui.label("New drawings:");
+    egui::Grid::new("new_drawing_grid").num_columns(2).show(ui, |ui| {
+        ui.label("Units");
+        ui.horizontal(|ui| {
+            if ui.radio(inches, "Inches").clicked() {
+                set = Some(("inches", json!(true)));
+            }
+            if ui.radio(!inches, "Metric").clicked() {
+                set = Some(("inches", json!(false)));
+            }
+        });
+        ui.end_row();
+        ui.label("Paper");
+        egui::ComboBox::from_id_salt("new_drawing_paper")
+            .selected_text(paper.name())
+            .show_ui(ui, |ui| {
+                for ps in PaperSize::ALL {
+                    if ui.selectable_label(ps == paper, ps.name()).clicked() {
+                        set = Some(("paper_size", json!(ps.name())));
+                    }
+                }
+            });
+        ui.end_row();
+        ui.label("Orientation");
+        ui.horizontal(|ui| {
+            if ui.radio(landscape, "Landscape").clicked() {
+                set = Some(("landscape", json!(true)));
+            }
+            if ui.radio(!landscape, "Portrait").clicked() {
+                set = Some(("landscape", json!(false)));
+            }
+        });
+        ui.end_row();
+    });
+    if ui.button("This drawing's units and page…").clicked() {
+        app.run("app.document_settings", json!({}));
+    }
+    if let Some((name, value)) = set {
+        app.run("prefs.set", json!({ "resource": name, "value": value }));
+    }
+}
+
 /// The colours kept for every drawing (E1): offered in every colour menu.
 /// RustFig's LaTeX settings (F8): typeset texts with the TeX flag on the canvas, the
+/// Where the LaTeX section keeps its drafts: (program, preamble, program
+/// edited, preamble edited).
+fn latex_draft_id() -> egui::Id {
+    egui::Id::new("latex_settings_draft")
+}
+
+/// Apply edited LaTeX drafts while their fields are not on screen (another
+/// settings tab, a filter that hides them, or the window closing): typing in
+/// the preamble and then choosing another tab must not lose the text.
+fn flush_latex_drafts(app: &mut App, ctx: &egui::Context) {
+    let Some((program, preamble, program_edited, preamble_edited)) =
+        ctx.data(|d| d.get_temp::<(String, String, bool, bool)>(latex_draft_id()))
+    else {
+        return;
+    };
+    let settings = app.engine.latex.settings();
+    if program_edited && program != settings.program {
+        app.run("view.set_latex_program", json!({ "program": program.trim() }));
+    }
+    if preamble_edited && preamble != settings.preamble {
+        app.run("view.set_latex_preamble", json!({ "preamble": preamble }));
+    }
+    ctx.data_mut(|d| d.remove::<(String, String, bool, bool)>(latex_draft_id()));
+}
+
 /// TeX program and the preamble added to every typeset text.
 fn latex_settings(app: &mut App, ui: &mut egui::Ui) {
     use rustfig_engine::latex_preview::BASE_PREAMBLE;
@@ -1963,10 +2058,13 @@ fn latex_settings(app: &mut App, ui: &mut egui::Ui) {
         app.run("view.toggle_latex_preview", serde_json::json!({}));
     }
     let found = app.engine.latex.program();
-    let id = ui.id().with("latex_settings_draft");
-    let (mut program, mut preamble): (String, String) = ui
+    let id = latex_draft_id();
+    // The drafts and whether each was edited: an edit is applied when the
+    // field is left, also when that is only seen later (another settings tab
+    // was chosen, so the field was not drawn and lost its focus unseen).
+    let (mut program, mut preamble, mut program_edited, mut preamble_edited): (String, String, bool, bool) = ui
         .data(|d| d.get_temp(id))
-        .unwrap_or_else(|| (settings.program.clone(), settings.preamble.clone()));
+        .unwrap_or_else(|| (settings.program.clone(), settings.preamble.clone(), false, false));
     // No Apply button: a field takes effect when you leave it (typesetting
     // on every key would run TeX for each letter).
     let program_field = ui
@@ -1979,11 +2077,15 @@ fn latex_settings(app: &mut App, ui: &mut egui::Ui) {
             )
         })
         .inner;
-    if program_field.lost_focus() && program != settings.program {
-        app.run(
-            "view.set_latex_program",
-            serde_json::json!({ "program": program.trim() }),
-        );
+    program_edited |= program_field.changed();
+    if program_edited && !program_field.has_focus() {
+        if program != settings.program {
+            app.run(
+                "view.set_latex_program",
+                serde_json::json!({ "program": program.trim() }),
+            );
+        }
+        program_edited = false;
     }
     ui.label(
         egui::RichText::new(match &found {
@@ -2001,15 +2103,22 @@ fn latex_settings(app: &mut App, ui: &mut egui::Ui) {
             .desired_rows(4)
             .desired_width(f32::INFINITY),
     );
-    if preamble_field.lost_focus() && preamble != settings.preamble {
-        app.run("view.set_latex_preamble", serde_json::json!({ "preamble": preamble }));
+    preamble_field.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "LaTeX preamble"));
+    preamble_edited |= preamble_field.changed();
+    if preamble_edited && !preamble_field.has_focus() {
+        if preamble != settings.preamble {
+            app.run("view.set_latex_preamble", serde_json::json!({ "preamble": preamble }));
+        }
+        preamble_edited = false;
     }
-    if !program_field.has_focus() && !preamble_field.has_focus() {
-        // Not being edited: follow the saved values (a command may change them).
+    // A field not being edited follows the saved value (a command may change it).
+    if !program_edited && !program_field.has_focus() {
         program = app.engine.latex.settings().program;
+    }
+    if !preamble_edited && !preamble_field.has_focus() {
         preamble = app.engine.latex.settings().preamble;
     }
-    ui.data_mut(|d| d.insert_temp(id, (program, preamble)));
+    ui.data_mut(|d| d.insert_temp(id, (program, preamble, program_edited, preamble_edited)));
 }
 
 fn user_colors_editor(app: &mut App, ui: &mut egui::Ui) {

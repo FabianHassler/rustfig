@@ -210,7 +210,7 @@ fn global_settings_switch_the_xfig_shortcuts() {
     h.run_steps(2);
     h.get_by_label_contains("Global settings...").click();
     h.run_steps(4);
-    h.get_by_label_contains("xfig keyboard shortcuts").click();
+    h.get_by_label_contains("xfig keyboard shortcuts in menus").click();
     h.run_steps(2);
     assert_eq!(h.state().xfig_keys, !before);
     // W16/W17: no mouse scheme, layout or icon switch is left, and the
@@ -2883,6 +2883,36 @@ fn global_settings_every_resource_is_reachable() {
     assert!(global_settings_matches("zzzz-nothing").is_empty());
 }
 
+/// Text typed in the LaTeX preamble is kept when another settings tab is
+/// chosen before the field is left (it was lost: the field applied only when
+/// it saw itself lose the focus, and on another tab it is not drawn).
+#[test]
+fn latex_preamble_survives_a_tab_switch() {
+    let mut h = harness(app());
+    h.state_mut().run("app.global_settings", json!({}));
+    h.run_steps(3);
+    // "Drawing" is also the mode panel's heading: the tab is the button.
+    let drawing_tab = |h: &mut egui_kittest::Harness<'_, App>| {
+        use egui_kittest::kittest::{NodeT, Queryable};
+        h.query_all_by_label("Drawing")
+            .find(|n| n.accesskit_node().role() == egui::accesskit::Role::Button)
+            .expect("the Drawing tab")
+            .click();
+    };
+    drawing_tab(&mut h);
+    h.run_steps(2);
+    h.get_by_label("LaTeX preamble").click();
+    h.run_steps(2);
+    h.get_by_label("LaTeX preamble").type_text("\\usepackage{siunitx}");
+    h.run_steps(2);
+    h.get_by_label("Files").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.latex.settings().preamble, "\\usepackage{siunitx}");
+    drawing_tab(&mut h);
+    h.run_steps(3);
+    assert_eq!(h.state().engine.latex.settings().preamble, "\\usepackage{siunitx}");
+}
+
 /// W10-25: tabs show their own rows; the filter field shows matches from
 /// every tab.
 #[test]
@@ -4454,4 +4484,24 @@ fn arrow_size_and_box_curve_faces_are_drawn_live() {
     h.state_mut().engine.set_tool(ToolKind::Polyline);
     h.run_steps(3);
     assert!(tex(&h, "arrow_size").is_some(), "the Arrow Size face is drawn");
+}
+
+/// Units, paper and orientation for new drawings are preferences: they are
+/// kept for the next start (the open drawing's settings are not).
+#[test]
+fn new_drawing_units_are_kept_as_preferences() {
+    let mut h = harness(app());
+    h.state_mut().run("app.global_settings", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Window").click();
+    h.run_steps(3);
+    h.get_by_label("Metric").click();
+    h.run_steps(3);
+    h.get_by_label("Portrait").click();
+    h.run_steps(3);
+    let e = &h.state().engine;
+    assert_eq!(e.prefs.bool("inches"), Some(false));
+    assert_eq!(e.prefs.bool("landscape"), Some(false));
+    // The empty start drawing follows at once.
+    assert_eq!(e.doc().settings.units, rustfig_model::Units::Metric);
 }
