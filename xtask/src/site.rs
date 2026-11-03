@@ -314,8 +314,8 @@ pub fn landing() -> String {
 <figure><a href="{REPO}/tree/main/examples/clifford-attractor"><img src="examples/clifford-attractor.jpg" width="640" height="495" alt="A Clifford attractor in rainbow colours on black" loading="lazy"></a><figcaption>Clifford attractor: 250,000 dots</figcaption></figure>
 <figure><a href="{REPO}/tree/main/examples/penrose-tiling"><img src="examples/penrose-tiling.jpg" width="640" height="489" alt="A Penrose tiling of gold and teal rhombs" loading="lazy"></a><figcaption>Penrose tiling: 7,615 rhombs</figcaption></figure>
 <figure><a href="{REPO}/tree/main/examples/apollonian-gasket"><img src="examples/apollonian-gasket.jpg" width="640" height="640" alt="An Apollonian gasket: circles inside circles, coloured by generation" loading="lazy"></a><figcaption>Apollonian gasket: 4,221 circles</figcaption></figure>
-<figure><a href="{REPO}/tree/main/examples/ne-countries"><img src="examples/ne-countries.jpg" width="640" height="320" alt="A world map with coloured countries" loading="lazy"></a><figcaption>World map at 1:10m, imported from Natural Earth</figcaption></figure>
-<figure><a href="{REPO}/tree/main/examples/greece"><img src="examples/greece.jpg" width="640" height="592" alt="A topographic map of Greece and the Aegean with relief shading" loading="lazy"></a><figcaption>Topographic map of Greece, imported from SVG</figcaption></figure>
+<figure><a href="{REPO}/tree/main/examples/gosper-curve"><img src="examples/gosper-curve.jpg" width="640" height="495" alt="A Gosper curve: one continuous line folded into a snowflake-like island, coloured like a rainbow" loading="lazy"></a><figcaption>Gosper curve: one line of 16,808 points</figcaption></figure>
+<figure><a href="{REPO}/tree/main/examples/greece"><img src="examples/greece.jpg" width="640" height="480" alt="A topographic map of Greece and the Aegean with relief shading" loading="lazy"></a><figcaption>Topographic map of Greece, imported from SVG</figcaption></figure>
 </div>
 </section>
 
