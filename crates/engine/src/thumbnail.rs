@@ -42,6 +42,30 @@ pub fn make(input: &str, output: &str, size: u32) -> Result<(), String> {
 /// reads (pictures included) and draws as the canvas does, once, at the size
 /// asked for.
 pub fn make_png(input: &Path, size: u32) -> Result<Vec<u8>, String> {
+    // A bug in the reader or the renderer must not take the Quick Look
+    // extension or the thumbnailer down: an error instead (as Engine::execute).
+    crate::guard::catch(|| draw_png(input, size)).and_then(|r| r)
+}
+
+/// Texts with the hidden flag are left out, as fig2dev's exports leave them out.
+fn drop_hidden_texts(objects: &mut Vec<Arc<rustfig_model::Object>>) {
+    use rustfig_model::ObjectKind;
+    fn keep(o: &rustfig_model::Object) -> bool {
+        !matches!(&o.kind, ObjectKind::Text(t) if t.is_hidden())
+    }
+    fn walk(o: &mut rustfig_model::Object) {
+        if let ObjectKind::Compound(c) = &mut o.kind {
+            c.objects.retain(keep);
+            c.objects.iter_mut().for_each(walk);
+        }
+    }
+    objects.retain(|o| keep(o));
+    for o in objects.iter_mut() {
+        walk(Arc::make_mut(o));
+    }
+}
+
+fn draw_png(input: &Path, size: u32) -> Result<Vec<u8>, String> {
     if !(1..=MAX_SIZE).contains(&size) {
         return Err(format!("size must be 1 to {MAX_SIZE}"));
     }
@@ -65,6 +89,8 @@ pub fn make_png(input: &Path, size: u32) -> Result<Vec<u8>, String> {
     let scale = f64::from(size) / fw.max(fh);
     let w = ((fw * scale).ceil() as u32).clamp(1, size);
     let h = ((fh * scale).ceil() as u32).clamp(1, size);
+    // After the bounds: fig2dev frames hidden texts but does not draw them.
+    drop_hidden_texts(&mut doc.objects);
     let scene = rustfig_render::build_scene(
         &doc,
         &SceneOptions {
@@ -122,6 +148,37 @@ pub fn run(args: &[String]) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A hidden text is framed (fig2dev's bounds count it) but not drawn, as
+    /// in fig2dev's exports; the canvas would show it.
+    #[test]
+    fn hidden_texts_are_not_drawn() {
+        crate::text::set_builtin_fonts(true);
+        let dir = std::env::temp_dir().join(format!("rf-thumb-hidden-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let fig = |flags: i32| {
+            format!(
+                "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+                 2 2 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 5\n\t 0 0 600 0 600 600 0 600 0 0\n\
+                 4 0 0 50 -1 0 40 0.0000 {flags} 400 3000 3000 600 HIDDENTEXT\\001\n"
+            )
+        };
+        let ink = |flags: i32| {
+            let path = dir.join(format!("f{flags}.fig"));
+            std::fs::write(&path, fig(flags)).unwrap();
+            let png = make_png(&path, 128).unwrap();
+            let img = image::load_from_memory(&png).unwrap().to_luma8();
+            (img.width(), img.pixels().filter(|p| p.0[0] < 128).count())
+        };
+        let (w_shown, dark_shown) = ink(4); // a plain text
+        let (w_hidden, dark_hidden) = ink(4 | 8); // the hidden flag (8)
+        assert_eq!(w_shown, w_hidden, "the same framing");
+        assert!(
+            dark_hidden < dark_shown,
+            "the hidden text is not drawn: {dark_hidden} vs {dark_shown}"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn thumbnail_fits_size() {
