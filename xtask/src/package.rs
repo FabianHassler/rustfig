@@ -404,7 +404,11 @@ pub fn copy_libraries(root: &Path, dest: &Path) -> Result<usize, String> {
     Ok(n)
 }
 
+/// `cargo xtask package [--app-only]`: with `--app-only` (macOS), only
+/// `RustFig.app` with its Quick Look extensions, no `.dmg` (the Homebrew
+/// formula installs the app this way).
 pub fn run(root: &Path, mut cargo: Command) -> Result<(), String> {
+    let app_only = std::env::args().skip(2).any(|a| a == "--app-only");
     let version = workspace_version(&fs::read_to_string(root.join("Cargo.toml")).unwrap_or_default());
     sh(cargo
         .current_dir(root)
@@ -422,7 +426,7 @@ pub fn run(root: &Path, mut cargo: Command) -> Result<(), String> {
     let _ = fs::remove_dir_all(&out);
     fs::create_dir_all(&out).map_err(|e| e.to_string())?;
     if cfg!(target_os = "macos") {
-        macos(root, &rel, &out, &version)
+        macos(root, &rel, &out, &version, app_only)
     } else if cfg!(target_os = "windows") {
         windows(root, &rel, &out, &version)
     } else {
@@ -432,7 +436,7 @@ pub fn run(root: &Path, mut cargo: Command) -> Result<(), String> {
     Ok(())
 }
 
-fn macos(root: &Path, rel: &Path, out: &Path, version: &str) -> Result<(), String> {
+fn macos(root: &Path, rel: &Path, out: &Path, version: &str, app_only: bool) -> Result<(), String> {
     let exe = rel.join("rustfig");
     let app = out.join("RustFig.app");
     let (macos_dir, res) = (app.join("Contents/MacOS"), app.join("Contents/Resources"));
@@ -505,6 +509,9 @@ fn macos(root: &Path, rel: &Path, out: &Path, version: &str) -> Result<(), Strin
     // reported as "damaged" by Gatekeeper after a download. No `--deep`: it would
     // sign the extensions again without their entitlements.
     sh(Command::new("codesign").args(["--force", "--sign", "-"]).arg(&app))?;
+    if app_only {
+        return Ok(());
+    }
     let dmg = out.join(format!("RustFig-{version}-macos.dmg"));
     let stage = out.join("dmg");
     fs::create_dir_all(&stage).map_err(|e| e.to_string())?;
