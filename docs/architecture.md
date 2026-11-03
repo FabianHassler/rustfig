@@ -20,7 +20,8 @@ lower layers; nothing below L6 may depend on egui, eframe, winit or rfd.
 | L5 | `rustfig-mcp` | MCP server over stdio |
 | L5 | `rustfig-os` | OS calls: pick a colour from the screen (E4b) and the native print dialog for a PDF (B5b): the only crate with `unsafe` (`deny` plus `allow` on the few OS-call functions: macOS NSColorSampler and PDFKit print operation, Windows GetPixel and `PrintDlgEx`); safe API, no egui |
 | L6 | `rustfig-ui-egui` | egui app: canvas, panels, menus, dialogs, control channel |
-| L7 | `rustfig` (app), `rustfig-cli`, `fig2dev` | binaries |
+| L7 | `rustfig-cli` | the command line (library and program) |
+| L8 | `rustfig` (app; `rustfig-cli` and `fig2dev` as links to it) | binaries |
 
 fig2dev is a program of its own that RustFig depends on (plan B12):
 `figbase`, `fig2dev` and the `fig2dev` app live in their own repository,

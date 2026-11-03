@@ -36,6 +36,7 @@ rustfig-format = { path = "crates/format" }
 rustfig-render = { path = "crates/render" }
 rustfig-engine = { path = "crates/engine" }
 rustfig-mcp = { path = "crates/mcp" }
+rustfig-cli = { path = "apps/cli" }
 rustfig-os = { path = "crates/os" }
 rustfig-ui-egui = { path = "crates/ui-egui" }
 serde = { version = "1", features = ["derive", "rc"] }
@@ -75,6 +76,11 @@ field_reassign_with_default = "allow"
 [profile.release]
 opt-level = 3
 debug = false
+# Smaller programs (rustfig 30 -> about 18 MB) at no cost in speed; release builds take longer.
+# panic stays "unwind": rustfig_engine::guard catches panics so unsaved work survives.
+strip = true
+lto = "fat"
+codegen-units = 1
 
 [profile.dev.package."*"]
 opt-level = 2

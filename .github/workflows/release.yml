@@ -50,7 +50,14 @@ jobs:
         run: |
           dir="rustfig-${GITHUB_REF_NAME}-${{ matrix.name }}"
           mkdir "$dir"
-          cp "target/release/rustfig${{ matrix.exe }}" "target/release/rustfig-cli${{ matrix.exe }}" "$dir/"
+          cp "target/release/rustfig${{ matrix.exe }}" "$dir/"
+          # rustfig-cli: one program under two names; Windows keeps its own
+          # console program (rustfig.exe is a windowed program without a console)
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp "target/release/rustfig-cli.exe" "$dir/"
+          else
+            ln -s rustfig "$dir/rustfig-cli"
+          fi
           cp README.md LICENSE-MIT LICENSE-APACHE LICENSE-xfig NOTICE ASSETS.md "$dir/"
           if [ "${{ runner.os }}" = "Windows" ]; then
             7z a "$dir.zip" "$dir"

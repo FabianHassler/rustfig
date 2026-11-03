@@ -27,8 +27,9 @@ const LAYERS: &[(&str, &str, i32)] = &[
     ("rustfig-mcp", "crates/mcp", 5),
     ("rustfig-os", "crates/os", 5),
     ("rustfig-ui-egui", "crates/ui-egui", 6),
-    ("rustfig", "apps/rustfig", 7),
     ("rustfig-cli", "apps/cli", 7),
+    // The app runs the command line when started as `rustfig-cli` (one program).
+    ("rustfig", "apps/rustfig", 8),
 ];
 
 /// Dependencies allowed only from layer 6 up.

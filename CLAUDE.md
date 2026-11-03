@@ -31,7 +31,8 @@ RustFig is an open-source, Rust-native reimplementation of xfig: close to the or
 | L5 | `rustfig-mcp` | `crates/mcp` | MCP server over stdio |
 | L5 | `rustfig-os` | `crates/os` | OS calls: pick a colour from the screen (macOS NSColorSampler, Windows GetPixel, Linux portal) and the platform's native print dialog for a PDF (macOS PDFKit print operation, Windows `PrintDlgEx`, Linux portal Print, browser tab): the only crate with `unsafe` (`deny` crate-wide plus `allow` on the OS-call functions, each with a SAFETY comment); safe API, no egui |
 | L6 | `rustfig-ui-egui` | `crates/ui-egui` | egui app: canvas, panels, menus, dialogs, control channel |
-| L7 | `rustfig`, `rustfig-cli` | `apps/` | desktop/web app; CLI (convert, info, perf, bench, mcp) |
+| L7 | `rustfig-cli` | `apps/cli` | CLI (convert, info, perf, bench, mcp): a library plus a small program |
+| L8 | `rustfig` | `apps/rustfig` | desktop/web app; started as `rustfig-cli` (a link) it runs the CLI, as `fig2dev` fig2dev's command line: one program on disk |
 | — | `xtask` | `xtask/` | `cargo xtask ci \| layers \| assets \| licences \| wasm \| source-audit` |
 
 Coordinates are Fig units (1200 per inch; metric drawings use 450 per cm), y grows downwards; line thickness is in 1/80 inch, drawn as fig2dev draws it (`geom::stroke_width`: 1/160 inch for thickness 1, (t − 1)/80 inch above).

@@ -4,6 +4,11 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result<()> {
+    // Started as `rustfig-cli` (a link to this program): the command line,
+    // so the two programs are one file on disk.
+    if started_as_cli() {
+        std::process::exit(i32::from(rustfig_cli::status()));
+    }
     // fig2dev first: started under that name, or `rustfig fig2dev ARGS…`.
     // The GUI is not started and its option parsing never sees the arguments.
     if rustfig_engine::fig2dev::started_as_fig2dev() {
@@ -265,4 +270,18 @@ fn main() {
             }
         }
     });
+}
+
+/// Whether `argv[0]` names `rustfig-cli` (its file stem, so `rustfig-cli.exe` counts).
+#[cfg(not(target_arch = "wasm32"))]
+fn started_as_cli() -> bool {
+    std::env::args_os().next().is_some_and(|a| {
+        let s = a.to_string_lossy().into_owned();
+        let base = s.rsplit(['/', '\\']).next().unwrap_or("");
+        let stem = base
+            .strip_suffix(".exe")
+            .or_else(|| base.strip_suffix(".EXE"))
+            .unwrap_or(base);
+        stem.eq_ignore_ascii_case("rustfig-cli")
+    })
 }

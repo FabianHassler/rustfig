@@ -51,7 +51,7 @@ wasm check (`RUSTFIG_REQUIRE_WASM=1`) and the perf budgets (tuned there). The
 other runners set `RUSTFIG_SKIP_WASM=1`, which makes `cargo xtask ci|wasm` skip
 the wasm check. `.gitattributes` checks text out with LF on every platform. `release.yml` runs on `v*` tags (or
 by hand): the gates on Linux, Windows and macOS, then release builds of
-`rustfig` and `rustfig-cli` attached to the GitHub release. With rustup: `rustup target add wasm32-unknown-unknown`.
+`rustfig` and `rustfig-cli` attached to the GitHub release (on macOS and Linux `rustfig-cli` is a link to `rustfig`, which runs the command line when started under that name; Windows ships `rustfig-cli.exe`, as `rustfig.exe` has no console). With rustup: `rustup target add wasm32-unknown-unknown`.
 
 Use rustup rather than Homebrew's `rust` formula: Homebrew's compiler can't
 load the official wasm32 standard library, so the target can't be added to

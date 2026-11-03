@@ -3404,6 +3404,7 @@ dependencies = [
  "egui",
  "fig2dev-rs-lib",
  "log",
+ "rustfig-cli",
  "rustfig-engine",
  "rustfig-ui-egui",
  "serde_json",

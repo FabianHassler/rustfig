@@ -256,6 +256,8 @@ fn install_script() -> String {
      rm -rf \"$PREFIX/share/rustfig/libraries\"\n\
      mkdir -p \"$PREFIX/share/rustfig\"\n\
      cp -R \"$d/libraries\" \"$PREFIX/share/rustfig/libraries\"\n\
+     # the command line: the same program under the name rustfig-cli\n\
+     ln -sf rustfig \"$PREFIX/bin/rustfig-cli\"\n\
      # fig2dev under its own name only where no fig2dev is installed\n\
      command -v fig2dev >/dev/null 2>&1 || ln -sf rustfig \"$PREFIX/bin/fig2dev\"\n\
      # and xfig's name (S3: `xfig file.fig` starts RustFig) where no xfig is\n\
@@ -551,6 +553,8 @@ fn linux(root: &Path, rel: &Path, out: &Path, version: &str) -> Result<(), Strin
     let dir = out.join(&name);
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     fs::copy(&exe, dir.join("rustfig")).map_err(|e| format!("rustfig: {e}"))?;
+    #[cfg(unix)]
+    std::os::unix::fs::symlink("rustfig", dir.join("rustfig-cli")).map_err(|e| e.to_string())?;
     write(&dir.join("rustfig.desktop"), &desktop_file())?;
     write(&dir.join("rustfig.xml"), &mime_xml())?;
     write(&dir.join("rustfig.thumbnailer"), &thumbnailer_file())?;
@@ -592,6 +596,9 @@ fn linux(root: &Path, rel: &Path, out: &Path, version: &str) -> Result<(), Strin
     let bin = pkg.join("usr/bin");
     fs::create_dir_all(&bin).map_err(|e| e.to_string())?;
     fs::copy(&exe, bin.join("rustfig")).map_err(|e| e.to_string())?;
+    // The command line is the same program under another name.
+    #[cfg(unix)]
+    std::os::unix::fs::symlink("rustfig", bin.join("rustfig-cli")).map_err(|e| e.to_string())?;
     // No /usr/bin/fig2dev: Debian's fig2dev package owns that name (and
     // xfig depends on it); `rustfig fig2dev …` runs the built-in one.
     write(&pkg.join("usr/share/applications/rustfig.desktop"), &desktop_file())?;
