@@ -51,7 +51,7 @@ mod mac {
     use block2::{Block, RcBlock};
     use objc2::encode::{Encode, Encoding, RefEncode};
     use objc2::rc::{Allocated, Retained};
-    use objc2::runtime::{AnyClass, AnyObject, ClassBuilder, Sel};
+    use objc2::runtime::{AnyClass, AnyObject, AnyProtocol, ClassBuilder, Sel};
     use objc2::{msg_send, sel};
     use objc2_foundation::{NSInteger, NSString};
     use std::ffi::{c_char, c_int};
@@ -75,7 +75,9 @@ mod mac {
     static RENDER: OnceLock<RenderFn> = OnceLock::new();
 
     /// Largest preview edge in pixels.
-    const PREVIEW_PX: u32 = 1600;
+    /// The preview's longest side in pixels; it is shown at half that in points, so it is
+    /// sharp on a 2x (Retina) display and 1200 points at most.
+    const PREVIEW_PX: u32 = 2400;
     const MIN_PX: u32 = 16;
     const MAX_THUMB_PX: u32 = 2048;
 
@@ -154,6 +156,11 @@ mod mac {
                 sel!(providePreviewForFileRequest:completionHandler:),
                 provide_preview as extern "C-unwind" fn(*mut AnyObject, Sel, *mut AnyObject, *mut AnyObject),
             );
+        }
+        // Quick Look hands preview requests only to a class that declares the
+        // QLPreviewingController protocol (thumbnails need none).
+        if let Some(proto) = AnyProtocol::get(c"QLPreviewingController") {
+            preview.add_protocol(proto);
         }
         thumb.register();
         preview.register();
@@ -273,9 +280,10 @@ mod mac {
         let path = request_path(request).ok_or("no file")?;
         let png = render(&path, PREVIEW_PX)?;
         let (w, h) = png_size(&png).ok_or("the renderer did not make a PNG")?;
+        // contentSize is in points: half the pixels (a Retina display draws 2 per point).
         let size = CGSize {
-            width: f64::from(w),
-            height: f64::from(h),
+            width: f64::from(w) / 2.0,
+            height: f64::from(h) / 2.0,
         };
         // SAFETY: NSData `dataWithBytes:length:` copies the bytes.
         let data: Retained<AnyObject> = unsafe {
