@@ -22,6 +22,8 @@ const MAX_CACHE_BYTES: usize = 64 << 20;
 struct State {
     index: Option<Vec<Library>>,
     names: HashMap<PathBuf, Vec<String>>,
+    /// The figures served gzipped (`name.fig.gz`), by [`key`].
+    gz: std::collections::HashSet<String>,
     figures: HashMap<String, Arc<Vec<u8>>>,
     bytes: usize,
 }
@@ -39,6 +41,15 @@ fn key(dir: &Path, name: &str) -> String {
 /// "dir": "Electronic/Schematic", "figures": ["and", "or"]}, …]}`. Names with
 /// a `..` or a leading `/` in `dir` are refused (they would leave `libraries/`).
 pub fn parse_index(text: &str) -> Result<Vec<(Library, Vec<String>)>, String> {
+    parse_index_gz(text).map(|v| v.into_iter().map(|(l, f, _)| (l, f)).collect())
+}
+
+/// A library of the index, its figures and its gzipped figures.
+type IndexEntry = (Library, Vec<String>, Vec<String>);
+
+/// [`parse_index`] with each library's gzipped figures (its `"gz"` list,
+/// names also in `"figures"`).
+fn parse_index_gz(text: &str) -> Result<Vec<IndexEntry>, String> {
     let v: Value = serde_json::from_str(text).map_err(|e| format!("library index: {e}"))?;
     let list = v
         .get("libraries")
@@ -55,18 +66,21 @@ pub fn parse_index(text: &str) -> Result<Vec<(Library, Vec<String>)>, String> {
         {
             continue;
         }
-        let figures: Vec<String> = l
-            .get("figures")
-            .and_then(Value::as_array)
-            .map(|a| {
-                a.iter()
-                    .filter_map(Value::as_str)
-                    .filter(|n| crate::library::valid_name(n))
-                    .take(MAX_OBJECTS)
-                    .map(str::to_string)
-                    .collect()
-            })
-            .unwrap_or_default();
+        let names = |k: &str| -> Vec<String> {
+            l.get(k)
+                .and_then(Value::as_array)
+                .map(|a| {
+                    a.iter()
+                        .filter_map(Value::as_str)
+                        .filter(|n| crate::library::valid_name(n))
+                        .take(MAX_OBJECTS)
+                        .map(str::to_string)
+                        .collect()
+                })
+                .unwrap_or_default()
+        };
+        let figures = names("figures");
+        let gz = names("gz");
         out.push((
             Library {
                 name: name.to_string(),
@@ -75,6 +89,7 @@ pub fn parse_index(text: &str) -> Result<Vec<(Library, Vec<String>)>, String> {
                 objects: figures.len(),
             },
             figures,
+            gz,
         ));
     }
     Ok(out)
@@ -82,11 +97,15 @@ pub fn parse_index(text: &str) -> Result<Vec<(Library, Vec<String>)>, String> {
 
 /// Install the index text the page served.
 pub fn set_index(text: &str) -> Result<usize, String> {
-    let parsed = parse_index(text)?;
+    let parsed = parse_index_gz(text)?;
     let n = parsed.len();
     let mut s = state().lock().map_err(|_| "library state is poisoned".to_string())?;
-    s.names = parsed.iter().map(|(l, f)| (l.path.clone(), f.clone())).collect();
-    s.index = Some(parsed.into_iter().map(|(l, _)| l).collect());
+    s.names = parsed.iter().map(|(l, f, _)| (l.path.clone(), f.clone())).collect();
+    s.gz = parsed
+        .iter()
+        .flat_map(|(l, _, g)| g.iter().map(|n| key(&l.path, n)))
+        .collect();
+    s.index = Some(parsed.into_iter().map(|(l, _, _)| l).collect());
     Ok(n)
 }
 
@@ -127,8 +146,10 @@ pub fn put(dir: &Path, name: &str, bytes: Vec<u8>) {
 }
 
 /// Where the page serves a figure, relative to the page, each folder or file
-/// name percent-encoded (`libraries/Electronic/a%20b.fig`).
+/// name percent-encoded (`libraries/Electronic/a%20b.fig`, `.fig.gz` for a
+/// figure the index lists as gzipped).
 pub fn figure_url(dir: &Path, name: &str) -> String {
+    let gz = state().lock().map(|s| s.gz.contains(&key(dir, name))).unwrap_or(false);
     fn enc(seg: &str) -> String {
         let mut o = String::new();
         for b in seg.bytes() {
@@ -146,7 +167,7 @@ pub fn figure_url(dir: &Path, name: &str) -> String {
         .filter(|s| !s.is_empty())
         .map(enc)
         .collect();
-    parts.push(format!("{}.fig", enc(name)));
+    parts.push(format!("{}.fig{}", enc(name), if gz { ".gz" } else { "" }));
     parts.join("/")
 }
 
@@ -171,6 +192,10 @@ pub fn generate_index(root: &Path) -> String {
                 "name": l.name,
                 "dir": dir.join("/"),
                 "figures": crate::library::object_names(&l.path),
+                "gz": crate::library::object_names(&l.path)
+                    .into_iter()
+                    .filter(|n| crate::library::figure_path(&l.path, n).extension().is_some_and(|e| e == "gz"))
+                    .collect::<Vec<_>>(),
             }))
         })
         .collect();
@@ -190,6 +215,20 @@ mod tests {
         let arrows = parsed.iter().find(|(l, _)| l.name == "Arrows").unwrap();
         assert!(arrows.1.iter().any(|n| n == "3darrow1"));
         assert_eq!(arrows.0.objects, arrows.1.len());
+    }
+
+    #[test]
+    fn gzipped_figures_are_fetched_as_fig_gz() {
+        let text = generate_index(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../libraries"));
+        assert!(text.contains(r#""gz":["africa"]"#), "{text}");
+        set_index(&text).unwrap();
+        let africa = Path::new(ROOT).join("Maps/Africa");
+        assert_eq!(figure_url(&africa, "africa"), "libraries/Maps/Africa/africa.fig.gz");
+        assert!(figure_names(&africa).contains(&"africa".to_string()));
+        assert_eq!(
+            figure_url(&Path::new(ROOT).join("Arrows"), "3darrow1"),
+            "libraries/Arrows/3darrow1.fig"
+        );
     }
 
     #[test]

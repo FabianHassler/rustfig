@@ -416,12 +416,40 @@ fn scan_dir(
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn is_fig_name(n: &str) -> bool {
-    n.len() > 4 && n.to_ascii_lowercase().ends_with(".fig")
+/// A figure file name's name without `.fig` or `.fig.gz` (large bundled
+/// figures are kept gzipped, plan G12); `None` for other files.
+pub fn figure_stem(n: &str) -> Option<&str> {
+    let lower = n.to_ascii_lowercase();
+    let cut = if lower.ends_with(".fig") {
+        4
+    } else if lower.ends_with(".fig.gz") {
+        7
+    } else {
+        return None;
+    };
+    n.get(..n.len() - cut).filter(|s| !s.is_empty())
 }
 
-/// The names of the figures in a library folder, sorted (without `.fig`).
+#[cfg(not(target_arch = "wasm32"))]
+fn is_fig_name(n: &str) -> bool {
+    figure_stem(n).is_some()
+}
+
+/// The file of the figure `name` in `dir`: `name.fig`, else `name.fig.gz`
+/// where only that exists.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn figure_path(dir: &Path, name: &str) -> PathBuf {
+    let fig = dir.join(format!("{name}.fig"));
+    let gz = dir.join(format!("{name}.fig.gz"));
+    if !fig.is_file() && gz.is_file() {
+        gz
+    } else {
+        fig
+    }
+}
+
+/// The names of the figures in a library folder, sorted (without `.fig` or
+/// `.fig.gz`).
 #[cfg(not(target_arch = "wasm32"))]
 pub fn object_names(dir: &Path) -> Vec<String> {
     let Ok(rd) = std::fs::read_dir(dir) else {
@@ -432,10 +460,11 @@ pub fn object_names(dir: &Path) -> Vec<String> {
         .filter(|e| e.path().is_file())
         .filter_map(|e| {
             let n = e.file_name().to_string_lossy().into_owned();
-            (is_fig_name(&n) && !n.starts_with('.')).then(|| n[..n.len() - 4].to_string())
+            figure_stem(&n).filter(|_| !n.starts_with('.')).map(str::to_string)
         })
         .collect();
     v.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()).then(a.cmp(b)));
+    v.dedup();
     v.truncate(MAX_OBJECTS);
     v
 }
@@ -464,7 +493,17 @@ pub fn object_comments(dir: &Path, name: &str) -> Vec<String> {
     if !valid_name(name) {
         return Vec::new();
     }
-    let Ok(f) = std::fs::File::open(dir.join(format!("{name}.fig"))) else {
+    let path = figure_path(dir, name);
+    if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("gz")) {
+        // Gzipped: the whole figure, unpacked (the comments are at its top).
+        return match std::fs::read(&path) {
+            Ok(b) if b.len() as u64 <= MAX_FILE_BYTES => rustfig_format::unpack(&b, false)
+                .map(|u| comments_of_bytes(&u))
+                .unwrap_or_default(),
+            _ => Vec::new(),
+        };
+    }
+    let Ok(f) = std::fs::File::open(path) else {
         return Vec::new();
     };
     let lines: Vec<String> = BufReader::new(f).lines().map_while(Result::ok).take(200).collect();
@@ -475,7 +514,10 @@ pub fn object_comments(dir: &Path, name: &str) -> Vec<String> {
 #[cfg(target_arch = "wasm32")]
 pub fn object_comments(dir: &Path, name: &str) -> Vec<String> {
     match web::cached(dir, name) {
-        Some(b) => comments_of_bytes(&b),
+        // (a gzipped figure is unpacked first)
+        Some(b) => rustfig_format::unpack(&b, false)
+            .map(|u| comments_of_bytes(&u))
+            .unwrap_or_default(),
         None => Vec::new(),
     }
 }
@@ -527,7 +569,7 @@ pub fn read_figure(dir: &Path, name: &str) -> Result<Document, String> {
     if !valid_name(name) {
         return Err(format!("bad object name {name:?}"));
     }
-    let path = dir.join(format!("{name}.fig"));
+    let path = figure_path(dir, name);
     let meta = std::fs::metadata(&path).map_err(|e| format!("{}: {e}", path.display()))?;
     if meta.len() > MAX_FILE_BYTES {
         return Err(format!("{}: too large", path.display()));
@@ -868,7 +910,7 @@ pub fn search(libs: &[Library], query: &str, limit: usize, comments: bool) -> Ve
             if out.len() >= limit {
                 break;
             }
-            let path = l.path.join(format!("{n}.fig"));
+            let path = figure_path(&l.path, &n);
             let mtime = std::fs::metadata(&path).and_then(|m| m.modified()).ok();
             let cached = cache
                 .as_ref()
@@ -925,5 +967,28 @@ mod tests {
             assert!(same_dir(&found, &lib), "{program_dir}: {}", found.display());
         }
         let _ = std::fs::remove_dir_all(&base);
+    }
+
+    /// Large figures are kept as `.fig.gz` (G12): listed, searched by their
+    /// comments and placed like the others.
+    #[test]
+    fn gzipped_figures_are_library_figures() {
+        let dir = std::env::temp_dir().join(format!("rustfig-libgz-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let fig = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n# a big map\n1200 2\n\
+                   2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2\n\t 0 0 1200 1200\n";
+        let gz = rustfig_format::compress::compress(fig.as_bytes(), rustfig_format::Compression::Gzip).unwrap();
+        std::fs::write(dir.join("map.fig.gz"), gz).unwrap();
+        std::fs::write(dir.join("small.fig"), fig).unwrap();
+        assert_eq!(object_names(&dir), ["map", "small"]);
+        assert_eq!(figure_path(&dir, "map"), dir.join("map.fig.gz"));
+        assert_eq!(object_comments(&dir, "map"), ["a big map"]);
+        let doc = read_figure(&dir, "map").unwrap();
+        assert_eq!(doc.objects.len(), 1);
+        assert_eq!(figure_stem("x.FIG.gz"), Some("x"));
+        assert_eq!(figure_stem(".fig.gz"), None);
+        assert_eq!(figure_stem("x.gz"), None);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

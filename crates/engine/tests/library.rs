@@ -764,3 +764,13 @@ fn hidden_libraries_toggle_persist_and_skip_search() {
         .execute("library.hide_library", &json!({"library": "Optics"}))
         .is_err());
 }
+
+/// The bundled large figures are gzipped (G12) and still listed and read.
+#[test]
+fn bundled_gzipped_figures_are_listed_and_read() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../libraries/Maps/Africa");
+    assert!(dir.join("africa.fig.gz").is_file());
+    assert!(rustfig_engine::library::object_names(&dir).contains(&"africa".to_string()));
+    let doc = rustfig_engine::library::read_figure(&dir, "africa").unwrap();
+    assert_eq!(doc.objects.len(), 1);
+}

@@ -246,7 +246,7 @@ fn assets() -> Result<(), String> {
         }
         // xfig's figure libraries (D6): a `.fig` file under `libraries/` is an asset
         // covered by the row of its library folder, `libraries/<Name>/`.
-        if ext == "fig" {
+        if ext == "fig" || rel.ends_with(".fig.gz") {
             if let Some(top) = rel
                 .strip_prefix("libraries/")
                 .and_then(|r| r.split_once('/'))
@@ -408,6 +408,8 @@ fn json_str(s: &str) -> String {
 fn libraries_index(root: &Path) -> Result<String, String> {
     fn walk(dir: &Path, rel: &[String], out: &mut Vec<String>) -> Result<(), String> {
         let mut figs: Vec<String> = Vec::new();
+        // Large figures are kept gzipped (`name.fig.gz`, plan G12).
+        let mut gz: Vec<String> = Vec::new();
         let mut subs: Vec<(String, PathBuf)> = Vec::new();
         for e in std::fs::read_dir(dir)
             .map_err(|e| format!("{}: {e}", dir.display()))?
@@ -421,17 +423,25 @@ fn libraries_index(root: &Path) -> Result<String, String> {
                 subs.push((name, e.path()));
             } else if name.len() > 4 && name.to_ascii_lowercase().ends_with(".fig") {
                 figs.push(name[..name.len() - 4].to_string());
+            } else if name.len() > 7 && name.to_ascii_lowercase().ends_with(".fig.gz") {
+                let stem = name[..name.len() - 7].to_string();
+                figs.push(stem.clone());
+                gz.push(stem);
             }
         }
         // (figures directly in `libraries/` itself are not part of the bundle)
         if !figs.is_empty() && !rel.is_empty() {
             figs.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()).then(a.cmp(b)));
+            figs.dedup();
+            gz.sort();
             let list: Vec<String> = figs.iter().map(|f| json_str(f)).collect();
+            let gz: Vec<String> = gz.iter().map(|f| json_str(f)).collect();
             out.push(format!(
-                "{{\"name\":{},\"dir\":{},\"figures\":[{}]}}",
+                "{{\"name\":{},\"dir\":{},\"figures\":[{}],\"gz\":[{}]}}",
                 json_str(&rel.join(" / ")),
                 json_str(&rel.join("/")),
-                list.join(",")
+                list.join(","),
+                gz.join(",")
             ));
         }
         subs.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()).then(a.0.cmp(&b.0)));
@@ -575,6 +585,7 @@ mod tests {
         std::fs::create_dir_all(t.join("Empty")).unwrap();
         std::fs::write(t.join("Outer/b.fig"), "x").unwrap();
         std::fs::write(t.join("Outer/A.fig"), "x").unwrap();
+        std::fs::write(t.join("Outer/c.fig.gz"), "x").unwrap();
         // Windows forbids `"` in file names; elsewhere it tests the escaping.
         let (quoted, escaped) = if cfg!(windows) {
             ("q'x", "q'x")
@@ -589,8 +600,8 @@ mod tests {
         assert_eq!(
             s,
             format!(
-                "{{\"libraries\":[{{\"name\":\"Outer\",\"dir\":\"Outer\",\"figures\":[\"A\",\"b\"]}},\
-                 {{\"name\":\"Outer / In ner\",\"dir\":\"Outer/In ner\",\"figures\":[\"{escaped}\"]}}]}}\n"
+                "{{\"libraries\":[{{\"name\":\"Outer\",\"dir\":\"Outer\",\"figures\":[\"A\",\"b\",\"c\"],\"gz\":[\"c\"]}},\
+                 {{\"name\":\"Outer / In ner\",\"dir\":\"Outer/In ner\",\"figures\":[\"{escaped}\"],\"gz\":[]}}]}}\n"
             )
         );
     }

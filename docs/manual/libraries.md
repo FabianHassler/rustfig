@@ -38,7 +38,7 @@ Colors the library figure defines are added to the drawing's colors. Pictures a 
 
 ## Your own libraries
 
-Your library folder is the preference `library_dir` (default `~/xfiglib`; [Preferences](preferences.md), `-library_dir` on the command line). Every folder in it that holds `.fig` files is a library; folders inside a folder are libraries of their own. Copy figures there with any file manager, or use *Copy to library* in the panel: give the figure a name (and a folder inside your library folder if you like); the selected objects, or the whole drawing if nothing is selected, are saved as a `.fig` file there. The name field is for a new figure: after the copy it is empty again and the saved figure is selected in the list. A comment typed in the figure's comments dialog becomes the *Object comments*.
+Your library folder is the preference `library_dir` (default `~/xfiglib`; [Preferences](preferences.md), `-library_dir` on the command line). Every folder in it that holds `.fig` files is a library (gzipped figures, `name.fig.gz`, count too; RustFig keeps its largest bundled figures that way); folders inside a folder are libraries of their own. Copy figures there with any file manager, or use *Copy to library* in the panel: give the figure a name (and a folder inside your library folder if you like); the selected objects, or the whole drawing if nothing is selected, are saved as a `.fig` file there. The name field is for a new figure: after the copy it is empty again and the saved figure is selected in the list. A comment typed in the figure's comments dialog becomes the *Object comments*.
 
 ### A list of library folders
 
