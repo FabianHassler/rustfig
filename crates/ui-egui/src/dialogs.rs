@@ -2988,6 +2988,47 @@ struct ExportActions {
     paper: Option<PaperSize>,
 }
 
+/// The export dialog's languages: the common modern ones first, the LaTeX
+/// family, other current formats, then the legacy ones (fig2dev's own list
+/// keeps xfig's order). Each with the section title it starts, if any; a
+/// language missing here goes to the end, so a new fig2dev language still shows.
+fn export_language_order() -> Vec<(
+    Option<&'static str>,
+    &'static rustfig_engine::fig2dev::languages::Language,
+)> {
+    const GROUPS: &[(&str, &[&str])] = &[
+        ("Common", &["pdf", "png", "svg", "eps", "jpeg", "tiff"]),
+        (
+            "LaTeX",
+            &[
+                "pdftex", "tikz", "pict2e", "pstricks", "pstex", "pspdftex", "latex", "box", "asy",
+            ],
+        ),
+        ("Other", &["ps", "pspdf", "emf", "mp", "dxf", "gif", "map"]),
+        (
+            "Legacy",
+            &[
+                "epic", "eepic", "eepicemu", "pictex", "cgm", "gbx", "ibmgl", "mf", "tk", "ptk", "shape", "pic",
+                "tpic", "textyl", "sld", "pcx", "ppm", "xbm", "xpm",
+            ],
+        ),
+    ];
+    let mut out = Vec::new();
+    for (head, ids) in GROUPS {
+        for (i, id) in ids.iter().enumerate() {
+            if let Some(l) = language(id) {
+                out.push(((i == 0).then_some(*head), l));
+            }
+        }
+    }
+    for l in LANGUAGES {
+        if !out.iter().any(|(_, o)| o.id == l.id) {
+            out.push((None, l));
+        }
+    }
+    out
+}
+
 /// A combo box of text choices that reports its choice.
 pub(crate) fn text_combo(ui: &mut egui::Ui, id: &str, current: &str, choices: &[&str]) -> Option<String> {
     let mut chosen = None;
@@ -3063,8 +3104,13 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
                         let combo = egui::ComboBox::from_id_salt("export_language")
                             .selected_text(current)
                             .width(280.0)
+                            // Tall enough for the common and LaTeX groups without scrolling.
+                            .height(600.0)
                             .show_ui(ui, |ui| {
-                                for l in LANGUAGES {
+                                for (head, l) in export_language_order() {
+                                    if let Some(head) = head {
+                                        ui.label(egui::RichText::new(head).small().weak());
+                                    }
                                     let available = rustfig_engine::fig2dev::language_available(l);
                                     let item = ui.add_enabled(
                                         available,
@@ -4340,6 +4386,22 @@ fn picture_rows(ui: &mut egui::Ui, ctx: &egui::Context, app: &mut App, st: &mut 
 
 #[cfg(test)]
 mod tests {
+    /// The export dialog lists every language once, the common modern ones
+    /// first and the legacy ones last.
+    #[test]
+    fn export_languages_modern_first_each_once() {
+        let order = super::export_language_order();
+        assert_eq!(order.len(), super::LANGUAGES.len());
+        for l in super::LANGUAGES {
+            assert_eq!(order.iter().filter(|(_, o)| o.id == l.id).count(), 1, "{}", l.id);
+        }
+        let ids: Vec<&str> = order.iter().map(|(_, l)| l.id).collect();
+        assert_eq!(&ids[..3], ["pdf", "png", "svg"]);
+        assert_eq!(order.first().and_then(|(h, _)| *h), Some("Common"));
+        let pos = |id: &str| ids.iter().position(|x| *x == id).unwrap();
+        assert!(pos("tikz") < pos("ps") && pos("ps") < pos("epic") && pos("png") < pos("xbm"));
+    }
+
     #[test]
     fn picture_picker_offers_xfigs_picture_types() {
         for ext in [
