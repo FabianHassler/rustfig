@@ -141,7 +141,7 @@ fn dialogs_open() {
     for (cmd, title) in [
         ("app.export", "Export"),
         ("app.search", "Search and Replace"),
-        ("app.document_settings", "Document Settings"),
+        ("app.document_settings", "Page setup"),
         ("app.commands", "Commands"),
         ("app.about", "About RustFig"),
         ("app.global_settings", "Global settings"),
@@ -3574,7 +3574,7 @@ fn dialogs_fit_a_small_window() {
     for (cmd, title) in [
         ("app.global_settings", "Global settings"),
         ("app.export", "Export"),
-        ("app.document_settings", "Document Settings"),
+        ("app.document_settings", "Page setup"),
         ("app.unit_panel", "Unit/Scale settings"),
     ] {
         h.state_mut().run(cmd, json!({}));
@@ -4504,4 +4504,15 @@ fn new_drawing_units_are_kept_as_preferences() {
     assert_eq!(e.prefs.bool("landscape"), Some(false));
     // The empty start drawing follows at once.
     assert_eq!(e.doc().settings.units, rustfig_model::Units::Metric);
+}
+
+/// The open drawing's units are set in Set units only; Page setup has the
+/// paper, orientation and magnification.
+#[test]
+fn page_setup_has_no_units() {
+    let mut h = harness(app());
+    h.state_mut().run("app.document_settings", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Paper");
+    assert!(h.query_by_label("Metric").is_none());
 }

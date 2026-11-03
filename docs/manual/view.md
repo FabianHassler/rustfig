@@ -8,4 +8,4 @@
 - **Portrait/Landscape** turns the page (Meta+C).
 - **Show page borders** draws the page's outline in light blue with the paper's name outside its lower-right corner (in multiple-page mode, from the Export or Print panel, the outline of every page); turned off, the whole canvas is paper, as in xfig; **Show depth manager** shows the list of depths with check boxes to hide or show each; **Show info balloons** turns tooltips on and off (the delay is a global setting); **Show line lengths** (Alt+L with xfig's keys) shows the dx / dy triangle with the lengths of its sides while a line is drawn or moved (the message panel always shows length, dx, dy and angle).
 - The rulers show the cursor position. The units box shows the current units; click it for Set units (inches or centimetres, a scale for the drawing).
-- **Document settings** has the units, paper size and orientation.
+- **Edit > Set units** has the units (xfig's Unit/Scale panel, also a right click on the units box); **Edit > Page setup** has the paper size, orientation and magnification.

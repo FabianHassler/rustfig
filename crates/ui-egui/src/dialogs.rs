@@ -1427,7 +1427,11 @@ const GLOBAL_ROWS: &[(GlobalTab, &str, &str)] = &[
     (GlobalTab::Window, "Button style", "3d flat bevel"),
     (GlobalTab::Window, "Theme", "light dark system colour"),
     (GlobalTab::Window, "UI scale", "zoom size scale"),
-    (GlobalTab::Window, "Units and page", "inches metric paper"),
+    (
+        GlobalTab::Window,
+        "New drawings: units and page",
+        "inches metric paper orientation",
+    ),
     (
         GlobalTab::Drawing,
         "Freehand drawing resolution",
@@ -1614,7 +1618,7 @@ fn global_tab_rows(app: &mut App, ui: &mut egui::Ui, d: &mut GlobalDraft, tab: G
                     }
                 });
             }
-            if show("Units and page") {
+            if show("New drawings: units and page") {
                 new_drawing_settings(app, ui);
             }
         }
@@ -1965,7 +1969,7 @@ fn apply_global(app: &mut App, was: &GlobalDraft, now: &GlobalDraft) {
 
 /// Units, paper and orientation of new drawings (xfig's `inches`,
 /// `paper_size` and `landscape` resources), kept for the next start; the open
-/// drawing's own settings are in Document Settings.
+/// drawing's own are in Set units and Page setup.
 fn new_drawing_settings(app: &mut App, ui: &mut egui::Ui) {
     let p = &app.engine.prefs;
     let inches = p.bool("inches").unwrap_or(true);
@@ -1975,7 +1979,7 @@ fn new_drawing_settings(app: &mut App, ui: &mut egui::Ui) {
         .and_then(|n| PaperSize::from_name(&n))
         .unwrap_or_else(|| app.engine.doc().settings.paper);
     let mut set: Option<(&str, Value)> = None;
-    ui.label("New drawings:");
+    ui.label("New drawings: units and page");
     egui::Grid::new("new_drawing_grid").num_columns(2).show(ui, |ui| {
         ui.label("Units");
         ui.horizontal(|ui| {
@@ -2009,9 +2013,15 @@ fn new_drawing_settings(app: &mut App, ui: &mut egui::Ui) {
         });
         ui.end_row();
     });
-    if ui.button("This drawing's units and page…").clicked() {
-        app.run("app.document_settings", json!({}));
-    }
+    ui.horizontal(|ui| {
+        ui.label("This drawing:");
+        if ui.button("Set units…").clicked() {
+            app.run("app.unit_panel", json!({}));
+        }
+        if ui.button("Page setup…").clicked() {
+            app.run("app.document_settings", json!({}));
+        }
+    });
     if let Some((name, value)) = set {
         app.run("prefs.set", json!({ "resource": name, "value": value }));
     }
@@ -3988,7 +3998,7 @@ fn settings_dialog(app: &mut App, ctx: &egui::Context) {
     let mut open = true;
     let s = app.engine.doc().settings.clone();
     let mut cmds: Vec<(&str, Value)> = Vec::new();
-    egui::Window::new("Document Settings")
+    egui::Window::new("Page setup")
         .open(&mut open)
         .resizable(false)
         .collapsible(false)
@@ -3998,16 +4008,6 @@ fn settings_dialog(app: &mut App, ctx: &egui::Context) {
                     .num_columns(2)
                     .spacing([8.0, 6.0])
                     .show(ui, |ui| {
-                        ui.label("Units");
-                        ui.horizontal(|ui| {
-                            if ui.radio(s.units == rustfig_model::Units::Inches, "Inches").clicked() {
-                                cmds.push(("doc.set_units", json!({"units": "inches"})));
-                            }
-                            if ui.radio(s.units == rustfig_model::Units::Metric, "Metric").clicked() {
-                                cmds.push(("doc.set_units", json!({"units": "metric"})));
-                            }
-                        });
-                        ui.end_row();
                         ui.label("Paper");
                         egui::ComboBox::from_id_salt("paper")
                             .selected_text(s.paper.name())
@@ -4034,7 +4034,6 @@ fn settings_dialog(app: &mut App, ctx: &egui::Context) {
                         }
                         ui.end_row();
                     });
-                ui.label(format!("{} user colours", app.engine.doc().colors.len()));
             })
         });
     for (c, p) in cmds {

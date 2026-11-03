@@ -30,14 +30,14 @@ RustFig's own rows (Window tab, except as noted):
 - **Button style**: 3D (xfig's bevelled buttons) or flat.
 - **Theme**: System (follows the system's light or dark setting), Light or Dark. The drawing's paper stays white in every theme.
 - **UI scale**: 75 % to 200 % (a slider in steps of 5), for small or large screens. Both are kept for every start (`app.theme`, `app.ui_scale`).
-- **Units and page**: units (inches or metric), paper and orientation of new drawings, kept for the next start; an empty, unchanged drawing follows at once. "This drawing's units and page…" opens Document settings, which changes only the open drawing (its file keeps them).
+- **New drawings: units and page**: units (inches or metric), paper and orientation of new drawings, kept for the next start; an empty, unchanged drawing follows at once. The buttons "Set units…" and "Page setup…" change only the open drawing (its file keeps them).
 - **xfig resources** (the Advanced tab; **Open as window…** there opens the table in a window of its own): every X resource and command-line option of xfig under its xfig name (for example `startfontsize`, `startlinewidth`), with its value, default and command-line option (only the ones RustFig uses). A value set here is kept for every start; xfig's command-line options override it for one run.
 - **Use current attributes as defaults**: the indicator panel's values become the start values for new drawings.
 - **Your colours**: colours added here appear in every colour menu of every drawing.
 
 The colour theme follows the system's light or dark setting unless you choose Light or Dark above.
 
-Document-specific settings (units, paper, orientation, comments) are saved in the drawing itself: see Edit > Document settings and [Zoom and view](view.md).
+Document-specific settings (units, paper, orientation, comments) are saved in the drawing itself: see Edit > Set units, Edit > Page setup and [Zoom and view](view.md).
 
 ## LaTeX text
 

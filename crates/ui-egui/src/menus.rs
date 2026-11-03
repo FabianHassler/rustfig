@@ -207,7 +207,7 @@ pub const UI_COMMANDS: &[UiCommand] = &[
     },
     UiCommand {
         id: "app.document_settings",
-        label: "Document Settings…",
+        label: "Page setup…",
         shortcut: "",
         params: "{}",
     },
@@ -868,7 +868,7 @@ const MENU_LABELS: &[(&str, &str)] = &[
     ("view.toggle_lengths", "Show line lengths"),
     ("view.toggle_vertex_numbers", "Show vertex numbers"),
     ("view.toggle_crosshair", "Show crosshair"),
-    ("app.document_settings", "Units and Page…"),
+    ("app.document_settings", "Page setup…"),
 ];
 
 /// Check mark state of toggle entries (xfig marks them with an asterisk).
