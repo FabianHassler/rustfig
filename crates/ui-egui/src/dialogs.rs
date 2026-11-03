@@ -3675,6 +3675,13 @@ fn export_preview(app: &mut App, ctx: &egui::Context) {
         app.dialogs.export.preview.texture = None;
         return;
     }
+    // Nothing to export (the export command is disabled then).
+    if app.engine.doc().objects.is_empty() {
+        app.dialogs.export.preview.error = Some("(the drawing is empty)".into());
+        app.dialogs.export.preview.texture = None;
+        app.dialogs.export.preview.key.clear();
+        return;
+    }
     let st = app.dialogs.export.clone();
     let key = format!(
         "{}|{}|{}|{}|{:?}",

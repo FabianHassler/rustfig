@@ -429,22 +429,50 @@ fn body(app: &mut App, ui: &mut egui::Ui) {
             }
         }
     });
-    // Keep a colour under a name for every drawing (E1's list).
+    // Favourites: colours kept for every drawing (E1's list, Global settings >
+    // Drawing > Your colours), named or by their hex code.
     ui.horizontal(|ui| {
         ui.add(
             egui::TextEdit::singleline(&mut app.dialogs.color.name)
-                .hint_text("New colour name")
+                .hint_text("Name (optional)")
                 .desired_width(110.0),
         )
         .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Colour name"));
-        let ready = !app.dialogs.color.name.trim().is_empty();
         if ui
-            .add_enabled(ready, egui::Button::new("Keep for all drawings"))
+            .button("Keep for all drawings")
+            .on_hover_text("A favourite: offered in every colour menu, kept for the next start")
             .clicked()
         {
             let name = app.dialogs.color.name.trim().to_string();
+            let name = if name.is_empty() { hex.clone() } else { name };
             app.dialogs.color.name.clear();
             app.run("prefs.add_color", json!({ "name": name, "rgb": hex }));
+        }
+        let kept: Vec<String> = app
+            .engine
+            .prefs
+            .rustfig
+            .user_colors
+            .iter()
+            .map(|c| c.rgb.to_ascii_lowercase())
+            .collect();
+        let new: Vec<String> = user
+            .iter()
+            .map(|(_, c)| c.to_hex().to_ascii_lowercase())
+            .filter(|h| !kept.contains(h))
+            .collect();
+        if ui
+            .add_enabled(!new.is_empty(), egui::Button::new("Keep all for all drawings"))
+            .on_hover_text("Every colour of this drawing becomes a favourite (named by its hex code)")
+            .clicked()
+        {
+            let mut seen = Vec::new();
+            for h in new {
+                if !seen.contains(&h) {
+                    app.run("prefs.add_color", json!({ "name": h, "rgb": h }));
+                    seen.push(h);
+                }
+            }
         }
     });
 }

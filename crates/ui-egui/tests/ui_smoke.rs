@@ -4516,3 +4516,45 @@ fn page_setup_has_no_units() {
     h.get_by_label("Paper");
     assert!(h.query_by_label("Metric").is_none());
 }
+
+/// An empty drawing's export preview says so instead of reporting the
+/// disabled export command.
+#[test]
+fn export_preview_of_an_empty_drawing() {
+    let mut h = harness(app());
+    h.state_mut().run("app.export", json!({}));
+    h.run_steps(4);
+    assert!(h.query_by_label_contains("not available").is_none());
+    h.get_by_label_contains("the drawing is empty");
+}
+
+/// Favourites without a name are named by their hex code; "Keep all for all
+/// drawings" keeps every colour of the drawing once.
+#[test]
+fn colour_favourites_unnamed_and_all() {
+    let mut h = harness(app());
+    h.state_mut().run("color.new", json!({ "rgb": "#123456" }));
+    h.state_mut().run("color.new", json!({ "rgb": "#abcdef" }));
+    h.state_mut().run("app.colors", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Keep all for all drawings").click();
+    h.run_steps(3);
+    let names = |h: &egui_kittest::Harness<'_, App>| -> Vec<String> {
+        h.state()
+            .engine
+            .prefs
+            .rustfig
+            .user_colors
+            .iter()
+            .map(|c| c.name.clone())
+            .collect()
+    };
+    assert_eq!(names(&h), ["#123456", "#abcdef"]);
+    // Nothing new to keep: the button is off and keeps nothing twice.
+    h.get_by_label("Keep all for all drawings").click();
+    h.run_steps(3);
+    assert_eq!(names(&h).len(), 2);
+    h.get_by_label("Keep for all drawings").click();
+    h.run_steps(3);
+    assert_eq!(names(&h).len(), 3, "the current colour, by its hex code");
+}

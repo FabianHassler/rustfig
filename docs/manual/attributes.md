@@ -58,7 +58,7 @@ Click PenColor or FillColor for the colour menu: Default, the 32 standard colour
     On Linux the desktop's colour picker opens through xdg-desktop-portal (Wayland and X11, GNOME and KDE provide it); where no portal runs, the message line says so.
 <!-- os: end -->
     In the web app the button is greyed out: the browser's EyeDropper needs JavaScript.
-  - **Keep for all drawings** stores the colour under a name in your settings, so it is offered in every drawing.
+  - **Keep for all drawings** makes the colour a favourite: it is stored in your settings (under the name you type, or its hex code), offered in every drawing's colour menus and listed in Global settings > Drawing > Your colours. **Keep all for all drawings** does this for every colour of the open drawing that is not a favourite yet.
 
 Scripts and MCP use the `color.*` commands (`color.parse`, `color.new`, `color.edit`, `color.delete`, `color.recent`, …).
 
