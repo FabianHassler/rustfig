@@ -122,14 +122,17 @@ pub struct LibObject {
 /// Where the packages put the libraries, relative to the program's folder:
 /// next to it (Windows zip, Linux tarball), `../Resources/libraries` (macOS
 /// app bundle), `../share/rustfig/libraries` (.deb, `install.sh`, Homebrew),
-/// and `../../libraries` (`cargo run`: the program is in target/<profile>/).
+/// `../../libraries` (`cargo run`: the program is in target/<profile>/) and
+/// `../../../share/rustfig/libraries` (the app the Homebrew formula installs
+/// next to `share/`: `PREFIX/RustFig.app/Contents/MacOS`, no copy in the app).
 #[cfg(not(target_arch = "wasm32"))]
-pub fn beside_program(dir: &Path) -> [PathBuf; 4] {
+pub fn beside_program(dir: &Path) -> [PathBuf; 5] {
     [
         dir.join("libraries"),
         dir.join("../Resources/libraries"),
         dir.join("../share/rustfig/libraries"),
         dir.join("../../libraries"),
+        dir.join("../../../share/rustfig/libraries"),
     ]
 }
 
@@ -913,6 +916,7 @@ mod tests {
             ("zip", "zip/libraries"),
             ("RustFig.app/Contents/MacOS", "RustFig.app/Contents/Resources/libraries"),
             ("usr/bin", "usr/share/rustfig/libraries"),
+            ("brew/RustFig.app/Contents/MacOS", "brew/share/rustfig/libraries"),
         ] {
             let (dir, lib) = (base.join(program_dir), base.join(libs));
             std::fs::create_dir_all(&dir).unwrap();

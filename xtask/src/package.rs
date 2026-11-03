@@ -407,8 +407,9 @@ pub fn copy_libraries(root: &Path, dest: &Path) -> Result<usize, String> {
 }
 
 /// `cargo xtask package [--app-only]`: with `--app-only` (macOS), only
-/// `RustFig.app` with its Quick Look extensions, no `.dmg` (the Homebrew
-/// formula installs the app this way).
+/// `RustFig.app` with its Quick Look extensions and without the figure
+/// libraries, no `.dmg`: the Homebrew formula installs the app next to
+/// `share/rustfig/libraries`, where the program finds them.
 pub fn run(root: &Path, mut cargo: Command) -> Result<(), String> {
     let app_only = std::env::args().skip(2).any(|a| a == "--app-only");
     let version = workspace_version(&fs::read_to_string(root.join("Cargo.toml")).unwrap_or_default());
@@ -444,7 +445,9 @@ fn macos(root: &Path, rel: &Path, out: &Path, version: &str, app_only: bool) -> 
     let (macos_dir, res) = (app.join("Contents/MacOS"), app.join("Contents/Resources"));
     fs::create_dir_all(&macos_dir).map_err(|e| e.to_string())?;
     fs::create_dir_all(&res).map_err(|e| e.to_string())?;
-    copy_libraries(root, &res.join("libraries"))?;
+    if !app_only {
+        copy_libraries(root, &res.join("libraries"))?;
+    }
     fs::copy(&exe, macos_dir.join("rustfig")).map_err(|e| format!("rustfig: {e}"))?;
     #[cfg(unix)]
     std::os::unix::fs::symlink("rustfig", macos_dir.join("fig2dev")).map_err(|e| e.to_string())?;
