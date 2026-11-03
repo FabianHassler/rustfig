@@ -4103,6 +4103,25 @@ fn mode_finder_down_moves_and_escape_clears() {
     );
 }
 
+/// The row under the pointer is the only highlighted one: hovering a result
+/// selects it (the first match does not stay lit), and Return picks it.
+#[test]
+fn mode_finder_hover_selects_the_row() {
+    let mut h = harness(app());
+    h.get_by_label("Go to mode").click();
+    h.run_steps(2);
+    h.get_by_label("Go to mode").type_text("circle");
+    h.run_steps(2);
+    assert_eq!(h.state().mode_finder.sel, 0);
+    let label = format!("Go to mode result {}", ToolKind::CircleDiameter.label());
+    h.get_by_label(&label).hover();
+    h.run_steps(2);
+    assert_eq!(h.state().mode_finder.sel, 1, "the hovered row is the selection");
+    press_key(&mut h, egui::Key::Enter, egui::Modifiers::NONE);
+    h.run_steps(2);
+    assert_eq!(h.state().engine.tool(), ToolKind::CircleDiameter);
+}
+
 #[test]
 fn mode_finder_click_picks_and_the_key_focuses_the_field() {
     let mut h = harness(app());

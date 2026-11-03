@@ -146,9 +146,19 @@ fn finder(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
             .show(&ctx, |ui| {
                 egui::Frame::popup(ui.style()).inner_margin(2.0).show(ui, |ui| {
                     ui.spacing_mut().item_spacing.y = 0.0;
-                    for (i, t) in hits.iter().enumerate() {
-                        let (r, rr) = ui.allocate_exact_size(vec2(200.0, 18.0), Sense::click());
-                        if i == f.sel || rr.hovered() {
+                    // One highlight: the row under the pointer becomes the
+                    // selection (Return then picks it), so the first match does
+                    // not stay lit beside it. Rows are laid out before they are
+                    // painted, to know the hovered one first.
+                    let rows: Vec<_> = hits
+                        .iter()
+                        .map(|_| ui.allocate_exact_size(vec2(200.0, 18.0), Sense::click()))
+                        .collect();
+                    if let Some(i) = rows.iter().position(|(_, rr)| rr.hovered()) {
+                        f.sel = i;
+                    }
+                    for (i, (t, (r, rr))) in hits.iter().zip(rows).enumerate() {
+                        if i == f.sel {
                             ui.painter().rect_filled(r, 2.0, tk.tool_active_bg);
                         }
                         let ink = ui.visuals().text_color();
