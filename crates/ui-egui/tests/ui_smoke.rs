@@ -4499,6 +4499,10 @@ fn new_drawing_units_are_kept_as_preferences() {
     h.run_steps(3);
     h.get_by_label("Portrait").click();
     h.run_steps(3);
+    // Nothing before Ok (the dialog's draft), as for every row.
+    assert_eq!(h.state().engine.prefs.bool("inches"), None);
+    h.get_by_label("Ok").click();
+    h.run_steps(3);
     let e = &h.state().engine;
     assert_eq!(e.prefs.bool("inches"), Some(false));
     assert_eq!(e.prefs.bool("landscape"), Some(false));
@@ -4557,4 +4561,59 @@ fn colour_favourites_unnamed_and_all() {
     h.get_by_label("Keep for all drawings").click();
     h.run_steps(3);
     assert_eq!(names(&h).len(), 3, "the current colour, by its hex code");
+}
+
+/// Global settings > New drawings: units and page, chosen with the mouse
+/// and confirmed with Ok, are in the settings file and in the next start.
+#[test]
+fn new_drawing_page_survives_ok_and_a_restart() {
+    let path = settings_file("new-drawing-page");
+    {
+        let mut h = harness(app_with_settings(&path));
+        h.state_mut().run("app.global_settings", json!({}));
+        h.run_steps(3);
+        h.get_by_label("Window").click();
+        h.run_steps(3);
+        h.get_by_label("Metric").click();
+        h.run_steps(3);
+        h.get_by_label("Paper of new drawings").click();
+        h.run_steps(3);
+        h.get_by_label("A4").click();
+        h.run_steps(3);
+        h.get_by_label("Ok").click();
+        h.run_steps(4);
+        assert!(!h.state().dialogs.global_open);
+    }
+    let text = std::fs::read_to_string(&path).unwrap();
+    assert!(text.contains("paper_size = \"A4\""), "{text}");
+    assert!(text.contains("inches = false"), "{text}");
+    let a = app_with_settings(&path);
+    assert_eq!(a.engine.doc().settings.paper.name(), "A4");
+    assert_eq!(a.engine.doc().settings.units, rustfig_model::Units::Metric);
+    let _ = std::fs::remove_dir_all(path.parent().unwrap());
+}
+
+/// "Use current attributes as defaults" writes the start values at once;
+/// Ok must not put the values the window opened with back (only rows changed
+/// in the window are applied).
+#[test]
+fn use_current_attributes_survives_ok() {
+    let mut h = harness(app());
+    h.state_mut().engine.indicator.font_size = 31.0;
+    h.state_mut().run("app.global_settings", json!({}));
+    h.run_steps(3);
+    {
+        use egui_kittest::kittest::{NodeT, Queryable};
+        h.query_all_by_label("Drawing")
+            .find(|n| n.accesskit_node().role() == egui::accesskit::Role::Button)
+            .expect("the Drawing tab")
+            .click();
+    }
+    h.run_steps(3);
+    h.get_by_label("Use current attributes as defaults").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.prefs.float("startfontsize"), Some(31.0));
+    h.get_by_label("Ok").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.prefs.float("startfontsize"), Some(31.0));
 }

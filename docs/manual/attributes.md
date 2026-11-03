@@ -44,7 +44,7 @@ The Update Control box (in Update mode) says which attributes Update applies, an
 
 Click PenColor or FillColor for the colour menu: Default, the 32 standard colours, the colours of the drawing and your own colours. Under them are the **recent colours** (the last twelve you used, kept in your settings, not in the drawing) and **More…**.
 
-- **More…** (also Edit > Colours…) opens the Colours window:
+- **More…** (also Edit > User colours…) opens the Colours window:
   - Pick in the hue/saturation square and the hue strip, or type Red, Green, Blue and Hue, Saturation, Value.
   - Type a hex value (`#rrggbb` or `#rgb`) or an X11 colour name such as `Dark Orange` (case and blanks do not matter; matching names are offered while you type) into **Hex or name**.
   - **Use as pen colour** and **Use as fill colour** make the colour current; a colour that is not one of the 32 standard colours becomes a user colour of the drawing.

@@ -27,7 +27,7 @@ pub const UI_COMMANDS: &[UiCommand] = &[
     },
     UiCommand {
         id: "app.colors",
-        label: "Colours…",
+        label: "User colours…",
         shortcut: "",
         params: "{\"color\"?: colour number}  — the colour picker and editor (hue/saturation square, RGB/HSV, hex and X11 names, recent and user colours)",
     },
@@ -607,7 +607,7 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Delete All", "edit.delete_all"),
                 H("Settings"),
                 Cmd("Global settings...", "app.global_settings"),
-                Cmd("Colours...", "app.colors"),
+                Cmd("User colours...", "app.colors"),
                 Cmd("Set units...", "app.unit_panel"),
                 Own("app.document_settings"),
             ],

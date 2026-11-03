@@ -646,10 +646,9 @@ impl Prefs {
         self.apply_latex(e);
         // `-scale_factor`: files are scaled as they are read (xfig's main.c:
         // a value that is not positive means 1).
-        e.read_scale = self
-            .float("scale_factor")
-            .filter(|f| *f > 0.0 && *f <= 1000.0)
-            .unwrap_or(1.0);
+        if let Some(f) = self.float("scale_factor") {
+            e.read_scale = if f > 0.0 && f <= 1000.0 { f } else { 1.0 };
+        }
         // The drawing's settings (for the empty start drawing and, as
         // file.new keeps them, every new one).
         let mut s = e.doc().settings.clone();

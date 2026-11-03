@@ -1619,7 +1619,7 @@ fn global_tab_rows(app: &mut App, ui: &mut egui::Ui, d: &mut GlobalDraft, tab: G
                 });
             }
             if show("New drawings: units and page") {
-                new_drawing_settings(app, ui);
+                new_drawing_settings(app, ui, d);
             }
         }
         GlobalTab::Drawing => {
@@ -1769,13 +1769,18 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
     let id = egui::Id::new("global_settings_draft");
     if !app.dialogs.global_open {
         flush_latex_drafts(app, ctx);
-        ctx.data_mut(|d| d.remove::<GlobalDraft>(id));
+        ctx.data_mut(|d| d.remove::<(GlobalDraft, GlobalDraft)>(id));
         return;
     }
-    let current = GlobalDraft::of(app);
-    let mut d: GlobalDraft = ctx
-        .data(|data| data.get_temp::<GlobalDraft>(id))
-        .unwrap_or_else(|| current.clone());
+    // (the values the window opened with, the window's draft): Ok applies
+    // only the rows changed in the window, so a setting changed meanwhile
+    // by another way (a button here that acts at once, a menu) is kept.
+    let (mut base, mut d): (GlobalDraft, GlobalDraft) = ctx
+        .data(|data| data.get_temp::<(GlobalDraft, GlobalDraft)>(id))
+        .unwrap_or_else(|| {
+            let now = GlobalDraft::of(app);
+            (now.clone(), now)
+        });
     let mut open = true;
     let (mut ok, mut cancel) = (false, false);
     let mut latex_hidden = false;
@@ -1886,15 +1891,17 @@ fn global_dialog(app: &mut App, ctx: &egui::Context) {
         flush_latex_drafts(app, ctx);
     }
     if ok || (app.apply_immediately && open && !cancel) {
-        apply_global(app, &current, &d);
-        apply_advanced(app, &current, &d);
+        apply_global(app, &base, &d);
+        apply_advanced(app, &base, &d);
         d.reset_look = false;
+        // Applied: the draft is the state to compare with from now on.
+        base = d.clone();
     }
     if ok || cancel || !open {
         app.dialogs.global_open = false;
-        ctx.data_mut(|data| data.remove::<GlobalDraft>(id));
+        ctx.data_mut(|data| data.remove::<(GlobalDraft, GlobalDraft)>(id));
     } else {
-        ctx.data_mut(|data| data.insert_temp(id, d));
+        ctx.data_mut(|data| data.insert_temp(id, (base, d)));
     }
 }
 
@@ -1915,14 +1922,21 @@ fn apply_global(app: &mut App, was: &GlobalDraft, now: &GlobalDraft) {
         app.run("app.theme", json!({ "theme": "system" }));
         app.run("app.ui_scale", json!({ "percent": 100 }));
     }
+    // These commands flip: only when the row was changed here and the
+    // switch is not already where the row says.
     let toggles = [
-        ("app.toggle_autorefresh", was.autorefresh, now.autorefresh),
-        ("view.toggle_page_border", was.page_borders, now.page_borders),
-        ("app.toggle_depths", was.depth_manager, now.depth_manager),
-        ("app.toggle_balloons", was.balloons, now.balloons),
+        ("app.toggle_autorefresh", was.autorefresh, now.autorefresh, app.reload.on),
+        (
+            "view.toggle_page_border",
+            was.page_borders,
+            now.page_borders,
+            app.engine.show_page_border,
+        ),
+        ("app.toggle_depths", was.depth_manager, now.depth_manager, app.show_depths),
+        ("app.toggle_balloons", was.balloons, now.balloons, app.show_balloons),
     ];
-    for (id, a, b) in toggles {
-        if a != b {
+    for (id, a, b, actual) in toggles {
+        if a != b && actual != b {
             app.run(id, json!({}));
         }
     }
@@ -1969,25 +1983,28 @@ fn apply_global(app: &mut App, was: &GlobalDraft, now: &GlobalDraft) {
 
 /// Units, paper and orientation of new drawings (xfig's `inches`,
 /// `paper_size` and `landscape` resources), kept for the next start; the open
-/// drawing's own are in Set units and Page setup.
-fn new_drawing_settings(app: &mut App, ui: &mut egui::Ui) {
-    let p = &app.engine.prefs;
-    let inches = p.bool("inches").unwrap_or(true);
-    let landscape = p.bool("landscape").unwrap_or(true);
-    let paper = p
-        .str("paper_size")
-        .and_then(|n| PaperSize::from_name(&n))
+/// drawing's own are in Set units and Page setup. They edit the dialog's
+/// draft like the Advanced tab's rows, so Ok applies them and Cancel
+/// discards them.
+fn new_drawing_settings(app: &mut App, ui: &mut egui::Ui, d: &mut GlobalDraft) {
+    let flag = |d: &GlobalDraft, name: &str| d.adv.get(name).is_none_or(|v| v.trim() != "false");
+    let inches = flag(d, "inches");
+    let landscape = flag(d, "landscape");
+    let paper = d
+        .adv
+        .get("paper_size")
+        .and_then(|n| PaperSize::from_name(n.trim()))
         .unwrap_or_else(|| app.engine.doc().settings.paper);
-    let mut set: Option<(&str, Value)> = None;
+    let mut set: Option<(&'static str, String)> = None;
     ui.label("New drawings: units and page");
     egui::Grid::new("new_drawing_grid").num_columns(2).show(ui, |ui| {
         ui.label("Units");
         ui.horizontal(|ui| {
             if ui.radio(inches, "Inches").clicked() {
-                set = Some(("inches", json!(true)));
+                set = Some(("inches", "true".into()));
             }
             if ui.radio(!inches, "Metric").clicked() {
-                set = Some(("inches", json!(false)));
+                set = Some(("inches", "false".into()));
             }
         });
         ui.end_row();
@@ -1997,18 +2014,20 @@ fn new_drawing_settings(app: &mut App, ui: &mut egui::Ui) {
             .show_ui(ui, |ui| {
                 for ps in PaperSize::ALL {
                     if ui.selectable_label(ps == paper, ps.name()).clicked() {
-                        set = Some(("paper_size", json!(ps.name())));
+                        set = Some(("paper_size", ps.name().to_string()));
                     }
                 }
-            });
+            })
+            .response
+            .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, "Paper of new drawings"));
         ui.end_row();
         ui.label("Orientation");
         ui.horizontal(|ui| {
             if ui.radio(landscape, "Landscape").clicked() {
-                set = Some(("landscape", json!(true)));
+                set = Some(("landscape", "true".into()));
             }
             if ui.radio(!landscape, "Portrait").clicked() {
-                set = Some(("landscape", json!(false)));
+                set = Some(("landscape", "false".into()));
             }
         });
         ui.end_row();
@@ -2023,7 +2042,7 @@ fn new_drawing_settings(app: &mut App, ui: &mut egui::Ui) {
         }
     });
     if let Some((name, value)) = set {
-        app.run("prefs.set", json!({ "resource": name, "value": value }));
+        d.adv.insert(name, value);
     }
 }
 

@@ -128,8 +128,11 @@ fn set(e: &mut Engine, p: &Value) -> CmdResult {
         e.view.origin.y = e.view.origin.y.max(0.0);
     }
     let warnings = if r.status == Status::Applied {
-        let prefs = e.prefs.clone();
-        prefs.apply(e)
+        // Only this resource: applying all of them would put every start
+        // value back (the attribute panel, the zoom) when one setting changes.
+        let mut only = e.prefs.clone();
+        only.xfig.retain(|k, _| k.eq_ignore_ascii_case(r.name));
+        only.apply(e)
     } else {
         Vec::new()
     };
