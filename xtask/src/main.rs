@@ -1,7 +1,8 @@
-//! Project automation: `cargo xtask ci | layers | assets | licences | wasm | web | site | source-audit | libraries`.
+//! Project automation: `cargo xtask ci | layers | assets | licences | wasm | web | site | source-audit | libraries | examples`.
 
 mod audit;
 mod ctan;
+mod examples;
 mod libraries;
 mod package;
 mod site;
@@ -525,10 +526,11 @@ fn main() -> ExitCode {
         #[cfg(not(unix))]
         "speed-compare" => Err("speed-compare runs xfig under Xvfb: Unix only".into()),
         "libraries" => libraries::run(&root()),
+        "examples" => examples::run(&root(), std::env::args().nth(2)),
         "site" => site::run(&root()),
         "ctan" => ctan::run(&root(), &std::env::args().nth(2).unwrap_or_else(|| "HEAD".into())),
         _ => Err(
-            "usage: cargo xtask ci | layers | assets | licences | wasm | web | package | source-audit | xfig-compare | speed-compare | libraries | site | ctan [REF]"
+            "usage: cargo xtask ci | layers | assets | licences | wasm | web | package | source-audit | xfig-compare | speed-compare | libraries | examples [OUTDIR] | site | ctan [REF]"
                 .into(),
         ),
     };
