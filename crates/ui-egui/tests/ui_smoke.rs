@@ -4617,3 +4617,24 @@ fn use_current_attributes_survives_ok() {
     h.run_steps(3);
     assert_eq!(h.state().engine.prefs.float("startfontsize"), Some(31.0));
 }
+
+/// The export panel's language and its options are kept for the next start.
+#[test]
+fn export_language_and_options_survive_a_restart() {
+    let path = settings_file("export-restart");
+    {
+        let mut h = harness(app_with_settings(&path));
+        h.state_mut()
+            .run("shape.rectangle", json!({"x": 0, "y": 0, "width": 1200, "height": 600}));
+        h.state_mut().run("app.export", json!({}));
+        h.run_steps(3);
+        h.state_mut().dialogs.export.format = "svg";
+        h.run_steps(3);
+        h.get_by_label("Embed the figure").click();
+        h.run_steps(4);
+    }
+    let a = app_with_settings(&path);
+    assert_eq!(a.dialogs.export.format, "svg");
+    assert!(rustfig_engine::export_panel::settings_for(&a.engine, "svg").embed);
+    let _ = std::fs::remove_dir_all(path.parent().unwrap());
+}

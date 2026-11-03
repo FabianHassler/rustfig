@@ -236,6 +236,20 @@ pub fn collect_ui(app: &mut App) {
         r.xfig_keys = Some(app.xfig_keys);
         changed = true;
     }
+    // The export panel's language, kept for the next start (xfig's
+    // `exportLanguage`); RustFig's start language, PDF, needs no entry.
+    let format = app.dialogs.export.format;
+    let stored = p.str("exportLanguage");
+    if stored.as_deref() != Some(format)
+        && !(stored.is_none() && format == "pdf")
+        && p.set(
+            "exportLanguage",
+            rustfig_engine::prefs::TomlValue::String(format.to_string()),
+        )
+        .is_ok()
+    {
+        changed = true;
+    }
     // xfig's own switches in Global settings and the View menu.
     for (name, v) in [
         ("showballoons", balloons),
