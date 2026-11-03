@@ -501,6 +501,21 @@ impl Importer {
         let (subs, ok) = split_subpaths(&bez(p.data(), t));
         match subs.as_slice() {
             [one] if ok => convex_ccw(&one.points),
+            // A convex region with small holes (fig2dev's SVG clips a line
+            // under its arrowhead: the page minus the arrow's tip): the
+            // region without its holes; the arrowhead is drawn over the line.
+            [outer, holes @ ..] if ok => {
+                let ring = convex_ccw(&outer.points)?;
+                let (mut x0, mut y0, mut x1, mut y1) = (f64::MAX, f64::MAX, f64::MIN, f64::MIN);
+                for (x, y) in &ring {
+                    (x0, y0, x1, y1) = (x0.min(*x), y0.min(*y), x1.max(*x), y1.max(*y));
+                }
+                let inside = holes
+                    .iter()
+                    .flat_map(|h| h.points.iter())
+                    .all(|(x, y)| (x0..=x1).contains(x) && (y0..=y1).contains(y));
+                inside.then_some(ring)
+            }
             _ => None,
         }
     }
@@ -1361,6 +1376,26 @@ fn xml_unescape(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// fig2dev's SVG clips a line under its arrowhead with the page minus
+    /// the arrow's tip: read as the page, without a warning.
+    #[test]
+    fn convex_clip_with_holes_is_its_outer_ring() {
+        let svg = br#"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">
+<defs><clipPath id="cp0"><path clip-rule="evenodd" d="M 0,0 H 200 V 200 H 0 z M 150,90 170,100 150,110z"/></clipPath></defs>
+<g clip-path="url(#cp0)"><path d="M 10 100 L 170 100" stroke="black" fill="none"/></g>
+</svg>"#;
+        let r = import(svg, "x", None).unwrap();
+        assert_eq!(r.doc.objects.len(), 1);
+        assert!(r.warnings.iter().all(|w| !w.contains("not convex")), "{:?}", r.warnings);
+        // A hole reaching outside the region is no such clip.
+        let svg = br#"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">
+<defs><clipPath id="cp0"><path clip-rule="evenodd" d="M 0,0 H 100 V 100 H 0 z M 150,90 170,100 150,110z"/></clipPath></defs>
+<g clip-path="url(#cp0)"><path d="M 10 50 L 90 50" stroke="black" fill="none"/></g>
+</svg>"#;
+        let r = import(svg, "x", None).unwrap();
+        assert!(r.warnings.iter().any(|w| w.contains("not convex")), "{:?}", r.warnings);
+    }
 
     #[test]
     fn garbage_is_an_error() {

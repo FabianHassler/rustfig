@@ -709,7 +709,9 @@ impl Importer {
         let size = (size * 10.0).round() / 10.0;
         let em = size * K;
         for pc in pieces {
-            if pc.text.chars().any(|c| c as u32 > 0xFF) {
+            // (a LaTeX text's glyphs are left out: no warning for them)
+            let latex = self.latex.iter().any(|m| m.covers(pc.origin, K));
+            if !latex && pc.text.chars().any(|c| c as u32 > 0xFF) {
                 self.warn_once(
                     "latin1",
                     "Characters outside Latin-1 are kept, but Fig's PostScript fonts cannot show them",

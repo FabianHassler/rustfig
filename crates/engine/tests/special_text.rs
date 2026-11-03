@@ -123,7 +123,9 @@ fn typeset_exports_import_their_latex_texts() {
         e.execute("file.export", &json!({"path": p, "typeset_latex": true}))
             .unwrap();
         let mut back = Engine::new();
-        back.execute("file.open", &json!({"path": p, "vectors": true})).unwrap();
+        let r = back.execute("file.open", &json!({"path": p, "vectors": true})).unwrap();
+        // The glyphs are left out: nothing to warn about them.
+        assert_eq!(r["warnings"], json!([]), "{ext}");
         let texts: Vec<_> = back
             .doc()
             .objects
