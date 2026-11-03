@@ -15,3 +15,6 @@ rustfig-geom.workspace = true
 rustfig-model.workspace = true
 rustfig-text.workspace = true
 fig2dev.workspace = true
+
+[dev-dependencies]
+rustfig-format.workspace = true

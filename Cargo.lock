@@ -3522,6 +3522,7 @@ name = "rustfig-render"
 version = "0.9.0-beta.8"
 dependencies = [
  "fig2dev-rs-lib",
+ "rustfig-format",
  "rustfig-geom",
  "rustfig-model",
  "rustfig-text",

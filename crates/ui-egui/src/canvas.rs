@@ -241,6 +241,12 @@ fn set_doc_texture(app: &mut App, ctx: &egui::Context, img: egui::ColorImage, ke
     app.canvas.doc_key = Some(key);
 }
 
+/// The drag layer's margin on each side (pixels) for a canvas side of `n`:
+/// a quarter of it, less where `n + 2 * margin` would pass `max_side`.
+fn layer_margin(n: usize, max_side: usize) -> usize {
+    (max_side.saturating_sub(n) / 2).min(n / 4)
+}
+
 /// How far (points) the drag layer, drawn with the objects shifted by `anchor`
 /// (Fig units), slides so that they show shifted by `shift`: the view's scale,
 /// not its zoom factor (a Fig unit is `zoom / 15` points at 80 dpi).
@@ -669,8 +675,10 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         let job_running = false;
         if !valid && !job_running {
             // A quarter of the canvas on each side stays drawn for the drag
-            // to slide into; very large canvases get less (texture limit).
-            let room = |n: usize| ((8192usize.saturating_sub(n)) / 2).min(n / 4);
+            // to slide into; very large canvases get less: the layer must stay
+            // within the GPU's largest texture (egui aborts on a larger one).
+            let max_side = ui.ctx().input(|i| i.max_texture_side);
+            let room = |n: usize| layer_margin(n, max_side);
             let margin = (room(w), room(h));
             let doc = app.engine.doc();
             let d = Document {
@@ -1253,7 +1261,23 @@ pub(crate) fn cursor_icon(kind: rustfig_engine::CursorKind) -> egui::CursorIcon 
 
 #[cfg(test)]
 mod tests {
-    use super::{describe_drawing, drag_offset, grid_spacing, LongPress};
+    use super::{describe_drawing, drag_offset, grid_spacing, layer_margin, LongPress};
+
+    /// The drag layer (canvas plus a margin each side) never exceeds the GPU's
+    /// largest texture: egui aborts on a larger one (2048 and 4096 are common).
+    #[test]
+    fn drag_layer_fits_the_texture_limit() {
+        for max_side in [2048, 4096, 8192, 16384] {
+            for n in [1, 100, 1000, 2000, 2048, 3000, 4000, 8000, 16000] {
+                let m = layer_margin(n, max_side);
+                assert!(
+                    n > max_side || n + 2 * m <= max_side,
+                    "n {n} limit {max_side}: margin {m}"
+                );
+                assert!(m <= n / 4);
+            }
+        }
+    }
     use rustfig_geom::Point;
 
     /// The dragged objects slide with the pointer: a shift of d Fig units is

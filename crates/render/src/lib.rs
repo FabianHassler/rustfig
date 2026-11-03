@@ -48,11 +48,11 @@ fn path_points(scene: &Scene, cap: usize) -> usize {
 
 /// Rasterise `scene` into a new `w` x `h` pixmap, in horizontal bands on
 /// several threads when the scene is large (P6): each band is a pixmap of its
-/// own drawn with the transform moved up by the band's first row, so the
-/// bands join pixel for pixel as one render would draw them (the rasteriser
-/// culls what is outside its pixmap). Native only; wasm draws on one thread.
+/// own, drawn with the transform moved up by its first row and a few rows
+/// more on both sides ([`BAND_PAD`]), so the bands join as one render draws
+/// them (within one antialiasing step of rounding; the rasteriser culls what
+/// is outside its pixmap). Native only; wasm draws on one thread.
 pub fn rasterize_banded(scene: &Scene, w: u32, h: u32, opts: &raster::RasterOptions) -> Option<raster::Pixmap> {
-    let mut pm = raster::Pixmap::new(w, h)?;
     #[cfg(not(target_arch = "wasm32"))]
     {
         let threads = std::thread::available_parallelism().map_or(1, |n| n.get()).min(16);
@@ -63,49 +63,76 @@ pub fn rasterize_banded(scene: &Scene, w: u32, h: u32, opts: &raster::RasterOpti
         {
             // More bands than threads smooths out uneven density.
             let n = (bands * 2).min(h as usize / PARALLEL_MIN_BAND).max(bands);
-            let rows = (h as usize).div_ceil(n);
-            let next = std::sync::atomic::AtomicUsize::new(0);
-            let done: std::sync::Mutex<Vec<(usize, raster::Pixmap)>> = std::sync::Mutex::new(Vec::new());
-            std::thread::scope(|sc| {
-                for _ in 0..bands {
-                    sc.spawn(|| loop {
-                        let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                        let y0 = i * rows;
-                        if y0 >= h as usize {
-                            break;
-                        }
-                        let bh = rows.min(h as usize - y0) as u32;
-                        let Some(mut band) = raster::Pixmap::new(w, bh) else {
-                            continue;
-                        };
-                        let mut o = *opts;
-                        o.transform = opts.transform.then(&rustfig_geom::Affine::translate(0.0, -(y0 as f64)));
-                        raster::rasterize(scene, &mut band, &o);
-                        if let Ok(mut d) = done.lock() {
-                            d.push((y0, band));
-                        }
-                    });
-                }
-            });
-            let stride = w as usize * 4;
-            let bands = done.into_inner().unwrap_or_default();
-            if bands.is_empty() {
-                // Every band failed (a poisoned lock or no memory): draw plainly.
-                raster::rasterize(scene, &mut pm, opts);
-                return Some(pm);
-            }
-            let dst = pm.data_mut();
-            for (y0, band) in bands {
-                let at = y0 * stride;
-                let src = band.data();
-                if let Some(d) = dst.get_mut(at..at + src.len()) {
-                    d.copy_from_slice(src);
-                }
-            }
-            return Some(pm);
+            return rasterize_in_bands(scene, w, h, opts, n, bands);
         }
     }
+    let mut pm = raster::Pixmap::new(w, h)?;
     raster::rasterize(scene, &mut pm, opts);
+    Some(pm)
+}
+
+/// Rows drawn above and below each band and thrown away: the rasteriser
+/// clips at a pixmap's edge, which changes the antialiasing of the rows next
+/// to it, so each band is drawn taller and only its own rows are kept.
+#[cfg(not(target_arch = "wasm32"))]
+const BAND_PAD: usize = 8;
+
+/// [`rasterize_banded`]'s work: `n` bands of rows on `threads` threads, each
+/// drawn with [`BAND_PAD`] extra rows on both sides, joined into one pixmap.
+#[cfg(not(target_arch = "wasm32"))]
+fn rasterize_in_bands(
+    scene: &Scene,
+    w: u32,
+    h: u32,
+    opts: &raster::RasterOptions,
+    n: usize,
+    threads: usize,
+) -> Option<raster::Pixmap> {
+    let mut pm = raster::Pixmap::new(w, h)?;
+    let rows = (h as usize).div_ceil(n.max(1));
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let done: std::sync::Mutex<Vec<(usize, usize, raster::Pixmap)>> = std::sync::Mutex::new(Vec::new());
+    std::thread::scope(|sc| {
+        for _ in 0..threads.max(1) {
+            sc.spawn(|| loop {
+                let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                let y0 = i * rows;
+                if y0 >= h as usize {
+                    break;
+                }
+                let bh = rows.min(h as usize - y0);
+                // The band with its padding, clipped to the image.
+                let top = y0.saturating_sub(BAND_PAD);
+                let bottom = (y0 + bh + BAND_PAD).min(h as usize);
+                let Some(mut band) = raster::Pixmap::new(w, (bottom - top) as u32) else {
+                    continue;
+                };
+                let mut o = *opts;
+                o.transform = opts
+                    .transform
+                    .then(&rustfig_geom::Affine::translate(0.0, -(top as f64)));
+                raster::rasterize(scene, &mut band, &o);
+                if let Ok(mut d) = done.lock() {
+                    d.push((y0, y0 - top, band));
+                }
+            });
+        }
+    });
+    let stride = w as usize * 4;
+    let bands = done.into_inner().unwrap_or_default();
+    if bands.len() != (h as usize).div_ceil(rows) {
+        // A band failed (a poisoned lock or no memory): draw plainly.
+        raster::rasterize(scene, &mut pm, opts);
+        return Some(pm);
+    }
+    let dst = pm.data_mut();
+    for (y0, skip, band) in bands {
+        let bh = rows.min(h as usize - y0);
+        let src = band.data().get(skip * stride..(skip + bh) * stride)?;
+        if let Some(d) = dst.get_mut(y0 * stride..y0 * stride + src.len()) {
+            d.copy_from_slice(src);
+        }
+    }
     Some(pm)
 }
 
@@ -676,6 +703,56 @@ mod tests {
             .count();
         assert!(drawn > 1000, "nothing drawn");
         assert!(off * 100 < drawn, "{off} of {drawn} pixels differ by more than 96");
+    }
+
+    /// Every test figure (arcs, arrows, ellipses, splines, text, patterns, …)
+    /// drawn in padded bands has the pixels of one render: without the
+    /// padding, curves and thin lines had kinks (whole pixels flipped) at the
+    /// band edges.
+    #[test]
+    fn bands_equal_one_render_on_every_fixture() {
+        rustfig_text::set_builtin_fonts(true);
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../engine/tests/fixtures");
+        let mut n = 0;
+        for e in std::fs::read_dir(dir).unwrap() {
+            let p = e.unwrap().path();
+            if p.extension().is_none_or(|x| x != "fig") {
+                continue;
+            }
+            let doc = rustfig_format::read_any(&std::fs::read(&p).unwrap()).unwrap();
+            let scene = build_scene(&doc, &SceneOptions::default());
+            for zoom in [0.05, 0.1, 0.3] {
+                let (w, h) = (640, 480);
+                let opts = raster::RasterOptions {
+                    transform: rustfig_geom::Affine::scale(zoom, zoom),
+                    min_line_px: 1.0,
+                    adjust_px: 0.0,
+                    pattern_k: 1,
+                    pattern: pattern::PatternFrame::screen(),
+                };
+                let banded = rasterize_in_bands(&scene, w, h, &opts, 7, 3).unwrap();
+                let mut single = raster::Pixmap::new(w, h).unwrap();
+                raster::rasterize(&scene, &mut single, &opts);
+                let diff = banded.data().iter().zip(single.data()).filter(|(a, b)| a != b).count();
+                let worst = banded
+                    .data()
+                    .iter()
+                    .zip(single.data())
+                    .map(|(a, b)| a.abs_diff(*b))
+                    .max()
+                    .unwrap_or(0);
+                // No pixel flips at a band edge (unpadded bands differed by up
+                // to 255); what remains is rounding of the shifted coordinates,
+                // one antialiasing step (64) on a few edge pixels.
+                assert!(
+                    worst <= 64 && diff * 1000 <= banded.data().len(),
+                    "{} at zoom {zoom}: {diff} bytes differ, by up to {worst}",
+                    p.display()
+                );
+            }
+            n += 1;
+        }
+        assert!(n >= 10, "fixtures found: {n}");
     }
 
     /// Bands join exactly as one render draws them (P6).
