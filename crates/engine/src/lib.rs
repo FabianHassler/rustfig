@@ -321,17 +321,23 @@ impl Engine {
 
     /// Replace the selection (unknown ids are dropped).
     pub fn set_selection(&mut self, ids: Vec<ObjectId>) {
-        // A set, not `doc.get` per id: selecting everything stays linear.
-        let present = self.top_level_ids();
-        let mut seen = HashSet::new();
-        self.selection = ids
-            .into_iter()
-            .filter(|id| present.contains(id) && seen.insert(*id))
-            .collect();
+        let sel = {
+            let present = self.id_lookup(ids.len());
+            let mut seen = HashSet::new();
+            ids.into_iter().filter(|id| present(id) && seen.insert(*id)).collect()
+        };
+        self.selection = sel;
     }
 
-    fn top_level_ids(&self) -> HashSet<ObjectId> {
-        self.doc.objects.iter().map(|o| o.id).collect()
+    /// Whether a top-level object has the id, for `n` ids to test: a direct
+    /// search for a few (one pass each), a set for many (selecting everything
+    /// stays linear; building the set costs a pass over the whole drawing).
+    fn id_lookup(&self, n: usize) -> impl Fn(&ObjectId) -> bool + '_ {
+        let set: Option<HashSet<ObjectId>> = (n > 16).then(|| self.doc.objects.iter().map(|o| o.id).collect());
+        move |id| match &set {
+            Some(s) => s.contains(id),
+            None => self.doc.get(*id).is_some(),
+        }
     }
 
     pub fn path(&self) -> Option<&str> {
@@ -508,8 +514,12 @@ impl Engine {
         if self.selection.is_empty() {
             return;
         }
-        let present = self.top_level_ids();
-        self.selection.retain(|id| present.contains(id));
+        let mut sel = std::mem::take(&mut self.selection);
+        {
+            let present = self.id_lookup(sel.len());
+            sel.retain(|id| present(id));
+        }
+        self.selection = sel;
     }
 
     /// [`Engine::target_ids`] as a set, for membership tests in a pass
@@ -523,14 +533,14 @@ impl Engine {
         match params.get("ids") {
             None | Some(Value::Null) => Ok(self.selection.clone()),
             Some(Value::Array(a)) => {
-                let present = self.top_level_ids();
+                let present = self.id_lookup(a.len());
                 let mut out = Vec::new();
                 for v in a {
                     let id = v
                         .as_u64()
                         .ok_or_else(|| EngineError::bad_params("ids must be an array of object ids"))?;
                     let id = ObjectId(id);
-                    if !present.contains(&id) {
+                    if !present(&id) {
                         return Err(EngineError::bad_params(format!("no top-level object with id {}", id.0)));
                     }
                     out.push(id);

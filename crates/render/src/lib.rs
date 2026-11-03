@@ -586,7 +586,9 @@ fn exact_outline(o: &Object) -> Option<Vec<Seg>> {
             let g = rustfig_geom::arc_from_three_points(a.points[0], a.points[1], a.points[2])?;
             Some(rustfig_geom::arc_path(&rustfig_model::arc_geom(a, g), a.pie))
         }
-        ObjectKind::Polyline(p) if p.kind == PolyKind::ArcBox => {
+        // Radius 0 is a plain box: its points, so dashes start at the same
+        // corner as before (the curve path starts at another).
+        ObjectKind::Polyline(p) if p.kind == PolyKind::ArcBox && p.radius > 0 => {
             let r = Rect::from_points(p.points.iter().copied());
             Some(rustfig_geom::round_rect_path(
                 &r,
