@@ -310,7 +310,7 @@ pub fn landing() -> String {
 <h2>Examples</h2>
 <p>Drawings made with RustFig or imported into it, to open and take apart: <a href="{REPO}/tree/main/examples">the examples folder</a>.</p>
 <div class="examples">
-<figure><a href="{REPO}/tree/main/examples/gallery"><img src="examples/science-gallery.jpg" width="640" height="530" alt="Sixteen scientific drawings: Carnot cycle, complex plane, damped oscillation, double slit, Feynman diagram, Fourier series and more" loading="lazy"></a><figcaption>Science gallery: 16 drawings with LaTeX labels</figcaption></figure>
+<figure><a href="{REPO}/tree/main/examples/gallery"><img src="examples/double-slit.jpg" width="640" height="465" alt="Young's double-slit experiment: wavefronts from two slits, the interference fringes on the screen and the intensity curve, labelled in LaTeX" loading="lazy"></a><figcaption>Young's double slit, labels typeset by LaTeX (from the science gallery)</figcaption></figure>
 <figure><a href="{REPO}/tree/main/examples/clifford-attractor"><img src="examples/clifford-attractor.jpg" width="640" height="495" alt="A Clifford attractor in rainbow colours on black" loading="lazy"></a><figcaption>Clifford attractor: 250,000 dots</figcaption></figure>
 <figure><a href="{REPO}/tree/main/examples/penrose-tiling"><img src="examples/penrose-tiling.jpg" width="640" height="489" alt="A Penrose tiling of gold and teal rhombs" loading="lazy"></a><figcaption>Penrose tiling: 7,615 rhombs</figcaption></figure>
 <figure><a href="{REPO}/tree/main/examples/ne-countries"><img src="examples/ne-countries.jpg" width="640" height="320" alt="A world map with coloured countries" loading="lazy"></a><figcaption>World map at 1:10m, imported from Natural Earth</figcaption></figure>
