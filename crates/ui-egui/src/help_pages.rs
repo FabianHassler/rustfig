@@ -110,10 +110,11 @@ pub fn show_mouse_sheet(app: &mut App, ctx: &egui::Context) {
 
 /// The "What's new" text: a few lines per release, newest first.
 pub const WHATS_NEW: &str = "\
-Command search: press Ctrl+Shift+K (Cmd+Shift+K on macOS) to find any command or menu entry by name and run it.
-F1 over a mode button, the indicator panel or an open dialog opens the matching page of the manual.
-Help > Mouse buttons lists what the left, middle and right buttons do in every mode.
-Help > What's new shows this page again.";
+LaTeX text is typeset by TeX in PDF, EPS, SVG and bitmap exports (Export > Typeset with TeX, on when TeX is installed); opening such a PDF or SVG gives the LaTeX texts back.
+Global settings and the Set units panel change only what you changed in them; the export panel keeps its language for the next start.
+Edit > User colors… keeps favorite colors for every drawing; Edit > Page setup… holds the page, Edit > Set units… the units.
+Tools > Go to mode… and Tools > Find Properties…; the library browser lists gzipped figures (.fig.gz) too.
+Command search: Ctrl+Shift+K (Cmd+Shift+K on macOS). F1 opens the manual page for what is under the pointer. Help > What's new shows this page again.";
 
 /// Whether the page is shown at start: when the version last seen is not
 /// the running one. Not on the first start (none stored): there is nothing

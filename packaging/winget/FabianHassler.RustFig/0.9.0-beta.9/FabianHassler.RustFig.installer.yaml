@@ -1,19 +1,19 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.9.0.schema.json
 PackageIdentifier: FabianHassler.RustFig
-PackageVersion: 0.9.0-beta.8
+PackageVersion: 0.9.0-beta.9
 InstallerType: zip
 NestedInstallerType: portable
 NestedInstallerFiles:
-  - RelativeFilePath: rustfig-0.9.0-beta.8-windows\rustfig.exe
+  - RelativeFilePath: rustfig-0.9.0-beta.9-windows\rustfig.exe
     PortableCommandAlias: rustfig
-  - RelativeFilePath: rustfig-0.9.0-beta.8-windows\rustfig-cli.exe
+  - RelativeFilePath: rustfig-0.9.0-beta.9-windows\rustfig-cli.exe
     PortableCommandAlias: rustfig-cli
 FileExtensions:
   - fig
 ReleaseDate: 2026-10-26
 Installers:
   - Architecture: x64
-    InstallerUrl: https://github.com/FabianHassler/rustfig/releases/download/v0.9.0-beta.8/rustfig-0.9.0-beta.8-windows.zip
+    InstallerUrl: https://github.com/FabianHassler/rustfig/releases/download/v0.9.0-beta.9/rustfig-0.9.0-beta.9-windows.zip
     InstallerSha256: 4BF5A9194E2D515535CBEE2E781C79D0F219D6E51BD2A9526FED46298B823BCE
 ManifestType: installer
 ManifestVersion: 1.9.0
