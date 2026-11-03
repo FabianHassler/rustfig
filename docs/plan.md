@@ -332,6 +332,7 @@ User decision 2026-10-20: RustFig uses fig2dev for everything fig2dev can do.
 
 ## Decisions that are the user's
 
+- CTAN (decided 2026-11-03): RustFig is on CTAN as `graphics/rustfig` at 0.9.0-beta.7 (2026-11-02); betas are not uploaded again, the next CTAN upload is 1.0 (`cargo xtask ctan v1.0.0`, then the upload form or CTAN's `submit/upload` API under the user's name). The help review (G11) also comes before 1.0.
 - Compressed figures (decided 2026-11-01): RustFig reads and saves `.fig.gz`, `.Z`, `.z`, `.bz2` and `.xz` (G10); new dependencies allowed for exactly bzip2 (`bzip2` with the pure-Rust libbz2-rs-sys backend, MIT OR Apache-2.0 / bzip2-1.0.6) and xz (`lzma-rust2` 0.22.0, Apache-2.0, switched from `lzma-rs` the same day with the user's approval; its xz feature pulls `sha2` 0.11), both pure Rust and wasm-ready.
 - fig2dev's helper programs (decided 2026-10-31): `fig2ps2tex`, `pic2tpic` and `transfig` from the C package are not ported; RustFig's fig2dev is the `fig2dev` program only. Right-to-left and complex-script text (F6) dropped the same day.
 - xfig comparison W22 (decided 2026-10-25): the canvas keeps RustFig's white page with grey around it (xfig: light grey everywhere, #20); Box scale keeps working on any object, not only boxes and compounds (#29). After the beta, the new RustFig libraries (D13) come first.
