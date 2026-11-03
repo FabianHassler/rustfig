@@ -602,6 +602,26 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     #[cfg(target_arch = "wasm32")]
     let render_running = false;
     app.canvas.pending = render_running || app.canvas.doc_key.as_ref() != Some(&key);
+    // xfig's object markers, painted under the drawing (the paper is drawn
+    // already, the drawing's raster is transparent where it has no ink): on a
+    // line with many points they would otherwise hide the line. Hollow squares on
+    // what the mode can act on
+    // (xfig's 5 pixels at 80 dpi; 7 points here, readable on today's
+    // screens); a tagged (selected) object's are filled (`toggle_*highlight`).
+    for m in &overlay.markers {
+        let p = to_screen(*m);
+        if !rect.expand(MARKER).contains(p) {
+            continue;
+        }
+        let r = Rect::from_center_size(p, vec2(MARKER, MARKER));
+        painter.rect_stroke(r, 0.0, Stroke::new(1.0_f32, tk.handle_stroke), egui::StrokeKind::Middle);
+    }
+    for m in &overlay.tagged {
+        let p = to_screen(*m);
+        if rect.expand(MARKER).contains(p) {
+            painter.rect_filled(Rect::from_center_size(p, vec2(MARKER, MARKER)), 0.0, tk.handle_stroke);
+        }
+    }
     let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
     if let (Some(tex), Some(shown)) = (&app.canvas.doc_tex, &app.canvas.doc_key) {
         // The raster where its view puts it in the current one: exact when
@@ -834,23 +854,6 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         let r = Rect::from_center_size(p, vec2(6.0, 6.0));
         painter.rect_filled(r, 0.0, tk.handle_fill);
         painter.rect_stroke(r, 0.0, Stroke::new(1.0_f32, tk.handle_stroke), egui::StrokeKind::Middle);
-    }
-    // xfig's object markers: hollow squares on what the mode can act on
-    // (xfig's 5 pixels at 80 dpi; 7 points here, readable on today's
-    // screens); a tagged (selected) object's are filled (`toggle_*highlight`).
-    for m in &overlay.markers {
-        let p = to_screen(*m);
-        if !rect.expand(MARKER).contains(p) {
-            continue;
-        }
-        let r = Rect::from_center_size(p, vec2(MARKER, MARKER));
-        painter.rect_stroke(r, 0.0, Stroke::new(1.0_f32, tk.handle_stroke), egui::StrokeKind::Middle);
-    }
-    for m in &overlay.tagged {
-        let p = to_screen(*m);
-        if rect.expand(MARKER).contains(p) {
-            painter.rect_filled(Rect::from_center_size(p, vec2(MARKER, MARKER)), 0.0, tk.handle_stroke);
-        }
     }
     // Chop: the axes in one colour, the log object under the pointer (what
     // the middle button cuts) in another.
