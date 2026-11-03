@@ -531,7 +531,8 @@ main { max-width: 1100px; margin: 0 auto; padding: 0 16px 2em; }
 .button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 section { margin-top: 2.5em; }
 .features li { margin: 0.5em 0; }
-.examples { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1em; }
+.examples { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1em; }
+@media (max-width: 600px) { .examples { grid-template-columns: 1fr; } }
 .examples figure { margin: 0; }
 .examples img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
 .examples figcaption { color: var(--muted); font-size: 0.9em; }
