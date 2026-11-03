@@ -313,7 +313,9 @@ pub fn landing() -> String {
 <figure><a href="{REPO}/tree/main/examples/gallery"><img src="examples/double-slit.jpg" width="640" height="465" alt="Young's double-slit experiment: wavefronts from two slits, the interference fringes on the screen and the intensity curve, labelled in LaTeX" loading="lazy"></a><figcaption>Young's double slit, labels typeset by LaTeX (from the science gallery)</figcaption></figure>
 <figure><a href="{REPO}/tree/main/examples/clifford-attractor"><img src="examples/clifford-attractor.jpg" width="640" height="495" alt="A Clifford attractor in rainbow colours on black" loading="lazy"></a><figcaption>Clifford attractor: 250,000 dots</figcaption></figure>
 <figure><a href="{REPO}/tree/main/examples/penrose-tiling"><img src="examples/penrose-tiling.jpg" width="640" height="489" alt="A Penrose tiling of gold and teal rhombs" loading="lazy"></a><figcaption>Penrose tiling: 7,615 rhombs</figcaption></figure>
+<figure><a href="{REPO}/tree/main/examples/apollonian-gasket"><img src="examples/apollonian-gasket.jpg" width="640" height="640" alt="An Apollonian gasket: circles inside circles, coloured by generation" loading="lazy"></a><figcaption>Apollonian gasket: 4,221 circles</figcaption></figure>
 <figure><a href="{REPO}/tree/main/examples/ne-countries"><img src="examples/ne-countries.jpg" width="640" height="320" alt="A world map with coloured countries" loading="lazy"></a><figcaption>World map at 1:10m, imported from Natural Earth</figcaption></figure>
+<figure><a href="{REPO}/tree/main/examples/greece"><img src="examples/greece.jpg" width="640" height="592" alt="A topographic map of Greece and the Aegean with relief shading" loading="lazy"></a><figcaption>Topographic map of Greece, imported from SVG</figcaption></figure>
 </div>
 </section>
 
@@ -531,10 +533,11 @@ main { max-width: 1100px; margin: 0 auto; padding: 0 16px 2em; }
 .button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 section { margin-top: 2.5em; }
 .features li { margin: 0.5em 0; }
-.examples { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1em; }
-@media (max-width: 600px) { .examples { grid-template-columns: 1fr; } }
+.examples { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1em; }
+@media (max-width: 860px) { .examples { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) { .examples { grid-template-columns: 1fr; } }
 .examples figure { margin: 0; }
-.examples img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+.examples img { width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: contain; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
 .examples figcaption { color: var(--muted); font-size: 0.9em; }
 table { border-collapse: collapse; width: 100%; display: block; overflow-x: auto; }
 th, td { border: 1px solid var(--line); padding: 0.4em 0.6em; text-align: left; vertical-align: top; }
