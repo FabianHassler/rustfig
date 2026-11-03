@@ -241,6 +241,14 @@ fn set_doc_texture(app: &mut App, ctx: &egui::Context, img: egui::ColorImage, ke
     app.canvas.doc_key = Some(key);
 }
 
+/// How far (points) the drag layer, drawn with the objects shifted by `anchor`
+/// (Fig units), slides so that they show shifted by `shift`: the view's scale,
+/// not its zoom factor (a Fig unit is `zoom / 15` points at 80 dpi).
+fn drag_offset(view: &rustfig_engine::View, shift: Point, anchor: Point) -> (f32, f32) {
+    let s = view.px_per_fig();
+    (((shift.x - anchor.x) * s) as f32, ((shift.y - anchor.y) * s) as f32)
+}
+
 fn rasterize_scene(scene: &Scene, t: Affine, w: usize, h: usize) -> egui::ColorImage {
     let (w, h) = (w.clamp(1, 16_384) as u32, h.clamp(1, 16_384) as u32);
     let opts = RasterOptions {
@@ -613,11 +621,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
             app.canvas.layer_job = None;
         }
     } else {
-        let zoom = view.zoom;
-        let rem = |anchor: Point| {
-            let (dx, dy) = ((overlay.shift.x - anchor.x) * zoom, (overlay.shift.y - anchor.y) * zoom);
-            (dx as f32, dy as f32)
-        };
+        let rem = |anchor: Point| drag_offset(&view, overlay.shift, anchor);
         // A layer rendered on a background thread: take it when it is done.
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(job) = &app.canvas.layer_job {
@@ -1246,7 +1250,31 @@ pub(crate) fn cursor_icon(kind: rustfig_engine::CursorKind) -> egui::CursorIcon 
 
 #[cfg(test)]
 mod tests {
-    use super::{describe_drawing, grid_spacing, LongPress};
+    use super::{describe_drawing, drag_offset, grid_spacing, LongPress};
+    use rustfig_geom::Point;
+
+    /// The dragged objects slide with the pointer: a shift of d Fig units is
+    /// d * zoom / 15 points on screen, as the view draws everything else
+    /// (the layer moved by d * zoom, 15 times too far, before 2026-11-03).
+    #[test]
+    fn drag_layer_follows_the_pointer() {
+        for zoom in [0.5, 1.0, 2.0, 4.0] {
+            let view = rustfig_engine::View {
+                zoom,
+                ..rustfig_engine::View::default()
+            };
+            let (anchor, shift) = (Point::new(300.0, 150.0), Point::new(1200.0, 600.0));
+            let (dx, dy) = drag_offset(&view, shift, anchor);
+            let (a, b) = (
+                view.to_screen(Point::new(0.0, 0.0)),
+                view.to_screen(Point::new(shift.x - anchor.x, shift.y - anchor.y)),
+            );
+            assert!(
+                (f64::from(dx) - (b.x - a.x)).abs() < 1e-3 && (f64::from(dy) - (b.y - a.y)).abs() < 1e-3,
+                "zoom {zoom}: {dx}, {dy}"
+            );
+        }
+    }
 
     #[test]
     fn canvas_description_names_the_objects_and_is_capped() {
