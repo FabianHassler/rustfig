@@ -306,6 +306,17 @@ pub fn landing() -> String {
 </ul>
 </section>
 
+<section id="examples">
+<h2>Examples</h2>
+<p>Drawings made with RustFig or imported into it, to open and take apart: <a href="{REPO}/tree/main/examples">the examples folder</a>.</p>
+<div class="examples">
+<figure><a href="{REPO}/tree/main/examples/gallery"><img src="examples/science-gallery.jpg" width="640" height="530" alt="Sixteen scientific drawings: Carnot cycle, complex plane, damped oscillation, double slit, Feynman diagram, Fourier series and more" loading="lazy"></a><figcaption>Science gallery: 16 drawings with LaTeX labels</figcaption></figure>
+<figure><a href="{REPO}/tree/main/examples/clifford-attractor"><img src="examples/clifford-attractor.jpg" width="640" height="495" alt="A Clifford attractor in rainbow colours on black" loading="lazy"></a><figcaption>Clifford attractor: 250,000 dots</figcaption></figure>
+<figure><a href="{REPO}/tree/main/examples/penrose-tiling"><img src="examples/penrose-tiling.jpg" width="640" height="489" alt="A Penrose tiling of gold and teal rhombs" loading="lazy"></a><figcaption>Penrose tiling: 7,615 rhombs</figcaption></figure>
+<figure><a href="{REPO}/tree/main/examples/ne-countries"><img src="examples/ne-countries.jpg" width="640" height="320" alt="A world map with coloured countries" loading="lazy"></a><figcaption>World map at 1:10m, imported from Natural Earth</figcaption></figure>
+</div>
+</section>
+
 <section id="download">
 <h2>Download and install</h2>
 <table>
@@ -520,6 +531,10 @@ main { max-width: 1100px; margin: 0 auto; padding: 0 16px 2em; }
 .button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 section { margin-top: 2.5em; }
 .features li { margin: 0.5em 0; }
+.examples { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1em; }
+.examples figure { margin: 0; }
+.examples img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+.examples figcaption { color: var(--muted); font-size: 0.9em; }
 table { border-collapse: collapse; width: 100%; display: block; overflow-x: auto; }
 th, td { border: 1px solid var(--line); padding: 0.4em 0.6em; text-align: left; vertical-align: top; }
 code { background: var(--box); padding: 0.1em 0.3em; border-radius: 4px; font-size: 0.92em; overflow-wrap: anywhere; }
@@ -608,6 +623,7 @@ pub fn build(root: &Path, out: &Path, app: Option<&Path>) -> Result<usize, Strin
         out.join("rustfig-window.png"),
     )
     .map_err(|e| format!("docs/images/rustfig-window.png: {e}"))?;
+    copy_dir(&root.join("docs/images/examples"), &out.join("examples"))?;
     let mut urls = vec![BASE.to_string(), format!("{BASE}compare.html"), format!("{BASE}app/")];
     for p in &pages {
         write(&out.join(format!("manual/{}.html", p.stem)), manual_html(p, &toc))?;

@@ -20,3 +20,13 @@
 - Press Escape or the right button to cancel what you are doing in most modes. Escape again clears the selection, and once more leaves the mode. While drawing a line, Backspace removes the last point.
 - Coordinates are in 1/1200 inch (Fig units); you work in inches or centimetres as the units box says.
 - The figure is never lost when the program stops unexpectedly: see [Files](files.md) (recovery).
+
+## Example drawings
+
+RustFig's repository has a folder of example drawings to open and take apart: <https://github.com/FabianHassler/rustfig/tree/main/examples>.
+
+- **Science gallery** (`examples/gallery/`): sixteen drawings from mathematics and physics (Carnot cycle, double slit, Feynman diagram, RLC circuit, Minkowski diagram and more), with all text in LaTeX. They show how to set up a figure whose labels LaTeX typesets: turn on View > Typeset LaTeX Text to see them typeset on the canvas, and export with File > Export, language "Combined PDF/LaTeX (both parts)".
+- **Generated drawings**: a Clifford attractor (250,000 dots), an Apollonian gasket, a Penrose tiling and a Gosper curve.
+- **Maps and pictures** imported from SVG: world maps, a topographic map of Greece, landscapes.
+
+Open them with File > Open: the compressed `.fig.gz` files open directly.

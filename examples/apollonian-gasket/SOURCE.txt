@@ -1,0 +1,5 @@
+Source
+
+Original work for RustFig, generated from mathematics by `cargo xtask examples` (xtask/src/examples/math.rs; MIT OR Apache-2.0, like RustFig).
+
+Apollonian gasket from Descartes' circle theorem, 4,221 circles; drawn at twice the size with the file's magnification at 50 %, so the outlines export at 1/320 inch.

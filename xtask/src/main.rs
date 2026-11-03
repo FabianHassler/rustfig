@@ -224,6 +224,25 @@ fn assets() -> Result<(), String> {
             ));
             continue;
         }
+        // The example drawings: every file in `examples/<name>/` (the figure, its
+        // previews and exports) is covered by the row of its folder.
+        if let Some(top) = rel
+            .strip_prefix("examples/")
+            .and_then(|r| r.split_once('/'))
+            .map(|(t, _)| t)
+        {
+            if ext == "fig" || ext == "gz" || ext == "pdf" || ASSET_EXTS.contains(&ext.as_str()) {
+                count += 1;
+                let key = format!("`examples/{top}/`");
+                let listed = table
+                    .lines()
+                    .any(|l| l.trim_start().starts_with('|') && l.contains(&key));
+                if !listed {
+                    errors.push(format!("{rel}: no row for examples/{top}/ in ASSETS.md"));
+                }
+            }
+            continue;
+        }
         // xfig's figure libraries (D6): a `.fig` file under `libraries/` is an asset
         // covered by the row of its library folder, `libraries/<Name>/`.
         if ext == "fig" {

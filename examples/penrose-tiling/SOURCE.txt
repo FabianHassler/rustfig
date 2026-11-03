@@ -1,0 +1,5 @@
+Source
+
+Original work for RustFig, generated from mathematics by `cargo xtask examples` (xtask/src/examples/math.rs; MIT OR Apache-2.0, like RustFig).
+
+Penrose P3 rhomb tiling by Robinson-triangle subdivision, 7 deflations.

@@ -1,0 +1,9 @@
+Source
+
+Original: ne_10m_coastline (GeoJSON)
+From: https://github.com/nvkelso/natural-earth-vector
+Author: Natural Earth
+Licence: Public domain (https://www.naturalearthdata.com/about/terms-of-use/)
+Retrieved: 2026-11-01
+
+RustFig imported the SVG with File › Open (the Fig file is RustFig's conversion; gradients become one colour, transparency is drawn solid, as Fig 3.2 has neither). Converted from GeoJSON to SVG with an equirectangular projection, then imported.

@@ -1,0 +1,9 @@
+Source
+
+Original: Greece large topographic basemap.svg
+From: https://commons.wikimedia.org/wiki/File:Greece_large_topographic_basemap.svg
+Author: Future Perfect at Sunrise
+Licence: Public domain
+Retrieved: 2026-11-01
+
+RustFig imported the SVG with File › Open (the Fig file is RustFig's conversion; gradients become one colour, transparency is drawn solid, as Fig 3.2 has neither). The relief picture greece-1.png is the raster embedded in the SVG.

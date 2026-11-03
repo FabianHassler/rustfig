@@ -1,0 +1,9 @@
+Source
+
+Original: Vector Illustration of a Mountain Landscape with Pine Trees.svg
+From: https://commons.wikimedia.org/wiki/File:Vector_Illustration_of_a_Mountain_Landscape_with_Pine_Trees.svg
+Author: Missaruthra
+Licence: CC0 1.0
+Retrieved: 2026-11-01
+
+RustFig imported the SVG with File › Open (the Fig file is RustFig's conversion; gradients become one colour, transparency is drawn solid, as Fig 3.2 has neither). Provenance not verified beyond the Commons page ("own work").

@@ -1,0 +1,9 @@
+Source
+
+Original: 8-cube t2467 B7.svg
+From: https://commons.wikimedia.org/wiki/File:8-cube_t2467_B7.svg
+Author: Tomruen
+Licence: Public domain
+Retrieved: 2026-11-01
+
+RustFig imported the SVG with File › Open (the Fig file is RustFig's conversion; gradients become one colour, transparency is drawn solid, as Fig 3.2 has neither).

@@ -1,0 +1,9 @@
+Source
+
+Original: Cold-snowy-landscape.svg
+From: https://commons.wikimedia.org/wiki/File:Cold-snowy-landscape.svg
+Author: publicdomainvectors.org (uploaded by Bmaric)
+Licence: CC0 1.0
+Retrieved: 2026-11-01
+
+RustFig imported the SVG with File › Open (the Fig file is RustFig's conversion; gradients become one colour, transparency is drawn solid, as Fig 3.2 has neither). The CC0 statement is from the Commons page; the original page on publicdomainvectors.org was not checked.

@@ -1,0 +1,9 @@
+Source
+
+Original: Headpiece with snowy landscape, by Bernhard Wenig.svg
+From: https://commons.wikimedia.org/wiki/File:Headpiece_with_snowy_landscape,_by_Bernhard_Wenig.svg
+Author: Bernhard Wenig (1897)
+Licence: Public domain
+Retrieved: 2026-11-01
+
+RustFig imported the SVG with File › Open (the Fig file is RustFig's conversion; gradients become one colour, transparency is drawn solid, as Fig 3.2 has neither).

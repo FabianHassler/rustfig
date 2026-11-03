@@ -1,0 +1,9 @@
+Source
+
+Original: BlankMap-World.svg
+From: https://commons.wikimedia.org/wiki/File:BlankMap-World.svg
+Author: Canuckguy and others (from the CIA World Factbook map)
+Licence: Public domain
+Retrieved: 2026-11-01
+
+RustFig imported the SVG with File › Open (the Fig file is RustFig's conversion; gradients become one colour, transparency is drawn solid, as Fig 3.2 has neither).

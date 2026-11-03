@@ -1,0 +1,5 @@
+Source
+
+Original work for RustFig, generated from mathematics by `cargo xtask examples` (xtask/src/examples/math.rs; MIT OR Apache-2.0, like RustFig).
+
+Gosper flowsnake (L-system), order 5: one continuous curve of 16,808 points in 142 coloured pieces.
