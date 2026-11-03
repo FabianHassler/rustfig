@@ -14,6 +14,6 @@ ReleaseDate: 2026-10-26
 Installers:
   - Architecture: x64
     InstallerUrl: https://github.com/FabianHassler/rustfig/releases/download/v0.9.0-beta.8/rustfig-0.9.0-beta.8-windows.zip
-    InstallerSha256: FA674AA4C37899F2BE3662FAAE53DBF761AAD1D862C5F64F9A204717EDEE4075
+    InstallerSha256: 4BF5A9194E2D515535CBEE2E781C79D0F219D6E51BD2A9526FED46298B823BCE
 ManifestType: installer
 ManifestVersion: 1.9.0
