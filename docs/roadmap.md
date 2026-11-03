@@ -1,6 +1,6 @@
 # Milestones
 
-2026-11-03 (v0.9.0-beta.8 prepared: speed work P6–P8, example drawings EX1; help review G11 moved to before 1.0). 2026-10-23 (D10, W10-13, W10-14 done); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (S4 done; D7 Angle Geom; D8 linked move landed; D14 smart links extended). Earlier: 2026-10-18. Current focus: **M4 (exports)**: phase W, phase A, B1, B2, B3, B6, B10, B12 and G1 done; every fig2dev language is ported except `sld` (B9); next the audit's hardening passes (B11, octal-escape text bytes first) page layout and previews (B4a/B4b) done 2026-10-18. Task-level plan: [plan.md](plan.md).
+2026-11-03 (F9 LaTeX typeset in exports; settings applied only where changed; American spelling). 2026-11-03 (v0.9.0-beta.8 prepared: speed work P6–P8, example drawings EX1; help review G11 moved to before 1.0). 2026-10-23 (D10, W10-13, W10-14 done); 2026-10-22 (W10-28, W10-2: bundled manual); 2026-10-22 (S4 done; D7 Angle Geom; D8 linked move landed; D14 smart links extended). Earlier: 2026-10-18. Current focus: **M4 (exports)**: phase W, phase A, B1, B2, B3, B6, B10, B12 and G1 done; every fig2dev language is ported except `sld` (B9); next the audit's hardening passes (B11, octal-escape text bytes first) page layout and previews (B4a/B4b) done 2026-10-18. Task-level plan: [plan.md](plan.md).
 
 | Milestone | Content | State |
 |-----------|---------|-------|
@@ -18,6 +18,7 @@
 
 | Date | Note |
 |------|------|
+| 2026-11-03 | F9, W10-25/W10-24/W10-4 fixes, G7 import warnings, W10-51. |
 | 2026-10-23 | D10 (mode options), W10-13 (background export) and W10-14 (saved versions) done. |
 | 2026-10-22 | W10-28, W10-2 done: bundled searchable manual (27 topics) and the Help menu's Manual entry; every task now adds its manual topic. |
 | 2026-10-22 | D5 done: measure modes (angle, length, area; `e_measure.c`). |
