@@ -37,12 +37,20 @@ impl DocKey {
     fn same_drawing(&self, o: &DocKey) -> bool {
         self.revision == o.revision && self.hide == o.hide
     }
+
+    /// Same view, maybe another drawing or other objects hidden: the
+    /// raster can be patched where what it shows changed.
+    fn same_view(&self, o: &DocKey) -> bool {
+        (self.zoom, self.ox, self.oy, self.w, self.h) == (o.zoom, o.ox, o.oy, o.w, o.h)
+    }
 }
 
 /// A document raster being made on a background thread (A7).
 #[cfg(not(target_arch = "wasm32"))]
 struct Job {
     key: DocKey,
+    /// The drawing being rendered.
+    doc: Document,
     /// The raster and how long it took (ms).
     rx: std::sync::mpsc::Receiver<(egui::ColorImage, f64)>,
 }
@@ -107,6 +115,11 @@ pub struct CanvasState {
     /// What `doc_tex` shows (it may lag behind the view while a new raster
     /// is made; it is then drawn moved and scaled to the current view).
     doc_key: Option<DocKey>,
+    /// The drawing `doc_tex` shows, without the hidden objects (its objects
+    /// shared with the engine's, so
+    /// unchanged ones compare by pointer): what an edit changed is redrawn
+    /// alone (gap 36).
+    drawn: Option<Document>,
     /// The scene of the current drawing, kept across pans and zooms.
     scene: Option<(DocKey, std::sync::Arc<Scene>)>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -214,31 +227,186 @@ fn build_scene(doc: &Document, opts: &SceneOptions, hide: &[ObjectId]) -> Scene 
     if hide.is_empty() {
         rustfig_render::build_scene(doc, opts)
     } else {
-        let mut d = Document {
-            settings: doc.settings.clone(),
-            comments: Vec::new(),
-            export_on_save: doc.export_on_save.clone(),
-            colors: doc.colors.clone(),
-            objects: Vec::with_capacity(doc.objects.len()),
-            next_id: 0,
-            open: doc.open.clone(),
-        };
-        d.objects = doc.objects.iter().filter(|o| !hide.contains(&o.id)).cloned().collect();
-        rustfig_render::build_scene(&d, opts)
+        rustfig_render::build_scene(&shown_doc(doc, hide), opts)
     }
+}
+
+/// `doc` minus the objects `hide` names (the dragged ones), as the canvas
+/// draws it; its objects stay shared with `doc`.
+fn shown_doc(doc: &Document, hide: &[ObjectId]) -> Document {
+    if hide.is_empty() {
+        return doc.clone();
+    }
+    let hide: std::collections::HashSet<ObjectId> = hide.iter().copied().collect();
+    Document {
+        settings: doc.settings.clone(),
+        comments: Vec::new(),
+        export_on_save: doc.export_on_save.clone(),
+        colors: doc.colors.clone(),
+        objects: doc.objects.iter().filter(|o| !hide.contains(&o.id)).cloned().collect(),
+        next_id: 0,
+        open: doc.open.clone(),
+    }
+}
+
+/// Free `v` on another thread (native): the old scene of a very large
+/// drawing takes a quarter of an edit's frame to free (gap 36).
+fn drop_later<T: Send + 'static>(v: T) {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        // Without a thread it is freed here, as before.
+        let _ = std::thread::Builder::new()
+            .name("rustfig-free".into())
+            .spawn(move || drop(v));
+    }
+    #[cfg(target_arch = "wasm32")]
+    drop(v);
 }
 
 /// A render that took this long or more goes to a background thread next
 /// time (native), so pans and zooms never wait for it.
 const SYNC_RENDER_MS: f64 = 20.0;
 
-/// Show `img`, the raster for `key`.
-fn set_doc_texture(app: &mut App, ctx: &egui::Context, img: egui::ColorImage, key: DocKey) {
+/// Show `img`, the raster of `doc` for `key`.
+fn set_doc_texture(app: &mut App, ctx: &egui::Context, img: egui::ColorImage, key: DocKey, doc: Document) {
     match &mut app.canvas.doc_tex {
         Some(tex) => tex.set(img, TextureOptions::NEAREST),
         None => app.canvas.doc_tex = Some(ctx.load_texture("doc", img, TextureOptions::NEAREST)),
     }
     app.canvas.doc_key = Some(key);
+    app.canvas.drawn = Some(doc);
+}
+
+/// Most changed objects redrawn as a region; more redraw the whole canvas.
+const MAX_PATCH_OBJECTS: usize = 5_000;
+
+/// The pixel region (x0, y0, x1, y1; empty when nothing visible changed) of
+/// a `w` x `h` raster drawn with `t` that differs between the drawings `old`
+/// and `new`, or `None` when the whole raster must be drawn again: the
+/// drawing's settings or colors changed, the order of the unchanged objects
+/// moved, nothing changed that objects show (the TeX texts or the hidden
+/// depths), or the changes cover much of the canvas. Objects compare by
+/// pointer: an edit or an undo replaces the objects it changes and shares
+/// the others.
+fn changed_region(
+    old: &Document,
+    new: &Document,
+    opts: &SceneOptions,
+    t: Affine,
+    w: usize,
+    h: usize,
+) -> Option<(usize, usize, usize, usize)> {
+    use std::collections::HashMap;
+    use std::sync::Arc;
+    if old.settings != new.settings || old.colors != new.colors {
+        return None;
+    }
+    let mut before: HashMap<ObjectId, &Arc<rustfig_model::Object>> = old.objects.iter().map(|o| (o.id, o)).collect();
+    let (mut gone, mut came) = (Vec::new(), Vec::new());
+    let mut kept_new = Vec::new();
+    for o in &new.objects {
+        match before.remove(&o.id) {
+            Some(b) if Arc::ptr_eq(b, o) => kept_new.push(o.id),
+            Some(b) => {
+                gone.push(Arc::clone(b));
+                came.push(Arc::clone(o));
+            }
+            None => came.push(Arc::clone(o)),
+        }
+        if gone.len() + came.len() > MAX_PATCH_OBJECTS {
+            return None;
+        }
+    }
+    gone.extend(before.into_values().cloned());
+    if (gone.is_empty() && came.is_empty()) || gone.len() + came.len() > MAX_PATCH_OBJECTS {
+        return None;
+    }
+    // Objects of equal depth draw in file order: unchanged ones must keep it.
+    let kept: std::collections::HashSet<ObjectId> = kept_new.iter().copied().collect();
+    if !old
+        .objects
+        .iter()
+        .map(|o| o.id)
+        .filter(|i| kept.contains(i))
+        .eq(kept_new.iter().copied())
+    {
+        return None;
+    }
+    let bbox = |doc: &Document, objects: Vec<Arc<rustfig_model::Object>>| {
+        let d = Document {
+            settings: doc.settings.clone(),
+            comments: Vec::new(),
+            export_on_save: doc.export_on_save.clone(),
+            colors: doc.colors.clone(),
+            objects,
+            next_id: 0,
+            open: Vec::new(),
+        };
+        rustfig_render::build_scene(&d, opts).bbox()
+    };
+    let fig = bbox(old, gone).union(&bbox(new, came));
+    if fig.is_empty() {
+        return Some((0, 0, 0, 0));
+    }
+    let corners = [
+        t.apply(Point::new(fig.min.x, fig.min.y)),
+        t.apply(Point::new(fig.max.x, fig.min.y)),
+        t.apply(Point::new(fig.min.x, fig.max.y)),
+        t.apply(Point::new(fig.max.x, fig.max.y)),
+    ];
+    // A pixel more for antialiasing and the thinnest lines (1 px on screen).
+    let x0 = corners.iter().map(|p| p.x).fold(f64::INFINITY, f64::min) - 2.0;
+    let x1 = corners.iter().map(|p| p.x).fold(f64::NEG_INFINITY, f64::max) + 2.0;
+    let y0 = corners.iter().map(|p| p.y).fold(f64::INFINITY, f64::min) - 2.0;
+    let y1 = corners.iter().map(|p| p.y).fold(f64::NEG_INFINITY, f64::max) + 2.0;
+    if ![x0, x1, y0, y1].iter().all(|v| v.is_finite()) {
+        return None;
+    }
+    let clip = |v: f64, n: usize| v.floor().clamp(0.0, n as f64) as usize;
+    let (x0, x1, y0, y1) = (clip(x0, w), clip(x1.ceil(), w), clip(y0, h), clip(y1.ceil(), h));
+    if x1 <= x0 || y1 <= y0 {
+        return Some((0, 0, 0, 0));
+    }
+    // A large change costs about as much as drawing everything.
+    if (x1 - x0) * (y1 - y0) * 2 > w * h {
+        return None;
+    }
+    Some((x0, y0, x1, y1))
+}
+
+/// Rows and columns drawn around a patched region and thrown away: the
+/// rasterizer clips at a pixmap's edge, which changes the antialiasing next
+/// to it (as [`rustfig_render::rasterize_banded`]'s bands).
+const PATCH_PAD: usize = 8;
+
+/// The pixels (x0, y0)-(x1, y1) of `scene` drawn with `t` on a `w` x `h`
+/// raster, as the whole raster has them.
+fn rasterize_region(
+    scene: &Scene,
+    t: Affine,
+    (x0, y0, x1, y1): (usize, usize, usize, usize),
+    w: usize,
+    h: usize,
+) -> egui::ColorImage {
+    let (ax, ay) = (x0.saturating_sub(PATCH_PAD), y0.saturating_sub(PATCH_PAD));
+    let (bx, by) = ((x1 + PATCH_PAD).min(w), (y1 + PATCH_PAD).min(h));
+    let big = rasterize_scene(
+        scene,
+        t.then(&Affine::translate(-(ax as f64), -(ay as f64))),
+        bx - ax,
+        by - ay,
+    );
+    let [bw, _] = big.size;
+    let (rw, rh) = (x1 - x0, y1 - y0);
+    let mut px = Vec::with_capacity(rw * rh);
+    for y in (y0 - ay)..(y0 - ay + rh) {
+        let start = y * bw + (x0 - ax);
+        px.extend_from_slice(big.pixels.get(start..start + rw).unwrap_or_default());
+    }
+    if px.len() != rw * rh {
+        px.resize(rw * rh, Color32::TRANSPARENT);
+    }
+    egui::ColorImage::new([rw, rh], px)
 }
 
 /// The drag layer's margin on each side (pixels) for a canvas side of `n`:
@@ -542,7 +710,8 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         Some((k, sc)) if k.same_drawing(&key) => std::sync::Arc::clone(sc),
         _ => {
             let sc = std::sync::Arc::new(build_scene(app.engine.doc(), &scene_opts, &overlay.hide));
-            app.canvas.scene = Some((key.clone(), std::sync::Arc::clone(&sc)));
+            let old = app.canvas.scene.replace((key.clone(), std::sync::Arc::clone(&sc)));
+            drop_later(old);
             sc
         }
     };
@@ -552,10 +721,11 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         match job.rx.try_recv() {
             Ok((img, ms)) => {
                 let k = job.key.clone();
+                let doc = job.doc.clone();
                 app.canvas.job = None;
                 app.canvas.render_ms = ms;
                 if k.same_drawing(&key) {
-                    set_doc_texture(app, ui.ctx(), img, k);
+                    set_doc_texture(app, ui.ctx(), img, k, doc);
                 }
             }
             Err(std::sync::mpsc::TryRecvError::Disconnected) => app.canvas.job = None,
@@ -567,15 +737,38 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         let busy = app.canvas.job.is_some();
         #[cfg(target_arch = "wasm32")]
         let busy = false;
+        // An edit in the same view: redraw only where the drawing changed
+        // (gap 36: undo on 190,000 objects redrew the whole canvas).
+        let region = match (&app.canvas.doc_key, &app.canvas.drawn, &app.canvas.doc_tex) {
+            (Some(k), Some(old), Some(_)) if !busy && k.same_view(&key) => {
+                let new = shown_doc(app.engine.doc(), &key.hide);
+                changed_region(old, &new, &scene_opts, t, w, h).map(|r| (r, new))
+            }
+            _ => None,
+        };
+        let patched = region.is_some();
+        if let Some((region, new)) = region {
+            if region.2 > region.0 && region.3 > region.1 {
+                let img = rasterize_region(&scene, t, region, w, h);
+                if let Some(tex) = &mut app.canvas.doc_tex {
+                    tex.set_partial([region.0, region.1], img, TextureOptions::NEAREST);
+                }
+            }
+            app.canvas.doc_key = Some(key.clone());
+            drop_later(app.canvas.drawn.replace(new));
+        }
         // Slow drawings render in the background (native); while a render
         // runs, the next starts when it is done.
         let background =
             cfg!(not(target_arch = "wasm32")) && app.canvas.render_ms >= SYNC_RENDER_MS && app.canvas.doc_tex.is_some();
-        if background {
+        if patched {
+            // Patched above.
+        } else if background {
             #[cfg(not(target_arch = "wasm32"))]
             if !busy {
                 let (tx, rx) = std::sync::mpsc::channel();
                 let (sc, ctx, k) = (std::sync::Arc::clone(&scene), ui.ctx().clone(), key.clone());
+                let doc = shown_doc(app.engine.doc(), &key.hide);
                 let spawned = std::thread::Builder::new()
                     .name("rustfig-render".into())
                     .spawn(move || {
@@ -587,10 +780,10 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
                         ctx.request_repaint();
                     });
                 match spawned {
-                    Ok(_) => app.canvas.job = Some(Job { key: k, rx }),
+                    Ok(_) => app.canvas.job = Some(Job { key: k, doc, rx }),
                     Err(_) => {
                         let img = rasterize_scene(&scene, t, w, h);
-                        set_doc_texture(app, ui.ctx(), img, key.clone());
+                        set_doc_texture(app, ui.ctx(), img, key.clone(), shown_doc(app.engine.doc(), &key.hide));
                     }
                 }
             }
@@ -600,7 +793,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
             let start = web_time_now();
             let img = rasterize_scene(&scene, t, w, h);
             app.canvas.render_ms = web_time_now() - start;
-            set_doc_texture(app, ui.ctx(), img, key.clone());
+            set_doc_texture(app, ui.ctx(), img, key.clone(), shown_doc(app.engine.doc(), &key.hide));
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
@@ -1262,6 +1455,70 @@ pub(crate) fn cursor_icon(kind: rustfig_engine::CursorKind) -> egui::CursorIcon 
 #[cfg(test)]
 mod tests {
     use super::{describe_drawing, drag_offset, grid_spacing, layer_margin, LongPress};
+
+    /// An edit redraws only the region it changed (gap 36), and the patched
+    /// raster is the raster drawn whole; changes it cannot place redraw all.
+    #[test]
+    fn a_patched_raster_equals_the_whole_one() {
+        use super::{changed_region, rasterize_region, rasterize_scene};
+        use rustfig_engine::Engine;
+        use rustfig_render::SceneOptions;
+        use serde_json::json;
+        let mut e = Engine::new();
+        for i in 0..40 {
+            let (x, y) = (300 + (i % 8) * 700, 300 + (i / 8) * 700);
+            e.execute(
+                "shape.circle",
+                &json!({"cx": x, "cy": y, "r": 400, "area_fill": 20, "fill_color": i % 8}),
+            )
+            .unwrap();
+        }
+        let before = e.doc().clone();
+        let id = e.doc().objects.get(17).unwrap().id.0;
+        e.execute("transform.move", &json!({"ids": [id], "dx": 150, "dy": 90}))
+            .unwrap();
+        let after = e.doc().clone();
+        let opts = SceneOptions {
+            screen: true,
+            ..Default::default()
+        };
+        let (w, h) = (640, 480);
+        let t = rustfig_geom::Affine::scale(0.1, 0.1);
+        let region = changed_region(&before, &after, &opts, t, w, h).expect("one object moved");
+        assert!(region.2 > region.0 && (region.2 - region.0) < w / 2, "{region:?}");
+        let scene = rustfig_render::build_scene(&after, &opts);
+        let mut patched = rasterize_scene(&rustfig_render::build_scene(&before, &opts), t, w, h);
+        let part = rasterize_region(&scene, t, region, w, h);
+        for y in 0..part.size[1] {
+            for x in 0..part.size[0] {
+                patched.pixels[(region.1 + y) * w + region.0 + x] = part.pixels[y * part.size[0] + x];
+            }
+        }
+        let whole = rasterize_scene(&scene, t, w, h);
+        let worst = patched
+            .pixels
+            .iter()
+            .zip(&whole.pixels)
+            .map(|(a, b)| {
+                a.to_array()
+                    .iter()
+                    .zip(b.to_array())
+                    .map(|(p, q)| p.abs_diff(q))
+                    .max()
+                    .unwrap_or(0)
+            })
+            .max()
+            .unwrap();
+        assert!(worst <= 1, "patched raster differs by {worst}");
+        // Nothing changed, or the colors: the whole raster.
+        assert_eq!(changed_region(&after, &after, &opts, t, w, h), None);
+        let mut recolored = after.clone();
+        recolored.colors.push(rustfig_model::UserColor {
+            number: 32,
+            rgb: rustfig_model::Rgb { r: 1, g: 2, b: 3 },
+        });
+        assert_eq!(changed_region(&after, &recolored, &opts, t, w, h), None);
+    }
 
     /// The drag layer (canvas plus a margin each side) never exceeds the GPU's
     /// largest texture: egui aborts on a larger one (2048 and 4096 are common).
