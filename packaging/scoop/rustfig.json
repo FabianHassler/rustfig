@@ -6,7 +6,7 @@
     "architecture": {
         "64bit": {
             "url": "https://github.com/FabianHassler/rustfig/releases/download/v0.9.0-beta.9/rustfig-0.9.0-beta.9-windows.zip",
-            "hash": "4bf5a9194e2d515535cbee2e781c79d0f219d6e51bd2a9526fed46298b823bce",
+            "hash": "0ef5e950d7e3615c7c3ab3d1a5ad028387e7d1e5576b5512f8f9978971794f48",
             "extract_dir": "rustfig-0.9.0-beta.9-windows"
         }
     },
