@@ -356,3 +356,40 @@ fn plot_labels_and_numbers_are_special_texts_the_typesetter_is_asked_for() {
     assert_eq!(rustfig_engine::plot::latex_number("2e6"), "$2\\times10^{6}$");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// With a real TeX: a figure's texts are typeset in one run, one page each;
+/// a text with an error fails alone. `cargo test -p rustfig-engine --test
+/// latex_preview -- --ignored`.
+#[test]
+#[ignore = "needs pdflatex or lualatex"]
+fn real_tex_typesets_many_texts_in_one_run_and_an_error_alone() {
+    let mut data = String::from("#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n");
+    for i in 0..24 {
+        let text = if i == 7 {
+            "$\\\\undefinedmacro$".to_string()
+        } else {
+            format!("$x_{{{i}}}^2$")
+        };
+        data.push_str(&format!(
+            "4 0 0 50 -1 0 12 0.0000 2 135 450 300 {} {text}\\001\n",
+            300 + i * 300
+        ));
+    }
+    let mut e = Engine::new();
+    e.execute("file.open_data", &json!({"data": data})).unwrap();
+    assert!(e.latex.active(), "no TeX found");
+    let start = std::time::Instant::now();
+    let _ = scene_of(&e);
+    for _ in 0..1500 {
+        if e.latex.pending() == 0 {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    eprintln!("24 texts typeset in {:.0} ms", start.elapsed().as_secs_f64() * 1000.0);
+    let msgs = e.latex.take_messages();
+    assert_eq!(msgs.len(), 1, "{msgs:?}");
+    assert!(msgs[0].contains("undefinedmacro"), "{msgs:?}");
+    let (_, special, pictures) = count(&scene_of(&e));
+    assert_eq!((special, pictures), (1, 23));
+}

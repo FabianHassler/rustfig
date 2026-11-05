@@ -4,7 +4,10 @@
 //! answers `None` for a text until a background job has run
 //! `pdflatex`/`lualatex` on it and kept the PDF as a vector picture (the rasterizer renders it at the size shown, so it is sharp at every zoom), so the raw
 //! source shows meanwhile (and when TeX is missing, off, or failed). Results
-//! are cached per text, font, size and color. Nothing here touches the
+//! are cached per text, font, size and color. The texts waiting are typeset
+//! together, one page each, in one TeX run (a figure's 40 labels cost one
+//! start of TeX, not 40); when that run fails, each is run alone so an error
+//! stays with its text. Nothing here touches the
 //! drawing or the exports. Native only: on wasm no job ever starts.
 
 use rustfig_render::{Typeset, TypesetRequest, Typesetter};
@@ -23,6 +26,8 @@ pub const MAX_PREAMBLE_BYTES: usize = 8000;
 pub const MAX_CACHE: usize = 512;
 /// Jobs waiting or running at once; further texts wait for the next frame.
 pub const MAX_PENDING: usize = 64;
+/// Most texts typeset in one TeX run.
+pub const MAX_BATCH: usize = 64;
 /// Largest PDF read back, in bytes.
 pub const MAX_PDF_BYTES: u64 = 8 << 20;
 
@@ -68,6 +73,10 @@ struct Cache {
     map: HashMap<Key, Entry>,
     order: VecDeque<Key>,
     pending: usize,
+    /// Texts waiting for the worker, in the order asked.
+    queue: Vec<Key>,
+    /// A worker thread is typesetting the queue.
+    worker: bool,
     /// Errors not yet shown in the message panel.
     messages: Vec<String>,
 }
@@ -136,6 +145,7 @@ impl LatexPreview {
             c.map.clear();
             c.order.clear();
             c.messages.clear();
+            c.queue.clear();
             c.pending = 0;
         }
         self.inner.generation.fetch_add(1, Ordering::Relaxed);
@@ -228,18 +238,28 @@ impl LatexPreview {
         None
     }
 
+    /// Queue `key`; start the worker unless it runs.
     #[cfg(not(target_arch = "wasm32"))]
     fn spawn(&self, key: Key) {
+        {
+            let mut c = lock(&self.inner.cache);
+            c.queue.push(key);
+            if std::mem::replace(&mut c.worker, true) {
+                return;
+            }
+        }
         let me = self.clone();
         let spawned = std::thread::Builder::new()
             .name("latex-preview".into())
-            .spawn(move || me.job(key));
+            .spawn(move || me.work());
         if spawned.is_err() {
             // Cannot start a thread: forget the pending entries so a later
             // frame tries again.
             let mut c = lock(&self.inner.cache);
             c.map.retain(|_, e| !matches!(e, Entry::Pending));
+            c.queue.clear();
             c.pending = 0;
+            c.worker = false;
         }
     }
 
@@ -248,24 +268,47 @@ impl LatexPreview {
         self.finish(key, Err("TeX does not run in the browser".to_string()));
     }
 
+    /// The worker: typeset what is queued, one TeX run per batch, until
+    /// the queue is empty.
     #[cfg(not(target_arch = "wasm32"))]
-    fn job(&self, key: Key) {
-        let _one_at_a_time = lock(&self.inner.gate);
-        let settings = self.settings();
-        let program = self.program();
-        // Dropped from the cache by a settings change while waiting?
-        if !matches!(lock(&self.inner.cache).map.get(&key), Some(Entry::Pending)) {
-            return;
+    fn work(&self) {
+        loop {
+            let batch: Vec<Key> = {
+                let mut c = lock(&self.inner.cache);
+                let take = c.queue.len().min(MAX_BATCH);
+                let queued: Vec<Key> = c.queue.drain(..take).collect();
+                // Dropped from the cache by a settings change while waiting?
+                let keys: Vec<Key> = queued
+                    .into_iter()
+                    .filter(|k| matches!(c.map.get(k), Some(Entry::Pending)))
+                    .collect();
+                if keys.is_empty() && c.queue.is_empty() {
+                    c.worker = false;
+                    return;
+                }
+                keys
+            };
+            if batch.is_empty() {
+                continue;
+            }
+            let _one_at_a_time = lock(&self.inner.gate);
+            let settings = self.settings();
+            let results = match self.program() {
+                Some(p) => std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    typeset_batch(&p, &settings.preamble, &batch)
+                }))
+                .unwrap_or_else(|_| {
+                    batch
+                        .iter()
+                        .map(|_| Err("internal error while typesetting".to_string()))
+                        .collect()
+                }),
+                None => batch.iter().map(|_| Err("no TeX program found".to_string())).collect(),
+            };
+            for (key, result) in batch.into_iter().zip(results) {
+                self.finish(key, result);
+            }
         }
-        let n = JOBS.fetch_add(1, Ordering::Relaxed);
-        let result = match program {
-            Some(p) => std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                run_tex(&p, &settings.preamble, &key, n)
-            }))
-            .unwrap_or_else(|_| Err("internal error while typesetting".to_string())),
-            None => Err("no TeX program found".to_string()),
-        };
-        self.finish(key, result);
     }
 
     fn finish(&self, key: Key, result: Result<Typeset, String>) {
@@ -324,9 +367,8 @@ impl LatexPreview {
         let settings = self.settings();
         let result = {
             let _one_at_a_time = lock(&self.inner.gate);
-            let n = JOBS.fetch_add(1, Ordering::Relaxed);
             std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                run_tex(&program, &settings.preamble, &key, n)
+                run_tex(&program, &settings.preamble, &key)
             }))
             .unwrap_or_else(|_| Err("internal error while typesetting".to_string()))
         };
@@ -442,6 +484,31 @@ pub const BASE_PREAMBLE: &str = "\\usepackage{amsmath,amssymb,color,graphicx}";
 /// documents need (`amsmath`, `amssymb`, `color`, `graphicx`), the user's
 /// additions, and the text in a box whose size and depth go to `doc.dim`.
 pub fn latex_document(preamble: &str, key_text: &str, font: i32, postscript: bool, size: f64, rgb: [u8; 3]) -> String {
+    format!(
+        "{}{}{}",
+        document_head(preamble),
+        text_page(key_text, font, postscript, size, rgb),
+        DOCUMENT_TAIL
+    )
+}
+
+/// The start of a typesetting document: the preamble, then `doc.dim`
+/// opened for the boxes' sizes.
+fn document_head(preamble: &str) -> String {
+    format!(
+        "\\documentclass{{article}}\n{base}\n{preamble}\n\
+         \\pagestyle{{empty}}\n\\newwrite\\rfdim\n\\newdimen\\rfw \\newdimen\\rfh\n\
+         \\begin{{document}}\n\\immediate\\openout\\rfdim=doc.dim\n",
+        base = BASE_PREAMBLE,
+    )
+}
+
+/// The end of a typesetting document.
+const DOCUMENT_TAIL: &str = "\\immediate\\closeout\\rfdim\n\\end{document}\n";
+
+/// One text as one page: its box's size and depth as a line of `doc.dim`,
+/// the page the box plus the margin.
+fn text_page(key_text: &str, font: i32, postscript: bool, size: f64, rgb: [u8; 3]) -> String {
     let family = if postscript {
         // Times, Helvetica, Courier families of the PostScript set.
         match font {
@@ -460,17 +527,13 @@ pub fn latex_document(preamble: &str, key_text: &str, font: i32, postscript: boo
     };
     let c = |v: u8| format!("{:.3}", f64::from(v) / 255.0);
     format!(
-        "\\documentclass{{article}}\n{base}\n{preamble}\n\
-         \\pagestyle{{empty}}\n\\newwrite\\rfdim\n\
-         \\begin{{document}}\n\\immediate\\openout\\rfdim=doc.dim\n\
-         \\setbox0\\hbox{{\\fontsize{{{size:.2}}}{{{lead:.2}}}\\selectfont {family}\\color[rgb]{{{r},{g},{b}}}{text}}}\n\
-         \\immediate\\write\\rfdim{{\\the\\wd0,\\the\\ht0,\\the\\dp0}}\n\\immediate\\closeout\\rfdim\n\
-         \\newdimen\\rfw \\rfw=\\wd0 \\advance\\rfw by {m2:.3}bp\n\
-         \\newdimen\\rfh \\rfh=\\ht0 \\advance\\rfh by \\dp0 \\advance\\rfh by {m2:.3}bp\n\
+        "\\setbox0\\hbox{{\\fontsize{{{size:.2}}}{{{lead:.2}}}\\selectfont {family}\\color[rgb]{{{r},{g},{b}}}{text}}}\n\
+         \\immediate\\write\\rfdim{{\\the\\wd0,\\the\\ht0,\\the\\dp0}}\n\
+         \\rfw=\\wd0 \\advance\\rfw by {m2:.3}bp\n\
+         \\rfh=\\ht0 \\advance\\rfh by \\dp0 \\advance\\rfh by {m2:.3}bp\n\
          \\ifdefined\\pagewidth\\pagewidth=\\rfw \\pageheight=\\rfh\\else\\pdfpagewidth=\\rfw \\pdfpageheight=\\rfh\\fi\n\
          \\hoffset=-1in \\advance\\hoffset by {m:.3}bp \\voffset=-1in \\advance\\voffset by {m:.3}bp\n\
-         \\shipout\\hbox{{\\box0}}\n\\end{{document}}\n",
-        base = BASE_PREAMBLE,
+         \\shipout\\hbox{{\\box0}}\n",
         m = margin_pt(size),
         m2 = 2.0 * margin_pt(size),
         lead = size * 1.2,
@@ -508,52 +571,114 @@ fn parse_dim(s: &str) -> Option<(f64, f64, f64)> {
         .then_some((w * k, h * k, d * k))
 }
 
+/// Typeset `keys` in one TeX run; when that run fails (a text with an
+/// error stops TeX) or gives other pages than asked, each half again, so a
+/// bad text costs a few runs and fails alone (one result per key, in order).
 #[cfg(not(target_arch = "wasm32"))]
-fn run_tex(program: &std::path::Path, preamble: &str, key: &Key, n: u64) -> Result<Typeset, String> {
-    use std::process::{Command, Stdio};
+fn typeset_batch(program: &std::path::Path, preamble: &str, keys: &[Key]) -> Vec<Result<Typeset, String>> {
+    if let [key] = keys {
+        return vec![run_tex(program, preamble, key)];
+    }
+    match run_batch(program, preamble, keys) {
+        Ok(v) if v.len() == keys.len() => v,
+        _ => {
+            let (a, b) = keys.split_at(keys.len() / 2);
+            let mut v = typeset_batch(program, preamble, a);
+            v.extend(typeset_batch(program, preamble, b));
+            v
+        }
+    }
+}
+
+/// A new work folder for one TeX run.
+#[cfg(not(target_arch = "wasm32"))]
+fn work_dir() -> Result<PathBuf, String> {
+    let n = JOBS.fetch_add(1, Ordering::Relaxed);
     let dir = std::env::temp_dir().join(format!("rustfig-tex-{}-{n}", std::process::id()));
     std::fs::create_dir_all(&dir).map_err(|e| format!("cannot make a work folder: {e}"))?;
+    Ok(dir)
+}
+
+/// All `keys` as the pages of one document, each page cut out as a PDF of
+/// its own.
+#[cfg(not(target_arch = "wasm32"))]
+fn run_batch(program: &std::path::Path, preamble: &str, keys: &[Key]) -> Result<Vec<Result<Typeset, String>>, String> {
+    let dir = work_dir()?;
+    let result = (|| {
+        let mut tex = document_head(preamble);
+        for k in keys {
+            tex.push_str(&text_page(&k.text, k.font, k.postscript, k.size as f64 / 100.0, k.rgb));
+        }
+        tex.push_str(DOCUMENT_TAIL);
+        let pdf = run_document(program, &dir, &tex)?;
+        let dims = std::fs::read_to_string(dir.join("doc.dim")).unwrap_or_default();
+        let dims: Vec<&str> = dims.lines().filter(|l| !l.trim().is_empty()).collect();
+        let doc = hayro::hayro_syntax::Pdf::new(Arc::new(pdf)).map_err(|_| "TeX's PDF cannot be read".to_string())?;
+        let pages = doc.pages().len();
+        if pages != keys.len() || dims.len() != keys.len() {
+            return Err(format!("TeX made {pages} pages for {} texts", keys.len()));
+        }
+        Ok(keys
+            .iter()
+            .zip(dims)
+            .enumerate()
+            .map(|(i, (k, dim))| {
+                let (w, h, d) =
+                    parse_dim(dim).ok_or_else(|| format!("TeX gave no size ({:?})", shorten(dim.trim(), 40)))?;
+                let page = hayro_write::extract_pages_to_pdf(&doc, &[i]);
+                render_pdf(page, (w, h, d), margin_pt(k.size as f64 / 100.0))
+            })
+            .collect())
+    })();
+    // Best effort: a stray temp folder is harmless.
+    let _ = std::fs::remove_dir_all(&dir);
+    result
+}
+
+/// Run TeX on `tex` in `dir`: the PDF, or the first error of TeX's log.
+#[cfg(not(target_arch = "wasm32"))]
+fn run_document(program: &std::path::Path, dir: &std::path::Path, tex: &str) -> Result<Vec<u8>, String> {
+    use std::process::{Command, Stdio};
+    std::fs::write(dir.join("doc.tex"), tex).map_err(|e| format!("cannot write the TeX file: {e}"))?;
+    let mut child = Command::new(program)
+        .args([
+            "-interaction=nonstopmode",
+            "-halt-on-error",
+            "-no-shell-escape",
+            "doc.tex",
+        ])
+        .current_dir(dir)
+        .env("openin_any", "p")
+        .env("openout_any", "p")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|e| format!("cannot start {}: {e}", program.display()))?;
+    let start = std::time::Instant::now();
+    let status = loop {
+        match child.try_wait() {
+            Ok(Some(s)) => break s,
+            Ok(None) if start.elapsed().as_secs() >= MAX_TEX_SECONDS => {
+                let _ = child.kill(); // already failing; the wait below reaps it
+                let _ = child.wait(); // same
+                return Err(format!("TeX took longer than {MAX_TEX_SECONDS} s"));
+            }
+            Ok(None) => std::thread::sleep(std::time::Duration::from_millis(20)),
+            Err(e) => return Err(format!("TeX did not finish: {e}")),
+        }
+    };
+    let pdf = status.success().then(|| read_limited(&dir.join("doc.pdf"))).flatten();
+    pdf.ok_or_else(|| tex_error(&dir.join("doc.log")))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn run_tex(program: &std::path::Path, preamble: &str, key: &Key) -> Result<Typeset, String> {
+    let dir = work_dir()?;
     let result = (|| {
         let size = key.size as f64 / 100.0;
         let tex = latex_document(preamble, &key.text, key.font, key.postscript, size, key.rgb);
-        std::fs::write(dir.join("doc.tex"), tex).map_err(|e| format!("cannot write the TeX file: {e}"))?;
-        let mut child = Command::new(program)
-            .args([
-                "-interaction=nonstopmode",
-                "-halt-on-error",
-                "-no-shell-escape",
-                "doc.tex",
-            ])
-            .current_dir(&dir)
-            .env("openin_any", "p")
-            .env("openout_any", "p")
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()
-            .map_err(|e| format!("cannot start {}: {e}", program.display()))?;
-        let start = std::time::Instant::now();
-        let status = loop {
-            match child.try_wait() {
-                Ok(Some(s)) => break s,
-                Ok(None) if start.elapsed().as_secs() >= MAX_TEX_SECONDS => {
-                    let _ = child.kill(); // already failing; the wait below reaps it
-                    let _ = child.wait(); // same
-                    return Err(format!("TeX took longer than {MAX_TEX_SECONDS} s"));
-                }
-                Ok(None) => std::thread::sleep(std::time::Duration::from_millis(20)),
-                Err(e) => return Err(format!("TeX did not finish: {e}")),
-            }
-        };
-        let pdf_path = dir.join("doc.pdf");
-        let pdf = if status.success() || pdf_path.is_file() {
-            read_limited(&pdf_path)
-        } else {
-            None
-        };
-        let Some(pdf) = pdf.filter(|_| status.success()) else {
-            return Err(tex_error(&dir.join("doc.log")));
-        };
+        let pdf = run_document(program, &dir, &tex)?;
         let dim = std::fs::read_to_string(dir.join("doc.dim")).unwrap_or_default();
         let (w, h, d) = parse_dim(&dim).ok_or_else(|| format!("TeX gave no size ({:?})", shorten(dim.trim(), 40)))?;
         render_pdf(pdf, (w, h, d), margin_pt(size))
