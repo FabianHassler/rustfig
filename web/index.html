@@ -17,7 +17,7 @@
    "offers": {"@type": "Offer", "price": "0"}, "license": "https://opensource.org/licenses/MIT",
    "url": "https://fabianhassler.github.io/rustfig/app/", "sameAs": "https://github.com/FabianHassler/rustfig"}
   </script>
-  <link data-trunk rel="rust" data-bin="rustfig" data-wasm-opt="z" href="../apps/rustfig/Cargo.toml">
+  <link data-trunk rel="rust" data-bin="rustfig" data-wasm-opt="z" data-wasm-opt-params="--enable-bulk-memory --enable-bulk-memory-opt --enable-nontrapping-float-to-int --enable-sign-ext --enable-reference-types --enable-multivalue" href="../apps/rustfig/Cargo.toml">
   <!-- The bundled figure libraries, fetched lazily by Library mode (C2); libraries.json is the index `cargo xtask web` writes. -->
   <link data-trunk rel="copy-dir" href="../libraries">
   <link data-trunk rel="copy-file" href="libraries.json">
