@@ -77,6 +77,73 @@ pub fn rasterize_banded(scene: &Scene, w: u32, h: u32, opts: &raster::RasterOpti
 #[cfg(not(target_arch = "wasm32"))]
 const BAND_PAD: usize = 8;
 
+/// The bands (of `rows` rows each, `n` in all) each primitive of `scene`
+/// touches, as lists of primitive indices in drawing order: a band then
+/// draws only those, instead of every band walking every primitive (on
+/// 190,000 circles a third of the time). Paths are placed by their box,
+/// widened by the band padding and a few pixels for antialiasing and the
+/// thinnest lines; texts and pictures, whose ink may pass their box, go to
+/// every band.
+#[cfg(not(target_arch = "wasm32"))]
+fn band_lists(scene: &Scene, t: &rustfig_geom::Affine, rows: usize, n: usize, threads: usize) -> Vec<Vec<u32>> {
+    let slack = BAND_PAD as f64 + 4.0;
+    let scale = t
+        .apply_vec(Point::new(1.0, 0.0))
+        .len()
+        .max(t.apply_vec(Point::new(0.0, 1.0)).len());
+    let range = |p: &Prim| -> (usize, usize) {
+        let all = (0, n.saturating_sub(1));
+        let Prim::Path { stroke, .. } = p else {
+            return all;
+        };
+        // A sharp miter reaches far past the box's half line width: up to
+        // the miter limit (10, PostScript's) times it.
+        let miter = stroke.as_ref().map_or(0.0, |s| 5.0 * s.width * scale);
+        let b = p.bbox();
+        if b.is_empty() {
+            return (1, 0);
+        }
+        let ys = [
+            t.apply(b.min).y,
+            t.apply(b.max).y,
+            t.apply(Point::new(b.min.x, b.max.y)).y,
+            t.apply(Point::new(b.max.x, b.min.y)).y,
+        ];
+        let y0 = ys.iter().copied().fold(f64::INFINITY, f64::min) - slack - miter;
+        let y1 = ys.iter().copied().fold(f64::NEG_INFINITY, f64::max) + slack + miter;
+        if !(y0.is_finite() && y1.is_finite()) {
+            return all;
+        }
+        let band = |y: f64| ((y.max(0.0) / rows.max(1) as f64) as usize).min(n.saturating_sub(1));
+        if y1 < 0.0 || y0 >= (rows * n) as f64 {
+            return (1, 0);
+        }
+        (band(y0), band(y1))
+    };
+    // The boxes in chunks on all threads; the lists filled in order after.
+    let chunk = scene.prims.len().div_ceil(threads.max(1)).max(1);
+    let ranges: Vec<(usize, usize)> = std::thread::scope(|sc| {
+        let handles: Vec<_> = scene
+            .prims
+            .chunks(chunk)
+            .map(|c| sc.spawn(move || c.iter().map(range).collect::<Vec<_>>()))
+            .collect();
+        // A chunk whose thread failed puts its primitives in every band.
+        handles
+            .into_iter()
+            .zip(scene.prims.chunks(chunk))
+            .flat_map(|(h, c)| h.join().unwrap_or_else(|_| vec![(0, n.saturating_sub(1)); c.len()]))
+            .collect()
+    });
+    let mut lists = vec![Vec::new(); n];
+    for (i, (a, b)) in ranges.into_iter().enumerate() {
+        for list in lists.iter_mut().take(b.saturating_add(1)).skip(a) {
+            list.push(i as u32);
+        }
+    }
+    lists
+}
+
 /// [`rasterize_banded`]'s work: `n` bands of rows on `threads` threads, each
 /// drawn with [`BAND_PAD`] extra rows on both sides, joined into one pixmap.
 #[cfg(not(target_arch = "wasm32"))]
@@ -90,6 +157,7 @@ fn rasterize_in_bands(
 ) -> Option<raster::Pixmap> {
     let mut pm = raster::Pixmap::new(w, h)?;
     let rows = (h as usize).div_ceil(n.max(1));
+    let lists = band_lists(scene, &opts.transform, rows, n.max(1), threads);
     let next = std::sync::atomic::AtomicUsize::new(0);
     let done: std::sync::Mutex<Vec<(usize, usize, raster::Pixmap)>> = std::sync::Mutex::new(Vec::new());
     std::thread::scope(|sc| {
@@ -111,7 +179,12 @@ fn rasterize_in_bands(
                 o.transform = opts
                     .transform
                     .then(&rustfig_geom::Affine::translate(0.0, -(top as f64)));
-                raster::rasterize(scene, &mut band, &o);
+                let prims = lists
+                    .get(i)
+                    .map(|l| l.iter().filter_map(|&k| scene.prims.get(k as usize)))
+                    .into_iter()
+                    .flatten();
+                raster::rasterize_prims(prims, &mut band, &o, true);
                 if let Ok(mut d) = done.lock() {
                     d.push((y0, y0 - top, band));
                 }
