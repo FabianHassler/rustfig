@@ -8,6 +8,7 @@
 use super::{always, has_objects, num_or, opt_bool, opt_num, opt_str, string, CmdResult, Command};
 use crate::fig2dev::languages::{language, language_for_path, Language, Status, LANGUAGES};
 use crate::fig2dev::options::{option_spec, options_for, Arg, Support};
+use crate::latex_preview::ExportTypesetter;
 use crate::{import, Engine, EngineError};
 use fig2dev::drivers::scene;
 use fig2dev::scene::ExportFormat;
@@ -195,7 +196,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Export to data",
             menu: "",
             shortcut: "",
-            params: "{\"format\": language id, \"part\"?: bool, ...export options}  — returns {\"data\": text} or {\"base64\": ...}; pspdf returns {\"files\": [{\"extension\", \"data\"|\"base64\"}]}",
+            params: "{\"format\": language id, \"part\"?: bool, \"latex_source\"?: bool (special texts drawn as plain text, the page fitted to their source: a preview without TeX), ...export options}  — returns {\"data\": text} or {\"base64\": ...}; pspdf returns {\"files\": [{\"extension\", \"data\"|\"base64\"}]}",
             mutates: false,
             enabled: has_objects,
             run: export_data,
@@ -1467,14 +1468,17 @@ fn write_part_of(e: &Engine, doc: &Document, part: &Part, p: &Value) -> Result<(
     if let Some(g) = &part.graphics {
         args.push(('p', Some(g.clone())));
     }
-    let (bytes, msgs) = crate::fig2dev::export_typeset(
+    let (ts, mut msgs) = typesetter(e, part.lang, p)?;
+    let (bytes, more) = crate::fig2dev::export_typeset(
         doc,
         part.lang,
         &args,
         doc_dir(e).as_deref(),
-        typesetter(e, part.lang, p)?,
+        ts.clone().map(|t| t as std::sync::Arc<dyn rustfig_render::Typesetter>),
     )
     .map_err(EngineError::format)?;
+    msgs.extend(more);
+    msgs.extend(ts.iter().flat_map(|t| t.errors()));
     // "Embed the figure" (E16): the Fig text goes into the finished file.
     if opt_bool(p, "embed")?.unwrap_or(false) && matches!(part.half, Half::Whole) {
         if !rustfig_format::embed::can_embed(part.lang) {
@@ -1569,20 +1573,19 @@ fn uses_picture_file(objects: &[rustfig_model::Object], dir: Option<&Path>, path
 }
 
 /// The typesetter for `lang` when `p` asks for typeset LaTeX text and TeX
-/// is installed.
-fn typesetter(
-    e: &Engine,
-    lang: &str,
-    p: &Value,
-) -> Result<Option<std::sync::Arc<dyn rustfig_render::Typesetter>>, EngineError> {
-    Ok(
-        if opt_bool(p, "typeset_latex")?.unwrap_or(false) && crate::export_panel::typesets(lang) {
-            e.latex.export_typesetter()
-        } else {
-            None
-        },
-    )
+/// is installed, with a warning when it asks but no TeX is found.
+fn typesetter(e: &Engine, lang: &str, p: &Value) -> Result<(Option<Arc<ExportTypesetter>>, Vec<String>), EngineError> {
+    if !(opt_bool(p, "typeset_latex")?.unwrap_or(false) && crate::export_panel::typesets(lang)) {
+        return Ok((None, Vec::new()));
+    }
+    Ok(match e.latex.export_typesetter() {
+        Some(t) => (Some(t), Vec::new()),
+        None => (None, vec![NO_TEX.to_string()]),
+    })
 }
+
+/// The warning of an export that asks for typeset LaTeX texts without TeX.
+const NO_TEX: &str = "no TeX program found: the LaTeX texts show as their source";
 
 fn export_file(e: &mut Engine, p: &Value) -> CmdResult {
     let job = export_job(e, p)?;
@@ -1606,7 +1609,9 @@ pub struct ExportJob {
     path: String,
     embed: bool,
     /// Typesets special texts (`typeset_latex`), for the languages that take it.
-    typesetter: Option<std::sync::Arc<dyn rustfig_render::Typesetter>>,
+    typesetter: Option<Arc<ExportTypesetter>>,
+    /// `typeset_latex` without TeX.
+    no_tex: bool,
     lang: &'static str,
     /// Target file, driver, share of the export, fig2dev's options.
     parts: Vec<JobPart>,
@@ -1637,13 +1642,21 @@ impl ExportJob {
             if let Some(g) = &part.graphics {
                 args.push(('p', Some(g.clone())));
             }
-            let typesetter = self
-                .typesetter
-                .clone()
-                .filter(|_| crate::export_panel::typesets(part.lang));
-            let (mut bytes, msgs) =
-                crate::fig2dev::export_typeset(&self.doc, part.lang, &args, self.dir.as_deref(), typesetter)
-                    .map_err(EngineError::format)?;
+            let typesets = crate::export_panel::typesets(part.lang);
+            let typesetter = self.typesetter.clone().filter(|_| typesets);
+            if self.no_tex && typesets && !warnings.iter().any(|w| w == NO_TEX) {
+                warnings.push(NO_TEX.to_string());
+            }
+            let (mut bytes, mut msgs) = crate::fig2dev::export_typeset(
+                &self.doc,
+                part.lang,
+                &args,
+                self.dir.as_deref(),
+                typesetter.clone().map(|t| t as Arc<dyn rustfig_render::Typesetter>),
+            )
+            .map_err(EngineError::format)?;
+            msgs.extend(typesetter.iter().flat_map(|t| t.errors()));
+            msgs.retain(|m| !warnings.contains(m));
             if self.embed && matches!(part.half, Half::Whole) {
                 if !rustfig_format::embed::can_embed(part.lang) {
                     return Err(EngineError::bad_params(format!(
@@ -1687,6 +1700,7 @@ pub fn export_job(e: &Engine, p: &Value) -> Result<ExportJob, EngineError> {
         )));
     }
     let lang = export_language(p, Some(&path))?;
+    let typeset = opt_bool(p, "typeset_latex")?.unwrap_or(false);
     let mut parts_with_args = Vec::new();
     for (target, part) in parts(lang, &path) {
         let args = driver_args(e, part.lang, part.half, p)?;
@@ -1697,11 +1711,8 @@ pub fn export_job(e: &Engine, p: &Value) -> Result<ExportJob, EngineError> {
         dir: doc_dir(e),
         path,
         embed: opt_bool(p, "embed")?.unwrap_or(false),
-        typesetter: if opt_bool(p, "typeset_latex")?.unwrap_or(false) {
-            e.latex.export_typesetter()
-        } else {
-            None
-        },
+        typesetter: if typeset { e.latex.export_typesetter() } else { None },
+        no_tex: typeset && e.latex.export_typesetter().is_none(),
         lang: lang.id,
         parts: parts_with_args,
     })
@@ -1733,8 +1744,18 @@ fn export_data(e: &mut Engine, p: &Value) -> CmdResult {
     let parts = parts(lang, &virtual_path);
     let mut files = Vec::new();
     let mut warnings = Vec::new();
+    let source_doc = if opt_bool(p, "latex_source")?.unwrap_or(false) {
+        let mut doc = scope_doc(e, p)?.into_owned();
+        latex_as_source(&mut doc.objects);
+        Some(doc)
+    } else {
+        None
+    };
     for (target, part) in &parts {
-        let (bytes, msgs) = write_part(e, part, p)?;
+        let (bytes, msgs) = match &source_doc {
+            Some(doc) => write_part_of(e, doc, part, p)?,
+            None => write_part(e, part, p)?,
+        };
         warnings.extend(msgs);
         let text = is_text(part, &bytes);
         let extension = target.rsplit_once('.').map_or("", |(_, x)| x);
@@ -1757,6 +1778,27 @@ fn export_data(e: &mut Engine, p: &Value) -> CmdResult {
             Ok(one)
         }
         _ => Ok(json!({ "files": files, "warnings": warnings })),
+    }
+}
+
+/// `latex_source`: special texts become plain texts, so a preview without
+/// TeX shows their source whole and sizes the page by it (fig2dev leaves
+/// a special text with `\` or `$` out of the bounds).
+fn latex_as_source(objects: &mut [Arc<rustfig_model::Object>]) {
+    fn plain(o: &mut rustfig_model::Object) {
+        match &mut o.kind {
+            ObjectKind::Text(t) => t.flags &= !rustfig_model::text_flags::SPECIAL,
+            ObjectKind::Compound(c) => c.objects.iter_mut().for_each(plain),
+            _ => {}
+        }
+    }
+    for o in objects {
+        if let ObjectKind::Text(t) = &o.kind {
+            if !t.is_special() {
+                continue;
+            }
+        }
+        plain(Arc::make_mut(o));
     }
 }
 

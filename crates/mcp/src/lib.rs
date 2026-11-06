@@ -44,7 +44,7 @@ fn tools() -> Value {
         },
         {
             "name": "rustfig_render",
-            "description": "Render the current drawing as a PNG image to look at it. LaTeX (special) texts are typeset by TeX when a TeX is installed (pdflatex or lualatex), so their size and placement can be judged; without TeX they show as their source.",
+            "description": "Render the current drawing as a PNG image to look at it. LaTeX (special) texts are typeset by TeX when a TeX is installed (pdflatex or lualatex), so their size and placement can be judged; without TeX, or with latex false, they show as their source. TeX errors (an undefined macro, say) come back as warnings next to the image; the text then shows as its source.",
             "inputSchema": {"type": "object", "properties": {
                 "dpi": {"type": "number", "description": "Resolution, default 100"},
                 "latex": {"type": "boolean", "description": "Typeset LaTeX texts with TeX (default true)"}
@@ -98,13 +98,33 @@ impl Server {
                     .and_then(Value::as_f64)
                     .unwrap_or(100.0)
                     .clamp(10.0, 600.0);
+                // Without TeX the LaTeX texts show as their source, and the
+                // page fits that source (fig2dev's bounds leave them out).
+                let latex = args.get("latex").and_then(Value::as_bool).unwrap_or(true);
+                let tex = latex && self.engine.latex.export_typesetter().is_some();
                 match self.engine.execute(
                     "file.export_data",
                     &json!({"format": "png", "dpi": dpi, "margin": 60, "background": "#ffffff", "options": {"smoothing": 4},
-                        "typeset_latex": args.get("latex").and_then(Value::as_bool).unwrap_or(true)}),
+                        "typeset_latex": tex, "latex_source": !tex}),
                 ) {
                     Ok(v) => match v.get("base64").and_then(Value::as_str) {
-                        Some(b) => json!({"content": [{"type": "image", "data": b, "mimeType": "image/png"}]}),
+                        Some(b) => {
+                            let mut content = vec![json!({"type": "image", "data": b, "mimeType": "image/png"})];
+                            let warnings: Vec<&str> = v
+                                .get("warnings")
+                                .and_then(Value::as_array)
+                                .into_iter()
+                                .flatten()
+                                .filter_map(Value::as_str)
+                                .collect();
+                            if latex && !tex {
+                                content.push(json!({"type": "text", "text": "No TeX program found: the LaTeX texts show as their source."}));
+                            }
+                            if !warnings.is_empty() {
+                                content.push(json!({"type": "text", "text": format!("Warnings:\n{}", warnings.join("\n"))}));
+                            }
+                            json!({ "content": content })
+                        }
                         None => error_result("render produced no image"),
                     },
                     Err(e) => error_result(&e.message),

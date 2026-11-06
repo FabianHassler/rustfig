@@ -15,7 +15,7 @@ message per line) on stdin/stdout. Example client configuration:
 |---|---|
 | `rustfig_commands` | list commands and their parameters (`filter`: a substring of the id or label; the full list is about 50 KB) |
 | `rustfig_execute` | run a command: `{"command": "shape.circle", "params": {"cx": 600, "cy": 600, "r": 300}}` |
-| `rustfig_render` | the drawing as a PNG image (`dpi`, default 100; `latex`, default true: LaTeX texts typeset by TeX when one is installed, else shown as their source) |
+| `rustfig_render` | the drawing as a PNG image (`dpi`, default 100; `latex`, default true: LaTeX texts typeset by TeX when one is installed, else shown as their source, with the page fitted to the source; TeX's errors, such as an undefined macro, come back as warnings next to the image) |
 | `rustfig_document` | the drawing as Fig 3.2 text (or `format: "rustfig"`) |
 
 Coordinates are Fig units: 1200 per inch, y grows downwards. Open and save

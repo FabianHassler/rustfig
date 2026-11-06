@@ -427,3 +427,32 @@ fn real_tex_export_shares_fonts_and_fits_the_texts() {
         .collect();
     assert!(v[2] - v[0] > 7.0 * 900.0 * 72.0 / 1200.0 + 20.0, "{v:?}");
 }
+
+/// A text TeX cannot typeset (an undefined macro) comes back as the
+/// export's warning, with TeX's error; the text shows as its source.
+#[test]
+#[ignore = "needs pdflatex or lualatex"]
+fn real_tex_errors_are_export_warnings() {
+    let data = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+        4 0 0 50 -1 0 12 0.0000 2 135 450 300 600 $\\\\nosuchmacro$\\001\n\
+        4 0 0 50 -1 0 12 0.0000 2 135 450 300 900 $\\\\alpha$\\001\n";
+    let mut e = Engine::new();
+    e.execute("file.open_data", &json!({"data": data})).unwrap();
+    assert!(e.latex.active(), "no TeX found");
+    for _ in 0..2 {
+        let r = e
+            .execute("file.export_data", &json!({"format": "png", "typeset_latex": true}))
+            .unwrap();
+        let w: Vec<&str> = r["warnings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|v| v.as_str())
+            .collect();
+        assert_eq!(w.len(), 1, "{w:?}");
+        assert!(
+            w[0].contains("nosuchmacro") && w[0].contains("Undefined control sequence"),
+            "{w:?}"
+        );
+    }
+}

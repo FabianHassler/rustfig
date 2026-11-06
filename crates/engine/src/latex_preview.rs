@@ -65,7 +65,8 @@ struct Key {
 enum Entry {
     Pending,
     Ready(Typeset),
-    Failed,
+    /// TeX's error, as the message panel shows it.
+    Failed(String),
 }
 
 #[derive(Debug, Default)]
@@ -320,9 +321,9 @@ impl LatexPreview {
         let entry = match result {
             Ok(t) => Entry::Ready(t),
             Err(e) => {
-                let first = key.text.lines().next().unwrap_or_default();
-                c.messages.push(format!("LaTeX text \"{}\": {e}", shorten(first, 30)));
-                Entry::Failed
+                let m = failure(&key, &e);
+                c.messages.push(m.clone());
+                Entry::Failed(m)
             }
         };
         c.map.insert(key.clone(), entry);
@@ -341,29 +342,34 @@ impl LatexPreview {
 /// the preview's program, preamble and cache, but not its on/off switch
 /// (the export's option decides). `None` on wasm and without TeX.
 impl LatexPreview {
-    pub fn export_typesetter(&self) -> Option<Arc<dyn Typesetter>> {
+    pub fn export_typesetter(&self) -> Option<Arc<ExportTypesetter>> {
         if cfg!(target_arch = "wasm32") {
             return None;
         }
-        self.program()
-            .map(|_| Arc::new(ExportHandle(self.clone())) as Arc<dyn Typesetter>)
+        self.program().map(|_| {
+            Arc::new(ExportTypesetter {
+                preview: self.clone(),
+                errors: Mutex::new(Vec::new()),
+            })
+        })
     }
 
+    /// The typeset text, or TeX's error (`None`: not a text TeX is asked for).
     #[cfg(not(target_arch = "wasm32"))]
-    fn typeset_now(&self, req: &TypesetRequest<'_>) -> Option<Typeset> {
+    fn typeset_now(&self, req: &TypesetRequest<'_>) -> Result<Typeset, Option<String>> {
         if req.text.trim().is_empty()
             || req.text.len() > MAX_TEXT_BYTES
             || !(req.size.is_finite() && req.size > 0.0 && req.size <= 1000.0)
         {
-            return None;
+            return Err(None);
         }
         let key = Self::base_key(req);
         match lock(&self.inner.cache).map.get(&key) {
-            Some(Entry::Ready(t)) => return Some(t.clone()),
-            Some(Entry::Failed) => return None,
+            Some(Entry::Ready(t)) => return Ok(t.clone()),
+            Some(Entry::Failed(m)) => return Err(Some(m.clone())),
             _ => {}
         }
-        let program = self.program()?;
+        let program = self.program().ok_or(None)?;
         let settings = self.settings();
         let result = {
             let _one_at_a_time = lock(&self.inner.gate);
@@ -384,12 +390,12 @@ impl LatexPreview {
                         }
                     }
                 }
-                Some(t)
+                Ok(t)
             }
             Err(e) => {
-                let first = key.text.lines().next().unwrap_or_default();
-                c.messages.push(format!("LaTeX text \"{}\": {e}", shorten(first, 30)));
-                None
+                let m = failure(&key, &e);
+                c.messages.push(m.clone());
+                Err(Some(m))
             }
         }
     }
@@ -468,18 +474,43 @@ impl LatexPreview {
 #[cfg(not(target_arch = "wasm32"))]
 static JOBS: AtomicU64 = AtomicU64::new(0);
 
+/// The typesetter of one export ([`LatexPreview::export_typesetter`]): it
+/// keeps the errors of the texts TeX could not typeset, which the export
+/// reports as warnings (the texts show as their source).
 #[derive(Debug)]
-struct ExportHandle(#[cfg_attr(target_arch = "wasm32", allow(dead_code))] LatexPreview);
+pub struct ExportTypesetter {
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+    preview: LatexPreview,
+    errors: Mutex<Vec<String>>,
+}
 
-impl Typesetter for ExportHandle {
+impl ExportTypesetter {
+    /// TeX's errors so far, each once.
+    pub fn errors(&self) -> Vec<String> {
+        lock(&self.errors).clone()
+    }
+}
+
+impl Typesetter for ExportTypesetter {
     #[cfg(not(target_arch = "wasm32"))]
     fn typeset(&self, req: &TypesetRequest<'_>) -> Option<Typeset> {
-        self.0.typeset_now(req)
+        match self.preview.typeset_now(req) {
+            Ok(t) => Some(t),
+            Err(m) => {
+                if let Some(m) = m {
+                    let mut errors = lock(&self.errors);
+                    if !errors.contains(&m) {
+                        errors.push(m);
+                    }
+                }
+                None
+            }
+        }
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     fn prepare(&self, requests: &[TypesetRequest<'_>]) {
-        self.0.prepare_now(requests);
+        self.preview.prepare_now(requests);
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -495,6 +526,12 @@ impl Typesetter for Handle {
     fn typeset(&self, req: &TypesetRequest<'_>) -> Option<Typeset> {
         self.0.lookup(req)
     }
+}
+
+/// A text's TeX error for the message panel and the export's warnings.
+fn failure(key: &Key, e: &str) -> String {
+    let first = key.text.lines().next().unwrap_or_default();
+    format!("LaTeX text \"{}\": {e}", shorten(first, 30))
 }
 
 fn floor_boundary(s: &str, max: usize) -> usize {

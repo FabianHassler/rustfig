@@ -47,7 +47,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Set attributes",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id], \"line\"?, \"thickness\"?, \"pen_color\"?, \"fill_color\"?, \"area_fill\"?, \"depth\"?, \"style_val\"?, \"cap\"?: butt|round|projecting, \"join\"?: miter|round|bevel, \"forward_arrow\"?: bool, \"backward_arrow\"?: bool, \"arrow_kind\"?, \"arrow_style\"?, \"arrow_width\"?, \"arrow_height\"?, \"radius\"?, \"font\"?, \"local_font\"?: string|null (installed font; applied after font and postscript), \"font_size\"?, \"justify\"?, \"angle\"?: degrees, \"text\"?, \"postscript\"?: bool, \"hidden\"?: bool, \"rigid\"?: bool, \"special\"?: bool, \"pie\"?: bool, \"flipped\"?: bool (pictures), \"arrow_thickness\"?, \"comment\"?: string, \"texts\"?: [string] (compound: the texts directly in it, in order), \"forward_arrow_spec\"?, \"backward_arrow_spec\"?: {kind, style, thickness, width, height}, \"geometry\"?: as object.set_geometry without id}",
+            params: "{\"ids\"?: [id], \"line\"?, \"thickness\"?, \"pen_color\"?, \"fill_color\"?, \"area_fill\"?, \"depth\"?, \"style_val\"?, \"cap\"?: butt|round|projecting, \"join\"?: miter|round|bevel, \"forward_arrow\"?: bool, \"backward_arrow\"?: bool, \"arrow_kind\"?, \"arrow_style\"?, \"arrow_width\"?, \"arrow_height\"?, \"radius\"?, \"font\"?, \"local_font\"?: string|null (installed font; applied after font and postscript), \"font_size\"?, \"justify\"?, \"angle\"?: degrees, \"text\"?, \"postscript\"?: bool, \"hidden\"?: bool, \"rigid\"?: bool, \"special\"?: bool (as shape.text: without postscript and font it leaves the PostScript font), \"pie\"?: bool, \"flipped\"?: bool (pictures), \"arrow_thickness\"?, \"comment\"?: string, \"texts\"?: [string] (compound: the texts directly in it, in order), \"forward_arrow_spec\"?, \"backward_arrow_spec\"?: {kind, style, thickness, width, height}, \"geometry\"?: as object.set_geometry without id}",
             mutates: true,
             enabled: |_| true,
             run: set_attributes,
@@ -476,7 +476,12 @@ pub(super) fn set_attributes_inner(e: &mut Engine, p: &Value) -> CmdResult {
             set(&mut t.flags, rustfig_model::text_flags::POSTSCRIPT, postscript);
             set(&mut t.flags, rustfig_model::text_flags::HIDDEN, hidden);
             set(&mut t.flags, rustfig_model::text_flags::RIGID, rigid);
-            set(&mut t.flags, rustfig_model::text_flags::SPECIAL, special);
+            if let Some(on) = special {
+                // As shape.text: LaTeX text leaves the PostScript font.
+                if super::shape::latex_text(t, on, p).is_err() {
+                    set(&mut t.flags, rustfig_model::text_flags::SPECIAL, special);
+                }
+            }
             return;
         }
         if let Some(s) = o.style_mut() {

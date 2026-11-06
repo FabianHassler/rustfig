@@ -175,3 +175,62 @@ fn typeset_exports_import_their_latex_texts() {
     }
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// `special` on shape.text and object.set_attributes makes LaTeX text and
+/// leaves the PostScript font (flags 2, font 0), unless postscript is given.
+#[test]
+fn special_text_leaves_the_postscript_font() {
+    let mut e = Engine::new();
+    e.execute(
+        "shape.text",
+        &json!({"x": 300, "y": 600, "text": "$x$", "font": 16, "postscript": true}),
+    )
+    .unwrap();
+    let r = e
+        .execute(
+            "shape.text",
+            &json!({"x": 300, "y": 900, "text": "$y$", "special": true}),
+        )
+        .unwrap();
+    let fig = |e: &mut Engine| {
+        e.execute("file.save_data", &json!({"format": "fig"})).unwrap()["data"]
+            .as_str()
+            .unwrap()
+            .to_string()
+    };
+    assert!(fig(&mut e).contains("4 0 0 50 -1 0 12 0.0000 2 "), "{}", fig(&mut e));
+    let first = r["id"].as_u64().unwrap() - 1;
+    e.execute("object.set_attributes", &json!({"ids": [first], "special": true}))
+        .unwrap();
+    assert!(!fig(&mut e).contains(" 16 12 0.0000 6 "), "{}", fig(&mut e));
+    e.execute(
+        "shape.text",
+        &json!({"x": 300, "y": 1200, "text": "$z$", "special": true, "postscript": true}),
+    )
+    .unwrap();
+    assert!(fig(&mut e).contains(" 0 12 0.0000 6 "), "{}", fig(&mut e));
+}
+
+/// `latex_source` (a preview without TeX): the page fits the source of a
+/// special text, which fig2dev's bounds otherwise leave out.
+#[test]
+fn latex_source_sizes_the_page_by_the_source() {
+    let mut e = Engine::new();
+    e.execute(
+        "shape.text",
+        &json!({"x": 300, "y": 600, "text": "a long label $\\alpha + \\beta$", "special": true}),
+    )
+    .unwrap();
+    let width = |e: &mut Engine, source: bool| {
+        let r = e
+            .execute(
+                "file.export_data",
+                &json!({"format": "png", "dpi": 80, "latex_source": source}),
+            )
+            .unwrap();
+        let b = rustfig_engine::base64_decode(r["base64"].as_str().unwrap());
+        u32::from_be_bytes([b[16], b[17], b[18], b[19]])
+    };
+    let (raw, source) = (width(&mut e, false), width(&mut e, true));
+    assert!(source > raw + 100, "{raw} -> {source}");
+}

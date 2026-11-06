@@ -62,7 +62,7 @@ pub(super) fn commands() -> Vec<Command> {
         shape_cmd!(
             "shape.text",
             "Add text",
-            "{\"x\", \"y\", \"text\", \"size\"?: points, \"font\"?: number, \"postscript\"?: bool, \"justify\"?: left|center|right, \"angle\"?: degrees, \"color\"?, \"depth\"?}",
+            "{\"x\", \"y\", \"text\", \"size\"?: points, \"font\"?: number, \"postscript\"?: bool, \"special\"?: bool (LaTeX text; unless postscript or font is given it leaves the PostScript font for the LaTeX default font), \"justify\"?: left|center|right, \"angle\"?: degrees, \"color\"?, \"depth\"?}",
             text
         ),
         shape_cmd!(
@@ -338,6 +338,9 @@ fn text(e: &mut Engine, p: &Value) -> CmdResult {
             t.flags &= !rustfig_model::text_flags::POSTSCRIPT;
         }
     }
+    if let Some(special) = opt_bool(p, "special")? {
+        latex_text(&mut t, special, p)?;
+    }
     if let Some(j) = opt_str(p, "justify")? {
         t.justify = parse_justify(j)?;
     }
@@ -351,6 +354,27 @@ fn text(e: &mut Engine, p: &Value) -> CmdResult {
         t.depth = (d.round() as i32).clamp(0, rustfig_model::MAX_DEPTH);
     }
     added(e, Object::new(ObjectKind::Text(t)))
+}
+
+/// Sets or clears `t`'s special (LaTeX) flag. Turned on without an explicit
+/// `postscript` it also turns off the PostScript font, and without an
+/// explicit `font` picks the LaTeX default font: with a PostScript font,
+/// fig2dev's LaTeX drivers set the text in it (Times for font 0).
+pub(crate) fn latex_text(t: &mut rustfig_model::Text, special: bool, p: &Value) -> Result<(), EngineError> {
+    use rustfig_model::text_flags::{POSTSCRIPT, SPECIAL};
+    if !special {
+        t.flags &= !SPECIAL;
+        return Ok(());
+    }
+    t.flags |= SPECIAL;
+    if opt_bool(p, "postscript")?.is_none() && t.flags & POSTSCRIPT != 0 {
+        t.flags &= !POSTSCRIPT;
+        if opt_num(p, "font")?.is_none() {
+            t.font = 0;
+            t.local_font = None;
+        }
+    }
+    Ok(())
 }
 
 fn picture(e: &mut Engine, p: &Value) -> CmdResult {
