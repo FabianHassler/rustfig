@@ -205,7 +205,9 @@ fn object(out: &mut String, o: &Object) {
                 t.depth,
                 t.pen_style,
                 t.font,
-                f(t.size, 6),
+                // xfig keeps two decimals (`%.2f`); the shortest form of
+                // that, so 9.6 is not written 9.600000000000001.
+                f((t.size * 100.0).round() / 100.0, 6),
                 f(angle(t.angle), 4),
                 t.flags,
                 i(t.height).max(0),

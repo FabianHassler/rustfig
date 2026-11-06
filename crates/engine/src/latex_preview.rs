@@ -395,6 +395,75 @@ impl LatexPreview {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+impl LatexPreview {
+    /// An export's special texts, all in one TeX run, so that they are
+    /// pages of one file and the export has their fonts once; nothing when
+    /// they already are (the canvas typeset them together).
+    fn prepare_now(&self, requests: &[TypesetRequest<'_>]) {
+        let mut keys: Vec<Key> = Vec::new();
+        for r in requests {
+            if r.text.trim().is_empty()
+                || r.text.len() > MAX_TEXT_BYTES
+                || !(r.size.is_finite() && r.size > 0.0 && r.size <= 1000.0)
+            {
+                continue;
+            }
+            let k = Self::base_key(r);
+            if !keys.contains(&k) {
+                keys.push(k);
+            }
+        }
+        if keys.len() < 2 {
+            return;
+        }
+        {
+            let c = lock(&self.inner.cache);
+            let ready: Vec<&Typeset> = keys
+                .iter()
+                .filter_map(|k| match c.map.get(k) {
+                    Some(Entry::Ready(t)) => Some(t),
+                    _ => None,
+                })
+                .collect();
+            if ready.len() == keys.len() && ready.windows(2).all(|w| w[0].pdf.shares_file(&w[1].pdf)) {
+                return;
+            }
+        }
+        let Some(program) = self.program() else {
+            return;
+        };
+        let settings = self.settings();
+        let mut all = Vec::new();
+        for chunk in keys.chunks(MAX_BATCH) {
+            let results = {
+                let _one_at_a_time = lock(&self.inner.gate);
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    typeset_batch(&program, &settings.preamble, chunk)
+                }))
+                .unwrap_or_default()
+            };
+            all.extend(chunk.iter().cloned().zip(results));
+        }
+        let mut c = lock(&self.inner.cache);
+        for (key, result) in all {
+            // A failed text is left as it was: `typeset` runs it alone and
+            // reports its error.
+            if let Ok(t) = result {
+                if !c.map.contains_key(&key) {
+                    c.order.push_back(key.clone());
+                }
+                c.map.insert(key, Entry::Ready(t));
+            }
+        }
+        while c.order.len() > MAX_CACHE {
+            if let Some(old) = c.order.pop_front() {
+                c.map.remove(&old);
+            }
+        }
+    }
+}
+
 /// Jobs started (each TeX run gets its own folder).
 #[cfg(not(target_arch = "wasm32"))]
 static JOBS: AtomicU64 = AtomicU64::new(0);
@@ -406,6 +475,11 @@ impl Typesetter for ExportHandle {
     #[cfg(not(target_arch = "wasm32"))]
     fn typeset(&self, req: &TypesetRequest<'_>) -> Option<Typeset> {
         self.0.typeset_now(req)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn prepare(&self, requests: &[TypesetRequest<'_>]) {
+        self.0.prepare_now(requests);
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -613,7 +687,8 @@ fn run_batch(program: &std::path::Path, preamble: &str, keys: &[Key]) -> Result<
         let pdf = run_document(program, &dir, &tex)?;
         let dims = std::fs::read_to_string(dir.join("doc.dim")).unwrap_or_default();
         let dims: Vec<&str> = dims.lines().filter(|l| !l.trim().is_empty()).collect();
-        let doc = hayro::hayro_syntax::Pdf::new(Arc::new(pdf)).map_err(|_| "TeX's PDF cannot be read".to_string())?;
+        let file = Arc::new(pdf);
+        let doc = hayro::hayro_syntax::Pdf::new(file.clone()).map_err(|_| "TeX's PDF cannot be read".to_string())?;
         let pages = doc.pages().len();
         if pages != keys.len() || dims.len() != keys.len() {
             return Err(format!("TeX made {pages} pages for {} texts", keys.len()));
@@ -625,7 +700,10 @@ fn run_batch(program: &std::path::Path, preamble: &str, keys: &[Key]) -> Result<
             .map(|(i, (k, dim))| {
                 let (w, h, d) =
                     parse_dim(dim).ok_or_else(|| format!("TeX gave no size ({:?})", shorten(dim.trim(), 40)))?;
-                let page = hayro_write::extract_pages_to_pdf(&doc, &[i]);
+                // Each text is its page of the one file: the exports copy
+                // the pages of one file together, with their fonts once.
+                let page = fig2dev::util::pdfpic::PdfPicture::open_page(file.clone(), i)
+                    .ok_or("the TeX output cannot be shown")?;
                 render_pdf(page, (w, h, d), margin_pt(k.size as f64 / 100.0))
             })
             .collect())
@@ -681,7 +759,8 @@ fn run_tex(program: &std::path::Path, preamble: &str, key: &Key) -> Result<Types
         let pdf = run_document(program, &dir, &tex)?;
         let dim = std::fs::read_to_string(dir.join("doc.dim")).unwrap_or_default();
         let (w, h, d) = parse_dim(&dim).ok_or_else(|| format!("TeX gave no size ({:?})", shorten(dim.trim(), 40)))?;
-        render_pdf(pdf, (w, h, d), margin_pt(size))
+        let pic = fig2dev::util::pdfpic::PdfPicture::open(pdf).ok_or("the TeX output cannot be shown")?;
+        render_pdf(pic, (w, h, d), margin_pt(size))
     })();
     // Best effort: a stray temp folder is harmless.
     let _ = std::fs::remove_dir_all(&dir);
@@ -708,10 +787,13 @@ fn tex_error(log: &std::path::Path) -> String {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn render_pdf(pdf: Vec<u8>, (w, h, d): (f64, f64, f64), margin: f64) -> Result<Typeset, String> {
+fn render_pdf(
+    pic: fig2dev::util::pdfpic::PdfPicture,
+    (w, h, d): (f64, f64, f64),
+    margin: f64,
+) -> Result<Typeset, String> {
     // The page is TeX's box (height plus depth) with `margin` on every side;
     // TeX's depth places the baseline.
-    let pic = fig2dev::util::pdfpic::PdfPicture::open(pdf).ok_or("the TeX output cannot be shown")?;
     let (pw, ph) = pic.size();
     // A page that is not the box plus the margin (a TeX that ignored the page
     // size) is taken as the box itself.

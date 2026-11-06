@@ -393,3 +393,37 @@ fn real_tex_typesets_many_texts_in_one_run_and_an_error_alone() {
     let (_, special, pictures) = count(&scene_of(&e));
     assert_eq!((special, pictures), (1, 23));
 }
+
+/// With a real TeX: an export's special texts are typeset together, so the
+/// PDF has their fonts once (not a copy per text), and the page holds them.
+#[test]
+#[ignore = "needs pdflatex or lualatex"]
+fn real_tex_export_shares_fonts_and_fits_the_texts() {
+    let mut data = String::from("#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n");
+    for i in 0..8 {
+        data.push_str(&format!(
+            "4 0 0 50 -1 0 12 0.0000 2 135 100 {} 600 $x_{{{i}}}+\\\\alpha_{{{i}}}$\\001\n",
+            600 + i * 900
+        ));
+    }
+    let mut e = Engine::new();
+    e.execute("file.open_data", &json!({"data": data})).unwrap();
+    assert!(e.latex.active(), "no TeX found");
+    let r = e
+        .execute("file.export_data", &json!({"format": "pdf", "typeset_latex": true}))
+        .unwrap();
+    let pdf = rustfig_engine::base64_decode(r["base64"].as_str().unwrap());
+    let text = String::from_utf8_lossy(&pdf);
+    let fonts = text.matches("/FontFile").count();
+    assert!((1..=3).contains(&fonts), "{fonts} embedded font files for 8 texts");
+    // The last text ends past its stored length: the page holds TeX's box.
+    let i = text.find("/MediaBox [").unwrap() + 11;
+    let v: Vec<f64> = text[i..]
+        .split(']')
+        .next()
+        .unwrap()
+        .split_whitespace()
+        .map(|x| x.parse().unwrap())
+        .collect();
+    assert!(v[2] - v[0] > 7.0 * 900.0 * 72.0 / 1200.0 + 20.0, "{v:?}");
+}

@@ -39,13 +39,16 @@ fn tools() -> Value {
         },
         {
             "name": "rustfig_commands",
-            "description": "List RustFig commands with their parameters. Optional filter by substring.",
+            "description": "List RustFig commands with their parameters. Pass a filter (a substring of the id or label, e.g. \"plot\" or \"text.\"): the full list is large (about 50 KB).",
             "inputSchema": {"type": "object", "properties": {"filter": {"type": "string"}}}
         },
         {
             "name": "rustfig_render",
-            "description": "Render the current drawing as a PNG image to look at it.",
-            "inputSchema": {"type": "object", "properties": {"dpi": {"type": "number", "description": "Resolution, default 100"}}}
+            "description": "Render the current drawing as a PNG image to look at it. LaTeX (special) texts are typeset by TeX when a TeX is installed (pdflatex or lualatex), so their size and placement can be judged; without TeX they show as their source.",
+            "inputSchema": {"type": "object", "properties": {
+                "dpi": {"type": "number", "description": "Resolution, default 100"},
+                "latex": {"type": "boolean", "description": "Typeset LaTeX texts with TeX (default true)"}
+            }}
         },
         {
             "name": "rustfig_document",
@@ -97,7 +100,8 @@ impl Server {
                     .clamp(10.0, 600.0);
                 match self.engine.execute(
                     "file.export_data",
-                    &json!({"format": "png", "dpi": dpi, "margin": 60, "background": "#ffffff", "options": {"smoothing": 4}}),
+                    &json!({"format": "png", "dpi": dpi, "margin": 60, "background": "#ffffff", "options": {"smoothing": 4},
+                        "typeset_latex": args.get("latex").and_then(Value::as_bool).unwrap_or(true)}),
                 ) {
                     Ok(v) => match v.get("base64").and_then(Value::as_str) {
                         Some(b) => json!({"content": [{"type": "image", "data": b, "mimeType": "image/png"}]}),

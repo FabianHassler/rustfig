@@ -281,3 +281,18 @@ fn local_font_is_a_text_comment_in_fig() {
     // The native format keeps the family too.
     assert_eq!(read_native(write_native(&doc).unwrap().as_bytes()).unwrap(), doc);
 }
+
+/// Text sizes keep xfig's two decimals: 9.6 is written as 9.6, not as the
+/// float 9.600000000000001 (a plot's tick numbers at 0.8 of 12 points).
+#[test]
+fn text_sizes_are_written_with_two_decimals() {
+    let fig = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+               4 0 0 50 -1 0 12 0.0000 4 120 253 1331 3480 a\\001\n";
+    let mut doc = read_fig(fig.as_bytes()).unwrap();
+    let ObjectKind::Text(t) = &mut std::sync::Arc::make_mut(&mut doc.objects[0]).kind else {
+        panic!()
+    };
+    t.size = 12.0 * 0.8;
+    let out = write_fig(&doc);
+    assert!(out.contains("4 0 0 50 -1 0 9.6 0.0000"), "{out}");
+}
