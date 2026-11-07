@@ -116,6 +116,12 @@ rustfig-cli formats                         # list the export languages
 rustfig-cli mcp                             # MCP server for AI assistants
 ```
 
+**With an AI assistant:** `claude mcp add --scope user rustfig -- rustfig-cli mcp`
+(Claude Code) or `codex mcp add rustfig -- rustfig-cli mcp` (Codex), then copy
+[`skills/rustfig`](skills/rustfig/SKILL.md) to `~/.claude/skills/` or
+`~/.codex/skills/`. Setup for Claude Desktop and Cursor, and examples (prompt → figure):
+[AI assistants](https://fabianhassler.github.io/rustfig/manual/ai-assistants.html).
+
 Tool shortcuts follow xfig: `C` circle, `E` ellipse, `L` polyline,
 `P` polygon, `B` box, `I` spline, `R` arc, `T` text, `M` move, `D` delete,
 `S` select. Left click adds points; double click, right click or Enter

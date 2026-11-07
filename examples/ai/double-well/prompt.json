@@ -1,0 +1,111 @@
+{
+ "prompt": "Plot the double-well potential V(x) = V0 (x²/a² − 1)² for x/a from −1.6 to 1.6 with LaTeX axis labels, mark the two minima and the barrier height ΔV = V0.",
+ "calls": [
+  {
+   "command": "file.new",
+   "params": {}
+  },
+  {
+   "command": "plot.add",
+   "params": {
+    "x": 1200,
+    "y": 600,
+    "width": 3600,
+    "height": 2400,
+    "mode": "function",
+    "expr": "(x^2-1)^2",
+    "xmin": -1.6,
+    "xmax": 1.6,
+    "ymin": -0.2,
+    "ymax": 2,
+    "xlabel": "$x/a$",
+    "ylabel": "$V(x)/V_0$",
+    "latex": true,
+    "latex_numbers": true
+   }
+  },
+  {
+   "command": "shape.polyline",
+   "params": {
+    "points": [
+     [
+      1875,
+      2782
+     ],
+     [
+      4125,
+      2782
+     ]
+    ],
+    "depth": 60,
+    "line": "dashed",
+    "style_val": 3
+   }
+  },
+  {
+   "command": "shape.polyline",
+   "params": {
+    "points": [
+     [
+      3000,
+      2782
+     ],
+     [
+      3000,
+      1691
+     ]
+    ],
+    "depth": 60,
+    "forward_arrow": true,
+    "backward_arrow": true
+   }
+  },
+  {
+   "command": "shape.text",
+   "params": {
+    "x": 3080,
+    "y": 2509,
+    "text": "$\\Delta V = V_0$",
+    "size": 10,
+    "justify": "left",
+    "special": true,
+    "depth": 40
+   }
+  },
+  {
+   "command": "shape.circle",
+   "params": {
+    "cx": 1875,
+    "cy": 2782,
+    "r": 45,
+    "fill_color": 0,
+    "area_fill": 20,
+    "depth": 50
+   }
+  },
+  {
+   "command": "shape.circle",
+   "params": {
+    "cx": 4125,
+    "cy": 2782,
+    "r": 45,
+    "fill_color": 0,
+    "area_fill": 20,
+    "depth": 50
+   }
+  },
+  {
+   "command": "file.save",
+   "params": {
+    "path": "double-well.fig"
+   }
+  },
+  {
+   "command": "file.export",
+   "params": {
+    "path": "double-well.pdf",
+    "typeset_latex": true
+   }
+  }
+ ]
+}

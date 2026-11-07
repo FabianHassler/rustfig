@@ -1,13 +1,54 @@
 # MCP server
 
-**Status:** 2026-10-13.
+**Status:** 2026-11-06 (setup for Claude Code, Codex and others; the RustFig skill).
 
 `rustfig-cli mcp` speaks the Model Context Protocol (JSON-RPC 2.0, one
-message per line) on stdin/stdout. Example client configuration:
+message per line) on stdin/stdout. An AI assistant that runs it can draw,
+edit, look at, save and export figures with RustFig's commands.
 
-```json
-{"mcpServers": {"rustfig": {"command": "rustfig-cli", "args": ["mcp"]}}}
-```
+## Setup
+
+1. **Install RustFig** (see the README: Homebrew, the Linux packages, Scoop
+   or winget, or a release archive). `rustfig-cli --version` must work in a
+   terminal. Clients started from a desktop launcher may not see the shell's
+   `PATH`: give them the full path then (`which rustfig-cli`, for example
+   `/opt/homebrew/bin/rustfig-cli`; on Windows `rustfig-cli.exe` in the
+   install folder).
+2. **Optionally install a TeX** (TeX Live, MacTeX, MiKTeX) for LaTeX labels:
+   RustFig finds `pdflatex` or `lualatex` on its own.
+3. **Add the server to the client:**
+   - **Claude Code:** `claude mcp add --scope user rustfig -- rustfig-cli mcp`
+     (`--scope user` for all projects; leave it out for the current one).
+     `claude mcp list` shows it; `/mcp` in a session shows its state.
+   - **OpenAI Codex CLI:** `codex mcp add rustfig -- rustfig-cli mcp`, or in
+     `~/.codex/config.toml`:
+     ```toml
+     [mcp_servers.rustfig]
+     command = "rustfig-cli"
+     args = ["mcp"]
+     ```
+   - **Claude Desktop and other clients** with a JSON configuration
+     (`claude_desktop_config.json`, Cursor's `mcp.json`, …):
+     ```json
+     {"mcpServers": {"rustfig": {"command": "/opt/homebrew/bin/rustfig-cli", "args": ["mcp"]}}}
+     ```
+4. **Install the skill** (recommended): [`skills/rustfig/SKILL.md`](../skills/rustfig/SKILL.md)
+   tells the assistant how to use the tools: the workflow, coordinates,
+   LaTeX texts, plots, exports and the usual mistakes. Copy the folder
+   `skills/rustfig` to `~/.claude/skills/rustfig` (Claude Code, all
+   projects), to `.claude/skills/rustfig` in a project, or to
+   `~/.codex/skills/rustfig` (Codex). Clients without skills can be given
+   the file's text as instructions.
+5. **Restart the client** after updating RustFig: a running server keeps
+   the old program.
+
+Try it: "Draw a blue rounded box with a red circle in the middle and export
+it as PDF." More examples, with the figures they gave, are in the manual's
+[AI assistants](manual/ai-assistants.md) topic and in [`examples/ai`](../examples/ai).
+
+**Online assistants** (claude.ai, ChatGPT in the browser) can't use RustFig
+yet: they reach only remote MCP servers over HTTPS, and `rustfig-cli mcp`
+runs on the user's computer over stdio.
 
 ## Tools
 
@@ -25,3 +66,4 @@ files with `file.open` / `file.save` through `rustfig_execute`.
 | Date | Note |
 |---|---|
 | 2026-10-13 | First version. |
+| 2026-11-06 | Setup for Claude Code, Codex and JSON-configured clients; the RustFig skill (`skills/rustfig/SKILL.md`). |

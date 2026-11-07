@@ -1,0 +1,173 @@
+{
+ "prompt": "Draw the energy-level diagram of a three-level Λ system: ground states |1⟩ and |2⟩, excited state |3⟩, the probe Ω_p (blue) from |1⟩ and the coupling Ω_c (red) from |2⟩, labels in LaTeX.",
+ "calls": [
+  {
+   "command": "file.new",
+   "params": {}
+  },
+  {
+   "command": "shape.polyline",
+   "params": {
+    "points": [
+     [
+      1200,
+      3000
+     ],
+     [
+      2400,
+      3000
+     ]
+    ],
+    "depth": 60,
+    "thickness": 2
+   }
+  },
+  {
+   "command": "shape.polyline",
+   "params": {
+    "points": [
+     [
+      3600,
+      2700
+     ],
+     [
+      4800,
+      2700
+     ]
+    ],
+    "depth": 60,
+    "thickness": 2
+   }
+  },
+  {
+   "command": "shape.polyline",
+   "params": {
+    "points": [
+     [
+      2400,
+      900
+     ],
+     [
+      3600,
+      900
+     ]
+    ],
+    "depth": 60,
+    "thickness": 2
+   }
+  },
+  {
+   "command": "shape.text",
+   "params": {
+    "x": 1080,
+    "y": 3060,
+    "text": "$|1\\rangle$",
+    "size": 11,
+    "justify": "right",
+    "special": true,
+    "depth": 40
+   }
+  },
+  {
+   "command": "shape.text",
+   "params": {
+    "x": 4920,
+    "y": 2760,
+    "text": "$|2\\rangle$",
+    "size": 11,
+    "justify": "left",
+    "special": true,
+    "depth": 40
+   }
+  },
+  {
+   "command": "shape.text",
+   "params": {
+    "x": 3720,
+    "y": 960,
+    "text": "$|3\\rangle$",
+    "size": 11,
+    "justify": "left",
+    "special": true,
+    "depth": 40
+   }
+  },
+  {
+   "command": "shape.polyline",
+   "params": {
+    "points": [
+     [
+      1800,
+      3000
+     ],
+     [
+      2850,
+      900
+     ]
+    ],
+    "depth": 60,
+    "forward_arrow": true,
+    "thickness": 2,
+    "pen_color": 1
+   }
+  },
+  {
+   "command": "shape.polyline",
+   "params": {
+    "points": [
+     [
+      4200,
+      2700
+     ],
+     [
+      3150,
+      900
+     ]
+    ],
+    "depth": 60,
+    "forward_arrow": true,
+    "thickness": 2,
+    "pen_color": 4
+   }
+  },
+  {
+   "command": "shape.text",
+   "params": {
+    "x": 2220,
+    "y": 1980,
+    "text": "$\\Omega_\\mathrm{p}$",
+    "size": 11,
+    "justify": "right",
+    "special": true,
+    "depth": 40,
+    "color": 1
+   }
+  },
+  {
+   "command": "shape.text",
+   "params": {
+    "x": 3780,
+    "y": 1830,
+    "text": "$\\Omega_\\mathrm{c}$",
+    "size": 11,
+    "justify": "left",
+    "special": true,
+    "depth": 40,
+    "color": 4
+   }
+  },
+  {
+   "command": "file.save",
+   "params": {
+    "path": "lambda-system.fig"
+   }
+  },
+  {
+   "command": "file.export",
+   "params": {
+    "path": "lambda-system.pdf",
+    "typeset_latex": true
+   }
+  }
+ ]
+}

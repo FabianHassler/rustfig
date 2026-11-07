@@ -200,6 +200,7 @@ fn nav(prefix: &str) -> String {
 <a href="{prefix}index.html#download">Download</a>
 <a href="{prefix}manual/index.html">Manual</a>
 <a href="{prefix}compare.html">Compared</a>
+<a href="{prefix}manual/ai-assistants.html">AI assistants</a>
 <a href="{prefix}app/">Try it in the browser</a>
 <a href="{REPO}">GitHub</a>
 </nav></header>
@@ -290,7 +291,7 @@ pub fn landing() -> String {
 <section class="hero">
 <h1>RustFig: xfig for today's computers</h1>
 <p class="lead">The classic vector drawing program, rebuilt in Rust. It runs natively on <strong>Windows</strong>, <strong>macOS</strong> and <strong>Linux</strong> and in the browser, with <strong>no X server, XQuartz or WSL</strong>, and has fig2dev and LaTeX built in.</p>
-<p class="buttons"><a class="button primary" href="#download">Download</a> <a class="button" href="app/">Try it in the browser</a> <a class="button" href="manual/index.html">Read the manual</a> <a class="button" href="compare.html">Compare with xfig and others</a></p>
+<p class="buttons"><a class="button primary" href="#download">Download</a> <a class="button" href="app/">Try it in the browser</a> <a class="button" href="manual/index.html">Read the manual</a> <a class="button" href="#ai">Draw with an AI assistant</a> <a class="button" href="compare.html">Compare with xfig and others</a></p>
 <img src="rustfig-window.png" width="1600" height="1033" alt="RustFig's window in xfig's layout: a plot with LaTeX labels, LaTeX formulas typeset on the canvas, and a block diagram">
 </section>
 
@@ -317,6 +318,17 @@ pub fn landing() -> String {
 <figure><a href="{REPO}/tree/main/examples/gosper-curve"><img src="examples/gosper-curve.jpg" width="640" height="495" alt="A Gosper curve: one continuous line folded into a snowflake-like island, colored like a rainbow" loading="lazy"></a><figcaption>Gosper curve: one line of 16,808 points</figcaption></figure>
 <figure><a href="{REPO}/tree/main/examples/greece"><img src="examples/greece.jpg" width="640" height="480" alt="A topographic map of Greece and the Aegean with relief shading" loading="lazy"></a><figcaption>Topographic map of Greece, imported from SVG</figcaption></figure>
 </div>
+</section>
+
+<section id="ai">
+<h2>Draw with an AI assistant</h2>
+<p>Describe a figure in a sentence, and Claude Code, Claude Desktop, the Codex CLI or Cursor draws it with RustFig: it runs RustFig's commands, looks at the result, fixes it, saves the <code>.fig</code> and exports the PDF. The figure stays an ordinary xfig drawing you can edit by hand. <a href="manual/ai-assistants.html">How to set it up</a> (one command, plus the <a href="{REPO}/tree/main/skills/rustfig">RustFig skill</a>).</p>
+<div class="examples ai">
+<figure><a href="{REPO}/tree/main/examples/ai/feedback-loop"><img src="examples/ai-feedback-loop.jpg" width="640" height="228" alt="A feedback-loop block diagram: controller C(s), plant G(s), sensor H(s) in the feedback path, a summing junction, and the signals r(t), e(t), u(t), y(t) typeset in LaTeX" loading="lazy"></a><figcaption>&ldquo;Draw the block diagram of a feedback loop: controller C(s), plant G(s) and a sensor H(s) in the feedback path, a summing junction with + and &minus;, the signals r, e, u, y labeled in LaTeX. Save it and export a PDF.&rdquo;</figcaption></figure>
+<figure><a href="{REPO}/tree/main/examples/ai/double-well"><img src="examples/ai-double-well.jpg" width="623" height="444" alt="A plot of the double-well potential with LaTeX axis labels, dots at the two minima and a double arrow marking the barrier height Delta V = V_0" loading="lazy"></a><figcaption>&ldquo;Plot the double-well potential V(x) = V<sub>0</sub> (x&sup2;/a&sup2; &minus; 1)&sup2; for x/a from &minus;1.6 to 1.6 with LaTeX axis labels, mark the two minima and the barrier height.&rdquo;</figcaption></figure>
+<figure><a href="{REPO}/tree/main/examples/ai/lambda-system"><img src="examples/ai-lambda-system.jpg" width="503" height="275" alt="An energy-level diagram of a three-level Lambda system: levels |1>, |2>, |3>, a blue probe transition and a red coupling transition" loading="lazy"></a><figcaption>&ldquo;Draw the energy-level diagram of a three-level &Lambda; system: ground states |1&rang; and |2&rang;, excited state |3&rang;, the probe &Omega;<sub>p</sub> (blue) and the coupling &Omega;<sub>c</sub> (red), labels in LaTeX.&rdquo;</figcaption></figure>
+</div>
+<p>Each folder holds the prompt, the tool calls the assistant made, the <code>.fig</code> and its PDF.</p>
 </section>
 
 <section id="download">

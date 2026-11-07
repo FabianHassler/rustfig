@@ -57,6 +57,7 @@ pub const TOPICS: &[Topic] = &[
     topic!("print.md"),
     topic!("preferences.md"),
     topic!("automation.md"),
+    topic!("ai-assistants.md"),
     topic!("help-tools.md"),
 ];
 

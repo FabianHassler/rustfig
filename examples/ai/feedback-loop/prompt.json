@@ -1,0 +1,294 @@
+{
+ "prompt": "Draw the block diagram of a feedback loop: controller C(s), plant G(s) and a sensor H(s) in the feedback path, a summing junction with + and −, the signals r, e, u, y labeled in LaTeX. Save it as feedback-loop.fig and export a PDF.",
+ "calls": [
+  {
+   "command": "file.new",
+   "params": {}
+  },
+  {
+   "command": "shape.circle",
+   "params": {
+    "cx": 900,
+    "cy": 1650,
+    "r": 150,
+    "thickness": 1,
+    "depth": 60
+   }
+  },
+  {
+   "command": "shape.rectangle",
+   "params": {
+    "x": 1800,
+    "y": 1200,
+    "width": 1800,
+    "height": 900,
+    "thickness": 1,
+    "depth": 60
+   }
+  },
+  {
+   "command": "shape.text",
+   "params": {
+    "x": 2700,
+    "y": 1710,
+    "text": "Controller $C(s)$",
+    "size": 10,
+    "justify": "center",
+    "special": true,
+    "depth": 40
+   }
+  },
+  {
+   "command": "shape.rectangle",
+   "params": {
+    "x": 4800,
+    "y": 1200,
+    "width": 1800,
+    "height": 900,
+    "thickness": 1,
+    "depth": 60
+   }
+  },
+  {
+   "command": "shape.text",
+   "params": {
+    "x": 5700,
+    "y": 1710,
+    "text": "Plant $G(s)$",
+    "size": 10,
+    "justify": "center",
+    "special": true,
+    "depth": 40
+   }
+  },
+  {
+   "command": "shape.rectangle",
+   "params": {
+    "x": 4800,
+    "y": 3000,
+    "width": 1800,
+    "height": 900,
+    "thickness": 1,
+    "depth": 60
+   }
+  },
+  {
+   "command": "shape.text",
+   "params": {
+    "x": 5700,
+    "y": 3510,
+    "text": "Sensor $H(s)$",
+    "size": 10,
+    "justify": "center",
+    "special": true,
+    "depth": 40
+   }
+  },
+  {
+   "command": "shape.polyline",
+   "params": {
+    "points": [
+     [
+      0,
+      1650
+     ],
+     [
+      750,
+      1650
+     ]
+    ],
+    "depth": 60,
+    "forward_arrow": true
+   }
+  },
+  {
+   "command": "shape.polyline",
+   "params": {
+    "points": [
+     [
+      1050,
+      1650
+     ],
+     [
+      1800,
+      1650
+     ]
+    ],
+    "depth": 60,
+    "forward_arrow": true
+   }
+  },
+  {
+   "command": "shape.polyline",
+   "params": {
+    "points": [
+     [
+      3600,
+      1650
+     ],
+     [
+      4800,
+      1650
+     ]
+    ],
+    "depth": 60,
+    "forward_arrow": true
+   }
+  },
+  {
+   "command": "shape.polyline",
+   "params": {
+    "points": [
+     [
+      6600,
+      1650
+     ],
+     [
+      7800,
+      1650
+     ]
+    ],
+    "depth": 60,
+    "forward_arrow": true
+   }
+  },
+  {
+   "command": "shape.polyline",
+   "params": {
+    "points": [
+     [
+      7200,
+      1650
+     ],
+     [
+      7200,
+      3450
+     ],
+     [
+      6600,
+      3450
+     ]
+    ],
+    "depth": 60,
+    "forward_arrow": true
+   }
+  },
+  {
+   "command": "shape.polyline",
+   "params": {
+    "points": [
+     [
+      4800,
+      3450
+     ],
+     [
+      900,
+      3450
+     ],
+     [
+      900,
+      1800
+     ]
+    ],
+    "depth": 60,
+    "forward_arrow": true
+   }
+  },
+  {
+   "command": "shape.circle",
+   "params": {
+    "cx": 7200,
+    "cy": 1650,
+    "r": 45,
+    "fill_color": 0,
+    "area_fill": 20,
+    "depth": 50
+   }
+  },
+  {
+   "command": "shape.text",
+   "params": {
+    "x": 375,
+    "y": 1560,
+    "text": "$r(t)$",
+    "size": 10,
+    "justify": "center",
+    "special": true,
+    "depth": 40
+   }
+  },
+  {
+   "command": "shape.text",
+   "params": {
+    "x": 1425,
+    "y": 1560,
+    "text": "$e(t)$",
+    "size": 10,
+    "justify": "center",
+    "special": true,
+    "depth": 40
+   }
+  },
+  {
+   "command": "shape.text",
+   "params": {
+    "x": 4200,
+    "y": 1560,
+    "text": "$u(t)$",
+    "size": 10,
+    "justify": "center",
+    "special": true,
+    "depth": 40
+   }
+  },
+  {
+   "command": "shape.text",
+   "params": {
+    "x": 7500,
+    "y": 1560,
+    "text": "$y(t)$",
+    "size": 10,
+    "justify": "center",
+    "special": true,
+    "depth": 40
+   }
+  },
+  {
+   "command": "shape.text",
+   "params": {
+    "x": 660,
+    "y": 1530,
+    "text": "$+$",
+    "size": 9,
+    "justify": "center",
+    "special": true,
+    "depth": 40
+   }
+  },
+  {
+   "command": "shape.text",
+   "params": {
+    "x": 780,
+    "y": 1980,
+    "text": "$-$",
+    "size": 9,
+    "justify": "center",
+    "special": true,
+    "depth": 40
+   }
+  },
+  {
+   "command": "file.save",
+   "params": {
+    "path": "feedback-loop.fig"
+   }
+  },
+  {
+   "command": "file.export",
+   "params": {
+    "path": "feedback-loop.pdf",
+    "typeset_latex": true
+   }
+  }
+ ]
+}
