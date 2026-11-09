@@ -165,7 +165,7 @@ pub const RESOURCES: &[Resource] = &[
     r("rigidtext", Bool, "false", "-rigidtext", Applied),
     r("rulerthick", Int, "24", "-rulerthick", Planned("E9")),
     r("scale_factor", Float, "1.0", "-scale_factor", Applied),
-    r("splash", Bool, "true", "-splash, -nosplash", Applied),
+    r("splash", Bool, "false", "-splash, -nosplash", Applied),
     r("showallbuttons", Bool, "false", "-showallbuttons", Planned("E9")),
     r("showaxislines", Bool, "true", "-showaxislines, -dontshowaxislines", Applied),
     r("showballoons", Bool, "true", "-showballoons, -dontshowballoons", Applied),

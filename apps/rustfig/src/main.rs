@@ -153,12 +153,12 @@ fn main() -> eframe::Result<()> {
             }
             let mut app = rustfig_ui_egui::App::new(cc, engine, control);
             app.fixed_ppp = fixed_ppp;
+            // xfig's options and X resources apply to this run only.
+            rustfig_ui_egui::settings::start_session(&mut app, &xdefaults, &overrides);
             if background {
                 // Scripts and agents drive a background window: no start screen.
                 app.splash = None;
             }
-            // xfig's options and X resources apply to this run only.
-            rustfig_ui_egui::settings::start_session(&mut app, &xdefaults, &overrides);
             if let Some(e) = startup_error {
                 app.error(e);
             }

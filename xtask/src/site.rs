@@ -210,7 +210,7 @@ fn nav(prefix: &str) -> String {
 
 fn footer() -> String {
     format!(
-        "<footer>RustFig is open source (MIT OR Apache-2.0; parts ported from xfig and fig2dev under the xfig license). \
+        "<footer>RustFig \u{a9} 2026 Fabian Hassler, open source (MIT OR Apache-2.0; parts ported from xfig and fig2dev under the xfig license). \
          <a href=\"{REPO}\">Source on GitHub</a> · <a href=\"{REPO}/releases\">Releases</a> · \
          <a href=\"https://github.com/FabianHassler/fig2dev\">fig2dev in Rust</a></footer>\n</body>\n</html>\n"
     )

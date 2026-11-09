@@ -328,8 +328,6 @@ impl App {
         // Mutated only by the native control server below.
         #[cfg_attr(target_arch = "wasm32", allow(unused_mut))]
         let mut app = App::with_engine(engine);
-        // The start screen (off in tests, which build the app with `with_engine`).
-        app.splash = Some(splash::Splash::default());
         // TeX Gyre fonts installed earlier (F1) join the font lookup.
         #[cfg(not(target_arch = "wasm32"))]
         tex_gyre::register_installed();

@@ -1303,6 +1303,22 @@ fn settings_survive_a_restart() {
     let _ = std::fs::remove_dir_all(path.parent().unwrap());
 }
 
+/// The start screen is off at start-up unless `-splash` (or the `splash`
+/// setting) asks for it.
+#[test]
+fn start_screen_is_off_unless_asked_for() {
+    let path = settings_file("splash");
+    let mut a = app_with_settings(&path);
+    let none = rustfig_engine::cmdline::resource_table(&[]);
+    rustfig_ui_egui::settings::start_session(&mut a, &none, &none);
+    assert!(a.splash.is_none());
+    let mut a = app_with_settings(&path);
+    let o = rustfig_engine::cmdline::parse(["-splash"]).unwrap();
+    rustfig_ui_egui::settings::start_session(&mut a, &none, &o.override_table());
+    assert!(a.splash.is_some());
+    let _ = std::fs::remove_dir_all(path.parent().unwrap());
+}
+
 /// S3: xfig's command-line options apply to one run and are not saved.
 #[test]
 fn command_line_options_are_not_saved() {

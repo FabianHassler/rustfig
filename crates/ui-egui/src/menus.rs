@@ -299,7 +299,7 @@ pub const UI_COMMANDS: &[UiCommand] = &[
         id: "app.splash",
         label: "Show Start Screen",
         shortcut: "",
-        params: "{}  — the start screen again (shown for a few seconds at start-up unless -nosplash or the splash setting is off)",
+        params: "{}  — the start screen (shown for a few seconds at start-up with -splash or the splash setting on; off by default)",
     },
     UiCommand {
         id: "app.capture",
@@ -1656,7 +1656,7 @@ mod tests {
         ("tool.", "the mode panel's buttons and the mode keys choose tools"),
         (
             "app.splash",
-            "the start screen comes up at start-up (xfig's splash); scripts can show it again",
+            "the start screen comes up at start-up with -splash (xfig's splash); scripts can show it",
         ),
         // xfig has no selection (decided 2026-10-22): these work on the
         // given ids for scripts and MCP; the modes do the same by mouse.

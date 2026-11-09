@@ -50,6 +50,8 @@ pub fn info_plist(version: &str, with_icon: bool) -> String {
 	<string>{version}</string>
 	<key>CFBundleShortVersionString</key>
 	<string>{version}</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 Fabian Hassler</string>
 {icon}	<key>LSMinimumSystemVersion</key>
 	<string>11.0</string>
 	<key>NSHighResolutionCapable</key>

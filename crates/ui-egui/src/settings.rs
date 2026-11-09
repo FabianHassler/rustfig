@@ -347,4 +347,9 @@ pub fn start_session(app: &mut App, defaults: &TomlTable, overrides: &TomlTable)
         app.error(format!("options: {w}"));
     }
     apply_ui(app);
+    // The start screen is off unless asked for (`-splash`, the `splash`
+    // setting); it shows once, at the start.
+    if app.engine.prefs.bool("splash") == Some(true) {
+        app.splash = Some(crate::splash::Splash::default());
+    }
 }

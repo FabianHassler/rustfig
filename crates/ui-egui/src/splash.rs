@@ -14,8 +14,8 @@ const SHOW_SECS: f64 = 3.0;
 /// Seconds of the fade-in and of the fade-out.
 const FADE_SECS: f64 = 0.35;
 /// The card's size in points, at the start and as Help > About.
-const CARD: egui::Vec2 = vec2(500.0, 260.0);
-const ABOUT_CARD: egui::Vec2 = vec2(540.0, 340.0);
+const CARD: egui::Vec2 = vec2(500.0, 275.0);
+const ABOUT_CARD: egui::Vec2 = vec2(540.0, 355.0);
 /// Width of the colored band with the icon.
 const BAND: f32 = 180.0;
 /// The icon's side in points.
@@ -216,6 +216,7 @@ fn paint_card(p: &Painter, card: Rect, dark: bool, icon: Option<&egui::TextureHa
     let small = FontId::proportional(11.0);
     let lines: &[&str] = if about {
         &[
+            "\u{a9} 2026 Fabian Hassler.",
             "Licensed MIT OR Apache-2.0; the parts from xfig and",
             "fig2dev keep the xfig license (see NOTICE).",
             "",
@@ -225,6 +226,7 @@ fn paint_card(p: &Painter, card: Rect, dark: bool, icon: Option<&egui::TextureHa
         ]
     } else {
         &[
+            "\u{a9} 2026 Fabian Hassler.",
             "Based on xfig and fig2dev by Supoj Sutanthavibul,",
             "Brian V. Smith, Paul King, Thomas Loimer and many others.",
         ]

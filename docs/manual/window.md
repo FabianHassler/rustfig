@@ -21,7 +21,7 @@ Below it, the **Favorites** strip holds up to eight small mode buttons of your o
 
 ## Start screen
 
-When RustFig starts, a card with its name, version and credits shows over the canvas for three seconds, as xfig shows its splash graphic; Help › About RustFig shows the same card, with the license and the copyrights, until you click or press a key. The first key or click fades it out and still does its job. Start with `-nosplash`, or turn off the `splash` setting in Global settings, to skip it. Scripts can show it again with the `app.splash` command (Show Start Screen).
+Help › About RustFig shows a card with RustFig's name, version, copyright, license and xfig's copyrights, until you click or press a key. RustFig starts straight into the window; to see the card for three seconds at every start, as xfig shows its splash graphic, start with `-splash` or turn on the `splash` setting in Global settings (the first key or click fades it out and still does its job). Scripts can show it with the `app.splash` command (Show Start Screen).
 
 ## Canvas
 
