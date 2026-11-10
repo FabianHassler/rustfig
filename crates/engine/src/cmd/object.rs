@@ -49,7 +49,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Set attributes",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id], \"line\"?, \"thickness\"?, \"pen_color\"? (or \"color\"), \"fill_color\"?, \"area_fill\"?, \"depth\"?, \"style_val\"?, \"cap\"?: butt|round|projecting, \"join\"?: miter|round|bevel, \"forward_arrow\"?: bool, \"backward_arrow\"?: bool, \"arrow_kind\"?, \"arrow_style\"?, \"arrow_width\"?, \"arrow_height\"?, \"radius\"?, \"font\"?, \"local_font\"?: string|null (installed font; applied after font and postscript), \"font_size\"? (or \"size\"), \"justify\"?, \"angle\"?: degrees, \"text\"?, \"postscript\"?: bool, \"hidden\"?: bool, \"rigid\"?: bool, \"special\"?: bool (as shape.text: without postscript and font it leaves the PostScript font), \"pie\"?: bool, \"flipped\"?: bool (pictures), \"arrow_thickness\"?, \"comment\"?: string, \"texts\"?: [string] (compound: the texts directly in it, in order), \"forward_arrow_spec\"?, \"backward_arrow_spec\"?: {kind, style, thickness, width, height}, \"geometry\"?: as object.set_geometry without id}",
+            params: "{\"ids\"?: [id], \"line\"?, \"thickness\"?, \"pen_color\"? (or \"color\"), \"fill_color\"?, \"area_fill\"?, \"depth\"?, \"style_val\"?, \"cap\"?: butt|round|projecting, \"join\"?: miter|round|bevel, \"forward_arrow\"?: bool, \"backward_arrow\"?: bool, \"arrow_kind\"?, \"arrow_style\"?, \"arrow_width\"?, \"arrow_height\"?, \"radius\"?, \"font\"?, \"local_font\"?: string|null (installed font; applied after font and postscript), \"font_size\"? (or \"size\"), \"justify\"?, \"angle\"?: degrees, \"text\"?, \"postscript\"?: bool, \"hidden\"?: bool, \"rigid\"?: bool, \"special\"?: bool (as shape.text: without postscript and font it leaves the PostScript font), \"pie\"?: bool, \"flipped\"?: bool (pictures), \"arrow_thickness\"?, \"comment\"?: string, \"name\"?: string (1-100 characters, kept in the file as a comment line; \"\" removes it; names need not be unique: `names` in any command that takes `ids` selects every top-level object carrying it), \"texts\"?: [string] (compound: the texts directly in it, in order), \"forward_arrow_spec\"?, \"backward_arrow_spec\"?: {kind, style, thickness, width, height}, \"geometry\"?: as object.set_geometry without id}",
             mutates: true,
             enabled: |_| true,
             run: set_attributes,
@@ -99,7 +99,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "List objects",
             menu: "",
             shortcut: "",
-            params: "{\"typeset\"?: bool (default true)}  — id, type, depth and bounds of every top-level object; with TeX installed (and typeset not false) a LaTeX (special) text measures as TeX sets it, not by its source (result typeset: true; TeX errors as warnings)",
+            params: "{\"typeset\"?: bool (default true)}  — id, type, depth and bounds of every top-level object; a named object also lists its \"name\"; with TeX installed (and typeset not false) a LaTeX (special) text measures as TeX sets it, not by its source (result typeset: true; TeX errors as warnings)",
             mutates: false,
             enabled: |_| true,
             run: list,
@@ -442,6 +442,14 @@ pub(super) fn set_attributes_inner(e: &mut Engine, p: &Value) -> CmdResult {
     let aw = opt_num(p, "arrow_width")?.map(|v| v.clamp(1.0, 1.0e5));
     let ah = opt_num(p, "arrow_height")?.map(|v| v.clamp(1.0, 1.0e5));
     let comment = opt_str(p, "comment")?.map(str::to_string);
+    let name = match opt_str(p, "name")?.map(str::trim) {
+        Some(n) if n.chars().count() > 100 || n.contains(['\n', '\r']) => {
+            return Err(EngineError::bad_params(
+                "name must be 1-100 characters on one line (\"\" removes it)",
+            ))
+        }
+        other => other.map(str::to_string),
+    };
     let forward_spec = arrow_spec(p, "forward_arrow_spec")?;
     let backward_spec = arrow_spec(p, "backward_arrow_spec")?;
     let template = e.indicator.arrow_value();
@@ -613,7 +621,22 @@ pub(super) fn set_attributes_inner(e: &mut Engine, p: &Value) -> CmdResult {
         };
         for o in e.doc_mut().objects.iter_mut() {
             if ids.contains(&o.id) {
-                Arc::make_mut(o).comments = lines.clone();
+                // The name line stays: it is not part of the user's comment.
+                let keep = crate::object_name(o).map(|n| format!("{} {n}", crate::NAME_COMMENT));
+                let o = Arc::make_mut(o);
+                o.comments = keep.into_iter().chain(lines.iter().cloned()).collect();
+            }
+        }
+    }
+    if let Some(n) = &name {
+        let ids = e.target_set(p)?;
+        for o in e.doc_mut().objects.iter_mut() {
+            if ids.contains(&o.id) {
+                let o = Arc::make_mut(o);
+                o.comments.retain(|c| !c.starts_with(crate::NAME_COMMENT));
+                if !n.is_empty() {
+                    o.comments.insert(0, format!("{} {n}", crate::NAME_COMMENT));
+                }
             }
         }
     }
@@ -662,13 +685,17 @@ fn list(e: &mut Engine, p: &Value) -> CmdResult {
         .objects
         .iter()
         .map(|o| {
-            json!({
+            let mut v = json!({
                 "id": o.id.0,
                 "type": o.type_name(),
                 "depth": o.depth(),
                 "bounds": rect_json(&shown_bbox(doc, o, typesetter)),
                 "selected": e.selection().contains(&o.id),
-            })
+            });
+            if let (Some(name), Some(m)) = (crate::object_name(o), v.as_object_mut()) {
+                m.insert("name".into(), json!(name));
+            }
+            v
         })
         .collect();
     let warnings = ts.as_ref().map(|t| t.errors()).unwrap_or_default();
