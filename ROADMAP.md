@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-11-10 | **B16**: Asymptote export draws splines as curves (fig2dev v0.9.14): Export panel › Splines guide (default: the Fig points kept, `bspline(...)` or one Bézier per segment), hobby (Asymptote's `..`), exact (within 0.5 Fig units of xfig); user feedback. |
 | 2026-11-10 | **F17**: special functions in plot expressions: Bessel J, Y, I, K (`j0 j1 y0 y1 i0 i1 k0 k1`, `jn yn in kn (n, x)`), `gamma`, `lgamma`, `erf`, `erfc`, `heaviside`, own Rust code, about 1e-11 or better against scipy. |
 | 2026-11-10 | **F18**: object names that survive the file: `object.set_attributes {"name"}` keeps a `rustfig-name:` comment line in the .fig (xfig and fig2dev ignore it), `object.list` shows it, and `"names": [...]` replaces `"ids"` in every command that takes ids (a name selects every top-level object carrying it). |
 | 2026-11-10 | **F16**: plots with several curves, each with its own style and markers (circle, square, triangle, diamond, cross, plus); data given in the command is kept in the figure, so ranges can change later; the plot takes a depth and a default style. |

@@ -116,6 +116,8 @@ fn setup(lang: &str, options: &[(char, Option<String>)], dir: Option<&Path>) -> 
     }
     // After the options, so that -m counts (fig2dev's get_args).
     ctx.font_size *= ctx.fontmag;
+    // The Asymptote driver draws splines as curves: they reach it as splines.
+    ctx.keep_splines = dev.keeps_splines();
     Ok((dev, ctx))
 }
 

@@ -63,6 +63,10 @@ pub struct PanelSettings {
     pub hpgl_pcl: bool,
     /// HPGL: "Use Specified Font" (`hpgl_specified_font`, fig2dev's `-F`).
     pub hpgl_font: bool,
+    /// Asymptote: how splines are written (fig2dev's `-S`): "guide" (the
+    /// Fig points kept), "hobby" (Asymptote's own curve through the points
+    /// of interpolated splines) or "exact" (within 0.5 Fig units of xfig).
+    pub asy_splines: String,
 }
 
 impl Default for PanelSettings {
@@ -101,6 +105,7 @@ impl PanelSettings {
             typeset_latex: false,
             hpgl_pcl: false,
             hpgl_font: false,
+            asy_splines: "guide".into(),
         }
     }
 
@@ -169,7 +174,12 @@ pub struct Rows {
     /// HPGL: the PCL command and specified font switches
     /// (`toggle_hpgl_pcl_switch`, `toggle_hpgl_font`).
     pub hpgl: bool,
+    /// Asymptote: the spline mode.
+    pub asy: bool,
 }
+
+/// The Asymptote spline modes, the default first.
+pub const ASY_SPLINES: [&str; 3] = ["guide", "hobby", "exact"];
 
 /// Languages that draw special (LaTeX) texts as TeX typesets them when the
 /// export asks for it (`typeset_latex`): PDF, PostScript, SVG and the
@@ -204,6 +214,7 @@ pub fn rows(id: &str) -> Rows {
         multiple: matches!(id, "ps" | "pdf"),
         bitmap,
         hpgl: id == "ibmgl",
+        asy: id == "asy",
     }
 }
 
@@ -323,6 +334,9 @@ pub fn params(e: &Engine, id: &str, s: &PanelSettings) -> Map<String, Value> {
                 options.insert("O".into(), json!(true));
             }
         }
+    }
+    if r.asy && ASY_SPLINES.contains(&s.asy_splines.as_str()) && s.asy_splines != "guide" {
+        options.insert("S".into(), json!(s.asy_splines));
     }
     if r.hpgl {
         // `print_export` for LANG_IBMGL: -F, -k, then the paper size and -P.
@@ -531,5 +545,26 @@ mod tests {
         // 10.5 in x 8 in usable (landscape) over 10 in x 5 in: width wins? 10.5/10 = 1.05, 7.5/5 = 1.5
         let m = fit_page(&b, PaperSize::Letter, true, Units::Inches).unwrap_or(0.0);
         assert!((m - 100.0 * (11.0 - 1.0) / 10.0).abs() < 1e-9, "{m}");
+    }
+
+    #[test]
+    fn the_asymptote_spline_mode_is_fig2devs_s() {
+        let e = Engine::new();
+        let opts = |mode: &str| {
+            let s = PanelSettings {
+                asy_splines: mode.into(),
+                ..PanelSettings::xfig()
+            };
+            params(&e, "asy", &s)
+                .get("options")
+                .and_then(Value::as_object)
+                .cloned()
+                .unwrap_or_default()
+        };
+        assert!(rows("asy").asy && !rows("pdf").asy);
+        assert!(opts("guide").get("S").is_none(), "the default goes without -S");
+        assert_eq!(opts("hobby").get("S"), Some(&json!("hobby")));
+        assert_eq!(opts("exact").get("S"), Some(&json!("exact")));
+        assert!(opts("wavy").get("S").is_none());
     }
 }

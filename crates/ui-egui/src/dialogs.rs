@@ -3524,6 +3524,15 @@ fn export_dialog(app: &mut App, ctx: &egui::Context) {
                             });
                             ui.end_row();
                         }
+                        if rows.asy {
+                            // fig2dev's `-S`: how splines are written.
+                            ui.label("Splines");
+                            let cur = st.settings.asy_splines.clone();
+                            if let Some(c) = text_combo(ui, "export_asy_splines", &cur, &rustfig_engine::export_panel::ASY_SPLINES) {
+                                st.settings.asy_splines = c;
+                            }
+                            ui.end_row();
+                        }
                         if rows.bitmap {
                             ui.label("Resolution");
                             ui.add(

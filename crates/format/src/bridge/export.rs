@@ -179,7 +179,7 @@ fn fix(obj: FigObject, ctx: &mut Ctx) -> Option<FigObject> {
             if rd::spline_invalid(&s) || s.points.len() < 2 {
                 return None;
             }
-            // Fig 3.2 splines are lines for the drivers, as the reader
+            // Fig 3.2 splines are lines for most drivers, as the reader
             // makes them (a spline that can't be is a failure there).
             let bad = s.points.iter().all(|p| Some(p) == s.points.first())
                 || s.controls.len() != s.points.len()
@@ -188,7 +188,14 @@ fn fix(obj: FigObject, ctx: &mut Ctx) -> Option<FigObject> {
                 return None;
             }
             note_spline(ctx, &s);
-            FigObject::Line(fig2dev::trans_spline::create_line_with_spline(ctx, &s)?)
+            let line = fig2dev::trans_spline::create_line_with_spline(ctx, &s)?;
+            // A driver that draws splines itself (asy) gets the spline; the
+            // conversion only checked that it works, as in the reader.
+            if ctx.keep_splines {
+                FigObject::Spline(s)
+            } else {
+                FigObject::Line(line)
+            }
         }
         FigObject::Text(mut t) => {
             let text = t.cstring.clone();
