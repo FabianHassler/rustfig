@@ -456,3 +456,39 @@ fn real_tex_errors_are_export_warnings() {
         );
     }
 }
+
+#[test]
+fn the_figure_preamble_follows_the_document() {
+    let mut e = Engine::new();
+    e.execute("view.set_latex_preamble", &json!({"preamble": "\\usepackage{bm}"}))
+        .unwrap();
+    e.execute(
+        "doc.set_latex_preamble",
+        &json!({"preamble": "\\usepackage{siunitx}\n"}),
+    )
+    .unwrap();
+    assert_eq!(e.doc().latex_preamble, "\\usepackage{siunitx}");
+    assert_eq!(
+        e.latex.settings().tex_preamble(),
+        "\\usepackage{bm}\n\\usepackage{siunitx}"
+    );
+    assert!(e.undo());
+    assert_eq!(e.latex.settings().tex_preamble(), "\\usepackage{bm}");
+    assert!(e.redo());
+
+    // Saved in the Fig file and back on open; merging adds missing lines.
+    let data = e.execute("file.save_data", &json!({})).unwrap()["data"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert!(data.contains("# RustFigLaTeXPreamble \\usepackage{siunitx}"), "{data}");
+    e.execute("file.new", &json!({})).unwrap();
+    assert_eq!(e.latex.settings().document_preamble, "");
+    e.execute("file.open_data", &json!({"data": data})).unwrap();
+    assert_eq!(e.latex.settings().document_preamble, "\\usepackage{siunitx}");
+
+    assert!(e
+        .execute("doc.set_latex_preamble", &json!({"preamble": "x".repeat(9000)}))
+        .is_err());
+    assert_eq!(e.doc().latex_preamble, "\\usepackage{siunitx}");
+}

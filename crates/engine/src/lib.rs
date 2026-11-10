@@ -313,6 +313,8 @@ impl Engine {
 
     pub fn bump_revision(&mut self) {
         self.revision = self.revision.wrapping_add(1);
+        // Every document change (commands, undo, open) passes here.
+        self.latex.set_document_preamble(&self.doc.latex_preamble);
     }
 
     pub fn selection(&self) -> &[ObjectId] {

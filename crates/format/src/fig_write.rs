@@ -13,6 +13,10 @@ use std::fmt::Write as _;
 /// comments and read back into the model, not shown as a user comment.
 const EXPORT_ON_SAVE_MARKER: &str = "RustFigExportOnSave";
 
+/// The whole-figure comment lines that carry [`Document::latex_preamble`],
+/// one per preamble line, after the export-on-save line.
+const LATEX_PREAMBLE_MARKER: &str = "RustFigLaTeXPreamble";
+
 fn i(v: f64) -> i64 {
     if v.is_finite() {
         v.round().clamp(-2.0e9, 2.0e9) as i64
@@ -277,6 +281,7 @@ pub fn write_fig(doc: &Document) -> String {
     let _ = writeln!(out, "{}", s.transparent_color);
     comments(&mut out, &doc.comments);
     write_export_on_save(&mut out, doc);
+    write_latex_preamble(&mut out, doc);
     out.push_str("1200 2\n");
     let mut colors = doc.colors.clone();
     colors.sort_by_key(|c| c.number);
@@ -326,5 +331,44 @@ pub(crate) fn restore_export_on_save(doc: &mut Document) {
             _ => kept.push(line),
         }
     }
+    doc.comments = kept;
+}
+
+fn write_latex_preamble(out: &mut String, doc: &Document) {
+    for line in doc.latex_preamble.lines() {
+        let line = line.trim_end();
+        if line.is_empty() {
+            let _ = writeln!(out, "# {LATEX_PREAMBLE_MARKER}");
+        } else {
+            let _ = writeln!(out, "# {LATEX_PREAMBLE_MARKER} {line}");
+        }
+    }
+}
+
+/// Take [`Document::latex_preamble`] out of a Fig file's whole-figure
+/// comments; the marker lines are not kept as user comments.
+pub(crate) fn restore_latex_preamble(doc: &mut Document) {
+    if !doc.latex_preamble.is_empty() {
+        return;
+    }
+    let mut preamble: Vec<String> = Vec::new();
+    let mut kept = Vec::with_capacity(doc.comments.len());
+    for entry in std::mem::take(&mut doc.comments) {
+        let mut rest = Vec::new();
+        for line in entry.split('\n') {
+            match line.strip_prefix(LATEX_PREAMBLE_MARKER) {
+                Some("") => preamble.push(String::new()),
+                Some(l) => match l.strip_prefix(' ') {
+                    Some(l) => preamble.push(l.to_string()),
+                    None => rest.push(line),
+                },
+                None => rest.push(line),
+            }
+        }
+        if !rest.is_empty() {
+            kept.push(rest.join("\n"));
+        }
+    }
+    doc.latex_preamble = preamble.join("\n").trim_end().to_string();
     doc.comments = kept;
 }

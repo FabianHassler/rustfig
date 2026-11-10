@@ -183,6 +183,11 @@ pub struct Document {
     /// Export on every save (E15), when the user asked for it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub export_on_save: Option<ExportOnSave>,
+    /// LaTeX preamble lines this figure's special texts need (after the
+    /// packages every text gets and the user's own preamble). Saved in Fig
+    /// files as `# RustFigLaTeXPreamble` comment lines.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub latex_preamble: String,
     #[serde(default)]
     pub colors: Vec<UserColor>,
     /// Top-level objects, shared so an undo snapshot copies pointers;

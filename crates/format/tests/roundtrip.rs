@@ -85,6 +85,25 @@ fn export_on_save_comment_roundtrips_and_garbage_stays_a_comment() {
 }
 
 #[test]
+fn latex_preamble_roundtrips_as_comment_lines() {
+    let mut doc = read_fig(SAMPLE).unwrap();
+    doc.latex_preamble = "\\usepackage{siunitx}\n\n  \\newcommand{\\ket}[1]{|#1\\rangle}".to_string();
+    let out = write_fig(&doc);
+    assert!(out.contains("# RustFigLaTeXPreamble \\usepackage{siunitx}\n"), "{out}");
+    let back = read_fig(out.as_bytes()).unwrap();
+    assert_eq!(back.latex_preamble, doc.latex_preamble);
+    assert_eq!(back.comments, doc.comments, "the preamble is not a user comment");
+
+    // A comment that only starts like the marker stays the user's.
+    let src = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n\
+# RustFigLaTeXPreambles are nice\n\
+1200 2\n";
+    let parsed = read_fig(src.as_bytes()).unwrap();
+    assert!(parsed.latex_preamble.is_empty());
+    assert!(parsed.comments.iter().any(|c| c == "RustFigLaTeXPreambles are nice"));
+}
+
+#[test]
 fn native_roundtrip() {
     let doc = read_fig(SAMPLE).unwrap();
     let s = write_native(&doc).unwrap();

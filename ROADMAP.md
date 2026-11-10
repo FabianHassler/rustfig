@@ -18,7 +18,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Measure | Value |
 |---------|-------|
 | Overall parity (weighted) | ≈95 % (94.7) |
-| Commands (all reachable from the control channel and MCP) | 255 engine (incl. the tool modes and "no mode") + 43 UI |
+| Commands (all reachable from the control channel and MCP) | 256 engine (incl. the tool modes and "no mode") + 43 UI |
 | Interactive tools (xfig modes) | 44 (xfig's 43 + Trim/Split/Extend) |
 | Tests | 1,121 passing in `cargo xtask ci` (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 1.3–3.2, write 3.2 |
@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-11-10 | **F13**: a figure's own LaTeX preamble, saved in the .fig (`# RustFigLaTeXPreamble` comment lines; xfig and fig2dev ignore them), edited in the Whole Figure dialog (`doc.set_latex_preamble`); `rustfig-cli convert` typesets LaTeX texts (`--no-latex` to turn off). 1 engine command. |
 | 2026-11-03 | **v0.9.0-beta.9**: LaTeX text typeset by TeX in PDF, EPS/PS, SVG and bitmap exports and restored when such a PDF or SVG is opened (F9, fig2dev v0.9.11); settings fixes (Global settings and Set units change only what was changed, export language kept); User colors with favorites; American spelling throughout (W10-51); large library figures gzipped (G12); the manual reviewed against the app (G11); What's new refreshed. |
 | 2026-11-03 | **F9 done**: LaTeX text typeset with TeX in PDF, EPS/PS, SVG and bitmap exports (fig2dev v0.9.11), the LaTeX given back when RustFig opens such a PDF or SVG; Global settings and the Unit/Scale panel apply only what was changed (settings no longer lost on Ok); the export language kept; **W10-51** American spelling throughout, as xfig. Tests 1,121 (headline count was stale at 598). |
 | 2026-11-03 | **v0.9.0-beta.8**: speed (P6–P8: select all and big selections linear, cached drag layer, banded and multi-threaded drawing, exact curves; faster than xfig on most tasks, `docs/speed-compare.md`), Find Properties and a Find mode, a Tools menu with section headers, the mode finder, slider pop-ups and hover previews for attributes, Global settings in tabs, message history, library favorites and search, compressed figures (.gz/.Z/.bz2/.xz), file previews (macOS Quick Look, Linux thumbnailer), SVG/PDF import fixes, example drawings, fig2dev v0.9.9. |

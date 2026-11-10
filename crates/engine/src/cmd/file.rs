@@ -740,6 +740,28 @@ fn read_scale(doc: &mut Document, k: f64) {
 
 fn merge_doc(e: &mut Engine, mut other: Document, (dx, dy): (f64, f64)) -> CmdResult {
     read_scale(&mut other, e.read_scale);
+    // The merged texts need the merged figure's preamble: add its lines
+    // that this figure lacks.
+    let missing: Vec<&str> = {
+        let have: Vec<&str> = e.doc().latex_preamble.lines().map(str::trim).collect();
+        other
+            .latex_preamble
+            .lines()
+            .filter(|l| !l.trim().is_empty() && !have.contains(&l.trim()))
+            .collect()
+    };
+    if !missing.is_empty() {
+        let mut pre = e.doc().latex_preamble.clone();
+        for l in missing {
+            if !pre.is_empty() {
+                pre.push('\n');
+            }
+            pre.push_str(l);
+        }
+        if pre.len() <= crate::latex_preview::MAX_PREAMBLE_BYTES {
+            e.doc_mut().latex_preamble = pre;
+        }
+    }
     let mut objects = mapped_objects(e, other);
     for o in &mut objects {
         o.translate(dx, dy);

@@ -103,6 +103,30 @@ pub(super) fn commands() -> Vec<Command> {
             },
         },
         Command {
+            id: "doc.set_latex_preamble",
+            label: "Set figure LaTeX preamble",
+            menu: "",
+            shortcut: "",
+            params: "{\"preamble\": string (this figure's LaTeX preamble lines, after the user's own; saved in the file)}",
+            mutates: true,
+            enabled: always,
+            run: |e, p| {
+                let pre = string(p, "preamble")?;
+                if pre.len() > crate::latex_preview::MAX_PREAMBLE_BYTES {
+                    return Err(EngineError::bad_params("preamble: too long"));
+                }
+                if pre.contains('\0') {
+                    return Err(EngineError::bad_params("preamble: not text"));
+                }
+                let pre = pre.lines().collect::<Vec<_>>().join("\n");
+                let pre = pre.trim_end().to_string();
+                if e.doc().latex_preamble != pre {
+                    e.doc_mut().latex_preamble = pre;
+                }
+                Ok(json!({}))
+            },
+        },
+        Command {
             id: "color.add",
             label: "Add user color",
             menu: "",

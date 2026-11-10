@@ -184,6 +184,8 @@ pub struct EditState {
 #[derive(Debug, Clone, Default)]
 pub struct FigureComments {
     pub text: String,
+    /// The figure's LaTeX preamble (saved in the file).
+    pub preamble: String,
 }
 
 /// xfig's "Edit the behavior of the control point" panel (right button in
@@ -2157,6 +2159,12 @@ fn latex_settings(app: &mut App, ui: &mut egui::Ui) {
     if !preamble_edited && !preamble_field.has_focus() {
         preamble = app.engine.latex.settings().preamble;
     }
+    ui.horizontal(|ui| {
+        ui.label("This figure's own preamble, saved in its file:");
+        if ui.button("Edit…").clicked() {
+            app.dialogs.open_figure_comments(&app.engine);
+        }
+    });
     ui.data_mut(|d| d.insert_temp(id, (program, preamble, program_edited, preamble_edited)));
 }
 
@@ -2277,6 +2285,7 @@ impl Dialogs {
     pub fn open_figure_comments(&mut self, engine: &Engine) {
         self.figure_comments = Some(FigureComments {
             text: engine.doc().comments.join("\n"),
+            preamble: engine.doc().latex_preamble.clone(),
         });
     }
 
@@ -2320,7 +2329,23 @@ fn figure_comments_dialog(app: &mut App, ctx: &egui::Context) {
                                 .desired_width(300.0),
                         );
                         ui.end_row();
+                        rl(ui, "LaTeX preamble");
+                        ui.add(
+                            egui::TextEdit::multiline(&mut st.preamble)
+                                .code_editor()
+                                .hint_text("\\usepackage{siunitx}")
+                                .desired_rows(3)
+                                .desired_width(300.0),
+                        )
+                        .widget_info(|| {
+                            egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Figure LaTeX preamble")
+                        });
+                        ui.end_row();
                     });
+                ui.label(
+                    egui::RichText::new("The preamble is saved in the figure, after the one in Global settings.")
+                        .small(),
+                );
                 ui.separator();
                 ui.horizontal(|ui| {
                     done = ui.button("Done").clicked();
@@ -2330,6 +2355,9 @@ fn figure_comments_dialog(app: &mut App, ctx: &egui::Context) {
         });
     if done {
         app.run("doc.set_comments", json!({"comments": st.text}));
+        if st.preamble.trim_end() != app.engine.doc().latex_preamble {
+            app.run("doc.set_latex_preamble", json!({"preamble": st.preamble}));
+        }
     } else if open && !cancel {
         app.dialogs.figure_comments = Some(st);
     }

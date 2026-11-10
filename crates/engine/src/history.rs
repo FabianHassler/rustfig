@@ -104,6 +104,7 @@ impl Delta {
         std::mem::size_of::<Delta>()
             + doc.objects.capacity() * std::mem::size_of::<Arc<Object>>()
             + doc.comments.iter().map(String::capacity).sum::<usize>()
+            + doc.latex_preamble.capacity()
             + doc
                 .objects
                 .iter()
@@ -239,7 +240,7 @@ mod tests {
     fn deltas_rebuild_the_document_and_cost_what_changed() {
         let a = doc(1000);
         // Unchanged.
-        assert!(round_trip(&a, &a.clone()) < 200);
+        assert!(round_trip(&a, &a.clone()) < 256);
         // One object changed in place.
         let mut b = a.clone();
         if let Some(o) = b.objects.get_mut(500) {
@@ -250,10 +251,10 @@ mod tests {
         // Added at the end, inserted at the start, deleted in the middle.
         let mut c = a.clone();
         c.objects.push(line(-1.0));
-        assert!(round_trip(&a, &c) < 200);
+        assert!(round_trip(&a, &c) < 256);
         let mut c = a.clone();
         c.objects.insert(0, line(-1.0));
-        assert!(round_trip(&a, &c) < 200);
+        assert!(round_trip(&a, &c) < 256);
         let mut c = a.clone();
         c.objects.remove(300);
         assert!(round_trip(&a, &c) < 1000);

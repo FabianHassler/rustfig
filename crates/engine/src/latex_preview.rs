@@ -39,6 +39,20 @@ pub struct PreviewSettings {
     pub program: String,
     /// Added to the preamble (packages the figure's texts need).
     pub preamble: String,
+    /// The open figure's own preamble ([`rustfig_model::Document::latex_preamble`]),
+    /// after `preamble`.
+    pub document_preamble: String,
+}
+
+impl PreviewSettings {
+    /// The preamble TeX gets after [`BASE_PREAMBLE`]: the user's, then the figure's.
+    pub fn tex_preamble(&self) -> String {
+        match (self.preamble.is_empty(), self.document_preamble.is_empty()) {
+            (_, true) => self.preamble.clone(),
+            (true, false) => self.document_preamble.clone(),
+            (false, false) => format!("{}\n{}", self.preamble, self.document_preamble),
+        }
+    }
 }
 
 impl Default for PreviewSettings {
@@ -47,6 +61,7 @@ impl Default for PreviewSettings {
             enabled: true,
             program: String::new(),
             preamble: String::new(),
+            document_preamble: String::new(),
         }
     }
 }
@@ -130,6 +145,8 @@ impl LatexPreview {
     /// Change the settings; a change drops the cache.
     pub fn configure(&self, mut s: PreviewSettings) {
         s.preamble.truncate(floor_boundary(&s.preamble, MAX_PREAMBLE_BYTES));
+        s.document_preamble
+            .truncate(floor_boundary(&s.document_preamble, MAX_PREAMBLE_BYTES));
         let mut cur = lock(&self.inner.settings);
         if *cur == s {
             return;
@@ -150,6 +167,15 @@ impl LatexPreview {
             c.pending = 0;
         }
         self.inner.generation.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Use the open figure's preamble; a change drops the cache.
+    pub fn set_document_preamble(&self, preamble: &str) {
+        let mut s = self.settings();
+        if s.document_preamble != preamble {
+            s.document_preamble = preamble.to_string();
+            self.configure(s);
+        }
     }
 
     pub fn settings(&self) -> PreviewSettings {
@@ -296,7 +322,7 @@ impl LatexPreview {
             let settings = self.settings();
             let results = match self.program() {
                 Some(p) => std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                    typeset_batch(&p, &settings.preamble, &batch)
+                    typeset_batch(&p, &settings.tex_preamble(), &batch)
                 }))
                 .unwrap_or_else(|_| {
                     batch
@@ -374,7 +400,7 @@ impl LatexPreview {
         let result = {
             let _one_at_a_time = lock(&self.inner.gate);
             std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                run_tex(&program, &settings.preamble, &key)
+                run_tex(&program, &settings.tex_preamble(), &key)
             }))
             .unwrap_or_else(|_| Err("internal error while typesetting".to_string()))
         };
@@ -445,7 +471,7 @@ impl LatexPreview {
             let results = {
                 let _one_at_a_time = lock(&self.inner.gate);
                 std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                    typeset_batch(&program, &settings.preamble, chunk)
+                    typeset_batch(&program, &settings.tex_preamble(), chunk)
                 }))
                 .unwrap_or_default()
             };

@@ -25,7 +25,7 @@ Pointing at a choice in a pop-up grid (Line style, Cap, Join, Fill style, Pen an
 - A compound has its own panel, see [Compounds](compounds.md).
 
 - Left, “edit object”: click an object.
-- Middle, “edit Main comment”: edits the figure's own comment. Shift+middle on an object shows its comments in the message panel.
+- Middle, “edit Main comment”: edits the figure's own comment and its LaTeX preamble (RustFig's addition, see [LaTeX text](draw-text-pictures.md)). Shift+middle on an object shows its comments in the message panel.
 - Right, “edit point”: on a point of a spline, edits that point's shape factor (end points of an open spline cannot be edited).
 
 

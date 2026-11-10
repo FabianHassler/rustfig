@@ -3,7 +3,7 @@
 //! messages) and the bridge's [`crate::bridge::to_document`].
 
 use crate::bridge::to_document;
-use crate::fig_write::restore_export_on_save;
+use crate::fig_write::{restore_export_on_save, restore_latex_preamble};
 use crate::FormatError;
 use fig2dev::Ctx;
 use rustfig_model::Document;
@@ -77,6 +77,7 @@ pub fn read_fig_messages(src: &[u8], enc: TextEncoding) -> Result<(Document, Vec
         Ok(objects) => {
             let mut doc = to_document(&ctx, &objects);
             restore_export_on_save(&mut doc);
+            restore_latex_preamble(&mut doc);
             Ok((doc, std::mem::take(&mut ctx.messages)))
         }
         Err(_) if ctx.messages.is_empty() => Err(FormatError::new("not a Fig file")),

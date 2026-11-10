@@ -12,10 +12,14 @@ use std::time::Instant;
 
 const USAGE: &str = "usage:
   rustfig-cli convert IN OUT [--format LANG] [--magnification PCT] [--dpi N] [--margin FIGUNITS] [--background #rrggbb]
-                             [--option KEY=VALUE]...
+                             [--latex | --no-latex] [--option KEY=VALUE]...
         OUT: .fig/.rustfig save; otherwise an export language (fig2dev's -L names),
         from --format or the file's extension; --option passes one of fig2dev's
-        options by name or letter (border=10, g=lightblue, N=true, Z=4w)
+        options by name or letter (border=10, g=lightblue, N=true, Z=4w).
+        LaTeX texts (TeX flag) are typeset by TeX when pdflatex or lualatex is
+        found (PDF, EPS, PS, SVG, bitmaps), with the preamble of your settings
+        and the figure's own; --no-latex draws their source, --latex warns
+        when no TeX is found
   rustfig-cli formats [LANG]        list the export languages, or one language's options
   rustfig-cli info FILE
   rustfig-cli thumbnail IN OUT.png [--size N]   fit the figure into N x N pixels (default 256; the file manager thumbnailer)
@@ -76,11 +80,26 @@ fn open(path: &str) -> Result<Engine, String> {
     Ok(e)
 }
 
+/// The user's TeX program and preamble from the settings file, so LaTeX
+/// texts come out as on the canvas.
+fn latex_settings(e: &mut Engine) {
+    #[cfg(not(target_arch = "wasm32"))]
+    if let Some(text) = rustfig_engine::prefs::config_path().and_then(|p| std::fs::read_to_string(p).ok()) {
+        // A damaged settings file only loses its LaTeX settings here.
+        if let Ok((p, _)) = rustfig_engine::prefs::Prefs::parse(&text) {
+            e.prefs.rustfig.latex_program = p.rustfig.latex_program;
+            e.prefs.rustfig.latex_preamble = p.rustfig.latex_preamble;
+        }
+    }
+    e.prefs.apply_latex(e);
+}
+
 fn convert(args: &[String]) -> Result<(), String> {
     let (Some(input), Some(output)) = (args.first(), args.get(1)) else {
         return Err(USAGE.into());
     };
     let mut e = open(input)?;
+    latex_settings(&mut e);
     let lower = output.to_ascii_lowercase();
     if lower.ends_with(".fig") || lower.ends_with(".rustfig") || lower.ends_with(".xfig") {
         e.execute("file.save", &json!({ "path": output }))
@@ -123,7 +142,16 @@ fn convert(args: &[String]) -> Result<(), String> {
     if !options.is_empty() {
         p["options"] = serde_json::Value::Object(options);
     }
-    e.execute("file.export", &p).map_err(|e| e.message)?;
+    let latex = if args.iter().any(|a| a == "--no-latex") {
+        false
+    } else {
+        args.iter().any(|a| a == "--latex") || e.latex.program().is_some()
+    };
+    p["typeset_latex"] = json!(latex);
+    let r = e.execute("file.export", &p).map_err(|e| e.message)?;
+    for w in r["warnings"].as_array().into_iter().flatten().filter_map(Value::as_str) {
+        eprintln!("rustfig-cli: {w}");
+    }
     Ok(())
 }
 

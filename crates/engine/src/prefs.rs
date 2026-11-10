@@ -636,6 +636,7 @@ impl Prefs {
             enabled: r.latex_preview.unwrap_or(true),
             program: r.latex_program.clone().unwrap_or_default(),
             preamble: r.latex_preamble.clone().unwrap_or_default(),
+            document_preamble: e.latex.settings().document_preamble,
         });
     }
 
