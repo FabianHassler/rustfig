@@ -1,13 +1,13 @@
 {
-    "version": "0.9.0-beta.9",
+    "version": "0.9.0-beta.10",
     "description": "A modern xfig: the vector drawing program rebuilt in Rust, native on Windows without an X server, with fig2dev and LaTeX built in.",
     "homepage": "https://fabianhassler.github.io/rustfig/",
     "license": "MIT|Apache-2.0,Xfig",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/FabianHassler/rustfig/releases/download/v0.9.0-beta.9/rustfig-0.9.0-beta.9-windows.zip",
+            "url": "https://github.com/FabianHassler/rustfig/releases/download/v0.9.0-beta.10/rustfig-0.9.0-beta.10-windows.zip",
             "hash": "0ef5e950d7e3615c7c3ab3d1a5ad028387e7d1e5576b5512f8f9978971794f48",
-            "extract_dir": "rustfig-0.9.0-beta.9-windows"
+            "extract_dir": "rustfig-0.9.0-beta.10-windows"
         }
     },
     "bin": [

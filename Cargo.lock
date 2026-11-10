@@ -3398,7 +3398,7 @@ dependencies = [
 
 [[package]]
 name = "rustfig"
-version = "0.9.0-beta.9"
+version = "0.9.0-beta.10"
 dependencies = [
  "eframe",
  "egui",
@@ -3415,7 +3415,7 @@ dependencies = [
 
 [[package]]
 name = "rustfig-cli"
-version = "0.9.0-beta.9"
+version = "0.9.0-beta.10"
 dependencies = [
  "fig2dev-rs-lib",
  "rustfig-engine",
@@ -3429,7 +3429,7 @@ dependencies = [
 
 [[package]]
 name = "rustfig-engine"
-version = "0.9.0-beta.9"
+version = "0.9.0-beta.10"
 dependencies = [
  "epaint_default_fonts",
  "fig2dev-rs-lib",
@@ -3453,7 +3453,7 @@ dependencies = [
 
 [[package]]
 name = "rustfig-format"
-version = "0.9.0-beta.9"
+version = "0.9.0-beta.10"
 dependencies = [
  "bzip2",
  "fig2dev-rs-lib",
@@ -3468,14 +3468,14 @@ dependencies = [
 
 [[package]]
 name = "rustfig-geom"
-version = "0.9.0-beta.9"
+version = "0.9.0-beta.10"
 dependencies = [
  "figbase",
 ]
 
 [[package]]
 name = "rustfig-mcp"
-version = "0.9.0-beta.9"
+version = "0.9.0-beta.10"
 dependencies = [
  "proptest",
  "rustfig-engine",
@@ -3484,7 +3484,7 @@ dependencies = [
 
 [[package]]
 name = "rustfig-model"
-version = "0.9.0-beta.9"
+version = "0.9.0-beta.10"
 dependencies = [
  "figbase",
  "rustfig-geom",
@@ -3494,7 +3494,7 @@ dependencies = [
 
 [[package]]
 name = "rustfig-os"
-version = "0.9.0-beta.9"
+version = "0.9.0-beta.10"
 dependencies = [
  "ashpd",
  "block2 0.6.2",
@@ -3511,7 +3511,7 @@ dependencies = [
 
 [[package]]
 name = "rustfig-quicklook"
-version = "0.9.0-beta.9"
+version = "0.9.0-beta.10"
 dependencies = [
  "rustfig-engine",
  "rustfig-os",
@@ -3519,7 +3519,7 @@ dependencies = [
 
 [[package]]
 name = "rustfig-render"
-version = "0.9.0-beta.9"
+version = "0.9.0-beta.10"
 dependencies = [
  "fig2dev-rs-lib",
  "rustfig-format",
@@ -3530,7 +3530,7 @@ dependencies = [
 
 [[package]]
 name = "rustfig-text"
-version = "0.9.0-beta.9"
+version = "0.9.0-beta.10"
 dependencies = [
  "epaint_default_fonts",
  "figbase",
@@ -3540,7 +3540,7 @@ dependencies = [
 
 [[package]]
 name = "rustfig-ui-egui"
-version = "0.9.0-beta.9"
+version = "0.9.0-beta.10"
 dependencies = [
  "clipboard-rs",
  "eframe",
@@ -5227,7 +5227,7 @@ checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
 
 [[package]]
 name = "xtask"
-version = "0.9.0-beta.9"
+version = "0.9.0-beta.10"
 dependencies = [
  "flate2",
  "pulldown-cmark",

@@ -110,10 +110,11 @@ pub fn show_mouse_sheet(app: &mut App, ctx: &egui::Context) {
 
 /// The "What's new" text: a few lines per release, newest first.
 pub const WHATS_NEW: &str = "\
-LaTeX text is typeset by TeX in PDF, EPS, SVG and bitmap exports (Export > Typeset with TeX, on when TeX is installed); opening such a PDF or SVG gives the LaTeX texts back.
-Global settings and the Set units panel change only what you changed in them; the export panel keeps its language for the next start.
-Edit > User colors… keeps favorite colors for every drawing; Edit > Page setup… holds the page, Edit > Set units… the units.
-Tools > Go to mode… and Tools > Find Properties…; the library browser lists gzipped figures (.fig.gz) too.
+Plots: several curves in one plot, each with its own color, line style and markers (circle, square, triangle, diamond, cross, plus); Bessel, gamma and error functions in expressions; an empty expression draws only the axes.
+Asymptote export draws splines as curves, not as many straight pieces (Export > Splines: guide, hobby or exact).
+A figure can keep its own LaTeX preamble (Global settings > LaTeX text > Edit…); it is saved in the .fig.
+LaTeX texts in one drawing are typeset in a single TeX run, so the preview appears faster.
+For scripts and AI assistants: parameters a command does not take come back as warnings, objects can be named, and the manual's AI assistants page explains the setup.
 Command search: Ctrl+Shift+K (Cmd+Shift+K on macOS). F1 opens the manual page for what is under the pointer. Help > What's new shows this page again.";
 
 /// Whether the page is shown at start: when the version last seen is not
