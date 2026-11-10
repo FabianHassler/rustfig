@@ -54,6 +54,8 @@ const MAX_MARKERS: usize = 20_000;
 
 // ---- expressions ---------------------------------------------------------
 
+use crate::special_fns as sf;
+
 type F1 = fn(f64) -> f64;
 type F2 = fn(f64, f64) -> f64;
 
@@ -129,6 +131,19 @@ const FUNCS1: &[(&str, F1)] = &[
     ("floor", f64::floor),
     ("ceil", f64::ceil),
     ("sign", sign),
+    ("j0", sf::j0),
+    ("j1", sf::j1),
+    ("y0", sf::y0),
+    ("y1", sf::y1),
+    ("i0", sf::i0),
+    ("i1", sf::i1),
+    ("k0", sf::k0),
+    ("k1", sf::k1),
+    ("gamma", sf::gamma),
+    ("lgamma", sf::lgamma),
+    ("erf", sf::erf),
+    ("erfc", sf::erfc),
+    ("heaviside", sf::heaviside),
 ];
 
 const FUNCS2: &[(&str, F2)] = &[
@@ -136,6 +151,10 @@ const FUNCS2: &[(&str, F2)] = &[
     ("min", f64::min),
     ("max", f64::max),
     ("pow", f64::powf),
+    ("jn", sf::bessel_jn),
+    ("yn", sf::bessel_yn),
+    ("in", sf::bessel_in),
+    ("kn", sf::bessel_kn),
 ];
 
 #[derive(Debug, Clone, PartialEq)]

@@ -32,6 +32,7 @@ pub mod print;
 pub mod recovery;
 mod region;
 pub mod snap;
+mod special_fns;
 pub mod styles;
 pub mod thumbnail;
 pub mod tools;
