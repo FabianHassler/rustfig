@@ -50,5 +50,14 @@ permissive dependencies; see fig2dev's NOTICE and Cargo.lock.
 The system clipboard for Copy as picture uses the clipboard-rs crate (ChurchTao;
 MIT OR Apache-2.0) and its platform dependencies.
 
+The special functions in plot expressions (Bessel, gamma, error functions)
+are original Rust code written from published methods: power series and
+Hankel asymptotic expansions (Abramowitz & Stegun, Handbook of Mathematical
+Functions, chapters 6, 7 and 9), Miller's downward recurrence and Temme/Steed's
+continued fraction for K (Press et al., Numerical Recipes, sections 6.5 and
+6.7), and the Lanczos approximation of ln Gamma (Lanczos 1964; coefficients as
+in Numerical Recipes, 3rd ed.). Accuracy was checked against scipy.special
+(Cephes, AMOS); no Cephes source code is included.
+
 Third-party Rust crates are used under their own licenses (MIT, Apache-2.0,
 BSD, Zlib and similar permissive licenses); see Cargo.lock.
