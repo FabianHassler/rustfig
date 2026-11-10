@@ -193,6 +193,10 @@ pub(crate) fn ignored_params(command: &Command, params: &Value, read: &[String])
         documented.extend(documented_params(doc));
     }
     documented.push("reappend");
+    // `names` goes wherever `ids` does (see `Engine::target_ids`).
+    if documented.contains(&"ids") {
+        documented.push("names");
+    }
     unread
         .into_iter()
         .filter(|k| !documented.contains(&k.as_str()))

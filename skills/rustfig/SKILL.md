@@ -120,6 +120,7 @@ A text with the **TeX flag** (`special: true`) is LaTeX source. It is typeset by
 - **One drawing per server:** `file.open` and `file.new` replace the current drawing without asking. Save first.
 - **Moving** objects without changing them: `transform.move {"ids": [...], "dx": 150, "dy": 0}` (also compounds). `object.set_geometry` repositions and rescales.
 - **Ids** are numbers returned by the drawing commands and by `object.list`. Grouping (`object.group`) makes a new compound id.
+- **Name objects you will need again:** ids change when a file is reopened. `object.set_attributes {"ids":[id],"name":"legend"}` stores the name in the .fig; afterwards `"names": ["legend"]` works wherever `"ids"` does (a name selects every top-level object carrying it).
 - **Read the reply's `warnings`:** a parameter the command does not take is ignored, and the warning names it. Colors are `pen_color` and `fill_color` everywhere (`shape.text` also takes `color`).
 - **Hostile input is rejected, not guessed:** an error names the parameter. Read it and fix the call instead of retrying the same one.
 

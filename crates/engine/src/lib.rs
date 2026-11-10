@@ -544,13 +544,22 @@ impl Engine {
         Ok(self.target_ids(params)?.into_iter().collect())
     }
 
-    /// Ids from a `"ids"` parameter, or the selection when absent.
+    /// Ids from `"ids"` and `"names"` (the union, in order, without
+    /// duplicates), or the selection when neither is given. A name selects
+    /// every top-level object carrying it ([`object_name`]).
     pub fn target_ids(&self, params: &Value) -> Result<Vec<ObjectId>, EngineError> {
-        match cmd::param(params, "ids") {
-            None | Some(Value::Null) => Ok(self.selection.clone()),
+        let ids = cmd::param(params, "ids");
+        let names = cmd::param(params, "names");
+        let no_ids = matches!(ids, None | Some(Value::Null));
+        let no_names = matches!(names, None | Some(Value::Null));
+        if no_ids && no_names {
+            return Ok(self.selection.clone());
+        }
+        let mut out: Vec<ObjectId> = Vec::new();
+        match ids {
+            None | Some(Value::Null) => {}
             Some(Value::Array(a)) => {
                 let present = self.id_lookup(a.len());
-                let mut out = Vec::new();
                 for v in a {
                     let id = v
                         .as_u64()
@@ -561,10 +570,34 @@ impl Engine {
                     }
                     out.push(id);
                 }
-                Ok(out)
             }
-            Some(_) => Err(EngineError::bad_params("ids must be an array of object ids")),
+            Some(_) => return Err(EngineError::bad_params("ids must be an array of object ids")),
         }
+        match names {
+            None | Some(Value::Null) => {}
+            Some(Value::Array(a)) => {
+                for v in a {
+                    let name = v
+                        .as_str()
+                        .ok_or_else(|| EngineError::bad_params("names must be an array of strings"))?
+                        .trim();
+                    let mut found = false;
+                    for o in &self.doc.objects {
+                        if object_name(o) == Some(name) {
+                            found = true;
+                            out.push(o.id);
+                        }
+                    }
+                    if !found {
+                        return Err(EngineError::bad_params(format!("no top-level object named {name:?}")));
+                    }
+                }
+            }
+            Some(_) => return Err(EngineError::bad_params("names must be an array of strings")),
+        }
+        let mut seen = HashSet::new();
+        out.retain(|id| seen.insert(*id));
+        Ok(out)
     }
 
     /// Add an object at the top level, assigning a fresh id. Returns the id.
@@ -1129,6 +1162,19 @@ pub fn fix_text_metrics(t: &mut Text) {
     let m = measure_in_font(t, &t.text);
     t.length = m.width;
     t.height = m.ascent;
+}
+
+/// The comment line that names an object: `rustfig-name: NAME` (Fig
+/// comments survive the file; xfig and fig2dev ignore the line).
+pub const NAME_COMMENT: &str = "rustfig-name:";
+
+/// The name of `o` (its `rustfig-name:` comment line), if it has one.
+pub fn object_name(o: &Object) -> Option<&str> {
+    o.comments
+        .iter()
+        .find_map(|c| c.strip_prefix(NAME_COMMENT))
+        .map(str::trim)
+        .filter(|n| !n.is_empty())
 }
 
 #[cfg(test)]
