@@ -65,7 +65,7 @@ fn settings(e: &mut Engine, p: &Value) -> CmdResult {
     if opt_bool(p, "reset")?.unwrap_or(false) {
         store(e, id, PanelSettings::xfig());
     }
-    if let Some(v) = p.get("settings").filter(|v| !v.is_null()) {
+    if let Some(v) = super::param(p, "settings").filter(|v| !v.is_null()) {
         let merged = merge(settings_for(e, id), v)?;
         store(e, id, merged);
     }

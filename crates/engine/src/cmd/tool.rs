@@ -52,7 +52,7 @@ pub(super) fn commands() -> Vec<Command> {
         mutates: false,
         enabled: |e| e.typing_font().is_some(),
         run: |e, p| {
-            let text = match p.get("text") {
+            let text = match super::param(p, "text") {
                 Some(_) => super::string(p, "text")?,
                 None => e
                     .clipboard_plain_text()

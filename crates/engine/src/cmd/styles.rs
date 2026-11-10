@@ -239,7 +239,7 @@ fn rename(e: &mut Engine, p: &Value) -> CmdResult {
 }
 
 fn list(e: &mut Engine, p: &Value) -> CmdResult {
-    let given = |k: &str| p.get(k).is_some_and(|n| !n.is_null());
+    let given = |k: &str| super::param(p, k).is_some_and(|n| !n.is_null());
     if !given("family") {
         let fams: Vec<Value> = e
             .prefs

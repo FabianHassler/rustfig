@@ -130,7 +130,7 @@ fn other_leaves(e: &Engine, except: ObjectId) -> Vec<Object> {
 }
 
 fn cutting_objects(e: &Engine, p: &Value, key: &str, log: ObjectId) -> Result<Vec<Object>, EngineError> {
-    match p.get(key) {
+    match super::param(p, key) {
         None | Some(Value::Null) => Ok(other_leaves(e, log)),
         Some(Value::Array(a)) => axe_leaves(e, a, log, true),
         Some(_) => Err(bad(format!("{key:?} must be an array of object ids"))),

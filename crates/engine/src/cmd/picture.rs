@@ -336,7 +336,7 @@ fn store(_e: &mut Engine, p: &Value) -> CmdResult {
 
 fn set_file(e: &mut Engine, p: &Value) -> CmdResult {
     let (id, _, _, pic) = target(e, p)?;
-    let path = match p.get("path") {
+    let path = match super::param(p, "path") {
         None | Some(Value::Null) => pic.file.clone(),
         Some(_) => string(p, "path")?,
     };

@@ -23,7 +23,7 @@ Setup (installing RustFig and adding the server to Claude Code, Claude Desktop, 
 1. **Start clean or open a file.** `file.new {}` or `file.open {"path": "/abs/path/figure.fig"}`. Use absolute paths: the server's working folder is the client's.
 2. **Set the document first.** Units and paper: `doc.set_units {"units": "metric"}`, `doc.set_paper {"paper": "A4"}`. When labels use LaTeX packages or macros, set the preamble before drawing them: `view.set_latex_preamble {"preamble": "\\usepackage{bm}"}`.
 3. **Draw** with `shape.*`, `plot.add` and the other commands. Compute coordinates instead of estimating them, especially for symmetric shapes and curves.
-4. **Check** with `object.list {}` (id, type, depth and bounds of every object) and `rustfig_render`. Bounds catch shapes that are off-center or too large, which a small preview hides. Read the warnings next to the image.
+4. **Check** with `object.list {}` (id, type, depth and bounds of every object; with TeX installed, LaTeX texts measure as typeset) and `rustfig_render`. Bounds catch shapes that are off-center or too large, which a small preview hides. Read the warnings next to the image.
 5. **Save**: `file.save {"path": "/abs/path/figure.fig"}`. Nothing reaches the disk before this.
 6. **Export**: `file.export {"path": "/abs/path/figure.pdf", "typeset_latex": true}`. Check the `warnings` in the reply.
 
@@ -75,7 +75,7 @@ A text with the **TeX flag** (`special: true`) is LaTeX source. It is typeset by
 - Write one backslash per LaTeX command in the actual string, which is `\\` inside JSON. The saved .fig file doubles it again (`$\\alpha$`), which is normal.
 - Macros from packages or the user's own macros need `view.set_latex_preamble`. Otherwise TeX reports `Undefined control sequence`, the text shows as its source, and the warning names the text.
 - The `x, y` of a text is its baseline point at the justification (left end, center or right end).
-- `rustfig_render` with `latex: false` shows the source instead of typesetting it, which is quick for checking positions.
+- `rustfig_render` with `latex: false` shows the source instead of typesetting it, which is quick for checking positions. For small overlaps, render at `dpi` 200–300 (up to 600).
 
 ## Plots
 
@@ -103,6 +103,7 @@ A text with the **TeX flag** (`special: true`) is LaTeX source. It is typeset by
 
 - `latex: true` makes the axis labels TeX text. `latex_numbers: true` writes the tick numbers in math mode too, so negative numbers get a real minus sign (`$-1.5$`), not a hyphen.
 - Modes: `"function"` (`expr` in `x`), `"parametric"` (`xt`, `yt` in `t`, with `tmin`, `tmax`), `"data"` (`file` or the text in `data`, with columns `xcol`, `ycol`). Also `log_x`, `log_y`, `grid`, `xticks`, `yticks`.
+- An empty `expr` with all four ranges draws only the frame, ticks and labels (axes for curves added later).
 - The reply's `id` is the compound. `plot.edit` and `plot.update` change it later. Annotations are separate objects on top.
 
 ## Exporting
@@ -116,7 +117,9 @@ A text with the **TeX flag** (`special: true`) is LaTeX source. It is typeset by
 ## Pitfalls
 
 - **One drawing per server:** `file.open` and `file.new` replace the current drawing without asking. Save first.
+- **Moving** objects without changing them: `transform.move {"ids": [...], "dx": 150, "dy": 0}` (also compounds). `object.set_geometry` repositions and rescales.
 - **Ids** are numbers returned by the drawing commands and by `object.list`. Grouping (`object.group`) makes a new compound id.
+- **Read the reply's `warnings`:** a parameter the command does not take is ignored, and the warning names it. Colors are `pen_color` and `fill_color` everywhere (`shape.text` also takes `color`).
 - **Hostile input is rejected, not guessed:** an error names the parameter. Read it and fix the call instead of retrying the same one.
 
 ## Example

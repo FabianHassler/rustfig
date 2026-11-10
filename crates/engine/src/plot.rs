@@ -581,6 +581,12 @@ impl PlotSpec {
         Ok(spec.migrate())
     }
 
+    /// A function plot with an empty expression: only the frame, ticks and
+    /// labels.
+    pub fn has_no_curve(&self) -> bool {
+        self.mode == PlotMode::Function && self.expr.trim().is_empty()
+    }
+
     /// Old comments' `axes: false` means no frame, ticks or numbers.
     fn migrate(mut self) -> PlotSpec {
         if self.axes.take() == Some(false) {
@@ -856,7 +862,6 @@ fn sample(spec: &PlotSpec, data: Option<&str>) -> Result<(Vec<Vec<P>>, Ranges), 
             }
         }
         PlotMode::Function => {
-            let f = parse(&spec.expr, &["x"])?;
             let (a, b) = (
                 gx0.unwrap_or(if lx { -1.0 } else { -10.0 }),
                 gx1.unwrap_or(if lx { 2.0 } else { 10.0 }),
@@ -865,10 +870,14 @@ fn sample(spec: &PlotSpec, data: Option<&str>) -> Result<(Vec<Vec<P>>, Ranges), 
                 return Err("the x range must have min below max".into());
             }
             (u0, u1) = (a, b);
-            curve = Some(Box::new(move |u| {
-                let x = if lx { 10f64.powf(u) } else { u };
-                tr(f.eval(&[x]), ly).map(|y| (u, y))
-            }));
+            // No expression: the frame, ticks and labels without a curve.
+            if !spec.expr.trim().is_empty() {
+                let f = parse(&spec.expr, &["x"])?;
+                curve = Some(Box::new(move |u| {
+                    let x = if lx { 10f64.powf(u) } else { u };
+                    tr(f.eval(&[x]), ly).map(|y| (u, y))
+                }));
+            }
         }
         PlotMode::Parametric => {
             let fx = parse(&spec.xt, &["t"])?;
@@ -900,6 +909,16 @@ fn sample(spec: &PlotSpec, data: Option<&str>) -> Result<(Vec<Vec<P>>, Ranges), 
     // Ranges.
     let mut xs: Vec<f64> = pts.iter().filter_map(|(_, p)| p.map(|p| p.0)).collect();
     let mut ys: Vec<f64> = pts.iter().filter_map(|(_, p)| p.map(|p| p.1)).collect();
+    if spec.has_no_curve() {
+        let (Some(y0), Some(y1)) = (gy0, gy1) else {
+            return Err("a plot without a curve (empty \"expr\") needs \"ymin\" and \"ymax\"".into());
+        };
+        if !ordered(y0, y1) {
+            return Err("a range must have min below max".into());
+        }
+        let ranges = Ranges { x0: u0, x1: u1, y0, y1 };
+        return Ok((Vec::new(), ranges));
+    }
     if xs.is_empty() {
         return Err("the curve has no finite values in this range".into());
     }
@@ -1268,6 +1287,8 @@ pub struct Plot {
     pub object: Object,
     pub curves: usize,
     pub points: usize,
+    /// What the caller should know (a curve outside the ranges).
+    pub warnings: Vec<String>,
 }
 
 fn fig(v: f64) -> f64 {
@@ -1507,8 +1528,11 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
             push_part(&mut members, "curve", line(look.curve, pts));
         }
     }
-    if count == 0 {
-        return Err("nothing of the curve lies inside the ranges".into());
+    // A curve outside the ranges still gives the frame (wider ranges later
+    // show it); the result says so.
+    let mut warnings = Vec::new();
+    if count == 0 && !spec.has_no_curve() {
+        warnings.push("nothing of the curve lies inside the ranges".to_string());
     }
 
     let mut object = Object::new(ObjectKind::Compound(Compound { objects: members }));
@@ -1519,6 +1543,7 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
         object,
         curves: count,
         points: total,
+        warnings,
     })
 }
 

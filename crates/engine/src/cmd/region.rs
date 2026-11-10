@@ -116,7 +116,7 @@ pub(super) fn commands() -> Vec<Command> {
 /// The region of the parameters: `"polygon": [[x, y], …]` (a lasso, at
 /// least three points), else the rectangle `x1, y1, x2, y2`.
 fn region(p: &Value) -> Result<Region, EngineError> {
-    if p.get("polygon").is_some_and(|v| !v.is_null()) {
+    if super::param(p, "polygon").is_some_and(|v| !v.is_null()) {
         let pts = super::points(p, "polygon")?;
         if pts.len() < 3 {
             return Err(EngineError::bad_params("a lasso needs at least three points"));
@@ -163,7 +163,7 @@ fn delete_points_region(e: &mut Engine, p: &Value) -> CmdResult {
             _ => Vec::new(),
         }
     };
-    let id = match p.get("id") {
+    let id = match super::param(p, "id") {
         None | Some(Value::Null) => {
             // The front-most (lowest depth, last drawn) object with a point inside.
             let mut best: Option<(i32, usize, ObjectId)> = None;

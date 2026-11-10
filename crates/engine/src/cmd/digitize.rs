@@ -75,7 +75,7 @@ fn point_num(pt: &Value, key: &str) -> Result<f64, EngineError> {
 }
 
 fn calibration(p: &Value) -> Result<Option<(Axis, Axis)>, EngineError> {
-    let c = match p.get("calibration") {
+    let c = match super::param(p, "calibration") {
         None | Some(Value::Null) => return Ok(None),
         Some(c) => c,
     };

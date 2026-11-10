@@ -64,7 +64,7 @@ fn idle(e: &Engine) -> Result<(), EngineError> {
 
 fn open(e: &mut Engine, p: &Value) -> CmdResult {
     idle(e)?;
-    let id = match p.get("id") {
+    let id = match super::param(p, "id") {
         None | Some(Value::Null) => match e.selection() {
             [one] => *one,
             _ => {

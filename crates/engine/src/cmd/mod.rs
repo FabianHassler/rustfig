@@ -122,12 +122,99 @@ pub fn find(id: &str) -> Option<&'static Command> {
 
 // ---- parameter helpers -------------------------------------------------
 
+thread_local! {
+    /// The parameter names the running command has looked at ([`param`]).
+    static READ: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Most names one command run notes (a guard against loops over input).
+const MAX_READ: usize = 1_000;
+
+/// `p[key]`, noting that the command read `key`: a parameter it never
+/// reads is reported as ignored ([`ignored_params`]). Every helper below
+/// reads through it.
+pub(crate) fn param<'a>(p: &'a Value, key: &str) -> Option<&'a Value> {
+    READ.with(|r| {
+        // (Already borrowed cannot happen; skipping the note only risks a
+        // spurious "ignored" warning.)
+        if let Ok(mut r) = r.try_borrow_mut() {
+            if r.len() < MAX_READ && !r.iter().any(|k| k == key) {
+                r.push(key.to_string());
+            }
+        }
+    });
+    p.get(key)
+}
+
+/// Starts noting the parameters a command reads; returns the names of an
+/// outer command running it, for [`end_reading`].
+pub(crate) fn begin_reading() -> Vec<String> {
+    READ.with(|r| {
+        r.try_borrow_mut()
+            .map(|mut r| std::mem::take(&mut *r))
+            .unwrap_or_default()
+    })
+}
+
+/// The names read since [`begin_reading`]; the outer command's come back.
+pub(crate) fn end_reading(outer: Vec<String>) -> Vec<String> {
+    READ.with(|r| {
+        r.try_borrow_mut()
+            .map(|mut r| std::mem::replace(&mut *r, outer))
+            .unwrap_or_default()
+    })
+}
+
+/// The parameters given to `command` that it neither read nor documents
+/// (null values count as not given), as warnings: a misspelt or wrong name
+/// (`color` for `pen_color`) would otherwise do nothing without a word.
+pub(crate) fn ignored_params(command: &Command, params: &Value, read: &[String]) -> Vec<String> {
+    let Some(given) = params.as_object() else {
+        return Vec::new();
+    };
+    let unread: Vec<&String> = given
+        .iter()
+        .filter(|(k, v)| !v.is_null() && !read.iter().any(|r| r == *k))
+        .map(|(k, _)| k)
+        .collect();
+    if unread.is_empty() {
+        return Vec::new();
+    }
+    // Also the names of the commands its documentation refers to ("as
+    // file.export"), and the tools' `reappend`, read only when it matters.
+    let mut documented = documented_params(command.params);
+    let referred: Vec<&str> = command
+        .params
+        .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '.'))
+        .filter(|w| w.contains('.') && *w != command.id)
+        .filter_map(|w| find(w.trim_end_matches('.')).map(|c| c.params))
+        .collect();
+    for doc in referred {
+        documented.extend(documented_params(doc));
+    }
+    documented.push("reappend");
+    unread
+        .into_iter()
+        .filter(|k| !documented.contains(&k.as_str()))
+        .map(|k| format!("parameter {k:?} ignored: {} does not take it", command.id))
+        .collect()
+}
+
+/// The quoted names in a command's parameter documentation.
+fn documented_params(doc: &str) -> Vec<&str> {
+    // (Every piece between quotes that is a name: unbalanced quotes in a
+    // text cannot shift the names out.)
+    doc.split('"')
+        .filter(|w| !w.is_empty() && w.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'))
+        .collect()
+}
+
 pub(crate) fn num(p: &Value, key: &str) -> Result<f64, EngineError> {
     opt_num(p, key)?.ok_or_else(|| EngineError::bad_params(format!("missing number parameter {key:?}")))
 }
 
 pub(crate) fn opt_num(p: &Value, key: &str) -> Result<Option<f64>, EngineError> {
-    match p.get(key) {
+    match param(p, key) {
         None | Some(Value::Null) => Ok(None),
         Some(v) => match v.as_f64() {
             Some(f) if f.is_finite() && f.abs() < 1.0e9 => Ok(Some(f)),
@@ -143,7 +230,7 @@ pub(crate) fn num_or(p: &Value, key: &str, default: f64) -> Result<f64, EngineEr
 }
 
 pub(crate) fn opt_str<'a>(p: &'a Value, key: &str) -> Result<Option<&'a str>, EngineError> {
-    match p.get(key) {
+    match param(p, key) {
         None | Some(Value::Null) => Ok(None),
         Some(Value::String(s)) => Ok(Some(s.as_str())),
         Some(_) => Err(EngineError::bad_params(format!("parameter {key:?} must be a string"))),
@@ -157,7 +244,7 @@ pub(crate) fn string(p: &Value, key: &str) -> Result<String, EngineError> {
 }
 
 pub(crate) fn opt_bool(p: &Value, key: &str) -> Result<Option<bool>, EngineError> {
-    match p.get(key) {
+    match param(p, key) {
         None | Some(Value::Null) => Ok(None),
         Some(Value::Bool(b)) => Ok(Some(*b)),
         Some(_) => Err(EngineError::bad_params(format!(
@@ -171,7 +258,7 @@ pub const MAX_PARAM_POINTS: usize = 1_000_000;
 
 /// `[[x, y], ...]` or `[{"x":..,"y":..}, ...]`.
 pub(crate) fn points(p: &Value, key: &str) -> Result<Vec<Point>, EngineError> {
-    let Some(Value::Array(a)) = p.get(key) else {
+    let Some(Value::Array(a)) = param(p, key) else {
         return Err(EngineError::bad_params(format!("missing point list {key:?}")));
     };
     if a.len() > MAX_PARAM_POINTS {

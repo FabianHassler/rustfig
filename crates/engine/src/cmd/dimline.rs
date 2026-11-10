@@ -111,7 +111,7 @@ pub(crate) fn recompute_objects(e: &mut Engine, ids: &[rustfig_model::ObjectId])
 }
 
 fn recompute(e: &mut Engine, p: &Value) -> CmdResult {
-    let ids = match p.get("ids") {
+    let ids = match super::param(p, "ids") {
         Some(_) => e.target_ids(p)?,
         None => e.doc().objects.iter().map(|o| o.id).collect(),
     };

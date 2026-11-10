@@ -51,8 +51,8 @@ fn clear(e: &mut Engine, _: &Value) -> CmdResult {
 }
 
 fn set(e: &mut Engine, p: &Value) -> CmdResult {
-    let attrs = p.get("attrs").filter(|v| !v.is_null());
-    let indicator = p.get("indicator").filter(|v| !v.is_null());
+    let attrs = super::param(p, "attrs").filter(|v| !v.is_null());
+    let indicator = super::param(p, "indicator").filter(|v| !v.is_null());
     if attrs.is_none() && indicator.is_none() {
         return Err(EngineError::bad_params("preview.set needs \"attrs\" or \"indicator\""));
     }

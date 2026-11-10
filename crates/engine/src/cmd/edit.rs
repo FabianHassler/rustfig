@@ -384,7 +384,7 @@ fn copy_picture(e: &mut Engine, p: &Value) -> CmdResult {
         ));
     }
     // `whole`: the whole figure (Copy as Picture's right button).
-    let whole = p.get("whole").and_then(Value::as_bool).unwrap_or(false);
+    let whole = super::param(p, "whole").and_then(Value::as_bool).unwrap_or(false);
     let ids = if whole { Vec::new() } else { e.target_ids(p)? };
     let mut doc = e.whole_doc().into_owned();
     if !ids.is_empty() {
@@ -452,7 +452,7 @@ fn paste(e: &mut Engine, p: &Value) -> CmdResult {
     sync_from_system_clipboard(e);
     // Without an offset the objects follow the pointer until a click places
     // them (xfig's paste); scripts give `dx`/`dy`.
-    if p.get("dx").is_none() && p.get("dy").is_none() {
+    if super::param(p, "dx").is_none() && super::param(p, "dy").is_none() {
         e.begin_paste()?;
         return Ok(json!({"attached": e.clipboard().len()}));
     }

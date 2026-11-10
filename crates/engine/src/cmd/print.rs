@@ -86,7 +86,7 @@ pub(super) fn commands() -> Vec<Command> {
 
 /// The kept settings with the command's `settings` merged in (not kept).
 fn effective(e: &Engine, p: &Value) -> Result<PrintSettings, EngineError> {
-    match p.get("settings").filter(|v| !v.is_null()) {
+    match super::param(p, "settings").filter(|v| !v.is_null()) {
         Some(v) => print::merge(print::settings_of(e), v),
         None => Ok(print::settings_of(e)),
     }
@@ -96,7 +96,7 @@ fn settings(e: &mut Engine, p: &Value) -> CmdResult {
     if super::opt_bool(p, "reset")?.unwrap_or(false) {
         print::store(e, PrintSettings::default());
     }
-    if let Some(v) = p.get("settings").filter(|v| !v.is_null()) {
+    if let Some(v) = super::param(p, "settings").filter(|v| !v.is_null()) {
         let merged = print::merge(print::settings_of(e), v)?;
         print::store(e, merged);
     }

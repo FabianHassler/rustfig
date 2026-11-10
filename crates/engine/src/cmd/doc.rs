@@ -174,7 +174,7 @@ pub(super) fn commands() -> Vec<Command> {
                 if let Some(d) = opt_num(p, "depth")? {
                     depths.push(d);
                 }
-                if let Some(list) = p.get("depths") {
+                if let Some(list) = super::param(p, "depths") {
                     let list = list
                         .as_array()
                         .ok_or_else(|| EngineError::bad_params("depths must be an array of numbers"))?;

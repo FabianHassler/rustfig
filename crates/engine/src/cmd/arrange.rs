@@ -244,7 +244,7 @@ fn align_canvas(e: &mut Engine, p: &Value) -> CmdResult {
     ) {
         return Err(EngineError::bad_params(format!("unknown vertical alignment {v:?}")));
     }
-    let ids: Vec<ObjectId> = match p.get("ids") {
+    let ids: Vec<ObjectId> = match super::param(p, "ids") {
         Some(_) => e.target_ids(p)?,
         None => e.doc().objects.iter().map(|o| o.id).collect(),
     };

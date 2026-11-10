@@ -100,7 +100,7 @@ fn bad(m: &str) -> EngineError {
 }
 
 fn id_param(p: &Value, key: &str) -> Result<ObjectId, EngineError> {
-    match p.get(key) {
+    match super::param(p, key) {
         Some(v) => v
             .as_u64()
             .map(ObjectId)
@@ -261,7 +261,7 @@ pub(crate) fn join_splines(
 fn join(e: &mut Engine, p: &Value) -> CmdResult {
     let id1 = id_param(p, "id")?;
     let first1 = end_param(p, "end")?;
-    let id2 = match p.get("other") {
+    let id2 = match super::param(p, "other") {
         None | Some(Value::Null) => id1,
         Some(_) => id_param(p, "other")?,
     };

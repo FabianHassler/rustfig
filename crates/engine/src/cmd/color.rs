@@ -228,7 +228,7 @@ fn recent(e: &mut Engine, _: &Value) -> CmdResult {
 }
 
 fn use_color(e: &mut Engine, p: &Value) -> CmdResult {
-    let rgb = if p.get("rgb").is_some() {
+    let rgb = if super::param(p, "rgb").is_some() {
         rgb_param(p, "rgb")?
     } else {
         let n = num(p, "color")?;

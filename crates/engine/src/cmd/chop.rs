@@ -54,7 +54,7 @@ pub(super) fn object(e: &Engine, id: ObjectId) -> Result<Object, EngineError> {
 }
 
 pub(super) fn id_param(p: &Value, key: &str) -> Result<ObjectId, EngineError> {
-    match p.get(key) {
+    match super::param(p, key) {
         Some(v) => v
             .as_u64()
             .map(ObjectId)
@@ -116,7 +116,7 @@ pub(super) fn axe_leaves(
 }
 
 fn axes_param(e: &Engine, p: &Value, log_id: ObjectId) -> Result<Vec<Object>, EngineError> {
-    let Some(Value::Array(arr)) = p.get("axes") else {
+    let Some(Value::Array(arr)) = super::param(p, "axes") else {
         return Err(bad("missing object id list \"axes\""));
     };
     if arr.is_empty() {

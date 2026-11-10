@@ -340,7 +340,7 @@ fn objects(e: &mut Engine, p: &Value) -> CmdResult {
 }
 
 fn ops_of(p: &Value) -> Result<Vec<LibOp>, EngineError> {
-    match p.get("ops") {
+    match super::param(p, "ops") {
         None | Some(Value::Null) => Ok(Vec::new()),
         Some(Value::Array(a)) => {
             if a.len() > 256 {

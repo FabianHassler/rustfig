@@ -42,6 +42,8 @@ The line style, thickness, color, depth and the font of the numbers and labels a
 
 Expressions use `+ - * / ^` (also × ÷ and `**`), parentheses, the constants `pi` and `e`, and the functions sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, exp, ln (also log: natural), log10, log2, sqrt, abs, floor, ceil, sign, and with two arguments atan2(y, x), min(a, b), max(a, b), pow(a, b). `-x^2` means -(x^2) and `2^3^2` is 2^(3^2). An expression of up to 500 characters and nested up to 64 deep is accepted; an error names the position.
 
+An empty expression draws only the frame, ticks, numbers and labels; give both ranges then (y has no curve to fit). A curve that lies wholly outside the ranges also leaves just the frame, with a warning in the message panel; wider ranges later show it.
+
 Where the function is not defined (division by zero, the root of a negative number) or beyond the plot's range, the curve simply stops: there is never a line across a pole such as that of 1/x or tan(x), and parts outside the frame are cut at the frame.
 
 ## Edit plot

@@ -196,7 +196,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Export to data",
             menu: "",
             shortcut: "",
-            params: "{\"format\": language id, \"part\"?: bool, \"latex_source\"?: bool (special texts drawn as plain text, the page fitted to their source: a preview without TeX), ...export options}  — returns {\"data\": text} or {\"base64\": ...}; pspdf returns {\"files\": [{\"extension\", \"data\"|\"base64\"}]}",
+            params: "{\"format\": language id, \"part\"?: bool, \"latex_source\"?: bool (special texts drawn as plain text, the page fitted to their source: a preview without TeX), and the options of file.export except path}  — returns {\"data\": text} or {\"base64\": ...}; pspdf returns {\"files\": [{\"extension\", \"data\"|\"base64\"}]}",
             mutates: false,
             enabled: has_objects,
             run: export_data,
@@ -1230,7 +1230,7 @@ fn save_data(e: &mut Engine, p: &Value) -> CmdResult {
 
 /// The `options` object of an export (empty when absent).
 fn option_items(p: &Value) -> Result<Vec<(&str, &Value)>, EngineError> {
-    match p.get("options") {
+    match super::param(p, "options") {
         None | Some(Value::Null) => Ok(Vec::new()),
         Some(Value::Object(m)) => Ok(m.iter().map(|(k, v)| (k.as_str(), v)).collect()),
         Some(_) => Err(EngineError::bad_params("options must be an object")),
@@ -1743,7 +1743,7 @@ pub fn export_job(e: &Engine, p: &Value) -> Result<ExportJob, EngineError> {
 /// `p` with the Export panel's settings for its language when it has
 /// `"panel"` ([`crate::export_panel::apply`]).
 fn with_panel(e: &Engine, p: &Value, path: Option<&str>) -> Result<Value, EngineError> {
-    if p.get("panel").is_none_or(|v| v.is_null() || *v == Value::Bool(false)) {
+    if super::param(p, "panel").is_none_or(|v| v.is_null() || *v == Value::Bool(false)) {
         return Ok(p.clone());
     }
     let lang = export_language(p, path)?;

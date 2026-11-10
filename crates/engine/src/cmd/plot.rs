@@ -55,7 +55,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Add plot",
             menu: "",
             shortcut: "",
-            params: "{\"x\"?: 0, \"y\"?: 0, \"width\"?: 4800, \"height\"?: 3000 (the frame, Fig units), plus the plot's parameters}  — draw a plot as one compound; returns {id, curves, points}. Parameters: mode \"function\" (y = f(x): \"expr\") | \"parametric\" (\"xt\", \"yt\" in t; \"tmin\", \"tmax\") | \"data\" (\"file\" and 1-based columns \"xcol\" (0: row number), \"ycol\"; \"data\": the text itself instead of the file), \"xmin\" \"xmax\" \"ymin\" \"ymax\" (null: fit), \"samples\" (400, refined where the curve bends; no line across poles), \"frame\" (true: the box), \"xticks\" and \"yticks\" ({\"ticks\": true (marks), \"numbers\": true, \"manual\", \"first\", \"step\", \"count\", \"minor\", \"length\", \"dir\": in|out|both, \"format\", \"decimals\"}; ticks sit on the frame's edges even when the box is off), \"axes\" (old all-in-one: false turns frame, ticks and numbers off), \"grid\", \"log_x\", \"log_y\", \"xlabel\", \"ylabel\", \"latex\" (the axis labels are LaTeX text with the TeX flag), \"latex_numbers\" (the tick numbers too, in math mode: $-1.5$, $10^{3}$; both for all-LaTeX text). Expressions: + - * / ^, parentheses, pi, e, sin cos tan asin acos atan sinh cosh tanh exp ln log log10 log2 sqrt abs floor ceil sign, atan2 min max pow(a,b); line style, depth and font come from the indicator",
+            params: "{\"x\"?: 0, \"y\"?: 0, \"width\"?: 4800, \"height\"?: 3000 (the frame, Fig units), plus the plot's parameters}  — draw a plot as one compound; returns {id, curves, points, warnings} (a curve outside the ranges: curves 0 and a warning). Parameters: mode \"function\" (y = f(x): \"expr\"; empty: only frame, ticks and labels, with xmin..ymax given) | \"parametric\" (\"xt\", \"yt\" in t; \"tmin\", \"tmax\") | \"data\" (\"file\" and 1-based columns \"xcol\" (0: row number), \"ycol\"; \"data\": the text itself instead of the file), \"xmin\" \"xmax\" \"ymin\" \"ymax\" (null: fit), \"samples\" (400, refined where the curve bends; no line across poles), \"frame\" (true: the box), \"xticks\" and \"yticks\" ({\"ticks\": true (marks), \"numbers\": true, \"manual\", \"first\", \"step\", \"count\", \"minor\", \"length\", \"dir\": in|out|both, \"format\", \"decimals\"}; ticks sit on the frame's edges even when the box is off), \"axes\" (old all-in-one: false turns frame, ticks and numbers off), \"grid\", \"log_x\", \"log_y\", \"xlabel\", \"ylabel\", \"latex\" (the axis labels are LaTeX text with the TeX flag), \"latex_numbers\" (the tick numbers too, in math mode: $-1.5$, $10^{3}$; both for all-LaTeX text). Expressions: + - * / ^, parentheses, pi, e, sin cos tan asin acos atan sinh cosh tanh exp ln log log10 log2 sqrt abs floor ceil sign, atan2 min max pow(a,b); line style, depth and font come from the indicator",
             mutates: true,
             enabled: always,
             run: add,
@@ -87,7 +87,7 @@ fn look(e: &Engine) -> PlotLook {
 
 /// The plot compound `id` names (default the selected one).
 fn which(e: &Engine, p: &Value) -> Result<ObjectId, EngineError> {
-    let id = match p.get("id") {
+    let id = match super::param(p, "id") {
         None | Some(Value::Null) => match e.selection() {
             [one] => *one,
             _ => return Err(EngineError::bad_params("select one plot or give its \"id\"")),
@@ -153,7 +153,17 @@ fn bad(m: String) -> EngineError {
     EngineError::bad_params(m)
 }
 
+/// Notes the plot's parameters as read (serde reads them, not [`super::param`]).
+fn read_spec_keys(p: &Value) {
+    if let Ok(Value::Object(m)) = serde_json::to_value(PlotSpec::default()) {
+        for k in m.keys().map(String::as_str).chain(["axes", "data"]) {
+            let _ = super::param(p, k);
+        }
+    }
+}
+
 fn add(e: &mut Engine, p: &Value) -> CmdResult {
+    read_spec_keys(p);
     let mut spec = PlotSpec::from_value(p).map_err(bad)?;
     spec.rect = None;
     let (x, y) = (num_or(p, "x", 0.0)?, num_or(p, "y", 0.0)?);
@@ -163,10 +173,11 @@ fn add(e: &mut Engine, p: &Value) -> CmdResult {
     let built = plot::build(&spec, rect, data.as_deref(), &look(e)).map_err(bad)?;
     let id = e.add_object(built.object);
     e.set_selection(vec![id]);
-    Ok(json!({"id": id.0, "curves": built.curves, "points": built.points}))
+    Ok(json!({"id": id.0, "curves": built.curves, "points": built.points, "warnings": built.warnings}))
 }
 
 fn update(e: &mut Engine, p: &Value) -> CmdResult {
+    read_spec_keys(p);
     let id = which(e, p)?;
     let (old, frame) = {
         let o = e
@@ -219,7 +230,7 @@ fn update(e: &mut Engine, p: &Value) -> CmdResult {
     if let Some(slot) = doc.objects.get_mut(idx) {
         *slot = Arc::new(obj);
     }
-    Ok(json!({"id": id.0, "curves": built.curves, "points": built.points}))
+    Ok(json!({"id": id.0, "curves": built.curves, "points": built.points, "warnings": built.warnings}))
 }
 
 fn get(e: &mut Engine, p: &Value) -> CmdResult {

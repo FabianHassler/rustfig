@@ -498,7 +498,16 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
             Ok(p) => {
                 let cmd = if d.edit.is_some() { "plot.update" } else { "plot.add" };
                 match app.try_run(cmd, &p) {
-                    Ok(_) => d.open = false,
+                    Ok(r) => {
+                        if let Some(w) = r["warnings"]
+                            .as_array()
+                            .and_then(|w| w.first())
+                            .and_then(|w| w.as_str())
+                        {
+                            app.warn(format!("Plot: {w}"));
+                        }
+                        d.open = false;
+                    }
                     Err(e) => d.error = e,
                 }
             }

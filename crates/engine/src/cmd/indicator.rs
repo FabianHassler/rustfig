@@ -90,6 +90,8 @@ fn set(e: &mut Engine, p: &Value) -> CmdResult {
         fields.insert("local_font".into(), Value::Null);
     }
     for (k, v) in changes {
+        // (Every field is read; an unknown one is an error here.)
+        let _ = super::param(p, k);
         if !fields.contains_key(k) {
             return Err(EngineError::bad_params(format!("unknown indicator field {k:?}")));
         }
@@ -147,7 +149,7 @@ fn set_update_flag(e: &mut Engine, p: &Value) -> CmdResult {
         .ok_or_else(|| EngineError::bad_params("attr must be an update flag name"))?;
     let flag =
         UpdateFlag::from_name(name).ok_or_else(|| EngineError::bad_params(format!("unknown update flag {name:?}")))?;
-    let on = match p.get("on") {
+    let on = match super::param(p, "on") {
         None | Some(Value::Null) => !e.indicator.updates(flag),
         Some(Value::Bool(b)) => *b,
         Some(_) => return Err(EngineError::bad_params("on must be true or false")),
@@ -157,7 +159,7 @@ fn set_update_flag(e: &mut Engine, p: &Value) -> CmdResult {
 }
 
 fn update_flags(e: &mut Engine, p: &Value) -> CmdResult {
-    match p.get("all") {
+    match super::param(p, "all") {
         Some(Value::Bool(true)) => {
             e.indicator.update_off.clear();
             e.set_status("Update commands are now ENABLED for all buttons");

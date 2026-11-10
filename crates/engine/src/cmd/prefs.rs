@@ -103,7 +103,7 @@ fn get(e: &mut Engine, _: &Value) -> CmdResult {
 fn set(e: &mut Engine, p: &Value) -> CmdResult {
     let name = string(p, "resource")?;
     let r = resource(&name).ok_or_else(|| EngineError::bad_params(format!("unknown xfig resource {name:?}")))?;
-    let value = match p.get("value") {
+    let value = match super::param(p, "value") {
         None | Some(Value::Null) => {
             e.prefs.xfig.retain(|k, _| !k.eq_ignore_ascii_case(r.name));
             e.prefs_dirty = true;
@@ -140,7 +140,7 @@ fn set(e: &mut Engine, p: &Value) -> CmdResult {
 }
 
 fn reset(e: &mut Engine, p: &Value) -> CmdResult {
-    let selected: Vec<&'static crate::prefs::Resource> = match p.get("names") {
+    let selected: Vec<&'static crate::prefs::Resource> = match super::param(p, "names") {
         None | Some(Value::Null) => RESOURCES.iter().filter(|r| r.in_ui()).collect(),
         Some(Value::Array(a)) => {
             let mut out = Vec::new();

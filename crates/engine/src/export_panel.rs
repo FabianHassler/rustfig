@@ -375,7 +375,7 @@ pub fn params(e: &Engine, id: &str, s: &PanelSettings) -> Map<String, Value> {
 /// for `"panel": true` (the stored ones) or `"panel": {…}` (these): what
 /// `p` gives itself wins.
 pub fn apply(e: &Engine, p: &Value, id: &str) -> Result<Value, EngineError> {
-    let s = match p.get("panel") {
+    let s = match crate::cmd::param(p, "panel") {
         None | Some(Value::Null) | Some(Value::Bool(false)) => return Ok(p.clone()),
         Some(Value::Bool(true)) => settings_for(e, id),
         Some(v @ Value::Object(_)) => merge(settings_for(e, id), v)?,

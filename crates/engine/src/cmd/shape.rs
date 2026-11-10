@@ -62,7 +62,7 @@ pub(super) fn commands() -> Vec<Command> {
         shape_cmd!(
             "shape.text",
             "Add text",
-            "{\"x\", \"y\", \"text\", \"size\"?: points, \"font\"?: number, \"postscript\"?: bool, \"special\"?: bool (LaTeX text; unless postscript or font is given it leaves the PostScript font for the LaTeX default font), \"justify\"?: left|center|right, \"angle\"?: degrees, \"color\"?, \"depth\"?}",
+            "{\"x\", \"y\", \"text\", \"size\"?: points (or \"font_size\"), \"font\"?: number, \"postscript\"?: bool, \"special\"?: bool (LaTeX text; unless postscript or font is given it leaves the PostScript font for the LaTeX default font), \"justify\"?: left|center|right, \"angle\"?: degrees, \"pen_color\"? (or \"color\"), \"depth\"?}",
             text
         ),
         shape_cmd!(
@@ -240,7 +240,7 @@ fn spline(e: &mut Engine, p: &Value) -> CmdResult {
         other => return Err(EngineError::bad_params(format!("unknown spline kind {other:?}"))),
     };
     let mut s = Spline::new(kind, closed, style_from(e, p)?, pts);
-    if let Some(Value::Array(a)) = p.get("shapes") {
+    if let Some(Value::Array(a)) = super::param(p, "shapes") {
         if a.len() != s.points.len() {
             return Err(EngineError::bad_params("\"shapes\" needs one value per point"));
         }
@@ -324,7 +324,8 @@ fn text(e: &mut Engine, p: &Value) -> CmdResult {
         return Err(EngineError::bad_params("text is too long"));
     }
     let mut t = make_text(e, origin, s);
-    if let Some(v) = opt_num(p, "size")? {
+    // (`font_size`: the name `object.set_attributes` also takes.)
+    if let Some(v) = opt_num(p, "size")?.or(opt_num(p, "font_size")?) {
         t.size = v.clamp(1.0, 2000.0);
     }
     if let Some(v) = opt_num(p, "font")? {
@@ -347,7 +348,9 @@ fn text(e: &mut Engine, p: &Value) -> CmdResult {
     if let Some(a) = opt_num(p, "angle")? {
         t.angle = a.to_radians();
     }
-    if let Some(c) = opt_num(p, "color")? {
+    // `pen_color` as for the other shapes and `object.set_attributes`;
+    // `color` is the older name.
+    if let Some(c) = opt_num(p, "pen_color")?.or(opt_num(p, "color")?) {
         t.color = ColorRef((c.round() as i32).clamp(-1, rustfig_model::LAST_USER_COLOR));
     }
     if let Some(d) = opt_num(p, "depth")? {

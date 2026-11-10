@@ -105,7 +105,7 @@ fn int(p: &Value, key: &str) -> Result<Option<i32>, EngineError> {
 
 fn parse(p: &Value) -> Result<Criteria, EngineError> {
     let mut c = Criteria::default();
-    match p.get("kind") {
+    match super::param(p, "kind") {
         None | Some(Value::Null) => {}
         Some(Value::String(s)) => c.kinds.push(s.clone()),
         Some(Value::Array(a)) => {

@@ -427,7 +427,7 @@ pub(crate) fn vertex_near(l: &Polyline, x: f64, y: f64, tol: f64) -> Option<Poin
 
 fn measure_angle(e: &mut Engine, p: &Value) -> CmdResult {
     let save = opt_bool(p, "save")?.unwrap_or(false);
-    let (what, kind, ang) = if p.get("points").is_some() {
+    let (what, kind, ang) = if super::param(p, "points").is_some() {
         let pts = super::points(p, "points")?;
         let [a, b, c] = pts.as_slice() else {
             return Err(EngineError::bad_params("\"points\" must be three points"));

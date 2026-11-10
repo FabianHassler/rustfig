@@ -449,11 +449,25 @@ impl Engine {
             None
         };
         self.changed = false;
+        let outer = cmd::begin_reading();
         let result = guard::catch(|| (command.run)(self, params));
-        let result = match result {
+        let read = cmd::end_reading(outer);
+        let mut result = match result {
             Ok(r) => r,
             Err(panic_msg) => Err(EngineError::internal(panic_msg)),
         };
+        // Parameters the command did not use: the result's warnings say so.
+        if let Ok(Value::Object(m)) = &mut result {
+            let ignored = cmd::ignored_params(command, params, &read);
+            if !ignored.is_empty() {
+                match m.get_mut("warnings") {
+                    Some(Value::Array(w)) => w.extend(ignored.into_iter().map(Value::from)),
+                    _ => {
+                        m.insert("warnings".into(), Value::from(ignored));
+                    }
+                }
+            }
+        }
         match (&result, snapshot) {
             (Err(_), Some((doc, sel))) => {
                 self.doc = doc;
@@ -532,7 +546,7 @@ impl Engine {
 
     /// Ids from a `"ids"` parameter, or the selection when absent.
     pub fn target_ids(&self, params: &Value) -> Result<Vec<ObjectId>, EngineError> {
-        match params.get("ids") {
+        match cmd::param(params, "ids") {
             None | Some(Value::Null) => Ok(self.selection.clone()),
             Some(Value::Array(a)) => {
                 let present = self.id_lookup(a.len());

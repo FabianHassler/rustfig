@@ -3,10 +3,12 @@
 use super::{always, ids_value, num, opt_bool, opt_num, opt_str, point_value, CmdResult, Command};
 use crate::{Engine, EngineError};
 use rustfig_geom::{polygon_area, polyline_length, Affine, Point, Rect};
+use rustfig_model::Document;
 use rustfig_model::{
     flatten_object, Arrow, CapStyle, ColorRef, Compound, JoinStyle, LineKind, Object, ObjectId, ObjectKind, PolyKind,
     Polyline, Spline, SplineKind, MAX_DEPTH,
 };
+use rustfig_render::{TypesetRequest, Typesetter};
 use serde_json::{json, Value};
 use std::sync::Arc;
 
@@ -47,7 +49,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Set attributes",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id], \"line\"?, \"thickness\"?, \"pen_color\"?, \"fill_color\"?, \"area_fill\"?, \"depth\"?, \"style_val\"?, \"cap\"?: butt|round|projecting, \"join\"?: miter|round|bevel, \"forward_arrow\"?: bool, \"backward_arrow\"?: bool, \"arrow_kind\"?, \"arrow_style\"?, \"arrow_width\"?, \"arrow_height\"?, \"radius\"?, \"font\"?, \"local_font\"?: string|null (installed font; applied after font and postscript), \"font_size\"?, \"justify\"?, \"angle\"?: degrees, \"text\"?, \"postscript\"?: bool, \"hidden\"?: bool, \"rigid\"?: bool, \"special\"?: bool (as shape.text: without postscript and font it leaves the PostScript font), \"pie\"?: bool, \"flipped\"?: bool (pictures), \"arrow_thickness\"?, \"comment\"?: string, \"texts\"?: [string] (compound: the texts directly in it, in order), \"forward_arrow_spec\"?, \"backward_arrow_spec\"?: {kind, style, thickness, width, height}, \"geometry\"?: as object.set_geometry without id}",
+            params: "{\"ids\"?: [id], \"line\"?, \"thickness\"?, \"pen_color\"? (or \"color\"), \"fill_color\"?, \"area_fill\"?, \"depth\"?, \"style_val\"?, \"cap\"?: butt|round|projecting, \"join\"?: miter|round|bevel, \"forward_arrow\"?: bool, \"backward_arrow\"?: bool, \"arrow_kind\"?, \"arrow_style\"?, \"arrow_width\"?, \"arrow_height\"?, \"radius\"?, \"font\"?, \"local_font\"?: string|null (installed font; applied after font and postscript), \"font_size\"? (or \"size\"), \"justify\"?, \"angle\"?: degrees, \"text\"?, \"postscript\"?: bool, \"hidden\"?: bool, \"rigid\"?: bool, \"special\"?: bool (as shape.text: without postscript and font it leaves the PostScript font), \"pie\"?: bool, \"flipped\"?: bool (pictures), \"arrow_thickness\"?, \"comment\"?: string, \"texts\"?: [string] (compound: the texts directly in it, in order), \"forward_arrow_spec\"?, \"backward_arrow_spec\"?: {kind, style, thickness, width, height}, \"geometry\"?: as object.set_geometry without id}",
             mutates: true,
             enabled: |_| true,
             run: set_attributes,
@@ -77,7 +79,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Set geometry",
             menu: "",
             shortcut: "",
-            params: "{\"id\", \"points\"?: [[x, y]...] (box/arc-box/picture: two opposite corners; polyline/polygon/spline: all points, same count; arc: three points; ellipse/circle: [center]; text: [origin]), \"radii\"?: [rx, ry], \"angle\"?: degrees (ellipse), \"shapes\"?: [factor per spline point], \"resize\"?: bool (polyline/polygon/spline: the number of points may change; a spline then takes one shape factor per point or none), compound: points [top-left, bottom-right] repositions and rescales it}  — xfig's edit panel rows, Fig units",
+            params: "{\"id\", \"points\"?: [[x, y]...] (box/arc-box/picture: two opposite corners; polyline/polygon/spline: all points, same count; arc: three points; ellipse/circle: [center]; text: [origin]), \"radii\"?: [rx, ry], \"angle\"?: degrees (ellipse), \"shapes\"?: [factor per spline point], \"resize\"?: bool (polyline/polygon/spline: the number of points may change; a spline then takes one shape factor per point or none), compound: points [top-left, bottom-right] repositions and rescales it}  — xfig's edit panel rows, Fig units; to move objects without changing them use transform.move",
             mutates: true,
             enabled: |_| true,
             run: set_geometry,
@@ -97,7 +99,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "List objects",
             menu: "",
             shortcut: "",
-            params: "{}  — id, type, depth and bounds of every top-level object",
+            params: "{\"typeset\"?: bool (default true)}  — id, type, depth and bounds of every top-level object; with TeX installed (and typeset not false) a LaTeX (special) text measures as TeX sets it, not by its source (result typeset: true; TeX errors as warnings)",
             mutates: false,
             enabled: |_| true,
             run: list,
@@ -284,7 +286,7 @@ pub(super) fn update(e: &mut Engine, p: &Value) -> CmdResult {
 }
 
 fn local_choice(p: &Value) -> Result<Option<Option<(String, i32)>>, EngineError> {
-    match p.get("local_font") {
+    match super::param(p, "local_font") {
         None => Ok(None),
         Some(Value::Null) => Ok(Some(None)),
         Some(Value::String(s)) => crate::local_font_choice(s).map(|c| Some(Some(c))),
@@ -307,7 +309,8 @@ fn apply_local(t: &mut rustfig_model::Text, choice: &Option<(String, i32)>) {
 }
 
 fn set_local_font(e: &mut Engine, p: &Value) -> CmdResult {
-    let choice = local_choice(&json!({"local_font": p.get("name").cloned().unwrap_or(Value::Null)}))?.unwrap_or(None);
+    let choice =
+        local_choice(&json!({"local_font": super::param(p, "name").cloned().unwrap_or(Value::Null)}))?.unwrap_or(None);
     let ids = e.target_set(p)?;
     if let Some((name, font)) = &choice {
         e.indicator.local_font = Some(name.clone());
@@ -364,7 +367,7 @@ fn set_attributes(e: &mut Engine, p: &Value) -> CmdResult {
 pub(super) fn set_attributes_inner(e: &mut Engine, p: &Value) -> CmdResult {
     // The edit panel's position rows travel with its attributes, so one
     // Apply is one undo step.
-    if let Some(g) = p.get("geometry") {
+    if let Some(g) = super::param(p, "geometry") {
         let ids = e.target_ids(p)?;
         let [id] = ids.as_slice() else {
             return Err(EngineError::bad_params("geometry needs exactly one object"));
@@ -407,7 +410,9 @@ pub(super) fn set_attributes_inner(e: &mut Engine, p: &Value) -> CmdResult {
         Ok(opt_num(p, k)?.map(|v| (v.round() as i32).clamp(lo, hi)))
     };
     let thickness = int("thickness", 0, 10_000)?;
-    let pen = int("pen_color", -1, rustfig_model::LAST_USER_COLOR)?;
+    // (`color`: the name `shape.text` also takes.)
+    let pen =
+        int("pen_color", -1, rustfig_model::LAST_USER_COLOR)?.or(int("color", -1, rustfig_model::LAST_USER_COLOR)?);
     let fill = int("fill_color", -1, rustfig_model::LAST_USER_COLOR)?;
     let area = int("area_fill", -1, 62)?;
     let depth = int("depth", 0, MAX_DEPTH)?;
@@ -415,7 +420,9 @@ pub(super) fn set_attributes_inner(e: &mut Engine, p: &Value) -> CmdResult {
     let font = int("font", -1, 34)?;
     let local = local_choice(p)?;
     let style_val = opt_num(p, "style_val")?.map(|v| v.clamp(0.0, 1000.0));
-    let font_size = opt_num(p, "font_size")?.map(|v| v.clamp(1.0, 2000.0));
+    let font_size = opt_num(p, "font_size")?
+        .or(opt_num(p, "size")?)
+        .map(|v| v.clamp(1.0, 2000.0));
     let angle = opt_num(p, "angle")?.map(f64::to_radians);
     let text = opt_str(p, "text")?.map(str::to_string);
     if text.as_ref().is_some_and(|t| t.len() > rustfig_format::MAX_TEXT_BYTES) {
@@ -567,7 +574,7 @@ pub(super) fn set_attributes_inner(e: &mut Engine, p: &Value) -> CmdResult {
         }
     })?;
     // A compound's panel lists the texts directly in it (`e_edit.c`).
-    if let Some(v) = p.get("texts") {
+    if let Some(v) = super::param(p, "texts") {
         let bad_texts = || EngineError::bad_params("texts must be an array of strings");
         let list: Vec<String> = v
             .as_array()
@@ -634,9 +641,24 @@ fn rect_json(r: &Rect) -> Value {
     json!({"x": r.min.x, "y": r.min.y, "width": r.width(), "height": r.height()})
 }
 
-fn list(e: &mut Engine, _: &Value) -> CmdResult {
-    let v: Vec<Value> = e
-        .doc()
+fn list(e: &mut Engine, p: &Value) -> CmdResult {
+    // LaTeX texts measure as TeX sets them when TeX is there: their stored
+    // size is that of the source.
+    let ts = match opt_bool(p, "typeset")?.unwrap_or(true) {
+        true => e.latex.export_typesetter(),
+        false => None,
+    };
+    let doc = e.doc();
+    if let Some(ts) = &ts {
+        let mut texts = Vec::new();
+        for o in &doc.objects {
+            special_texts(o, &mut texts);
+        }
+        let requests: Vec<_> = texts.iter().map(|t| typeset_request(doc, t)).collect();
+        ts.prepare(&requests);
+    }
+    let typesetter = ts.as_deref().map(|t| t as &dyn Typesetter);
+    let v: Vec<Value> = doc
         .objects
         .iter()
         .map(|o| {
@@ -644,12 +666,48 @@ fn list(e: &mut Engine, _: &Value) -> CmdResult {
                 "id": o.id.0,
                 "type": o.type_name(),
                 "depth": o.depth(),
-                "bounds": rect_json(&o.geometry_bbox()),
+                "bounds": rect_json(&shown_bbox(doc, o, typesetter)),
                 "selected": e.selection().contains(&o.id),
             })
         })
         .collect();
-    Ok(json!({"objects": v}))
+    let warnings = ts.as_ref().map(|t| t.errors()).unwrap_or_default();
+    Ok(json!({"objects": v, "typeset": ts.is_some(), "warnings": warnings}))
+}
+
+/// The visible special (LaTeX) texts in `o`.
+fn special_texts<'a>(o: &'a Object, out: &mut Vec<&'a rustfig_model::Text>) {
+    match &o.kind {
+        ObjectKind::Text(t) if t.is_special() && !t.is_hidden() => out.push(t),
+        ObjectKind::Compound(c) => c.objects.iter().for_each(|o| special_texts(o, out)),
+        _ => {}
+    }
+}
+
+fn typeset_request<'a>(doc: &Document, t: &'a rustfig_model::Text) -> TypesetRequest<'a> {
+    TypesetRequest {
+        text: &t.text,
+        font: t.font,
+        postscript: t.is_postscript(),
+        size: t.size,
+        color: rustfig_render::Rgba::opaque(doc.rgb(t.color)),
+    }
+}
+
+/// `o`'s box with each special text as TeX typesets it (`ts`), or as
+/// stored when there is no TeX or it failed.
+fn shown_bbox(doc: &Document, o: &Object, ts: Option<&dyn Typesetter>) -> Rect {
+    match &o.kind {
+        ObjectKind::Text(t) if t.is_special() && !t.is_hidden() => ts
+            .and_then(|ts| ts.typeset(&typeset_request(doc, t)))
+            .map(|r| Rect::from_points(rustfig_render::typeset_corners(t.origin, t.angle, t.justify, &r, 0.0)))
+            .unwrap_or_else(|| o.geometry_bbox()),
+        ObjectKind::Compound(c) => c
+            .objects
+            .iter()
+            .fold(Rect::EMPTY, |r, o| r.union(&shown_bbox(doc, o, ts))),
+        _ => o.geometry_bbox(),
+    }
 }
 
 fn measure(e: &mut Engine, p: &Value) -> CmdResult {
@@ -1043,7 +1101,7 @@ fn point_move_object(e: &mut Engine, id: ObjectId, idx: usize, pt: Point) -> Cmd
 }
 
 fn pt_list(p: &Value, key: &str) -> Result<Option<Vec<Point>>, EngineError> {
-    let Some(v) = p.get(key) else { return Ok(None) };
+    let Some(v) = super::param(p, key) else { return Ok(None) };
     let arr = v
         .as_array()
         .ok_or_else(|| EngineError::bad_params(format!("{key} must be an array of [x, y]")))?;
@@ -1067,12 +1125,12 @@ fn pt_list(p: &Value, key: &str) -> Result<Option<Vec<Point>>, EngineError> {
 /// xfig's edit panel rows for positions (`get_new_*_values` in `e_edit.c`).
 fn set_geometry(e: &mut Engine, p: &Value) -> CmdResult {
     let id = ObjectId(
-        p.get("id")
+        super::param(p, "id")
             .and_then(Value::as_u64)
             .ok_or_else(|| EngineError::bad_params("id is required"))?,
     );
     let points = pt_list(p, "points")?;
-    let radii = match p.get("radii") {
+    let radii = match super::param(p, "radii") {
         Some(v) => {
             let a = v.as_array().filter(|a| a.len() == 2);
             match (
@@ -1088,7 +1146,7 @@ fn set_geometry(e: &mut Engine, p: &Value) -> CmdResult {
         None => None,
     };
     let angle = opt_num(p, "angle")?;
-    let shapes: Option<Vec<f64>> = match p.get("shapes") {
+    let shapes: Option<Vec<f64>> = match super::param(p, "shapes") {
         None => None,
         Some(v) => Some(
             v.as_array()
@@ -1265,7 +1323,7 @@ fn set_geometry(e: &mut Engine, p: &Value) -> CmdResult {
 struct ArrowSpec(Arrow);
 
 fn arrow_spec(p: &Value, key: &str) -> Result<Option<ArrowSpec>, EngineError> {
-    let Some(v) = p.get(key) else { return Ok(None) };
+    let Some(v) = super::param(p, key) else { return Ok(None) };
     let f = |k: &str, lo: f64, hi: f64| -> Result<f64, EngineError> {
         v.get(k)
             .and_then(Value::as_f64)
