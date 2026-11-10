@@ -103,6 +103,7 @@ A text with the **TeX flag** (`special: true`) is LaTeX source. It is typeset by
 
 - `latex: true` makes the axis labels TeX text. `latex_numbers: true` writes the tick numbers in math mode too, so negative numbers get a real minus sign (`$-1.5$`), not a hyphen.
 - Modes: `"function"` (`expr` in `x`), `"parametric"` (`xt`, `yt` in `t`, with `tmin`, `tmax`), `"data"` (`file` or the text in `data`, with columns `xcol`, `ycol`). Also `log_x`, `log_y`, `grid`, `xticks`, `yticks`.
+- Several curves in one plot: `"curves": [{"expr": "sin(x)", "pen_color": 4}, {"points": [[0, 1], [1, 2]], "marker": "circle", "line": "none"}]`. Each curve takes `pen_color`, `thickness`, `line`, `marker` (circle, square, triangle, diamond, cross, plus), `marker_size`, `marker_fill`; the plot takes `depth` and a default style.
 - An empty `expr` with all four ranges draws only the frame, ticks and labels (axes for curves added later).
 - The reply's `id` is the compound. `plot.edit` and `plot.update` change it later. Annotations are separate objects on top.
 

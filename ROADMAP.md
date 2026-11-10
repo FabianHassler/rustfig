@@ -72,6 +72,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-11-10 | **F16**: plots with several curves, each with its own style and markers (circle, square, triangle, diamond, cross, plus); data given in the command is kept in the figure, so ranges can change later; the plot takes a depth and a default style. |
 | 2026-11-10 | **F15**: scripting fixes from user feedback: ignored parameters come back as warnings, `pen_color`/`color` and `size`/`font_size` on both text commands, `object.list` measures LaTeX texts as typeset, frame-only plots (empty `expr`), a curve outside the ranges warns instead of failing. F16–F18 planned (curve lists with markers, special functions, object names). |
 | 2026-11-10 | **F13**: a figure's own LaTeX preamble, saved in the .fig (`# RustFigLaTeXPreamble` comment lines; xfig and fig2dev ignore them), edited in the Whole Figure dialog (`doc.set_latex_preamble`); `rustfig-cli convert` typesets LaTeX texts (`--no-latex` to turn off). 1 engine command. |
 | 2026-11-03 | **v0.9.0-beta.9**: LaTeX text typeset by TeX in PDF, EPS/PS, SVG and bitmap exports and restored when such a PDF or SVG is opened (F9, fig2dev v0.9.11); settings fixes (Global settings and Set units change only what was changed, export language kept); User colors with favorites; American spelling throughout (W10-51); large library figures gzipped (G12); the manual reviewed against the app (G11); What's new refreshed. |

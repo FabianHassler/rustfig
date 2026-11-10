@@ -55,7 +55,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Add plot",
             menu: "",
             shortcut: "",
-            params: "{\"x\"?: 0, \"y\"?: 0, \"width\"?: 4800, \"height\"?: 3000 (the frame, Fig units), plus the plot's parameters}  — draw a plot as one compound; returns {id, curves, points, warnings} (a curve outside the ranges: curves 0 and a warning). Parameters: mode \"function\" (y = f(x): \"expr\"; empty: only frame, ticks and labels, with xmin..ymax given) | \"parametric\" (\"xt\", \"yt\" in t; \"tmin\", \"tmax\") | \"data\" (\"file\" and 1-based columns \"xcol\" (0: row number), \"ycol\"; \"data\": the text itself instead of the file), \"xmin\" \"xmax\" \"ymin\" \"ymax\" (null: fit), \"samples\" (400, refined where the curve bends; no line across poles), \"frame\" (true: the box), \"xticks\" and \"yticks\" ({\"ticks\": true (marks), \"numbers\": true, \"manual\", \"first\", \"step\", \"count\", \"minor\", \"length\", \"dir\": in|out|both, \"format\", \"decimals\"}; ticks sit on the frame's edges even when the box is off), \"axes\" (old all-in-one: false turns frame, ticks and numbers off), \"grid\", \"log_x\", \"log_y\", \"xlabel\", \"ylabel\", \"latex\" (the axis labels are LaTeX text with the TeX flag), \"latex_numbers\" (the tick numbers too, in math mode: $-1.5$, $10^{3}$; both for all-LaTeX text). Expressions: + - * / ^, parentheses, pi, e, sin cos tan asin acos atan sinh cosh tanh exp ln log log10 log2 sqrt abs floor ceil sign, atan2 min max pow(a,b); line style, depth and font come from the indicator",
+            params: "{\"x\"?: 0, \"y\"?: 0, \"width\"?: 4800, \"height\"?: 3000 (the frame, Fig units), plus the plot's parameters}  — draw a plot as one compound; returns {id, curves, points, markers, warnings} (a curve outside the ranges: curves 0 and a warning). Parameters: mode \"function\" (y = f(x): \"expr\"; empty: only frame, ticks and labels, with xmin..ymax given) | \"parametric\" (\"xt\", \"yt\" in t; \"tmin\", \"tmax\") | \"data\" (\"file\" and 1-based columns \"xcol\" (0: row number), \"ycol\"; \"data\": the text itself instead of the file), \"xmin\" \"xmax\" \"ymin\" \"ymax\" (null: fit), \"samples\" (400, refined where the curve bends; no line across poles), \"frame\" (true: the box), \"xticks\" and \"yticks\" ({\"ticks\": true (marks), \"numbers\": true, \"manual\", \"first\", \"step\", \"count\", \"minor\", \"length\", \"dir\": in|out|both, \"format\", \"decimals\"}; ticks sit on the frame's edges even when the box is off), \"axes\" (old all-in-one: false turns frame, ticks and numbers off), \"grid\", \"log_x\", \"log_y\", \"xlabel\", \"ylabel\", \"latex\" (the axis labels are LaTeX text with the TeX flag), \"latex_numbers\" (the tick numbers too, in math mode: $-1.5$, $10^{3}$; both for all-LaTeX text). Expressions: + - * / ^, parentheses, pi, e, sin cos tan asin acos atan sinh cosh tanh exp ln log log10 log2 sqrt abs floor ceil sign, atan2 min max pow(a,b); several curves: \"curves\": [{the curve's source as above: \"expr\" | \"xt\", \"yt\", \"tmin\", \"tmax\" | \"file\", \"xcol\", \"ycol\" | \"data\" (text) | \"points\": [[x, y]...]; \"mode\"? (default from the source), \"samples\", \"pen_color\", \"thickness\", \"line\" (a line style or \"none\": markers only), \"style_val\", \"marker\": none|circle|square|triangle|diamond|cross|plus (at the data points or the samples), \"marker_size\" (Fig units, 75), \"marker_fill\" (true)}] (at most 50; the ranges fit them all; inline data and points are kept in the figure, up to 20000 points, so plot.update redraws without them; plot.update with \"curves\" replaces the list); \"depth\" (all parts), \"pen_color\", \"thickness\", \"line\", \"style_val\" (the curves' style where a curve sets none); font comes from the indicator, and so do depth and style when not given",
             mutates: true,
             enabled: always,
             run: add,
@@ -104,10 +104,21 @@ fn which(e: &Engine, p: &Value) -> Result<ObjectId, EngineError> {
     }
 }
 
+/// The listed curves with the text of their data files read (the file is
+/// read again at every redraw; its points are not kept in the figure).
+fn read_curve_files(spec: &mut PlotSpec) -> Result<(), EngineError> {
+    for c in spec.curves.iter_mut() {
+        if c.mode() == PlotMode::Data && c.points.is_empty() && c.data.is_empty() && !c.file.trim().is_empty() {
+            c.data = read_file(&c.file)?;
+        }
+    }
+    Ok(())
+}
+
 /// The text of the data file (data mode only): the `data` parameter, or the
 /// file, up to [`plot::MAX_DATA_BYTES`].
 fn data_text(spec: &PlotSpec, p: &Value) -> Result<Option<String>, EngineError> {
-    if spec.mode != PlotMode::Data {
+    if spec.mode != PlotMode::Data || !spec.curves.is_empty() {
         return Ok(None);
     }
     if let Some(t) = opt_str(p, "data")? {
@@ -169,11 +180,14 @@ fn add(e: &mut Engine, p: &Value) -> CmdResult {
     let (x, y) = (num_or(p, "x", 0.0)?, num_or(p, "y", 0.0)?);
     let (w, h) = (num_or(p, "width", DEFAULT_W)?, num_or(p, "height", DEFAULT_H)?);
     let rect = Rect::new(Point::new(x, y), Point::new(x + w, y + h));
+    read_curve_files(&mut spec)?;
     let data = data_text(&spec, p)?;
     let built = plot::build(&spec, rect, data.as_deref(), &look(e)).map_err(bad)?;
     let id = e.add_object(built.object);
     e.set_selection(vec![id]);
-    Ok(json!({"id": id.0, "curves": built.curves, "points": built.points, "warnings": built.warnings}))
+    Ok(
+        json!({"id": id.0, "curves": built.curves, "points": built.points, "markers": built.markers, "warnings": built.warnings}),
+    )
 }
 
 fn update(e: &mut Engine, p: &Value) -> CmdResult {
@@ -197,7 +211,8 @@ fn update(e: &mut Engine, p: &Value) -> CmdResult {
             }
         }
     }
-    let spec = PlotSpec::from_value(&merged).map_err(bad)?;
+    let mut spec = PlotSpec::from_value(&merged).map_err(bad)?;
+    read_curve_files(&mut spec)?;
     let data = data_text(&spec, p)?;
     let built = plot::build(&spec, frame, data.as_deref(), &look(e)).map_err(bad)?;
     let mut obj = built.object;
@@ -221,7 +236,10 @@ fn update(e: &mut Engine, p: &Value) -> CmdResult {
         obj.comments.extend(
             comments
                 .iter()
-                .filter(|c| !c.trim_start().starts_with(plot::PLOT_COMMENT))
+                .filter(|c| {
+                    let c = c.trim_start();
+                    !c.starts_with(plot::PLOT_COMMENT) && !c.starts_with(plot::POINTS_COMMENT)
+                })
                 .cloned(),
         );
     }
@@ -230,7 +248,9 @@ fn update(e: &mut Engine, p: &Value) -> CmdResult {
     if let Some(slot) = doc.objects.get_mut(idx) {
         *slot = Arc::new(obj);
     }
-    Ok(json!({"id": id.0, "curves": built.curves, "points": built.points, "warnings": built.warnings}))
+    Ok(
+        json!({"id": id.0, "curves": built.curves, "points": built.points, "markers": built.markers, "warnings": built.warnings}),
+    )
 }
 
 fn get(e: &mut Engine, p: &Value) -> CmdResult {

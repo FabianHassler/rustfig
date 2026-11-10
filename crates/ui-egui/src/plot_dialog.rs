@@ -15,6 +15,9 @@ pub struct PlotDialog {
     pub edit: Option<u64>,
     /// Where a new plot goes: x, y, width, height (Fig units).
     pub frame: Option<[f64; 4]>,
+    /// The edited plot's curve list (scripts make it): the fields edit the
+    /// first curve, the others stay as they are.
+    pub curves: Vec<plot::CurveSpec>,
     pub mode: PlotMode,
     pub expr: String,
     pub xt: String,
@@ -201,6 +204,7 @@ impl Default for PlotDialog {
             xticks: TickFields::from_spec(&TickSpec::default()),
             yticks: TickFields::from_spec(&TickSpec::default()),
             error: String::new(),
+            curves: Vec::new(),
         };
         d.load(&PlotSpec::default());
         d
@@ -234,6 +238,19 @@ impl PlotDialog {
         self.xticks = TickFields::from_spec(&s.xticks);
         self.yticks = TickFields::from_spec(&s.yticks);
         self.error.clear();
+        self.curves = s.curves.clone();
+        if let Some(c) = s.curves.first() {
+            self.mode = c.mode();
+            self.expr = c.expr.clone();
+            self.xt = c.xt.clone();
+            self.yt = c.yt.clone();
+            self.file = c.file.clone();
+            self.xcol = c.xcol.to_string();
+            self.ycol = c.ycol.to_string();
+            self.tmin = num(c.tmin);
+            self.tmax = num(c.tmax);
+            self.samples = c.samples.unwrap_or(s.samples).to_string();
+        }
     }
 
     /// Open for a new plot in `frame` (x, y, width, height), keeping the
@@ -242,6 +259,7 @@ impl PlotDialog {
         self.open = true;
         self.edit = None;
         self.frame = frame;
+        self.curves.clear();
         self.error.clear();
     }
 
@@ -305,6 +323,25 @@ impl PlotDialog {
             "xticks": self.xticks.params("x")?,
             "yticks": self.yticks.params("y")?,
         });
+        // A curve list: the fields are its first curve.
+        if let Some((first, rest)) = self.curves.split_first() {
+            let mut c = first.clone();
+            c.mode = Some(self.mode);
+            if c.file != self.file || self.mode != PlotMode::Data {
+                c.points.clear();
+            }
+            c.expr = self.expr.clone();
+            c.xt = self.xt.clone();
+            c.yt = self.yt.clone();
+            c.file = self.file.clone();
+            c.xcol = p["xcol"].as_u64().unwrap_or(1) as usize;
+            c.ycol = p["ycol"].as_u64().unwrap_or(2) as usize;
+            c.tmin = p["tmin"].as_f64();
+            c.tmax = p["tmax"].as_f64();
+            c.samples = p["samples"].as_u64().map(|n| n as usize);
+            let list: Vec<plot::CurveSpec> = std::iter::once(c).chain(rest.iter().cloned()).collect();
+            p["curves"] = serde_json::to_value(list).map_err(|e| e.to_string())?;
+        }
         if let (Some(o), Some(id), _) = (p.as_object_mut(), self.edit, ()) {
             o.insert("id".into(), json!(id));
         } else if let (Some(o), Some([x, y, w, h])) = (p.as_object_mut(), self.frame) {

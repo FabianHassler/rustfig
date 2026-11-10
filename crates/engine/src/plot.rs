@@ -12,7 +12,8 @@
 
 use rustfig_geom::{Point, Rect};
 use rustfig_model::{
-    text_flags, ColorRef, Compound, Justify, LineKind, Object, ObjectKind, PolyKind, Polyline, Style, Text, MAX_DEPTH,
+    text_flags, ColorRef, Compound, Ellipse, EllipseKind, Justify, LineKind, Object, ObjectKind, PolyKind, Polyline,
+    Style, Text, MAX_DEPTH,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -41,6 +42,15 @@ const BIG: f64 = 1e150;
 pub const PLOT_COMMENT: &str = "rustfig-plot:";
 /// Longest comment line Fig files keep (xfig reads 1024 characters a line).
 const MAX_COMMENT: usize = 1000;
+/// The comment lines that keep a curve's data points: prefix, the curve's
+/// index, then x y pairs.
+pub const POINTS_COMMENT: &str = "rustfig-plot-points:";
+/// Most data points one plot keeps in the figure (more: a data file).
+pub const MAX_KEPT_POINTS: usize = 20_000;
+/// Most curves in one plot.
+pub const MAX_CURVES: usize = 50;
+/// Most markers in one plot.
+const MAX_MARKERS: usize = 20_000;
 
 // ---- expressions ---------------------------------------------------------
 
@@ -538,6 +548,155 @@ pub struct PlotSpec {
     /// The plot's frame in Fig units (min x, min y, max x, max y); written
     /// by the command, used by "Edit plot" when the frame is missing.
     pub rect: Option<[f64; 4]>,
+    /// Several curves, each with its own source and style; empty: the one
+    /// curve the fields above describe.
+    pub curves: Vec<CurveSpec>,
+    /// Depth of every part (`None`: the indicator's).
+    pub depth: Option<i32>,
+    /// The curves' style where a curve sets none (`None`: the indicator's).
+    pub pen_color: Option<i32>,
+    pub thickness: Option<i32>,
+    pub line: Option<String>,
+    pub style_val: Option<f64>,
+}
+
+/// The mark drawn at each point of a curve.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Marker {
+    #[default]
+    None,
+    Circle,
+    Square,
+    Triangle,
+    Diamond,
+    Cross,
+    Plus,
+}
+
+/// One curve of a plot with several ([`PlotSpec::curves`]).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CurveSpec {
+    /// `None`: data when it has points, data or a file, parametric with
+    /// `xt`/`yt`, else a function.
+    pub mode: Option<PlotMode>,
+    pub expr: String,
+    pub xt: String,
+    pub yt: String,
+    pub tmin: Option<f64>,
+    pub tmax: Option<f64>,
+    pub file: String,
+    pub xcol: usize,
+    pub ycol: usize,
+    /// The text of a data file given inline; drawing turns it into `points`.
+    #[serde(skip_serializing)]
+    pub data: String,
+    /// Data points, kept in the figure ([`POINTS_COMMENT`] lines).
+    pub points: Vec<[f64; 2]>,
+    /// Samples of a function (`None`: the plot's); markers stand at them.
+    pub samples: Option<usize>,
+    pub pen_color: Option<i32>,
+    pub thickness: Option<i32>,
+    /// A line style name, or `"none"` for markers alone.
+    pub line: Option<String>,
+    pub style_val: Option<f64>,
+    pub marker: Marker,
+    /// Width of a marker in Fig units.
+    pub marker_size: f64,
+    /// Filled with the curve's color (else open).
+    pub marker_fill: bool,
+}
+
+impl Default for CurveSpec {
+    fn default() -> Self {
+        CurveSpec {
+            mode: None,
+            expr: String::new(),
+            xt: String::new(),
+            yt: String::new(),
+            tmin: None,
+            tmax: None,
+            file: String::new(),
+            xcol: 1,
+            ycol: 2,
+            data: String::new(),
+            points: Vec::new(),
+            samples: None,
+            pen_color: None,
+            thickness: None,
+            line: None,
+            style_val: None,
+            marker: Marker::None,
+            marker_size: 75.0,
+            marker_fill: true,
+        }
+    }
+}
+
+impl CurveSpec {
+    pub fn mode(&self) -> PlotMode {
+        match self.mode {
+            Some(m) => m,
+            None if !self.points.is_empty() || !self.data.is_empty() || !self.file.is_empty() => PlotMode::Data,
+            None if !self.xt.is_empty() || !self.yt.is_empty() => PlotMode::Parametric,
+            None => PlotMode::Function,
+        }
+    }
+
+    /// Whether the curve draws its line (`line: "none"`: markers only).
+    pub fn has_line(&self) -> bool {
+        self.line.as_deref() != Some("none")
+    }
+
+    fn check(&self, n: usize) -> Result<(), String> {
+        let at = |m: &str| format!("curve {n}: {m}");
+        if let Some(name) = self.line.as_deref().filter(|l| *l != "none") {
+            if LineKind::from_name(name).is_none() {
+                return Err(at(&format!("unknown line style {name:?}")));
+            }
+        }
+        if self
+            .pen_color
+            .is_some_and(|c| !(-1..=rustfig_model::LAST_USER_COLOR).contains(&c))
+        {
+            return Err(at("pen_color is not a color number"));
+        }
+        if self.thickness.is_some_and(|t| !(0..=10_000).contains(&t)) {
+            return Err(at("thickness must be between 0 and 10000"));
+        }
+        if self
+            .style_val
+            .is_some_and(|v| !v.is_finite() || !(0.0..=1000.0).contains(&v))
+        {
+            return Err(at("style_val must be between 0 and 1000"));
+        }
+        if !self.marker_size.is_finite() || !(1.0..=10_000.0).contains(&self.marker_size) {
+            return Err(at("marker_size must be between 1 and 10000"));
+        }
+        if self.samples.is_some_and(|n| !(2..=MAX_SAMPLES).contains(&n)) {
+            return Err(at(&format!("samples must be between 2 and {MAX_SAMPLES}")));
+        }
+        let nums = [self.tmin, self.tmax];
+        if nums.iter().flatten().any(|v| !v.is_finite() || v.abs() > BIG) {
+            return Err(at("ranges must be finite numbers"));
+        }
+        for s in [&self.expr, &self.xt, &self.yt, &self.file] {
+            if s.chars().count() > MAX_TEXT.max(MAX_EXPR_LEN) {
+                return Err(at("a text of the curve is too long"));
+            }
+        }
+        if self.xcol > 1_000 || self.ycol == 0 || self.ycol > 1_000 {
+            return Err(at("columns are numbered from 1 (x column 0 means the row number)"));
+        }
+        if self.points.len() > MAX_KEPT_POINTS {
+            return Err(at(&format!("at most {MAX_KEPT_POINTS} points (use a data file)")));
+        }
+        if self.points.iter().flatten().any(|v| !v.is_finite() || v.abs() > BIG) {
+            return Err(at("points must be finite numbers"));
+        }
+        Ok(())
+    }
 }
 
 impl Default for PlotSpec {
@@ -569,6 +728,12 @@ impl Default for PlotSpec {
             xticks: TickSpec::default(),
             yticks: TickSpec::default(),
             rect: None,
+            curves: Vec::new(),
+            depth: None,
+            pen_color: None,
+            thickness: None,
+            line: None,
+            style_val: None,
         }
     }
 }
@@ -584,7 +749,30 @@ impl PlotSpec {
     /// A function plot with an empty expression: only the frame, ticks and
     /// labels.
     pub fn has_no_curve(&self) -> bool {
-        self.mode == PlotMode::Function && self.expr.trim().is_empty()
+        self.curves.is_empty() && self.mode == PlotMode::Function && self.expr.trim().is_empty()
+    }
+
+    /// The curves to draw: the list, or the one curve of the fields.
+    pub fn curve_list(&self) -> Vec<CurveSpec> {
+        if !self.curves.is_empty() {
+            return self.curves.clone();
+        }
+        if self.has_no_curve() {
+            return Vec::new();
+        }
+        vec![CurveSpec {
+            mode: Some(self.mode),
+            expr: self.expr.clone(),
+            xt: self.xt.clone(),
+            yt: self.yt.clone(),
+            tmin: self.tmin,
+            tmax: self.tmax,
+            file: self.file.clone(),
+            xcol: self.xcol,
+            ycol: self.ycol,
+            samples: Some(self.samples),
+            ..CurveSpec::default()
+        }]
     }
 
     /// Old comments' `axes: false` means no frame, ticks or numbers.
@@ -622,6 +810,28 @@ impl PlotSpec {
                 return Err("rect must be finite".into());
             }
         }
+        if self.curves.len() > MAX_CURVES {
+            return Err(format!("at most {MAX_CURVES} curves"));
+        }
+        for (i, c) in self.curves.iter().enumerate() {
+            c.check(i + 1)?;
+        }
+        if self.curves.iter().map(|c| c.points.len()).sum::<usize>() > MAX_KEPT_POINTS {
+            return Err(format!("at most {MAX_KEPT_POINTS} points in one plot (use data files)"));
+        }
+        // The plot's own style, as for a curve.
+        CurveSpec {
+            pen_color: self.pen_color,
+            thickness: self.thickness,
+            line: self.line.clone(),
+            style_val: self.style_val,
+            ..CurveSpec::default()
+        }
+        .check(0)
+        .map_err(|e| e.replacen("curve 0", "plot", 1))?;
+        if self.depth.is_some_and(|d| !(0..=MAX_DEPTH).contains(&d)) {
+            return Err(format!("depth must be between 0 and {MAX_DEPTH}"));
+        }
         Ok(())
     }
 
@@ -642,6 +852,14 @@ impl PlotSpec {
             for k in drop {
                 m.remove(*k);
             }
+            // Curves: what differs from a curve's defaults; the points go
+            // on lines of their own.
+            let dc = serde_json::to_value(CurveSpec::default()).map_err(|e| e.to_string())?;
+            if let (Some(Value::Array(list)), Some(dc)) = (m.get_mut("curves"), dc.as_object()) {
+                for c in list.iter_mut().filter_map(Value::as_object_mut) {
+                    c.retain(|k, x| k != "points" && dc.get(k) != Some(x));
+                }
+            }
         }
         let line = format!("{PLOT_COMMENT} {v}");
         if line.chars().count() > MAX_COMMENT {
@@ -657,12 +875,57 @@ impl PlotSpec {
         PlotSpec::from_value(&v).ok()
     }
 
-    /// The spec of a plot compound (its comment), if it is one.
+    /// The comment lines that keep this spec: [`Self::comment`], then the
+    /// curves' points ([`POINTS_COMMENT`]).
+    pub fn comments(&self) -> Result<Vec<String>, String> {
+        let mut out = vec![self.comment()?];
+        for (i, c) in self.curves.iter().enumerate() {
+            let mut line = String::new();
+            for p in &c.points {
+                let pair = format!(" {} {}", short(p[0]), short(p[1]));
+                if line.is_empty() || line.len() + pair.len() > MAX_COMMENT {
+                    if !line.is_empty() {
+                        out.push(std::mem::take(&mut line));
+                    }
+                    line = format!("{POINTS_COMMENT} {i}");
+                }
+                line.push_str(&pair);
+            }
+            if !line.is_empty() {
+                out.push(line);
+            }
+        }
+        Ok(out)
+    }
+
+    /// The spec of a plot compound (its comments), if it is one.
     pub fn of_object(o: &Object) -> Option<PlotSpec> {
         if !matches!(o.kind, ObjectKind::Compound(_)) {
             return None;
         }
-        o.comments.iter().find_map(|c| PlotSpec::from_comment(c))
+        let mut spec = o.comments.iter().find_map(|c| PlotSpec::from_comment(c))?;
+        let mut kept = 0;
+        for line in &o.comments {
+            let Some(rest) = line.trim().strip_prefix(POINTS_COMMENT) else {
+                continue;
+            };
+            let mut words = rest.split_whitespace();
+            let Some(curve) = words
+                .next()
+                .and_then(|w| w.parse::<usize>().ok())
+                .and_then(|i| spec.curves.get_mut(i))
+            else {
+                continue;
+            };
+            let nums: Vec<f64> = words.map_while(|w| w.parse::<f64>().ok()).collect();
+            for &[x, y] in nums.as_chunks::<2>().0 {
+                if kept < MAX_KEPT_POINTS && x.is_finite() && y.is_finite() && x.abs() <= BIG && y.abs() <= BIG {
+                    curve.points.push([x, y]);
+                    kept += 1;
+                }
+            }
+        }
+        Some(spec)
     }
 }
 
@@ -834,9 +1097,19 @@ struct Ranges {
     y1: f64,
 }
 
-/// The curve as pieces of points in the plot's coordinates (transformed by
-/// the axes' logarithms), and the ranges.
-fn sample(spec: &PlotSpec, data: Option<&str>) -> Result<(Vec<Vec<P>>, Ranges), String> {
+/// One curve's raw samples: (parameter, point) with the parameter ordering
+/// them, and the function behind them (none for data).
+struct Raw {
+    pts: Vec<(f64, Option<P>)>,
+    curve: Option<Box<dyn Fn(f64) -> Option<P>>>,
+}
+
+/// The curves as pieces of points in the plot's coordinates (transformed by
+/// the axes' logarithms), the points each curve's markers stand at, and the
+/// ranges, which fit all the curves.
+type Sampled = (Vec<Vec<Vec<P>>>, Vec<Vec<P>>, Ranges);
+
+fn sample(spec: &PlotSpec, curves: &[CurveSpec]) -> Result<Sampled, String> {
     let (lx, ly) = (spec.log_x, spec.log_y);
     let given = |v: Option<f64>, log: bool, name: &str| -> Result<Option<f64>, String> {
         match v {
@@ -848,76 +1121,50 @@ fn sample(spec: &PlotSpec, data: Option<&str>) -> Result<(Vec<Vec<P>>, Ranges), 
     };
     let (gx0, gx1) = (given(spec.xmin, lx, "x range")?, given(spec.xmax, lx, "x range")?);
     let (gy0, gy1) = (given(spec.ymin, ly, "y range")?, given(spec.ymax, ly, "y range")?);
+    // A function's x range when none is given.
+    let (fx0, fx1) = (
+        gx0.unwrap_or(if lx { -1.0 } else { -10.0 }),
+        gx1.unwrap_or(if lx { 2.0 } else { 10.0 }),
+    );
 
-    // Raw samples: (parameter, point) with the parameter ordering them.
-    let mut pts: Vec<(f64, Option<P>)> = Vec::new();
-    let mut curve: Option<Box<dyn Fn(f64) -> Option<P>>> = None;
-    let (mut u0, mut u1) = (0.0, 1.0);
-    match spec.mode {
-        PlotMode::Data => {
-            let text = data.ok_or("the plot has no data (give a file)")?;
-            for (i, (x, y)) in parse_table(text, spec.xcol, spec.ycol)?.into_iter().enumerate() {
-                let p = tr(x, lx).zip(tr(y, ly));
-                pts.push((i as f64, p));
-            }
-        }
-        PlotMode::Function => {
-            let (a, b) = (
-                gx0.unwrap_or(if lx { -1.0 } else { -10.0 }),
-                gx1.unwrap_or(if lx { 2.0 } else { 10.0 }),
-            );
-            if !ordered(a, b) {
-                return Err("the x range must have min below max".into());
-            }
-            (u0, u1) = (a, b);
-            // No expression: the frame, ticks and labels without a curve.
-            if !spec.expr.trim().is_empty() {
-                let f = parse(&spec.expr, &["x"])?;
-                curve = Some(Box::new(move |u| {
-                    let x = if lx { 10f64.powf(u) } else { u };
-                    tr(f.eval(&[x]), ly).map(|y| (u, y))
-                }));
-            }
-        }
-        PlotMode::Parametric => {
-            let fx = parse(&spec.xt, &["t"])?;
-            let fy = parse(&spec.yt, &["t"])?;
-            let (a, b) = (spec.tmin.unwrap_or(0.0), spec.tmax.unwrap_or(std::f64::consts::TAU));
-            if !ordered(a, b) {
-                return Err("the t range must have min below max".into());
-            }
-            (u0, u1) = (a, b);
-            curve = Some(Box::new(move |t| {
-                let x = tr(fx.eval(&[t]), lx)?;
-                let y = tr(fy.eval(&[t]), ly)?;
-                Some((x, y))
-            }));
-        }
-    }
-    if let Some(f) = &curve {
-        let n = spec.samples;
-        for i in 0..=n {
-            let u = if i == n {
-                u1
-            } else {
-                u0 + (u1 - u0) * i as f64 / n as f64
-            };
-            pts.push((u, f(u)));
-        }
-    }
-
-    // Ranges.
-    let mut xs: Vec<f64> = pts.iter().filter_map(|(_, p)| p.map(|p| p.0)).collect();
-    let mut ys: Vec<f64> = pts.iter().filter_map(|(_, p)| p.map(|p| p.1)).collect();
-    if spec.has_no_curve() {
+    if curves.is_empty() {
+        // The frame, ticks and labels without a curve.
         let (Some(y0), Some(y1)) = (gy0, gy1) else {
             return Err("a plot without a curve (empty \"expr\") needs \"ymin\" and \"ymax\"".into());
         };
-        if !ordered(y0, y1) {
+        if !ordered(fx0, fx1) || !ordered(y0, y1) {
             return Err("a range must have min below max".into());
         }
-        let ranges = Ranges { x0: u0, x1: u1, y0, y1 };
-        return Ok((Vec::new(), ranges));
+        return Ok((
+            Vec::new(),
+            Vec::new(),
+            Ranges {
+                x0: fx0,
+                x1: fx1,
+                y0,
+                y1,
+            },
+        ));
+    }
+
+    let mut raws: Vec<Raw> = Vec::with_capacity(curves.len());
+    for (i, c) in curves.iter().enumerate() {
+        let which = |m: String| {
+            if curves.len() > 1 {
+                format!("curve {}: {m}", i + 1)
+            } else {
+                m
+            }
+        };
+        raws.push(raw(c, spec, (fx0, fx1), (lx, ly)).map_err(which)?);
+    }
+
+    // Ranges.
+    let mut xs: Vec<f64> = Vec::new();
+    let mut ys: Vec<f64> = Vec::new();
+    for r in &raws {
+        xs.extend(r.pts.iter().filter_map(|(_, p)| p.map(|p| p.0)));
+        ys.extend(r.pts.iter().filter_map(|(_, p)| p.map(|p| p.1)));
     }
     if xs.is_empty() {
         return Err("the curve has no finite values in this range".into());
@@ -937,19 +1184,106 @@ fn sample(spec: &PlotSpec, data: Option<&str>) -> Result<(Vec<Vec<P>>, Ranges), 
     }
     let ranges = Ranges { x0, x1, y0, y1 };
 
-    // Adaptive refinement of a sampled curve, then the pieces.
+    let budget = MAX_POINTS / raws.len().max(1);
+    let mut all_pieces = Vec::with_capacity(raws.len());
+    let mut marks = Vec::with_capacity(raws.len());
+    for (r, c) in raws.into_iter().zip(curves) {
+        marks.push(if c.marker == Marker::None {
+            Vec::new()
+        } else {
+            r.pts
+                .iter()
+                .filter_map(|(_, p)| *p)
+                .filter(|p| p.0 >= x0 && p.0 <= x1 && p.1 >= y0 && p.1 <= y1)
+                .collect()
+        });
+        all_pieces.push(pieces_of(r, &ranges, budget));
+    }
+    Ok((all_pieces, marks, ranges))
+}
+
+/// The raw samples of one curve; `fx` is a function's x range (already on
+/// the axis's scale), `log` the axes' logarithms.
+fn raw(c: &CurveSpec, spec: &PlotSpec, fx: (f64, f64), log: (bool, bool)) -> Result<Raw, String> {
+    let (lx, ly) = log;
+    let mut pts: Vec<(f64, Option<P>)> = Vec::new();
+    let mut curve: Option<Box<dyn Fn(f64) -> Option<P>>> = None;
+    let (mut u0, mut u1) = (0.0, 1.0);
+    match c.mode() {
+        PlotMode::Data => {
+            let table = if c.points.is_empty() {
+                if c.data.trim().is_empty() {
+                    return Err("the plot has no data (give a file)".into());
+                }
+                parse_table(&c.data, c.xcol, c.ycol)?
+            } else {
+                c.points.iter().map(|p| (p[0], p[1])).collect()
+            };
+            for (i, (x, y)) in table.into_iter().enumerate() {
+                pts.push((i as f64, tr(x, lx).zip(tr(y, ly))));
+            }
+        }
+        PlotMode::Function => {
+            if c.expr.trim().is_empty() {
+                return Err("the curve has no expression".into());
+            }
+            let f = parse(&c.expr, &["x"])?;
+            let (a, b) = fx;
+            if !ordered(a, b) {
+                return Err("the x range must have min below max".into());
+            }
+            (u0, u1) = (a, b);
+            curve = Some(Box::new(move |u| {
+                let x = if lx { 10f64.powf(u) } else { u };
+                tr(f.eval(&[x]), ly).map(|y| (u, y))
+            }));
+        }
+        PlotMode::Parametric => {
+            let fx = parse(&c.xt, &["t"])?;
+            let fy = parse(&c.yt, &["t"])?;
+            let (a, b) = (c.tmin.unwrap_or(0.0), c.tmax.unwrap_or(std::f64::consts::TAU));
+            if !ordered(a, b) {
+                return Err("the t range must have min below max".into());
+            }
+            (u0, u1) = (a, b);
+            curve = Some(Box::new(move |t| {
+                let x = tr(fx.eval(&[t]), lx)?;
+                let y = tr(fy.eval(&[t]), ly)?;
+                Some((x, y))
+            }));
+        }
+    }
+    if let Some(f) = &curve {
+        let n = c.samples.unwrap_or(spec.samples).clamp(2, MAX_SAMPLES);
+        for i in 0..=n {
+            let u = if i == n {
+                u1
+            } else {
+                u0 + (u1 - u0) * i as f64 / n as f64
+            };
+            pts.push((u, f(u)));
+        }
+    }
+    Ok(Raw { pts, curve })
+}
+
+/// One curve's pieces: adaptive refinement of a sampled curve (at most
+/// `budget` points more), cut where it is undefined or crosses a pole.
+fn pieces_of(raw: Raw, r: &Ranges, budget: usize) -> Vec<Vec<P>> {
+    let Raw { pts, curve } = raw;
+    let (y0, y1) = (r.y0, r.y1);
     let mut all: Vec<(f64, Option<P>)> = Vec::with_capacity(pts.len());
     if let Some(f) = &curve {
-        let mut r = Refiner {
+        let mut rf = Refiner {
             f: &**f,
-            sx: x1 - x0,
-            sy: y1 - y0,
-            budget: MAX_POINTS.saturating_sub(pts.len()) / 2,
+            sx: r.x1 - r.x0,
+            sy: r.y1 - r.y0,
+            budget: budget.saturating_sub(pts.len()) / 2,
         };
         for w in pts.windows(2) {
             if let [(ua, pa), (ub, pb)] = *w {
                 all.push((ua, pa));
-                r.refine(ua, pa, ub, pb, 10, &mut all);
+                rf.refine(ua, pa, ub, pb, 10, &mut all);
             }
         }
         if let Some(last) = pts.last() {
@@ -985,7 +1319,7 @@ fn sample(spec: &PlotSpec, data: Option<&str>) -> Result<(Vec<Vec<P>>, Ranges), 
     }
     pieces.push(cur);
     pieces.retain(|p| !p.is_empty());
-    Ok((pieces, ranges))
+    pieces
 }
 
 /// The part of the segment a-b inside the rectangle (Liang-Barsky).
@@ -1287,8 +1621,20 @@ pub struct Plot {
     pub object: Object,
     pub curves: usize,
     pub points: usize,
+    pub markers: usize,
     /// What the caller should know (a curve outside the ranges).
     pub warnings: Vec<String>,
+}
+
+/// A number for a points line: plain, or with an exponent when that is shorter.
+fn short(v: f64) -> String {
+    let plain = format!("{v}");
+    let exp = format!("{v:e}");
+    if exp.len() < plain.len() {
+        exp
+    } else {
+        plain
+    }
 }
 
 fn fig(v: f64) -> f64 {
@@ -1303,8 +1649,30 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
     if !(w.is_finite() && h.is_finite() && w >= 10.0 && h >= 10.0 && w <= 1e7 && h <= 1e7) {
         return Err("the plot's frame is too small or too large".into());
     }
-    let (pieces, r) = sample(spec, data)?;
-    let pieces = clip_pieces(&pieces, &r);
+    // The curves; inline data of a listed curve is kept as its points.
+    let mut keep = spec.clone();
+    let mut curves = spec.curve_list();
+    if spec.curves.is_empty() {
+        if let (Some(d), Some(c)) = (data, curves.first_mut()) {
+            c.data = d.to_string();
+        }
+    }
+    for (k, c) in keep.curves.iter_mut().zip(curves.iter_mut()) {
+        if c.mode() == PlotMode::Data && c.points.is_empty() && c.file.is_empty() && !c.data.trim().is_empty() {
+            let table = parse_table(&c.data, c.xcol, c.ycol)?;
+            if table.len() > MAX_KEPT_POINTS {
+                return Err(format!(
+                    "at most {MAX_KEPT_POINTS} points kept in a plot (use a data file)"
+                ));
+            }
+            c.points = table.into_iter().map(|(x, y)| [x, y]).collect();
+            c.data.clear();
+            k.points = c.points.clone();
+        }
+        k.data.clear();
+    }
+    keep.check()?;
+    let (pieces, marks, r) = sample(spec, &curves)?;
     let mx = |x: f64| rect.min.x + (x - r.x0) / (r.x1 - r.x0) * w;
     let my = |y: f64| rect.max.y - (y - r.y0) / (r.y1 - r.y0) * h;
 
@@ -1323,7 +1691,15 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
     let line = |style: Style, pts: Vec<Point>| {
         Object::new(ObjectKind::Polyline(Polyline::new(PolyKind::Polyline, style, pts)))
     };
-    let depth = look.curve.depth;
+    let depth = spec.depth.unwrap_or(look.curve.depth);
+    // The curves' style: the indicator's, then the plot's, then the curve's.
+    let base = restyle(
+        Style { depth, ..look.curve },
+        spec.pen_color,
+        spec.thickness,
+        spec.line.as_deref(),
+        spec.style_val,
+    );
     let mut members: Vec<Object> = Vec::new();
 
     if spec.frame {
@@ -1510,41 +1886,145 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
 
     let mut count = 0;
     let mut total = 0;
-    for piece in &pieces {
-        let mut pts: Vec<Point> = Vec::with_capacity(piece.len());
-        for &(x, y) in piece {
-            let p = Point::new(fig(mx(x)), fig(my(y)));
-            if pts.last() != Some(&p) {
-                pts.push(p);
+    let mut markers = 0;
+    let mut warnings = Vec::new();
+    let several = curves.len() > 1;
+    for (i, ((pieces, marks), c)) in pieces.iter().zip(&marks).zip(&curves).enumerate() {
+        let style = restyle(base, c.pen_color, c.thickness, c.line.as_deref(), c.style_val);
+        let mut drawn = 0;
+        if c.has_line() {
+            for piece in clip_pieces(pieces, &r) {
+                let mut pts: Vec<Point> = Vec::with_capacity(piece.len());
+                for &(x, y) in &piece {
+                    let p = Point::new(fig(mx(x)), fig(my(y)));
+                    if pts.last() != Some(&p) {
+                        pts.push(p);
+                    }
+                }
+                if let [only] = pts[..] {
+                    // A single dot: a zero-length line draws it.
+                    pts.push(only);
+                }
+                if pts.len() >= 2 {
+                    total += pts.len();
+                    count += 1;
+                    drawn += 1;
+                    push_part(&mut members, "curve", line(style, pts));
+                }
             }
         }
-        if pts.len() == 1 {
-            // A single dot: a zero-length line draws it.
-            pts.push(pts[0]);
+        for &(x, y) in marks {
+            if markers >= MAX_MARKERS {
+                warnings.push(format!("only the first {MAX_MARKERS} markers are drawn"));
+                break;
+            }
+            let at = Point::new(fig(mx(x)), fig(my(y)));
+            for o in marker(c, style, at) {
+                push_part(&mut members, "marker", o);
+            }
+            markers += 1;
+            drawn += 1;
         }
-        if pts.len() >= 2 {
-            total += pts.len();
-            count += 1;
-            push_part(&mut members, "curve", line(look.curve, pts));
+        // A curve outside the ranges still gives the frame (wider ranges
+        // later show it); the result says so.
+        if drawn == 0 {
+            let m = "nothing of the curve lies inside the ranges";
+            warnings.push(if several {
+                format!("curve {}: {m}", i + 1)
+            } else {
+                m.to_string()
+            });
         }
     }
-    // A curve outside the ranges still gives the frame (wider ranges later
-    // show it); the result says so.
-    let mut warnings = Vec::new();
-    if count == 0 && !spec.has_no_curve() {
-        warnings.push("nothing of the curve lies inside the ranges".to_string());
-    }
+    warnings.dedup();
 
     let mut object = Object::new(ObjectKind::Compound(Compound { objects: members }));
-    let mut keep = spec.clone();
     keep.rect = Some([rect.min.x, rect.min.y, rect.max.x, rect.max.y]);
-    object.comments = vec![keep.comment()?];
+    object.comments = keep.comments()?;
     Ok(Plot {
         object,
         curves: count,
         points: total,
+        markers,
         warnings,
     })
+}
+
+/// `s` with the style values that are given.
+fn restyle(
+    mut s: Style,
+    pen: Option<i32>,
+    thickness: Option<i32>,
+    line: Option<&str>,
+    style_val: Option<f64>,
+) -> Style {
+    if let Some(c) = pen {
+        s.pen_color = ColorRef(c.clamp(-1, rustfig_model::LAST_USER_COLOR));
+    }
+    if let Some(t) = thickness {
+        s.thickness = t.clamp(0, 10_000);
+    }
+    if let Some(l) = line.and_then(LineKind::from_name) {
+        s.line = l;
+        if l != LineKind::Solid && s.style_val <= 0.0 {
+            // xfig's default dash length.
+            s.style_val = 4.0;
+        }
+    }
+    if let Some(v) = style_val {
+        s.style_val = v.clamp(0.0, 1000.0);
+    }
+    s
+}
+
+/// The objects of one marker of curve `c` at `at`: solid lines of width 1
+/// in the curve's color, closed shapes filled with it unless open.
+fn marker(c: &CurveSpec, curve: Style, at: Point) -> Vec<Object> {
+    let r = (c.marker_size / 2.0).max(0.5);
+    let style = Style {
+        line: LineKind::Solid,
+        thickness: 1,
+        style_val: 0.0,
+        fill_color: curve.pen_color,
+        area_fill: if c.marker_fill { 20 } else { -1 },
+        ..curve
+    };
+    let pt = |dx: f64, dy: f64| Point::new(fig(at.x + dx), fig(at.y + dy));
+    let shape = |pts: Vec<Point>| Object::new(ObjectKind::Polyline(Polyline::new(PolyKind::Polygon, style, pts)));
+    let stroke = |a: Point, b: Point| {
+        let s = Style { area_fill: -1, ..style };
+        Object::new(ObjectKind::Polyline(Polyline::new(PolyKind::Polyline, s, vec![a, b])))
+    };
+    match c.marker {
+        Marker::None => Vec::new(),
+        Marker::Circle => vec![Object::new(ObjectKind::Ellipse(Ellipse {
+            kind: EllipseKind::CircleRadius,
+            style,
+            direction: 1,
+            angle: 0.0,
+            center: at,
+            radii: Point::new(fig(r).max(1.0), fig(r).max(1.0)),
+            start: at,
+            end: Point::new(at.x + fig(r).max(1.0), at.y),
+        }))],
+        Marker::Square => vec![shape(vec![pt(-r, -r), pt(r, -r), pt(r, r), pt(-r, r), pt(-r, -r)])],
+        Marker::Diamond => vec![shape(vec![
+            pt(0.0, -r),
+            pt(r, 0.0),
+            pt(0.0, r),
+            pt(-r, 0.0),
+            pt(0.0, -r),
+        ])],
+        Marker::Triangle => {
+            let h = r * 3f64.sqrt() / 2.0;
+            vec![shape(vec![pt(0.0, -r), pt(h, r / 2.0), pt(-h, r / 2.0), pt(0.0, -r)])]
+        }
+        Marker::Plus => vec![stroke(pt(-r, 0.0), pt(r, 0.0)), stroke(pt(0.0, -r), pt(0.0, r))],
+        Marker::Cross => {
+            let d = r / std::f64::consts::SQRT_2;
+            vec![stroke(pt(-d, -d), pt(d, d)), stroke(pt(-d, d), pt(d, -d))]
+        }
+    }
 }
 
 /// The comment line that marks a generated part of a plot (frame, grid,
@@ -1604,6 +2084,23 @@ pub fn frame_of(o: &Object, spec: &PlotSpec) -> Option<Rect> {
 mod tests {
     use super::*;
 
+    /// [`sample`] of the spec's one curve, with `data` as its data text.
+    fn sample1(spec: &PlotSpec, data: Option<&str>) -> Result<(Vec<Vec<P>>, Ranges), String> {
+        let mut curves = spec.curve_list();
+        if let (Some(d), Some(c)) = (data, curves.first_mut()) {
+            c.data = d.to_string();
+        }
+        let (mut pieces, _, r) = sample(spec, &curves)?;
+        Ok((
+            if pieces.is_empty() {
+                Vec::new()
+            } else {
+                pieces.remove(0)
+            },
+            r,
+        ))
+    }
+
     fn ev(src: &str) -> f64 {
         parse(src, &["x"]).unwrap().eval(&[2.0])
     }
@@ -1662,7 +2159,7 @@ mod tests {
 
     #[test]
     fn sin_samples() {
-        let (pieces, r) = sample(&spec("sin(x)", 0.0, std::f64::consts::TAU), None).unwrap();
+        let (pieces, r) = sample1(&spec("sin(x)", 0.0, std::f64::consts::TAU), None).unwrap();
         assert_eq!(pieces.len(), 1);
         let p = &pieces[0];
         assert!(p.len() >= 401);
@@ -1676,7 +2173,7 @@ mod tests {
         let mut s = spec("1/x", -2.0, 2.0);
         s.ymin = Some(-5.0);
         s.ymax = Some(5.0);
-        let (pieces, r) = sample(&s, None).unwrap();
+        let (pieces, r) = sample1(&s, None).unwrap();
         assert!(pieces.len() >= 2, "{} pieces", pieces.len());
         // No piece crosses x = 0.
         for p in &pieces {
@@ -1685,10 +2182,10 @@ mod tests {
         let clipped = clip_pieces(&pieces, &r);
         assert!(clipped.len() >= 2);
         // Auto range keeps the bulk, not 1e5.
-        let (_, r) = sample(&spec("1/x", -2.0, 2.0), None).unwrap();
+        let (_, r) = sample1(&spec("1/x", -2.0, 2.0), None).unwrap();
         assert!(r.y1 < 100.0 && r.y0 > -100.0);
         // tan too.
-        let (pieces, _) = sample(&spec("tan(x)", -4.0, 4.0), None).unwrap();
+        let (pieces, _) = sample1(&spec("tan(x)", -4.0, 4.0), None).unwrap();
         assert!(pieces.len() >= 3);
     }
 
@@ -1697,7 +2194,7 @@ mod tests {
         let mut s = spec("x^2", 1.0, 100.0);
         s.log_x = true;
         s.log_y = true;
-        let (pieces, r) = sample(&s, None).unwrap();
+        let (pieces, r) = sample1(&s, None).unwrap();
         assert_eq!(pieces.len(), 1);
         assert!((r.x0 - 0.0).abs() < 1e-9 && (r.x1 - 2.0).abs() < 1e-9);
         assert!(spec_err(PlotSpec {
@@ -1709,7 +2206,7 @@ mod tests {
     }
 
     fn spec_err(s: PlotSpec) -> bool {
-        sample(&s, None).is_err()
+        sample1(&s, None).is_err()
     }
 
     #[test]
@@ -1733,10 +2230,10 @@ mod tests {
             xmax: None,
             ..PlotSpec::default()
         };
-        let (pieces, r) = sample(&s, Some("0 0\n1 1\n2 4\n3 9\n")).unwrap();
+        let (pieces, r) = sample1(&s, Some("0 0\n1 1\n2 4\n3 9\n")).unwrap();
         assert_eq!(pieces[0].len(), 4);
         assert!(r.x0 <= 0.0 && r.x1 >= 3.0 && r.y1 >= 9.0);
-        assert!(sample(&s, None).is_err());
+        assert!(sample1(&s, None).is_err());
     }
 
     #[test]
