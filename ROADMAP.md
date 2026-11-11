@@ -48,7 +48,8 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 - A modern Select tool (click, shift-click, rubber band, drag to move, vertex handles).
 - JSON-lines control channel, MCP server (`rustfig-cli mcp`), command-line converter.
 - Native `.rustfig` JSON format.
-- Plot a curve (E12): a Plot mode and dialog draw a function, a parametric curve or data from a file as vector objects with axes, grid, log axes and LaTeX labels; the plot is edited again from its comment (`plot.add`, `plot.update`).
+- Plot a curve (E12): a Plot mode and dialog draw a function, a parametric curve or data from a file as vector objects with axes, grid, log axes and LaTeX labels; the plot is edited again from its comment (`plot.add`, `plot.update`). Phase Q (2026-11-11): axes at the origin, minor and styled grids, tick label formats, fills between curves, bars, stems, error bars, polar, implicit, derivative, integral and field-line curves.
+- Arrowheads partway along a line (Arrow Mode "middle"), boxed text with a vertical anchor, angle arcs and right-angle marks in Angle measure mode (phase Q).
 
 ## Outlook
 
@@ -73,6 +74,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-11-11 | **Phase Q** (PSTricks gallery requests that stay xfig's format and have a place in the UI): plots get axes crossing at the origin, minor and styled grids (Q1), tick label formats (Q2), fills between curves (Q3), bars, stems and error bars (Q4), polar, implicit, derivative, integral and field-line curves (Q5); arrowheads partway along a line, Arrow Mode "middle" (Q7); boxed text and a vertical anchor (Q8); angle arcs and right-angle marks on Angle measure's Shift+middle/Shift+right, dimension label along the line (Q9); MCP colors as `#rrggbb`/X11 names, arrow types by name, `\n` texts, cropped `rustfig_render` (Q10). Everything is plain Fig 3.2. Q6 (rounded corners) and Q11 (elliptical arc) after 1.0. 1 engine command (`object.annotate_angle`). |
 | 2026-11-11 | **F23**: MCP fixes from the PSTricks gallery run: `shape.*` take cap, join and arrow specs, `arrow_style` hollow/filled, `shape.dimension_line`'s `text` a fixed label, undefined user colors refused, LaTeX default font follows `\familydefault`; the skill simplified with the bounding box as a workflow step. |
 | 2026-11-11 | **F11, fig2dev v0.9.17**: the figure's bounding box. Standard is the page (nothing saved); View > Bounding box: Standard (page), Fit to drawing, Edit bounding box (a mode: drag corners, edges or the box, one undo step per drag); a box of the figure's own is saved as the first comment `# RustFigBoundingBox x1 y1 x2 y2`. Everything outside it is grayed out on the canvas and cut off by the exports (File > Export, convert, print, `rustfig_render`); fig2dev's `Ctx::user_bounds` is opt-in, so the `fig2dev` program is unchanged. 3 engine commands, 1 mode. |
 | 2026-11-11 | **F22, fig2dev v0.9.16**: the figure's LaTeX preamble goes into the complete documents of `tikz`, `pict2e`, `pstricks` (`-P`) and into `asy` (`texpreamble`); what C fig2dev writes is unchanged. fig2dev v0.9.14 and v0.9.15 retagged (author fixed, trees unchanged). |
