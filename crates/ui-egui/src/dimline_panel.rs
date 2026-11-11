@@ -331,6 +331,8 @@ fn fields(app: &App, ui: &mut Ui, d: &mut DimlineSettings) {
         int(ui, "Precision", &mut p, 9);
         d.precision = u32::try_from(p).unwrap_or(1);
     });
+    ui.checkbox(&mut d.label_along, "Label along the line")
+        .on_hover_text("The text runs along the line, above it, instead of in a box on the line");
 }
 
 #[cfg(test)]

@@ -2254,6 +2254,22 @@ fn dimension_line_panel_edits_the_indicator() {
     }
 }
 
+/// Q9: the panel's "Label along the line" is stored in the indicator.
+#[test]
+fn dimension_line_panel_label_along() {
+    let mut h = harness(app());
+    h.state_mut().engine.set_tool(ToolKind::Polyline);
+    h.run_steps(2);
+    assert!(!h.state().engine.indicator.dimline.label_along);
+    h.get_by_label("Dimension line: settings").click();
+    h.run_steps(3);
+    h.get_by_label("Label along the line").click();
+    h.run_steps(2);
+    h.get_by_label("OK").click();
+    h.run_steps(3);
+    assert!(h.state().engine.indicator.dimline.label_along);
+}
+
 /// D10: the typed-coordinates window (Ctrl+K) runs `tool.point` and keeps a
 /// history; a bad entry shows its error and stays in the field.
 #[test]

@@ -20,6 +20,8 @@ const MAIN: &str = "main dimension line";
 const BOX: &str = "text box";
 const TICK: &str = "tick";
 const FIXED: &str = "fixed text";
+/// How far a label along the line is clear of it (Fig units).
+const ALONG_GAP: f64 = 45.0;
 
 /// The dimension-line settings of the indicator (xfig's `cur_dimline_*`,
 /// `mode.c`; its "Dimension line settings" panel).
@@ -48,6 +50,9 @@ pub struct DimlineSettings {
     pub fixed: bool,
     /// Decimals of the length.
     pub precision: u32,
+    /// The label runs along the line, on its upper side, instead of in a
+    /// box that interrupts it (plan Q9): the compound has no box.
+    pub label_along: bool,
 }
 
 impl Default for DimlineSettings {
@@ -70,6 +75,7 @@ impl Default for DimlineSettings {
             postscript: true,
             fixed: false,
             precision: 1,
+            label_along: false,
         }
     }
 }
@@ -198,7 +204,10 @@ pub fn create(
     )));
     boxed.comments = vec![BOX.into()];
 
-    let mut members = vec![main, boxed];
+    let mut members = vec![main];
+    if !s.label_along {
+        members.push(boxed);
+    }
     if s.ticks {
         for _ in 0..2 {
             let tick_style = Style {
@@ -305,6 +314,11 @@ pub fn recompute(o: &mut Object, s: &DimlineSettings, fmt: &dyn Fn(f64) -> Strin
     }
 
     // The text: the length unless the text is fixed.
+    // No box: the label is along the line.
+    let along = !c
+        .objects
+        .iter()
+        .any(|m| m.comments.first().map(String::as_str) == Some(BOX));
     let text_idx = c.objects.iter().position(|m| matches!(m.kind, ObjectKind::Text(_)));
     let (ascent, descent, text_len) = {
         let idx = match text_idx {
@@ -351,7 +365,10 @@ pub fn recompute(o: &mut Object, s: &DimlineSettings, fmt: &dyn Fn(f64) -> Strin
         t.height = m.ascent;
         t.angle = angle;
         t.justify = Justify::Center;
-        t.origin = Point::new(round(cx - dy / length * m.descent), round(cy + dx / length * m.descent));
+        // In a box the text's middle is on the line; along the line it sits
+        // above it, its lowest part a margin clear of the line.
+        let off = if along { -(m.descent + ALONG_GAP) } else { m.descent };
+        t.origin = Point::new(round(cx - dy / length * off), round(cy + dx / length * off));
         (m.ascent, m.descent, m.width)
     };
     let fixed_text = c

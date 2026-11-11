@@ -1185,11 +1185,18 @@ impl Engine {
     /// Flip's Shift+right sets the center / anchor like the right button.
     fn shift_keeps_button(&self, button: Button) -> bool {
         match button {
-            Button::Middle => self.tool == ToolKind::Edit,
+            // Angle measure's Shift+middle and Shift+right draw the angle at
+            // a corner or arc (plan Q9).
+            Button::Middle => matches!(self.tool, ToolKind::Edit | ToolKind::AngleMeasure),
             // Area measure's Shift+right is "reset to +-0" (`e_measure.c`).
             Button::Right => matches!(
                 self.tool,
-                ToolKind::RotateCw | ToolKind::RotateCcw | ToolKind::FlipH | ToolKind::FlipV | ToolKind::AreaMeasure
+                ToolKind::RotateCw
+                    | ToolKind::RotateCcw
+                    | ToolKind::FlipH
+                    | ToolKind::FlipV
+                    | ToolKind::AreaMeasure
+                    | ToolKind::AngleMeasure
             ),
             Button::Left => false,
         }
@@ -3493,6 +3500,8 @@ impl Engine {
             (ToolState::Idle, ToolKind::Box | ToolKind::ArcBox | ToolKind::Picture) => ("", "square at center", ""),
             (ToolState::Idle, ToolKind::Plot) => ("first corner", "", ""),
             (ToolState::Idle, ToolKind::AreaMeasure) => ("locate object", "", "reset to +-0"),
+            (ToolState::Idle, ToolKind::AngleMeasure) => ("", "select & draw arc", "select & right angle"),
+            (ToolState::Angle { pts, .. }, _) if pts.len() >= 2 => ("", "draw arc & label", "draw right angle"),
             (ToolState::Idle, ToolKind::Edit) => ("locate object", "show comments", ""),
             (ToolState::Idle | ToolState::Chop { .. }, t) if t.locates() => ("locate object", "", ""),
             _ => ("", "", ""),

@@ -1758,6 +1758,10 @@ mod tests {
             "object.measure_angle",
             "the Measure angle tool (three points, or a corner or arc)",
         ),
+        (
+            "object.annotate_angle",
+            "the Measure angle tool's Shift+middle and Shift+right buttons",
+        ),
         ("object.measure_length", "the Measure length tool"),
         ("object.measure_area", "the Measure area tool"),
         ("object.measure_reset", "the measure tools' right button"),

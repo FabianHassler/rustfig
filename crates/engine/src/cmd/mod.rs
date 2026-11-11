@@ -2,6 +2,7 @@
 //! id, label, menu path, shortcut, parameter documentation, an `enabled`
 //! predicate and a `run` function.
 
+mod annotate;
 mod arrange;
 mod chop;
 mod chop_ext;
@@ -97,6 +98,7 @@ pub fn all() -> &'static [Command] {
         v.extend(tangent::commands());
         v.extend(sfactor::commands());
         v.extend(measure::commands());
+        v.extend(annotate::commands());
         v.extend(dimline::commands());
         v.extend(joinsplit::commands());
         v.extend(library::commands());

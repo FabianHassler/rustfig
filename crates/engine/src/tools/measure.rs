@@ -86,10 +86,17 @@ impl Engine {
                         cursor: p,
                     }
                 }
-                _ if shift => {}
                 _ => {
                     let tol = self.pick_tol();
                     if let Some(id) = angle_target(self, pos.x, pos.y, tol) {
+                        // Shift: draw the angle (Shift+middle an arc with its
+                        // label, Shift+right a right-angle mark; plan Q9).
+                        if shift {
+                            let mark = if button == Button::Middle { "arc" } else { "right" };
+                            let params = json!({"id": id.0, "x": pos.x, "y": pos.y, "mark": mark});
+                            let _ = self.execute("object.annotate_angle", &params);
+                            return Ok(());
+                        }
                         let params = json!({"id": id.0, "x": pos.x, "y": pos.y, "save": button == Button::Middle});
                         let _ = self.execute("object.measure_angle", &params);
                     }
@@ -97,6 +104,17 @@ impl Engine {
             }
             return Ok(());
         };
+        // Shift at the last point: measure and draw the angle, with an arc and
+        // its label (middle) or a right-angle mark (right); plan Q9.
+        if let (true, Button::Middle | Button::Right, [a, b]) = (shift, button, pts.as_slice()) {
+            if *b != p {
+                let mark = if button == Button::Middle { "arc" } else { "right" };
+                let params = json!({"points": [[a.x, a.y], [b.x, b.y], [p.x, p.y]], "mark": mark});
+                self.tool_state = ToolState::Idle;
+                let _ = self.execute("object.annotate_angle", &params);
+                return Ok(());
+            }
+        }
         match (button, pts.as_slice()) {
             (Button::Right, _) => self.tool_state = ToolState::Idle,
             // The second point; a click on the first is ignored.

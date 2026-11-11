@@ -18,7 +18,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Dimension line",
             menu: "",
             shortcut: "",
-            params: "{\"x1\", \"y1\", \"x2\", \"y2\", \"text\"?: string (a fixed label instead of the measured length, as with the indicator's dimline.fixed)}  — a compound of the measured line, a box with its length in the figure units, and ticks at the ends (xfig: Shift+left button, then the final point, in polyline mode); settings in the indicator's dimline. Returns {\"id\"}",
+            params: "{\"x1\", \"y1\", \"x2\", \"y2\", \"text\"?: string (a fixed label instead of the measured length, as with the indicator's dimline.fixed), \"label_along\"?: bool (the label runs along the line, above it, instead of in a box on it; default the indicator's dimline.label_along)}  — a compound of the measured line, a box with its length in the figure units, and ticks at the ends (xfig: Shift+left button, then the final point, in polyline mode); settings in the indicator's dimline. Returns {\"id\"}",
             mutates: true,
             enabled: |_| true,
             run: create,
@@ -60,6 +60,9 @@ fn create(e: &mut Engine, p: &Value) -> CmdResult {
     // A label given here is a fixed one (xfig's "User-defined text").
     if text.is_some() {
         settings.fixed = true;
+    }
+    if let Some(v) = super::opt_bool(p, "label_along")? {
+        settings.label_along = v;
     }
     let fmt = formatter(e, settings.precision);
     let obj = dimline::create(&settings, &defaults, a, b, text, &fmt);

@@ -68,7 +68,7 @@ when all 512 are used); `arrow_kind` takes 0-14 or a name (`stick`,
 `half_concave`, `half_convex`, `wye`, `bar`, `fork`, `backward_fork`; the
 names that stand for a hollow or filled head also set the style, an explicit
 `arrow_style` wins); `shape.text` with `\n` writes one text per line, spaced
-as Return does in Text mode (separate texts, `{"ids": [...]}`); `shape.polyline`, `shape.spline` and `shape.arc` take `mid_arrows: [0.5]` (fractions of the line's length, ascending): an arrowhead centered at each position, the line cut into pieces glued into a compound (reply `{"id": compound}`). `shape.text` also takes `anchor` (`top`, `middle`, `baseline`: what the point `x, y` is on the text) and `box` (`true` or `{margin, fill_color, area_fill, pen_color, thickness}`: a filled box one depth behind the text, glued into a compound).
+as Return does in Text mode (separate texts, `{"ids": [...]}`); `shape.polyline`, `shape.spline` and `shape.arc` take `mid_arrows: [0.5]` (fractions of the line's length, ascending): an arrowhead centered at each position, the line cut into pieces glued into a compound (reply `{"id": compound}`). `shape.text` also takes `anchor` (`top`, `middle`, `baseline`: what the point `x, y` is on the text) and `box` (`true` or `{margin, fill_color, area_fill, pen_color, thickness}`: a filled box one depth behind the text, glued into a compound). `object.annotate_angle` draws a measured angle (an arc with its label, or `mark: "right"`); `shape.dimension_line` takes `label_along`.
 
 Coordinates are Fig units: 1200 per inch, y grows downwards. Open and save
 files with `file.open` / `file.save` through `rustfig_execute`.
@@ -142,3 +142,4 @@ Sizes and work are capped; hostile expressions end in an error or a plot.
 | 2026-11-11 | Q10: `pen_color`/`fill_color` as `#rrggbb` or X11 name, `arrow_kind` by name, `shape.text` with `\n` one text per line, `rustfig_render` `crop`. |
 | 2026-11-11 | Q7: `mid_arrows` on shape.polyline, spline and arc. |
 | 2026-11-11 | Q8: `shape.text` `box` and `anchor`. |
+| 2026-11-11 | Q9: `object.annotate_angle`, `shape.dimension_line` `label_along`. |
