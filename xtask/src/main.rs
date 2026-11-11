@@ -1,10 +1,11 @@
-//! Project automation: `cargo xtask ci | layers | assets | licences | wasm | web | site | source-audit | libraries | examples`.
+//! Project automation: `cargo xtask ci | layers | assets | licences | wasm | web | site | source-audit | libraries | examples | release-check`.
 
 mod audit;
 mod ctan;
 mod examples;
 mod libraries;
 mod package;
+mod release_check;
 mod site;
 // Drives xfig under Xvfb: Unix only.
 #[cfg(unix)]
@@ -558,9 +559,10 @@ fn main() -> ExitCode {
         "libraries" => libraries::run(&root()),
         "examples" => examples::run(&root(), std::env::args().nth(2)),
         "site" => site::run(&root()),
+        "release-check" => release_check::run(&root(), cargo()),
         "ctan" => ctan::run(&root(), &std::env::args().nth(2).unwrap_or_else(|| "HEAD".into())),
         _ => Err(
-            "usage: cargo xtask ci | layers | assets | licences | wasm | web | package | source-audit | xfig-compare | speed-compare | libraries | examples [OUTDIR] | site | ctan [REF]"
+            "usage: cargo xtask ci | layers | assets | licences | wasm | web | package | source-audit | xfig-compare | speed-compare | libraries | examples [OUTDIR] | site | ctan [REF] | release-check [--steps 1,12]"
                 .into(),
         ),
     };
