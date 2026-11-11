@@ -23,7 +23,7 @@ Buttons that exist (labels as in xfig):
 | Line Style | solid and the dash styles ([Line styles](line-styles.md)) |
 | Tangent/Norm Length | [Tangent and normal](tangent-normal.md) |
 | Join Style, Cap Style | corners and line ends (miter, round, bevel; butt, round, projecting) |
-| Arrow Mode, Arrow Type, Arrow Size | arrowheads |
+| Arrow Mode, Arrow Type, Arrow Size | arrowheads (Arrow Mode: none, forward, both, backward, or middle, see below) |
 | Box Curve | corner radius of rounded boxes |
 | Dimension line | in Polyline mode: opens xfig's Dimension Line Settings panel for new dimension lines ([Draw shapes](draw-shapes.md)) |
 | Text Just, Text/Ellipse Angle, Text Flags, Text Size, Text Step, Text Font | text settings |
@@ -80,3 +80,7 @@ Scripts and MCP use `style.family_add`, `style.family_delete`, `style.family_ren
 ## Hover preview
 
 In Find mode, pointing at a choice in a pictorial panel (Line Style, Join, Cap, Arrow Type, Fill Style) or moving a number pop-up shows what **Update** would do to the matched objects, on the canvas, at once. Moving the pointer away, or closing the pop-up, puts the objects back; nothing is added to the undo list and nothing in the drawing changes until you press Update. With no matched objects (and in the other modes) there is nothing to preview.
+
+## Arrowhead in the middle of a line
+
+Arrow Mode has a fifth choice, **middle** (added; xfig draws arrowheads only at the ends of a line). A polyline, open spline or arc drawn in this mode gets one arrowhead, of the indicator's Arrow Type and Size, centered on the middle of the line. Fig has no arrowheads in the middle of a line, so the line is stored as two pieces glued into a compound: the first ends in a real Fig arrowhead and the second starts under it, so the line runs through the head without a seam. xfig and fig2dev draw the same, and Arrow mode and the edit panel work on the pieces (open the compound to reach them). A spline becomes two polylines along its curve. If the line is too short for the head, the plain line is drawn and the message line says so. Scripts and MCP use `mid_arrows: [fractions of the line's length]` on `shape.polyline`, `shape.spline` and `shape.arc` (any number of heads) and `mid_arrow` in `indicator.set`.

@@ -604,6 +604,7 @@ const ARROW_CHOICES: i32 = 29;
 /// Arrow mode in xfig's order: none, forward, both, backward.
 fn arrow_mode(ind: &Indicator) -> usize {
     match (ind.forward_arrow, ind.backward_arrow) {
+        (false, false) if ind.mid_arrow => 4,
         (false, false) => 0,
         (true, false) => 1,
         (true, true) => 2,
@@ -612,13 +613,16 @@ fn arrow_mode(ind: &Indicator) -> usize {
 }
 
 fn set_arrow_mode(app: &mut App, m: usize) {
-    let (f, b) = match m % 4 {
+    let (f, b) = match m % 5 {
         1 => (true, false),
         2 => (true, true),
         3 => (false, true),
         _ => (false, false),
     };
-    set(app, json!({"forward_arrow": f, "backward_arrow": b}));
+    set(
+        app,
+        json!({"forward_arrow": f, "backward_arrow": b, "mid_arrow": m % 5 == 4}),
+    );
 }
 
 /// xfig's seven align choices (`halign_choices`, `valign_choices`).
@@ -693,7 +697,7 @@ fn value_text(app: &App, a: Attr) -> String {
         Attr::LineStyle => ind.line.name().into(),
         Attr::JoinStyle => format!("{:?}", ind.join).to_lowercase(),
         Attr::CapStyle => format!("{:?}", ind.cap).to_lowercase(),
-        Attr::ArrowMode => ["none", "forward", "both", "backward"]
+        Attr::ArrowMode => ["none", "forward", "both", "backward", "middle"]
             .get(arrow_mode(ind))
             .copied()
             .unwrap_or("none")
@@ -843,7 +847,7 @@ fn step(app: &mut App, a: Attr, dir: i32) {
                 set(app, json!({ "cap": c }));
             }
         }
-        Attr::ArrowMode => set_arrow_mode(app, (arrow_mode(&ind) as i32 + dir).rem_euclid(4) as usize),
+        Attr::ArrowMode => set_arrow_mode(app, (arrow_mode(&ind) as i32 + dir).rem_euclid(5) as usize),
         Attr::ArrowType => {
             let n = (arrow_choice_of(ind.arrow.kind, ind.arrow.style) + dir).rem_euclid(ARROW_CHOICES);
             set_arrow_type(app, &ind, n);
@@ -1075,7 +1079,7 @@ fn cap_icon(c: CapStyle) -> &'static Xbm {
     }
 }
 
-const ARROW_MODE_ICONS: [&Xbm; 4] = [&xi::NOARROWS, &xi::FARROWS, &xi::FBARROWS, &xi::BARROWS];
+const ARROW_MODE_ICONS: [&Xbm; 5] = [&xi::NOARROWS, &xi::FARROWS, &xi::FBARROWS, &xi::BARROWS, &xi::FARROWS];
 
 fn just_icon(j: Justify) -> &'static Xbm {
     match j {
@@ -1144,6 +1148,9 @@ fn arc_pic(pie: bool) -> Pic {
 
 /// The picture of arrow mode `m` (xfig's order: none, forward, both, backward).
 fn arrow_mode_pic(m: usize) -> Pic {
+    if m == 4 {
+        return Pic::of(&xi::FARROWS, VIcon::ArrowMid);
+    }
     let (forward, backward) = match m {
         1 => (true, false),
         2 => (true, true),
@@ -1924,13 +1931,13 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             }
         }
         Attr::ArrowMode => {
-            let names = ["no arrows", "forward", "both", "backward"];
+            let names = ["no arrows", "forward", "both", "backward", "middle"];
             let items: Vec<_> = names
                 .iter()
                 .enumerate()
                 .map(|(m, n)| (arrow_mode(&ind) == m, (*n).to_string(), arrow_mode_pic(m)))
                 .collect();
-            if let Some(m) = icon_choices(ui, "arrow_mode", &items, 4) {
+            if let Some(m) = icon_choices(ui, "arrow_mode", &items, 5) {
                 set_arrow_mode(app, m);
             }
         }

@@ -381,6 +381,28 @@ fn attribute_panel_shows_the_modes_attributes() {
     h.get_by_label_contains("Grid Mode: ");
 }
 
+/// Q7: Arrow mode has a "middle" choice: one arrowhead in the middle of the
+/// lines drawn next.
+#[test]
+fn arrow_mode_middle_choice() {
+    let mut h = harness(app());
+    h.state_mut().engine.set_tool(ToolKind::Polyline);
+    h.run_steps(2);
+    h.get_by_label("Arrow Mode: none").click();
+    h.run_steps(3);
+    h.get_by_label("middle").click();
+    h.run_steps(3);
+    assert!(h.state().engine.indicator.mid_arrow);
+    assert!(!h.state().engine.indicator.forward_arrow);
+    h.get_by_label("Arrow Mode: middle");
+    // Another choice turns it off again.
+    h.get_by_label("Arrow Mode: middle").click();
+    h.run_steps(3);
+    h.get_by_label("forward").click();
+    h.run_steps(3);
+    assert!(!h.state().engine.indicator.mid_arrow && h.state().engine.indicator.forward_arrow);
+}
+
 /// W10-1: in Update mode every attribute button has an update box and the
 /// panel starts with the three Update Control buttons.
 #[test]

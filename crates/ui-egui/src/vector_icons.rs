@@ -31,6 +31,8 @@ pub enum VIcon {
         backward: bool,
         forward: bool,
     },
+    /// Arrow mode "middle": one head in the middle of the line.
+    ArrowMid,
     Arc {
         pie: bool,
     },
@@ -126,6 +128,20 @@ fn drawing(icon: VIcon) -> Vec<Object> {
             p.forward_arrow = forward.then_some(a);
             p.backward_arrow = backward.then_some(a);
             vec![Object::new(ObjectKind::Polyline(p))]
+        }
+        VIcon::ArrowMid => {
+            let a = Arrow {
+                width: 6.0 * U,
+                height: 6.0 * U,
+                ..arrow(1, 1)
+            };
+            let line = Polyline::new(PolyKind::Polyline, style(1), vec![px(3.0, 16.0), px(29.0, 16.0)]);
+            let mut head = Polyline::new(PolyKind::Polyline, style(1), vec![px(10.0, 16.0), px(19.0, 16.0)]);
+            head.forward_arrow = Some(a);
+            vec![
+                Object::new(ObjectKind::Polyline(line)),
+                Object::new(ObjectKind::Polyline(head)),
+            ]
         }
         VIcon::Arc { pie } => Arc::through(style(2), px(16.0, 3.0), px(22.0, 16.0), px(16.0, 29.0), pie)
             .map(|a| vec![Object::new(ObjectKind::Arc(a))])
@@ -276,6 +292,7 @@ mod tests {
                 forward: f,
             });
         }
+        icons.push(VIcon::ArrowMid);
         for i in icons {
             assert!(ink(i) > 10, "{i:?} is empty");
         }

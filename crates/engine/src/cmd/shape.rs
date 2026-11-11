@@ -378,6 +378,41 @@ pub(super) fn arrows_from(
     Ok((f, b))
 }
 
+/// `mid_arrows` and the arrow that goes there: the indicator's arrow with
+/// the `arrow_*` changes, or `mid_arrow_spec`.
+fn mid_arrows(e: &Engine, p: &Value) -> Result<Option<(Vec<f64>, rustfig_model::Arrow)>, EngineError> {
+    let Some(v) = super::param(p, "mid_arrows").filter(|v| !v.is_null()) else {
+        return Ok(None);
+    };
+    let list = v
+        .as_array()
+        .ok_or_else(|| EngineError::bad_params("mid_arrows must be a list of fractions of the line's length"))?;
+    let fractions = list
+        .iter()
+        .map(|x| x.as_f64().filter(|f| f.is_finite()))
+        .collect::<Option<Vec<f64>>>()
+        .ok_or_else(|| EngineError::bad_params("mid_arrows must be a list of numbers"))?;
+    crate::midarrow::check_fractions(&fractions)?;
+    let mut arrow = e.indicator.arrow_value();
+    ArrowChanges::from_params(p)?.apply(&mut arrow);
+    if let Some(spec) = arrow_spec(p, "mid_arrow_spec")? {
+        arrow = spec;
+    }
+    Ok(Some((fractions, arrow)))
+}
+
+/// Adds a line (polyline, open spline or arc), cut into pieces with heads
+/// along it when `mid_arrows` is given.
+fn added_line(e: &mut Engine, p: &Value, o: Object) -> CmdResult {
+    match mid_arrows(e, p)? {
+        Some((fractions, arrow)) => {
+            let o = crate::midarrow::split(&o, &fractions, &arrow)?;
+            added(e, o)
+        }
+        None => added(e, o),
+    }
+}
+
 pub(super) fn added(e: &mut Engine, o: Object) -> CmdResult {
     let id = e.add_object(o);
     e.set_selection(vec![id]);
@@ -471,7 +506,7 @@ fn polyline(e: &mut Engine, p: &Value) -> CmdResult {
     need(&pts, 1, "polyline")?;
     let mut pl = Polyline::new(PolyKind::Polyline, style_from(e, p)?, pts);
     (pl.forward_arrow, pl.backward_arrow) = arrows_from(e, p)?;
-    added(e, Object::new(ObjectKind::Polyline(pl)))
+    added_line(e, p, Object::new(ObjectKind::Polyline(pl)))
 }
 
 fn polygon(e: &mut Engine, p: &Value) -> CmdResult {
@@ -505,7 +540,7 @@ fn spline(e: &mut Engine, p: &Value) -> CmdResult {
     if !closed {
         (s.forward_arrow, s.backward_arrow) = arrows_from(e, p)?;
     }
-    added(e, Object::new(ObjectKind::Spline(s)))
+    added_line(e, p, Object::new(ObjectKind::Spline(s)))
 }
 
 fn arc(e: &mut Engine, p: &Value) -> CmdResult {
@@ -519,7 +554,7 @@ fn arc(e: &mut Engine, p: &Value) -> CmdResult {
     if !pie {
         (arc.forward_arrow, arc.backward_arrow) = arrows_from(e, p)?;
     }
-    added(e, Object::new(ObjectKind::Arc(arc)))
+    added_line(e, p, Object::new(ObjectKind::Arc(arc)))
 }
 
 fn regpoly(e: &mut Engine, p: &Value) -> CmdResult {

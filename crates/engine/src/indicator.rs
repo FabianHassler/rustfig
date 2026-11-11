@@ -195,6 +195,10 @@ pub struct Indicator {
     pub join: JoinStyle,
     pub forward_arrow: bool,
     pub backward_arrow: bool,
+    /// Arrow mode "middle" (plan Q7): a new polyline, open spline or arc
+    /// gets one arrowhead at the middle of the line (cut into pieces glued
+    /// into a compound, see [`crate::midarrow`]).
+    pub mid_arrow: bool,
     pub arrow: Arrow,
     /// Arrow Size panel: the `arrow` thickness, width and length are used as
     /// they are (xfig's "Absolute Values"); otherwise the multiples below
@@ -271,6 +275,7 @@ impl Default for Indicator {
             join: JoinStyle::Miter,
             forward_arrow: false,
             backward_arrow: false,
+            mid_arrow: false,
             // xfig's startarrowtype 0: the stick arrow.
             arrow: Arrow {
                 kind: 0,

@@ -24,6 +24,7 @@ mod indicator;
 pub mod latex_preview;
 pub mod library;
 mod links;
+pub mod midarrow;
 pub mod picture;
 pub mod plot;
 pub mod prefs;

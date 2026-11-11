@@ -68,7 +68,7 @@ when all 512 are used); `arrow_kind` takes 0-14 or a name (`stick`,
 `half_concave`, `half_convex`, `wye`, `bar`, `fork`, `backward_fork`; the
 names that stand for a hollow or filled head also set the style, an explicit
 `arrow_style` wins); `shape.text` with `\n` writes one text per line, spaced
-as Return does in Text mode (separate texts, `{"ids": [...]}`).
+as Return does in Text mode (separate texts, `{"ids": [...]}`); `shape.polyline`, `shape.spline` and `shape.arc` take `mid_arrows: [0.5]` (fractions of the line's length, ascending): an arrowhead centered at each position, the line cut into pieces glued into a compound (reply `{"id": compound}`).
 
 Coordinates are Fig units: 1200 per inch, y grows downwards. Open and save
 files with `file.open` / `file.save` through `rustfig_execute`.
@@ -140,3 +140,4 @@ Sizes and work are capped; hostile expressions end in an error or a plot.
 | 2026-11-11 | Plots: bars (grouped), stems and error bars (Q4). |
 | 2026-11-11 | Plots: polar, implicit, derivative, integral and field-line curves (Q5). |
 | 2026-11-11 | Q10: `pen_color`/`fill_color` as `#rrggbb` or X11 name, `arrow_kind` by name, `shape.text` with `\n` one text per line, `rustfig_render` `crop`. |
+| 2026-11-11 | Q7: `mid_arrows` on shape.polyline, spline and arc. |

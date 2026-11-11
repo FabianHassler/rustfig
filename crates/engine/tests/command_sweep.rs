@@ -102,6 +102,10 @@ fn hostile_values() -> Vec<Value> {
         json!({"points": [[0, 0], [90, 0]], "pen_color": "#abcdef", "fill_color": "salmon", "arrow_kind": "dot", "forward_arrow": true, "crop": true}),
         json!({"points": [[0, 0], [90, 0]], "arrow_kind": [1], "forward_arrow_spec": {"kind": "bar", "style": "filled"}, "pen_color": [1]}),
         json!({"x": 0, "y": 0, "text": "a\n\n".repeat(2000), "pen_color": "#010203", "size": 1e308}),
+        json!({"points": [[0, 0], [900, 0], [900, 900]], "mid_arrows": [0.5, 1e308, "a", null], "arrow_height": 1e300, "mid_arrow_spec": 5}),
+        json!({"points": [[0, 0], [1, 0]], "mid_arrows": [0.5], "kind": "x", "closed": true, "pie": true}),
+        json!({"points": [[0, 0], [900, 300], [1800, 0]], "mid_arrows": [0.1, 0.5, 0.9], "arrow_width": 0}),
+        json!({"mid_arrow": 5, "arrow": "x"}),
         json!({"x": 0, "y": 0, "text": "\n\r\n", "crop": "yes", "box": true, "anchor": "nowhere", "pen_color": null}),
     ]
 }

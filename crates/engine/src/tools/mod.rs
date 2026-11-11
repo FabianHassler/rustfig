@@ -1548,9 +1548,31 @@ impl Engine {
             return Ok(());
         }
         match self.points_object(&pts, center) {
-            Some(o) => self.commit_object(o),
+            Some(o) => match self.with_mid_arrow(&o) {
+                Ok(split) => self.commit_object(split),
+                Err(e) => {
+                    // No room for the head: the plain line, and why.
+                    self.set_status(e.message);
+                    self.commit_object(o)
+                }
+            },
             None => Ok(()),
         }
+    }
+
+    /// Arrow mode "middle" (plan Q7): the line cut in two with one head at
+    /// its middle, glued into a compound; any other object, or mode, as it is.
+    fn with_mid_arrow(&self, o: &Object) -> Result<Object, EngineError> {
+        let open = match &o.kind {
+            ObjectKind::Polyline(p) => p.kind == PolyKind::Polyline,
+            ObjectKind::Spline(s) => !s.closed,
+            ObjectKind::Arc(a) => !a.pie,
+            _ => false,
+        };
+        if !self.indicator.mid_arrow || !open {
+            return Ok(o.clone());
+        }
+        crate::midarrow::split(o, &[0.5], &self.indicator.arrow_value())
     }
 
     /// Fewest points xfig finishes the current shape with
@@ -3756,7 +3778,7 @@ impl Engine {
                         None => ov.guides.push(all.clone()),
                     }
                 } else if let Some(o) = self.points_object(&all, *center) {
-                    ov.preview.push(o);
+                    ov.preview.push(self.with_mid_arrow(&o).unwrap_or(o));
                 }
                 if self.tool.spline_kind().is_some() {
                     ov.guides.push(all.clone());
