@@ -107,6 +107,17 @@ the cap width in Fig units. The reply of `plot.add` and `plot.update` counts
 `bars` (bars, stems and error bar lines). Data from a file needs no list:
 `{"file": "d.csv", "xcol": 1, "ycol": 2, "yerr_col": 3, "style": "bar"}`.
 
+More curve kinds, as the `mode` of a plot or of a curve in `curves`:
+`"polar"` (`expr` is r in `t` or `theta`, `tmin`/`tmax`, default 0..2pi),
+`"implicit"` (`expr` is `f(x,y)` or an equation `"x^2+y^2=1"`; marching
+squares on `samples` cells per axis, at most 300, over `xmin`..`ymax`, default
+-10..10), `"derivative"` and `"integral"` (`of`: the number, from 1, of an
+earlier curve; integral from 0 at its first point) and `"field"` (`xt`, `yt`
+the components P and Q of the field in `x`, `y`; `starts: [[x, y]...]`, at most
+60; `field_steps` each way, default 400, at most 5000; `field_step` the step
+length, default 1/100 of the window's diagonal; RK4; linear axes only).
+Sizes and work are capped; hostile expressions end in an error or a plot.
+
 ## Revision history
 | Date | Note |
 |---|---|
@@ -116,3 +127,4 @@ the cap width in Fig units. The reply of `plot.add` and `plot.update` counts
 | 2026-11-11 | Plots: tick labels with a scale factor, decimal comma, own labels and rotation (Q2). |
 | 2026-11-11 | Plots: filled areas between curves or to a baseline (Q3). |
 | 2026-11-11 | Plots: bars (grouped), stems and error bars (Q4). |
+| 2026-11-11 | Plots: polar, implicit, derivative, integral and field-line curves (Q5). |

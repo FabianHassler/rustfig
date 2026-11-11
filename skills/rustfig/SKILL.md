@@ -65,6 +65,7 @@ RustFig is an xfig replacement. Its MCP server, `rustfig-cli mcp`, holds one dra
 - Tick numbers: `"xticks": {"scale": 3, "comma": true, "rotate": 45, "labels": [[1, "Mon"], [2, "Tue"]]}` (÷10³ with ×10³ at the axis end, decimal comma, turned numbers, own texts at given positions: bars and categories).
 - A curve leaving `ymin`..`ymax` is cut at the window (poles too). Fill between curves in `curves`: `{"expr": "sin(x)", "fill": {"curve": 2, "color": 11, "density": 30}}, {"expr": "cos(x)"}`, or to the x axis with `"fill": {"y": 0}`.
 - Bar charts: `"curves": [{"points": [[1, 3], [2, 5]], "style": "bar", "pen_color": 4}, {"points": [[1, 2], [2, 4]], "style": "bar", "pen_color": 2}]` (several bar curves stand side by side); `"style": "stem"` for stems; error bars with `"yerr": [0.3, 0.5]` or a data file column `"yerr_col": 3`. Category names on the x axis: `"xticks": {"labels": [[1, "A"], [2, "B"]]}`.
+- More kinds (`mode` of a curve): `"polar"` (`"expr": "1+cos(t)"`), `"implicit"` (`"expr": "x^2+y^2=1"`, give the ranges), `"derivative"`/`"integral"` (`"of": 1`, an earlier curve), `"field"` (`"xt": "-y", "yt": "x", "starts": [[1, 0]]`).
 - The reply's `id` is the plot compound; change it with `plot.update`.
 
 ## Exporting

@@ -57,6 +57,14 @@ pub struct PlotDialog {
     /// The data column with the error values (empty: none).
     pub yerr_col: String,
     pub err_cap: String,
+    /// Field lines (Q5): start points `x, y; x, y`, steps each way and the
+    /// step length (empty: automatic).
+    pub starts: String,
+    pub field_steps: String,
+    pub field_step: String,
+    /// Also draw the derivative and the integral of the first curve.
+    pub derivative: bool,
+    pub integral: bool,
     /// The last error, shown in the dialog.
     pub error: String,
 }
@@ -371,6 +379,11 @@ impl Default for PlotDialog {
             baseline: "0".into(),
             yerr_col: String::new(),
             err_cap: "60".into(),
+            starts: String::new(),
+            field_steps: "400".into(),
+            field_step: String::new(),
+            derivative: false,
+            integral: false,
             error: String::new(),
             curves: Vec::new(),
         };
@@ -422,6 +435,17 @@ impl PlotDialog {
             c.yerr_col.to_string()
         };
         self.err_cap = num(Some(c.err_cap));
+        self.starts = c
+            .starts
+            .iter()
+            .map(|p| format!("{}, {}", num(Some(p[0])), num(Some(p[1]))))
+            .collect::<Vec<_>>()
+            .join("; ");
+        self.field_steps = c.field_steps.to_string();
+        self.field_step = num(c.field_step);
+        let derived = |m: PlotMode| s.curves.iter().skip(1).any(|c| c.mode == Some(m) && c.of == Some(1));
+        self.derivative = derived(PlotMode::Derivative);
+        self.integral = derived(PlotMode::Integral);
         if let Some(c) = s.curves.first() {
             self.mode = c.mode();
             self.expr = c.expr.clone();
@@ -477,6 +501,22 @@ impl PlotDialog {
             .map_err(|_| format!("{name} must be a whole number"))
     }
 
+    /// The field lines' start points typed as `x, y; x, y`.
+    fn start_list(&self) -> Result<Vec<[f64; 2]>, String> {
+        let mut out = Vec::new();
+        for pair in self.starts.split(';').map(str::trim).filter(|t| !t.is_empty()) {
+            let (a, b) = pair
+                .split_once(',')
+                .ok_or_else(|| format!("Start point {pair:?}: write x, y"))?;
+            let (a, b) = (Self::value(a, "Start x")?, Self::value(b, "Start y")?);
+            match (a.as_f64(), b.as_f64()) {
+                (Some(a), Some(b)) => out.push([a, b]),
+                _ => return Err(format!("Start point {pair:?}: write x, y")),
+            }
+        }
+        Ok(out)
+    }
+
     /// The parameters of `plot.add` or `plot.update`; an error names the
     /// field to fix.
     pub fn params(&self) -> Result<Value, String> {
@@ -518,7 +558,13 @@ impl PlotDialog {
         } else {
             Self::whole(&self.yerr_col, "The error column")? as usize
         };
-        let list = if self.curves.is_empty() && (fill.is_some() || self.style != plot::CurveStyle::Line || yerr_col > 0)
+        let list = if self.curves.is_empty()
+            && (fill.is_some()
+                || self.style != plot::CurveStyle::Line
+                || yerr_col > 0
+                || self.mode == PlotMode::Field
+                || self.derivative
+                || self.integral)
         {
             vec![plot::CurveSpec::default()]
         } else {
@@ -546,7 +592,30 @@ impl PlotDialog {
             c.tmin = p["tmin"].as_f64();
             c.tmax = p["tmax"].as_f64();
             c.samples = p["samples"].as_u64().map(|n| n as usize);
-            let list: Vec<plot::CurveSpec> = std::iter::once(c).chain(rest.iter().cloned()).collect();
+            c.starts = self.start_list()?;
+            c.field_steps = Self::whole(&self.field_steps, "Field steps")? as usize;
+            c.field_step = Self::value(&self.field_step, "Field step")?.as_f64();
+            // The derivative and integral of the first curve are curves after
+            // it; the ones made here are replaced.
+            let mine = |x: &plot::CurveSpec| {
+                x.of == Some(1) && matches!(x.mode, Some(PlotMode::Derivative | PlotMode::Integral))
+            };
+            let mut list: Vec<plot::CurveSpec> = std::iter::once(c)
+                .chain(rest.iter().filter(|x| !mine(x)).cloned())
+                .collect();
+            for (on, mode, line) in [
+                (self.derivative, PlotMode::Derivative, "dashed"),
+                (self.integral, PlotMode::Integral, "dotted"),
+            ] {
+                if on {
+                    list.push(plot::CurveSpec {
+                        mode: Some(mode),
+                        of: Some(1),
+                        line: Some(line.into()),
+                        ..plot::CurveSpec::default()
+                    });
+                }
+            }
             p["curves"] = serde_json::to_value(list).map_err(|e| e.to_string())?;
         }
         if let (Some(o), Some(id), _) = (p.as_object_mut(), self.edit, ()) {
@@ -565,6 +634,11 @@ impl PlotDialog {
 fn curve_summary(c: &plot::CurveSpec) -> String {
     match c.mode() {
         PlotMode::Function => format!("y = {}", c.expr),
+        PlotMode::Polar => format!("r = {}", c.expr),
+        PlotMode::Implicit => format!("{} (implicit)", c.expr),
+        PlotMode::Derivative => format!("derivative of curve {}", c.of.unwrap_or(0)),
+        PlotMode::Integral => format!("integral of curve {}", c.of.unwrap_or(0)),
+        PlotMode::Field => format!("field lines of ({}, {})", c.xt, c.yt),
         PlotMode::Parametric => format!("x = {}, y = {}", c.xt, c.yt),
         PlotMode::Data if !c.file.is_empty() => format!("data from {}", c.file),
         PlotMode::Data => format!("{} data points", c.points.len()),
@@ -602,6 +676,9 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                 ui.horizontal(|ui| {
                     ui.radio_value(&mut d.mode, PlotMode::Function, "y = f(x)");
                     ui.radio_value(&mut d.mode, PlotMode::Parametric, "x(t), y(t)");
+                    ui.radio_value(&mut d.mode, PlotMode::Polar, "r(t) polar");
+                    ui.radio_value(&mut d.mode, PlotMode::Implicit, "f(x,y) = 0");
+                    ui.radio_value(&mut d.mode, PlotMode::Field, "Field lines");
                     // Files are read by path: not on the web.
                     ui.add_enabled_ui(cfg!(not(target_arch = "wasm32")), |ui| {
                         ui.radio_value(&mut d.mode, PlotMode::Data, "Data file");
@@ -632,6 +709,45 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                                 });
                                 ui.end_row();
                             }
+                            PlotMode::Polar => {
+                                ui.label("r(t) =");
+                                field(ui, "Plot polar expression", &mut d.expr, 260.0);
+                                ui.end_row();
+                                ui.label("t from / to:");
+                                ui.horizontal(|ui| {
+                                    field(ui, "Plot t from", &mut d.tmin, 70.0);
+                                    field(ui, "Plot t to", &mut d.tmax, 70.0);
+                                    ui.weak("(default 0 to 2*pi)");
+                                });
+                                ui.end_row();
+                            }
+                            PlotMode::Implicit => {
+                                ui.label("Equation:");
+                                field(ui, "Plot implicit expression", &mut d.expr, 260.0);
+                                ui.end_row();
+                                ui.label("");
+                                ui.weak("e.g. x^2 + y^2 = 1; give the x and y ranges (default -10 to 10)");
+                                ui.end_row();
+                            }
+                            PlotMode::Field => {
+                                ui.label("P(x,y) =");
+                                field(ui, "Plot field P", &mut d.xt, 260.0);
+                                ui.end_row();
+                                ui.label("Q(x,y) =");
+                                field(ui, "Plot field Q", &mut d.yt, 260.0);
+                                ui.end_row();
+                                ui.label("Start points:");
+                                field(ui, "Plot field starts", &mut d.starts, 260.0);
+                                ui.end_row();
+                                ui.label("Steps / length:");
+                                ui.horizontal(|ui| {
+                                    field(ui, "Plot field steps", &mut d.field_steps, 45.0);
+                                    field(ui, "Plot field step length", &mut d.field_step, 55.0);
+                                    ui.weak("(each way from a start; length empty: 1/100 of the window)");
+                                });
+                                ui.end_row();
+                            }
+                            PlotMode::Derivative | PlotMode::Integral => {}
                             PlotMode::Data => {
                                 ui.label("File:");
                                 ui.horizontal(|ui| {
@@ -686,6 +802,12 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                                     ui.label("cap width");
                                     field(ui, "Plot error cap", &mut d.err_cap, 40.0);
                                     ui.weak("(data file; the column of the error values)");
+                                });
+                                ui.end_row();
+                                ui.label("Also draw:");
+                                ui.horizontal(|ui| {
+                                    ui.checkbox(&mut d.derivative, "derivative (dashed)");
+                                    ui.checkbox(&mut d.integral, "integral (dotted)");
                                 });
                                 ui.end_row();
                                 ui.label("Fill:");

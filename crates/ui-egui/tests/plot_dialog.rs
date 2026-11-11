@@ -233,3 +233,67 @@ fn bar_and_error_controls_reach_the_plot() {
     assert!(h.state().plot_dialog.open && h.state().plot_dialog.error.contains("error column"));
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn curve_kind_controls_reach_the_plot() {
+    use rustfig_engine::plot::PlotMode;
+    let mut h = harness();
+    open(&mut h);
+    // Polar through the radio.
+    h.get_by_label("r(t) polar").click();
+    h.run_steps(2);
+    {
+        let d = &mut h.state_mut().plot_dialog;
+        d.expr = "1+cos(t)".into();
+        d.xmin = "-2".into();
+        d.xmax = "2".into();
+        d.ymin = "-2".into();
+        d.ymax = "2".into();
+        d.derivative = true;
+        d.integral = true;
+    }
+    h.run_steps(2);
+    h.get_by_label("Curve options").click();
+    h.run_steps(2);
+    h.get_by_label("Draw plot").click();
+    h.run_steps(3);
+    assert!(!h.state().plot_dialog.open, "{}", h.state().plot_dialog.error);
+    let s = spec(&mut h);
+    assert_eq!(s["curves"][0]["mode"], "polar");
+    assert_eq!(s["curves"][1]["mode"], "derivative");
+    assert_eq!(s["curves"][2]["mode"], "integral");
+    assert_eq!(s["curves"][2]["of"], 1);
+    // Reopened, the boxes show and switching them off removes the curves.
+    let id = h.state().engine.doc().objects[0].id.0;
+    h.state_mut().run("plot.edit", json!({"id": id}));
+    h.run_steps(3);
+    assert!(h.state().plot_dialog.derivative && h.state().plot_dialog.integral);
+    h.state_mut().plot_dialog.derivative = false;
+    h.state_mut().plot_dialog.integral = false;
+    h.get_by_label("Draw plot").click();
+    h.run_steps(3);
+    assert_eq!(spec(&mut h)["curves"].as_array().unwrap().len(), 1);
+    // Implicit and field lines.
+    h.state_mut().run("plot.edit", json!({"id": id}));
+    h.run_steps(3);
+    {
+        let d = &mut h.state_mut().plot_dialog;
+        d.mode = PlotMode::Field;
+        d.xt = "-y".into();
+        d.yt = "x".into();
+        d.starts = "1, 0; 0.5, 0".into();
+    }
+    h.run_steps(2);
+    h.get_by_label("Draw plot").click();
+    h.run_steps(3);
+    assert!(!h.state().plot_dialog.open, "{}", h.state().plot_dialog.error);
+    let s = spec(&mut h);
+    assert_eq!(s["curves"][0]["mode"], "field");
+    assert_eq!(s["curves"][0]["starts"], json!([[1.0, 0.0], [0.5, 0.0]]));
+    h.state_mut().run("plot.edit", json!({"id": id}));
+    h.run_steps(3);
+    h.state_mut().plot_dialog.starts = "1".into();
+    h.get_by_label("Draw plot").click();
+    h.run_steps(3);
+    assert!(h.state().plot_dialog.open && h.state().plot_dialog.error.contains("Start point"));
+}

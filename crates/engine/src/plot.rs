@@ -53,6 +53,14 @@ pub const MAX_CURVES: usize = 50;
 const MAX_MARKERS: usize = 20_000;
 /// Most bars, stems or error bars of one curve.
 const MAX_BARS: usize = 5_000;
+/// Most cells per axis of an implicit curve.
+pub const MAX_IMPLICIT_GRID: usize = 300;
+/// Most start points of field lines.
+pub const MAX_STARTS: usize = 60;
+/// Most steps of one field line direction.
+pub const MAX_FIELD_STEPS: usize = 5_000;
+/// Most steps of all the field lines of one curve.
+const MAX_FIELD_WORK: usize = 10_000;
 /// The comment lines that keep a curve's error values: prefix, the curve's
 /// index, then one value per point.
 pub const YERR_COMMENT: &str = "rustfig-plot-yerr:";
@@ -78,6 +86,7 @@ enum Expr {
 #[derive(Debug, Clone)]
 pub struct Formula {
     root: Expr,
+    nodes: usize,
 }
 
 impl Formula {
@@ -85,6 +94,11 @@ impl Formula {
     /// NaN or infinite.
     pub fn eval(&self, vars: &[f64]) -> f64 {
         eval(&self.root, vars)
+    }
+
+    /// How many nodes the expression has (its cost to evaluate).
+    pub fn nodes(&self) -> usize {
+        self.nodes
     }
 }
 
@@ -413,7 +427,27 @@ pub fn parse(src: &str, vars: &[&str]) -> Result<Formula, String> {
     if p.pos < p.toks.len() {
         return Err(format!("unexpected input at {}", p.here()));
     }
-    Ok(Formula { root })
+    Ok(Formula { root, nodes: p.nodes })
+}
+
+/// Parse an equation `lhs = rhs` as the formula lhs - rhs (without an `=`:
+/// the formula itself, which is then compared with 0).
+pub fn parse_equation(src: &str, vars: &[&str]) -> Result<Formula, String> {
+    let Some((l, r)) = src.split_once('=') else {
+        return parse(src, vars);
+    };
+    if r.contains('=') {
+        return Err("an equation has one \"=\"".into());
+    }
+    let (a, b) = (parse(l, vars)?, parse(r, vars)?);
+    let nodes = a.nodes + b.nodes + 1;
+    if nodes > 2 * MAX_NODES {
+        return Err("the expression is too long".into());
+    }
+    Ok(Formula {
+        root: Expr::Bin('-', Box::new(a.root), Box::new(b.root)),
+        nodes,
+    })
 }
 
 // ---- the plot's parameters -----------------------------------------------
@@ -428,6 +462,18 @@ pub enum PlotMode {
     Parametric,
     /// Columns of a CSV or whitespace separated file.
     Data,
+    /// r(t) with the angle t (`expr`, variable `t` or `theta`).
+    Polar,
+    /// f(x, y) = 0 (`expr`: a formula, or an equation `lhs = rhs`), by
+    /// marching squares over the window.
+    Implicit,
+    /// The derivative of another curve (`of`, a curve before this one).
+    Derivative,
+    /// The integral of another curve, from its first point (`of`).
+    Integral,
+    /// Field lines of the vector field (`xt`, `yt`) in x and y from the
+    /// start points `starts`.
+    Field,
 }
 
 /// Where the ticks stand relative to the axis.
@@ -752,6 +798,15 @@ pub struct CurveSpec {
     pub yerr_col: usize,
     /// Width of the end caps of error bars in Fig units.
     pub err_cap: f64,
+    /// Derivative and integral: the number (from 1) of the curve it is of.
+    pub of: Option<usize>,
+    /// Field lines start here.
+    pub starts: Vec<[f64; 2]>,
+    /// Steps of a field line in each direction (from its start point).
+    pub field_steps: usize,
+    /// Length of one step in data units (`None`: 1/100 of the window's
+    /// diagonal).
+    pub field_step: Option<f64>,
 }
 
 impl Default for CurveSpec {
@@ -783,6 +838,10 @@ impl Default for CurveSpec {
             yerr: Vec::new(),
             yerr_col: 0,
             err_cap: 60.0,
+            of: None,
+            starts: Vec::new(),
+            field_steps: 400,
+            field_step: None,
         }
     }
 }
@@ -856,6 +915,21 @@ impl CurveSpec {
         }
         if !self.err_cap.is_finite() || !(0.0..=10_000.0).contains(&self.err_cap) {
             return Err(at("err_cap must be between 0 and 10000"));
+        }
+        if !(1..=MAX_FIELD_STEPS).contains(&self.field_steps) {
+            return Err(at(&format!("field_steps must be between 1 and {MAX_FIELD_STEPS}")));
+        }
+        if self.field_step.is_some_and(|h| !h.is_finite() || h <= 0.0 || h > BIG) {
+            return Err(at("field_step must be a positive number"));
+        }
+        if self.starts.len() > MAX_STARTS {
+            return Err(at(&format!("at most {MAX_STARTS} start points")));
+        }
+        if self.starts.iter().flatten().any(|v| !v.is_finite() || v.abs() > BIG) {
+            return Err(at("start points must be finite numbers"));
+        }
+        if self.of == Some(0) {
+            return Err(at("\"of\" is the number of a curve, counted from 1"));
         }
         if self.yerr_col > 1_000 {
             return Err(at("yerr_col is a column number from 1 (0: none)"));
@@ -1011,6 +1085,12 @@ impl PlotSpec {
         }
         for (i, c) in self.curves.iter().enumerate() {
             c.check(i + 1)?;
+            if matches!(c.mode, Some(PlotMode::Derivative | PlotMode::Integral)) && !c.of.is_some_and(|k| k <= i) {
+                return Err(format!(
+                    "curve {}: a derivative or integral is of an earlier curve (\"of\": its number, from 1)",
+                    i + 1
+                ));
+            }
             if let Some(k) = c.fill.as_ref().and_then(|f| f.curve) {
                 if k == 0 || k > self.curves.len() || k == i + 1 {
                     return Err(format!(
@@ -1060,9 +1140,11 @@ impl PlotSpec {
         if let (Some(m), Some(dm)) = (v.as_object_mut(), d.as_object()) {
             m.retain(|k, x| k == "mode" || k == "rect" || dm.get(k) != Some(x));
             let drop: &[&str] = match mode {
-                PlotMode::Function => &["xt", "yt", "file", "xcol", "ycol", "tmin", "tmax"],
+                PlotMode::Function | PlotMode::Implicit => &["xt", "yt", "file", "xcol", "ycol", "tmin", "tmax"],
+                PlotMode::Polar => &["xt", "yt", "file", "xcol", "ycol"],
                 PlotMode::Parametric => &["expr", "file", "xcol", "ycol"],
                 PlotMode::Data => &["expr", "xt", "yt", "tmin", "tmax", "samples"],
+                PlotMode::Derivative | PlotMode::Integral | PlotMode::Field => &["file", "xcol", "ycol"],
             };
             for k in drop {
                 m.remove(*k);
@@ -1429,6 +1511,12 @@ fn sample(spec: &PlotSpec, curves: &[CurveSpec]) -> Result<Sampled, String> {
         gx1.unwrap_or(if lx { 2.0 } else { 10.0 }),
     );
 
+    // The window of implicit curves and field lines when no y range is given.
+    let (wy0, wy1) = (
+        gy0.unwrap_or(if ly { -1.0 } else { -10.0 }),
+        gy1.unwrap_or(if ly { 2.0 } else { 10.0 }),
+    );
+
     if curves.is_empty() {
         // The frame, ticks and labels without a curve.
         let (Some(y0), Some(y1)) = (gy0, gy1) else {
@@ -1460,7 +1548,9 @@ fn sample(spec: &PlotSpec, curves: &[CurveSpec]) -> Result<Sampled, String> {
                 m
             }
         };
-        raws.push(raw(c, spec, (fx0, fx1), (lx, ly)).map_err(which)?);
+        let win = [fx0, fx1, wy0, wy1];
+        let made = raw(c, spec, (fx0, fx1), (lx, ly), win, &raws).map_err(which)?;
+        raws.push(made);
     }
 
     // The points of bars, stems and error bars.
@@ -1570,7 +1660,14 @@ fn err_ends(y: f64, e: f64, log: bool) -> (Option<f64>, Option<f64>) {
 
 /// The raw samples of one curve; `fx` is a function's x range (already on
 /// the axis's scale), `log` the axes' logarithms.
-fn raw(c: &CurveSpec, spec: &PlotSpec, fx: (f64, f64), log: (bool, bool)) -> Result<Raw, String> {
+fn raw(
+    c: &CurveSpec,
+    spec: &PlotSpec,
+    fx: (f64, f64),
+    log: (bool, bool),
+    win: [f64; 4],
+    prev: &[Raw],
+) -> Result<Raw, String> {
     let (lx, ly) = log;
     let mut pts: Vec<(f64, Option<P>)> = Vec::new();
     let mut errs: Vec<f64> = Vec::new();
@@ -1624,6 +1721,54 @@ fn raw(c: &CurveSpec, spec: &PlotSpec, fx: (f64, f64), log: (bool, bool)) -> Res
                 tr(f.eval(&[x]), ly).map(|y| (u, y))
             }));
         }
+        PlotMode::Polar => {
+            if c.expr.trim().is_empty() {
+                return Err("the curve has no expression r(t)".into());
+            }
+            let f = parse(&c.expr, &["t", "theta"])?;
+            let (a, b) = (c.tmin.unwrap_or(0.0), c.tmax.unwrap_or(std::f64::consts::TAU));
+            if !ordered(a, b) {
+                return Err("the t range must have min below max".into());
+            }
+            (u0, u1) = (a, b);
+            curve = Some(Box::new(move |t| {
+                let r = f.eval(&[t, t]);
+                let x = tr(r * t.cos(), lx)?;
+                let y = tr(r * t.sin(), ly)?;
+                Some((x, y))
+            }));
+        }
+        PlotMode::Implicit => {
+            if c.expr.trim().is_empty() {
+                return Err("the curve has no equation f(x, y) = 0".into());
+            }
+            let f = parse_equation(&c.expr, &["x", "y"])?;
+            if !ordered(win[0], win[1]) || !ordered(win[2], win[3]) {
+                return Err("a range must have min below max".into());
+            }
+            let n = c.samples.unwrap_or(spec.samples);
+            pts = implicit_pts(&f, win, n, log);
+        }
+        PlotMode::Field => {
+            if lx || ly {
+                return Err("field lines need linear axes".into());
+            }
+            let (fp, fq) = (parse(&c.xt, &["x", "y"])?, parse(&c.yt, &["x", "y"])?);
+            if c.starts.is_empty() {
+                return Err("field lines need start points (\"starts\": [[x, y]...])".into());
+            }
+            if !ordered(win[0], win[1]) || !ordered(win[2], win[3]) {
+                return Err("a range must have min below max".into());
+            }
+            pts = field_pts(&fp, &fq, c, win);
+        }
+        PlotMode::Derivative | PlotMode::Integral => {
+            let src =
+                c.of.and_then(|k| k.checked_sub(1))
+                    .and_then(|k| prev.get(k))
+                    .ok_or("a derivative or integral needs \"of\": an earlier curve's number")?;
+            pts = derived_pts(src, c.mode() == PlotMode::Integral, log);
+        }
         PlotMode::Parametric => {
             let fx = parse(&c.xt, &["t"])?;
             let fy = parse(&c.yt, &["t"])?;
@@ -1651,6 +1796,239 @@ fn raw(c: &CurveSpec, spec: &PlotSpec, fx: (f64, f64), log: (bool, bool)) -> Res
         }
     }
     Ok(Raw { pts, curve, errs })
+}
+
+/// Marching squares: the curve f(x, y) = 0 over the window `win` (in plot
+/// coordinates) on an n by n grid, as polylines separated by `None`.
+fn implicit_pts(f: &Formula, win: [f64; 4], n: usize, log: (bool, bool)) -> Vec<(f64, Option<P>)> {
+    use std::collections::HashMap;
+    let [x0, x1, y0, y1] = win;
+    let n = n.clamp(2, MAX_IMPLICIT_GRID);
+    let (dx, dy) = ((x1 - x0) / n as f64, (y1 - y0) / n as f64);
+    let w = n + 1;
+    let mut v = vec![f64::NAN; w * w];
+    for j in 0..=n {
+        let y = y0 + dy * j as f64;
+        let yd = if log.1 { 10f64.powf(y) } else { y };
+        for i in 0..=n {
+            let x = x0 + dx * i as f64;
+            let xd = if log.0 { 10f64.powf(x) } else { x };
+            let val = f.eval(&[xd, yd]);
+            if let Some(slot) = v.get_mut(j * w + i) {
+                if val.is_finite() && val.abs() <= BIG {
+                    *slot = val;
+                }
+            }
+        }
+    }
+    let at = |i: usize, j: usize| v.get(j * w + i).copied().unwrap_or(f64::NAN);
+    // Edge keys: horizontal edge (i, j)-(i+1, j) is 2(jw+i), vertical
+    // (i, j)-(i, j+1) is 2(jw+i)+1.
+    let h = |i: usize, j: usize| 2 * (j * w + i);
+    let vt = |i: usize, j: usize| 2 * (j * w + i) + 1;
+    let mut segs: Vec<(usize, usize)> = Vec::new();
+    for j in 0..n {
+        for i in 0..n {
+            let (a, b, c, d) = (at(i, j), at(i + 1, j), at(i + 1, j + 1), at(i, j + 1));
+            if [a, b, c, d].iter().any(|q| q.is_nan()) {
+                continue;
+            }
+            let case = usize::from(a > 0.0)
+                | usize::from(b > 0.0) << 1
+                | usize::from(c > 0.0) << 2
+                | usize::from(d > 0.0) << 3;
+            let (bo, r, t, l) = (h(i, j), vt(i + 1, j), h(i, j + 1), vt(i, j));
+            let center = 0.25 * (a + b + c + d) > 0.0;
+            let mut push = |p: usize, q: usize| segs.push((p, q));
+            match case {
+                1 | 14 => push(l, bo),
+                2 | 13 => push(bo, r),
+                3 | 12 => push(l, r),
+                4 | 11 => push(r, t),
+                6 | 9 => push(bo, t),
+                7 | 8 => push(t, l),
+                5 => {
+                    if center {
+                        push(bo, r);
+                        push(t, l);
+                    } else {
+                        push(l, bo);
+                        push(r, t);
+                    }
+                }
+                10 => {
+                    if center {
+                        push(l, bo);
+                        push(r, t);
+                    } else {
+                        push(bo, r);
+                        push(t, l);
+                    }
+                }
+                _ => {}
+            }
+            if segs.len() > MAX_POINTS {
+                break;
+            }
+        }
+    }
+    let point = |key: usize| -> P {
+        let (cell, vert) = (key / 2, key % 2 == 1);
+        let (i, j) = (cell % w, cell / w);
+        let v1 = at(i, j);
+        let v2 = if vert { at(i, j + 1) } else { at(i + 1, j) };
+        let t = if v1 == v2 {
+            0.5
+        } else {
+            (v1 / (v1 - v2)).clamp(0.0, 1.0)
+        };
+        if vert {
+            (x0 + dx * i as f64, y0 + dy * (j as f64 + t))
+        } else {
+            (x0 + dx * (i as f64 + t), y0 + dy * j as f64)
+        }
+    };
+    let mut adj: HashMap<usize, Vec<usize>> = HashMap::new();
+    for (k, (p, q)) in segs.iter().enumerate() {
+        adj.entry(*p).or_default().push(k);
+        adj.entry(*q).or_default().push(k);
+    }
+    let mut used = vec![false; segs.len()];
+    let mut out: Vec<(f64, Option<P>)> = Vec::new();
+    let next = |end: usize, used: &mut Vec<bool>| -> Option<usize> {
+        let k = adj
+            .get(&end)?
+            .iter()
+            .copied()
+            .find(|k| !used.get(*k).copied().unwrap_or(true))?;
+        *used.get_mut(k)? = true;
+        let (p, q) = segs.get(k).copied()?;
+        Some(if p == end { q } else { p })
+    };
+    for s0 in 0..segs.len() {
+        if used.get(s0).copied().unwrap_or(true) {
+            continue;
+        }
+        if let Some(u) = used.get_mut(s0) {
+            *u = true;
+        }
+        let Some(&(p, q)) = segs.get(s0) else { continue };
+        let mut path = std::collections::VecDeque::from([p, q]);
+        while let Some(k) = path.back().copied().and_then(|e| next(e, &mut used)) {
+            path.push_back(k);
+        }
+        while let Some(k) = path.front().copied().and_then(|e| next(e, &mut used)) {
+            path.push_front(k);
+        }
+        for key in &path {
+            out.push((out.len() as f64, Some(point(*key))));
+        }
+        out.push((out.len() as f64, None));
+        if out.len() > MAX_POINTS {
+            break;
+        }
+    }
+    out
+}
+
+/// Field lines of (P, Q) from the start points, by RK4 on the direction
+/// field (unit steps along the line), forward and backward, until a line
+/// leaves the window, the field vanishes or the steps are used up.
+fn field_pts(fp: &Formula, fq: &Formula, c: &CurveSpec, win: [f64; 4]) -> Vec<(f64, Option<P>)> {
+    let [x0, x1, y0, y1] = win;
+    let h = c.field_step.unwrap_or_else(|| ((x1 - x0).hypot(y1 - y0)) / 100.0);
+    let dir = |p: P| -> Option<P> {
+        let (a, b) = (fp.eval(&[p.0, p.1]), fq.eval(&[p.0, p.1]));
+        let m = a.hypot(b);
+        (m.is_finite() && m > 1e-12 && a.is_finite() && b.is_finite()).then(|| (a / m, b / m))
+    };
+    let inside = |p: P| p.0 >= x0 && p.0 <= x1 && p.1 >= y0 && p.1 <= y1;
+    let rk4 = |p: P, s: f64| -> Option<P> {
+        let h = s * h;
+        let k1 = dir(p)?;
+        let k2 = dir((p.0 + 0.5 * h * k1.0, p.1 + 0.5 * h * k1.1))?;
+        let k3 = dir((p.0 + 0.5 * h * k2.0, p.1 + 0.5 * h * k2.1))?;
+        let k4 = dir((p.0 + h * k3.0, p.1 + h * k3.1))?;
+        let q = (
+            p.0 + h / 6.0 * (k1.0 + 2.0 * k2.0 + 2.0 * k3.0 + k4.0),
+            p.1 + h / 6.0 * (k1.1 + 2.0 * k2.1 + 2.0 * k3.1 + k4.1),
+        );
+        finite(q.0).zip(finite(q.1))
+    };
+    let mut work = MAX_FIELD_WORK;
+    let mut out: Vec<(f64, Option<P>)> = Vec::new();
+    for s in &c.starts {
+        let start = (s[0], s[1]);
+        let mut sides: Vec<Vec<P>> = Vec::new();
+        for sign in [1.0, -1.0] {
+            let mut line = Vec::new();
+            let mut p = start;
+            for _ in 0..c.field_steps {
+                if work == 0 || !inside(p) {
+                    break;
+                }
+                work -= 1;
+                let Some(q) = rk4(p, sign) else { break };
+                line.push(q);
+                p = q;
+            }
+            sides.push(line);
+        }
+        let mut path: Vec<P> = sides.pop().unwrap_or_default().into_iter().rev().collect();
+        path.push(start);
+        path.extend(sides.pop().unwrap_or_default());
+        for p in path {
+            out.push((out.len() as f64, Some(p)));
+        }
+        out.push((out.len() as f64, None));
+        if work == 0 || out.len() > MAX_POINTS {
+            break;
+        }
+    }
+    out
+}
+
+/// The derivative (central differences) or the running integral (trapezoids,
+/// from 0 at the first point) of a curve's points, in data coordinates.
+fn derived_pts(src: &Raw, integral: bool, log: (bool, bool)) -> Vec<(f64, Option<P>)> {
+    let back = |v: f64, l: bool| if l { 10f64.powf(v) } else { v };
+    let mut out: Vec<(f64, Option<P>)> = Vec::new();
+    let mut run: Vec<(f64, f64)> = Vec::new();
+    let mut total = 0.0;
+    let flush = |run: &mut Vec<(f64, f64)>, out: &mut Vec<(f64, Option<P>)>, total: &mut f64| {
+        let n = run.len();
+        for k in 0..n {
+            let Some(&(x, y)) = run.get(k) else { continue };
+            let val = if integral {
+                if let Some(&(xp, yp)) = k.checked_sub(1).and_then(|k| run.get(k)) {
+                    *total += 0.5 * (y + yp) * (x - xp);
+                }
+                *total
+            } else {
+                let a = run.get(k.saturating_sub(1)).copied().unwrap_or((x, y));
+                let b = run.get((k + 1).min(n.saturating_sub(1))).copied().unwrap_or((x, y));
+                let dx = b.0 - a.0;
+                if dx == 0.0 {
+                    f64::NAN
+                } else {
+                    (b.1 - a.1) / dx
+                }
+            };
+            out.push((out.len() as f64, tr(x, log.0).zip(tr(val, log.1))));
+        }
+        if n > 0 {
+            out.push((out.len() as f64, None));
+        }
+        run.clear();
+    };
+    for (_, p) in &src.pts {
+        match p {
+            Some(p) => run.push((back(p.0, log.0), back(p.1, log.1))),
+            None => flush(&mut run, &mut out, &mut total),
+        }
+    }
+    flush(&mut run, &mut out, &mut total);
+    out
 }
 
 /// One curve's pieces: adaptive refinement of a sampled curve (at most
