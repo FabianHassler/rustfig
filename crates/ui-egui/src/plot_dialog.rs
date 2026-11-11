@@ -66,6 +66,13 @@ pub struct TickFields {
     pub decimals: String,
     pub ticks: bool,
     pub numbers: bool,
+    /// The power of ten the numbers are divided by (empty: none).
+    pub scale: String,
+    pub comma: bool,
+    /// Own labels, one per line: the position, a space, the text.
+    pub labels: String,
+    /// Angle of the numbers in degrees.
+    pub rotate: String,
 }
 
 impl TickFields {
@@ -82,7 +89,31 @@ impl TickFields {
             decimals: t.decimals.to_string(),
             ticks: t.ticks,
             numbers: t.numbers,
+            scale: t.scale.map(|e| e.to_string()).unwrap_or_default(),
+            comma: t.comma,
+            labels: t
+                .labels
+                .iter()
+                .map(|(v, text)| format!("{} {text}", num(Some(*v))))
+                .collect::<Vec<_>>()
+                .join("\n"),
+            rotate: num(Some(t.rotate)),
         }
+    }
+
+    /// The own labels typed: a position (an expression such as `pi/2`
+    /// works), a space and the text, one per line.
+    fn label_list(&self, axis: &str) -> Result<Vec<Value>, String> {
+        let mut out = Vec::new();
+        for line in self.labels.lines().map(str::trim).filter(|l| !l.is_empty()) {
+            let (pos, text) = line.split_once(char::is_whitespace).unwrap_or((line, ""));
+            let v = PlotDialog::value(pos, &format!("{axis} ticks: own label position {pos:?}"))?;
+            if v.is_null() {
+                return Err(format!("{axis} ticks: an own label needs a position"));
+            }
+            out.push(json!([v, text.trim()]));
+        }
+        Ok(out)
     }
 
     fn params(&self, axis: &str) -> Result<Value, String> {
@@ -91,6 +122,16 @@ impl TickFields {
                 Ok(Value::Null)
             } else {
                 PlotDialog::whole(t, &format!("{axis} ticks: {name}")).map(|v| json!(v))
+            }
+        };
+        let opt_int = |t: &str, name: &str| -> Result<Value, String> {
+            if t.trim().is_empty() {
+                Ok(Value::Null)
+            } else {
+                t.trim()
+                    .parse::<i32>()
+                    .map(|v| json!(v))
+                    .map_err(|_| format!("{axis} ticks: {name} must be a whole number"))
             }
         };
         Ok(json!({
@@ -106,6 +147,11 @@ impl TickFields {
             "decimals": PlotDialog::whole(&self.decimals, &format!("{axis} ticks: decimals"))?,
             "ticks": self.ticks,
             "numbers": self.numbers,
+            "scale": opt_int(&self.scale, "scale")?,
+            "comma": self.comma,
+            "labels": self.label_list(axis)?,
+            "rotate": PlotDialog::value(&self.rotate, &format!("{axis} ticks: rotation"))?
+                .as_f64().unwrap_or(0.0),
         }))
     }
 }
@@ -154,6 +200,32 @@ fn tick_section(ui: &mut egui::Ui, axis: &str, t: &mut TickFields) {
                         field(ui, &format!("{axis} tick decimals"), &mut t.decimals, 25.0);
                         ui.radio_value(&mut t.format, NumFormat::Scientific, "scientific");
                         ui.radio_value(&mut t.format, NumFormat::Pi, "multiples of \u{3c0}");
+                    });
+                    ui.end_row();
+                    ui.label("Scale factor:");
+                    ui.horizontal(|ui| {
+                        ui.label("numbers \u{d7} 10^");
+                        field(ui, &format!("{axis} tick scale"), &mut t.scale, 35.0);
+                        ui.label("(e.g. 3: 2000 shows as 2, with \u{d7}10^3 at the axis end)");
+                    });
+                    ui.end_row();
+                    ui.label("Written:");
+                    ui.horizontal(|ui| {
+                        ui.checkbox(&mut t.comma, "decimal comma");
+                        ui.label("Rotate numbers by");
+                        field(ui, &format!("{axis} tick rotate"), &mut t.rotate, 35.0);
+                        ui.label("degrees");
+                    });
+                    ui.end_row();
+                    ui.label("Own labels:");
+                    let r = ui.add(
+                        egui::TextEdit::multiline(&mut t.labels)
+                            .desired_rows(2)
+                            .desired_width(260.0)
+                            .hint_text("1 Mon\n2 Tue   (position, text)"),
+                    );
+                    r.widget_info(|| {
+                        egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, format!("{axis} tick labels"))
                     });
                     ui.end_row();
                 });

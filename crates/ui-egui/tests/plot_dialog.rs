@@ -63,3 +63,42 @@ fn axes_kind_and_grid_controls_reach_the_plot() {
     assert_eq!(d.axes, rustfig_engine::plot::AxesKind::Origin);
     assert!(d.grid_minor && d.grid_style == "dashed");
 }
+
+#[test]
+fn tick_format_controls_reach_the_plot() {
+    let mut h = harness();
+    open(&mut h);
+    {
+        let d = &mut h.state_mut().plot_dialog;
+        d.expr = "x".into();
+        d.xmin = "0".into();
+        d.xmax = "3000".into();
+        d.xticks.scale = "3".into();
+        d.xticks.comma = true;
+        d.xticks.rotate = "45".into();
+        d.xticks.labels = "1000 one\n2000 two words".into();
+        d.yticks.labels = "pi/2 half pi".into();
+    }
+    h.run_steps(2);
+    h.get_by_label("Draw plot").click();
+    h.run_steps(3);
+    assert!(!h.state().plot_dialog.open, "{}", h.state().plot_dialog.error);
+    let s = spec(&mut h);
+    assert_eq!(s["xticks"]["scale"], 3);
+    assert_eq!(s["xticks"]["comma"], true);
+    assert_eq!(s["xticks"]["rotate"], 45.0);
+    assert_eq!(s["xticks"]["labels"], json!([[1000.0, "one"], [2000.0, "two words"]]));
+    assert_eq!(s["yticks"]["labels"][0][0], std::f64::consts::FRAC_PI_2);
+    // Editing shows them again, a bad value is an error in the dialog.
+    let id = h.state().engine.doc().objects[0].id.0;
+    h.state_mut().run("plot.edit", json!({"id": id}));
+    h.run_steps(3);
+    let d = &h.state().plot_dialog;
+    assert_eq!(d.xticks.scale, "3");
+    assert_eq!(d.xticks.labels, "1000 one\n2000 two words");
+    h.state_mut().plot_dialog.xticks.scale = "x".into();
+    h.run_steps(2);
+    h.get_by_label("Draw plot").click();
+    h.run_steps(3);
+    assert!(h.state().plot_dialog.open && h.state().plot_dialog.error.contains("scale"));
+}

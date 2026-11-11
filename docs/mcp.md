@@ -78,9 +78,21 @@ plot redraws the same. Axes and grid (the plot's `axes`, `axis_arrows`,
 - `grid: true` with `grid_minor: true` (lines at the minor ticks too) and
   `grid_style`: `"dotted"` (default), `"dashed"`, `"solid"`.
 
+Tick label format (`xticks` and `yticks` objects, as in the dialog):
+
+- `scale: 3` divides the numbers by 10^3 and writes `x10^3` at the axis end
+  (`$\times10^{3}$` with `latex_numbers`); `comma: true` is the decimal comma
+  (`0{,}5` in LaTeX numbers); `rotate: 45` turns the numbers by degrees,
+  counterclockwise.
+- `labels: [[1, "Mon"], [2, "Tue"]]` puts the ticks at these values (inside
+  the range) with these texts, so categories work: positions 1..n, the texts
+  are used as typed (LaTeX when `latex_numbers`). `numbers: false` hides the
+  texts, `ticks: false` the marks.
+
 ## Revision history
 | Date | Note |
 |---|---|
 | 2026-10-13 | First version. |
 | 2026-11-06 | Setup for Claude Code, Codex and JSON-configured clients; the RustFig skill (`skills/rustfig/SKILL.md`). |
 | 2026-11-11 | Plots: axes crossing at the origin, no axes, grid with minor lines and a line style (Q1). |
+| 2026-11-11 | Plots: tick labels with a scale factor, decimal comma, own labels and rotation (Q2). |

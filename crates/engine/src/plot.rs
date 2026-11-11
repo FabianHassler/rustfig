@@ -495,6 +495,17 @@ pub struct TickSpec {
     pub ticks: bool,
     /// Numbers at the major ticks.
     pub numbers: bool,
+    /// Scale factor (Q2): the numbers are divided by 10^scale and a
+    /// "x10^scale" stands at the axis's end (linear axes only).
+    pub scale: Option<i32>,
+    /// A decimal comma instead of the point.
+    pub comma: bool,
+    /// Own labels `[[value, "text"]]` (also categories): ticks stand at
+    /// these values (inside the range) with these texts, instead of the
+    /// automatic or manual ones.
+    pub labels: Vec<(f64, String)>,
+    /// Angle of the numbers in degrees, counterclockwise (-180 to 180).
+    pub rotate: f64,
 }
 
 impl Default for TickSpec {
@@ -511,6 +522,10 @@ impl Default for TickSpec {
             decimals: 2,
             ticks: true,
             numbers: true,
+            scale: None,
+            comma: false,
+            labels: Vec::new(),
+            rotate: 0.0,
         }
     }
 }
@@ -540,6 +555,25 @@ impl TickSpec {
         }
         if self.decimals > 9 {
             return Err(format!("{axis} ticks: at most 9 decimals"));
+        }
+        if self.scale.is_some_and(|e| !(-30..=30).contains(&e)) {
+            return Err(format!("{axis} ticks: the scale is a power of ten from -30 to 30"));
+        }
+        if !self.rotate.is_finite() || !(-180.0..=180.0).contains(&self.rotate) {
+            return Err(format!("{axis} ticks: the rotation is between -180 and 180 degrees"));
+        }
+        if self.labels.len() > MAX_TICKS as usize {
+            return Err(format!("{axis} ticks: at most {MAX_TICKS} own labels"));
+        }
+        for (v, t) in &self.labels {
+            if !v.is_finite() || v.abs() > BIG {
+                return Err(format!(
+                    "{axis} ticks: the positions of own labels must be finite numbers"
+                ));
+            }
+            if t.chars().count() > MAX_TEXT {
+                return Err(format!("{axis} ticks: an own label is too long"));
+            }
         }
         Ok(())
     }
@@ -921,6 +955,13 @@ impl PlotSpec {
             };
             for k in drop {
                 m.remove(*k);
+            }
+            // Ticks: what differs from the defaults of a tick setting.
+            let dt = serde_json::to_value(TickSpec::default()).map_err(|e| e.to_string())?;
+            for k in ["xticks", "yticks"] {
+                if let (Some(Value::Object(t)), Some(dt)) = (m.get_mut(k), dt.as_object()) {
+                    t.retain(|k, x| dt.get(k) != Some(x));
+                }
             }
             // Curves: what differs from a curve's defaults; the points go
             // on lines of their own.
@@ -1510,6 +1551,8 @@ struct Tick {
     at: f64,
     major: bool,
     label: Option<String>,
+    /// The label is the user's own text, not a number.
+    own: bool,
 }
 
 fn pi_label(v: f64) -> String {
@@ -1544,7 +1587,18 @@ fn pi_label(v: f64) -> String {
     format!("{}\u{3c0}", format_tick(r))
 }
 
+/// A tick number as written: scaled (a linear axis), formatted, with the
+/// decimal comma when asked.
 fn format_with(spec: &TickSpec, v: f64) -> String {
+    let s = format_plain(spec, v);
+    if spec.comma {
+        s.replace('.', ",")
+    } else {
+        s
+    }
+}
+
+fn format_plain(spec: &TickSpec, v: f64) -> String {
     match spec.format {
         NumFormat::Auto => format_tick(v),
         NumFormat::Fixed => {
@@ -1568,8 +1622,26 @@ fn format_with(spec: &TickSpec, v: f64) -> String {
 
 fn ticks(lo: f64, hi: f64, log: bool, spec: &TickSpec) -> Result<Vec<Tick>, String> {
     let mut out = Vec::new();
-    let label = |v: f64| spec.numbers.then(|| format_with(spec, v));
+    // Scaled numbers: 1000 shows as 1 with a scale of 3 (not on a log axis).
+    let div = if log { 1.0 } else { 10f64.powi(spec.scale.unwrap_or(0)) };
+    let label = |v: f64| spec.numbers.then(|| format_with(spec, v / div));
     if !(lo.is_finite() && hi.is_finite()) {
+        return Ok(out);
+    }
+    if !spec.labels.is_empty() {
+        // Own labels: the ticks are exactly these.
+        for (v, text) in &spec.labels {
+            let Some(at) = tr(*v, log) else { continue };
+            let eps = 1e-9 * (hi - lo).abs();
+            if at >= lo - eps && at <= hi + eps {
+                out.push(Tick {
+                    at,
+                    major: true,
+                    label: spec.numbers.then(|| text.clone()),
+                    own: true,
+                });
+            }
+        }
         return Ok(out);
     }
     if log {
@@ -1594,6 +1666,7 @@ fn ticks(lo: f64, hi: f64, log: bool, spec: &TickSpec) -> Result<Vec<Tick>, Stri
                     at: v,
                     major: true,
                     label: label(10f64.powf(v)),
+                    own: false,
                 });
             }
             for m in 2..(2 + minors) {
@@ -1603,6 +1676,7 @@ fn ticks(lo: f64, hi: f64, log: bool, spec: &TickSpec) -> Result<Vec<Tick>, Stri
                         at: w,
                         major: false,
                         label: None,
+                        own: false,
                     });
                 }
             }
@@ -1654,6 +1728,7 @@ fn ticks(lo: f64, hi: f64, log: bool, spec: &TickSpec) -> Result<Vec<Tick>, Stri
                 at: v,
                 major: true,
                 label: label(if v.abs() < eps { 0.0 } else { v }),
+                own: false,
             });
         }
         for j in 1..=minor {
@@ -1663,6 +1738,7 @@ fn ticks(lo: f64, hi: f64, log: bool, spec: &TickSpec) -> Result<Vec<Tick>, Stri
                     at: w,
                     major: false,
                     label: None,
+                    own: false,
                 });
             }
         }
@@ -1854,11 +1930,12 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
     };
 
     // A tick number as typed on the canvas, or as math for LaTeX.
-    let tick_text = |l: &str| {
-        if spec.latex_numbers {
-            latex_number(l)
-        } else {
+    let tick_text = |l: &str, own: bool| {
+        if own || !spec.latex_numbers {
             l.to_string()
+        } else {
+            // A decimal comma stands in braces, so TeX does not space it.
+            latex_number(l).replace(',', "{,}")
         }
     };
     // No axes: no ticks and numbers either.
@@ -1870,6 +1947,7 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
         }
     }
     let mut left_width = 0.0f64;
+    let mut x_chars = 0usize;
     {
         let tick_h = tick_size * unit * 0.75;
         let gap = 0.5 * tick_h;
@@ -1937,17 +2015,25 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
                 );
             }
             if let Some(l) = &t.label {
+                let a = xt.rotate.to_radians();
+                let (justify, at) = if xt.rotate == 0.0 {
+                    (Justify::Center, Point::new(x, fig(ay + xout + gap + tick_h)))
+                } else {
+                    // The text ends (or starts, turned clockwise) under the tick.
+                    let j = if xt.rotate > 0.0 { Justify::Right } else { Justify::Left };
+                    (
+                        j,
+                        Point::new(
+                            fig(x + 0.35 * tick_h * a.sin()),
+                            fig(ay + xout + gap + 0.35 * tick_h * a.cos() + 0.3 * tick_h),
+                        ),
+                    )
+                };
+                x_chars = x_chars.max(l.chars().count());
                 push_part(
                     &mut members,
                     "number",
-                    text(
-                        &tick_text(l),
-                        Justify::Center,
-                        Point::new(x, fig(ay + xout + gap + tick_h)),
-                        0.0,
-                        tick_size,
-                        spec.latex_numbers,
-                    ),
+                    text(&tick_text(l, t.own), justify, at, a, tick_size, spec.latex_numbers),
                 );
             }
         }
@@ -1970,15 +2056,17 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
                 if origin && (t.at - cross_y).abs() < 1e-9 * (r.y1 - r.y0).abs() {
                     continue;
                 }
-                left_width = left_width.max(l.chars().count() as f64 * tick_size * unit * 0.55);
+                let a = yt.rotate.to_radians();
+                let w = l.chars().count() as f64 * tick_size * unit * 0.55;
+                left_width = left_width.max(w * a.cos().abs() + tick_h * a.sin().abs());
                 push_part(
                     &mut members,
                     "number",
                     text(
-                        &tick_text(l),
+                        &tick_text(l, t.own),
                         Justify::Right,
-                        Point::new(fig(ax - yout - gap), fig(y + 0.35 * tick_h)),
-                        0.0,
+                        Point::new(fig(ax - yout - gap), fig(y + 0.35 * tick_h * a.cos())),
+                        a,
                         tick_size,
                         spec.latex_numbers,
                     ),
@@ -1987,6 +2075,41 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
         }
         let label_size = size;
         let label_h = label_size * unit * 0.75;
+        // The scale factor stands at the end of each axis that has one.
+        let scale_text = |e: i32| {
+            if spec.latex_numbers {
+                format!("$\\times10^{{{e}}}$")
+            } else {
+                format!("\u{d7}10^{e}")
+            }
+        };
+        if let Some(e) = xt.scale.filter(|_| xt.numbers && !spec.log_x) {
+            let half = 0.5 * x_chars as f64 * tick_size * unit * 0.55;
+            push_part(
+                &mut members,
+                "number",
+                text(
+                    &scale_text(e),
+                    Justify::Left,
+                    Point::new(fig(rect.max.x + half + gap), fig(ay + xout + gap + tick_h)),
+                    0.0,
+                    tick_size,
+                    spec.latex_numbers,
+                ),
+            );
+        }
+        if let Some(e) = yt.scale.filter(|_| yt.numbers && !spec.log_y) {
+            let (justify, at) = if origin {
+                (Justify::Center, Point::new(ax, fig(rect.min.y - gap - 1.3 * label_h)))
+            } else {
+                (Justify::Right, Point::new(fig(ax - yout - gap), fig(rect.min.y - gap)))
+            };
+            push_part(
+                &mut members,
+                "number",
+                text(&scale_text(e), justify, at, 0.0, tick_size, spec.latex_numbers),
+            );
+        }
         if origin {
             // The labels stand at the arrow tips.
             if !spec.xlabel.trim().is_empty() {
