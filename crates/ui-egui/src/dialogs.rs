@@ -2160,9 +2160,9 @@ fn latex_settings(app: &mut App, ui: &mut egui::Ui) {
         preamble = app.engine.latex.settings().preamble;
     }
     ui.horizontal(|ui| {
-        ui.label("This figure's own preamble, saved in its file:");
-        if ui.button("Edit…").clicked() {
-            app.dialogs.open_figure_comments(&app.engine);
+        ui.label("This figure's own preamble, saved in its file, is in");
+        if ui.button("Page setup…").clicked() {
+            app.run("app.document_settings", json!({}));
         }
     });
     ui.data_mut(|d| d.insert_temp(id, (program, preamble, program_edited, preamble_edited)));
@@ -4076,12 +4076,25 @@ fn search_dialog(app: &mut App, ctx: &egui::Context) {
     }
 }
 
+/// Page setup closed while its preamble field still had the focus: what
+/// was typed is kept, not lost.
+fn keep_figure_preamble_draft(app: &mut App, ctx: &egui::Context) {
+    let id = egui::Id::new(FIGURE_PREAMBLE_DRAFT);
+    if let Some(draft) = ctx.data_mut(|d| d.remove_temp::<String>(id)) {
+        if draft != app.engine.doc().latex_preamble {
+            app.run("doc.set_latex_preamble", json!({ "preamble": draft }));
+        }
+    }
+}
+
 fn settings_dialog(app: &mut App, ctx: &egui::Context) {
     if !app.dialogs.settings_open {
+        keep_figure_preamble_draft(app, ctx);
         return;
     }
     let mut open = true;
     let s = app.engine.doc().settings.clone();
+    let preamble = app.engine.doc().latex_preamble.clone();
     let mut cmds: Vec<(&str, Value)> = Vec::new();
     egui::Window::new("Page setup")
         .open(&mut open)
@@ -4119,12 +4132,46 @@ fn settings_dialog(app: &mut App, ctx: &egui::Context) {
                         }
                         ui.end_row();
                     });
+                ui.separator();
+                figure_preamble_editor(&preamble, ui, &mut cmds);
             })
         });
     for (c, p) in cmds {
         app.run(c, p);
     }
     app.dialogs.settings_open = open;
+    if !open {
+        keep_figure_preamble_draft(app, ctx);
+    }
+}
+
+/// Where Page setup keeps the preamble being typed.
+const FIGURE_PREAMBLE_DRAFT: &str = "page_setup_figure_preamble";
+
+/// Page setup's field for the figure's own LaTeX preamble (F13), saved in
+/// its file and typeset after the global one; set when the field is left.
+fn figure_preamble_editor(saved: &str, ui: &mut egui::Ui, cmds: &mut Vec<(&str, Value)>) {
+    let id = egui::Id::new(FIGURE_PREAMBLE_DRAFT);
+    let mut draft: String = ui.data(|d| d.get_temp(id)).unwrap_or_else(|| saved.to_string());
+    ui.label(
+        "LaTeX preamble of this figure (saved in its file, after the global preamble of Global settings > LaTeX text):",
+    );
+    let field = ui.add(
+        egui::TextEdit::multiline(&mut draft)
+            .code_editor()
+            .desired_rows(3)
+            .desired_width(f32::INFINITY)
+            .hint_text("\\newcommand{\\vect}[1]{\\mathbf{#1}}"),
+    );
+    field.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Figure LaTeX preamble"));
+    if field.lost_focus() && draft != saved {
+        cmds.push(("doc.set_latex_preamble", json!({ "preamble": draft })));
+    }
+    // A field not being edited follows the figure (undo, another file).
+    if !field.has_focus() && !field.lost_focus() {
+        draft = saved.to_string();
+    }
+    ui.data_mut(|d| d.insert_temp(id, draft));
 }
 
 fn commands_dialog(app: &mut App, ctx: &egui::Context) {

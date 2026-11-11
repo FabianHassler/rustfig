@@ -4537,6 +4537,41 @@ fn page_setup_has_no_units() {
     assert!(h.query_by_label("Metric").is_none());
 }
 
+/// Page setup edits the figure's own LaTeX preamble (saved in the file),
+/// set when the field is left; Global settings points to it.
+#[test]
+fn page_setup_edits_the_figure_preamble() {
+    let mut h = harness(app());
+    h.state_mut().run("app.document_settings", json!({}));
+    h.run_steps(3);
+    h.get_by_label("Figure LaTeX preamble").click();
+    h.run_steps(2);
+    h.get_by_label("Figure LaTeX preamble")
+        .type_text("\\newcommand{\\R}{\\mathbb{R}}");
+    h.run_steps(2);
+    assert_eq!(
+        h.state().engine.doc().latex_preamble,
+        "",
+        "not before the field is left"
+    );
+    h.get_by_label("Paper").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.doc().latex_preamble, "\\newcommand{\\R}{\\mathbb{R}}");
+    // Undo shows in the field again.
+    h.state_mut().run("edit.undo", json!({}));
+    h.run_steps(3);
+    assert_eq!(h.state().engine.doc().latex_preamble, "");
+    // Closing the window while typing keeps the text.
+    h.get_by_label("Figure LaTeX preamble").click();
+    h.run_steps(2);
+    h.get_by_label("Figure LaTeX preamble")
+        .type_text("\\usepackage{siunitx}");
+    h.run_steps(2);
+    h.state_mut().dialogs.settings_open = false;
+    h.run_steps(3);
+    assert_eq!(h.state().engine.doc().latex_preamble, "\\usepackage{siunitx}");
+}
+
 /// An empty drawing's export preview says so instead of reporting the
 /// disabled export command.
 #[test]
