@@ -78,8 +78,8 @@ Same resolution, Mac mini M4 (the main table below), RustFig at main 2112440. Ti
 ### Setup of this run
 
 - Machine: Apple M4, macOS 27.2
-- xfig: `/Users/fabian/rustfig-speed/xfig/src/src/xfig` (3.2.9a), default options, scratch `HOME`, on `Xvfb :78` 1400x1000x24; window `1322x818` (canvas 1128x686 pixels)
-- RustFig: `/Users/fabian/rustfig-speed/bin/rustfig` (rustfig 0.9.0-beta.7), release build, label: main 2112440 (after P8), same resolution; `-geometry 1398x803`, `RUSTFIG_PIXELS_PER_POINT=1` (window size in device pixels)
+- xfig: `~/rustfig-speed/xfig/src/src/xfig` (3.2.9a), default options, scratch `HOME`, on `Xvfb :78` 1400x1000x24; window `1322x818` (canvas 1128x686 pixels)
+- RustFig: `~/rustfig-speed/bin/rustfig` (rustfig 0.9.0-beta.7), release build, label: main 2112440 (after P8), same resolution; `-geometry 1398x803`, `RUSTFIG_PIXELS_PER_POINT=1` (window size in device pixels)
 - Each value is the median of 3 run(s), a new process per run; timeout 120 s per measurement ("> N s": not finished in that time; the real time is longer)
 - Generated 2026-11-03 00:17 by `cargo xtask speed-compare`
 
@@ -1003,8 +1003,8 @@ Move test: 30 steps over 240 x 120 pixels. Figures with more than 300 objects (s
 ### Setup of this run
 
 - Machine: Apple M4, macOS 27.2
-- xfig: `/Users/fabian/rustfig-speed/xfig/src/src/xfig` (3.2.9a), default options, scratch `HOME`, on `Xvfb :78` 1400x1000x24; window `1322x818` (canvas 1128x686 pixels)
-- RustFig: `/Users/fabian/rustfig-speed/bin/rustfig` (rustfig 0.9.0-beta.7), release build, label: main 2112440 (after P8), Retina 2x; `-geometry 1398x803`
+- xfig: `~/rustfig-speed/xfig/src/src/xfig` (3.2.9a), default options, scratch `HOME`, on `Xvfb :78` 1400x1000x24; window `1322x818` (canvas 1128x686 pixels)
+- RustFig: `~/rustfig-speed/bin/rustfig` (rustfig 0.9.0-beta.7), release build, label: main 2112440 (after P8), Retina 2x; `-geometry 1398x803`
 - Each value is the median of 3 run(s), a new process per run; timeout 120 s per measurement ("> N s": not finished in that time; the real time is longer)
 - Generated 2026-11-03 00:33 by `cargo xtask speed-compare`
 

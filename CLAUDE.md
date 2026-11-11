@@ -5,8 +5,8 @@ RustFig is an open-source, Rust-native reimplementation of xfig: close to the or
 ## Start every session here
 
 1. Read [`ROADMAP.md`](ROADMAP.md) (stage, numbers, what's next), then [`docs/plan.md`](docs/plan.md) (phased tasks with ids and acceptance criteria) and [`docs/gaps.md`](docs/gaps.md) (every shortfall, ranked). Unless the user gives you a task, take the next task from `docs/plan.md`.
-2. Read `plan/STATUS.md` (local session notes, gitignored, may lag) and the relevant section of [`docs/architecture.md`](docs/architecture.md).
-3. Work in this loop: orient → plan → implement + test → verify (CI gates, run the app, screenshot) → record (progress docs, `plan/STATUS.md`) → commit. Don't stop to ask unless `docs/plan.md` › "Decisions that are the user's" lists the decision.
+2. Read the relevant section of [`docs/architecture.md`](docs/architecture.md).
+3. Work in this loop: orient → plan → implement + test → verify (CI gates, run the app, screenshot) → record (progress docs) → commit. Don't stop to ask unless `docs/plan.md` › "Decisions that are the user's" lists the decision.
 
 Read when the task needs it:
 
@@ -49,10 +49,8 @@ Coordinates are Fig units (1200 per inch; metric 450 per cm), y grows downwards;
 - **Licences**: code is MIT OR Apache-2.0; ported xfig/fig2dev code carries a "Ported from" comment and a `LICENSE-xfig` entry (`cargo xtask licences` checks).
 - **Quality gates** before every commit: `cargo xtask ci` with `RUSTFIG_REQUIRE_WASM=1` (fmt, clippy -D warnings, tests, layers, assets, licences, wasm). One task id per commit (`A1: shared undo snapshots`), ending with the attribution line the session asks for. Update the progress docs in the same commit ([`progress-docs.md`](docs/agents/progress-docs.md)).
 
-## Environment notes
+## Environment
 
-- If cargo can't write `~/.cargo` (sandboxed agents), use `export CARGO_HOME=$PWD/.cargo-home` (gitignored). Fetching new crates needs network access to crates.io; one crate archive contains `.vscode/settings.json`, which some sandboxes refuse to write.
-- Rust comes from rustup (Homebrew's keg-only `rustup` formula): stable with clippy, rustfmt and `wasm32-unknown-unknown`. A shell that doesn't read `~/.zshrc` needs `export PATH="/opt/homebrew/opt/rustup/bin:$PATH"`.
-- Shell gotchas: `mv`/`cp` are aliased interactive (use `/bin/mv -f` / `/bin/cp -f`), and zsh `noclobber` is on (use `>|` to overwrite with a redirect).
-- Parallel agents: separate `CARGO_TARGET_DIR` per agent; edit only the crates you own; write manifests atomically. Delete your target dir when you finish (a full disk fails links with `errno=28`).
-- Running the app: always with scratch `RUSTFIG_SETTINGS_DIR` and `RUSTFIG_RECOVERY_DIR` and `--background` (see [`running.md`](docs/agents/running.md)).
+- Rust stable with clippy, rustfmt and the `wasm32-unknown-unknown` target ([`docs/development.md`](docs/development.md)).
+- Running the app for a test: scratch `RUSTFIG_SETTINGS_DIR` and `RUSTFIG_RECOVERY_DIR`, so it leaves your own preferences alone (see [`running.md`](docs/agents/running.md)).
+- Notes for one machine go in `CLAUDE.local.md` (gitignored).
