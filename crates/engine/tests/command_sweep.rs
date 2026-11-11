@@ -98,6 +98,11 @@ fn hostile_values() -> Vec<Value> {
         json!({"name": "\u{0}\u{1}", "ids": [3], "query": "\u{0}", "local_font": ["x"]}),
         json!({"name": null, "ids": [999], "local_font": "Nope", "font": 1e308}),
         json!({"name": "x".repeat(5000), "local_font": "x".repeat(5000)}),
+        json!({"x": 0, "y": 0, "width": 9, "height": 9, "pen_color": "#12", "fill_color": "x".repeat(500), "arrow_kind": "blob"}),
+        json!({"points": [[0, 0], [90, 0]], "pen_color": "#abcdef", "fill_color": "salmon", "arrow_kind": "dot", "forward_arrow": true, "crop": true}),
+        json!({"points": [[0, 0], [90, 0]], "arrow_kind": [1], "forward_arrow_spec": {"kind": "bar", "style": "filled"}, "pen_color": [1]}),
+        json!({"x": 0, "y": 0, "text": "a\n\n".repeat(2000), "pen_color": "#010203", "size": 1e308}),
+        json!({"x": 0, "y": 0, "text": "\n\r\n", "crop": "yes", "box": true, "anchor": "nowhere", "pen_color": null}),
     ]
 }
 

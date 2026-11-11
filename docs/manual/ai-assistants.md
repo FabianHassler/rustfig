@@ -52,6 +52,8 @@ Then ask for a figure. Most assistants ask for your permission before they use R
 
 The assistant has four tools: one lists RustFig's commands, one runs a command, one renders the drawing as a picture for the assistant to look at, and one returns the drawing as Fig text. The commands are the same ones the menus and modes run ([Automation](automation.md)), so whatever you can do in the window an assistant can do too, and every change is one undo step.
 
+Parameters follow the window. A pen or fill color is a color number, `#rrggbb`, `#rgb` or an X11 name as in the color dialog: a color the figure has is reused, any other is added as a user color in the same undo step (an error says when all 512 are used). Arrow types can be named (`dot`, `circle`, `bar`, `diamond`, ...) as well as numbered 0 to 14. A text with line breaks becomes one text object per line, spaced as Return does in Text mode. The picture the assistant looks at can be cut to the drawing's bounds instead of the page, as View > Bounding box > Fit to drawing does, without changing the figure's own box. For braces, block arrows, zigzags, springs and coils the assistant searches the bundled libraries (`library.search`, `library.place`) instead of drawing them.
+
 The server holds one drawing at a time, in memory, and writes files only when the assistant saves or exports. It doesn't open a window; open the saved .fig in RustFig to see or edit it.
 
 ## Online assistants

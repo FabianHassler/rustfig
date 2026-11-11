@@ -21,6 +21,21 @@ fn set_box(e: &mut Engine, b: Option<BoundingBox>) -> CmdResult {
     }))
 }
 
+/// The drawing's present bounds as a bounding box (View > Bounding box > Fit
+/// to drawing; the export `crop`).
+pub(crate) fn content_box(e: &Engine) -> Result<BoundingBox, EngineError> {
+    let r = e.fit_bounds();
+    if r.is_empty() || !(r.min.is_finite() && r.max.is_finite()) {
+        return Err(EngineError::bad_params("the drawing is empty"));
+    }
+    let c = |v: f64| v.clamp(-MAX_COORD, MAX_COORD) as i32;
+    BoundingBox::new(
+        (c(r.min.x.floor()), c(r.min.y.floor())),
+        (c(r.max.x.ceil()), c(r.max.y.ceil())),
+    )
+    .ok_or_else(|| EngineError::bad_params("the drawing has no width or height"))
+}
+
 /// Depths 0–999: the most a depth list can sensibly name.
 const MAX_DEPTHS: usize = 1000;
 
@@ -199,13 +214,7 @@ pub(super) fn commands() -> Vec<Command> {
             mutates: true,
             enabled: |e| !e.doc().objects.is_empty(),
             run: |e, _| {
-                let r = e.fit_bounds();
-                if r.is_empty() || !(r.min.is_finite() && r.max.is_finite()) {
-                    return Err(EngineError::bad_params("the drawing is empty"));
-                }
-                let c = |v: f64| v.clamp(-MAX_COORD, MAX_COORD) as i32;
-                let b = BoundingBox::new((c(r.min.x.floor()), c(r.min.y.floor())), (c(r.max.x.ceil()), c(r.max.y.ceil())))
-                    .ok_or_else(|| EngineError::bad_params("the drawing has no width or height"))?;
+                let b = content_box(e)?;
                 set_box(e, Some(b))
             },
         },

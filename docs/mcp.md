@@ -1,6 +1,6 @@
 # MCP server
 
-**Status:** 2026-11-06 (setup for Claude Code, Codex and others; the RustFig skill).
+**Status:** 2026-11-11 (Q10: colors as text, arrow types by name, `shape.text` lines, `rustfig_render` `crop`; setup for Claude Code, Codex and others; the RustFig skill).
 
 `rustfig-cli mcp` speaks the Model Context Protocol (JSON-RPC 2.0, one
 message per line) on stdin/stdout. An AI assistant that runs it can draw,
@@ -56,8 +56,19 @@ runs on the user's computer over stdio.
 |---|---|
 | `rustfig_commands` | list commands and their parameters (`filter`: a substring of the id or label; the full list is about 50 KB) |
 | `rustfig_execute` | run a command: `{"command": "shape.circle", "params": {"cx": 600, "cy": 600, "r": 300}}` |
-| `rustfig_render` | the drawing as a PNG image (`dpi`, default 100; `latex`, default true: LaTeX texts typeset by TeX when one is installed, else shown as their source, with the page fitted to the source; TeX's errors, such as an undefined macro, come back as warnings next to the image) |
+| `rustfig_render` | the drawing as a PNG image (`dpi`, default 100; `latex`, default true: LaTeX texts typeset by TeX when one is installed, else shown as their source, with the page fitted to the source; TeX's errors, such as an undefined macro, come back as warnings next to the image; `crop`, default false: the drawing's content bounds plus a margin instead of the page, as View > Bounding box > Fit to drawing, without changing the figure's box) |
 | `rustfig_document` | the drawing as Fig 3.2 text (or `format: "rustfig"`) |
+
+Parameters match the UI (plan Q10): `pen_color` and `fill_color` take a color
+number, `#rrggbb`, `#rgb` or an X11 name (the standard or user color with
+that value is reused, else one is added in the same undo step; a clear error
+when all 512 are used); `arrow_kind` takes 0-14 or a name (`stick`,
+`triangle`, `concave`, `convex`, `diamond`, `circle`, `dot`, `half_circle`,
+`square`, `reverse_triangle`, `half_filled_concave`, `half_triangle`,
+`half_concave`, `half_convex`, `wye`, `bar`, `fork`, `backward_fork`; the
+names that stand for a hollow or filled head also set the style, an explicit
+`arrow_style` wins); `shape.text` with `\n` writes one text per line, spaced
+as Return does in Text mode (separate texts, `{"ids": [...]}`).
 
 Coordinates are Fig units: 1200 per inch, y grows downwards. Open and save
 files with `file.open` / `file.save` through `rustfig_execute`.
@@ -128,3 +139,4 @@ Sizes and work are capped; hostile expressions end in an error or a plot.
 | 2026-11-11 | Plots: filled areas between curves or to a baseline (Q3). |
 | 2026-11-11 | Plots: bars (grouped), stems and error bars (Q4). |
 | 2026-11-11 | Plots: polar, implicit, derivative, integral and field-line curves (Q5). |
+| 2026-11-11 | Q10: `pen_color`/`fill_color` as `#rrggbb` or X11 name, `arrow_kind` by name, `shape.text` with `\n` one text per line, `rustfig_render` `crop`. |

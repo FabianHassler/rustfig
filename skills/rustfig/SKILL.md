@@ -11,7 +11,7 @@ RustFig is an xfig replacement. Its MCP server, `rustfig-cli mcp`, holds one dra
 
 - `rustfig_commands {"filter": "shape."}`: commands and their parameters. Always pass a filter (the full list is about 50 KB). It comes from the running program, so trust it over this file.
 - `rustfig_execute {"command": "shape.circle", "params": {"cx": 2400, "cy": 1800, "r": 600}}`: run one command (one undo step).
-- `rustfig_render`: the drawing as PNG (`dpi`, default 100), with LaTeX typeset when TeX is installed and warnings as text.
+- `rustfig_render`: the drawing as PNG (`dpi`, default 100; `crop: true` shows the drawing's bounds instead of the page), with LaTeX typeset when TeX is installed and warnings as text.
 - `rustfig_document`: the drawing as Fig text.
 
 ## Workflow
@@ -32,10 +32,11 @@ RustFig is an xfig replacement. Its MCP server, `rustfig-cli mcp`, holds one dra
 
 ## Shapes and style
 
-`shape.polyline`, `shape.polygon` (`points: [[x,y], …]`), `shape.rectangle` (`x, y, width, height`, `radius`), `shape.circle` (`cx, cy, r`), `shape.text` (`x, y, text, size, justify, angle, special`), `shape.dimension_line` (`x1, y1, x2, y2`, `text` for an own label); ellipse, arc, spline, regular polygon and picture: see `rustfig_commands`.
+`shape.polyline`, `shape.polygon` (`points: [[x,y], …]`), `shape.rectangle` (`x, y, width, height`, `radius`), `shape.circle` (`cx, cy, r`), `shape.text` (`x, y, text, size, justify, angle, special`; a `\n` in `text` writes one text per line, as Return does in Text mode), `shape.dimension_line` (`x1, y1, x2, y2`, `text` for an own label); ellipse, arc, spline, regular polygon and picture: see `rustfig_commands`.
 
-- **Style** on every shape: `depth`, `thickness`, `pen_color`, `fill_color`, `area_fill`, `line` (solid, dashed, dotted, …), `style_val`, `cap`, `join`. Open shapes also take arrows: `forward_arrow`/`backward_arrow: true`, sized with `arrow_kind`, `arrow_style` (hollow, filled), `arrow_width`, `arrow_height`, or one arrow at a time with `forward_arrow_spec: {"kind": 1, "style": "filled", "thickness": 15, "width": 60, "height": 120}`.
-- **Colors** are numbers: 0 black, 1 blue, 2 green, 3 cyan, 4 red, 5 magenta, 6 yellow, 7 white, 8–31 shades. Others: `color.add {"rgb": "#d9d9d9"}` returns the number to use.
+- **Style** on every shape: `depth`, `thickness`, `pen_color`, `fill_color`, `area_fill`, `line` (solid, dashed, dotted, …), `style_val`, `cap`, `join`. Open shapes also take arrows: `forward_arrow`/`backward_arrow: true`, sized with `arrow_kind` (0-14 or a name: `stick`, `triangle`, `concave`, `convex`, `diamond`, `circle`, `dot`, `half_circle`, `square`, `reverse_triangle`, `half_filled_concave`, `half_triangle`, `half_concave`, `half_convex`, `wye`, `bar`, `fork`, `backward_fork`), `arrow_style` (hollow, filled), `arrow_width`, `arrow_height`, or one arrow at a time with `forward_arrow_spec: {"kind": 1, "style": "filled", "thickness": 15, "width": 60, "height": 120}`.
+- **Colors:** `pen_color` and `fill_color` take a number (0 black, 1 blue, 2 green, 3 cyan, 4 red, 5 magenta, 6 yellow, 7 white, 8–31 shades), `"#rrggbb"`, `"#rgb"` or an X11 name (`"salmon"`): a color the figure has is reused, any other becomes a user color (up to 512). `color.add {"rgb": "#d9d9d9"}` returns the number.
+- **Ready-made shapes** (braces, block arrows, zigzags, springs, coils, symbols): don't redraw them by hand; `library.search {"query": "brace"}` finds them in the bundled libraries and `library.place {"library": …, "name": …, "x": …, "y": …, "ops": ["rotate_cw", "larger"]}` places one (as a compound; `object.set_attributes`, `transform.*` then size and move it).
 - **Fills:** `area_fill` 20 is the fill color itself, 0–19 darker, 21–39 lighter, 41–62 patterns, -1 none (for black: 0–20 runs white to black).
 - **Depth:** lower is in front, default 50. Give fills and backgrounds a larger depth than the lines and labels on them.
 - **Changing objects:** `object.set_attributes {"ids": [3, 4], …}` takes the same names plus `font_size`, `text` and more; also `transform.move`, `object.set_geometry`, `arrange.*`, `object.group`, `edit.delete`, `edit.duplicate`.

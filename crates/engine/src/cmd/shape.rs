@@ -62,7 +62,7 @@ pub(super) fn commands() -> Vec<Command> {
         shape_cmd!(
             "shape.text",
             "Add text",
-            "{\"x\", \"y\", \"text\", \"size\"?: points (or \"font_size\"), \"font\"?: number, \"postscript\"?: bool, \"special\"?: bool (LaTeX text; unless postscript or font is given it leaves the PostScript font for the LaTeX default font), \"justify\"?: left|center|right, \"angle\"?: degrees, \"pen_color\"? (or \"color\"), \"depth\"?}",
+            "{\"x\", \"y\", \"text\" (a \\n starts a new text one line below, as Return does in Text mode; {\"ids\"} lists them), \"size\"?: points (or \"font_size\"), \"font\"?: number, \"postscript\"?: bool, \"special\"?: bool (LaTeX text; unless postscript or font is given it leaves the PostScript font for the LaTeX default font), \"justify\"?: left|center|right, \"angle\"?: degrees, \"pen_color\"? (or \"color\"), \"depth\"?}",
             text
         ),
         shape_cmd!(
@@ -80,7 +80,7 @@ pub(super) fn commands() -> Vec<Command> {
     ]
 }
 
-pub(crate) fn style_from(e: &Engine, p: &Value) -> Result<Style, EngineError> {
+pub(crate) fn style_from(e: &mut Engine, p: &Value) -> Result<Style, EngineError> {
     let mut s = e.indicator.style();
     if let Some(v) = opt_num(p, "depth")? {
         s.depth = (v.round() as i32).clamp(0, rustfig_model::MAX_DEPTH);
@@ -116,10 +116,34 @@ pub(crate) fn style_from(e: &Engine, p: &Value) -> Result<Style, EngineError> {
     Ok(s)
 }
 
-/// A color parameter, clamped to the color numbers. A user color must be
-/// defined (`color.add`) or already used in the figure (a file may refer to
-/// one it does not define); otherwise fig2dev would only find out on export.
-pub(super) fn color_param(e: &Engine, p: &Value, key: &str) -> Result<Option<i32>, EngineError> {
+/// A color parameter: a color number (clamped to the color numbers), or
+/// `#rrggbb`, `#rgb` or an X11 name as the color dialog takes them. A text
+/// color is the standard or user color with that value, else a new user
+/// color (part of the command's one undo step); a number must be a defined
+/// user color or one already used in the figure (a file may refer to one it
+/// does not define), otherwise fig2dev would only find out on export.
+pub(super) fn color_param(e: &mut Engine, p: &Value, key: &str) -> Result<Option<i32>, EngineError> {
+    if let Some(Value::String(text)) = super::param(p, key) {
+        if text.chars().count() > 64 {
+            return Err(EngineError::bad_params(format!("{key}: color text too long")));
+        }
+        let rgb = rustfig_model::x_color(text.trim()).ok_or_else(|| {
+            EngineError::bad_params(format!(
+                "{key} {text:?} is neither a color number, #rrggbb, #rgb nor an X11 color name"
+            ))
+        })?;
+        let known = e.doc().colors.iter().any(|u| u.rgb == rgb);
+        let c = e.doc_mut().color_for_rgb(rgb).ok_or_else(|| {
+            EngineError::bad_params(format!(
+                "{key} {text:?}: all 512 user colors are in use (reuse one, or free some with color.remove_unused)"
+            ))
+        })?;
+        if !known {
+            e.prefs.add_recent_color(&rgb.to_hex());
+            e.prefs_dirty = true;
+        }
+        return Ok(Some(c.0));
+    }
     let Some(v) = opt_num(p, key)? else { return Ok(None) };
     let c = (v.round() as i32).clamp(-1, rustfig_model::LAST_USER_COLOR);
     let doc = e.doc();
@@ -179,6 +203,57 @@ pub(super) fn arrow_style_value(v: &Value, key: &str) -> Result<i32, EngineError
     }
 }
 
+/// The arrowhead names, by Fig's arrow types 0 to 14 (xfig's `arrow_shapes`):
+/// the name, the type and the style the name implies (a name without one
+/// leaves the style to `arrow_style` and the indicator).
+pub const ARROW_NAMES: [(&str, i32, Option<i32>); 18] = [
+    ("stick", 0, None),
+    ("triangle", 1, None),
+    ("concave", 2, None),
+    ("convex", 3, None),
+    ("diamond", 4, None),
+    ("circle", 5, Some(0)),
+    ("dot", 5, Some(1)),
+    ("half_circle", 6, None),
+    ("square", 7, None),
+    ("reverse_triangle", 8, None),
+    ("half_filled_concave", 9, None),
+    ("half_triangle", 10, None),
+    ("half_concave", 11, None),
+    ("half_convex", 12, None),
+    ("wye", 13, Some(0)),
+    ("bar", 13, Some(1)),
+    ("fork", 14, Some(0)),
+    ("backward_fork", 14, Some(1)),
+];
+
+/// An arrow type: a number 0-14, or a name from [`ARROW_NAMES`]; returns the
+/// type and the style the name implies.
+pub(super) fn arrow_kind_value(v: &Value, key: &str) -> Result<(i32, Option<i32>), EngineError> {
+    match v {
+        Value::Number(n) => match n.as_f64() {
+            Some(x) if x.is_finite() => Ok(((x.round() as i32).clamp(0, 14), None)),
+            _ => Err(EngineError::bad_params(format!(
+                "{key} must be a number 0-14 or a name"
+            ))),
+        },
+        Value::String(name) => ARROW_NAMES
+            .iter()
+            .find(|(n, _, _)| n.eq_ignore_ascii_case(name.trim()))
+            .map(|&(_, k, st)| (k, st))
+            .ok_or_else(|| {
+                let names: Vec<&str> = ARROW_NAMES.iter().map(|a| a.0).collect();
+                EngineError::bad_params(format!(
+                    "{key} {name:?}: unknown arrow type (0-14, or {})",
+                    names.join(", ")
+                ))
+            }),
+        _ => Err(EngineError::bad_params(format!(
+            "{key} must be a number 0-14 or a name"
+        ))),
+    }
+}
+
 /// The per-arrow changes `arrow_kind`, `arrow_style`, `arrow_width`,
 /// `arrow_height` and `arrow_thickness` (Fig units) take, for both arrows.
 #[derive(Default)]
@@ -192,11 +267,16 @@ pub(super) struct ArrowChanges {
 
 impl ArrowChanges {
     pub(super) fn from_params(p: &Value) -> Result<Self, EngineError> {
+        let named = super::param(p, "arrow_kind")
+            .filter(|v| !v.is_null())
+            .map(|v| arrow_kind_value(v, "arrow_kind"))
+            .transpose()?;
+        let explicit = super::param(p, "arrow_style")
+            .map(|v| arrow_style_value(v, "arrow_style"))
+            .transpose()?;
         Ok(Self {
-            kind: opt_num(p, "arrow_kind")?.map(|v| (v.round() as i32).clamp(0, 14)),
-            style: super::param(p, "arrow_style")
-                .map(|v| arrow_style_value(v, "arrow_style"))
-                .transpose()?,
+            kind: named.map(|n| n.0),
+            style: explicit.or(named.and_then(|n| n.1)),
             width: opt_num(p, "arrow_width")?.map(|v| v.clamp(1.0, 1.0e5)),
             height: opt_num(p, "arrow_height")?.map(|v| v.clamp(1.0, 1.0e5)),
             thickness: opt_num(p, "arrow_thickness")?.map(|v| v.clamp(0.0, 1.0e4)),
@@ -239,8 +319,17 @@ pub(super) fn arrow_spec(p: &Value, key: &str) -> Result<Option<rustfig_model::A
             .map(|x| x.clamp(lo, hi))
             .ok_or_else(|| EngineError::bad_params(format!("{key}.{k} must be a number")))
     };
+    let kind = match v.get("kind") {
+        Some(k) => arrow_kind_value(k, &format!("{key}.kind"))?,
+        None => {
+            return Err(EngineError::bad_params(format!(
+                "{key}.kind must be a number 0-14 or a name"
+            )))
+        }
+    };
     let style = match v.get("style") {
         Some(s) => arrow_style_value(s, &format!("{key}.style"))?,
+        None if kind.1.is_some() => kind.1.unwrap_or(0),
         None => {
             return Err(EngineError::bad_params(format!(
                 "{key}.style must be hollow or filled (0 or 1)"
@@ -248,7 +337,7 @@ pub(super) fn arrow_spec(p: &Value, key: &str) -> Result<Option<rustfig_model::A
         }
     };
     Ok(Some(rustfig_model::Arrow {
-        kind: f("kind", 0.0, 14.0)? as i32,
+        kind: kind.0,
         style,
         thickness: f("thickness", 0.0, 1.0e4)?,
         width: f("width", 0.0, 1.0e5)?,
@@ -519,8 +608,46 @@ fn text(e: &mut Engine, p: &Value) -> CmdResult {
     if let Some(d) = opt_num(p, "depth")? {
         t.depth = (d.round() as i32).clamp(0, rustfig_model::MAX_DEPTH);
     }
-    added(e, Object::new(ObjectKind::Text(t)))
+    if !t.text.contains('\n') {
+        return added(e, Object::new(ObjectKind::Text(t)));
+    }
+    // One text per line, as Return does in Text mode: separate objects (not
+    // glued), each line one step (`text_step` of the line height) below the
+    // one before, along the text's angle. An empty line only leaves a gap.
+    let lines: Vec<String> = t.text.lines().map(str::to_string).collect();
+    if lines.len() > MAX_TEXT_LINES {
+        return Err(EngineError::bad_params(format!(
+            "a text of at most {MAX_TEXT_LINES} lines"
+        )));
+    }
+    let step = if e.indicator.text_step.is_finite() {
+        e.indicator.text_step.clamp(0.0, 100.0)
+    } else {
+        1.0
+    };
+    let down = rustfig_geom::Affine::rotate(t.angle).apply_vec(Point::new(
+        0.0,
+        t.size * rustfig_geom::FIG_PER_POINT * rustfig_text::LINE_SPACING * step,
+    ));
+    let mut ids = Vec::new();
+    for (i, line) in lines.into_iter().enumerate() {
+        if line.is_empty() {
+            continue;
+        }
+        let mut l = t.clone();
+        l.text = line;
+        l.origin = origin + down * i as f64;
+        ids.push(e.add_object(Object::new(ObjectKind::Text(l))));
+    }
+    if ids.is_empty() {
+        return Err(EngineError::bad_params("the text has no characters"));
+    }
+    e.set_selection(ids.clone());
+    Ok(json!({"id": ids[0].0, "ids": super::ids_value(&ids)}))
 }
+
+/// The most lines `shape.text` writes as separate texts.
+const MAX_TEXT_LINES: usize = 1000;
 
 /// Sets or clears `t`'s special (LaTeX) flag. Turned on without an explicit
 /// `postscript` it also turns off the PostScript font, and without an

@@ -186,7 +186,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Export…",
             menu: "",
             shortcut: "",
-            params: "{\"path\": string, \"part\"?: bool (only the visible part while a compound is open), \"format\"?: language id (see file.export_formats; default from the file name), \"magnification\"?: percent, \"margin\"?: fig units, \"dpi\"?: number, \"background\"?: \"#rrggbb\", \"active_layers_only\"?: bool, \"whole_figure_bounds\"?: bool, \"embed\"?: bool (PDF, SVG, PNG: store the figure's Fig text in the file, so File > Open reads it back; default false), \"typeset_latex\"?: bool (PDF, EPS/PS, SVG and the bitmaps: special texts typeset by the installed TeX, as on the canvas; default false), \"options\"?: {key: value} fig2dev's options for the language, by key or letter (see file.export_formats), \"panel\"?: true | {…} the Export panel's settings kept for the language (export.settings) turned into options}  — active_layers_only leaves out depths that are off; whole_figure_bounds then still sizes the page by the whole figure; pspdf writes NAME.eps and NAME.pdf",
+            params: "{\"path\": string, \"part\"?: bool (only the visible part while a compound is open), \"format\"?: language id (see file.export_formats; default from the file name), \"magnification\"?: percent, \"margin\"?: fig units, \"dpi\"?: number, \"background\"?: \"#rrggbb\", \"active_layers_only\"?: bool, \"whole_figure_bounds\"?: bool, \"crop\"?: bool (file.export_data: cover the drawing's content bounds, as View > Bounding box > Fit to drawing, for this export only), \"embed\"?: bool (PDF, SVG, PNG: store the figure's Fig text in the file, so File > Open reads it back; default false), \"typeset_latex\"?: bool (PDF, EPS/PS, SVG and the bitmaps: special texts typeset by the installed TeX, as on the canvas; default false), \"options\"?: {key: value} fig2dev's options for the language, by key or letter (see file.export_formats), \"panel\"?: true | {…} the Export panel's settings kept for the language (export.settings) turned into options}  — active_layers_only leaves out depths that are off; whole_figure_bounds then still sizes the page by the whole figure; pspdf writes NAME.eps and NAME.pdf",
             mutates: false,
             enabled: has_objects,
             run: export_file,
@@ -196,7 +196,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Export to data",
             menu: "",
             shortcut: "",
-            params: "{\"format\": language id, \"part\"?: bool, \"latex_source\"?: bool (special texts drawn as plain text, the page fitted to their source: a preview without TeX), and the options of file.export except path}  — returns {\"data\": text} or {\"base64\": ...}; pspdf returns {\"files\": [{\"extension\", \"data\"|\"base64\"}]}",
+            params: "{\"format\": language id, \"part\"?: bool, \"crop\"?: bool (the page is the drawing's content bounds, as View > Bounding box > Fit to drawing; the figure keeps its own box), \"latex_source\"?: bool (special texts drawn as plain text, the page fitted to their source: a preview without TeX), and the options of file.export except path}  — returns {\"data\": text} or {\"base64\": ...}; pspdf returns {\"files\": [{\"extension\", \"data\"|\"base64\"}]}",
             mutates: false,
             enabled: has_objects,
             run: export_data,
@@ -1797,9 +1797,17 @@ fn export_data(e: &mut Engine, p: &Value) -> CmdResult {
     let parts = parts(lang, &virtual_path);
     let mut files = Vec::new();
     let mut warnings = Vec::new();
-    let source_doc = if opt_bool(p, "latex_source")?.unwrap_or(false) {
+    let latex_source = opt_bool(p, "latex_source")?.unwrap_or(false);
+    let crop = opt_bool(p, "crop")?.unwrap_or(false);
+    let source_doc = if latex_source || crop {
         let mut doc = scope_doc(e, p)?.into_owned();
-        latex_as_source(&mut doc.objects);
+        if latex_source {
+            latex_as_source(&mut doc.objects);
+        }
+        if crop {
+            // As View > Bounding box > Fit to drawing, for this export only.
+            doc.bounding_box = Some(super::doc::content_box(e)?);
+        }
         Some(doc)
     } else {
         None

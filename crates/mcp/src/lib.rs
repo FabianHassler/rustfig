@@ -47,7 +47,8 @@ fn tools() -> Value {
             "description": "Render the current drawing as a PNG image to look at it. LaTeX (special) texts are typeset by TeX when a TeX is installed (pdflatex or lualatex), so their size and placement can be judged; without TeX, or with latex false, they show as their source. TeX errors (an undefined macro, say) come back as warnings next to the image; the text then shows as its source.",
             "inputSchema": {"type": "object", "properties": {
                 "dpi": {"type": "number", "description": "Resolution, default 100"},
-                "latex": {"type": "boolean", "description": "Typeset LaTeX texts with TeX (default true)"}
+                "latex": {"type": "boolean", "description": "Typeset LaTeX texts with TeX (default true)"},
+                "crop": {"type": "boolean", "description": "Show the drawing's content bounds (plus a margin) instead of the whole page, as View > Bounding box > Fit to drawing; the figure's own box is not changed (default false)"}
             }}
         },
         {
@@ -102,10 +103,11 @@ impl Server {
                 // page fits that source (fig2dev's bounds leave them out).
                 let latex = args.get("latex").and_then(Value::as_bool).unwrap_or(true);
                 let tex = latex && self.engine.latex.export_typesetter().is_some();
+                let crop = args.get("crop").and_then(Value::as_bool).unwrap_or(false);
                 match self.engine.execute(
                     "file.export_data",
                     &json!({"format": "png", "dpi": dpi, "margin": 60, "background": "#ffffff", "options": {"smoothing": 4},
-                        "typeset_latex": tex, "latex_source": !tex}),
+                        "typeset_latex": tex, "latex_source": !tex, "crop": crop}),
                 ) {
                     Ok(v) => match v.get("base64").and_then(Value::as_str) {
                         Some(b) => {
@@ -237,6 +239,10 @@ mod tests {
             .handle(&json!({"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "rustfig_render", "arguments": {}}}))
             .unwrap();
         assert_eq!(r["result"]["content"][0]["type"], "image");
+        let r = s
+            .handle(&json!({"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "rustfig_render", "arguments": {"crop": true}}}))
+            .unwrap();
+        assert_eq!(r["result"]["content"][0]["type"], "image", "{r}");
         assert!(s
             .handle(&json!({"jsonrpc": "2.0", "method": "notifications/initialized"}))
             .is_none());
