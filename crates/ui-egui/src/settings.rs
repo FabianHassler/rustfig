@@ -313,6 +313,7 @@ pub fn load_and_apply(app: &mut App) {
     for w in prefs.apply(&mut app.engine) {
         app.error(format!("settings: {w}"));
     }
+    app.engine.seed_new_figure_preamble();
     apply_ui(app);
     // Saved once, so the import happens on the first start only.
     app.engine.prefs_dirty = imported;

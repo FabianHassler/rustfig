@@ -41,7 +41,7 @@ Document-specific settings (units, paper, orientation, comments) are saved in th
 
 ## LaTeX text
 
-Under **LaTeX text** in Edit > Global settings: **Typeset LaTeX text on the canvas** (View > Typeset LaTeX text), the **TeX program** (empty: `pdflatex`, then `lualatex`, from the `PATH`; the line below names the one in use) and the **Preamble** added after `\usepackage{amsmath,amssymb,color,graphicx}`. Each field is saved, and the texts typeset again, when you leave it. A figure's own preamble, saved in its file, is in Edit > Page setup. See [Text and pictures](draw-text-pictures.md).
+Under **LaTeX text** in Edit > Global settings: **Typeset LaTeX text on the canvas** (View > Typeset LaTeX text), the **TeX program** (empty: `pdflatex`, then `lualatex`, from the `PATH`; the line below names the one in use) and the **Preamble** new figures start with (empty unless you set it; **Reapply to figure** gives it to the open figure). Each field is saved when you leave it. A figure typesets with its own preamble only, saved in its file and edited in Edit > Page setup. See [Text and pictures](draw-text-pictures.md).
 
 ## Command-line options
 

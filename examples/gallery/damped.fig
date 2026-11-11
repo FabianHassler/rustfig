@@ -7,7 +7,7 @@ Letter
 Single
 -2
 1200 2
-# Damped harmonic oscillator x(t) = x0 exp(-t/tau) cos(omega t) with the dashed exponential envelope +-x0 exp(-t/tau); axes labelled with units, the period T and 1/e time tau marked.
+# Damped harmonic oscillator x(t) = x0 exp(-t/tau) cos(omega t) with the dashed exponential envelope +-x0 exp(-t/tau); axes labeled with units, the period T and 1/e time tau marked.
 0 32 #1f5fa8
 0 33 #c0392b
 0 34 #2e8b57

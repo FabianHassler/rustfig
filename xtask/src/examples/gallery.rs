@@ -22,7 +22,11 @@ pub use drawings::DRAWINGS;
 pub type Pt = (f64, f64);
 
 const HEADER: &str =
-    "#FIG 3.2  Produced by RustFig's gallery generator\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n";
+    "#FIG 3.2  Produced by RustFig's gallery generator\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n";
+/// Commands of the texts (as the file escapes them) that need `amsmath`: a
+/// figure using one carries it as its LaTeX preamble, since its texts get no
+/// packages but their figure's.
+const AMSMATH: [&str; 2] = ["\\\\text{", "\\\\dfrac"];
 /// Fig units per point.
 const PT: f64 = 1200.0 / 72.0;
 
@@ -842,13 +846,17 @@ impl Fig {
     /// sets wider than estimated).
     pub fn render(&self) -> String {
         let mut out = String::from(HEADER);
-        out.push_str("# ");
+        let body = self.stack.first().map_or("", String::as_str);
+        if AMSMATH.iter().any(|c| body.contains(c)) {
+            out.push_str("# RustFigLaTeXPreamble \\usepackage{amsmath}\n");
+        }
+        out.push_str("1200 2\n# ");
         out.push_str(&self.comment);
         out.push('\n');
         for (hx, n) in &self.colors {
             let _ = writeln!(out, "0 {n} {hx}");
         }
-        out.push_str(self.stack.first().map_or("", String::as_str));
+        out.push_str(body);
         let gb = &self.gbb;
         let (x0, y0) = (round_i(gb[0]) - 150, round_i(gb[1]) - 150);
         let (x1, y1) = (round_i(gb[2]) + 250, round_i(gb[3]) + 200);

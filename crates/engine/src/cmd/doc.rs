@@ -107,7 +107,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Set figure LaTeX preamble",
             menu: "",
             shortcut: "",
-            params: "{\"preamble\": string (this figure's LaTeX preamble lines, after the user's own; saved in the file)}",
+            params: "{\"preamble\": string (this figure's LaTeX preamble lines, the only ones its texts get besides \\usepackage{color,graphicx}; saved in the file when it has LaTeX texts)}",
             mutates: true,
             enabled: always,
             run: |e, p| {
@@ -118,12 +118,27 @@ pub(super) fn commands() -> Vec<Command> {
                 if pre.contains('\0') {
                     return Err(EngineError::bad_params("preamble: not text"));
                 }
-                let pre = pre.lines().collect::<Vec<_>>().join("\n");
-                let pre = pre.trim_end().to_string();
+                let pre = crate::latex_preview::tidy_preamble(&pre);
                 if e.doc().latex_preamble != pre {
                     e.doc_mut().latex_preamble = pre;
                 }
                 Ok(json!({}))
+            },
+        },
+        Command {
+            id: "doc.reapply_latex_preamble",
+            label: "Reapply to figure",
+            menu: "",
+            shortcut: "",
+            params: "{}  — replace this figure's LaTeX preamble with the one new figures start with (view.set_latex_preamble)",
+            mutates: true,
+            enabled: always,
+            run: |e, _| {
+                let pre = e.new_figure_preamble();
+                if e.doc().latex_preamble != pre {
+                    e.doc_mut().latex_preamble = pre.clone();
+                }
+                Ok(json!({"preamble": pre}))
             },
         },
         Command {

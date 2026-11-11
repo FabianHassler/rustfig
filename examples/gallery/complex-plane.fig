@@ -6,6 +6,7 @@ Letter
 100.00
 Single
 -2
+# RustFigLaTeXPreamble \usepackage{amsmath}
 1200 2
 # Euler's formula on the complex plane: e^{i theta} = cos theta + i sin theta, a point on the unit circle. The bottom formula is LaTeX 'special' text (flag bit 1) meant for the LaTeX export (pstex/pict2e); RustFig typesets it with View > Typeset LaTeX text.
 0 32 #1f5fa8

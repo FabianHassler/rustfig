@@ -2,7 +2,7 @@
 //! F8: special texts typeset by TeX on the canvas, with a fake TeX program.
 #![cfg(unix)]
 
-use rustfig_engine::latex_preview::latex_document;
+use rustfig_engine::latex_preview::{latex_document, with_hint};
 use rustfig_engine::render::{build_scene, Prim, SceneOptions};
 use rustfig_engine::Engine;
 use serde_json::json;
@@ -250,7 +250,7 @@ fn files_and_exports_do_not_depend_on_the_preview() {
 fn the_document_has_the_export_preamble_and_the_color() {
     let d = latex_document("\\usepackage{bm}", "$x$", 4, false, 12.0, [255, 0, 0]);
     for want in [
-        "amsmath,amssymb,color,graphicx",
+        "\\usepackage{color,graphicx}\n",
         "\\usepackage{bm}",
         "\\sffamily",
         "{1.000,0.000,0.000}",
@@ -457,38 +457,79 @@ fn real_tex_errors_are_export_warnings() {
     }
 }
 
+/// A figure with one LaTeX (special) text and no preamble.
+const SPECIAL_FIG: &str = "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+4 0 0 50 -1 0 12 0.0000 2 135 300 1200 1200 $x^2$\\001\n";
+
 #[test]
-fn the_figure_preamble_follows_the_document() {
+fn the_figure_preamble_is_the_only_one() {
     let mut e = Engine::new();
-    e.execute("view.set_latex_preamble", &json!({"preamble": "\\usepackage{bm}"}))
+    e.execute("file.open_data", &json!({"data": SPECIAL_FIG})).unwrap();
+    // The global preamble only starts new figures.
+    e.execute("view.set_latex_preamble", &json!({"preamble": "\\usepackage{bm}\n"}))
         .unwrap();
+    assert_eq!(e.doc().latex_preamble, "");
+    assert_eq!(e.latex.settings().tex_preamble(), "");
     e.execute(
         "doc.set_latex_preamble",
         &json!({"preamble": "\\usepackage{siunitx}\n"}),
     )
     .unwrap();
     assert_eq!(e.doc().latex_preamble, "\\usepackage{siunitx}");
-    assert_eq!(
-        e.latex.settings().tex_preamble(),
-        "\\usepackage{bm}\n\\usepackage{siunitx}"
-    );
+    assert_eq!(e.latex.settings().tex_preamble(), "\\usepackage{siunitx}");
     assert!(e.undo());
-    assert_eq!(e.latex.settings().tex_preamble(), "\\usepackage{bm}");
+    assert_eq!(e.latex.settings().tex_preamble(), "");
     assert!(e.redo());
 
-    // Saved in the Fig file and back on open; merging adds missing lines.
+    // Saved in the Fig file and back on open, without the global one.
     let data = e.execute("file.save_data", &json!({})).unwrap()["data"]
         .as_str()
         .unwrap()
         .to_string();
-    assert!(data.contains("# RustFigLaTeXPreamble \\usepackage{siunitx}"), "{data}");
+    assert!(
+        data.contains("# RustFigLaTeXPreamble \\usepackage{siunitx}\n"),
+        "{data}"
+    );
+    assert!(!data.contains("{bm}"), "{data}");
     e.execute("file.new", &json!({})).unwrap();
-    assert_eq!(e.latex.settings().document_preamble, "");
+    assert_eq!(
+        e.doc().latex_preamble,
+        "\\usepackage{bm}",
+        "a new figure starts with it"
+    );
+    assert_eq!(e.latex.settings().tex_preamble(), "\\usepackage{bm}");
     e.execute("file.open_data", &json!({"data": data})).unwrap();
-    assert_eq!(e.latex.settings().document_preamble, "\\usepackage{siunitx}");
+    assert_eq!(e.latex.settings().tex_preamble(), "\\usepackage{siunitx}");
+    e.execute("file.open_data", &json!({"data": SPECIAL_FIG})).unwrap();
+    assert_eq!(e.latex.settings().tex_preamble(), "", "no preamble added on open");
+
+    // Reapply to figure: replaces it, one undo step.
+    e.execute("doc.reapply_latex_preamble", &json!({})).unwrap();
+    assert_eq!(e.doc().latex_preamble, "\\usepackage{bm}");
+    assert!(e.undo());
+    assert_eq!(e.doc().latex_preamble, "");
 
     assert!(e
         .execute("doc.set_latex_preamble", &json!({"preamble": "x".repeat(9000)}))
         .is_err());
-    assert_eq!(e.doc().latex_preamble, "\\usepackage{siunitx}");
+}
+
+/// The preamble is written only when the figure has LaTeX texts.
+#[test]
+fn a_figure_without_latex_texts_saves_no_preamble() {
+    let mut e = Engine::new();
+    e.execute("doc.set_latex_preamble", &json!({"preamble": "\\usepackage{bm}"}))
+        .unwrap();
+    let data = e.execute("file.save_data", &json!({})).unwrap()["data"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert!(!data.contains("RustFigLaTeXPreamble"), "{data}");
+}
+
+#[test]
+fn an_unknown_command_points_to_the_figure_preamble() {
+    assert!(with_hint("Undefined control sequence.").contains("Page setup > LaTeX preamble"));
+    assert!(with_hint("LaTeX Error: Environment align undefined.").contains("Page setup"));
+    assert_eq!(with_hint("Missing $ inserted."), "Missing $ inserted.");
 }

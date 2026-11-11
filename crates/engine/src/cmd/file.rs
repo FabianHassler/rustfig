@@ -226,8 +226,10 @@ pub(super) fn commands() -> Vec<Command> {
 
 fn new(e: &mut Engine, _: &Value) -> CmdResult {
     let settings = e.doc().settings.clone();
+    let latex_preamble = e.new_figure_preamble();
     *e.doc_mut() = Document {
         settings,
+        latex_preamble,
         ..Document::new()
     };
     e.set_selection(Vec::new());
@@ -295,6 +297,7 @@ fn open(e: &mut Engine, p: &Value) -> CmdResult {
         let settings = e.doc().settings.clone();
         let doc = Document {
             settings,
+            latex_preamble: e.new_figure_preamble(),
             ..Document::new()
         };
         e.replace_document(doc, Some(path.clone()));
@@ -738,14 +741,12 @@ fn read_scale(doc: &mut Document, k: f64) {
     }
 }
 
-fn merge_doc(e: &mut Engine, mut other: Document, (dx, dy): (f64, f64)) -> CmdResult {
-    read_scale(&mut other, e.read_scale);
-    // The merged texts need the merged figure's preamble: add its lines
-    // that this figure lacks.
+/// The merged texts (a merged figure, a library object) need their figure's
+/// preamble: add its lines that this figure lacks.
+pub(crate) fn add_preamble_lines(e: &mut Engine, other: &str) {
     let missing: Vec<&str> = {
         let have: Vec<&str> = e.doc().latex_preamble.lines().map(str::trim).collect();
         other
-            .latex_preamble
             .lines()
             .filter(|l| !l.trim().is_empty() && !have.contains(&l.trim()))
             .collect()
@@ -762,6 +763,11 @@ fn merge_doc(e: &mut Engine, mut other: Document, (dx, dy): (f64, f64)) -> CmdRe
             e.doc_mut().latex_preamble = pre;
         }
     }
+}
+
+fn merge_doc(e: &mut Engine, mut other: Document, (dx, dy): (f64, f64)) -> CmdResult {
+    read_scale(&mut other, e.read_scale);
+    add_preamble_lines(e, &other.latex_preamble);
     let mut objects = mapped_objects(e, other);
     for o in &mut objects {
         o.translate(dx, dy);

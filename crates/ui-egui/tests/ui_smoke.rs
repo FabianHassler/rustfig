@@ -2923,10 +2923,16 @@ fn latex_preamble_survives_a_tab_switch() {
     h.run_steps(2);
     h.get_by_label("Files").click();
     h.run_steps(3);
-    assert_eq!(h.state().engine.latex.settings().preamble, "\\usepackage{siunitx}");
+    let global = |h: &egui_kittest::Harness<'_, App>| h.state().engine.prefs.rustfig.latex_preamble.clone();
+    assert_eq!(global(&h).as_deref(), Some("\\usepackage{siunitx}"));
     drawing_tab(&mut h);
     h.run_steps(3);
-    assert_eq!(h.state().engine.latex.settings().preamble, "\\usepackage{siunitx}");
+    assert_eq!(global(&h).as_deref(), Some("\\usepackage{siunitx}"));
+    // Only new figures get it, or the open one by Reapply to figure.
+    assert_eq!(h.state().engine.doc().latex_preamble, "");
+    h.get_by_label("Reapply to figure").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.doc().latex_preamble, "\\usepackage{siunitx}");
 }
 
 /// W10-25: tabs show their own rows; the filter field shows matches from

@@ -6,6 +6,7 @@ Letter
 100.00
 Single
 -2
+# RustFigLaTeXPreamble \usepackage{amsmath}
 1200 2
 # Normal distribution with the 68.27 / 95.45 / 99.73 % regions of +-1, 2, 3 sigma shaded as polygons under an X-spline density curve.
 0 32 #1f5fa8

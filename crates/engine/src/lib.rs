@@ -347,6 +347,21 @@ impl Engine {
         self.path.as_deref()
     }
 
+    /// The LaTeX preamble new figures start with: the user's, from the
+    /// settings. Opened files keep their own (none when they have none).
+    pub fn new_figure_preamble(&self) -> String {
+        latex_preview::tidy_preamble(self.prefs.rustfig.latex_preamble.as_deref().unwrap_or_default())
+    }
+
+    /// Give the blank figure of a start without a file the preamble new
+    /// figures start with (the settings are read after it was made).
+    pub fn seed_new_figure_preamble(&mut self) {
+        if self.path.is_none() && !self.modified && self.doc.objects.is_empty() && self.doc.latex_preamble.is_empty() {
+            self.doc.latex_preamble = self.new_figure_preamble();
+            self.bump_revision();
+        }
+    }
+
     pub fn set_path(&mut self, p: Option<String>) {
         self.path = p;
     }

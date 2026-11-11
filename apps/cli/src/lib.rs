@@ -15,8 +15,8 @@ const USAGE: &str = "usage:
         OUT: .fig/.rustfig save; otherwise an export language (fig2dev's -L names),
         from --format or the file's extension. convert writes what File > Export
         writes: the Export panel's settings saved for that language in your
-        settings file, the TeX program and preamble of your settings and the
-        figure's own. Flags change a panel setting for this run (never saved):
+        settings file, the TeX program of your settings and the figure's own
+        LaTeX preamble. Flags change a panel setting for this run (never saved):
           --border N (points; pixels for bitmaps)   --background N|none|#rrggbb
           --grid MINOR[:MAJOR] (1/4, 10, None)      --preview none|ascii|color|mono
           --page-mode | --no-page-mode              --offset X,Y (each in, cm or fig)
@@ -88,7 +88,7 @@ fn open(path: &str) -> Result<Engine, String> {
     Ok(e)
 }
 
-/// The user's settings file (TeX program and preamble, the Export panel's
+/// The user's settings file (TeX program, the Export panel's
 /// values per language), so convert writes what File > Export writes (F14).
 /// `defaults`: the panel's values start from RustFig's defaults instead.
 fn user_settings(e: &mut Engine, defaults: bool) {

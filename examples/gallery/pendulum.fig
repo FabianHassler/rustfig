@@ -6,6 +6,7 @@ Letter
 100.00
 Single
 -2
+# RustFigLaTeXPreamble \usepackage{amsmath}
 1200 2
 # Simple pendulum at a turning point: weight mg, tension T and the components of mg along and across the string; angle theta; hatched ceiling.
 0 32 #1f5fa8

@@ -117,6 +117,8 @@ pub struct LibObject {
     pub object: Object,
     /// Its top-left corner in the file.
     pub nw: Point,
+    /// The figure's LaTeX preamble, added to the drawing it is placed in.
+    pub latex_preamble: String,
 }
 
 /// Where the packages put the libraries, relative to the program's folder:
@@ -711,13 +713,18 @@ impl Engine {
 
     /// [`Engine::library_object`] in a library already found.
     pub fn library_object_in(&mut self, lib: &Library, name: &str) -> Result<LibObject, EngineError> {
-        let doc = read_figure(&lib.path, name).map_err(EngineError::bad_params)?;
+        let mut doc = read_figure(&lib.path, name).map_err(EngineError::bad_params)?;
+        let latex_preamble = std::mem::take(&mut doc.latex_preamble);
         let mut objs = crate::cmd::file::mapped_objects(self, doc);
         let object = objs
             .pop()
             .ok_or_else(|| EngineError::bad_params(format!("{name}.fig holds no objects")))?;
         let nw = nw_of(&object);
-        Ok(LibObject { object, nw })
+        Ok(LibObject {
+            object,
+            nw,
+            latex_preamble,
+        })
     }
 
     /// Library mode: the object follows the pointer (xfig's `put_selected`).

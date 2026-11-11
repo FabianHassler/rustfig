@@ -330,7 +330,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "LaTeX Preamble",
             menu: "",
             shortcut: "",
-            params: r#"{"preamble": string (added to the preamble of typeset texts)}"#,
+            params: r#"{"preamble": string (the LaTeX preamble new figures start with; doc.reapply_latex_preamble gives it to the open figure)}"#,
             mutates: false,
             enabled: always,
             run: |e, p| {
@@ -343,8 +343,6 @@ pub(super) fn commands() -> Vec<Command> {
                 }
                 e.prefs.rustfig.latex_preamble = Some(pre.to_string());
                 e.prefs_dirty = true;
-                e.prefs.apply_latex(e);
-                e.bump_revision();
                 Ok(json!({"preamble": pre}))
             },
         },

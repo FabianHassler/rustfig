@@ -384,6 +384,7 @@ fn place(e: &mut Engine, p: &Value) -> CmdResult {
         let nw = library::nw_of(&obj);
         obj.translate(x - nw.x, y - nw.y);
     }
+    super::file::add_preamble_lines(e, &lo.latex_preamble);
     let id = e.add_object(obj);
     e.set_selection(vec![id]);
     e.prefs.add_library_recent(&library, &name);

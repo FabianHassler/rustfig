@@ -334,7 +334,18 @@ pub(crate) fn restore_export_on_save(doc: &mut Document) {
     doc.comments = kept;
 }
 
+/// Written only when the figure has LaTeX (special) texts: a figure without
+/// them needs no preamble, and stays as xfig would write it.
 fn write_latex_preamble(out: &mut String, doc: &Document) {
+    let mut special = false;
+    doc.for_each_leaf(&mut |o| {
+        if let rustfig_model::ObjectKind::Text(t) = &o.kind {
+            special |= t.is_special();
+        }
+    });
+    if !special {
+        return;
+    }
     for line in doc.latex_preamble.lines() {
         let line = line.trim_end();
         if line.is_empty() {

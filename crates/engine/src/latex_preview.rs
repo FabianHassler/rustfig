@@ -37,21 +37,16 @@ pub struct PreviewSettings {
     pub enabled: bool,
     /// Program name or path; empty looks for `pdflatex`, then `lualatex`.
     pub program: String,
-    /// Added to the preamble (packages the figure's texts need).
-    pub preamble: String,
-    /// The open figure's own preamble ([`rustfig_model::Document::latex_preamble`]),
-    /// after `preamble`.
+    /// The open figure's own preamble ([`rustfig_model::Document::latex_preamble`]).
+    /// Typesetting depends on nothing else, so a figure typesets the same
+    /// everywhere; the user's preamble in the settings only starts new figures.
     pub document_preamble: String,
 }
 
 impl PreviewSettings {
-    /// The preamble TeX gets after [`BASE_PREAMBLE`]: the user's, then the figure's.
+    /// The preamble TeX gets after [`BASE_PREAMBLE`]: the figure's.
     pub fn tex_preamble(&self) -> String {
-        match (self.preamble.is_empty(), self.document_preamble.is_empty()) {
-            (_, true) => self.preamble.clone(),
-            (true, false) => self.document_preamble.clone(),
-            (false, false) => format!("{}\n{}", self.preamble, self.document_preamble),
-        }
+        self.document_preamble.clone()
     }
 }
 
@@ -60,7 +55,6 @@ impl Default for PreviewSettings {
         PreviewSettings {
             enabled: true,
             program: String::new(),
-            preamble: String::new(),
             document_preamble: String::new(),
         }
     }
@@ -144,7 +138,6 @@ impl LatexPreview {
 
     /// Change the settings; a change drops the cache.
     pub fn configure(&self, mut s: PreviewSettings) {
-        s.preamble.truncate(floor_boundary(&s.preamble, MAX_PREAMBLE_BYTES));
         s.document_preamble
             .truncate(floor_boundary(&s.document_preamble, MAX_PREAMBLE_BYTES));
         let mut cur = lock(&self.inner.settings);
@@ -614,12 +607,17 @@ pub fn find_tex(program: &str) -> Option<PathBuf> {
     None
 }
 
-/// The packages every typeset text gets, before the user's preamble.
-pub const BASE_PREAMBLE: &str = "\\usepackage{amsmath,amssymb,color,graphicx}";
+/// A preamble as figures keep it: lines without trailing blank lines.
+pub fn tidy_preamble(pre: &str) -> String {
+    pre.lines().collect::<Vec<_>>().join("\n").trim_end().to_string()
+}
 
-/// The LaTeX file for one text: the preamble the `pdftex` export's
-/// documents need (`amsmath`, `amssymb`, `color`, `graphicx`), the user's
-/// additions, and the text in a box whose size and depth go to `doc.dim`.
+/// The packages every typeset text gets, before the figure's preamble: what
+/// the `pdftex` export's overlay needs from the document that includes it.
+pub const BASE_PREAMBLE: &str = "\\usepackage{color,graphicx}";
+
+/// The LaTeX file for one text: [`BASE_PREAMBLE`], the figure's preamble,
+/// and the text in a box whose size and depth go to `doc.dim`.
 pub fn latex_document(preamble: &str, key_text: &str, font: i32, postscript: bool, size: f64, rgb: [u8; 3]) -> String {
     format!(
         "{}{}{}",
@@ -845,8 +843,19 @@ fn tex_error(log: &std::path::Path) -> String {
     let text = read_limited(log).map(|b| String::from_utf8_lossy(&b).into_owned());
     text.as_deref()
         .and_then(|t| t.lines().find(|l| l.starts_with('!')))
-        .map(|l| shorten(l.trim_start_matches('!').trim(), 80))
+        .map(|l| with_hint(&shorten(l.trim_start_matches('!').trim(), 80)))
         .unwrap_or_else(|| "TeX failed".to_string())
+}
+
+/// A TeX error, with where the missing package goes when the error is an
+/// unknown command or environment (texts get no packages besides
+/// [`BASE_PREAMBLE`] and the figure's own preamble).
+pub fn with_hint(err: &str) -> String {
+    if err.starts_with("Undefined control sequence") || (err.contains("Environment") && err.ends_with("undefined.")) {
+        format!("{err} (a package missing? add it in Edit > Page setup > LaTeX preamble)")
+    } else {
+        err.to_string()
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]

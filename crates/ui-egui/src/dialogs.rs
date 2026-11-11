@@ -2079,13 +2079,18 @@ fn flush_latex_drafts(app: &mut App, ctx: &egui::Context) {
     if program_edited && program != settings.program {
         app.run("view.set_latex_program", json!({ "program": program.trim() }));
     }
-    if preamble_edited && preamble != settings.preamble {
+    if preamble_edited && preamble != global_preamble(app) {
         app.run("view.set_latex_preamble", json!({ "preamble": preamble }));
     }
     ctx.data_mut(|d| d.remove::<(String, String, bool, bool)>(latex_draft_id()));
 }
 
-/// TeX program and the preamble added to every typeset text.
+/// The preamble new figures start with, as the settings hold it.
+fn global_preamble(app: &App) -> String {
+    app.engine.prefs.rustfig.latex_preamble.clone().unwrap_or_default()
+}
+
+/// TeX program and the preamble new figures start with.
 fn latex_settings(app: &mut App, ui: &mut egui::Ui) {
     use rustfig_engine::latex_preview::BASE_PREAMBLE;
     ui.label(egui::RichText::new("LaTeX text").strong());
@@ -2105,7 +2110,7 @@ fn latex_settings(app: &mut App, ui: &mut egui::Ui) {
     // was chosen, so the field was not drawn and lost its focus unseen).
     let (mut program, mut preamble, mut program_edited, mut preamble_edited): (String, String, bool, bool) = ui
         .data(|d| d.get_temp(id))
-        .unwrap_or_else(|| (settings.program.clone(), settings.preamble.clone(), false, false));
+        .unwrap_or_else(|| (settings.program.clone(), global_preamble(app), false, false));
     // No Apply button: a field takes effect when you leave it (typesetting
     // on every key would run TeX for each letter).
     let program_field = ui
@@ -2135,7 +2140,7 @@ fn latex_settings(app: &mut App, ui: &mut egui::Ui) {
         })
         .small(),
     );
-    ui.label("Preamble (after the packages every text gets; used when you leave the field):");
+    ui.label("Preamble of new figures (saved in a figure's file; besides it, every text gets only the line below):");
     ui.label(egui::RichText::new(BASE_PREAMBLE).monospace().small());
     let preamble_field = ui.add(
         egui::TextEdit::multiline(&mut preamble)
@@ -2147,7 +2152,7 @@ fn latex_settings(app: &mut App, ui: &mut egui::Ui) {
     preamble_field.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "LaTeX preamble"));
     preamble_edited |= preamble_field.changed();
     if preamble_edited && !preamble_field.has_focus() {
-        if preamble != settings.preamble {
+        if preamble != global_preamble(app) {
             app.run("view.set_latex_preamble", serde_json::json!({ "preamble": preamble }));
         }
         preamble_edited = false;
@@ -2157,10 +2162,22 @@ fn latex_settings(app: &mut App, ui: &mut egui::Ui) {
         program = app.engine.latex.settings().program;
     }
     if !preamble_edited && !preamble_field.has_focus() {
-        preamble = app.engine.latex.settings().preamble;
+        preamble = global_preamble(app);
     }
     ui.horizontal(|ui| {
-        ui.label("This figure's own preamble, saved in its file, is in");
+        // The field's draft is applied first, so the figure gets what it shows.
+        if ui
+            .button("Reapply to figure")
+            .on_hover_text("Replace this figure's preamble with this one (undoable)")
+            .clicked()
+        {
+            if preamble != global_preamble(app) {
+                app.run("view.set_latex_preamble", serde_json::json!({ "preamble": preamble }));
+            }
+            preamble_edited = false;
+            app.run("doc.reapply_latex_preamble", json!({}));
+        }
+        ui.label("This figure's own preamble is in");
         if ui.button("Page setup…").clicked() {
             app.run("app.document_settings", json!({}));
         }
@@ -2343,8 +2360,7 @@ fn figure_comments_dialog(app: &mut App, ctx: &egui::Context) {
                         ui.end_row();
                     });
                 ui.label(
-                    egui::RichText::new("The preamble is saved in the figure, after the one in Global settings.")
-                        .small(),
+                    egui::RichText::new("The preamble is saved in the figure; its LaTeX texts get no other.").small(),
                 );
                 ui.separator();
                 ui.horizontal(|ui| {
@@ -4153,9 +4169,7 @@ const FIGURE_PREAMBLE_DRAFT: &str = "page_setup_figure_preamble";
 fn figure_preamble_editor(saved: &str, ui: &mut egui::Ui, cmds: &mut Vec<(&str, Value)>) {
     let id = egui::Id::new(FIGURE_PREAMBLE_DRAFT);
     let mut draft: String = ui.data(|d| d.get_temp(id)).unwrap_or_else(|| saved.to_string());
-    ui.label(
-        "LaTeX preamble of this figure (saved in its file, after the global preamble of Global settings > LaTeX text):",
-    );
+    ui.label("LaTeX preamble of this figure (saved in its file; its LaTeX texts get no other):");
     let field = ui.add(
         egui::TextEdit::multiline(&mut draft)
             .code_editor()

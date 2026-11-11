@@ -21,7 +21,7 @@ Setup (installing RustFig and adding the server to Claude Code, Claude Desktop, 
 ## Workflow
 
 1. **Start clean or open a file.** `file.new {}` or `file.open {"path": "/abs/path/figure.fig"}`. Use absolute paths: the server's working folder is the client's.
-2. **Set the document first.** Units and paper: `doc.set_units {"units": "metric"}`, `doc.set_paper {"paper": "A4"}`. When labels use LaTeX packages or macros, set the preamble before drawing them: `view.set_latex_preamble {"preamble": "\\usepackage{bm}"}`.
+2. **Set the document first.** Units and paper: `doc.set_units {"units": "metric"}`, `doc.set_paper {"paper": "A4"}`. When labels use LaTeX packages or macros (also `amsmath` for `\\text`, `\\dfrac`), set the figure's preamble before drawing them: `doc.set_latex_preamble {"preamble": "\\usepackage{amsmath,bm}"}`. It is saved in the .fig, and a figure's texts get no other packages (only `color` and `graphicx`).
 3. **Draw** with `shape.*`, `plot.add` and the other commands. Compute coordinates instead of estimating them, especially for symmetric shapes and curves.
 4. **Check** with `object.list {}` (id, type, depth and bounds of every object; with TeX installed, LaTeX texts measure as typeset) and `rustfig_render`. Bounds catch shapes that are off-center or too large, which a small preview hides. Read the warnings next to the image.
 5. **Save**: `file.save {"path": "/abs/path/figure.fig"}`. Nothing reaches the disk before this.
@@ -73,7 +73,7 @@ A text with the **TeX flag** (`special: true`) is LaTeX source. It is typeset by
 
 - Pass `special: true` and leave out `postscript` and `font`, so the text is set in the document's own LaTeX font. With `postscript: true` fig2dev sets it in a PostScript font (Times for font 0).
 - Write one backslash per LaTeX command in the actual string, which is `\\` inside JSON. The saved .fig file doubles it again (`$\\alpha$`), which is normal.
-- Macros from packages or the user's own macros need `view.set_latex_preamble`. Otherwise TeX reports `Undefined control sequence`, the text shows as its source, and the warning names the text.
+- Macros from packages (including `amsmath`) or the user's own macros need `doc.set_latex_preamble`. Otherwise TeX reports `Undefined control sequence`, the text shows as its source, and the warning names the text.
 - The `x, y` of a text is its baseline point at the justification (left end, center or right end).
 - `rustfig_render` with `latex: false` shows the source instead of typesetting it, which is quick for checking positions. For small overlaps, render at `dpi` 200–300 (up to 600).
 

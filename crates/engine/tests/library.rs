@@ -251,6 +251,40 @@ fn a_figure_copied_to_the_user_library_is_listed_and_placeable() {
     let _ = std::fs::remove_dir_all(&user);
 }
 
+/// A library figure's LaTeX preamble comes along with the object: the lines
+/// the drawing lacks are added, one undo step with the placing.
+#[test]
+fn a_placed_object_brings_its_latex_preamble() {
+    let user = scratch("preamble");
+    std::fs::write(
+        user.join("ket.fig"),
+        "#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n\
+# RustFigLaTeXPreamble \\usepackage{braket}\n\
+# RustFigLaTeXPreamble \\usepackage{amsmath}\n1200 2\n\
+4 0 0 50 -1 0 12 0.0000 2 135 300 1200 1200 $\\ket{0}$\\001\n",
+    )
+    .unwrap();
+    let mut e = engine_with_user_dir(&user);
+    e.execute("doc.set_latex_preamble", &json!({"preamble": "\\usepackage{amsmath}"}))
+        .unwrap();
+    let lib = e.execute("library.list", &json!({})).unwrap()["libraries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|l| l["user"] == true)
+        .unwrap()["name"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    e.execute("library.place", &json!({"library": lib, "name": "ket", "x": 0, "y": 0}))
+        .unwrap();
+    assert_eq!(e.doc().latex_preamble, "\\usepackage{amsmath}\n\\usepackage{braket}");
+    assert!(e.undo());
+    assert_eq!(e.doc().latex_preamble, "\\usepackage{amsmath}");
+    assert!(e.doc().objects.is_empty());
+    let _ = std::fs::remove_dir_all(&user);
+}
+
 #[test]
 fn hostile_library_params_fail_cleanly() {
     let user = scratch("hostile");

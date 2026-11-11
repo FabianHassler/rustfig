@@ -86,8 +86,17 @@ fn export_on_save_comment_roundtrips_and_garbage_stays_a_comment() {
 
 #[test]
 fn latex_preamble_roundtrips_as_comment_lines() {
-    let mut doc = read_fig(SAMPLE).unwrap();
-    doc.latex_preamble = "\\usepackage{siunitx}\n\n  \\newcommand{\\ket}[1]{|#1\\rangle}".to_string();
+    let preamble = "\\usepackage{siunitx}\n\n  \\newcommand{\\ket}[1]{|#1\\rangle}";
+    // Written only for a figure with LaTeX (special) texts.
+    let mut plain = read_fig(SAMPLE).unwrap();
+    plain.latex_preamble = preamble.to_string();
+    assert!(!write_fig(&plain).contains("RustFigLaTeXPreamble"));
+    let mut doc = read_fig(
+        b"#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n\
+4 0 0 50 -1 0 12 0.0000 2 135 300 1200 1200 $x$\\001\n",
+    )
+    .unwrap();
+    doc.latex_preamble = preamble.to_string();
     let out = write_fig(&doc);
     assert!(out.contains("# RustFigLaTeXPreamble \\usepackage{siunitx}\n"), "{out}");
     let back = read_fig(out.as_bytes()).unwrap();
