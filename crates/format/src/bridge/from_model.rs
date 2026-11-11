@@ -149,7 +149,7 @@ fn transparent_name(ctx: &Ctx, number: i32) -> String {
 pub fn from_model(doc: &Document) -> Figure {
     let mut ctx = context(doc);
     let mut objects = compound_of(&doc.objects, &ctx, 0);
-    objects.comments = comments(&doc.comments);
+    objects.comments = whole_figure_comments(doc);
     note_usage(&mut ctx, &objects);
     Figure { ctx, objects }
 }
@@ -190,6 +190,19 @@ fn repair_lines(c: &mut Compound) {
         }
     }
     c.compounds.iter_mut().for_each(repair_lines);
+}
+
+/// The figure's comment lines as the saved file has them: the user's, then
+/// the LaTeX preamble's (`crate::fig_write::latex_preamble_comments`).
+pub(super) fn whole_figure_comments_text(doc: &Document) -> Vec<String> {
+    let mut lines = doc.comments.clone();
+    lines.extend(crate::fig_write::latex_preamble_comments(doc));
+    lines
+}
+
+/// [`whole_figure_comments_text`] for fig2dev.
+pub(super) fn whole_figure_comments(doc: &Document) -> Vec<f::Comment> {
+    comments(&whole_figure_comments_text(doc))
 }
 
 pub(super) fn comments(lines: &[String]) -> Vec<f::Comment> {

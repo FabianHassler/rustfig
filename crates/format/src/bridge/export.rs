@@ -15,7 +15,8 @@
 //! [`apply_font_size`](fig2dev::read::apply_font_size)), not a copy.
 
 use super::from_model::{
-    comments, context, give_children, note_arc, note_ellipse, note_line, note_spline, note_text, object_at, FigObject,
+    context, give_children, note_arc, note_ellipse, note_line, note_spline, note_text, object_at,
+    whole_figure_comments, whole_figure_comments_text, FigObject,
 };
 use fig2dev::gendev::MAX_USR_COLS;
 use fig2dev::object::Compound;
@@ -33,7 +34,7 @@ use std::cell::Cell;
 /// `None`: use the text path (see the module doc); `ctx` is then
 /// unspecified.
 pub fn export_objects(doc: &Document, ctx: &mut Ctx) -> Option<Compound> {
-    if ctx.input_encoding.is_some() || !colors_regular(doc) || !comments_ok(&doc.comments) {
+    if ctx.input_encoding.is_some() || !colors_regular(doc) || !comments_ok(&whole_figure_comments_text(doc)) {
         return None;
     }
     let header = context(doc);
@@ -84,7 +85,7 @@ pub fn export_objects(doc: &Document, ctx: &mut Ctx) -> Option<Compound> {
     if odd.get() || ctx.messages.len() != before {
         return None;
     }
-    objects.comments = comments(&doc.comments);
+    objects.comments = whole_figure_comments(doc);
     Some(objects)
 }
 

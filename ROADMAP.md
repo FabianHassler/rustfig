@@ -20,7 +20,7 @@ saves and exports. The web build compiles; it is not yet packaged or tested in a
 | Overall parity (weighted) | ≈95 % (94.7) |
 | Commands (all reachable from the control channel and MCP) | 257 engine (incl. the tool modes and "no mode") + 43 UI |
 | Interactive tools (xfig modes) | 44 (xfig's 43 + Trim/Split/Extend) |
-| Tests | 1,166 passing in `cargo xtask ci` (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
+| Tests | 1,167 passing in `cargo xtask ci` (unit, integration, property-based fuzzing, headless UI, fig2dev reference comparison) |
 | Fig format | read 1.3–3.2, write 3.2 |
 | Export formats | all through fig2dev's ported drivers (`convert`): PDF, SVG, EPS, PNG, GIF, JPEG, TIFF, PPM, PCX, XBM, XPM, EPS+PDF pair, LaTeX box from its scene writers (PostScript without page layout yet); LaTeX picture, epic/eepic/eepicemu, PiCTeX, TeXtyl, tpic, pic, pstex/pdftex, pict2e, CGM, HPGL, DXF, MetaPost, METAFONT, ge, image map, Gerber, shape, TikZ, PSTricks, EMF, Tk/Perl-Tk from ported fig2dev drivers (every fig2dev language except `sld`), plus Asymptote (`asy`, B16, not in C fig2dev); imports: PDF and SVG as editable objects (G5, G7); fig2dev's own suite 88 pass / 0 fail / 1 skipped; SVG byte-identical with C fig2dev on 284 of 299 sample figures |
 | Perf, 50k paths (render fit / hit test / open / edit + undo) | 260 ms / 0.1 ms / 20 ms / 0.9 ms |
@@ -73,6 +73,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-11-11 | **F22, fig2dev v0.9.16**: the figure's LaTeX preamble goes into the complete documents of `tikz`, `pict2e`, `pstricks` (`-P`) and into `asy` (`texpreamble`); what C fig2dev writes is unchanged. fig2dev v0.9.14 and v0.9.15 retagged (author fixed, trees unchanged). |
 | 2026-11-11 | **F21**: `rustfig-cli convert` depends only on the file and its flags: the Export panel's defaults, the figure's preamble, TeX from the `PATH` (`--tex`); the settings file is no longer read. |
 | 2026-11-11 | **F20**: a figure typesets with its own LaTeX preamble only (plus `color,graphicx`); `amsmath,amssymb` no longer implicit; the global preamble starts new figures and Reapply to figure (`doc.reapply_latex_preamble`) gives it to the open one; library objects bring their preamble lines; four gallery figures carry `\usepackage{amsmath}`. F21 (convert without the settings file) and F22 (fig2dev reads the preamble in `-P` and `asy`) planned. 1 engine command. |
 | 2026-11-11 | **fig2dev v0.9.15** (P12 follow-up): four more C fig2dev bugs fixed instead of copied: tpic tints and patterns as Fig 3.2, CGM `-r` kept by later options, Gerber apertures reused, CRLF in multi-line texts. |

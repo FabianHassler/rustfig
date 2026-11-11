@@ -13,9 +13,9 @@ use std::fmt::Write as _;
 /// comments and read back into the model, not shown as a user comment.
 const EXPORT_ON_SAVE_MARKER: &str = "RustFigExportOnSave";
 
-/// The whole-figure comment lines that carry [`Document::latex_preamble`],
-/// one per preamble line, after the export-on-save line.
-const LATEX_PREAMBLE_MARKER: &str = "RustFigLaTeXPreamble";
+// The whole-figure comment lines that carry `Document::latex_preamble`,
+// one per preamble line, after the export-on-save line.
+use fig2dev::gendev::LATEX_PREAMBLE_MARKER;
 
 fn i(v: f64) -> i64 {
     if v.is_finite() {
@@ -334,9 +334,18 @@ pub(crate) fn restore_export_on_save(doc: &mut Document) {
     doc.comments = kept;
 }
 
-/// Written only when the figure has LaTeX (special) texts: a figure without
-/// them needs no preamble, and stays as xfig would write it.
 fn write_latex_preamble(out: &mut String, doc: &Document) {
+    for line in latex_preamble_comments(doc) {
+        let _ = writeln!(out, "# {line}");
+    }
+}
+
+/// The whole-figure comment lines (without `# `) that carry
+/// [`Document::latex_preamble`]: written to the file, and handed to
+/// fig2dev's drivers with the figure's comments, so an export reads them as
+/// fig2dev reads the saved file. Only for a figure with LaTeX (special)
+/// texts: one without them needs no preamble, and stays as xfig writes it.
+pub(crate) fn latex_preamble_comments(doc: &Document) -> Vec<String> {
     let mut special = false;
     doc.for_each_leaf(&mut |o| {
         if let rustfig_model::ObjectKind::Text(t) = &o.kind {
@@ -344,16 +353,15 @@ fn write_latex_preamble(out: &mut String, doc: &Document) {
         }
     });
     if !special {
-        return;
+        return Vec::new();
     }
-    for line in doc.latex_preamble.lines() {
-        let line = line.trim_end();
-        if line.is_empty() {
-            let _ = writeln!(out, "# {LATEX_PREAMBLE_MARKER}");
-        } else {
-            let _ = writeln!(out, "# {LATEX_PREAMBLE_MARKER} {line}");
-        }
-    }
+    doc.latex_preamble
+        .lines()
+        .map(|line| match line.trim_end() {
+            "" => LATEX_PREAMBLE_MARKER.to_string(),
+            line => format!("{LATEX_PREAMBLE_MARKER} {line}"),
+        })
+        .collect()
 }
 
 /// Take [`Document::latex_preamble`] out of a Fig file's whole-figure
