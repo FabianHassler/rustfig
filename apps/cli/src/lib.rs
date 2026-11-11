@@ -11,15 +11,23 @@ use std::process::ExitCode;
 use std::time::Instant;
 
 const USAGE: &str = "usage:
-  rustfig-cli convert IN OUT [--format LANG] [--magnification PCT] [--dpi N] [--margin FIGUNITS] [--background #rrggbb]
-                             [--latex | --no-latex] [--option KEY=VALUE]...
+  rustfig-cli convert IN OUT [--format LANG] [--magnification PCT] [--defaults] [Export panel flags] [--option KEY=VALUE]...
         OUT: .fig/.rustfig save; otherwise an export language (fig2dev's -L names),
-        from --format or the file's extension; --option passes one of fig2dev's
-        options by name or letter (border=10, g=lightblue, N=true, Z=4w).
-        LaTeX texts (TeX flag) are typeset by TeX when pdflatex or lualatex is
-        found (PDF, EPS, PS, SVG, bitmaps), with the preamble of your settings
-        and the figure's own; --no-latex draws their source, --latex warns
-        when no TeX is found
+        from --format or the file's extension. convert writes what File > Export
+        writes: the Export panel's settings saved for that language in your
+        settings file, the TeX program and preamble of your settings and the
+        figure's own. Flags change a panel setting for this run (never saved):
+          --border N (points; pixels for bitmaps)   --background N|none|#rrggbb
+          --grid MINOR[:MAJOR] (1/4, 10, None)      --preview none|ascii|color|mono
+          --page-mode | --no-page-mode              --offset X,Y (each in, cm or fig)
+          --overlap | --no-overlap                  --dpi N   --smoothing none|some|more
+          --quality N   --transparent N|none|background|#rrggbb
+          --embed | --no-embed   --latex | --no-latex (typeset LaTeX texts with TeX)
+          --hpgl-font, --hpgl-pcl (and --no-...)    --asy-splines guide|hobby|exact
+        --defaults starts from RustFig's panel defaults instead of the saved ones;
+        formats LANG lists the flags a language takes. --option passes one of
+        fig2dev's options by name or letter (g=lightblue, N=true, Z=4w);
+        --margin FIGUNITS adds a margin in Fig units
   rustfig-cli formats [LANG]        list the export languages, or one language's options
   rustfig-cli info FILE
   rustfig-cli thumbnail IN OUT.png [--size N]   fit the figure into N x N pixels (default 256; the file manager thumbnailer)
@@ -80,55 +88,253 @@ fn open(path: &str) -> Result<Engine, String> {
     Ok(e)
 }
 
-/// The user's TeX program and preamble from the settings file, so LaTeX
-/// texts come out as on the canvas.
-fn latex_settings(e: &mut Engine) {
+/// The user's settings file (TeX program and preamble, the Export panel's
+/// values per language), so convert writes what File > Export writes (F14).
+/// `defaults`: the panel's values start from RustFig's defaults instead.
+fn user_settings(e: &mut Engine, defaults: bool) {
     #[cfg(not(target_arch = "wasm32"))]
     if let Some(text) = rustfig_engine::prefs::config_path().and_then(|p| std::fs::read_to_string(p).ok()) {
-        // A damaged settings file only loses its LaTeX settings here.
+        // A damaged settings file is left out, as the app does after its warning.
         if let Ok((p, _)) = rustfig_engine::prefs::Prefs::parse(&text) {
-            e.prefs.rustfig.latex_program = p.rustfig.latex_program;
-            e.prefs.rustfig.latex_preamble = p.rustfig.latex_preamble;
+            e.prefs = p;
         }
+    }
+    if defaults {
+        e.prefs.rustfig.export.clear();
+        e.prefs.xfig.remove("export_margin");
     }
     e.prefs.apply_latex(e);
 }
 
-fn convert(args: &[String]) -> Result<(), String> {
+type JsonMap = serde_json::Map<String, Value>;
+
+/// The Export panel's rows as convert's flags: (flag, takes a value).
+const PANEL_FLAGS: &[(&str, bool)] = &[
+    ("--border", true),
+    ("--background", true),
+    ("--grid", true),
+    ("--preview", true),
+    ("--page-mode", false),
+    ("--no-page-mode", false),
+    ("--offset", true),
+    ("--overlap", false),
+    ("--no-overlap", false),
+    ("--dpi", true),
+    ("--smoothing", true),
+    ("--quality", true),
+    ("--transparent", true),
+    ("--embed", false),
+    ("--no-embed", false),
+    ("--latex", false),
+    ("--no-latex", false),
+    ("--hpgl-font", false),
+    ("--no-hpgl-font", false),
+    ("--hpgl-pcl", false),
+    ("--no-hpgl-pcl", false),
+    ("--asy-splines", true),
+];
+
+/// Other flags of convert: (flag, takes a value).
+const CONVERT_FLAGS: &[(&str, bool)] = &[
+    ("--format", true),
+    ("--magnification", true),
+    ("--margin", true),
+    ("--option", true),
+    ("--defaults", false),
+];
+
+fn number(flag: &str, v: &str) -> Result<f64, String> {
+    v.trim()
+        .parse::<f64>()
+        .ok()
+        .filter(|n| n.is_finite())
+        .ok_or_else(|| format!("{flag} needs a number, not {v:?}"))
+}
+
+fn color_number(flag: &str, v: &str) -> Result<i64, String> {
+    v.trim()
+        .parse::<i64>()
+        .ok()
+        .filter(|n| (0..=2047).contains(n))
+        .ok_or_else(|| format!("{flag} needs a color number (0-31 or a user color), none or #rrggbb, not {v:?}"))
+}
+
+/// An offset with its unit (`1.5`, `2cm`, `600fig`): the panel's value and
+/// unit (0 in, 1 cm, 2 Fig units).
+fn offset(flag: &str, v: &str) -> Result<(f64, u8), String> {
+    let v = v.trim();
+    for (suffix, unit) in [("in", 0), ("cm", 1), ("fig", 2)] {
+        if let Some(n) = v.strip_suffix(suffix) {
+            return Ok((number(flag, n)?, unit));
+        }
+    }
+    Ok((number(flag, v)?, 0))
+}
+
+/// Convert's flags as the Export panel's settings (`export_panel::merge`
+/// checks them as for `file.export`'s `panel`), plus the values that go
+/// straight into `file.export` (a background or transparent color given as
+/// #rrggbb).
+fn panel_overrides(args: &[String]) -> Result<(JsonMap, JsonMap), String> {
+    let mut s = serde_json::Map::new();
+    let mut direct = serde_json::Map::new();
+    let mut i = 0;
+    while i < args.len() {
+        let flag = args.get(i).map(String::as_str).unwrap_or_default();
+        let Some(&(_, takes)) = PANEL_FLAGS.iter().chain(CONVERT_FLAGS).find(|(f, _)| *f == flag) else {
+            return Err(format!("unknown flag {flag:?}\n{USAGE}"));
+        };
+        let v = if takes {
+            i += 1;
+            args.get(i).ok_or_else(|| format!("{flag} needs a value"))?.as_str()
+        } else {
+            ""
+        };
+        i += 1;
+        let mut set = |k: &str, val: Value| {
+            s.insert(k.to_string(), val);
+        };
+        match flag {
+            "--border" => set("border", json!(number(flag, v)?)),
+            "--background" if v.eq_ignore_ascii_case("none") => set("background", json!(-1)),
+            "--background" if v.starts_with('#') => {
+                direct.insert("background".into(), json!(v));
+            }
+            "--background" => set("background", json!(color_number(flag, v)?)),
+            "--grid" => {
+                let (minor, major) = v.split_once(':').unwrap_or((v, "None"));
+                let none = |g: &str| {
+                    if g.trim().is_empty() {
+                        "None".to_string()
+                    } else {
+                        g.trim().to_string()
+                    }
+                };
+                set("grid_minor", json!(none(minor)));
+                set("grid_major", json!(none(major)));
+            }
+            "--preview" => {
+                let n = ["none", "ascii", "color", "mono"]
+                    .iter()
+                    .position(|p| p.eq_ignore_ascii_case(v))
+                    .ok_or_else(|| format!("--preview needs none, ascii, color or mono, not {v:?}"))?;
+                set("preview", json!(n));
+            }
+            "--page-mode" | "--no-page-mode" => set("pdf_page_mode", json!(flag == "--page-mode")),
+            "--offset" => {
+                let (x, y) = v
+                    .split_once(',')
+                    .ok_or("--offset needs X,Y (each with in, cm or fig)")?;
+                let ((x, xu), (y, yu)) = (offset(flag, x)?, offset(flag, y)?);
+                set("x_offset", json!(x));
+                set("x_unit", json!(xu));
+                set("y_offset", json!(y));
+                set("y_unit", json!(yu));
+            }
+            "--overlap" | "--no-overlap" => set("overlap", json!(flag == "--overlap")),
+            "--dpi" => set("dpi", json!(number(flag, v)?)),
+            "--smoothing" => {
+                let n = match v.to_ascii_lowercase().as_str() {
+                    "none" | "1" => 1,
+                    "some" | "2" => 2,
+                    "more" | "4" => 4,
+                    _ => return Err(format!("--smoothing needs none, some or more (1, 2, 4), not {v:?}")),
+                };
+                set("smoothing", json!(n));
+            }
+            "--quality" => set("quality", json!(number(flag, v)?.round().clamp(1.0, 100.0) as u32)),
+            "--transparent" if v.eq_ignore_ascii_case("none") => {
+                set("transparent", json!(rustfig_engine::export_panel::TRANSP_NONE))
+            }
+            "--transparent" if v.eq_ignore_ascii_case("background") => {
+                set("transparent", json!(rustfig_engine::export_panel::TRANSP_BACKGROUND))
+            }
+            "--transparent" if v.starts_with('#') => {
+                direct.insert("options".into(), json!({ "t": v }));
+            }
+            "--transparent" => set("transparent", json!(color_number(flag, v)?)),
+            "--embed" | "--no-embed" => set("embed", json!(flag == "--embed")),
+            "--latex" | "--no-latex" => set("typeset_latex", json!(flag == "--latex")),
+            "--hpgl-font" | "--no-hpgl-font" => set("hpgl_font", json!(flag == "--hpgl-font")),
+            "--hpgl-pcl" | "--no-hpgl-pcl" => set("hpgl_pcl", json!(flag == "--hpgl-pcl")),
+            "--asy-splines" => {
+                if !rustfig_engine::export_panel::ASY_SPLINES.contains(&v) {
+                    return Err(format!("--asy-splines needs guide, hobby or exact, not {v:?}"));
+                }
+                set("asy_splines", json!(v));
+            }
+            _ => {}
+        }
+    }
+    Ok((s, direct))
+}
+
+/// The panel flags language `id` takes (its Export panel rows).
+fn panel_flags_for(id: &str) -> Vec<&'static str> {
+    let r = rustfig_engine::export_panel::rows(id);
+    let mut v = Vec::new();
+    let mut add = |on: bool, flags: &[&'static str]| {
+        if on {
+            v.extend_from_slice(flags);
+        }
+    };
+    add(r.border, &["--border"]);
+    add(r.background, &["--background"]);
+    add(r.grid, &["--grid"]);
+    add(r.preview, &["--preview"]);
+    add(r.pdf_page_mode, &["--page-mode"]);
+    add(id == "ps" || r.pdf_page_mode, &["--offset"]);
+    add(r.multiple, &["--overlap"]);
+    add(r.bitmap, &["--dpi", "--smoothing"]);
+    add(r.quality, &["--quality"]);
+    add(r.transparent, &["--transparent"]);
+    add(r.embed, &["--embed"]);
+    add(r.typeset_latex, &["--latex"]);
+    add(r.hpgl, &["--hpgl-font", "--hpgl-pcl"]);
+    add(r.asy, &["--asy-splines"]);
+    v
+}
+
+/// `rustfig-cli convert ARGS…` (public for the tests).
+pub fn convert(args: &[String]) -> Result<(), String> {
     let (Some(input), Some(output)) = (args.first(), args.get(1)) else {
         return Err(USAGE.into());
     };
+    let flags = args.get(2..).unwrap_or_default();
+    let (panel, direct) = panel_overrides(flags)?;
     let mut e = open(input)?;
-    latex_settings(&mut e);
+    user_settings(&mut e, flags.iter().any(|a| a == "--defaults"));
     let lower = output.to_ascii_lowercase();
     if lower.ends_with(".fig") || lower.ends_with(".rustfig") || lower.ends_with(".xfig") {
         e.execute("file.save", &json!({ "path": output }))
             .map_err(|e| e.message)?;
         return Ok(());
     }
-    let mut p = json!({ "path": output });
-    for (flag, key) in [
-        ("--magnification", "magnification"),
-        ("--dpi", "dpi"),
-        ("--margin", "margin"),
-    ] {
-        if let Some(v) = opt(args, flag) {
-            let n: f64 = v.parse().map_err(|_| format!("{flag} needs a number"))?;
-            p[key] = json!(n);
-        }
+    // What the Export panel sends: the figure's magnification, both layer
+    // choices off (no hidden depths here) and the panel's values for the
+    // language, the saved ones with the flags laid over them.
+    let mut p = json!({
+        "path": output,
+        "magnification": e.doc().settings.magnification,
+        "active_layers_only": false,
+        "whole_figure_bounds": false,
+        "panel": Value::Object(panel),
+    });
+    if let Some(m) = opt(flags, "--magnification") {
+        p["magnification"] = json!(number("--magnification", &m)?);
     }
-    if let Some(bg) = opt(args, "--background") {
-        p["background"] = json!(bg);
+    if let Some(m) = opt(flags, "--margin") {
+        p["margin"] = json!(number("--margin", &m)?);
     }
-    if let Some(f) = opt(args, "--format") {
+    if let Some(f) = opt(flags, "--format") {
         p["format"] = json!(f);
     }
     let mut options = serde_json::Map::new();
-    for (i, a) in args.iter().enumerate() {
+    for (i, a) in flags.iter().enumerate() {
         if a != "--option" {
             continue;
         }
-        let kv = args.get(i + 1).ok_or("--option needs KEY=VALUE")?;
+        let kv = flags.get(i + 1).ok_or("--option needs KEY=VALUE")?;
         let (k, v) = kv.split_once('=').unwrap_or((kv.as_str(), "true"));
         // Numbers stay text: the engine reads them, and depth lists like
         // -5 or titles like 2024 must stay as written.
@@ -139,15 +345,19 @@ fn convert(args: &[String]) -> Result<(), String> {
         };
         options.insert(k.to_string(), value);
     }
-    if !options.is_empty() {
-        p["options"] = serde_json::Value::Object(options);
+    for (k, v) in direct {
+        match (k.as_str(), v) {
+            ("options", Value::Object(o)) => {
+                for (ok, ov) in o {
+                    options.entry(ok).or_insert(ov);
+                }
+            }
+            (_, v) => p[k] = v,
+        }
     }
-    let latex = if args.iter().any(|a| a == "--no-latex") {
-        false
-    } else {
-        args.iter().any(|a| a == "--latex") || e.latex.program().is_some()
-    };
-    p["typeset_latex"] = json!(latex);
+    if !options.is_empty() {
+        p["options"] = Value::Object(options);
+    }
     let r = e.execute("file.export", &p).map_err(|e| e.message)?;
     for w in r["warnings"].as_array().into_iter().flatten().filter_map(Value::as_str) {
         eprintln!("rustfig-cli: {w}");
@@ -169,6 +379,10 @@ fn formats(lang: Option<&str>) -> Result<(), String> {
             f["id"].as_str().unwrap_or_default()
         );
         let id = f["id"].as_str().unwrap_or_default();
+        let flags = panel_flags_for(id);
+        if !flags.is_empty() {
+            println!("Export panel flags: {}", flags.join(" "));
+        }
         for o in f["options"].as_array().into_iter().flatten() {
             if !option_shown(id, o) {
                 continue;

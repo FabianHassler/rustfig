@@ -1723,6 +1723,8 @@ pub fn export_job(e: &Engine, p: &Value) -> Result<ExportJob, EngineError> {
     }
     let lang = export_language(p, Some(&path))?;
     let typeset = opt_bool(p, "typeset_latex")?.unwrap_or(false);
+    // Without TeX, a warning only when there are LaTeX texts to typeset.
+    let no_tex = typeset && e.latex.export_typesetter().is_none() && has_special_text(&doc);
     let mut parts_with_args = Vec::new();
     for (target, part) in parts(lang, &path) {
         let args = driver_args(e, part.lang, part.half, p)?;
@@ -1734,10 +1736,21 @@ pub fn export_job(e: &Engine, p: &Value) -> Result<ExportJob, EngineError> {
         path,
         embed: opt_bool(p, "embed")?.unwrap_or(false),
         typesetter: if typeset { e.latex.export_typesetter() } else { None },
-        no_tex: typeset && e.latex.export_typesetter().is_none(),
+        no_tex,
         lang: lang.id,
         parts: parts_with_args,
     })
+}
+
+/// Whether `doc` has a visible special (LaTeX) text.
+fn has_special_text(doc: &rustfig_model::Document) -> bool {
+    let mut found = false;
+    doc.for_each_leaf(&mut |o| {
+        if let rustfig_model::ObjectKind::Text(t) = &o.kind {
+            found |= t.is_special() && !t.is_hidden();
+        }
+    });
+    found
 }
 
 /// `p` with the Export panel's settings for its language when it has

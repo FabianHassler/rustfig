@@ -3733,17 +3733,15 @@ fn export_apply(app: &mut App, ctx: &egui::Context, act: ExportActions, open: bo
 /// `file.export` parameters for the export panel's settings: the figure's
 /// own page settings go with it; the rest are fig2dev's options (W10-4).
 fn export_params(app: &App, st: &ExportState, path: &str) -> serde_json::Value {
-    let mut p = json!({
-        "path": path,
-        "format": st.format,
-        "magnification": st.magnification,
-        "active_layers_only": st.active_layers_only && !app.engine.hidden_depths.is_empty(),
-        "whole_figure_bounds": st.whole_figure_bounds,
-    });
-    for (k, v) in rustfig_engine::export_panel::params(&app.engine, st.format, &st.settings) {
-        p[k] = v;
-    }
-    p
+    rustfig_engine::export_panel::request(
+        &app.engine,
+        st.format,
+        &st.settings,
+        path,
+        st.magnification,
+        st.active_layers_only,
+        st.whole_figure_bounds,
+    )
 }
 
 /// A small picture of the export (the PPM bitmap export at a low

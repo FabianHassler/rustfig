@@ -385,6 +385,32 @@ pub fn params(e: &Engine, id: &str, s: &PanelSettings) -> Map<String, Value> {
     out
 }
 
+/// The whole `file.export` request of the Export panel: the path, the
+/// language, the magnification, the layer choice and the panel's values
+/// ([`params`]). The panel, File > Export now and `rustfig-cli convert`
+/// all export through it, so they write the same file (F14).
+pub fn request(
+    e: &Engine,
+    id: &str,
+    s: &PanelSettings,
+    path: &str,
+    magnification: f64,
+    active_layers_only: bool,
+    whole_figure_bounds: bool,
+) -> Value {
+    let mut p = json!({
+        "path": path,
+        "format": id,
+        "magnification": magnification,
+        "active_layers_only": active_layers_only && !e.hidden_depths.is_empty(),
+        "whole_figure_bounds": whole_figure_bounds,
+    });
+    if let Some(obj) = p.as_object_mut() {
+        obj.extend(params(e, id, s));
+    }
+    p
+}
+
 /// `p` (a `file.export` parameter object) with the panel's settings added
 /// for `"panel": true` (the stored ones) or `"panel": {…}` (these): what
 /// `p` gives itself wins.

@@ -65,13 +65,15 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 1. W22 is done (three rounds, 64 differences; the user kept RustFig's picking and chose xfig's Ctrl+wheel zoom steps).
 2. E10: only a check by hand with a real input method is left.
 3. Checks by hand: Windows install and print hand-off (P3, Printing), Linux Wayland and HiDPI, the web demo in real browsers (C5).
-4. The accepted UI proposals (W10-25 to W10-38): Global settings in tabs, Search, library browser, live value pop-ups, mode finder; each asked for separately (spell check dropped 2026-11-01).
-5. 1.0: what it needs is the user's decision (proposed: parity ≥ 95 % and no known regressions); then the web version (phase C).
+4. Before 1.0: the release check (P10), with xfig reading RustFig's files and the Rust fig2dev compared with C fig2dev, its differences checked against a local list of C bugs (P12).
+5. The accepted UI proposals (W10-25 to W10-38): Global settings in tabs, Search, library browser, live value pop-ups, mode finder; each asked for separately (spell check dropped 2026-11-01).
+6. 1.0: what it needs is the user's decision (proposed: parity ≥ 95 % and no known regressions); then the web version (phase C).
 
 ## Progress log
 
 | Date | Change |
 |------|--------|
+| 2026-11-11 | **F14**: `rustfig-cli convert` writes what File > Export writes (the saved panel settings per language, flags for every panel row, `--defaults`); release checks planned: xfig reads RustFig's files, the Rust fig2dev equals C fig2dev apart from listed C bugs (P10 steps 11–12, P12). |
 | 2026-11-10 | **v0.9.0-beta.10**: plots with several curves and markers, special functions, frame-only plots (F15–F17); object names (F18); a figure's own LaTeX preamble (F13); Asymptote splines as curves (B16, fig2dev v0.9.14); scripting fixes from user feedback (F15); LaTeX texts typeset in one TeX run (F10). |
 | 2026-11-10 | **B16**: Asymptote export draws splines as curves (fig2dev v0.9.14): Export panel › Splines guide (default: the Fig points kept, `bspline(...)` or one Bézier per segment), hobby (Asymptote's `..`), exact (within 0.5 Fig units of xfig); user feedback. |
 | 2026-11-10 | **F17**: special functions in plot expressions: Bessel J, Y, I, K (`j0 j1 y0 y1 i0 i1 k0 k1`, `jn yn in kn (n, x)`), `gamma`, `lgamma`, `erf`, `erfc`, `heaviside`, own Rust code, about 1e-11 or better against scipy. |
