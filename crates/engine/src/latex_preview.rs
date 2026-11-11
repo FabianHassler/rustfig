@@ -657,7 +657,10 @@ fn text_page(key_text: &str, font: i32, postscript: bool, size: f64, rgb: [u8; 3
             3 => "\\rmfamily\\itshape",
             4 => "\\sffamily",
             5 => "\\ttfamily",
-            _ => "\\rmfamily",
+            1 => "\\rmfamily",
+            // Default: the document's font, `\familydefault` as fig2dev's
+            // `texfontfamily` writes it (so the preamble can change it).
+            _ => "\\normalfont",
         }
     };
     let c = |v: u8| format!("{:.3}", f64::from(v) / 255.0);

@@ -5,8 +5,8 @@ use crate::{Engine, EngineError};
 use rustfig_geom::{polygon_area, polyline_length, Affine, Point, Rect};
 use rustfig_model::Document;
 use rustfig_model::{
-    flatten_object, Arrow, CapStyle, ColorRef, Compound, JoinStyle, LineKind, Object, ObjectId, ObjectKind, PolyKind,
-    Polyline, Spline, SplineKind, MAX_DEPTH,
+    flatten_object, Arrow, ColorRef, Compound, LineKind, Object, ObjectId, ObjectKind, PolyKind, Polyline, Spline,
+    SplineKind, MAX_DEPTH,
 };
 use rustfig_render::{TypesetRequest, Typesetter};
 use serde_json::{json, Value};
@@ -49,7 +49,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Set attributes",
             menu: "",
             shortcut: "",
-            params: "{\"ids\"?: [id], \"line\"?, \"thickness\"?, \"pen_color\"? (or \"color\"), \"fill_color\"?, \"area_fill\"?, \"depth\"?, \"style_val\"?, \"cap\"?: butt|round|projecting, \"join\"?: miter|round|bevel, \"forward_arrow\"?: bool, \"backward_arrow\"?: bool, \"arrow_kind\"?, \"arrow_style\"?, \"arrow_width\"?, \"arrow_height\"?, \"radius\"?, \"font\"?, \"local_font\"?: string|null (installed font; applied after font and postscript), \"font_size\"? (or \"size\"), \"justify\"?, \"angle\"?: degrees, \"text\"?, \"postscript\"?: bool, \"hidden\"?: bool, \"rigid\"?: bool, \"special\"?: bool (as shape.text: without postscript and font it leaves the PostScript font), \"pie\"?: bool, \"flipped\"?: bool (pictures), \"arrow_thickness\"?, \"comment\"?: string, \"name\"?: string (1-100 characters, kept in the file as a comment line; \"\" removes it; names need not be unique: `names` in any command that takes `ids` selects every top-level object carrying it), \"texts\"?: [string] (compound: the texts directly in it, in order), \"forward_arrow_spec\"?, \"backward_arrow_spec\"?: {kind, style, thickness, width, height}, \"geometry\"?: as object.set_geometry without id}",
+            params: "{\"ids\"?: [id], \"line\"?, \"thickness\"?, \"pen_color\"? (or \"color\"), \"fill_color\"?, \"area_fill\"?, \"depth\"?, \"style_val\"?, \"cap\"?: butt|round|projecting, \"join\"?: miter|round|bevel, \"forward_arrow\"?: bool, \"backward_arrow\"?: bool, \"arrow_kind\"?: 0-14, \"arrow_style\"?: hollow|filled (or 0|1), \"arrow_width\"?, \"arrow_height\"?, \"radius\"?, \"font\"?, \"local_font\"?: string|null (installed font; applied after font and postscript), \"font_size\"? (or \"size\"), \"justify\"?, \"angle\"?: degrees, \"text\"?, \"postscript\"?: bool, \"hidden\"?: bool, \"rigid\"?: bool, \"special\"?: bool (as shape.text: without postscript and font it leaves the PostScript font), \"pie\"?: bool, \"flipped\"?: bool (pictures), \"arrow_thickness\"?, \"comment\"?: string, \"name\"?: string (1-100 characters, kept in the file as a comment line; \"\" removes it; names need not be unique: `names` in any command that takes `ids` selects every top-level object carrying it), \"texts\"?: [string] (compound: the texts directly in it, in order), \"forward_arrow_spec\"?, \"backward_arrow_spec\"?: {kind, style, thickness, width, height}, \"geometry\"?: as object.set_geometry without id}",
             mutates: true,
             enabled: |_| true,
             run: set_attributes,
@@ -388,20 +388,8 @@ pub(super) fn set_attributes_inner(e: &mut Engine, p: &Value) -> CmdResult {
         }
         None => None,
     };
-    let cap = match opt_str(p, "cap")? {
-        Some("butt") => Some(CapStyle::Butt),
-        Some("round") => Some(CapStyle::Round),
-        Some("projecting") => Some(CapStyle::Projecting),
-        Some(o) => return Err(EngineError::bad_params(format!("unknown cap {o:?}"))),
-        None => None,
-    };
-    let join = match opt_str(p, "join")? {
-        Some("miter") => Some(JoinStyle::Miter),
-        Some("round") => Some(JoinStyle::Round),
-        Some("bevel") => Some(JoinStyle::Bevel),
-        Some(o) => return Err(EngineError::bad_params(format!("unknown join {o:?}"))),
-        None => None,
-    };
+    let cap = super::shape::cap_param(p)?;
+    let join = super::shape::join_param(p)?;
     let justify = match opt_str(p, "justify")? {
         Some(j) => Some(super::shape::parse_justify(j)?),
         None => None,
@@ -411,9 +399,8 @@ pub(super) fn set_attributes_inner(e: &mut Engine, p: &Value) -> CmdResult {
     };
     let thickness = int("thickness", 0, 10_000)?;
     // (`color`: the name `shape.text` also takes.)
-    let pen =
-        int("pen_color", -1, rustfig_model::LAST_USER_COLOR)?.or(int("color", -1, rustfig_model::LAST_USER_COLOR)?);
-    let fill = int("fill_color", -1, rustfig_model::LAST_USER_COLOR)?;
+    let pen = super::shape::color_param(e, p, "pen_color")?.or(super::shape::color_param(e, p, "color")?);
+    let fill = super::shape::color_param(e, p, "fill_color")?;
     let area = int("area_fill", -1, 62)?;
     let depth = int("depth", 0, MAX_DEPTH)?;
     let radius = int("radius", 0, 100_000)?;
@@ -434,13 +421,9 @@ pub(super) fn set_attributes_inner(e: &mut Engine, p: &Value) -> CmdResult {
     let special = opt_bool(p, "special")?;
     let pie = opt_bool(p, "pie")?;
     let flipped = opt_bool(p, "flipped")?;
-    let athick = opt_num(p, "arrow_thickness")?.map(|v| v.clamp(0.0, 1.0e4));
     let fwd = opt_bool(p, "forward_arrow")?;
     let back = opt_bool(p, "backward_arrow")?;
-    let akind = int("arrow_kind", 0, 14)?;
-    let astyle = int("arrow_style", 0, 1)?;
-    let aw = opt_num(p, "arrow_width")?.map(|v| v.clamp(1.0, 1.0e5));
-    let ah = opt_num(p, "arrow_height")?.map(|v| v.clamp(1.0, 1.0e5));
+    let arrow_changes = super::shape::ArrowChanges::from_params(p)?;
     let comment = opt_str(p, "comment")?.map(str::to_string);
     let name = match opt_str(p, "name")?.map(str::trim) {
         Some(n) if n.chars().count() > 100 || n.contains(['\n', '\r']) => {
@@ -450,8 +433,8 @@ pub(super) fn set_attributes_inner(e: &mut Engine, p: &Value) -> CmdResult {
         }
         other => other.map(str::to_string),
     };
-    let forward_spec = arrow_spec(p, "forward_arrow_spec")?;
-    let backward_spec = arrow_spec(p, "backward_arrow_spec")?;
+    let forward_spec = super::shape::arrow_spec(p, "forward_arrow_spec")?;
+    let backward_spec = super::shape::arrow_spec(p, "backward_arrow_spec")?;
     let template = e.indicator.arrow_value();
     let n = for_targets(e, p, &mut |o| {
         if let ObjectKind::Text(t) = &mut o.kind {
@@ -550,21 +533,7 @@ pub(super) fn set_attributes_inner(e: &mut Engine, p: &Value) -> CmdResult {
                     _ => {}
                 }
                 if let Some(a) = a {
-                    if let Some(v) = akind {
-                        a.kind = v;
-                    }
-                    if let Some(v) = astyle {
-                        a.style = v;
-                    }
-                    if let Some(v) = aw {
-                        a.width = v;
-                    }
-                    if let Some(v) = ah {
-                        a.height = v;
-                    }
-                    if let Some(v) = athick {
-                        a.thickness = v;
-                    }
+                    arrow_changes.apply(a);
                 }
             };
             adjust(f, fwd);
@@ -572,11 +541,11 @@ pub(super) fn set_attributes_inner(e: &mut Engine, p: &Value) -> CmdResult {
             // Per-arrow type and size (xfig's two arrow rows).
             for (slot, spec) in [(f, forward_spec.as_ref()), (b, backward_spec.as_ref())] {
                 if let (Some(a), Some(sp)) = (slot.as_mut(), spec) {
-                    a.kind = sp.0.kind;
-                    a.style = sp.0.style;
-                    a.thickness = sp.0.thickness;
-                    a.width = sp.0.width;
-                    a.height = sp.0.height;
+                    a.kind = sp.kind;
+                    a.style = sp.style;
+                    a.thickness = sp.thickness;
+                    a.width = sp.width;
+                    a.height = sp.height;
                 }
             }
         }
@@ -1343,28 +1312,6 @@ fn set_geometry(e: &mut Engine, p: &Value) -> CmdResult {
     }
     *o = new;
     Ok(json!({}))
-}
-
-/// `{"kind", "style", "thickness", "width", "height"}` (width and height in
-/// Fig units) for one arrow, as the edit panel's arrow rows give it.
-struct ArrowSpec(Arrow);
-
-fn arrow_spec(p: &Value, key: &str) -> Result<Option<ArrowSpec>, EngineError> {
-    let Some(v) = super::param(p, key) else { return Ok(None) };
-    let f = |k: &str, lo: f64, hi: f64| -> Result<f64, EngineError> {
-        v.get(k)
-            .and_then(Value::as_f64)
-            .filter(|x| x.is_finite())
-            .map(|x| x.clamp(lo, hi))
-            .ok_or_else(|| EngineError::bad_params(format!("{key}.{k} must be a number")))
-    };
-    Ok(Some(ArrowSpec(Arrow {
-        kind: f("kind", 0.0, 14.0)? as i32,
-        style: f("style", 0.0, 1.0)? as i32,
-        thickness: f("thickness", 0.0, 1.0e4)?,
-        width: f("width", 0.0, 1.0e5)?,
-        height: f("height", 0.0, 1.0e5)?,
-    })))
 }
 
 /// Number of points after dropping consecutive repeats.

@@ -73,6 +73,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-11-11 | **F23**: MCP fixes from the PSTricks gallery run: `shape.*` take cap, join and arrow specs, `arrow_style` hollow/filled, `shape.dimension_line`'s `text` a fixed label, undefined user colors refused, LaTeX default font follows `\familydefault`; the skill simplified with the bounding box as a workflow step. |
 | 2026-11-11 | **F11, fig2dev v0.9.17**: the figure's bounding box. Standard is the page (nothing saved); View > Bounding box: Standard (page), Fit to drawing, Edit bounding box (a mode: drag corners, edges or the box, one undo step per drag); a box of the figure's own is saved as the first comment `# RustFigBoundingBox x1 y1 x2 y2`. Everything outside it is grayed out on the canvas and cut off by the exports (File > Export, convert, print, `rustfig_render`); fig2dev's `Ctx::user_bounds` is opt-in, so the `fig2dev` program is unchanged. 3 engine commands, 1 mode. |
 | 2026-11-11 | **F22, fig2dev v0.9.16**: the figure's LaTeX preamble goes into the complete documents of `tikz`, `pict2e`, `pstricks` (`-P`) and into `asy` (`texpreamble`); what C fig2dev writes is unchanged. fig2dev v0.9.14 and v0.9.15 retagged (author fixed, trees unchanged). |
 | 2026-11-11 | **F21**: `rustfig-cli convert` depends only on the file and its flags: the Export panel's defaults, the figure's preamble, TeX from the `PATH` (`--tex`); the settings file is no longer read. |

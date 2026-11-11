@@ -5,14 +5,14 @@ use super::{num, num_or, opt_bool, opt_num, opt_str, points, string, CmdResult, 
 use crate::{import, Engine, EngineError};
 use rustfig_geom::{Point, Rect};
 use rustfig_model::{
-    Arc, ColorRef, Ellipse, EllipseKind, Justify, LineKind, Object, ObjectKind, Picture, PolyKind, Polyline, Spline,
-    SplineKind, Style, Text,
+    Arc, CapStyle, ColorRef, Ellipse, EllipseKind, JoinStyle, Justify, LineKind, Object, ObjectKind, Picture, PolyKind,
+    Polyline, Spline, SplineKind, Style, Text,
 };
 use serde_json::{json, Value};
 use std::sync::Arc as Shared;
 
 /// Attribute overrides accepted by every shape command.
-pub const STYLE_PARAMS: &str = "\"depth\"?, \"thickness\"?, \"pen_color\"?, \"fill_color\"?, \"area_fill\"?, \"line\"?: solid|dashed|dotted|dash-dotted|..., \"style_val\"?, \"forward_arrow\"?: bool, \"backward_arrow\"?: bool";
+pub const STYLE_PARAMS: &str = "\"depth\"?, \"thickness\"?, \"pen_color\"?, \"fill_color\"?, \"area_fill\"?, \"line\"?: solid|dashed|dotted|dash-dotted|..., \"style_val\"?, \"cap\"?: butt|round|projecting, \"join\"?: miter|round|bevel; open shapes (polyline, open spline, arc) also \"forward_arrow\"?: bool, \"backward_arrow\"?: bool, \"arrow_kind\"?: 0-14, \"arrow_style\"?: hollow|filled (or 0|1), \"arrow_width\"?, \"arrow_height\"?, \"arrow_thickness\"? (Fig units, both arrows), \"forward_arrow_spec\"?, \"backward_arrow_spec\"?: {kind, style, thickness, width, height} (turns that arrow on)";
 
 macro_rules! shape_cmd {
     ($id:expr, $label:expr, $params:expr, $run:expr) => {
@@ -88,11 +88,11 @@ pub(crate) fn style_from(e: &Engine, p: &Value) -> Result<Style, EngineError> {
     if let Some(v) = opt_num(p, "thickness")? {
         s.thickness = (v.round() as i32).clamp(0, 10_000);
     }
-    if let Some(v) = opt_num(p, "pen_color")? {
-        s.pen_color = ColorRef((v.round() as i32).clamp(-1, rustfig_model::LAST_USER_COLOR));
+    if let Some(v) = color_param(e, p, "pen_color")? {
+        s.pen_color = ColorRef(v);
     }
-    if let Some(v) = opt_num(p, "fill_color")? {
-        s.fill_color = ColorRef((v.round() as i32).clamp(-1, rustfig_model::LAST_USER_COLOR));
+    if let Some(v) = color_param(e, p, "fill_color")? {
+        s.fill_color = ColorRef(v);
     }
     if let Some(v) = opt_num(p, "area_fill")? {
         s.area_fill = (v.round() as i32).clamp(-1, 62);
@@ -107,7 +107,153 @@ pub(crate) fn style_from(e: &Engine, p: &Value) -> Result<Style, EngineError> {
     if let Some(v) = opt_num(p, "style_val")? {
         s.style_val = v.clamp(0.0, 1000.0);
     }
+    if let Some(v) = cap_param(p)? {
+        s.cap = v;
+    }
+    if let Some(v) = join_param(p)? {
+        s.join = v;
+    }
     Ok(s)
+}
+
+/// A color parameter, clamped to the color numbers. A user color must be
+/// defined (`color.add`) or already used in the figure (a file may refer to
+/// one it does not define); otherwise fig2dev would only find out on export.
+pub(super) fn color_param(e: &Engine, p: &Value, key: &str) -> Result<Option<i32>, EngineError> {
+    let Some(v) = opt_num(p, key)? else { return Ok(None) };
+    let c = (v.round() as i32).clamp(-1, rustfig_model::LAST_USER_COLOR);
+    let doc = e.doc();
+    if c >= rustfig_model::FIRST_USER_COLOR
+        && !doc.colors.iter().any(|u| u.number == c)
+        && !doc.used_colors().contains(&c)
+    {
+        return Err(EngineError::bad_params(format!(
+            "{key} {c}: no user color {c} in this figure (define it with color.add)"
+        )));
+    }
+    Ok(Some(c))
+}
+
+pub(super) fn cap_param(p: &Value) -> Result<Option<CapStyle>, EngineError> {
+    Ok(match opt_str(p, "cap")? {
+        Some("butt") => Some(CapStyle::Butt),
+        Some("round") => Some(CapStyle::Round),
+        Some("projecting") => Some(CapStyle::Projecting),
+        Some(o) => {
+            return Err(EngineError::bad_params(format!(
+                "unknown cap {o:?} (butt, round, projecting)"
+            )))
+        }
+        None => None,
+    })
+}
+
+pub(super) fn join_param(p: &Value) -> Result<Option<JoinStyle>, EngineError> {
+    Ok(match opt_str(p, "join")? {
+        Some("miter") => Some(JoinStyle::Miter),
+        Some("round") => Some(JoinStyle::Round),
+        Some("bevel") => Some(JoinStyle::Bevel),
+        Some(o) => {
+            return Err(EngineError::bad_params(format!(
+                "unknown join {o:?} (miter, round, bevel)"
+            )))
+        }
+        None => None,
+    })
+}
+
+/// An arrow style: `hollow`/`filled` or Fig's 0/1.
+pub(super) fn arrow_style_value(v: &Value, key: &str) -> Result<i32, EngineError> {
+    match v {
+        Value::String(n) if n == "hollow" => Ok(0),
+        Value::String(n) if n == "filled" => Ok(1),
+        Value::Number(n) => match n.as_f64().map(f64::round) {
+            Some(x) if x == 0.0 || x == 1.0 => Ok(x as i32),
+            _ => Err(EngineError::bad_params(format!(
+                "{key} must be hollow or filled (0 or 1)"
+            ))),
+        },
+        _ => Err(EngineError::bad_params(format!(
+            "{key} must be hollow or filled (0 or 1)"
+        ))),
+    }
+}
+
+/// The per-arrow changes `arrow_kind`, `arrow_style`, `arrow_width`,
+/// `arrow_height` and `arrow_thickness` (Fig units) take, for both arrows.
+#[derive(Default)]
+pub(super) struct ArrowChanges {
+    kind: Option<i32>,
+    style: Option<i32>,
+    width: Option<f64>,
+    height: Option<f64>,
+    thickness: Option<f64>,
+}
+
+impl ArrowChanges {
+    pub(super) fn from_params(p: &Value) -> Result<Self, EngineError> {
+        Ok(Self {
+            kind: opt_num(p, "arrow_kind")?.map(|v| (v.round() as i32).clamp(0, 14)),
+            style: super::param(p, "arrow_style")
+                .map(|v| arrow_style_value(v, "arrow_style"))
+                .transpose()?,
+            width: opt_num(p, "arrow_width")?.map(|v| v.clamp(1.0, 1.0e5)),
+            height: opt_num(p, "arrow_height")?.map(|v| v.clamp(1.0, 1.0e5)),
+            thickness: opt_num(p, "arrow_thickness")?.map(|v| v.clamp(0.0, 1.0e4)),
+        })
+    }
+
+    pub(super) fn apply(&self, a: &mut rustfig_model::Arrow) {
+        if let Some(v) = self.kind {
+            a.kind = v;
+        }
+        if let Some(v) = self.style {
+            a.style = v;
+        }
+        if let Some(v) = self.width {
+            a.width = v;
+        }
+        if let Some(v) = self.height {
+            a.height = v;
+        }
+        if let Some(v) = self.thickness {
+            a.thickness = v;
+        }
+    }
+}
+
+/// `{"kind", "style", "thickness", "width", "height"}` (width and height in
+/// Fig units) for one arrow, as the edit panel's arrow rows give it; `style`
+/// also takes `hollow`/`filled`.
+pub(super) fn arrow_spec(p: &Value, key: &str) -> Result<Option<rustfig_model::Arrow>, EngineError> {
+    let Some(v) = super::param(p, key) else { return Ok(None) };
+    if !v.is_object() {
+        return Err(EngineError::bad_params(format!(
+            "{key} must be an object {{kind, style, thickness, width, height}}"
+        )));
+    }
+    let f = |k: &str, lo: f64, hi: f64| -> Result<f64, EngineError> {
+        v.get(k)
+            .and_then(Value::as_f64)
+            .filter(|x| x.is_finite())
+            .map(|x| x.clamp(lo, hi))
+            .ok_or_else(|| EngineError::bad_params(format!("{key}.{k} must be a number")))
+    };
+    let style = match v.get("style") {
+        Some(s) => arrow_style_value(s, &format!("{key}.style"))?,
+        None => {
+            return Err(EngineError::bad_params(format!(
+                "{key}.style must be hollow or filled (0 or 1)"
+            )))
+        }
+    };
+    Ok(Some(rustfig_model::Arrow {
+        kind: f("kind", 0.0, 14.0)? as i32,
+        style,
+        thickness: f("thickness", 0.0, 1.0e4)?,
+        width: f("width", 0.0, 1.0e5)?,
+        height: f("height", 0.0, 1.0e5)?,
+    }))
 }
 
 pub(super) fn arrows_from(
@@ -117,11 +263,28 @@ pub(super) fn arrows_from(
     let (mut f, mut b) = e.indicator.arrows();
     let template = e.indicator.arrows();
     let a = e.indicator.arrow_value();
-    if let Some(on) = opt_bool(p, "forward_arrow")? {
+    let fwd_on = opt_bool(p, "forward_arrow")?;
+    if let Some(on) = fwd_on {
         f = if on { template.0.or(Some(a)) } else { None };
     }
-    if let Some(on) = opt_bool(p, "backward_arrow")? {
+    let back_on = opt_bool(p, "backward_arrow")?;
+    if let Some(on) = back_on {
         b = if on { template.1.or(Some(a)) } else { None };
+    }
+    let changes = ArrowChanges::from_params(p)?;
+    for arrow in [&mut f, &mut b].into_iter().flatten() {
+        changes.apply(arrow);
+    }
+    // A spec turns its arrow on, unless that arrow is switched off.
+    if let Some(spec) = arrow_spec(p, "forward_arrow_spec")? {
+        if fwd_on != Some(false) {
+            f = Some(spec);
+        }
+    }
+    if let Some(spec) = arrow_spec(p, "backward_arrow_spec")? {
+        if back_on != Some(false) {
+            b = Some(spec);
+        }
     }
     Ok((f, b))
 }
@@ -350,8 +513,8 @@ fn text(e: &mut Engine, p: &Value) -> CmdResult {
     }
     // `pen_color` as for the other shapes and `object.set_attributes`;
     // `color` is the older name.
-    if let Some(c) = opt_num(p, "pen_color")?.or(opt_num(p, "color")?) {
-        t.color = ColorRef((c.round() as i32).clamp(-1, rustfig_model::LAST_USER_COLOR));
+    if let Some(c) = color_param(e, p, "pen_color")?.or(color_param(e, p, "color")?) {
+        t.color = ColorRef(c);
     }
     if let Some(d) = opt_num(p, "depth")? {
         t.depth = (d.round() as i32).clamp(0, rustfig_model::MAX_DEPTH);
