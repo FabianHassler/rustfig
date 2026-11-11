@@ -212,6 +212,7 @@ tool_runs!(
     AreaMeasure,
     Plot,
     Find,
+    BoundingBox,
 );
 
 fn event(e: &mut Engine, p: &Value) -> CmdResult {

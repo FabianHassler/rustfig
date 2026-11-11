@@ -221,6 +221,9 @@ fn latex_source_sizes_the_page_by_the_source() {
         &json!({"x": 300, "y": 600, "text": "a long label $\\alpha + \\beta$", "special": true}),
     )
     .unwrap();
+    // The page fits the objects: a multi-page figure with the standard
+    // bounding box keeps fig2dev's bounds (F11).
+    e.doc_mut().settings.multiple_pages = true;
     let width = |e: &mut Engine, source: bool| {
         let r = e
             .execute(

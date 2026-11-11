@@ -24,7 +24,7 @@ pub use fig2dev::{languages, options};
 use fig2dev::object::Compound;
 use fig2dev::{read, Ctx, Driver};
 use languages::Language;
-use rustfig_model::Document;
+use rustfig_model::{BoundingBox, Document};
 use std::path::Path;
 
 /// Whether the fig2dev crate writes language `id` (fig2dev's name).
@@ -59,25 +59,32 @@ pub fn export(
     options: &[(char, Option<String>)],
     dir: Option<&Path>,
 ) -> Result<(Vec<u8>, Vec<String>), String> {
-    export_typeset(doc, lang, options, dir, None)
+    export_typeset(doc, lang, options, dir, None, None)
 }
 
 /// [`export`] with special (LaTeX) texts drawn as `typesetter` typesets
-/// them (the scene languages and SVG; the others ignore it).
+/// them (the scene languages and SVG; the others ignore it), and the page
+/// covering `bounds` (Fig units; plan F11) instead of the objects' bounds:
+/// objects past it are cut off where the language can (the scene
+/// languages, SVG, TikZ).
 pub fn export_typeset(
     doc: &Document,
     lang: &str,
     options: &[(char, Option<String>)],
     dir: Option<&Path>,
     typesetter: Option<std::sync::Arc<dyn fig2dev::scene::typeset::TextTypesetter>>,
+    bounds: Option<BoundingBox>,
 ) -> Result<(Vec<u8>, Vec<String>), String> {
+    let user_bounds = bounds.map(|b| (b.x1, b.y1, b.x2, b.y2));
     let (mut dev, mut ctx) = setup(lang, options, dir)?;
     ctx.typesetter = typesetter.clone();
+    ctx.user_bounds = user_bounds;
     match rustfig_format::bridge::export_objects(doc, &mut ctx) {
         Some(objects) => finish(lang, dev.as_mut(), &mut ctx, &objects),
         None => {
             let (mut dev, mut ctx) = setup(lang, options, dir)?;
             ctx.typesetter = typesetter;
+            ctx.user_bounds = user_bounds;
             let fig = rustfig_format::write_fig(doc);
             let objects = read::readfp_fig(&mut ctx, fig.as_bytes()).map_err(|_| ctx.messages.join("\n"))?;
             finish(lang, dev.as_mut(), &mut ctx, &objects)

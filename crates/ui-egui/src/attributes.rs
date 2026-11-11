@@ -294,6 +294,8 @@ pub fn attributes_for(tool: ToolKind) -> Vec<Attr> {
         ToolKind::Tangent => &[MIN2, LINE1, ARROWS, &[TangentLength]],
         // `I_MIN2` only (`w_modepanel.c`).
         ToolKind::AngleMeasure | ToolKind::LengthMeasure | ToolKind::AreaMeasure => &[MIN2],
+        // Bounding box mode: the box's sides snap (Point Posn).
+        ToolKind::BoundingBox => &[MIN2],
         // xfig's `I_CHOP` is `I_ARCTYPE`: chopped arcs become open or pie
         // pieces.
         ToolKind::Chop => &[&[ArcType]],

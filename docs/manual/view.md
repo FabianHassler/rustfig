@@ -7,6 +7,19 @@
 - **Show crosshair** draws full-window red lines through the pointer while you draw or edit (xfig's `crosshair` resource). **Autorefresh mode** reloads the figure when its file changes on disk ([Files](files.md)).
 - **Redraw** (Meta+R, Ctrl+L) repaints the canvas.
 - **Portrait/Landscape** turns the page (Meta+C).
+- **Bounding box** (View > Bounding box) is the area every export covers (section Edit bounding box below).
 - **Show page borders** draws the page's outline in light blue with the paper's name outside its lower-right corner (in multiple-page mode, from the Export or Print panel, the outline of every page); turned off, the whole canvas is paper, as in xfig; **Show depth manager** shows the list of depths with check boxes to hide or show each; **Show info balloons** turns tooltips on and off (the delay is a global setting); **Show line lengths** (Alt+L with xfig's keys) shows the dx / dy triangle with the lengths of its sides while a line is drawn or moved (the message panel always shows length, dx, dy and angle).
 - The rulers show the cursor position. The units box shows the current units; right-click it for Set units (inches or centimeters, a scale for the drawing).
 - **Edit > Set units** has the units (xfig's Unit/Scale panel, also a right click on the units box); **Edit > Page setup** has the paper size, orientation, magnification and the figure's own LaTeX preamble (saved in its file; see [Text and pictures](draw-text-pictures.md)).
+
+## Edit bounding box
+
+The bounding box is the area every export covers: File > Export, `rustfig-cli convert`, printing and the AI assistants' render. View > Bounding box has three entries:
+
+- **Standard (page)** (checked while it applies): the box is the page, as paper size and orientation give it. Nothing is saved in the file.
+- **Fit to drawing**: the box becomes the drawing's present bounds (typeset LaTeX labels included). The box then stays where it is when the drawing changes.
+- **Edit bounding box**: a mode without a button in the mode panel. The box is framed with eight handles. The left button drags a corner or an edge to move that side, or the inside to move the whole box (indicator: “drag side/corner/box”; while dragging, “place side”). The sides snap as points do (Point Posn), and each drag is one undo step. The middle and right buttons do nothing; Escape or another mode ends it.
+
+A box of the figure's own is framed in dashed purple on the canvas, and whatever lies outside the box is grayed out, because exports cut it off: PDF, EPS, SVG, PNG and the other bitmaps, and TikZ. The other LaTeX languages only take the box as their picture size. The box is saved as the file's first comment line, `# RustFigBoundingBox x1 y1 x2 y2` in Fig units. xfig and fig2dev keep that line without using it, so the `fig2dev` program still writes what C fig2dev writes. Copy as picture keeps fitting the copied objects, and a figure in multiple-page mode with the standard box exports all its pages as before.
+
+Scripts and AI assistants use `doc.set_bounding_box` (`x1`, `y1`, `x2`, `y2` in Fig units), `doc.bounding_box_standard`, `doc.bounding_box_content` and `tool.bounding_box`; `doc.info` reports the box.

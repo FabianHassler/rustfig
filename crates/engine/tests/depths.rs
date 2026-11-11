@@ -166,6 +166,9 @@ fn svg_size(e: &mut Engine, extra: Value) -> (f64, f64) {
 #[test]
 fn export_active_layers_only() {
     let mut e = two_depths();
+    // The page fits the objects: a multi-page figure with the standard
+    // bounding box keeps fig2dev's bounds (F11).
+    e.doc_mut().settings.multiple_pages = true;
     hide(&mut e, 60);
     let whole = svg_size(&mut e, json!({}));
     let active = svg_size(&mut e, json!({"active_layers_only": true}));

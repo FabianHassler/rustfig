@@ -124,7 +124,8 @@ fn every_picking_mode_shows_markers() {
         e
     };
     for &t in ToolKind::ALL.iter() {
-        if t.is_drawing() || t == ToolKind::None {
+        // Bounding box mode picks no object: it shows the box's handles.
+        if t.is_drawing() || matches!(t, ToolKind::None | ToolKind::BoundingBox) {
             continue;
         }
         let mut e = fresh();

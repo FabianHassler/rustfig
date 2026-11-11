@@ -162,6 +162,9 @@ fn depth_options_select_objects_and_bounds() {
     let id = r["id"].as_u64().unwrap();
     e.execute("arrange.set_depth", &json!({"ids": [id], "depth": 10}))
         .unwrap();
+    // The page fits the objects: a multi-page figure with the standard
+    // bounding box keeps fig2dev's bounds (F11).
+    e.doc_mut().settings.multiple_pages = true;
     let all = eps(&mut e, json!({}));
     let only_50 = eps(&mut e, json!({"depths": "+50"}));
     let only_50_adjusted = eps(&mut e, json!({"depths": "+50", "K": true}));

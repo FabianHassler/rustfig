@@ -7,6 +7,10 @@ pub struct Tokens {
     pub canvas_bg: Color32,
     pub paper: Color32,
     pub page_border: Color32,
+    /// The figure's bounding box (plan F11): its frame, and the veil over
+    /// what exports cut off outside it.
+    pub bounding_box: Color32,
+    pub outside_box: Color32,
     pub grid: Color32,
     pub guide: Color32,
     pub handle_fill: Color32,
@@ -64,6 +68,8 @@ impl Tokens {
                 canvas_bg: Color32::from_rgb(58, 60, 66),
                 paper: Color32::WHITE,
                 page_border: Color32::from_rgb(110, 160, 230),
+                bounding_box: Color32::from_rgb(200, 90, 200),
+                outside_box: Color32::from_rgba_unmultiplied(58, 60, 66, 150),
                 grid: Color32::from_rgba_unmultiplied(80, 110, 160, 70),
                 guide: Color32::from_rgb(230, 80, 60),
                 handle_fill: Color32::WHITE,
@@ -94,6 +100,8 @@ impl Tokens {
                 canvas_bg: Color32::from_rgb(200, 203, 208),
                 paper: Color32::WHITE,
                 page_border: Color32::from_rgb(70, 130, 220),
+                bounding_box: Color32::from_rgb(170, 40, 170),
+                outside_box: Color32::from_rgba_unmultiplied(200, 203, 208, 160),
                 grid: Color32::from_rgba_unmultiplied(60, 90, 150, 60),
                 guide: Color32::from_rgb(220, 60, 40),
                 handle_fill: Color32::WHITE,

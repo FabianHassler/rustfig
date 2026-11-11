@@ -1487,11 +1487,19 @@ fn driver_args(e: &Engine, drv: &str, half: Half, p: &Value) -> Result<Vec<(char
 /// Write one part of an export through fig2dev; the bytes and fig2dev's
 /// messages.
 fn write_part(e: &Engine, part: &Part, p: &Value) -> Result<(Vec<u8>, Vec<String>), EngineError> {
-    write_part_of(e, &*scope_doc(e, p)?, part, p)
+    let doc = scope_doc(e, p)?;
+    write_part_of(e, &doc, part, p, doc.export_bounds())
 }
 
-/// [`write_part`] for `doc` instead of the export's scope.
-fn write_part_of(e: &Engine, doc: &Document, part: &Part, p: &Value) -> Result<(Vec<u8>, Vec<String>), EngineError> {
+/// [`write_part`] for `doc` instead of the export's scope, the page
+/// covering `bounds` (the figure's export box), or the objects' bounds.
+fn write_part_of(
+    e: &Engine,
+    doc: &Document,
+    part: &Part,
+    p: &Value,
+    bounds: Option<rustfig_model::BoundingBox>,
+) -> Result<(Vec<u8>, Vec<String>), EngineError> {
     let mut args = driver_args(e, part.lang, part.half, p)?;
     if let Some(g) = &part.graphics {
         args.push(('p', Some(g.clone())));
@@ -1503,6 +1511,7 @@ fn write_part_of(e: &Engine, doc: &Document, part: &Part, p: &Value) -> Result<(
         &args,
         doc_dir(e).as_deref(),
         ts.clone().map(|t| t as std::sync::Arc<dyn rustfig_render::Typesetter>),
+        bounds,
     )
     .map_err(EngineError::format)?;
     msgs.extend(more);
@@ -1525,7 +1534,8 @@ fn write_part_of(e: &Engine, doc: &Document, part: &Part, p: &Value) -> Result<(
 }
 
 /// The export of `doc` in language `id` with the export parameters `p`
-/// (Copy as picture): the bytes only.
+/// (Copy as picture): the bytes only. The picture fits the objects, not
+/// the figure's export box.
 pub(super) fn export_bytes(e: &Engine, doc: &Document, id: &str, p: &Value) -> Result<Vec<u8>, EngineError> {
     let lang = export_language(&json!({ "format": id }), None)?;
     let part = Part {
@@ -1533,10 +1543,11 @@ pub(super) fn export_bytes(e: &Engine, doc: &Document, id: &str, p: &Value) -> R
         half: Half::Whole,
         graphics: None,
     };
-    Ok(write_part_of(e, doc, &part, p)?.0)
+    Ok(write_part_of(e, doc, &part, p, None)?.0)
 }
 
-/// [`export_bytes`] with fig2dev's messages (printing).
+/// [`export_bytes`] with fig2dev's messages, the page covering the
+/// figure's export box (printing).
 pub(crate) fn export_bytes_msgs(
     e: &Engine,
     doc: &Document,
@@ -1549,7 +1560,7 @@ pub(crate) fn export_bytes_msgs(
         half: Half::Whole,
         graphics: None,
     };
-    write_part_of(e, doc, &part, p)
+    write_part_of(e, doc, &part, p, doc.export_bounds())
 }
 
 /// Whether `part` writes text (the rest comes back as base64).
@@ -1681,6 +1692,7 @@ impl ExportJob {
                 &args,
                 self.dir.as_deref(),
                 typesetter.clone().map(|t| t as Arc<dyn rustfig_render::Typesetter>),
+                self.doc.export_bounds(),
             )
             .map_err(EngineError::format)?;
             msgs.extend(typesetter.iter().flat_map(|t| t.errors()));
@@ -1794,7 +1806,7 @@ fn export_data(e: &mut Engine, p: &Value) -> CmdResult {
     };
     for (target, part) in &parts {
         let (bytes, msgs) = match &source_doc {
-            Some(doc) => write_part_of(e, doc, part, p)?,
+            Some(doc) => write_part_of(e, doc, part, p, doc.export_bounds())?,
             None => write_part(e, part, p)?,
         };
         warnings.extend(msgs);

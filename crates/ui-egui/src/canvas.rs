@@ -243,6 +243,7 @@ fn shown_doc(doc: &Document, hide: &[ObjectId]) -> Document {
         comments: Vec::new(),
         export_on_save: doc.export_on_save.clone(),
         latex_preamble: String::new(),
+        bounding_box: None,
         colors: doc.colors.clone(),
         objects: doc.objects.iter().filter(|o| !hide.contains(&o.id)).cloned().collect(),
         next_id: 0,
@@ -339,6 +340,7 @@ fn changed_region(
             comments: Vec::new(),
             export_on_save: doc.export_on_save.clone(),
             latex_preamble: String::new(),
+            bounding_box: None,
             colors: doc.colors.clone(),
             objects,
             next_id: 0,
@@ -881,6 +883,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
                 comments: Vec::new(),
                 export_on_save: doc.export_on_save.clone(),
                 latex_preamble: String::new(),
+                bounding_box: None,
                 colors: doc.colors.clone(),
                 objects: overlay.shifted.0.clone(),
                 next_id: 0,
@@ -971,6 +974,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
                 comments: Vec::new(),
                 export_on_save: doc.export_on_save.clone(),
                 latex_preamble: String::new(),
+                bounding_box: None,
                 colors: doc.colors.clone(),
                 objects: overlay.preview.iter().cloned().map(std::sync::Arc::new).collect(),
                 next_id: 0,
@@ -1016,6 +1020,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
             }
         }
     }
+    draw_bounding_box(app, &painter, rect, tk, &to_screen);
     // Guides, selection, handles.
     let guide = Stroke::new(1.0_f32, tk.guide);
     for g in &overlay.guides {
@@ -1091,6 +1096,71 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
     crate::rulers::show(app, ui, tk, rect, top, side, unit_box);
     for r in [top, side, unit_box] {
         app.context_help.zones.push((r, crate::context_help::RULER_TOPIC));
+    }
+}
+
+/// The figure's bounding box (plan F11): what exports cut off outside it
+/// is veiled (grayed out), a box of the figure's own is framed in dashes,
+/// and Bounding box mode shows the frame with its eight handles. A
+/// multi-page figure with the standard box exports all its pages: no veil.
+fn draw_bounding_box(app: &App, painter: &egui::Painter, rect: Rect, tk: &Tokens, to_screen: &dyn Fn(Point) -> Pos2) {
+    let doc = app.engine.doc();
+    let editing = app.engine.tool() == rustfig_engine::ToolKind::BoundingBox;
+    if doc.export_bounds().is_none() && !editing {
+        return;
+    }
+    let b = app.engine.shown_bounding_box();
+    let r = b.rect();
+    let inner = Rect::from_two_pos(to_screen(r.min), to_screen(r.max));
+    // Four bands around the box, inside the canvas.
+    let bands = [
+        Rect::from_min_max(rect.min, egui::pos2(rect.max.x, inner.min.y.max(rect.min.y))),
+        Rect::from_min_max(egui::pos2(rect.min.x, inner.max.y.min(rect.max.y)), rect.max),
+        Rect::from_min_max(
+            egui::pos2(rect.min.x, inner.min.y.max(rect.min.y)),
+            egui::pos2(inner.min.x.max(rect.min.x), inner.max.y.min(rect.max.y)),
+        ),
+        Rect::from_min_max(
+            egui::pos2(inner.max.x.min(rect.max.x), inner.min.y.max(rect.min.y)),
+            egui::pos2(rect.max.x, inner.max.y.min(rect.max.y)),
+        ),
+    ];
+    for band in bands {
+        if band.is_positive() {
+            painter.rect_filled(band, 0.0, tk.outside_box);
+        }
+    }
+    if doc.bounding_box.is_none() && !editing {
+        return;
+    }
+    let frame = [
+        inner.left_top(),
+        inner.right_top(),
+        inner.right_bottom(),
+        inner.left_bottom(),
+        inner.left_top(),
+    ];
+    painter.extend(Shape::dashed_line(
+        &frame,
+        Stroke::new(1.5_f32, tk.bounding_box),
+        6.0,
+        4.0,
+    ));
+    if editing {
+        for p in [
+            inner.left_top(),
+            inner.center_top(),
+            inner.right_top(),
+            inner.right_center(),
+            inner.right_bottom(),
+            inner.center_bottom(),
+            inner.left_bottom(),
+            inner.left_center(),
+        ] {
+            let h = Rect::from_center_size(p, vec2(8.0, 8.0));
+            painter.rect_filled(h, 0.0, tk.handle_fill);
+            painter.rect_stroke(h, 0.0, Stroke::new(1.0_f32, tk.bounding_box), egui::StrokeKind::Middle);
+        }
     }
 }
 

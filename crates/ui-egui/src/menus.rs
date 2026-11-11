@@ -619,6 +619,14 @@ pub const XFIG_MENUS: &[(&str, &[XfigItem])] = {
                 Cmd("Manage Styles...", "app.styles"),
                 Cmd("Redraw", "app.redraw"),
                 Cmd("Portrait/Landscape", "doc.toggle_orientation"),
+                XfigItem::Sub(
+                    "Bounding box",
+                    &[
+                        Own("doc.bounding_box_standard"),
+                        Own("doc.bounding_box_content"),
+                        Own("tool.bounding_box"),
+                    ],
+                ),
                 H("Zoom"),
                 Cmd("Zoom In", "view.zoom_in"),
                 Cmd("Zoom Out", "view.zoom_out"),
@@ -875,6 +883,8 @@ const MENU_LABELS: &[(&str, &str)] = &[
 fn checked(app: &App, id: &str) -> Option<bool> {
     match id {
         "view.toggle_page_border" => Some(app.engine.show_page_border),
+        "doc.bounding_box_standard" => Some(app.engine.doc().bounding_box.is_none()),
+        "tool.bounding_box" => Some(app.engine.tool() == rustfig_engine::ToolKind::BoundingBox),
         "view.toggle_latex_preview" => Some(app.engine.prefs.rustfig.latex_preview.unwrap_or(true)),
         "app.toggle_depths" => Some(app.show_depths),
         "app.toggle_balloons" => Some(app.show_balloons),

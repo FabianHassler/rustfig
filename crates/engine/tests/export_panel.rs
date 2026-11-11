@@ -120,7 +120,11 @@ fn eps_options_reach_fig2dev() {
     set(&mut e, "eps", json!({"border": 0, "preview": 1, "background": 4}));
     let epsi = text(&mut e, json!({"format": "eps", "panel": true}));
     assert!(epsi.contains("%%BeginPreview"), "no preview");
-    assert!(epsi.contains("0 0 1"), "no blue background");
+    // Color 4 is red; the page is filled with it.
+    assert!(
+        epsi.contains("1 0 0 setrgbcolor\n0 0 792 612 rectfill"),
+        "no red background"
+    );
     set(
         &mut e,
         "eps",

@@ -2,8 +2,24 @@
 
 use super::{always, num, opt_bool, opt_num, string, CmdResult, Command};
 use crate::{Engine, EngineError};
-use rustfig_model::{Orientation, PaperSize, Units};
+use rustfig_model::{BoundingBox, Orientation, PaperSize, Units};
 use serde_json::{json, Value};
+
+/// Largest bounding-box coordinate (Fig units, about 14 km at 1200 per inch).
+const MAX_COORD: f64 = 1.0e9;
+
+/// Set the figure's bounding box (`None`: the standard one, the page);
+/// the box as the result.
+fn set_box(e: &mut Engine, b: Option<BoundingBox>) -> CmdResult {
+    if e.doc().bounding_box != b {
+        e.doc_mut().bounding_box = b;
+    }
+    let shown = e.doc().export_box();
+    Ok(json!({
+        "standard": b.is_none(),
+        "x1": shown.x1, "y1": shown.y1, "x2": shown.x2, "y2": shown.y2,
+    }))
+}
 
 /// Depths 0–999: the most a depth list can sensibly name.
 const MAX_DEPTHS: usize = 1000;
@@ -139,6 +155,58 @@ pub(super) fn commands() -> Vec<Command> {
                     e.doc_mut().latex_preamble = pre.clone();
                 }
                 Ok(json!({"preamble": pre}))
+            },
+        },
+        Command {
+            id: "doc.set_bounding_box",
+            label: "Set bounding box",
+            menu: "",
+            shortcut: "",
+            params: "{\"x1\", \"y1\", \"x2\", \"y2\": Fig units}  — the figure's own export box (plan F11): every export (File > Export, rustfig-cli convert, printing, rustfig_render) covers exactly this box and cuts off what lies outside; saved in the .fig as a `# RustFigBoundingBox` comment. doc.bounding_box_standard goes back to the page",
+            mutates: true,
+            enabled: always,
+            run: |e, p| {
+                let mut v = [0i32; 4];
+                for (slot, key) in v.iter_mut().zip(["x1", "y1", "x2", "y2"]) {
+                    let n = num(p, key)?;
+                    if !n.is_finite() || n.abs() > MAX_COORD {
+                        return Err(EngineError::bad_params(format!("\"{key}\" is out of range")));
+                    }
+                    *slot = n.round() as i32;
+                }
+                let [x1, y1, x2, y2] = v;
+                let b = BoundingBox::new((x1, y1), (x2, y2))
+                    .ok_or_else(|| EngineError::bad_params("the bounding box needs a width and a height"))?;
+                set_box(e, Some(b))
+            },
+        },
+        Command {
+            id: "doc.bounding_box_standard",
+            label: "Standard (page)",
+            menu: "View",
+            shortcut: "",
+            params: "{}  — the standard bounding box: exports cover the page (paper size and orientation); nothing is saved in the .fig",
+            mutates: true,
+            enabled: always,
+            run: |e, _| set_box(e, None),
+        },
+        Command {
+            id: "doc.bounding_box_content",
+            label: "Fit to drawing",
+            menu: "View",
+            shortcut: "",
+            params: "{}  — the bounding box becomes the drawing's present bounds (as Zoom to fit sees them, typeset LaTeX texts included); it stays fixed when the drawing changes",
+            mutates: true,
+            enabled: |e| !e.doc().objects.is_empty(),
+            run: |e, _| {
+                let r = e.fit_bounds();
+                if r.is_empty() || !(r.min.is_finite() && r.max.is_finite()) {
+                    return Err(EngineError::bad_params("the drawing is empty"));
+                }
+                let c = |v: f64| v.clamp(-MAX_COORD, MAX_COORD) as i32;
+                let b = BoundingBox::new((c(r.min.x.floor()), c(r.min.y.floor())), (c(r.max.x.ceil()), c(r.max.y.ceil())))
+                    .ok_or_else(|| EngineError::bad_params("the drawing has no width or height"))?;
+                set_box(e, Some(b))
             },
         },
         Command {
@@ -287,6 +355,7 @@ fn info(e: &mut Engine, _: &Value) -> CmdResult {
     let d = e.doc();
     let s = &d.settings;
     let bb = e.doc_bounds();
+    let bx = d.export_box();
     Ok(json!({
         "path": e.path(),
         "modified": e.is_modified(),
@@ -302,6 +371,7 @@ fn info(e: &mut Engine, _: &Value) -> CmdResult {
         "paper": s.paper.name(),
         "magnification": s.magnification,
         "bounds": if bb.is_empty() { Value::Null } else { json!({"x": bb.min.x, "y": bb.min.y, "width": bb.width(), "height": bb.height()}) },
+        "bounding_box": {"standard": d.bounding_box.is_none(), "x1": bx.x1, "y1": bx.y1, "x2": bx.x2, "y2": bx.y2},
         "selection": super::ids_value(e.selection()),
         "tool": e.tool().id(),
     }))

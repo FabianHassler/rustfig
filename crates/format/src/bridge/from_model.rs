@@ -195,7 +195,8 @@ fn repair_lines(c: &mut Compound) {
 /// The figure's comment lines as the saved file has them: the user's, then
 /// the LaTeX preamble's (`crate::fig_write::latex_preamble_comments`).
 pub(super) fn whole_figure_comments_text(doc: &Document) -> Vec<String> {
-    let mut lines = doc.comments.clone();
+    let mut lines: Vec<String> = crate::fig_write::bounding_box_comment(doc).into_iter().collect();
+    lines.extend(doc.comments.iter().cloned());
     lines.extend(crate::fig_write::latex_preamble_comments(doc));
     lines
 }

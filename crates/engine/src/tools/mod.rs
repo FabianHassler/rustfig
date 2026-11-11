@@ -8,6 +8,7 @@
 // editing modes src/d_*.c and src/e_*.c (button behavior, `set_mousefun`
 // wording) and src/w_canvas.c (snapping) (xfig license, see LICENSE-xfig).
 
+mod bbox;
 mod chop;
 mod ctrl;
 mod cursor;
@@ -92,6 +93,10 @@ pub enum ToolKind {
     /// Find properties: the match set of Edit > Find Properties; a click
     /// adds or removes an object. No button in the mode panel.
     Find,
+    /// Edit the figure's bounding box (plan F11): drag a corner or an edge
+    /// of the frame, or the inside to move it. No button in the mode panel
+    /// (View > Bounding box).
+    BoundingBox,
 }
 
 impl ToolKind {
@@ -135,7 +140,7 @@ impl ToolKind {
         )
     }
 
-    pub const ALL: [ToolKind; 47] = [
+    pub const ALL: [ToolKind; 48] = [
         ToolKind::CircleRadius,
         ToolKind::CircleDiameter,
         ToolKind::EllipseRadii,
@@ -183,6 +188,7 @@ impl ToolKind {
         ToolKind::AreaMeasure,
         ToolKind::Plot,
         ToolKind::Find,
+        ToolKind::BoundingBox,
     ];
 
     pub fn id(self) -> &'static str {
@@ -235,6 +241,7 @@ impl ToolKind {
             ToolKind::AreaMeasure => "tool.area_measure",
             ToolKind::Plot => "tool.plot",
             ToolKind::Find => "tool.find",
+            ToolKind::BoundingBox => "tool.bounding_box",
         }
     }
 
@@ -292,6 +299,7 @@ impl ToolKind {
             ToolKind::AreaMeasure => "Measure area",
             ToolKind::Plot => "Plot",
             ToolKind::Find => "Find properties",
+            ToolKind::BoundingBox => "Edit bounding box",
         }
     }
 
@@ -614,6 +622,15 @@ pub(crate) enum Band {
 pub(crate) enum ToolState {
     #[default]
     Idle,
+    /// Bounding box mode: a drag of the frame (`bbox.rs`).
+    BoxDrag {
+        /// The box when the drag began.
+        from: rustfig_model::BoundingBox,
+        /// Which sides follow the pointer.
+        grip: bbox::Grip,
+        start: Point,
+        cursor: Point,
+    },
     Points {
         pts: Vec<Point>,
         cursor: Point,
@@ -1245,6 +1262,7 @@ impl Engine {
             ToolKind::Scale => self.scale_event(ev),
             ToolKind::Delete => self.delete_event(ev),
             ToolKind::Find => self.find_event(ev),
+            ToolKind::BoundingBox => self.bounding_box_event(ev),
             ToolKind::OpenCompound => self.open_compound_event(ev),
             ToolKind::JoinSplit => self.join_split_event(ev),
             ToolKind::Chop => self.chop_event(ev),
@@ -3477,6 +3495,7 @@ impl Engine {
         let tool = self.tool;
         match &self.tool_state {
             ToolState::ZoomBox { .. } => h("final point", "", "cancel"),
+            ToolState::BoxDrag { .. } => h("place side", "", ""),
             ToolState::Paste { .. } => h("place object", "place at orig posn", "cancel paste"),
             ToolState::Library { .. } => h("place object", "new object", "cancel library"),
             ToolState::Points {
@@ -3611,6 +3630,7 @@ impl Engine {
                     ToolKind::Delete => ("delete object", "delete region", "del to cut buf"),
                     ToolKind::Update => ("update object", "update settings", ""),
                     ToolKind::Find => ("add/remove object", "", ""),
+                    ToolKind::BoundingBox => ("drag side/corner/box", "", ""),
                     ToolKind::Edit => ("edit object", "edit Main comment", "edit point"),
                     ToolKind::FlipV | ToolKind::FlipH if self.set_point.is_some() => {
                         ("flip", "copy & flip", "unset anchor")
@@ -3655,7 +3675,8 @@ impl Engine {
     pub fn overlay(&self) -> Overlay {
         let mut ov = Overlay::default();
         match &self.tool_state {
-            ToolState::Idle | ToolState::Join { .. } => {}
+            // The canvas draws the box being dragged (`shown_bounding_box`).
+            ToolState::Idle | ToolState::Join { .. } | ToolState::BoxDrag { .. } => {}
             ToolState::Angle { pts, cursor } => {
                 // The rubber band: the lines from the first point through
                 // the second to the pointer (`elastic_line`).

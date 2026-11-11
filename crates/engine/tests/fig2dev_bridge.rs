@@ -302,6 +302,9 @@ fn doc_bounds_are_the_eps_frame() {
         }
         let mut e = Engine::new();
         e.execute("file.open", &json!({"path": p})).unwrap();
+        // The page fits the objects: a multi-page figure with the standard
+        // bounding box keeps fig2dev's bounds (F11).
+        e.doc_mut().settings.multiple_pages = true;
         let r = e
             .execute("file.export_data", &json!({"format": "eps", "options": {}}))
             .unwrap();

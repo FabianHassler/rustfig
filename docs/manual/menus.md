@@ -17,7 +17,7 @@ Sections Undo (Undo, Redo), Paste (Paste objects, Paste text, Copy as picture), 
 
 ## View
 
-Sections Drawing (Manage Styles, Redraw, Portrait/Landscape), Zoom (Zoom in, Zoom out, Zoom to fit canvas, Unzoom, Pan to origin), Character map, and Show (the switches: page borders, grid, LaTeX text, depth manager, all depths on, info balloons, line lengths, vertex numbers, crosshair, autorefresh). See [Zoom and view](view.md).
+Sections Drawing (Manage Styles, Redraw, Portrait/Landscape, Bounding box: Standard (page), Fit to drawing, Edit bounding box), Zoom (Zoom in, Zoom out, Zoom to fit canvas, Unzoom, Pan to origin), Character map, and Show (the switches: page borders, grid, LaTeX text, depth manager, all depths on, info balloons, line lengths, vertex numbers, crosshair, autorefresh). See [Zoom and view](view.md).
 
 ## Snap
 

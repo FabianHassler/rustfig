@@ -75,10 +75,11 @@ fn every_tool_button_selects_its_tool() {
         ToolKind::EllipseRadii,
         ToolKind::EllipseDiameter,
     ];
-    // Find mode has no button: Tools > Find Objects enters it.
+    // Find mode and Bounding box mode have no button: the Tools and View
+    // menus enter them.
     for t in ToolKind::ALL
         .into_iter()
-        .filter(|t| !menu_only.contains(t) && *t != ToolKind::Find)
+        .filter(|t| !menu_only.contains(t) && !matches!(t, ToolKind::Find | ToolKind::BoundingBox))
     {
         // The mode panel scrolls in a small window, as a user would.
         h.get_by_label(t.label()).scroll_to_me();

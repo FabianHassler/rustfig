@@ -13,6 +13,11 @@ use std::fmt::Write as _;
 /// comments and read back into the model, not shown as a user comment.
 const EXPORT_ON_SAVE_MARKER: &str = "RustFigExportOnSave";
 
+/// The whole-figure comment line that carries [`Document::bounding_box`]
+/// (plan F11): `# RustFigBoundingBox x1 y1 x2 y2` in Fig units, the first
+/// comment of the file. A standard box (the page) writes nothing.
+const BOUNDING_BOX_MARKER: &str = "RustFigBoundingBox";
+
 // The whole-figure comment lines that carry `Document::latex_preamble`,
 // one per preamble line, after the export-on-save line.
 use fig2dev::gendev::LATEX_PREAMBLE_MARKER;
@@ -279,6 +284,9 @@ pub fn write_fig(doc: &Document) -> String {
     let _ = writeln!(out, "{:.2}", f(s.magnification, 2));
     out.push_str(if s.multiple_pages { "Multiple\n" } else { "Single\n" });
     let _ = writeln!(out, "{}", s.transparent_color);
+    if let Some(line) = bounding_box_comment(doc) {
+        let _ = writeln!(out, "# {line}");
+    }
     comments(&mut out, &doc.comments);
     write_export_on_save(&mut out, doc);
     write_latex_preamble(&mut out, doc);
@@ -293,6 +301,38 @@ pub fn write_fig(doc: &Document) -> String {
         object(&mut out, o);
     }
     out
+}
+
+/// The comment line (without `# `) of a figure's own bounding box.
+pub(crate) fn bounding_box_comment(doc: &Document) -> Option<String> {
+    let b = doc.bounding_box?;
+    Some(format!("{BOUNDING_BOX_MARKER} {} {} {} {}", b.x1, b.y1, b.x2, b.y2))
+}
+
+/// Take [`Document::bounding_box`] out of a Fig file's whole-figure
+/// comments. A line that names the marker but does not hold a box (four
+/// integers, width and height not zero) stays a user comment.
+pub(crate) fn restore_bounding_box(doc: &mut Document) {
+    if doc.bounding_box.is_some() {
+        return;
+    }
+    let prefix = format!("{BOUNDING_BOX_MARKER} ");
+    let parse = |rest: &str| -> Option<rustfig_model::BoundingBox> {
+        let v: Vec<i32> = rest.split_whitespace().map(|t| t.parse().ok()).collect::<Option<_>>()?;
+        let [x1, y1, x2, y2] = v.as_slice() else {
+            return None;
+        };
+        rustfig_model::BoundingBox::new((*x1, *y1), (*x2, *y2))
+    };
+    let found = doc
+        .comments
+        .iter()
+        .enumerate()
+        .find_map(|(i, c)| Some((i, parse(c.strip_prefix(&prefix)?)?)));
+    if let Some((i, b)) = found {
+        doc.comments.remove(i);
+        doc.bounding_box = Some(b);
+    }
 }
 
 /// The one-line representation of [`Document::export_on_save`]. The JSON is

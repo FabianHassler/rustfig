@@ -161,6 +161,33 @@ pub struct ExportOnSave {
     pub params: serde_json::Map<String, serde_json::Value>,
 }
 
+/// A figure's export box in Fig units (plan F11): `x1 < x2`, `y1 < y2`
+/// ([`BoundingBox::new`] orders the corners).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BoundingBox {
+    pub x1: i32,
+    pub y1: i32,
+    pub x2: i32,
+    pub y2: i32,
+}
+
+impl BoundingBox {
+    /// The box between two corners; `None` when it has no width or height.
+    pub fn new(a: (i32, i32), b: (i32, i32)) -> Option<BoundingBox> {
+        let (x1, x2) = (a.0.min(b.0), a.0.max(b.0));
+        let (y1, y2) = (a.1.min(b.1), a.1.max(b.1));
+        (x1 < x2 && y1 < y2).then_some(BoundingBox { x1, y1, x2, y2 })
+    }
+
+    /// The box as a rectangle.
+    pub fn rect(&self) -> rustfig_geom::Rect {
+        rustfig_geom::Rect::new(
+            Point::new(f64::from(self.x1), f64::from(self.y1)),
+            Point::new(f64::from(self.x2), f64::from(self.y2)),
+        )
+    }
+}
+
 /// A user-defined color (Fig color numbers 32–543).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UserColor {
@@ -188,6 +215,11 @@ pub struct Document {
     /// files as `# RustFigLaTeXPreamble` comment lines.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub latex_preamble: String,
+    /// The figure's own export box (plan F11); `None` is the standard box,
+    /// the page ([`Document::export_box`]). Saved in Fig files as a
+    /// `# RustFigBoundingBox x1 y1 x2 y2` comment line.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bounding_box: Option<BoundingBox>,
     #[serde(default)]
     pub colors: Vec<UserColor>,
     /// Top-level objects, shared so an undo snapshot copies pointers;
@@ -509,6 +541,38 @@ impl Document {
         match self.settings.orientation {
             Orientation::Landscape => (h * per_inch, w * per_inch),
             Orientation::Portrait => (w * per_inch, h * per_inch),
+        }
+    }
+
+    /// The box exports cover (plan F11): the figure's own
+    /// [`Document::bounding_box`], else the page (the paper at the origin,
+    /// as the canvas draws it).
+    pub fn export_box(&self) -> BoundingBox {
+        self.bounding_box.unwrap_or_else(|| {
+            let (w, h) = self.page_size();
+            let px = |v: f64| {
+                if v.is_finite() {
+                    v.round().clamp(1.0, 1.0e9) as i32
+                } else {
+                    1
+                }
+            };
+            BoundingBox {
+                x1: 0,
+                y1: 0,
+                x2: px(w),
+                y2: px(h),
+            }
+        })
+    }
+
+    /// The box exports use as their page: [`Document::export_box`], except
+    /// for a figure printed on multiple pages without a box of its own,
+    /// which keeps fig2dev's bounds of its objects (`None`).
+    pub fn export_bounds(&self) -> Option<BoundingBox> {
+        match self.bounding_box {
+            None if self.settings.multiple_pages => None,
+            _ => Some(self.export_box()),
         }
     }
 
