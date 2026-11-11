@@ -4,7 +4,7 @@
 //! `plot.update` (a plot being edited); the dialog only collects fields.
 
 use crate::App;
-use rustfig_engine::plot::{self, NumFormat, PlotMode, PlotSpec, TickDir, TickSpec};
+use rustfig_engine::plot::{self, AxesKind, NumFormat, PlotMode, PlotSpec, TickDir, TickSpec};
 use serde_json::{json, Value};
 
 /// The dialog's fields as text; they stay between uses.
@@ -33,7 +33,13 @@ pub struct PlotDialog {
     pub tmax: String,
     pub samples: String,
     pub frame_box: bool,
+    /// Where the axes stand: the frame's edges, crossing at the origin, none.
+    pub axes: AxesKind,
+    pub axis_arrows: bool,
     pub grid: bool,
+    pub grid_minor: bool,
+    /// `dotted`, `dashed` or `solid`.
+    pub grid_style: String,
     pub log_x: bool,
     pub log_y: bool,
     pub xlabel: String,
@@ -194,7 +200,11 @@ impl Default for PlotDialog {
             tmax: String::new(),
             samples: String::new(),
             frame_box: true,
+            axes: AxesKind::Frame,
+            axis_arrows: true,
             grid: false,
+            grid_minor: false,
+            grid_style: "dotted".into(),
             log_x: false,
             log_y: false,
             xlabel: String::new(),
@@ -228,7 +238,11 @@ impl PlotDialog {
         self.tmax = num(s.tmax);
         self.samples = s.samples.to_string();
         self.frame_box = s.frame;
+        self.axes = s.axes_kind();
+        self.axis_arrows = s.axis_arrows;
         self.grid = s.grid;
+        self.grid_minor = s.grid_minor;
+        self.grid_style = s.grid_style.clone().unwrap_or_else(|| "dotted".into());
         self.log_x = s.log_x;
         self.log_y = s.log_y;
         self.xlabel = s.xlabel.clone();
@@ -313,7 +327,11 @@ impl PlotDialog {
             "tmax": Self::value(&self.tmax, "t to")?,
             "samples": Self::whole(&self.samples, "Samples")?,
             "frame": self.frame_box,
+            "axes": self.axes,
+            "axis_arrows": self.axis_arrows,
             "grid": self.grid,
+            "grid_minor": self.grid_minor,
+            "grid_style": self.grid_style,
             "log_x": self.log_x,
             "log_y": self.log_y,
             "xlabel": self.xlabel,
@@ -481,8 +499,27 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                         ui.end_row();
                     });
                 ui.horizontal(|ui| {
-                    ui.checkbox(&mut d.frame_box, "Box");
+                    ui.label("Axes:");
+                    ui.radio_value(&mut d.axes, AxesKind::Frame, "On the frame");
+                    ui.radio_value(&mut d.axes, AxesKind::Origin, "Crossing at the origin");
+                    ui.radio_value(&mut d.axes, AxesKind::None, "None");
+                });
+                ui.horizontal(|ui| {
+                    ui.add_enabled(d.axes == AxesKind::Frame, egui::Checkbox::new(&mut d.frame_box, "Box"));
+                    ui.add_enabled(
+                        d.axes == AxesKind::Origin,
+                        egui::Checkbox::new(&mut d.axis_arrows, "Arrows"),
+                    );
+                });
+                ui.horizontal(|ui| {
                     ui.checkbox(&mut d.grid, "Grid");
+                    ui.add_enabled_ui(d.grid, |ui| {
+                        ui.checkbox(&mut d.grid_minor, "Minor lines");
+                        ui.label("Lines:");
+                        ui.radio_value(&mut d.grid_style, "dotted".into(), "dotted");
+                        ui.radio_value(&mut d.grid_style, "dashed".into(), "dashed");
+                        ui.radio_value(&mut d.grid_style, "solid".into(), "solid");
+                    });
                 });
                 tick_section(ui, "x", &mut d.xticks);
                 tick_section(ui, "y", &mut d.yticks);

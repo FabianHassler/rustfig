@@ -62,8 +62,25 @@ runs on the user's computer over stdio.
 Coordinates are Fig units: 1200 per inch, y grows downwards. Open and save
 files with `file.open` / `file.save` through `rustfig_execute`.
 
+## Plots
+
+`plot.add` draws a plot as one compound and `plot.update` redraws it with
+changed parameters (`plot.get` returns them; `rustfig_commands` with the
+filter `plot` lists every parameter). Everything the Plot dialog offers is a
+parameter, and a plot's parameters are kept in the figure, so an edited
+plot redraws the same. Axes and grid (the plot's `axes`, `axis_arrows`,
+`grid`, `grid_minor` and `grid_style`):
+
+- `axes`: `"frame"` (ticks and numbers on the edges of the box, the default),
+  `"origin"` (axes crossing at (0, 0) or the nearest edge, arrowheads at the
+  tips, labels at the tips, ticks and numbers on one side) or `"none"`.
+  `axis_arrows: false` leaves the arrowheads off.
+- `grid: true` with `grid_minor: true` (lines at the minor ticks too) and
+  `grid_style`: `"dotted"` (default), `"dashed"`, `"solid"`.
+
 ## Revision history
 | Date | Note |
 |---|---|
 | 2026-10-13 | First version. |
 | 2026-11-06 | Setup for Claude Code, Codex and JSON-configured clients; the RustFig skill (`skills/rustfig/SKILL.md`). |
+| 2026-11-11 | Plots: axes crossing at the origin, no axes, grid with minor lines and a line style (Q1). |

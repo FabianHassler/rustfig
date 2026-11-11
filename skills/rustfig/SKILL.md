@@ -61,6 +61,7 @@ RustFig is an xfig replacement. Its MCP server, `rustfig-cli mcp`, holds one dra
 ```
 
 - Modes: `function` (`expr` in `x`), `parametric` (`xt`, `yt`, `tmin`, `tmax`), `data` (`file` or `data`, `xcol`, `ycol`). Several curves: `"curves": [{"expr": "sin(x)", "pen_color": 4}, {"points": [[0, 1], [1, 2]], "marker": "circle", "line": "none"}]`.
+- Axes: `"axes": "origin"` crosses them at (0, 0) with arrows and labels at the tips (with `"xticks": {"dir": "out"}`), `"none"` draws only the curves; `"grid": true` with `"grid_minor": true` and `"grid_style": "dashed"`.
 - The reply's `id` is the plot compound; change it with `plot.update`.
 
 ## Exporting

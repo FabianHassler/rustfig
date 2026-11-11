@@ -12,8 +12,8 @@
 
 use rustfig_geom::{Point, Rect};
 use rustfig_model::{
-    text_flags, ColorRef, Compound, Ellipse, EllipseKind, Justify, LineKind, Object, ObjectKind, PolyKind, Polyline,
-    Style, Text, MAX_DEPTH,
+    text_flags, Arrow, ColorRef, Compound, Ellipse, EllipseKind, Justify, LineKind, Object, ObjectKind, PolyKind,
+    Polyline, Style, Text, MAX_DEPTH,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -434,6 +434,29 @@ pub enum TickDir {
     Both,
 }
 
+/// Where the axes stand (Q1).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AxesKind {
+    /// Ticks and numbers on the frame's edges (the box is `frame`).
+    #[default]
+    Frame,
+    /// Two axes crossing at (0, 0), or at the range's edge when 0 is
+    /// outside it, with arrows and the axis labels at the tips; ticks and
+    /// numbers on one side of each axis.
+    Origin,
+    /// No box, axes, ticks or numbers: the curves (and the grid) alone.
+    None,
+}
+
+/// The `axes` value of a plot: a kind, or the old plots' on/off switch.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AxesValue {
+    Switch(bool),
+    Kind(AxesKind),
+}
+
 /// How tick numbers are written.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -549,11 +572,19 @@ pub struct PlotSpec {
     pub samples: usize,
     /// The box around the plot.
     pub frame: bool,
+    /// Where the axes stand (`frame`, `origin`, `none`; `None` is `frame`).
     /// Old plots' all-in-one switch: `false` turns the frame, ticks and
-    /// numbers off when read (`from_value`), then it is cleared. Never written.
-    #[serde(skip_serializing)]
-    pub axes: Option<bool>,
+    /// numbers off when read (`from_value`), then it is cleared.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub axes: Option<AxesValue>,
+    /// Arrowheads at the tips of origin axes.
+    pub axis_arrows: bool,
     pub grid: bool,
+    /// Grid lines at the minor ticks too (half as dense a dotted line).
+    pub grid_minor: bool,
+    /// Line style of the major grid lines (`dotted`, `dashed`, `solid`...;
+    /// `None`: dotted).
+    pub grid_style: Option<String>,
     pub log_x: bool,
     pub log_y: bool,
     pub xlabel: String,
@@ -737,7 +768,10 @@ impl Default for PlotSpec {
             samples: 400,
             frame: true,
             axes: None,
+            axis_arrows: true,
             grid: false,
+            grid_minor: false,
+            grid_style: None,
             log_x: false,
             log_y: false,
             xlabel: String::new(),
@@ -794,14 +828,26 @@ impl PlotSpec {
         }]
     }
 
+    /// Where the axes stand.
+    pub fn axes_kind(&self) -> AxesKind {
+        match self.axes {
+            Some(AxesValue::Kind(k)) => k,
+            _ => AxesKind::Frame,
+        }
+    }
+
     /// Old comments' `axes: false` means no frame, ticks or numbers.
     fn migrate(mut self) -> PlotSpec {
-        if self.axes.take() == Some(false) {
-            self.frame = false;
-            for t in [&mut self.xticks, &mut self.yticks] {
-                t.ticks = false;
-                t.numbers = false;
+        match self.axes.take() {
+            Some(AxesValue::Switch(false)) => {
+                self.frame = false;
+                for t in [&mut self.xticks, &mut self.yticks] {
+                    t.ticks = false;
+                    t.numbers = false;
+                }
             }
+            Some(AxesValue::Kind(k)) if k != AxesKind::Frame => self.axes = Some(AxesValue::Kind(k)),
+            _ => {}
         }
         self
     }
@@ -850,6 +896,11 @@ impl PlotSpec {
         .map_err(|e| e.replacen("curve 0", "plot", 1))?;
         if self.depth.is_some_and(|d| !(0..=MAX_DEPTH).contains(&d)) {
             return Err(format!("depth must be between 0 and {MAX_DEPTH}"));
+        }
+        if let Some(name) = &self.grid_style {
+            if LineKind::from_name(name).is_none() {
+                return Err(format!("unknown grid line style {name:?}"));
+            }
         }
         Ok(())
     }
@@ -1721,7 +1772,10 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
     );
     let mut members: Vec<Object> = Vec::new();
 
-    if spec.frame {
+    let kind = spec.axes_kind();
+    let origin = kind == AxesKind::Origin;
+    // The box only goes with ticks on the frame's edges.
+    if spec.frame && kind == AxesKind::Frame {
         let a = Point::new(fig(rect.min.x), fig(rect.min.y));
         let b = Point::new(fig(rect.max.x), fig(rect.max.y));
         let mut frame = thin(LineKind::Solid, depth);
@@ -1731,6 +1785,44 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
             "frame",
             Object::new(ObjectKind::Polyline(Polyline::rect(frame, a, b))),
         );
+    }
+
+    // Where the axes cross: (0, 0), or the range's nearest edge (the lower
+    // one on a logarithmic axis).
+    let cross = |lo: f64, hi: f64, log: bool| {
+        if log || lo > 0.0 {
+            lo
+        } else if hi < 0.0 {
+            hi
+        } else {
+            0.0
+        }
+    };
+    let (cross_x, cross_y) = (cross(r.x0, r.x1, spec.log_x), cross(r.y0, r.y1, spec.log_y));
+    // Where the x axis (its ticks and numbers) and the y axis stand.
+    let ay = if origin { fig(my(cross_y)) } else { fig(rect.max.y) };
+    let ax = if origin { fig(mx(cross_x)) } else { fig(rect.min.x) };
+    if origin {
+        let mut st = thin(LineKind::Solid, depth);
+        st.thickness = look.curve.thickness.clamp(1, 3);
+        let arrow = spec.axis_arrows.then(|| Arrow {
+            thickness: f64::from(st.thickness),
+            ..Arrow::default()
+        });
+        let mut xa = Polyline::new(
+            PolyKind::Polyline,
+            st,
+            vec![Point::new(fig(rect.min.x), ay), Point::new(fig(rect.max.x), ay)],
+        );
+        xa.forward_arrow = arrow;
+        let mut ya = Polyline::new(
+            PolyKind::Polyline,
+            st,
+            vec![Point::new(ax, fig(rect.max.y)), Point::new(ax, fig(rect.min.y))],
+        );
+        ya.forward_arrow = arrow;
+        push_part(&mut members, "axis", Object::new(ObjectKind::Polyline(xa)));
+        push_part(&mut members, "axis", Object::new(ObjectKind::Polyline(ya)));
     }
 
     let size = look.font_size.clamp(6.0, 72.0);
@@ -1769,44 +1861,78 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
             l.to_string()
         }
     };
+    // No axes: no ticks and numbers either.
+    let (mut xt, mut yt) = (spec.xticks.clone(), spec.yticks.clone());
+    if kind == AxesKind::None {
+        for t in [&mut xt, &mut yt] {
+            t.ticks = false;
+            t.numbers = false;
+        }
+    }
     let mut left_width = 0.0f64;
     {
         let tick_h = tick_size * unit * 0.75;
         let gap = 0.5 * tick_h;
-        // Ticks start on the frame's edges whether or not the box is drawn.
-        let xout = if spec.xticks.ticks {
-            tick_reach(spec.xticks.dir, spec.xticks.length).0
-        } else {
-            0.0
-        };
-        let yout = if spec.yticks.ticks {
-            tick_reach(spec.yticks.dir, spec.yticks.length).0
-        } else {
-            0.0
-        };
-        for t in ticks(r.x0, r.x1, spec.log_x, &spec.xticks)? {
-            let x = fig(mx(t.at));
-            let len = if t.major {
-                spec.xticks.length
-            } else {
-                0.5 * spec.xticks.length
+        // Ticks start on the axis whether or not the box is drawn.
+        let xout = if xt.ticks { tick_reach(xt.dir, xt.length).0 } else { 0.0 };
+        let yout = if yt.ticks { tick_reach(yt.dir, yt.length).0 } else { 0.0 };
+        if spec.grid {
+            // Major lines in the grid style, minor ones dotted at twice the gap.
+            let major_kind = spec
+                .grid_style
+                .as_deref()
+                .and_then(LineKind::from_name)
+                .unwrap_or(LineKind::Dotted);
+            let mut major = thin(major_kind, depth + 1);
+            major.style_val = match major_kind {
+                LineKind::Solid => 0.0,
+                LineKind::Dotted => look.grid_gap,
+                _ => 4.0,
             };
-            let (o, i) = tick_reach(spec.xticks.dir, len);
-            if spec.grid && t.major {
-                let g = thin(LineKind::Dotted, depth + 1);
-                push_part(
-                    &mut members,
-                    "grid",
-                    line(g, vec![Point::new(x, fig(rect.min.y)), Point::new(x, fig(rect.max.y))]),
-                );
+            let mut minor = thin(LineKind::Dotted, depth + 1);
+            minor.style_val = 2.0 * look.grid_gap;
+            let gridticks = |lo: f64, hi: f64, log: bool, t: &TickSpec| {
+                let mut g = t.clone();
+                g.numbers = false;
+                if spec.grid_minor && g.minor.is_none() && !log {
+                    g.minor = Some(4);
+                }
+                ticks(lo, hi, log, &g)
+            };
+            for t in gridticks(r.x0, r.x1, spec.log_x, &spec.xticks)? {
+                if t.major || spec.grid_minor {
+                    let x = fig(mx(t.at));
+                    let st = if t.major { major } else { minor };
+                    push_part(
+                        &mut members,
+                        "grid",
+                        line(st, vec![Point::new(x, fig(rect.min.y)), Point::new(x, fig(rect.max.y))]),
+                    );
+                }
             }
-            if spec.xticks.ticks {
+            for t in gridticks(r.y0, r.y1, spec.log_y, &spec.yticks)? {
+                if t.major || spec.grid_minor {
+                    let y = fig(my(t.at));
+                    let st = if t.major { major } else { minor };
+                    push_part(
+                        &mut members,
+                        "grid",
+                        line(st, vec![Point::new(fig(rect.min.x), y), Point::new(fig(rect.max.x), y)]),
+                    );
+                }
+            }
+        }
+        for t in ticks(r.x0, r.x1, spec.log_x, &xt)? {
+            let x = fig(mx(t.at));
+            let len = if t.major { xt.length } else { 0.5 * xt.length };
+            let (o, i) = tick_reach(xt.dir, len);
+            if xt.ticks {
                 push_part(
                     &mut members,
                     "tick",
                     line(
                         thin(LineKind::Solid, depth),
-                        vec![Point::new(x, fig(rect.max.y + o)), Point::new(x, fig(rect.max.y - i))],
+                        vec![Point::new(x, fig(ay + o)), Point::new(x, fig(ay - i))],
                     ),
                 );
             }
@@ -1817,7 +1943,7 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
                     text(
                         &tick_text(l),
                         Justify::Center,
-                        Point::new(x, fig(rect.max.y + xout + gap + tick_h)),
+                        Point::new(x, fig(ay + xout + gap + tick_h)),
                         0.0,
                         tick_size,
                         spec.latex_numbers,
@@ -1825,33 +1951,25 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
                 );
             }
         }
-        for t in ticks(r.y0, r.y1, spec.log_y, &spec.yticks)? {
+        for t in ticks(r.y0, r.y1, spec.log_y, &yt)? {
             let y = fig(my(t.at));
-            let len = if t.major {
-                spec.yticks.length
-            } else {
-                0.5 * spec.yticks.length
-            };
-            let (o, i) = tick_reach(spec.yticks.dir, len);
-            if spec.grid && t.major {
-                let g = thin(LineKind::Dotted, depth + 1);
-                push_part(
-                    &mut members,
-                    "grid",
-                    line(g, vec![Point::new(fig(rect.min.x), y), Point::new(fig(rect.max.x), y)]),
-                );
-            }
-            if spec.yticks.ticks {
+            let len = if t.major { yt.length } else { 0.5 * yt.length };
+            let (o, i) = tick_reach(yt.dir, len);
+            if yt.ticks {
                 push_part(
                     &mut members,
                     "tick",
                     line(
                         thin(LineKind::Solid, depth),
-                        vec![Point::new(fig(rect.min.x - o), y), Point::new(fig(rect.min.x + i), y)],
+                        vec![Point::new(fig(ax - o), y), Point::new(fig(ax + i), y)],
                     ),
                 );
             }
             if let Some(l) = &t.label {
+                // The number at the crossing is the x axis's.
+                if origin && (t.at - cross_y).abs() < 1e-9 * (r.y1 - r.y0).abs() {
+                    continue;
+                }
                 left_width = left_width.max(l.chars().count() as f64 * tick_size * unit * 0.55);
                 push_part(
                     &mut members,
@@ -1859,7 +1977,7 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
                     text(
                         &tick_text(l),
                         Justify::Right,
-                        Point::new(fig(rect.min.x - yout - gap), fig(y + 0.35 * tick_h)),
+                        Point::new(fig(ax - yout - gap), fig(y + 0.35 * tick_h)),
                         0.0,
                         tick_size,
                         spec.latex_numbers,
@@ -1869,37 +1987,69 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
         }
         let label_size = size;
         let label_h = label_size * unit * 0.75;
-        if !spec.xlabel.trim().is_empty() {
-            let below = if spec.xticks.numbers { gap + tick_h } else { xout };
-            let y = rect.max.y + below + gap + label_h * 1.1;
-            push_part(
-                &mut members,
-                "label",
-                text(
-                    &spec.xlabel,
-                    Justify::Center,
-                    Point::new(fig(0.5 * (rect.min.x + rect.max.x)), fig(y)),
-                    0.0,
-                    label_size,
-                    spec.latex,
-                ),
-            );
-        }
-        if !spec.ylabel.trim().is_empty() {
-            // Reads upwards; the baseline lies right of the glyphs.
-            let x = rect.min.x - yout - gap - left_width - gap;
-            push_part(
-                &mut members,
-                "label",
-                text(
-                    &spec.ylabel,
-                    Justify::Center,
-                    Point::new(fig(x), fig(0.5 * (rect.min.y + rect.max.y))),
-                    std::f64::consts::FRAC_PI_2,
-                    label_size,
-                    spec.latex,
-                ),
-            );
+        if origin {
+            // The labels stand at the arrow tips.
+            if !spec.xlabel.trim().is_empty() {
+                push_part(
+                    &mut members,
+                    "label",
+                    text(
+                        &spec.xlabel,
+                        Justify::Left,
+                        Point::new(fig(rect.max.x + gap), fig(ay + 0.35 * label_h)),
+                        0.0,
+                        label_size,
+                        spec.latex,
+                    ),
+                );
+            }
+            if !spec.ylabel.trim().is_empty() {
+                push_part(
+                    &mut members,
+                    "label",
+                    text(
+                        &spec.ylabel,
+                        Justify::Center,
+                        Point::new(ax, fig(rect.min.y - gap)),
+                        0.0,
+                        label_size,
+                        spec.latex,
+                    ),
+                );
+            }
+        } else {
+            if !spec.xlabel.trim().is_empty() {
+                let below = if xt.numbers { gap + tick_h } else { xout };
+                let y = rect.max.y + below + gap + label_h * 1.1;
+                push_part(
+                    &mut members,
+                    "label",
+                    text(
+                        &spec.xlabel,
+                        Justify::Center,
+                        Point::new(fig(0.5 * (rect.min.x + rect.max.x)), fig(y)),
+                        0.0,
+                        label_size,
+                        spec.latex,
+                    ),
+                );
+            }
+            if !spec.ylabel.trim().is_empty() {
+                // Reads upwards; the baseline lies right of the glyphs.
+                let x = rect.min.x - yout - gap - left_width - gap;
+                push_part(
+                    &mut members,
+                    "label",
+                    text(
+                        &spec.ylabel,
+                        Justify::Center,
+                        Point::new(fig(x), fig(0.5 * (rect.min.y + rect.max.y))),
+                        std::f64::consts::FRAC_PI_2,
+                        label_size,
+                        spec.latex,
+                    ),
+                );
+            }
         }
     }
 
