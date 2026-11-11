@@ -658,6 +658,33 @@ pub enum Marker {
     Plus,
 }
 
+/// A filled area behind a curve (Q3): between the curve and a horizontal
+/// baseline, or between the curve and another curve.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CurveFill {
+    /// The number (from 1) of the curve it is filled up to; `None`: the
+    /// baseline `y`.
+    pub curve: Option<usize>,
+    /// The baseline's y value (kept inside the window).
+    pub y: f64,
+    /// Fill color (`None`: the curve's pen color).
+    pub color: Option<i32>,
+    /// Xfig's area fill: 0 black ... 20 the full color ... 40 white.
+    pub density: i32,
+}
+
+impl Default for CurveFill {
+    fn default() -> Self {
+        CurveFill {
+            curve: None,
+            y: 0.0,
+            color: None,
+            density: 20,
+        }
+    }
+}
+
 /// One curve of a plot with several ([`PlotSpec::curves`]).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -690,6 +717,8 @@ pub struct CurveSpec {
     pub marker_size: f64,
     /// Filled with the curve's color (else open).
     pub marker_fill: bool,
+    /// An area filled behind the curve: to a baseline or to another curve.
+    pub fill: Option<CurveFill>,
 }
 
 impl Default for CurveSpec {
@@ -714,6 +743,7 @@ impl Default for CurveSpec {
             marker: Marker::None,
             marker_size: 75.0,
             marker_fill: true,
+            fill: None,
         }
     }
 }
@@ -778,6 +808,19 @@ impl CurveSpec {
         }
         if self.points.iter().flatten().any(|v| !v.is_finite() || v.abs() > BIG) {
             return Err(at("points must be finite numbers"));
+        }
+        if let Some(f) = &self.fill {
+            if !f.y.is_finite() || f.y.abs() > BIG {
+                return Err(at("the fill's y must be a finite number"));
+            }
+            if !(0..=40).contains(&f.density) {
+                return Err(at("the fill density is 0 (black) to 40 (white), 20 the full color"));
+            }
+            if f.color
+                .is_some_and(|c| !(-1..=rustfig_model::LAST_USER_COLOR).contains(&c))
+            {
+                return Err(at("the fill color is not a color number"));
+            }
         }
         Ok(())
     }
@@ -914,6 +957,15 @@ impl PlotSpec {
         }
         for (i, c) in self.curves.iter().enumerate() {
             c.check(i + 1)?;
+            if let Some(k) = c.fill.as_ref().and_then(|f| f.curve) {
+                if k == 0 || k > self.curves.len() || k == i + 1 {
+                    return Err(format!(
+                        "curve {}: the fill goes up to another curve, numbered from 1 to {}",
+                        i + 1,
+                        self.curves.len()
+                    ));
+                }
+            }
         }
         if self.curves.iter().map(|c| c.points.len()).sum::<usize>() > MAX_KEPT_POINTS {
             return Err(format!("at most {MAX_KEPT_POINTS} points in one plot (use data files)"));
@@ -2181,13 +2233,88 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
     let mut markers = 0;
     let mut warnings = Vec::new();
     let several = curves.len() > 1;
-    for (i, ((pieces, marks), c)) in pieces.iter().zip(&marks).zip(&curves).enumerate() {
+    // Every curve cut at the window: what leaves it ends on its edge.
+    let clipped: Vec<Vec<Vec<P>>> = pieces.iter().map(|p| clip_pieces(p, &r)).collect();
+    // Areas first, behind the grid and the curves.
+    for (i, c) in curves.iter().enumerate() {
+        let Some(f) = &c.fill else { continue };
+        let own = clipped.get(i).map(Vec::as_slice).unwrap_or_default();
+        let polys: Vec<Vec<P>> = match f.curve {
+            Some(k) => {
+                // Up to the other curve: this one forward, that one back.
+                let other = k
+                    .checked_sub(1)
+                    .and_then(|k| clipped.get(k))
+                    .map(Vec::as_slice)
+                    .unwrap_or_default();
+                let mut poly: Vec<P> = own.iter().flatten().copied().collect();
+                poly.extend(other.iter().flatten().rev().copied());
+                vec![poly]
+            }
+            None => {
+                let base_y = tr(f.y, spec.log_y).unwrap_or(r.y0).clamp(r.y0, r.y1);
+                own.iter()
+                    .filter_map(|run| {
+                        let (first, last) = (run.first()?, run.last()?);
+                        let mut poly = run.clone();
+                        poly.push((last.0, base_y));
+                        poly.push((first.0, base_y));
+                        Some(poly)
+                    })
+                    .collect()
+            }
+        };
+        let fill_color = ColorRef(f.color.unwrap_or(c.pen_color.unwrap_or(base.pen_color.0)));
+        let mut drawn = 0;
+        for poly in polys {
+            let mut pts: Vec<Point> = Vec::with_capacity(poly.len());
+            for &(x, y) in &poly {
+                let p = Point::new(fig(mx(x)), fig(my(y)));
+                if pts.last() != Some(&p) {
+                    pts.push(p);
+                }
+            }
+            while pts.len() > 1 && pts.first() == pts.last() {
+                pts.pop();
+            }
+            if pts.len() < 3 {
+                continue;
+            }
+            let st = Style {
+                line: LineKind::Solid,
+                thickness: 0,
+                pen_color: fill_color,
+                fill_color,
+                depth: (depth + 2).clamp(0, MAX_DEPTH),
+                pen_style: -1,
+                area_fill: f.density,
+                style_val: 0.0,
+                cap: look.curve.cap,
+                join: look.curve.join,
+            };
+            drawn += 1;
+            push_part(
+                &mut members,
+                "fill",
+                Object::new(ObjectKind::Polyline(Polyline::new(PolyKind::Polygon, st, pts))),
+            );
+        }
+        if drawn == 0 {
+            let m = "nothing to fill inside the ranges";
+            warnings.push(if several {
+                format!("curve {}: {m}", i + 1)
+            } else {
+                m.to_string()
+            });
+        }
+    }
+    for (i, (((_, marks), c), runs)) in pieces.iter().zip(&marks).zip(&curves).zip(&clipped).enumerate() {
         let style = restyle(base, c.pen_color, c.thickness, c.line.as_deref(), c.style_val);
         let mut drawn = 0;
         if c.has_line() {
-            for piece in clip_pieces(pieces, &r) {
+            for piece in runs {
                 let mut pts: Vec<Point> = Vec::with_capacity(piece.len());
-                for &(x, y) in &piece {
+                for &(x, y) in piece {
                     let p = Point::new(fig(mx(x)), fig(my(y)));
                     if pts.last() != Some(&p) {
                         pts.push(p);

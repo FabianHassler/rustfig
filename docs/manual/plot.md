@@ -21,6 +21,10 @@ Choose what to draw:
 - **x(t), y(t)**: two expressions in t and the range of t (default 0 to 2π, written `2*pi`).
 - **Data file**: a CSV or whitespace separated file (comma, semicolon, tab or blanks). Give the number of the x and y columns, counting from 1; x column 0 uses the row number. Lines starting with # or % and lines that are not numbers (a header) are skipped. Files up to 16 MB are read. This works on the desktop only; on the web use the command `plot.add` with the text as `data`.
 
+**Curve options** (collapsible, under Function) apply to the curve:
+
+- **Fill**: a filled area behind the curve, as a polygon behind the grid and the curves. *To the line y =* fills between the curve and a horizontal line (the x axis for y = 0; a line outside the window sits on its edge); where the curve is cut at the window, each piece gets its own polygon. *Up to curve* fills between this curve and another curve of the plot (the number counts from 1; **Add curve y = f(x)** under Curve options adds a function curve to the plot, a row for each, with Remove): the area between sin and cos, for instance. Crossing curves give two areas. **Fill color** is a color number (empty: the curve's color) and **density** the xfig area fill: 20 the full color, below it darker, above it lighter, 40 white. The area has no outline.
+
 The ranges of x and y can be left empty to fit the curve (the y range of a curve with poles ignores a few extreme values, so 1/x does not flatten everything else); the numbers are rounded to tick values. Numbers may be expressions such as `2*pi`.
 
 The dialog has four groups: **Function** (the mode, its fields, samples), **Range** (x and y, each with **Logarithmic**: powers of ten, the range must be positive), **Axes** and **Labels**.
@@ -54,7 +58,7 @@ Expressions use `+ - * / ^` (also × ÷ and `**`), parentheses, the constants `p
 
 An empty expression draws only the frame, ticks, numbers and labels; give both ranges then (y has no curve to fit). A curve that lies wholly outside the ranges also leaves just the frame, with a warning in the message panel; wider ranges later show it.
 
-Where the function is not defined (division by zero, the root of a negative number) or beyond the plot's range, the curve simply stops: there is never a line across a pole such as that of 1/x or tan(x), and parts outside the frame are cut at the frame.
+Where the function is not defined (division by zero, the root of a negative number) the curve simply stops: there is never a line across a pole such as that of 1/x or tan(x). Where it leaves the y range (or the x range) it is cut at the window: the part outside is dropped and the line ends exactly on the frame's edge, so tan(x) between -3 and 3 shows each branch running up to the top and down from the bottom of the frame.
 
 ## Edit plot
 
@@ -66,6 +70,6 @@ A plot stays one compound that carries the `rustfig-plot:` comment, and every pa
 
 ## Commands
 
-**Several curves** (scripts and MCP for now): `plot.add` takes `curves`, a list in which each curve has its own source (`expr`, `xt`/`yt`, a data `file`, `data` text or `points`) and style (`pen_color`, `thickness`, `line`, `style_val`; `line: "none"` draws markers only) and markers (`marker`: circle, square, triangle, diamond, cross or plus; `marker_size` in Fig units; `marker_fill`). The ranges fit all the curves. Data given in the command is kept in the figure (up to 20,000 points, as comment lines), so a later `plot.update` with other ranges redraws it. The plot's own `depth`, `pen_color`, `thickness`, `line` and `style_val` apply where a curve sets none. **Edit plot** shows the first curve of such a plot and keeps the others.
+**Several curves** (scripts and MCP for now): `plot.add` takes `curves`, a list in which each curve has its own source (`expr`, `xt`/`yt`, a data `file`, `data` text or `points`) and style (`pen_color`, `thickness`, `line`, `style_val`; `line: "none"` draws markers only) and markers (`marker`: circle, square, triangle, diamond, cross or plus; `marker_size` in Fig units; `marker_fill`, `fill`: `{"curve": 2}` fills up to the second curve, `{"y": 0}` to a baseline, with `color` and `density`). The ranges fit all the curves. Data given in the command is kept in the figure (up to 20,000 points, as comment lines), so a later `plot.update` with other ranges redraws it. The plot's own `depth`, `pen_color`, `thickness`, `line` and `style_val` apply where a curve sets none. **Edit plot** shows the first curve of such a plot and keeps the others.
 
 For scripts and MCP (see [Automation](automation.md)): `plot.add` draws a plot (frame `x`, `y`, `width`, `height`; the settings `mode`, `expr`, `xt`, `yt`, `tmin`, `tmax`, `file`, `xcol`, `ycol`, `data`, `xmin`, `xmax`, `ymin`, `ymax`, `samples`, `frame`, `xticks`, `yticks`, `axes` (`"frame"`, `"origin"` or `"none"`; the old `false` turns box, ticks and numbers off), `axis_arrows`, `grid`, `grid_minor`, `grid_style` (`dotted`, `dashed`, `solid`), in `xticks` and `yticks` also `scale`, `comma`, `labels` (`[[1, "Mon"], [2, "Tue"]]`) and `rotate`, `log_x`, `log_y`, `xlabel`, `ylabel`, `latex` (the axis labels as LaTeX), `latex_numbers` (the tick numbers as LaTeX math, `$-1.5$`)), `plot.update` changes some settings of an existing plot, `plot.get` returns them, `plot.panel` and `plot.edit` open the dialog. Hostile or huge input is refused with an error: the expression length, the number of samples (20,000), the points of the curve and the size of a data file are limited.

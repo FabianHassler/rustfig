@@ -102,3 +102,79 @@ fn tick_format_controls_reach_the_plot() {
     h.run_steps(3);
     assert!(h.state().plot_dialog.open && h.state().plot_dialog.error.contains("scale"));
 }
+
+#[test]
+fn fill_controls_reach_the_plot() {
+    let mut h = harness();
+    open(&mut h);
+    {
+        let d = &mut h.state_mut().plot_dialog;
+        d.expr = "sin(x)".into();
+        d.ymin = "-1".into();
+        d.ymax = "1".into();
+    }
+    h.run_steps(2);
+    h.get_by_label("Curve options").click();
+    h.run_steps(2);
+    h.get_by_label("to the line y =").click();
+    h.run_steps(2);
+    h.get_by_label("Draw plot").click();
+    h.run_steps(3);
+    assert!(!h.state().plot_dialog.open, "{}", h.state().plot_dialog.error);
+    let s = spec(&mut h);
+    assert_eq!(s["curves"][0]["fill"]["y"], 0.0);
+    assert_eq!(s["curves"][0]["expr"], "sin(x)");
+    // The area is drawn.
+    let o = &h.state().engine.doc().objects[0];
+    let rustfig_model::ObjectKind::Compound(c) = &o.kind else {
+        panic!()
+    };
+    assert!(c
+        .objects
+        .iter()
+        .any(|m| m.comments.iter().any(|c| c.ends_with("part: fill"))));
+    // Editing and switching it off removes the area.
+    let id = o.id.0;
+    h.state_mut().run("plot.edit", json!({"id": id}));
+    h.run_steps(3);
+    assert_eq!(
+        h.state().plot_dialog.fill.mode,
+        rustfig_ui_egui::plot_dialog::FillMode::Baseline
+    );
+    h.state_mut().plot_dialog.fill.mode = rustfig_ui_egui::plot_dialog::FillMode::None;
+    h.get_by_label("Draw plot").click();
+    h.run_steps(3);
+    let s = spec(&mut h);
+    assert!(s["curves"][0]["fill"].is_null());
+}
+
+#[test]
+fn fill_up_to_a_second_curve_added_in_the_dialog() {
+    let mut h = harness();
+    open(&mut h);
+    {
+        let d = &mut h.state_mut().plot_dialog;
+        d.expr = "sin(x)".into();
+        d.ymin = "-1".into();
+        d.ymax = "1".into();
+        d.fill.mode = rustfig_ui_egui::plot_dialog::FillMode::Curve;
+    }
+    h.run_steps(2);
+    h.get_by_label("Curve options").click();
+    h.run_steps(2);
+    h.get_by_label("Add curve y = f(x)").click();
+    h.run_steps(3);
+    assert_eq!(h.state().plot_dialog.curves.len(), 2);
+    h.get_by_label("Remove").click();
+    h.run_steps(3);
+    assert_eq!(h.state().plot_dialog.curves.len(), 1);
+    h.get_by_label("Add curve y = f(x)").click();
+    h.run_steps(3);
+    h.get_by_label("Draw plot").click();
+    h.run_steps(3);
+    assert!(!h.state().plot_dialog.open, "{}", h.state().plot_dialog.error);
+    let s = spec(&mut h);
+    assert_eq!(s["curves"].as_array().unwrap().len(), 2);
+    assert_eq!(s["curves"][1]["expr"], "cos(x)");
+    assert_eq!(s["curves"][0]["fill"]["curve"], 2);
+}

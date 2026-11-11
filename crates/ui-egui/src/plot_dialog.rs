@@ -48,8 +48,81 @@ pub struct PlotDialog {
     pub latex_numbers: bool,
     pub xticks: TickFields,
     pub yticks: TickFields,
+    /// The curve's filled area (Q3).
+    pub fill: FillFields,
     /// The last error, shown in the dialog.
     pub error: String,
+}
+
+/// What a curve's area is filled up to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FillMode {
+    None,
+    /// The horizontal line y = `y`.
+    Baseline,
+    /// Another curve of the plot.
+    Curve,
+}
+
+/// The fill settings of the first curve as typed.
+#[derive(Debug, Clone)]
+pub struct FillFields {
+    pub mode: FillMode,
+    pub y: String,
+    pub curve: String,
+    /// A color number (empty: the curve's).
+    pub color: String,
+    /// 0 black ... 20 full color ... 40 white.
+    pub density: String,
+}
+
+impl Default for FillFields {
+    fn default() -> Self {
+        FillFields::from_spec(None)
+    }
+}
+
+impl FillFields {
+    fn from_spec(f: Option<&plot::CurveFill>) -> FillFields {
+        let d = plot::CurveFill::default();
+        let g = f.unwrap_or(&d);
+        FillFields {
+            mode: match f {
+                None => FillMode::None,
+                Some(f) if f.curve.is_some() => FillMode::Curve,
+                Some(_) => FillMode::Baseline,
+            },
+            y: num(Some(g.y)),
+            curve: g.curve.map(|c| c.to_string()).unwrap_or_else(|| "2".into()),
+            color: g.color.map(|c| c.to_string()).unwrap_or_default(),
+            density: g.density.to_string(),
+        }
+    }
+
+    fn spec(&self) -> Result<Option<plot::CurveFill>, String> {
+        if self.mode == FillMode::None {
+            return Ok(None);
+        }
+        let whole = |t: &str, name: &str| -> Result<i32, String> {
+            t.trim()
+                .parse()
+                .map_err(|_| format!("Fill {name} must be a whole number"))
+        };
+        Ok(Some(plot::CurveFill {
+            curve: if self.mode == FillMode::Curve {
+                Some(whole(&self.curve, "curve")?.max(0) as usize)
+            } else {
+                None
+            },
+            y: PlotDialog::value(&self.y, "Fill y")?.as_f64().unwrap_or(0.0),
+            color: if self.color.trim().is_empty() {
+                None
+            } else {
+                Some(whole(&self.color, "color")?)
+            },
+            density: whole(&self.density, "density")?,
+        }))
+    }
 }
 
 /// The tick settings of one axis as typed.
@@ -285,6 +358,7 @@ impl Default for PlotDialog {
             latex_numbers: false,
             xticks: TickFields::from_spec(&TickSpec::default()),
             yticks: TickFields::from_spec(&TickSpec::default()),
+            fill: FillFields::default(),
             error: String::new(),
             curves: Vec::new(),
         };
@@ -325,6 +399,7 @@ impl PlotDialog {
         self.yticks = TickFields::from_spec(&s.yticks);
         self.error.clear();
         self.curves = s.curves.clone();
+        self.fill = FillFields::from_spec(s.curves.first().and_then(|c| c.fill.as_ref()));
         if let Some(c) = s.curves.first() {
             self.mode = c.mode();
             self.expr = c.expr.clone();
@@ -413,9 +488,17 @@ impl PlotDialog {
             "xticks": self.xticks.params("x")?,
             "yticks": self.yticks.params("y")?,
         });
-        // A curve list: the fields are its first curve.
-        if let Some((first, rest)) = self.curves.split_first() {
+        // A curve list: the fields are its first curve (also when a setting
+        // only a curve has is used).
+        let fill = self.fill.spec()?;
+        let list = if self.curves.is_empty() && fill.is_some() {
+            vec![plot::CurveSpec::default()]
+        } else {
+            self.curves.clone()
+        };
+        if let Some((first, rest)) = list.split_first() {
             let mut c = first.clone();
+            c.fill = fill;
             c.mode = Some(self.mode);
             if c.file != self.file || self.mode != PlotMode::Data {
                 c.points.clear();
@@ -441,6 +524,16 @@ impl PlotDialog {
             o.insert("height".into(), json!(h));
         }
         Ok(p)
+    }
+}
+
+/// A short description of a curve that is not edited in the dialog.
+fn curve_summary(c: &plot::CurveSpec) -> String {
+    match c.mode() {
+        PlotMode::Function => format!("y = {}", c.expr),
+        PlotMode::Parametric => format!("x = {}, y = {}", c.xt, c.yt),
+        PlotMode::Data if !c.file.is_empty() => format!("data from {}", c.file),
+        PlotMode::Data => format!("{} data points", c.points.len()),
     }
 }
 
@@ -527,6 +620,59 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                             ui.label("Samples:");
                             field(ui, "Plot samples", &mut d.samples, 70.0);
                             ui.end_row();
+                        }
+                    });
+
+                egui::CollapsingHeader::new("Curve options")
+                    .id_salt("plot_curve_options")
+                    .show(ui, |ui| {
+                        egui::Grid::new("plot_curve_grid")
+                            .num_columns(2)
+                            .min_col_width(LABEL_W)
+                            .show(ui, |ui| {
+                                ui.label("Fill:");
+                                ui.horizontal_wrapped(|ui| {
+                                    ui.radio_value(&mut d.fill.mode, FillMode::None, "none");
+                                    ui.radio_value(&mut d.fill.mode, FillMode::Baseline, "to the line y =");
+                                    field(ui, "Plot fill y", &mut d.fill.y, 45.0);
+                                    ui.radio_value(&mut d.fill.mode, FillMode::Curve, "up to curve");
+                                    field(ui, "Plot fill curve", &mut d.fill.curve, 25.0);
+                                });
+                                ui.end_row();
+                                ui.label("Fill color / density:");
+                                ui.horizontal(|ui| {
+                                    field(ui, "Plot fill color", &mut d.fill.color, 35.0);
+                                    field(ui, "Plot fill density", &mut d.fill.density, 35.0);
+                                    ui.weak("(color number, empty: the curve's; 0 black, 20 full, 40 white)");
+                                });
+                                ui.end_row();
+                            });
+                        // The curves after the first: functions are edited here.
+                        let mut remove = None;
+                        for (i, c) in d.curves.iter_mut().enumerate().skip(1) {
+                            ui.horizontal(|ui| {
+                                ui.label(format!("Curve {}:", i + 1));
+                                if c.mode() == PlotMode::Function {
+                                    field(ui, &format!("Plot curve {} expression", i + 1), &mut c.expr, 200.0);
+                                } else {
+                                    ui.weak(curve_summary(c));
+                                }
+                                if ui.button("Remove").clicked() {
+                                    remove = Some(i);
+                                }
+                            });
+                        }
+                        if let Some(i) = remove {
+                            d.curves.remove(i);
+                        }
+                        if ui.button("Add curve y = f(x)").clicked() {
+                            if d.curves.is_empty() {
+                                d.curves.push(plot::CurveSpec::default());
+                            }
+                            d.curves.push(plot::CurveSpec {
+                                expr: "cos(x)".into(),
+                                ..plot::CurveSpec::default()
+                            });
                         }
                     });
 

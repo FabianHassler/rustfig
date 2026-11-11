@@ -89,6 +89,14 @@ Tick label format (`xticks` and `yticks` objects, as in the dialog):
   are used as typed (LaTeX when `latex_numbers`). `numbers: false` hides the
   texts, `ticks: false` the marks.
 
+Curves cut and filled: a curve leaving `ymin`..`ymax` (or the x range) is cut
+at the window, its pieces ending on the frame's edge, and a curve in `curves`
+takes `fill`: `{"curve": 2}` (the area between it and curve 2, numbered from
+1), `{"y": 0}` (between it and the line y = 0; the default when `fill` is
+`{}`), with `color` (a color number, default the curve's pen color) and
+`density` (xfig's area fill, 20 full color). The area is a polygon without
+outline, drawn behind the grid and the curves (part `fill`).
+
 ## Revision history
 | Date | Note |
 |---|---|
@@ -96,3 +104,4 @@ Tick label format (`xticks` and `yticks` objects, as in the dialog):
 | 2026-11-06 | Setup for Claude Code, Codex and JSON-configured clients; the RustFig skill (`skills/rustfig/SKILL.md`). |
 | 2026-11-11 | Plots: axes crossing at the origin, no axes, grid with minor lines and a line style (Q1). |
 | 2026-11-11 | Plots: tick labels with a scale factor, decimal comma, own labels and rotation (Q2). |
+| 2026-11-11 | Plots: filled areas between curves or to a baseline (Q3). |
