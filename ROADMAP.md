@@ -73,6 +73,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-11-11 | **fig2dev v0.9.15** (P12 follow-up): four more C fig2dev bugs fixed instead of copied: tpic tints and patterns as Fig 3.2, CGM `-r` kept by later options, Gerber apertures reused, CRLF in multi-line texts. |
 | 2026-11-11 | **F14**: `rustfig-cli convert` writes what File > Export writes (the saved panel settings per language, flags for every panel row, `--defaults`); release checks planned: xfig reads RustFig's files, the Rust fig2dev equals C fig2dev apart from listed C bugs (P10 steps 11–12, P12). |
 | 2026-11-10 | **v0.9.0-beta.10**: plots with several curves and markers, special functions, frame-only plots (F15–F17); object names (F18); a figure's own LaTeX preamble (F13); Asymptote splines as curves (B16, fig2dev v0.9.14); scripting fixes from user feedback (F15); LaTeX texts typeset in one TeX run (F10). |
 | 2026-11-10 | **B16**: Asymptote export draws splines as curves (fig2dev v0.9.14): Export panel › Splines guide (default: the Fig points kept, `bspline(...)` or one Bézier per segment), hobby (Asymptote's `..`), exact (within 0.5 Fig units of xfig); user feedback. |
