@@ -13,7 +13,7 @@ criteria and estimates. Commit messages use the task id (`A1: shared undo snapsh
   with every feature added on top.
 - Each task is done when its acceptance criteria hold, `cargo xtask ci`
   passes, the app has been run and screenshotted (for UI-visible work), and
-  the progress docs are updated (see `CLAUDE.md` › Roadmap and progress docs).
+  the progress docs are updated (see `docs/agents/progress-docs.md`).
 - Estimates are focused hours, not calendar time.
 - Port from xfig's and fig2dev's sources (`old/`, xfig license) where they
   cover the task: [`source-map.md`](source-map.md) names the C file for each
