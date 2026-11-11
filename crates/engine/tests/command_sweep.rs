@@ -106,6 +106,8 @@ fn hostile_values() -> Vec<Value> {
         json!({"points": [[0, 0], [1, 0]], "mid_arrows": [0.5], "kind": "x", "closed": true, "pie": true}),
         json!({"points": [[0, 0], [900, 300], [1800, 0]], "mid_arrows": [0.1, 0.5, 0.9], "arrow_width": 0}),
         json!({"mid_arrow": 5, "arrow": "x"}),
+        json!({"x": 0, "y": 0, "text": "a\nb", "box": {"margin": 1e308, "fill_color": [1], "area_fill": "x", "thickness": null}, "anchor": 5}),
+        json!({"x": 0, "y": 0, "text": "a", "box": true, "anchor": "middle", "angle": 1e300, "size": -5, "text_boxed": 3, "text_box_margin": "x", "text_anchor": "up"}),
         json!({"x": 0, "y": 0, "text": "\n\r\n", "crop": "yes", "box": true, "anchor": "nowhere", "pen_color": null}),
     ]
 }

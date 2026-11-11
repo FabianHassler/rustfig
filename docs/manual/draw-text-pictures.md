@@ -82,3 +82,12 @@ After the box is drawn and the file chosen, xfig's Edit panel for a picture open
 Reread and Relink are undone by Cancel. The same actions are the commands `picture.resize`, `picture.rotate`, `picture.set_file`, `picture.info`, `picture.edit_image` and `picture.import_objects`.
 
 Tools > Import Picture... does the same without drawing a box first: the picture goes to the center of the view at its own size. Pictures can be EPS, PDF, PNG, JPEG, GIF, PCX, PPM, TIFF and others; EPS needs ghostscript (optional) to show on the canvas. The picture is referenced by its file name in the figure; keep it next to the figure file.
+
+## Boxed text and the vertical anchor
+
+Two additions to the Text mode indicator (neither is in xfig; the result is plain Fig objects xfig opens and draws the same):
+
+- **Boxed** in the Text Flags pop-up (with its **Margin**, in Fig units): a new text gets a box one depth behind it, in the indicator's fill color (full fill when the indicator has no fill), glued with the text into a compound. The box has the indicator's pen color and line width (set Line Width to 0 for no border). A rotated text gets a rotated box (a polygon). A LaTeX text is boxed by the size TeX gives it when the typeset picture is known, else by its stored size. Several lines made with `\n` in a script share one box.
+- **Anchor** in the Text Just pop-up: **top**, **middle** or **baseline**. Baseline is xfig's behavior (the clicked point is the baseline at the justification); top and middle make the point the top or the vertical middle of the text, which is handy to put a label at a given spot. It applies when the text is placed (the text lands where the anchor says when you finish typing).
+
+Scripts: `shape.text` takes `box` (`true`, or `{margin, fill_color, area_fill, pen_color, thickness}`) and `anchor`; without them the indicator's `text_boxed`, `text_box_margin` and `text_anchor` apply.

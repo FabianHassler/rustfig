@@ -62,7 +62,7 @@ pub(super) fn commands() -> Vec<Command> {
         shape_cmd!(
             "shape.text",
             "Add text",
-            "{\"x\", \"y\", \"text\" (a \\n starts a new text one line below, as Return does in Text mode; {\"ids\"} lists them), \"size\"?: points (or \"font_size\"), \"font\"?: number, \"postscript\"?: bool, \"special\"?: bool (LaTeX text; unless postscript or font is given it leaves the PostScript font for the LaTeX default font), \"justify\"?: left|center|right, \"angle\"?: degrees, \"pen_color\"? (or \"color\"), \"depth\"?}",
+            "{\"x\", \"y\", \"text\" (a \\n starts a new text one line below, as Return does in Text mode; {\"ids\"} lists them), \"size\"?: points (or \"font_size\"), \"font\"?: number, \"postscript\"?: bool, \"special\"?: bool (LaTeX text; unless postscript or font is given it leaves the PostScript font for the LaTeX default font), \"justify\"?: left|center|right, \"anchor\"?: top|middle|baseline (what (x, y) is on the text: its top, its vertical middle, or the baseline as in xfig; default the indicator's), \"box\"?: bool | {margin, fill_color, area_fill, pen_color, thickness} (a filled box one depth behind the text, glued with it into a compound {\"id\": compound}; margin in Fig units; default the indicator's Boxed flag), \"angle\"?: degrees, \"pen_color\"? (or \"color\"), \"depth\"?}",
             text
         ),
         shape_cmd!(
@@ -643,12 +643,16 @@ fn text(e: &mut Engine, p: &Value) -> CmdResult {
     if let Some(d) = opt_num(p, "depth")? {
         t.depth = (d.round() as i32).clamp(0, rustfig_model::MAX_DEPTH);
     }
-    if !t.text.contains('\n') {
-        return added(e, Object::new(ObjectKind::Text(t)));
-    }
+    let anchor = match opt_str(p, "anchor")? {
+        Some(n) => crate::TextAnchor::from_name(n)
+            .ok_or_else(|| EngineError::bad_params(format!("unknown anchor {n:?} (top, middle, baseline)")))?,
+        None => e.indicator.text_anchor,
+    };
+    let boxed = text_box(e, p)?;
     // One text per line, as Return does in Text mode: separate objects (not
-    // glued), each line one step (`text_step` of the line height) below the
-    // one before, along the text's angle. An empty line only leaves a gap.
+    // glued, unless boxed), each line one step (`text_step` of the line
+    // height) below the one before, along the text's angle. An empty line
+    // only leaves a gap.
     let lines: Vec<String> = t.text.lines().map(str::to_string).collect();
     if lines.len() > MAX_TEXT_LINES {
         return Err(EngineError::bad_params(format!(
@@ -660,25 +664,160 @@ fn text(e: &mut Engine, p: &Value) -> CmdResult {
     } else {
         1.0
     };
-    let down = rustfig_geom::Affine::rotate(t.angle).apply_vec(Point::new(
-        0.0,
-        t.size * rustfig_geom::FIG_PER_POINT * rustfig_text::LINE_SPACING * step,
-    ));
-    let mut ids = Vec::new();
-    for (i, line) in lines.into_iter().enumerate() {
+    let rot = rustfig_geom::Affine::rotate(t.angle);
+    let step_len = t.size * rustfig_geom::FIG_PER_POINT * rustfig_text::LINE_SPACING * step;
+    // The lines in the text's own frame (origin of the first line, x along
+    // the text, y down): their texts and the rectangle they cover.
+    let mut block = Rect::EMPTY;
+    let mut members: Vec<(f64, rustfig_model::Text)> = Vec::new();
+    for (i, line) in lines.iter().enumerate() {
         if line.is_empty() {
             continue;
         }
         let mut l = t.clone();
-        l.text = line;
-        l.origin = origin + down * i as f64;
-        ids.push(e.add_object(Object::new(ObjectKind::Text(l))));
+        l.text.clone_from(line);
+        let dy = step_len * i as f64;
+        let r = local_rect(e, &l);
+        block = block.union(&Rect::new(
+            Point::new(r.min.x, r.min.y + dy),
+            Point::new(r.max.x, r.max.y + dy),
+        ));
+        members.push((dy, l));
     }
-    if ids.is_empty() {
+    if members.is_empty() {
         return Err(EngineError::bad_params("the text has no characters"));
     }
+    let shift = match anchor {
+        crate::TextAnchor::Baseline => 0.0,
+        crate::TextAnchor::Top => -block.min.y,
+        crate::TextAnchor::Middle => -(block.min.y + block.max.y) / 2.0,
+    };
+    let place = |dy: f64| origin + rot.apply_vec(Point::new(0.0, dy + shift));
+    let mut objects: Vec<Object> = Vec::new();
+    for (dy, mut l) in members {
+        l.origin = place(dy);
+        objects.push(Object::new(ObjectKind::Text(l)));
+    }
+    if let Some(b) = boxed {
+        let m = b.margin;
+        let (x0, y0, x1, y1) = (block.min.x - m, block.min.y - m, block.max.x + m, block.max.y + m);
+        let corners =
+            [(x0, y0), (x1, y0), (x1, y1), (x0, y1)].map(|(x, y)| place(0.0) + rot.apply_vec(Point::new(x, y)));
+        let kind = if t.angle == 0.0 {
+            PolyKind::Box
+        } else {
+            PolyKind::Polygon
+        };
+        let mut style = e.indicator.style();
+        style.depth = (t.depth + 1).min(rustfig_model::MAX_DEPTH);
+        style.fill_color = b.fill_color;
+        style.area_fill = b.area_fill;
+        if let Some(c) = b.pen_color {
+            style.pen_color = c;
+        }
+        if let Some(w) = b.thickness {
+            style.thickness = w;
+        }
+        let mut frame = Polyline::new(kind, style, corners.to_vec());
+        if kind == PolyKind::Box {
+            frame.radius = -1;
+        }
+        objects.insert(0, Object::new(ObjectKind::Polyline(frame)));
+        let c = Object::new(ObjectKind::Compound(rustfig_model::Compound { objects }));
+        return added(e, c);
+    }
+    let mut ids = Vec::new();
+    for o in objects {
+        ids.push(e.add_object(o));
+    }
     e.set_selection(ids.clone());
+    if let [one] = ids.as_slice() {
+        return Ok(json!({"id": one.0}));
+    }
     Ok(json!({"id": ids[0].0, "ids": super::ids_value(&ids)}))
+}
+
+/// A text's box (plan Q8): margin and the box's look.
+struct TextBox {
+    margin: f64,
+    fill_color: ColorRef,
+    area_fill: i32,
+    pen_color: Option<ColorRef>,
+    thickness: Option<i32>,
+}
+
+/// `box`: `true`/`false`, or `{"margin"?, "fill_color"?, "area_fill"?,
+/// "pen_color"?, "thickness"?}` (which turns it on); absent, the
+/// indicator's Boxed flag and margin. The fill is the indicator's fill color
+/// (a fill of its own area, 20 when the indicator has none).
+fn text_box(e: &mut Engine, p: &Value) -> Result<Option<TextBox>, EngineError> {
+    let spec = super::param(p, "box").filter(|v| !v.is_null());
+    let on = match spec {
+        Some(Value::Bool(b)) => *b,
+        Some(Value::Object(_)) => true,
+        Some(_) => {
+            return Err(EngineError::bad_params(
+                "box must be true, false or {margin, fill_color, ...}",
+            ))
+        }
+        None => e.indicator.text_boxed,
+    };
+    if !on {
+        return Ok(None);
+    }
+    let o = spec.filter(|v| v.is_object()).cloned().unwrap_or_else(|| json!({}));
+    let num_of = |k: &str| -> Result<Option<f64>, EngineError> {
+        match o.get(k) {
+            None | Some(Value::Null) => Ok(None),
+            Some(v) => v
+                .as_f64()
+                .filter(|f| f.is_finite() && f.abs() < 1.0e9)
+                .map(Some)
+                .ok_or_else(|| EngineError::bad_params(format!("box.{k} must be a number"))),
+        }
+    };
+    let margin = num_of("margin")?
+        .unwrap_or(e.indicator.text_box_margin)
+        .clamp(0.0, 10_000.0);
+    let area = match num_of("area_fill")? {
+        Some(a) => (a.round() as i32).clamp(-1, 62),
+        None if e.indicator.area_fill >= 0 => e.indicator.area_fill,
+        None => 20,
+    };
+    let default_fill = ColorRef(e.indicator.fill_color);
+    let mut color = |k: &str| -> Result<Option<ColorRef>, EngineError> {
+        if o.get(k).is_none_or(Value::is_null) {
+            return Ok(None);
+        }
+        let mut q = json!({});
+        q["c"] = o[k].clone();
+        Ok(color_param(e, &q, "c")?.map(ColorRef))
+    };
+    let fill_color = color("fill_color")?.unwrap_or(default_fill);
+    let pen_color = color("pen_color")?;
+    let thickness = num_of("thickness")?.map(|t| (t.round() as i32).clamp(0, 10_000));
+    Ok(Some(TextBox {
+        margin,
+        fill_color,
+        area_fill: area,
+        pen_color,
+        thickness,
+    }))
+}
+
+/// A text's rectangle in its own frame (origin at the first baseline, x
+/// along the text, y down, justification applied): as TeX typeset it where
+/// the picture is known (plan Q8), else the stored size.
+fn local_rect(e: &Engine, t: &rustfig_model::Text) -> Rect {
+    let mut u = t.clone();
+    u.angle = 0.0;
+    u.origin = Point::ZERO;
+    crate::fix_text_metrics(&mut u);
+    let o = Object::new(ObjectKind::Text(u));
+    match e.typeset_box(&o) {
+        Some((c, _)) => Rect::from_points(c),
+        None => o.geometry_bbox(),
+    }
 }
 
 /// The most lines `shape.text` writes as separate texts.

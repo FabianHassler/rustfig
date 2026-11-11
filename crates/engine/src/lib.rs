@@ -42,7 +42,7 @@ mod view;
 pub use anglegeom::{constrain as constrain_angle, AngleGeom};
 pub use cmd::file::{base64, base64_decode, export_job, ExportJob};
 pub use error::EngineError;
-pub use indicator::{arrow_choice, arrow_choice_of, GridMode, Indicator, LinkMode, SnapMode, UpdateFlag};
+pub use indicator::{arrow_choice, arrow_choice_of, GridMode, Indicator, LinkMode, SnapMode, TextAnchor, UpdateFlag};
 pub use region::Region;
 pub use rustfig_format::Compression;
 pub use snap::ObjectSnap;

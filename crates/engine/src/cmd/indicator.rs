@@ -21,7 +21,7 @@ pub(super) fn commands() -> Vec<Command> {
             label: "Set current attributes",
             menu: "",
             shortcut: "",
-            params: "{any indicator field: line, thickness, pen_color, fill_color, area_fill, depth, style_val, cap, join, forward_arrow, backward_arrow, arrow, font, font_size, local_font (string|null), postscript, justify, text_angle, box_radius, dot_gap, sides, rotate_angle, grid, snap, align_h, align_v, pie_arc, text_step, tangent_length (0-20), linkmode: off|move|slide, angle_geom: unconstrained|latex_line|latex_arrow|mount_hattan|manhattan|mountain}",
+            params: "{any indicator field: line, thickness, pen_color, fill_color, area_fill, depth, style_val, cap, join, forward_arrow, backward_arrow, arrow, font, font_size, local_font (string|null), postscript, justify, text_angle, box_radius, dot_gap, sides, rotate_angle, text_boxed, text_box_margin (Fig units), text_anchor: baseline|middle|top (new texts: shape.text), mid_arrow, grid, snap, align_h, align_v, pie_arc, text_step, tangent_length (0-20), linkmode: off|move|slide, angle_geom: unconstrained|latex_line|latex_arrow|mount_hattan|manhattan|mountain}",
             mutates: false,
             enabled: always,
             run: set,
@@ -104,6 +104,11 @@ fn set(e: &mut Engine, p: &Value) -> CmdResult {
     ind.area_fill = ind.area_fill.clamp(-1, 62);
     ind.sides = ind.sides.clamp(3, 1000);
     ind.dimline.sanitize();
+    ind.text_box_margin = if ind.text_box_margin.is_finite() {
+        ind.text_box_margin.clamp(0.0, 10_000.0)
+    } else {
+        60.0
+    };
     // The Arrow Size panel takes 0.1 to 10000 (zero would be 1, as in xfig).
     let unit = rustfig_geom::FIG_PER_STYLE_UNIT;
     let fix = |v: f64, default: f64| if v.is_finite() { v.clamp(0.1, 10_000.0) } else { default };

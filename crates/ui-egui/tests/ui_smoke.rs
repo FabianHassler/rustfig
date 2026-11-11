@@ -403,6 +403,28 @@ fn arrow_mode_middle_choice() {
     assert!(!h.state().engine.indicator.mid_arrow && h.state().engine.indicator.forward_arrow);
 }
 
+/// Q8: the Text Flags pop-up has Boxed (and its margin), the Text Just
+/// pop-up the vertical anchor.
+#[test]
+fn text_boxed_flag_and_anchor() {
+    let mut h = harness(app());
+    h.state_mut().engine.set_tool(ToolKind::Text);
+    h.run_steps(2);
+    h.get_by_label("Text Flags: hidden=off").click();
+    h.run_steps(3);
+    h.get_by_label("Boxed").click();
+    h.run_steps(3);
+    assert!(h.state().engine.indicator.text_boxed);
+    h.get_by_label("Margin");
+    h.get_by_label("Text Flags: hidden=off").click();
+    h.run_steps(3);
+    h.get_by_label("Text Just: left").click();
+    h.run_steps(3);
+    h.get_by_label("anchor top").click();
+    h.run_steps(3);
+    assert_eq!(h.state().engine.indicator.text_anchor, rustfig_engine::TextAnchor::Top);
+}
+
 /// W10-1: in Update mode every attribute button has an update box and the
 /// panel starts with the three Update Control buttons.
 #[test]

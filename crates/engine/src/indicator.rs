@@ -176,6 +176,34 @@ impl LinkMode {
     pub const ALL: [LinkMode; 3] = [LinkMode::Off, LinkMode::Move, LinkMode::Slide];
 }
 
+/// Where a new text's anchor point lies on the text (plan Q8): `Baseline`
+/// is xfig's (the point is the baseline at the justification), `Top` and
+/// `Middle` take the point as the top or the vertical middle of the text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TextAnchor {
+    #[default]
+    Baseline,
+    Middle,
+    Top,
+}
+
+impl TextAnchor {
+    pub const ALL: [TextAnchor; 3] = [TextAnchor::Top, TextAnchor::Middle, TextAnchor::Baseline];
+
+    pub fn name(self) -> &'static str {
+        match self {
+            TextAnchor::Baseline => "baseline",
+            TextAnchor::Middle => "middle",
+            TextAnchor::Top => "top",
+        }
+    }
+
+    pub fn from_name(n: &str) -> Option<TextAnchor> {
+        Self::ALL.into_iter().find(|a| a.name() == n)
+    }
+}
+
 /// Current attributes applied to new objects, and drawing settings.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -217,6 +245,12 @@ pub struct Indicator {
     /// Text angle in degrees.
     pub text_angle: f64,
     pub hidden_text: bool,
+    /// Text flag "boxed" (plan Q8): a new text gets a filled box one depth
+    /// behind it, glued with it into a compound.
+    pub text_boxed: bool,
+    /// The margin between the text and its box, in Fig units.
+    pub text_box_margin: f64,
+    pub text_anchor: TextAnchor,
     pub special_text: bool,
     pub rigid_text: bool,
     /// Arc-box corner radius in 1/80 inch.
@@ -291,6 +325,9 @@ impl Default for Indicator {
             justify: Justify::Left,
             text_angle: 0.0,
             hidden_text: false,
+            text_boxed: false,
+            text_box_margin: 60.0,
+            text_anchor: TextAnchor::Baseline,
             special_text: false,
             rigid_text: false,
             box_radius: 7,

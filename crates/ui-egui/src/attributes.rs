@@ -732,10 +732,11 @@ fn value_text(app: &App, a: Attr) -> String {
         // xfig's `show_flags`: one flag at a time, "hidden=off".
         Attr::TextFlags => {
             let on = |b: bool| if b { "on" } else { "off" };
-            match app.flag_shown % 3 {
+            match app.flag_shown % 4 {
                 0 => format!("hidden={}", on(ind.hidden_text)),
                 1 => format!("TeX={}", on(ind.special_text)),
-                _ => format!("rigid={}", on(ind.rigid_text)),
+                2 => format!("rigid={}", on(ind.rigid_text)),
+                _ => format!("boxed={}", on(ind.text_boxed)),
             }
         }
         Attr::FontSize => format!("{:.2}", ind.font_size),
@@ -875,7 +876,7 @@ fn step(app: &mut App, a: Attr, dir: i32) {
             set(app, json!({"font": (ind.font + dir).rem_euclid(count.max(1))}));
         }
         // `inc_flags` / `dec_flags`: show the next / previous flag.
-        Attr::TextFlags => app.flag_shown = (app.flag_shown + 3).wrapping_add_signed(dir as isize) % 3,
+        Attr::TextFlags => app.flag_shown = (app.flag_shown + 4).wrapping_add_signed(dir as isize) % 4,
         // Opens a panel only.
         Attr::ArrowSize => {}
     }
@@ -2054,6 +2055,28 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
             if let Some(j) = icon_choices(ui, "just", &items, 3).and_then(|i| JUSTIFY.get(i)) {
                 set(app, json!({ "justify": j }));
             }
+            // Q8: what a new text's point is on the text.
+            ui.separator();
+            ui.label("Anchor (the point is the text's)");
+            ui.horizontal(|ui| {
+                for a in rustfig_engine::TextAnchor::ALL {
+                    let label = format!("anchor {}", a.name());
+                    let r = ui
+                        .selectable_label(ind.text_anchor == a, a.name())
+                        .on_hover_text(&label);
+                    r.widget_info(|| {
+                        egui::WidgetInfo::selected(
+                            egui::WidgetType::SelectableLabel,
+                            true,
+                            ind.text_anchor == a,
+                            label.as_str(),
+                        )
+                    });
+                    if r.clicked() {
+                        set(app, json!({ "text_anchor": a.name() }));
+                    }
+                }
+            });
         }
         Attr::TextFlags => {
             // xfig's Text Flags panel: Hidden, Rigid and TeX (the special flag).
@@ -2068,6 +2091,27 @@ fn choice_panel(app: &mut App, ui: &mut Ui, tk: &Tokens, a: Attr) {
                     m.insert(field.into(), json!(v));
                     set(app, Value::Object(m));
                 }
+            }
+            // Q8: a filled box behind the new text, in the fill color.
+            let mut boxed = ind.text_boxed;
+            if ui
+                .checkbox(&mut boxed, "Boxed")
+                .on_hover_text("A box in the fill color one depth behind the text, glued with it")
+                .changed()
+            {
+                set(app, json!({ "text_boxed": boxed }));
+            }
+            if ind.text_boxed {
+                let mut margin = ind.text_box_margin;
+                ui.horizontal(|ui| {
+                    ui.label("Margin");
+                    if ui
+                        .add(egui::DragValue::new(&mut margin).range(0.0..=10_000.0).speed(5.0))
+                        .changed()
+                    {
+                        set(app, json!({ "text_box_margin": margin }));
+                    }
+                });
             }
         }
         Attr::Font => {
