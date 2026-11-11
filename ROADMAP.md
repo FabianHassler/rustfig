@@ -73,6 +73,7 @@ The phased plan is [docs/plan.md](docs/plan.md); every shortfall is ranked in
 
 | Date | Change |
 |------|--------|
+| 2026-11-11 | **F21**: `rustfig-cli convert` depends only on the file and its flags: the Export panel's defaults, the figure's preamble, TeX from the `PATH` (`--tex`); the settings file is no longer read. |
 | 2026-11-11 | **F20**: a figure typesets with its own LaTeX preamble only (plus `color,graphicx`); `amsmath,amssymb` no longer implicit; the global preamble starts new figures and Reapply to figure (`doc.reapply_latex_preamble`) gives it to the open one; library objects bring their preamble lines; four gallery figures carry `\usepackage{amsmath}`. F21 (convert without the settings file) and F22 (fig2dev reads the preamble in `-P` and `asy`) planned. 1 engine command. |
 | 2026-11-11 | **fig2dev v0.9.15** (P12 follow-up): four more C fig2dev bugs fixed instead of copied: tpic tints and patterns as Fig 3.2, CGM `-r` kept by later options, Gerber apertures reused, CRLF in multi-line texts. |
 | 2026-11-11 | **F14**: `rustfig-cli convert` writes what File > Export writes (the saved panel settings per language, flags for every panel row, `--defaults`); release checks planned: xfig reads RustFig's files, the Rust fig2dev equals C fig2dev apart from listed C bugs (P10 steps 11–12, P12). |

@@ -1,14 +1,18 @@
-//! F14: `rustfig-cli convert` writes what File > Export writes, with the
-//! same settings file: every language with Export panel rows that change
-//! the output, through the panel's request and through convert.
+//! F14, F21: `rustfig-cli convert` writes what File > Export writes with
+//! the panel's defaults, whatever the settings file holds (the output
+//! depends only on the file and the flags): every language with Export
+//! panel rows that change the output; flags set the rows as the panel does.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use rustfig_engine::{export_panel, prefs::Prefs, Engine};
 use serde_json::json;
 use std::path::Path;
 
-/// Saved panel values that differ from the defaults, per language.
+/// Saved panel values that differ from the defaults, per language (convert
+/// must not see them), and a TeX program that does not exist.
 const SETTINGS: &str = r#"
+[rustfig]
+latex_program = "/nonexistent/tex"
 [rustfig.export.pdf]
 border = 12.0
 background = 2
@@ -53,12 +57,11 @@ hpgl_font = true
 asy_splines = "hobby"
 "#;
 
-/// The export as the panel makes it, with the stored settings.
-fn panel_export(input: &Path, out: &Path, lang: &str) {
+/// The export as the panel makes it, with the panel values of `settings`.
+fn panel_export(input: &Path, out: &Path, lang: &str, settings: &str) {
     let mut e = Engine::new();
     e.execute("file.open", &json!({ "path": input })).unwrap();
-    e.prefs = Prefs::parse(SETTINGS).unwrap().0;
-    e.prefs.apply_latex(&e);
+    e.prefs = Prefs::parse(settings).unwrap().0;
     let s = export_panel::settings_for(&e, lang);
     let mag = e.doc().settings.magnification;
     let p = export_panel::request(&e, lang, &s, &out.to_string_lossy(), mag, false, false);
@@ -83,12 +86,12 @@ fn masked(bytes: &[u8]) -> Vec<u8> {
 }
 
 #[test]
-fn convert_writes_what_the_export_panel_writes() {
+fn convert_writes_what_the_export_panel_writes_with_its_defaults() {
     std::env::set_var("FIG2DEV_BUILTIN_FONTS", "1");
     let dir = std::env::temp_dir().join(format!("rustfig-convert-is-export-{}", std::process::id()));
     std::fs::create_dir_all(dir.join("settings")).unwrap();
     std::fs::write(dir.join("settings/settings.toml"), SETTINGS).unwrap();
-    // convert reads the settings file from here, as the app does.
+    // The app would read the settings file from here; convert must not.
     std::env::set_var("RUSTFIG_SETTINGS_DIR", dir.join("settings"));
     let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../crates/engine/tests/fixtures");
     for fixture in ["text.fig", "fills.fig", "splines.fig"] {
@@ -111,7 +114,7 @@ fn convert_writes_what_the_export_panel_writes() {
         ] {
             let a = dir.join(format!("panel-{lang}.{ext}"));
             let b = dir.join(format!("convert-{lang}.{ext}"));
-            panel_export(&input, &a, lang);
+            panel_export(&input, &a, lang, "");
             rustfig_cli::convert(&[
                 input.to_string_lossy().into_owned(),
                 b.to_string_lossy().into_owned(),
@@ -126,18 +129,36 @@ fn convert_writes_what_the_export_panel_writes() {
             );
         }
     }
-    // A flag changes the setting for this run: not the panel's file.
+    // Flags set the panel's rows: as the panel with those values saved.
     let input = fixtures.join("fills.fig");
-    let saved = dir.join("saved.png");
-    let flagged = dir.join("flagged.png");
     let arg = |p: &Path| p.to_string_lossy().into_owned();
-    rustfig_cli::convert(&[arg(&input), arg(&saved)]).unwrap();
-    rustfig_cli::convert(&[arg(&input), arg(&flagged), "--dpi".into(), "200".into()]).unwrap();
-    assert!(std::fs::read(&flagged).unwrap().len() > std::fs::read(&saved).unwrap().len());
+    let panel = dir.join("panel-flags.png");
+    let flagged = dir.join("flagged.png");
+    panel_export(
+        &input,
+        &panel,
+        "png",
+        "[rustfig.export.png]\ndpi = 96.0\nborder = 7.0\nsmoothing = 2\n",
+    );
+    rustfig_cli::convert(&[
+        arg(&input),
+        arg(&flagged),
+        "--dpi".into(),
+        "96".into(),
+        "--border".into(),
+        "7".into(),
+        "--smoothing".into(),
+        "some".into(),
+    ])
+    .unwrap();
+    assert_eq!(std::fs::read(&flagged).unwrap(), std::fs::read(&panel).unwrap());
     assert_eq!(
         std::fs::read_to_string(dir.join("settings/settings.toml")).unwrap(),
         SETTINGS
     );
+    // --tex names the program; one that is not there is an error.
+    let saved = dir.join("saved.png");
+    assert!(rustfig_cli::convert(&[arg(&input), arg(&saved), "--tex".into(), "/nonexistent/tex".into()]).is_err());
     // Unknown flags and bad values are errors, not silently ignored.
     assert!(rustfig_cli::convert(&[arg(&input), arg(&saved), "--dpl".into(), "3".into()]).is_err());
     assert!(rustfig_cli::convert(&[arg(&input), arg(&saved), "--preview".into(), "fancy".into()]).is_err());

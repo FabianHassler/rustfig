@@ -11,12 +11,12 @@ use std::process::ExitCode;
 use std::time::Instant;
 
 const USAGE: &str = "usage:
-  rustfig-cli convert IN OUT [--format LANG] [--magnification PCT] [--defaults] [Export panel flags] [--option KEY=VALUE]...
+  rustfig-cli convert IN OUT [--format LANG] [--magnification PCT] [--tex PROGRAM] [Export panel flags] [--option KEY=VALUE]...
         OUT: .fig/.rustfig save; otherwise an export language (fig2dev's -L names),
-        from --format or the file's extension. convert writes what File > Export
-        writes: the Export panel's settings saved for that language in your
-        settings file, the TeX program of your settings and the figure's own
-        LaTeX preamble. Flags change a panel setting for this run (never saved):
+        from --format or the file's extension. The output depends only on the
+        file and the flags, never on your settings: the Export panel's defaults
+        (as File > Export with Reset to xfig defaults), the figure's own LaTeX
+        preamble, TeX from the PATH (--tex names a program). Flags set a panel row:
           --border N (points; pixels for bitmaps)   --background N|none|#rrggbb
           --grid MINOR[:MAJOR] (1/4, 10, None)      --preview none|ascii|color|mono
           --page-mode | --no-page-mode              --offset X,Y (each in, cm or fig)
@@ -24,7 +24,6 @@ const USAGE: &str = "usage:
           --quality N   --transparent N|none|background|#rrggbb
           --embed | --no-embed   --latex | --no-latex (typeset LaTeX texts with TeX)
           --hpgl-font, --hpgl-pcl (and --no-...)    --asy-splines guide|hobby|exact
-        --defaults starts from RustFig's panel defaults instead of the saved ones;
         formats LANG lists the flags a language takes. --option passes one of
         fig2dev's options by name or letter (g=lightblue, N=true, Z=4w);
         --margin FIGUNITS adds a margin in Fig units
@@ -88,24 +87,6 @@ fn open(path: &str) -> Result<Engine, String> {
     Ok(e)
 }
 
-/// The user's settings file (TeX program, the Export panel's
-/// values per language), so convert writes what File > Export writes (F14).
-/// `defaults`: the panel's values start from RustFig's defaults instead.
-fn user_settings(e: &mut Engine, defaults: bool) {
-    #[cfg(not(target_arch = "wasm32"))]
-    if let Some(text) = rustfig_engine::prefs::config_path().and_then(|p| std::fs::read_to_string(p).ok()) {
-        // A damaged settings file is left out, as the app does after its warning.
-        if let Ok((p, _)) = rustfig_engine::prefs::Prefs::parse(&text) {
-            e.prefs = p;
-        }
-    }
-    if defaults {
-        e.prefs.rustfig.export.clear();
-        e.prefs.xfig.remove("export_margin");
-    }
-    e.prefs.apply_latex(e);
-}
-
 type JsonMap = serde_json::Map<String, Value>;
 
 /// The Export panel's rows as convert's flags: (flag, takes a value).
@@ -140,6 +121,8 @@ const CONVERT_FLAGS: &[(&str, bool)] = &[
     ("--magnification", true),
     ("--margin", true),
     ("--option", true),
+    ("--tex", true),
+    // Before F21 it ignored the saved settings, which convert now never reads.
     ("--defaults", false),
 ];
 
@@ -303,7 +286,13 @@ pub fn convert(args: &[String]) -> Result<(), String> {
     let flags = args.get(2..).unwrap_or_default();
     let (panel, direct) = panel_overrides(flags)?;
     let mut e = open(input)?;
-    user_settings(&mut e, flags.iter().any(|a| a == "--defaults"));
+    if let Some(tex) = opt(flags, "--tex") {
+        e.execute("view.set_latex_program", &json!({ "program": tex }))
+            .map_err(|e| e.message)?;
+        if e.latex.program().is_none() {
+            return Err(format!("--tex: {tex}: no such TeX program"));
+        }
+    }
     let lower = output.to_ascii_lowercase();
     if lower.ends_with(".fig") || lower.ends_with(".rustfig") || lower.ends_with(".xfig") {
         e.execute("file.save", &json!({ "path": output }))
@@ -312,7 +301,7 @@ pub fn convert(args: &[String]) -> Result<(), String> {
     }
     // What the Export panel sends: the figure's magnification, both layer
     // choices off (no hidden depths here) and the panel's values for the
-    // language, the saved ones with the flags laid over them.
+    // language: the defaults with the flags laid over them.
     let mut p = json!({
         "path": output,
         "magnification": e.doc().settings.magnification,
