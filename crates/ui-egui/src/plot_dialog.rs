@@ -50,6 +50,13 @@ pub struct PlotDialog {
     pub yticks: TickFields,
     /// The curve's filled area (Q3).
     pub fill: FillFields,
+    /// Lines, bars or stems, and error bars (Q4).
+    pub style: plot::CurveStyle,
+    pub bar_width: String,
+    pub baseline: String,
+    /// The data column with the error values (empty: none).
+    pub yerr_col: String,
+    pub err_cap: String,
     /// The last error, shown in the dialog.
     pub error: String,
 }
@@ -359,6 +366,11 @@ impl Default for PlotDialog {
             xticks: TickFields::from_spec(&TickSpec::default()),
             yticks: TickFields::from_spec(&TickSpec::default()),
             fill: FillFields::default(),
+            style: plot::CurveStyle::Line,
+            bar_width: "0.8".into(),
+            baseline: "0".into(),
+            yerr_col: String::new(),
+            err_cap: "60".into(),
             error: String::new(),
             curves: Vec::new(),
         };
@@ -400,6 +412,16 @@ impl PlotDialog {
         self.error.clear();
         self.curves = s.curves.clone();
         self.fill = FillFields::from_spec(s.curves.first().and_then(|c| c.fill.as_ref()));
+        let c = s.curves.first().cloned().unwrap_or_default();
+        self.style = c.style;
+        self.bar_width = num(Some(c.bar_width));
+        self.baseline = num(Some(c.baseline));
+        self.yerr_col = if c.yerr_col == 0 {
+            String::new()
+        } else {
+            c.yerr_col.to_string()
+        };
+        self.err_cap = num(Some(c.err_cap));
         if let Some(c) = s.curves.first() {
             self.mode = c.mode();
             self.expr = c.expr.clone();
@@ -491,7 +513,13 @@ impl PlotDialog {
         // A curve list: the fields are its first curve (also when a setting
         // only a curve has is used).
         let fill = self.fill.spec()?;
-        let list = if self.curves.is_empty() && fill.is_some() {
+        let yerr_col = if self.yerr_col.trim().is_empty() {
+            0
+        } else {
+            Self::whole(&self.yerr_col, "The error column")? as usize
+        };
+        let list = if self.curves.is_empty() && (fill.is_some() || self.style != plot::CurveStyle::Line || yerr_col > 0)
+        {
             vec![plot::CurveSpec::default()]
         } else {
             self.curves.clone()
@@ -499,9 +527,15 @@ impl PlotDialog {
         if let Some((first, rest)) = list.split_first() {
             let mut c = first.clone();
             c.fill = fill;
+            c.style = self.style;
+            c.bar_width = Self::value(&self.bar_width, "Bar width")?.as_f64().unwrap_or(0.8);
+            c.baseline = Self::value(&self.baseline, "Baseline")?.as_f64().unwrap_or(0.0);
+            c.yerr_col = yerr_col;
+            c.err_cap = Self::value(&self.err_cap, "Cap width")?.as_f64().unwrap_or(60.0);
             c.mode = Some(self.mode);
             if c.file != self.file || self.mode != PlotMode::Data {
                 c.points.clear();
+                c.yerr.clear();
             }
             c.expr = self.expr.clone();
             c.xt = self.xt.clone();
@@ -630,6 +664,30 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                             .num_columns(2)
                             .min_col_width(LABEL_W)
                             .show(ui, |ui| {
+                                ui.label("Draw as:");
+                                ui.horizontal(|ui| {
+                                    ui.radio_value(&mut d.style, plot::CurveStyle::Line, "line");
+                                    ui.radio_value(&mut d.style, plot::CurveStyle::Bar, "bars");
+                                    ui.radio_value(&mut d.style, plot::CurveStyle::Stem, "stems");
+                                });
+                                ui.end_row();
+                                ui.label("Bars / stems:");
+                                ui.horizontal(|ui| {
+                                    ui.label("width");
+                                    field(ui, "Plot bar width", &mut d.bar_width, 35.0);
+                                    ui.label("from y =");
+                                    field(ui, "Plot baseline", &mut d.baseline, 45.0);
+                                });
+                                ui.end_row();
+                                ui.label("Error bars:");
+                                ui.horizontal(|ui| {
+                                    ui.label("column");
+                                    field(ui, "Plot error column", &mut d.yerr_col, 35.0);
+                                    ui.label("cap width");
+                                    field(ui, "Plot error cap", &mut d.err_cap, 40.0);
+                                    ui.weak("(data file; the column of the error values)");
+                                });
+                                ui.end_row();
                                 ui.label("Fill:");
                                 ui.horizontal_wrapped(|ui| {
                                     ui.radio_value(&mut d.fill.mode, FillMode::None, "none");

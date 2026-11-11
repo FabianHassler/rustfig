@@ -51,6 +51,11 @@ pub const MAX_KEPT_POINTS: usize = 20_000;
 pub const MAX_CURVES: usize = 50;
 /// Most markers in one plot.
 const MAX_MARKERS: usize = 20_000;
+/// Most bars, stems or error bars of one curve.
+const MAX_BARS: usize = 5_000;
+/// The comment lines that keep a curve's error values: prefix, the curve's
+/// index, then one value per point.
+pub const YERR_COMMENT: &str = "rustfig-plot-yerr:";
 
 // ---- expressions ---------------------------------------------------------
 
@@ -658,6 +663,20 @@ pub enum Marker {
     Plus,
 }
 
+/// How a curve's points are drawn (Q4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CurveStyle {
+    /// A line through the points.
+    #[default]
+    Line,
+    /// A bar from the baseline to each point; the bars of several bar
+    /// curves stand side by side (grouped).
+    Bar,
+    /// A vertical line from the baseline to each point (a Dirac plot).
+    Stem,
+}
+
 /// A filled area behind a curve (Q3): between the curve and a horizontal
 /// baseline, or between the curve and another curve.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -719,6 +738,20 @@ pub struct CurveSpec {
     pub marker_fill: bool,
     /// An area filled behind the curve: to a baseline or to another curve.
     pub fill: Option<CurveFill>,
+    /// Line, bars or stems.
+    pub style: CurveStyle,
+    /// Width of a bar as a fraction (0.01 to 1) of the distance between the
+    /// bars' x values; grouped bars share it.
+    pub bar_width: f64,
+    /// Where bars and stems start (y value).
+    pub baseline: f64,
+    /// Error values (y plus and minus) of the data points, one each or one
+    /// for all; kept in the figure like `points`.
+    pub yerr: Vec<f64>,
+    /// The column of a data file or text with the error values (0: none).
+    pub yerr_col: usize,
+    /// Width of the end caps of error bars in Fig units.
+    pub err_cap: f64,
 }
 
 impl Default for CurveSpec {
@@ -744,6 +777,12 @@ impl Default for CurveSpec {
             marker_size: 75.0,
             marker_fill: true,
             fill: None,
+            style: CurveStyle::Line,
+            bar_width: 0.8,
+            baseline: 0.0,
+            yerr: Vec::new(),
+            yerr_col: 0,
+            err_cap: 60.0,
         }
     }
 }
@@ -808,6 +847,21 @@ impl CurveSpec {
         }
         if self.points.iter().flatten().any(|v| !v.is_finite() || v.abs() > BIG) {
             return Err(at("points must be finite numbers"));
+        }
+        if !self.bar_width.is_finite() || !(0.01..=1.0).contains(&self.bar_width) {
+            return Err(at("bar_width is a fraction between 0.01 and 1"));
+        }
+        if !self.baseline.is_finite() || self.baseline.abs() > BIG {
+            return Err(at("the baseline must be a finite number"));
+        }
+        if !self.err_cap.is_finite() || !(0.0..=10_000.0).contains(&self.err_cap) {
+            return Err(at("err_cap must be between 0 and 10000"));
+        }
+        if self.yerr_col > 1_000 {
+            return Err(at("yerr_col is a column number from 1 (0: none)"));
+        }
+        if self.yerr.len() > MAX_KEPT_POINTS || self.yerr.iter().any(|v| !v.is_finite() || v.abs() > BIG) {
+            return Err(at(&format!("yerr must be at most {MAX_KEPT_POINTS} finite numbers")));
         }
         if let Some(f) = &self.fill {
             if !f.y.is_finite() || f.y.abs() > BIG {
@@ -967,6 +1021,11 @@ impl PlotSpec {
                 }
             }
         }
+        if self.curves.iter().map(|c| c.yerr.len()).sum::<usize>() > MAX_KEPT_POINTS {
+            return Err(format!(
+                "at most {MAX_KEPT_POINTS} error values in one plot (use a data file)"
+            ));
+        }
         if self.curves.iter().map(|c| c.points.len()).sum::<usize>() > MAX_KEPT_POINTS {
             return Err(format!("at most {MAX_KEPT_POINTS} points in one plot (use data files)"));
         }
@@ -1020,7 +1079,7 @@ impl PlotSpec {
             let dc = serde_json::to_value(CurveSpec::default()).map_err(|e| e.to_string())?;
             if let (Some(Value::Array(list)), Some(dc)) = (m.get_mut("curves"), dc.as_object()) {
                 for c in list.iter_mut().filter_map(Value::as_object_mut) {
-                    c.retain(|k, x| k != "points" && dc.get(k) != Some(x));
+                    c.retain(|k, x| k != "points" && k != "yerr" && dc.get(k) != Some(x));
                 }
             }
         }
@@ -1057,6 +1116,20 @@ impl PlotSpec {
             if !line.is_empty() {
                 out.push(line);
             }
+            let mut line = String::new();
+            for e in &c.yerr {
+                let item = format!(" {}", short(*e));
+                if line.is_empty() || line.len() + item.len() > MAX_COMMENT {
+                    if !line.is_empty() {
+                        out.push(std::mem::take(&mut line));
+                    }
+                    line = format!("{YERR_COMMENT} {i}");
+                }
+                line.push_str(&item);
+            }
+            if !line.is_empty() {
+                out.push(line);
+            }
         }
         Ok(out)
     }
@@ -1088,6 +1161,26 @@ impl PlotSpec {
                 }
             }
         }
+        let mut kept_err = 0;
+        for line in &o.comments {
+            let Some(rest) = line.trim().strip_prefix(YERR_COMMENT) else {
+                continue;
+            };
+            let mut words = rest.split_whitespace();
+            let Some(curve) = words
+                .next()
+                .and_then(|w| w.parse::<usize>().ok())
+                .and_then(|i| spec.curves.get_mut(i))
+            else {
+                continue;
+            };
+            for v in words.map_while(|w| w.parse::<f64>().ok()) {
+                if kept_err < MAX_KEPT_POINTS && v.is_finite() && v.abs() <= BIG {
+                    curve.yerr.push(v);
+                    kept_err += 1;
+                }
+            }
+        }
         Some(spec)
     }
 }
@@ -1098,7 +1191,16 @@ impl PlotSpec {
 /// semicolons, tabs or spaces; `#`/`%` lines and lines that are not numbers
 /// (a header) are skipped. Returns the (x, y) of the chosen columns.
 pub fn parse_table(text: &str, xcol: usize, ycol: usize) -> Result<Vec<(f64, f64)>, String> {
-    let need = xcol.max(ycol);
+    Ok(parse_table_err(text, xcol, ycol, 0)?
+        .into_iter()
+        .map(|(x, y, _)| (x, y))
+        .collect())
+}
+
+/// [`parse_table`] with a third column of error values (`ecol` 0: none, the
+/// error is NaN); rows where that column is no number are skipped.
+pub fn parse_table_err(text: &str, xcol: usize, ycol: usize, ecol: usize) -> Result<Vec<(f64, f64, f64)>, String> {
+    let need = xcol.max(ycol).max(ecol);
     let mut out = Vec::new();
     for line in text.lines() {
         let line = line.trim();
@@ -1119,8 +1221,9 @@ pub fn parse_table(text: &str, xcol: usize, ycol: usize) -> Result<Vec<(f64, f64
         } else {
             num(xcol)
         };
-        if let (Some(x), Some(y)) = (x, y) {
-            out.push((x, y));
+        let e = if ecol == 0 { Some(f64::NAN) } else { num(ecol) };
+        if let (Some(x), Some(y), Some(e)) = (x, y, e) {
+            out.push((x, y, e));
             if out.len() >= MAX_DATA_ROWS {
                 break;
             }
@@ -1265,12 +1368,48 @@ struct Ranges {
 struct Raw {
     pts: Vec<(f64, Option<P>)>,
     curve: Option<Box<dyn Fn(f64) -> Option<P>>>,
+    /// Error values of data points, one per point (NaN: none); empty without.
+    errs: Vec<f64>,
 }
 
-/// The curves as pieces of points in the plot's coordinates (transformed by
-/// the axes' logarithms), the points each curve's markers stand at, and the
-/// ranges, which fit all the curves.
-type Sampled = (Vec<Vec<Vec<P>>>, Vec<Vec<P>>, Ranges);
+/// The points of a bar, stem or error bar curve: the point and its error.
+type Series = Vec<(P, Option<f64>)>;
+
+/// What [`sample`] gives: the curves as pieces of points in the plot's
+/// coordinates (transformed by the axes' logarithms), the points each
+/// curve's markers stand at, the ranges, which fit all the curves, the
+/// points of curves drawn as bars, stems or with error bars, and the
+/// distance between bars.
+struct Sampled {
+    pieces: Vec<Vec<Vec<P>>>,
+    marks: Vec<Vec<P>>,
+    ranges: Ranges,
+    series: Vec<Series>,
+    bar_spacing: f64,
+}
+
+/// The smallest distance between the x values of the bar curves (1 when
+/// there is no distance).
+fn bar_spacing(series: &[Series], curves: &[CurveSpec]) -> f64 {
+    let mut xs: Vec<f64> = series
+        .iter()
+        .zip(curves)
+        .filter(|(_, c)| c.style == CurveStyle::Bar)
+        .flat_map(|(s, _)| s.iter().map(|(p, _)| p.0))
+        .collect();
+    xs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    let scale = xs.iter().fold(0.0f64, |m, v| m.max(v.abs())).max(1e-300);
+    let d = xs
+        .windows(2)
+        .map(|w| w[1] - w[0])
+        .filter(|d| *d > 1e-12 * scale)
+        .fold(f64::INFINITY, f64::min);
+    if d.is_finite() && d > 0.0 {
+        d
+    } else {
+        1.0
+    }
+}
 
 fn sample(spec: &PlotSpec, curves: &[CurveSpec]) -> Result<Sampled, String> {
     let (lx, ly) = (spec.log_x, spec.log_y);
@@ -1298,16 +1437,18 @@ fn sample(spec: &PlotSpec, curves: &[CurveSpec]) -> Result<Sampled, String> {
         if !ordered(fx0, fx1) || !ordered(y0, y1) {
             return Err("a range must have min below max".into());
         }
-        return Ok((
-            Vec::new(),
-            Vec::new(),
-            Ranges {
+        return Ok(Sampled {
+            pieces: Vec::new(),
+            marks: Vec::new(),
+            ranges: Ranges {
                 x0: fx0,
                 x1: fx1,
                 y0,
                 y1,
             },
-        ));
+            series: Vec::new(),
+            bar_spacing: 1.0,
+        });
     }
 
     let mut raws: Vec<Raw> = Vec::with_capacity(curves.len());
@@ -1322,12 +1463,56 @@ fn sample(spec: &PlotSpec, curves: &[CurveSpec]) -> Result<Sampled, String> {
         raws.push(raw(c, spec, (fx0, fx1), (lx, ly)).map_err(which)?);
     }
 
+    // The points of bars, stems and error bars.
+    let mut series: Vec<Series> = Vec::with_capacity(raws.len());
+    for (i, (r, c)) in raws.iter().zip(curves).enumerate() {
+        let wanted = c.style != CurveStyle::Line || !r.errs.is_empty();
+        let s: Series = if wanted {
+            r.pts
+                .iter()
+                .enumerate()
+                .filter_map(|(k, (_, p))| p.map(|p| (p, r.errs.get(k).copied().filter(|e| e.is_finite()))))
+                .collect()
+        } else {
+            Vec::new()
+        };
+        if s.len() > MAX_BARS {
+            return Err(format!(
+                "curve {}: more than {MAX_BARS} bars, stems or error bars (use fewer points or samples)",
+                i + 1
+            ));
+        }
+        series.push(s);
+    }
+    let spacing = bar_spacing(&series, curves);
+
     // Ranges.
     let mut xs: Vec<f64> = Vec::new();
     let mut ys: Vec<f64> = Vec::new();
     for r in &raws {
         xs.extend(r.pts.iter().filter_map(|(_, p)| p.map(|p| p.0)));
         ys.extend(r.pts.iter().filter_map(|(_, p)| p.map(|p| p.1)));
+    }
+    for (s, c) in series.iter().zip(curves) {
+        if c.style == CurveStyle::Bar {
+            // Room for the half bar at both ends.
+            if let (Some(a), Some(b)) = (
+                s.iter().map(|(p, _)| p.0).reduce(f64::min),
+                s.iter().map(|(p, _)| p.0).reduce(f64::max),
+            ) {
+                xs.extend([a - 0.5 * spacing, b + 0.5 * spacing]);
+            }
+        }
+        if c.style != CurveStyle::Line && !s.is_empty() {
+            ys.extend(tr(c.baseline, ly));
+        }
+        for &(p, e) in s {
+            if let Some(e) = e {
+                let (lo, hi) = err_ends(p.1, e, ly);
+                ys.extend(lo);
+                ys.extend(hi);
+            }
+        }
     }
     if xs.is_empty() {
         return Err("the curve has no finite values in this range".into());
@@ -1362,7 +1547,25 @@ fn sample(spec: &PlotSpec, curves: &[CurveSpec]) -> Result<Sampled, String> {
         });
         all_pieces.push(pieces_of(r, &ranges, budget));
     }
-    Ok((all_pieces, marks, ranges))
+    Ok(Sampled {
+        pieces: all_pieces,
+        marks,
+        ranges,
+        series,
+        bar_spacing: spacing,
+    })
+}
+
+/// The ends of an error bar of half length `e` at `y` (plot coordinates);
+/// on a logarithmic axis the lower end may not exist (below zero).
+fn err_ends(y: f64, e: f64, log: bool) -> (Option<f64>, Option<f64>) {
+    let e = e.abs();
+    if log {
+        let d = 10f64.powf(y);
+        (tr(d - e, true), tr(d + e, true))
+    } else {
+        (finite(y - e), finite(y + e))
+    }
 }
 
 /// The raw samples of one curve; `fx` is a function's x range (already on
@@ -1370,20 +1573,40 @@ fn sample(spec: &PlotSpec, curves: &[CurveSpec]) -> Result<Sampled, String> {
 fn raw(c: &CurveSpec, spec: &PlotSpec, fx: (f64, f64), log: (bool, bool)) -> Result<Raw, String> {
     let (lx, ly) = log;
     let mut pts: Vec<(f64, Option<P>)> = Vec::new();
+    let mut errs: Vec<f64> = Vec::new();
     let mut curve: Option<Box<dyn Fn(f64) -> Option<P>>> = None;
     let (mut u0, mut u1) = (0.0, 1.0);
+    if c.mode() != PlotMode::Data && (c.yerr_col > 0 || !c.yerr.is_empty()) {
+        return Err("error bars (yerr) belong to data curves".into());
+    }
     match c.mode() {
         PlotMode::Data => {
-            let table = if c.points.is_empty() {
+            let table: Vec<(f64, f64, f64)> = if c.points.is_empty() {
                 if c.data.trim().is_empty() {
                     return Err("the plot has no data (give a file)".into());
                 }
-                parse_table(&c.data, c.xcol, c.ycol)?
+                parse_table_err(&c.data, c.xcol, c.ycol, c.yerr_col)?
             } else {
-                c.points.iter().map(|p| (p[0], p[1])).collect()
+                // One error value for all points, or one each.
+                c.points
+                    .iter()
+                    .enumerate()
+                    .map(|(i, p)| {
+                        let e = if c.yerr.len() == 1 {
+                            c.yerr.first()
+                        } else {
+                            c.yerr.get(i)
+                        };
+                        (p[0], p[1], e.copied().unwrap_or(f64::NAN))
+                    })
+                    .collect()
             };
-            for (i, (x, y)) in table.into_iter().enumerate() {
+            let has_err = c.yerr_col > 0 || !c.yerr.is_empty();
+            for (i, (x, y, e)) in table.into_iter().enumerate() {
                 pts.push((i as f64, tr(x, lx).zip(tr(y, ly))));
+                if has_err {
+                    errs.push(e);
+                }
             }
         }
         PlotMode::Function => {
@@ -1427,13 +1650,13 @@ fn raw(c: &CurveSpec, spec: &PlotSpec, fx: (f64, f64), log: (bool, bool)) -> Res
             pts.push((u, f(u)));
         }
     }
-    Ok(Raw { pts, curve })
+    Ok(Raw { pts, curve, errs })
 }
 
 /// One curve's pieces: adaptive refinement of a sampled curve (at most
 /// `budget` points more), cut where it is undefined or crosses a pole.
 fn pieces_of(raw: Raw, r: &Ranges, budget: usize) -> Vec<Vec<P>> {
-    let Raw { pts, curve } = raw;
+    let Raw { pts, curve, .. } = raw;
     let (y0, y1) = (r.y0, r.y1);
     let mut all: Vec<(f64, Option<P>)> = Vec::with_capacity(pts.len());
     if let Some(f) = &curve {
@@ -1820,6 +2043,8 @@ pub struct Plot {
     pub curves: usize,
     pub points: usize,
     pub markers: usize,
+    /// Bars, stems and error bars drawn.
+    pub bars: usize,
     /// What the caller should know (a curve outside the ranges).
     pub warnings: Vec<String>,
 }
@@ -1857,20 +2082,33 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
     }
     for (k, c) in keep.curves.iter_mut().zip(curves.iter_mut()) {
         if c.mode() == PlotMode::Data && c.points.is_empty() && c.file.is_empty() && !c.data.trim().is_empty() {
-            let table = parse_table(&c.data, c.xcol, c.ycol)?;
+            let table = parse_table_err(&c.data, c.xcol, c.ycol, c.yerr_col)?;
             if table.len() > MAX_KEPT_POINTS {
                 return Err(format!(
                     "at most {MAX_KEPT_POINTS} points kept in a plot (use a data file)"
                 ));
             }
-            c.points = table.into_iter().map(|(x, y)| [x, y]).collect();
+            if c.yerr_col > 0 {
+                // The error column is kept as a list beside the points.
+                c.yerr = table.iter().map(|t| t.2).collect();
+                c.yerr_col = 0;
+                k.yerr = c.yerr.clone();
+                k.yerr_col = 0;
+            }
+            c.points = table.into_iter().map(|(x, y, _)| [x, y]).collect();
             c.data.clear();
             k.points = c.points.clone();
         }
         k.data.clear();
     }
     keep.check()?;
-    let (pieces, marks, r) = sample(spec, &curves)?;
+    let Sampled {
+        pieces,
+        marks,
+        ranges: r,
+        series,
+        bar_spacing: spacing,
+    } = sample(spec, &curves)?;
     let mx = |x: f64| rect.min.x + (x - r.x0) / (r.x1 - r.x0) * w;
     let my = |y: f64| rect.max.y - (y - r.y0) / (r.y1 - r.y0) * h;
 
@@ -2231,6 +2469,7 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
     let mut count = 0;
     let mut total = 0;
     let mut markers = 0;
+    let mut bars = 0;
     let mut warnings = Vec::new();
     let several = curves.len() > 1;
     // Every curve cut at the window: what leaves it ends on its edge.
@@ -2308,10 +2547,105 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
             });
         }
     }
+    let bar_count = curves.iter().filter(|c| c.style == CurveStyle::Bar).count();
     for (i, (((_, marks), c), runs)) in pieces.iter().zip(&marks).zip(&curves).zip(&clipped).enumerate() {
         let style = restyle(base, c.pen_color, c.thickness, c.line.as_deref(), c.style_val);
         let mut drawn = 0;
-        if c.has_line() {
+        let ser = series.get(i).map(Vec::as_slice).unwrap_or_default();
+        // Grouped bars: this curve's bar among the bar curves of the plot.
+        let bar_pos = curves.iter().take(i).filter(|c| c.style == CurveStyle::Bar).count();
+        let slot = spacing * c.bar_width / bar_count.max(1) as f64;
+        let shift = if c.style == CurveStyle::Bar {
+            (bar_pos as f64 - 0.5 * (bar_count as f64 - 1.0)) * slot
+        } else {
+            0.0
+        };
+        let base_y = tr(c.baseline, spec.log_y).unwrap_or(r.y0).clamp(r.y0, r.y1);
+        match c.style {
+            CurveStyle::Line => {}
+            CurveStyle::Bar => {
+                let fill_color = ColorRef(c.fill.as_ref().and_then(|f| f.color).unwrap_or(style.pen_color.0));
+                let bar = Style {
+                    thickness: if c.has_line() { style.thickness } else { 0 },
+                    fill_color,
+                    area_fill: c.fill.as_ref().map_or(20, |f| f.density),
+                    ..style
+                };
+                for &((x, y), _) in ser {
+                    let (xa, xb) = ((x + shift - 0.5 * slot).max(r.x0), (x + shift + 0.5 * slot).min(r.x1));
+                    let (ya, yb) = (base_y, y.clamp(r.y0, r.y1));
+                    let a = Point::new(fig(mx(xa)), fig(my(ya.max(yb))));
+                    let b = Point::new(fig(mx(xb)), fig(my(ya.min(yb))));
+                    if xb > xa && a.x < b.x && a.y < b.y {
+                        bars += 1;
+                        drawn += 1;
+                        push_part(
+                            &mut members,
+                            "bar",
+                            Object::new(ObjectKind::Polyline(Polyline::rect(bar, a, b))),
+                        );
+                    }
+                }
+            }
+            CurveStyle::Stem => {
+                for &((x, y), _) in ser {
+                    if let Some((p, q)) = clip((x, base_y), (x, y), &r) {
+                        let (p, q) = (
+                            Point::new(fig(mx(p.0)), fig(my(p.1))),
+                            Point::new(fig(mx(q.0)), fig(my(q.1))),
+                        );
+                        if p != q {
+                            bars += 1;
+                            drawn += 1;
+                            push_part(&mut members, "stem", line(style, vec![p, q]));
+                        }
+                    }
+                }
+            }
+        }
+        // Error bars: a vertical line with a cap at each end that is inside.
+        let ebar = Style {
+            line: LineKind::Solid,
+            style_val: 0.0,
+            ..style
+        };
+        for &(p, e) in ser {
+            let Some(e) = e else { continue };
+            let x = p.0 + shift;
+            let (lo, hi) = err_ends(p.1, e, spec.log_y);
+            let (Some(hi), lo) = (hi, lo.unwrap_or(r.y0)) else {
+                continue;
+            };
+            if x < r.x0 || x > r.x1 {
+                continue;
+            }
+            let Some((a, b)) = clip((x, lo), (x, hi), &r) else {
+                continue;
+            };
+            let at = |p: P| Point::new(fig(mx(p.0)), fig(my(p.1)));
+            let half = 0.5 * c.err_cap;
+            if at(a) != at(b) {
+                bars += 1;
+                drawn += 1;
+                push_part(&mut members, "errorbar", line(ebar, vec![at(a), at(b)]));
+            }
+            if half > 0.0 {
+                for (y, inside) in [(lo, lo >= r.y0 && lo <= r.y1), (hi, hi >= r.y0 && hi <= r.y1)] {
+                    if inside {
+                        let m = at((x, y));
+                        push_part(
+                            &mut members,
+                            "errorbar",
+                            line(
+                                ebar,
+                                vec![Point::new(fig(m.x - half), m.y), Point::new(fig(m.x + half), m.y)],
+                            ),
+                        );
+                    }
+                }
+            }
+        }
+        if c.has_line() && c.style == CurveStyle::Line {
             for piece in runs {
                 let mut pts: Vec<Point> = Vec::with_capacity(piece.len());
                 for &(x, y) in piece {
@@ -2365,6 +2699,7 @@ pub fn build(spec: &PlotSpec, rect: Rect, data: Option<&str>, look: &PlotLook) -
         curves: count,
         points: total,
         markers,
+        bars,
         warnings,
     })
 }
@@ -2509,7 +2844,9 @@ mod tests {
         if let (Some(d), Some(c)) = (data, curves.first_mut()) {
             c.data = d.to_string();
         }
-        let (mut pieces, _, r) = sample(spec, &curves)?;
+        let Sampled {
+            mut pieces, ranges: r, ..
+        } = sample(spec, &curves)?;
         Ok((
             if pieces.is_empty() {
                 Vec::new()

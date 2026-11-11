@@ -97,6 +97,16 @@ takes `fill`: `{"curve": 2}` (the area between it and curve 2, numbered from
 `density` (xfig's area fill, 20 full color). The area is a polygon without
 outline, drawn behind the grid and the curves (part `fill`).
 
+Bars, stems and error bars, per curve in `curves`: `style` is `"line"`
+(default), `"bar"` or `"stem"`; bars rise from `baseline` (default 0) with
+`bar_width` (fraction of the x spacing, 0.8) and, in several bar curves, stand
+side by side (grouped); give the curves the same x values. `yerr` is the list
+of error values of `points` (one value applies to all points; kept in the
+figure) and `yerr_col` the column of a data `file` or `data` text; `err_cap` is
+the cap width in Fig units. The reply of `plot.add` and `plot.update` counts
+`bars` (bars, stems and error bar lines). Data from a file needs no list:
+`{"file": "d.csv", "xcol": 1, "ycol": 2, "yerr_col": 3, "style": "bar"}`.
+
 ## Revision history
 | Date | Note |
 |---|---|
@@ -105,3 +115,4 @@ outline, drawn behind the grid and the curves (part `fill`).
 | 2026-11-11 | Plots: axes crossing at the origin, no axes, grid with minor lines and a line style (Q1). |
 | 2026-11-11 | Plots: tick labels with a scale factor, decimal comma, own labels and rotation (Q2). |
 | 2026-11-11 | Plots: filled areas between curves or to a baseline (Q3). |
+| 2026-11-11 | Plots: bars (grouped), stems and error bars (Q4). |
