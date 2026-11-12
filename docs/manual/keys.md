@@ -12,7 +12,7 @@ The menus show one key per entry: the system's (`Ctrl+Z` for Undo), or xfig's wh
 
 ## Mode keys
 
-Every mode with a key; the letters are xfig's and always work. Mode keys do nothing while a menu is open or while you type text. The modes without a key (X-spline, Closed X-spline, Open/close, Find properties, Edit bounding box, Library) are in the Tools menu and in Go to mode (Ctrl+J).
+Every mode with a key; the letters are xfig's and always work. Mode keys do nothing while a menu is open or while you type text. Modes without a key: Library (its button in the mode panel), Find properties (Tools > Find Properties...) and Edit bounding box (View > Bounding box). An ellipse is drawn with the circle keys and the middle button, an object is opened or closed with `V` and the right button, and the two X-spline modes are found by name in Go to mode (Ctrl+J).
 
 | Mode | Key |
 |---|---|

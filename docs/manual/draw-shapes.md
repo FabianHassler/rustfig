@@ -22,17 +22,11 @@ Key `Shift+C`. Draws a circle from one end of its diameter.
 
 ## Ellipse (radii)
 
-Key `E`. Same buttons as Circle (radius), but the ellipse is the main shape.
-
-- Left, “Circle center”: a circle from its center.
-- Middle, “Ellipse center”: press at the center; the radii follow the pointer. A left or middle click finishes it (“Ellipse corner”), as in xfig, or release the middle button after dragging.
+Circle (radius), key `C`, with the **middle** button, “Ellipse center”: press at the center; the radii follow the pointer. A left or middle click finishes it (“Ellipse corner”), as in xfig, or release the middle button after dragging. (Key `E` gives the same buttons: left, “Circle center”, a circle from its center.)
 
 ## Ellipse (diameter)
 
-Key `Shift+E`.
-
-- Left, “Circle diameter”: a circle by its diameter.
-- Middle, “Ellipse corner”: press at one corner and drag to the opposite corner of the ellipse's box.
+Circle (diameter), key `Shift+C`, with the **middle** button, “Ellipse corner”: press at one corner and drag to the opposite corner of the ellipse's box. (Key `Shift+E` gives the same buttons: left, “Circle diameter”, a circle by its diameter.)
 
 ## Polygon
 

@@ -39,14 +39,16 @@ Key `Shift+I`.
 
 ## X-spline
 
-No key and no button: Tools > X-spline, or Go to mode. The curve's shape at each control point is a number between -1 and 1: 0 makes a sharp corner, 1 a smooth curve that approximates the point, -1 a smooth curve through it. New points are smooth approximations; change them later with [Edit attributes](attribute-modes.md) (right button on a point of the spline) or with Ctrl+Shift and a click on the point (see *Shape factor on the canvas* below). Any approximated or interpolated spline becomes an X-spline the same way.
+No key and no button: type its name in **Go to mode** at the top of the mode panel (Tools > Go to mode..., Ctrl+J). The curve's shape at each control point is a number between -1 and 1: 0 makes a sharp corner, 1 a smooth curve that approximates the point, -1 a smooth curve through it. New points are smooth approximations; change them with Ctrl+Shift and a click on a point in an editing mode such as Move point (see *Shape factor on the canvas* below), or set the number in [Edit attributes](attribute-modes.md) (right button on a point of the spline).
 
 - Left, “first point”.
 - Middle, “freehand”.
 
+An approximated or interpolated spline you have already drawn becomes an X-spline the same way: change one of its points with Ctrl+Shift and a click.
+
 ## Closed X-spline
 
-No key. As X-spline but closed.
+No key and no button: type its name in Go to mode. As X-spline but closed; a closed approximated or interpolated spline becomes one with Ctrl+Shift and a click on a point.
 
 - Left, “first point”.
 - Middle, “freehand”.

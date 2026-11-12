@@ -16,7 +16,7 @@ use serde_json::json;
 /// A mode panel button: one of RustFig's tools with xfig's icon, or an xfig
 /// mode RustFig doesn't have yet (shown grayed out, with the plan task).
 /// RustFig's tools without an xfig mode (Select, Open/close, X-splines,
-/// separate ellipse tools) are in the Tools menu only.
+/// separate ellipse tools) are reached through Go to mode only.
 #[derive(Clone, Copy)]
 enum Slot {
     Tool(ToolKind, &'static xfig_icons::Xbm),

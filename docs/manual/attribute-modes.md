@@ -38,9 +38,7 @@ Key `V`. Turns a polyline into a spline through its points, or a spline into a p
 
 ## Open/close
 
-No key. Closes an open line or spline (a polyline becomes a polygon) or opens a closed one.
-
-- Left, “open/close”: click the object.
+Key `V` (**Convert line ↔ spline** above), then the **right** button on a point of the object: an open line or spline closes (a polyline becomes a polygon), a closed one opens at that point. (Scripts also have a mode of its own, `tool.open_close`: left, “open/close”, click the object.)
 
 ## Add/remove arrows
 
