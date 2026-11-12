@@ -7,7 +7,7 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
-/// Whether the keys follow macOS (⌘, Ctrl+click as the right button): the
+/// Whether the keys follow macOS (⌘ for the menu keys): the
 /// build's system natively, the browser's system on the web, where a build
 /// for `wasm32` knows nothing about the machine. `App::ui` refreshes it from
 /// egui every frame.
@@ -60,7 +60,7 @@ impl Os {
         match self {
             Os::Mac => {
                 "Trackpad or one-button mouse: \u{2325}-click (Option) is the middle button, \
-                 \u{2303}-click (Control, or a two-finger click) the right button."
+                 a two-finger click the right button."
             }
             Os::Windows | Os::Linux => {
                 "Two-button mouse: press the left and right buttons together for the middle \

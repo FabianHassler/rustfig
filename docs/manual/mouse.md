@@ -18,7 +18,7 @@ Hold Shift and it shows the Shift meanings; in Polyline mode Shift+left draws a 
 | Mouse | Left | Middle | Right |
 |---|---|---|---|
 | Three-button mouse | left button | middle button (wheel click) | right button |
-| Trackpad or one-button mouse | click | Option+click | Ctrl+click (or a two-finger click) |
+| Trackpad or one-button mouse | click | Option+click | two-finger click (Ctrl+click is xfig's zoom, see [Zoom and view](view.md)) |
 
 <!-- os: linux windows -->
 | Mouse | Left | Middle | Right |
@@ -49,7 +49,7 @@ Holding Shift changes a button's job in some modes. While Shift is held, the mou
 
 ## Ctrl
 
-Holding Ctrl (Cmd on macOS) shows xfig's zoom functions: left starts a zoom box, middle pans to the origin, right unzooms ([Zoom and view](view.md)). With Ctrl and Shift in the editing modes, a click on a spline point changes its shape factor ([Splines](draw-splines.md)); in the drawing modes Ctrl+Shift does what Shift does. A Ctrl click while a tool is at work (a box under way, say) does nothing, as in xfig, and neither does its release.
+Holding Ctrl (the Control key on every system) shows xfig's zoom functions: left starts a zoom box, middle pans to the origin, right unzooms ([Zoom and view](view.md)). With Ctrl and Shift in the editing modes, a click on a spline point changes its shape factor ([Splines](draw-splines.md)); in the drawing modes Ctrl+Shift does what Shift does. A Ctrl click while a tool is at work (a box under way, say) does nothing, as in xfig, and neither does its release.
 
 The three buttons never share a job within one set of keys: where xfig gives two buttons the same function (Locate Object on all three buttons in the editing modes with Shift, the ellipse modes finished by either of two buttons), RustFig leaves the extra buttons unassigned. A drag is finished with the button that started it.
 

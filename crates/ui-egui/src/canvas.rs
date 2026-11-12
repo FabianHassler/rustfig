@@ -1251,12 +1251,11 @@ fn web_time_now() -> f64 {
     }
 }
 
-/// The tool button for a physical button: Alt+left is the middle button and
-/// Ctrl+left the right one, for two-button mice and trackpads.
+/// The tool button for a physical button: Alt+left is the middle button, for
+/// two-button mice and trackpads (the right button is a two-finger click there).
 pub fn tool_button(b: egui::PointerButton, m: egui::Modifiers) -> Option<Button> {
     match b {
         egui::PointerButton::Primary if m.alt => Some(Button::Middle),
-        egui::PointerButton::Primary if m.ctrl => Some(Button::Right),
         egui::PointerButton::Primary => Some(Button::Left),
         egui::PointerButton::Secondary => Some(Button::Right),
         egui::PointerButton::Middle => Some(Button::Middle),
@@ -1264,13 +1263,10 @@ pub fn tool_button(b: egui::PointerButton, m: egui::Modifiers) -> Option<Button>
     }
 }
 
-/// Whether the modifiers hold xfig's Ctrl key: Ctrl itself on Windows and
-/// Linux, Cmd on macOS (Ctrl+click is the right button there).
-pub fn ctrl_modifier(os: crate::platform::Os, m: &egui::Modifiers) -> bool {
-    match os {
-        crate::platform::Os::Mac => m.mac_cmd,
-        _ => m.ctrl,
-    }
+/// Whether the modifiers hold xfig's Ctrl key: the Control key itself on every
+/// system (on macOS too; the right button is a two-finger click there).
+pub fn ctrl_modifier(_os: crate::platform::Os, m: &egui::Modifiers) -> bool {
+    m.ctrl
 }
 
 /// The button of a press with xfig's Ctrl key held: Alt+left is the middle
@@ -1458,8 +1454,7 @@ fn handle_input(app: &mut App, ui: &egui::Ui, resp: &egui::Response, rect: Rect)
             );
         }
         for (phys, m) in pressed.iter().filter(|_| over) {
-            // xfig's Ctrl key (zoom box, shape factor); Cmd on macOS, where
-            // Ctrl+click is the right button.
+            // xfig's Ctrl key (zoom box, shape factor), the Control key on every system.
             let ctrl = ctrl_modifier(os, m);
             let Some(button) = (if ctrl {
                 physical_button(*phys, m)

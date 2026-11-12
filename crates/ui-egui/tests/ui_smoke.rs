@@ -232,15 +232,15 @@ fn global_settings_switch_the_xfig_shortcuts() {
 }
 
 #[test]
-fn xfig_ctrl_key_is_cmd_on_macos() {
+fn xfig_ctrl_key_is_control_everywhere() {
     use egui::Modifiers;
     use rustfig_ui_egui::canvas::ctrl_modifier;
     use rustfig_ui_egui::platform::Os;
     let cmd = Modifiers::COMMAND | Modifiers::MAC_CMD;
-    assert!(ctrl_modifier(Os::Mac, &cmd));
+    assert!(!ctrl_modifier(Os::Mac, &cmd), "Cmd is not xfig's Ctrl");
     assert!(
-        !ctrl_modifier(Os::Mac, &Modifiers::CTRL),
-        "Ctrl+click is the right button on a Mac"
+        ctrl_modifier(Os::Mac, &Modifiers::CTRL),
+        "the Control key is, on a Mac too"
     );
     assert!(ctrl_modifier(Os::Linux, &Modifiers::CTRL));
     assert!(ctrl_modifier(Os::Windows, &Modifiers::CTRL));
@@ -259,7 +259,8 @@ fn two_button_mapping() {
     );
     assert_eq!(
         tool_button(PointerButton::Primary, Modifiers::CTRL),
-        Some(Button::Right)
+        Some(Button::Left),
+        "Ctrl+click is not the right button (a two-finger click is)"
     );
     assert_eq!(
         tool_button(PointerButton::Middle, Modifiers::NONE),
