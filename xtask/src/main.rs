@@ -138,6 +138,28 @@ fn layer_name(layer: i32) -> String {
     }
 }
 
+/// `cargo xtask icons`: write the pictures beside the manual's headings for the website
+/// (`docs/images/icons/`, SVG from the program's own icons, and their index).
+fn icons() -> Result<(), String> {
+    let mut c = cargo();
+    c.args([
+        "test",
+        "-q",
+        "-p",
+        "rustfig-ui-egui",
+        "--lib",
+        "heading_icon_pictures_are_current",
+    ])
+    .env("RUSTFIG_UPDATE_ICONS", "1")
+    .current_dir(root());
+    if c.status().map_err(|e| e.to_string())?.success() {
+        println!("icons: docs/images/icons written");
+        Ok(())
+    } else {
+        Err("writing the heading icons failed".into())
+    }
+}
+
 fn layers() -> Result<(), String> {
     let mut errors = Vec::new();
     for (name, dir, layer) in LAYERS {
@@ -245,6 +267,17 @@ fn assets() -> Result<(), String> {
                 if !listed {
                     errors.push(format!("{rel}: no row for examples/{top}/ in ASSETS.md"));
                 }
+            }
+            continue;
+        }
+        // The heading pictures of the website's manual (`cargo xtask icons`): one row for the folder.
+        if rel.starts_with("docs/images/icons/") {
+            count += 1;
+            if !table
+                .lines()
+                .any(|l| l.trim_start().starts_with('|') && l.contains("`docs/images/icons/`"))
+            {
+                errors.push(format!("{rel}: no row for docs/images/icons/ in ASSETS.md"));
             }
             continue;
         }
@@ -555,6 +588,7 @@ fn main() -> ExitCode {
         "package" => package::run(&root(), cargo()),
         "source-audit" => audit::run(&root()),
         "movie" => movie::run(&root()),
+        "icons" => icons(),
         "xfig-compare" => xfig_compare::run(&root(), cargo()),
         #[cfg(unix)]
         "speed-compare" => speed_compare::run(&root()),
@@ -566,7 +600,7 @@ fn main() -> ExitCode {
         "release-check" => release_check::run(&root(), cargo()),
         "ctan" => ctan::run(&root(), &std::env::args().nth(2).unwrap_or_else(|| "HEAD".into())),
         _ => Err(
-            "usage: cargo xtask ci | layers | assets | licences | wasm | web | package | source-audit | xfig-compare | speed-compare | libraries | examples [OUTDIR] | site | ctan [REF] | release-check [--steps 1,12]"
+            "usage: cargo xtask ci | layers | assets | licences | wasm | web | package | source-audit | xfig-compare | speed-compare | libraries | examples [OUTDIR] | site | icons | ctan [REF] | release-check [--steps 1,12]"
                 .into(),
         ),
     };

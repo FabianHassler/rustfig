@@ -30,17 +30,26 @@ fn esc(s: &str) -> String {
 }
 
 /// The manual's per-system blocks (`<!-- os: mac -->` … `<!-- os: end -->`,
-/// which the program shows only on that system) as labeled boxes.
+/// which the program shows only on that system) as labeled boxes; in a group
+/// of blocks the Linux and Windows ones come before the macOS one.
 fn os_blocks(md: &str) -> String {
     let mut out = String::with_capacity(md.len());
-    let mut open = false;
+    // The group being read: each block's systems and text.
+    let mut group: Vec<(Vec<&str>, String)> = Vec::new();
+    let mut in_group = false;
+    let flush = |out: &mut String, group: &mut Vec<(Vec<&str>, String)>| {
+        let (mac, rest): (Vec<_>, Vec<_>) = group.drain(..).partition(|(sys, _)| sys == &["macOS"]);
+        for (systems, text) in rest.into_iter().chain(mac) {
+            let _ = write!(
+                out,
+                "<div class=\"os\"><p class=\"os-label\">On {}</p>\n\n{text}\n</div>\n\n",
+                systems.join(" and ")
+            );
+        }
+    };
     for line in md.lines() {
         let t = line.trim();
         if let Some(rest) = t.strip_prefix("<!-- os:").and_then(|r| r.strip_suffix("-->")) {
-            if open {
-                out.push_str("\n</div>\n\n");
-                open = false;
-            }
             let systems: Vec<&str> = rest
                 .split_whitespace()
                 .filter(|s| *s != "end")
@@ -51,22 +60,27 @@ fn os_blocks(md: &str) -> String {
                     other => other,
                 })
                 .collect();
-            if !systems.is_empty() {
-                let _ = write!(
-                    out,
-                    "<div class=\"os\"><p class=\"os-label\">On {}</p>\n\n",
-                    systems.join(" and ")
-                );
-                open = true;
+            if systems.is_empty() {
+                flush(&mut out, &mut group);
+                in_group = false;
+            } else {
+                group.push((systems, String::new()));
+                in_group = true;
             }
             continue;
         }
-        out.push_str(line);
-        out.push('\n');
+        match group.last_mut() {
+            Some((_, text)) if in_group => {
+                text.push_str(line);
+                text.push('\n');
+            }
+            _ => {
+                out.push_str(line);
+                out.push('\n');
+            }
+        }
     }
-    if open {
-        out.push_str("\n</div>\n");
-    }
+    flush(&mut out, &mut group);
     out
 }
 
@@ -139,7 +153,7 @@ pub fn page(stem: &str, md: &str) -> Page {
         });
     let mut body = String::new();
     html::push_html(&mut body, parser);
-    let body = dark_twins(&body);
+    let body = heading_icons(&dark_twins(&body));
     Page {
         stem: stem.to_string(),
         title,
@@ -188,6 +202,62 @@ fn dark_twins(body: &str) -> String {
         rest = after;
     }
     out.push_str(rest);
+    out
+}
+
+/// The pictures beside the manual's headings (a mode's icon), as the program's
+/// manual shows them: `heading<TAB>file` lines, written with the SVG files by
+/// `cargo xtask icons`.
+const HEADING_ICONS: &str = include_str!("../../docs/images/icons/index.tsv");
+
+/// An `<h1>`–`<h3>` whose text is in [`HEADING_ICONS`] gets its picture in front.
+fn heading_icons(body: &str) -> String {
+    let mut out = String::with_capacity(body.len());
+    let mut rest = body;
+    while let Some(i) = rest.find("<h") {
+        let (before, tag) = rest.split_at(i);
+        out.push_str(before);
+        let level = tag.get(2..3).filter(|l| matches!(*l, "1" | "2" | "3"));
+        let open_end = tag.find('>');
+        let close = level.and_then(|l| tag.find(&format!("</h{l}>")));
+        match (open_end, close) {
+            (Some(o), Some(c)) if o < c => {
+                let inner = tag.get(o + 1..c).unwrap_or("");
+                let text = strip_tags(inner)
+                    .replace("&amp;", "&")
+                    .replace("&lt;", "<")
+                    .replace("&gt;", ">")
+                    .replace("&quot;", "\"");
+                let file = HEADING_ICONS
+                    .lines()
+                    .find_map(|l| l.split_once('\t').filter(|(h, _)| *h == text.trim()).map(|(_, f)| f));
+                out.push_str(tag.get(..=o).unwrap_or(""));
+                if let Some(f) = file {
+                    let _ = write!(out, "<img class=\"mode-icon\" src=\"../images/icons/{f}\" alt=\"\">");
+                }
+                rest = tag.get(o + 1..).unwrap_or("");
+            }
+            _ => {
+                out.push_str(tag.get(..2).unwrap_or(""));
+                rest = tag.get(2..).unwrap_or("");
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+fn strip_tags(s: &str) -> String {
+    let mut out = String::new();
+    let mut inside = false;
+    for c in s.chars() {
+        match c {
+            '<' => inside = true,
+            '>' => inside = false,
+            c if !inside => out.push(c),
+            _ => {}
+        }
+    }
     out
 }
 
@@ -605,6 +675,8 @@ pre code { padding: 0; }
 .manual aside ul { list-style: none; padding: 0; margin: 0; }
 .manual aside li { margin: 0.25em 0; }
 .manual main.topic { flex: 1; min-width: 0; padding: 0 0 2em; margin: 0; }
+.manual main.topic img.mode-icon { height: 1.5em; width: auto; vertical-align: -0.35em; margin-right: 0.45em; padding: 2px; border: 1px solid var(--line); border-radius: 3px; background: #fff; }
+@media (prefers-color-scheme: dark) { .manual main.topic img.mode-icon { filter: invert(0.9); } }
 .manual main.topic video { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 4px; }
 .manual main.topic img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 4px; }
 .os { border-left: 3px solid var(--line); padding: 0.1em 0 0.1em 1em; margin: 1em 0; }
@@ -687,7 +759,7 @@ pub fn build(root: &Path, out: &Path, app: Option<&Path>) -> Result<usize, Strin
     .map_err(|e| format!("docs/images/rustfig-window.png: {e}"))?;
     copy_dir(&root.join("docs/images/examples"), &out.join("examples"))?;
     // The manual's pictures, at the path the topics use (`../images/…` from `manual/`).
-    for d in ["window", "movie"] {
+    for d in ["window", "movie", "icons"] {
         let dir = root.join("docs/images").join(d);
         if dir.is_dir() {
             copy_dir(&dir, &out.join("images").join(d))?;
@@ -743,6 +815,22 @@ mod tests {
     use super::*;
 
     #[test]
+    fn mode_headings_get_their_icon() {
+        let b = heading_icons("<h2>Polygon</h2><p>x</p><h3>Other</h3><h2 id=\"b\">Box</h2>");
+        assert_eq!(
+            b,
+            "<h2><img class=\"mode-icon\" src=\"../images/icons/polygon.svg\" alt=\"\">Polygon</h2><p>x</p><h3>Other</h3>\
+             <h2 id=\"b\"><img class=\"mode-icon\" src=\"../images/icons/box.svg\" alt=\"\">Box</h2>"
+        );
+        // Every file the index names is there.
+        let dir = root().join("docs/images/icons");
+        for l in HEADING_ICONS.lines() {
+            let f = l.split_once('\t').map_or("", |(_, f)| f);
+            assert!(dir.join(f).is_file(), "{f}");
+        }
+    }
+
+    #[test]
     fn movies_become_videos_with_captions() {
         let b = dark_twins(r#"<p><img src="../images/m/x.mp4" alt="X" /></p>"#);
         assert!(
@@ -785,6 +873,11 @@ mod tests {
     fn os_blocks_are_labeled_and_closed() {
         let s = os_blocks("a\n<!-- os: mac -->\nm\n<!-- os: linux windows -->\nw\n<!-- os: end -->\nb\n");
         assert!(s.contains("On macOS</p>") && s.contains("On Linux and Windows</p>"));
+        assert!(
+            s.find("On Linux and Windows").unwrap() < s.find("On macOS").unwrap(),
+            "{s}"
+        );
+        assert!(s.contains("w\n") && s.find("\nw\n").unwrap() < s.find("\nm\n").unwrap());
         assert_eq!(s.matches("<div class=\"os\">").count(), s.matches("</div>").count());
         assert!(!s.contains("<!--"));
     }

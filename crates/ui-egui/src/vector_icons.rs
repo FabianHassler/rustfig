@@ -173,6 +173,39 @@ pub fn image(icon: VIcon, scale: f32) -> Option<egui::ColorImage> {
     render_objects(drawing(icon), w, h, scale)
 }
 
+/// The picture as SVG (the website's manual shows the mode icons beside the
+/// headings): fig2dev's SVG driver on the icon's drawing, its page the
+/// icon's box, comment lines left out so the file changes only with the
+/// drawing.
+pub fn svg(icon: VIcon) -> Option<String> {
+    let (w, h) = icon.size();
+    let mut doc = Document::new();
+    doc.objects = drawing(icon).into_iter().map(Shared::new).collect();
+    let page = rustfig_model::BoundingBox {
+        x1: 0,
+        y1: 0,
+        x2: (w as f64 * U).round() as i32,
+        y2: (h as f64 * U).round() as i32,
+    };
+    let (bytes, _) = rustfig_engine::fig2dev::export_typeset(&doc, "svg", &[], None, None, Some(page)).ok()?;
+    let text = String::from_utf8(bytes).ok()?;
+    let mut out = String::new();
+    let mut comment = false;
+    for line in text.lines() {
+        if line.trim_start().starts_with("<!--") {
+            comment = !line.contains("-->");
+            continue;
+        }
+        if comment {
+            comment = !line.contains("-->");
+            continue;
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+    Some(out)
+}
+
 /// Render `objs` (Fig units, 15 per icon pixel) into a `w`×`h`-pixel icon
 /// at `scale` device pixels per icon pixel.
 pub fn render_objects(objs: Vec<Object>, w: usize, h: usize, scale: f32) -> Option<egui::ColorImage> {

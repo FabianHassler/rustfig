@@ -630,6 +630,69 @@ fn heading_icon(spans: &[Span]) -> Option<HeadingIcon> {
         .map(|(_, i)| *i)
 }
 
+/// The file name of a heading picture in `docs/images/icons/`.
+fn heading_icon_file(icon: HeadingIcon) -> String {
+    match icon {
+        HeadingIcon::Xbm(x) => format!("{}.svg", x.name.replace('_', "-")),
+        HeadingIcon::Vector(_) => "arrow-mid.svg".to_string(),
+    }
+}
+
+/// A heading picture as SVG: the vector drawing where the icon has one, else
+/// xfig's bitmap as squares.
+fn heading_icon_svg(icon: HeadingIcon) -> Option<String> {
+    match icon {
+        HeadingIcon::Vector(v) => crate::vector_icons::svg(v),
+        HeadingIcon::Xbm(x) if crate::mode_icons::traced(x.name) => {
+            crate::vector_icons::svg(crate::vector_icons::VIcon::Traced(x.name))
+        }
+        HeadingIcon::Xbm(x) => {
+            let row = x.width.div_ceil(8);
+            let mut out = format!(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 {w} {h}\" width=\"{w}\" height=\"{h}\">\n<path fill=\"#000\" d=\"",
+                w = x.width,
+                h = x.height
+            );
+            for y in 0..x.height {
+                for c in 0..x.width {
+                    let byte = x.bits.get(y * row + c / 8).copied().unwrap_or(0);
+                    if byte & (1 << (c % 8)) != 0 {
+                        out.push_str(&format!("M{c} {y}h1v1h-1z"));
+                    }
+                }
+            }
+            out.push_str("\"/>\n</svg>\n");
+            Some(out)
+        }
+    }
+}
+
+/// The pictures beside the manual's headings for the website: each file
+/// (name, SVG) once, and the index of `heading<TAB>file` lines it reads
+/// (`docs/images/icons/`, kept current by `heading_icon_pictures_are_current`).
+pub fn heading_icon_pictures() -> (Vec<(String, String)>, String) {
+    let mut files: Vec<(String, String)> = Vec::new();
+    let mut index = String::new();
+    for t in TOPICS {
+        for b in parse(t.text) {
+            let Block::Heading(_, spans) = b else { continue };
+            let Some(icon) = heading_icon(&spans) else { continue };
+            let file = heading_icon_file(icon);
+            let line = format!("{}\t{file}\n", heading_text(&spans));
+            if !index.contains(&line) {
+                index.push_str(&line);
+            }
+            if !files.iter().any(|(f, _)| *f == file) {
+                if let Some(svg) = heading_icon_svg(icon) {
+                    files.push((file, svg));
+                }
+            }
+        }
+    }
+    files.sort();
+    (files, index)
+}
+
 type Textures = std::collections::HashMap<&'static str, egui::TextureHandle>;
 
 fn show_blocks(ui: &mut egui::Ui, tk: &Tokens, blocks: &[Block], textures: &mut Textures, nav: &mut Option<String>) {
@@ -1012,6 +1075,45 @@ mod tests {
             );
             assert!(keys.contains(&row), "keys.md lacks {row:?}");
         }
+    }
+
+    /// `docs/images/icons/` holds every heading picture and its index as made
+    /// now; `RUSTFIG_UPDATE_ICONS=1` (or `cargo xtask icons`) writes them.
+    #[test]
+    fn heading_icon_pictures_are_current() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/images/icons");
+        let (files, index) = heading_icon_pictures();
+        assert!(files.len() > 40, "{} pictures", files.len());
+        let update = std::env::var_os("RUSTFIG_UPDATE_ICONS").is_some();
+        if update {
+            let _ = std::fs::remove_dir_all(&dir);
+            std::fs::create_dir_all(&dir).unwrap();
+            for (f, svg) in &files {
+                std::fs::write(dir.join(f), svg).unwrap();
+            }
+            std::fs::write(dir.join("index.tsv"), &index).unwrap();
+        }
+        let stale = "docs/images/icons is stale: run cargo xtask icons";
+        assert_eq!(
+            std::fs::read_to_string(dir.join("index.tsv")).unwrap_or_default(),
+            index,
+            "{stale}"
+        );
+        for (f, svg) in &files {
+            assert_eq!(
+                &std::fs::read_to_string(dir.join(f)).unwrap_or_default(),
+                svg,
+                "{f}: {stale}"
+            );
+        }
+        let svgs = std::fs::read_dir(&dir)
+            .map(|d| {
+                d.flatten()
+                    .filter(|e| e.path().extension().is_some_and(|x| x == "svg"))
+                    .count()
+            })
+            .unwrap_or(0);
+        assert_eq!(svgs, files.len(), "{stale} (pictures no heading uses)");
     }
 
     #[test]
