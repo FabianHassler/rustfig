@@ -16,9 +16,6 @@ fallback.
 | `docs/images/window/mouse-indicator-polyline-light.png` | Fabian Hassler (screenshot of RustFig, made by `cargo xtask movie`) | this repository | MIT OR Apache-2.0 | Close-up of the mouse indicator in Polyline mode |
 | `docs/images/window/mouse-indicator-polyline-shift-light.png` | Fabian Hassler (screenshot of RustFig, made by `cargo xtask movie`) | this repository | MIT OR Apache-2.0 | Close-up of the mouse indicator in Polyline mode, Shift held |
 | `docs/images/window/mouse-indicator-move-light.png` | Fabian Hassler (screenshot of RustFig, made by `cargo xtask movie`) | this repository | MIT OR Apache-2.0 | Close-up of the mouse indicator in Move mode |
-| `docs/images/window/mouse-indicator-move-shift-light.png` | Fabian Hassler (screenshot of RustFig, made by `cargo xtask movie`) | this repository | MIT OR Apache-2.0 | Close-up of the mouse indicator in Move mode, Shift held |
-| `docs/images/window/mouse-indicator-edit-light.png` | Fabian Hassler (screenshot of RustFig, made by `cargo xtask movie`) | this repository | MIT OR Apache-2.0 | Close-up of the mouse indicator in Edit mode |
-| `docs/images/window/mouse-indicator-edit-shift-light.png` | Fabian Hassler (screenshot of RustFig, made by `cargo xtask movie`) | this repository | MIT OR Apache-2.0 | Close-up of the mouse indicator in Edit mode, Shift held |
 | `docs/images/examples/clifford-attractor.jpg` | Fabian Hassler (original work) | this repository (`examples/clifford-attractor/`) | MIT OR Apache-2.0 | Website thumbnail (640 px) of the example's preview |
 | `docs/images/examples/penrose-tiling.jpg` | Fabian Hassler (original work) | this repository (`examples/penrose-tiling/`) | MIT OR Apache-2.0 | Website thumbnail (640 px) of the example's preview |
 | `docs/images/examples/apollonian-gasket.jpg` | Fabian Hassler (original work) | this repository (`examples/apollonian-gasket/`) | MIT OR Apache-2.0 | Website thumbnail (640 px) of the example's preview |

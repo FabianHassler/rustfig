@@ -2,13 +2,29 @@
 
 RustFig keeps xfig's arrangement of the main window.
 
+![RustFig's window with its areas numbered: 1 menus, 2 file name, 3 message panel, 4 mouse indicator, 5 units box, 6 mode panel, 7 canvas with rulers, 8 indicator panel, 9 depth manager](../images/window/window-light.png)
+
+| | Area | What it is for |
+|---|---|---|
+| 1 | Menus | File, Edit, View, Tools, Snap, Help |
+| 2 | File name | the current file; click to rename |
+| 3 | Message panel | what to do next, errors, information |
+| 4 | Mouse indicator | what each mouse button does right now |
+| 5 | Units box | inches or centimeters and the scale |
+| 6 | Mode panel | the modes: drawing first, then editing |
+| 7 | Canvas and rulers | the drawing area |
+| 8 | Indicator panel | the attributes of new objects and the current mode |
+| 9 | Depth manager | depths shown or hidden, the Snap Mode box above it |
+
+Each area is described below.
+
 ## Top strip
 
 - **Menus**: File, Edit, View, Tools (RustFig's own, after View: finding objects and modes, importing pictures, plots), Snap and Help. The entries of each menu are grouped under small section titles. See [Menus](menus.md).
 - **File name**: the current file; it is marked when there are unsaved changes. Click it to rename the file.
 - **Message panel**: what to do next, errors and information. Click it to see the history of messages (also Help > Message history..., `app.messages`).
   - Each message has a level: information, warning (for example the notes after opening a file) or error (red). The window's **Info**, **Warning** and **Error** check boxes choose which levels are listed, **Copy** puts the listed messages on the clipboard one per line (warnings and errors start with their level), **Clear** empties the history and **Dismiss** (or Return) closes the window, as in xfig. Scripts use `app.messages` and `app.copy_messages` with `levels`, for example `["warning","error"]`.
-- **Mouse indicator**: three boxes, one per mouse button, say what each does in the current mode and step. Hold Shift to see the Shift meanings. Hovering shows the same as text.
+- **Mouse indicator**: three boxes, one per mouse button, say what each does in the current mode and step. Hold Shift to see the Shift meanings. Hovering shows the same as text. See [The mouse](mouse.md) for examples.
 - **Units box**: shows the units (inches or centimeters, a scale); a left click pans to the origin, a right click opens the Unit/Scale panel (Edit > Set units).
 
 ## Mode panel (left)

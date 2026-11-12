@@ -5,7 +5,8 @@
 //! - `window-{light,dark}.png`: the whole window with a numbered callout on each area of
 //!   [`AREAS`], each placed from the rect `ui.state` reports for the area's label (points; scaled
 //!   by the screenshot's pixels per point), so the callouts follow the layout;
-//! - `mouse-indicator-{polyline,move,edit}{,-shift}-light.png`: the mouse indicator close up.
+//! - `mouse-indicator-polyline{,-shift}-light.png`, `mouse-indicator-move-light.png`: the mouse
+//!   indicator close up, as the manual's Mouse topic shows it.
 //!
 //! Needs ImageMagick (`magick`); skips with a message when it is missing. Environment:
 //! `MOVIE_PORT` (default 8032), `MOVIE_OUT` (default `docs/images/window`).
@@ -22,7 +23,7 @@ use std::process::Command;
 pub(crate) struct Area {
     pub name: &'static str,
     pub label: &'static str,
-    /// Callout position on the area's outline: `tl` top left, `tr`, `bl`, `br` (inside the corner), `l`, `r` (centered on the edge).
+    /// Callout position on the area's outline: `tl` top left, `tr`, `bl`, `br` (inside the corner), `l`, `r` (just outside the edge, centered, so no text is covered).
     pub at: &'static str,
 }
 
@@ -74,8 +75,8 @@ pub(crate) const AREAS: &[Area] = &[
     },
 ];
 
-/// Mode button labels of the close-ups.
-const CLOSE_UPS: &[(&str, &str)] = &[("polyline", "Polyline"), ("move", "Move"), ("edit", "Edit attributes")];
+/// The close-ups: file key, mode button label, also with Shift held.
+const CLOSE_UPS: &[(&str, &str, bool)] = &[("polyline", "Polyline", true), ("move", "Move", false)];
 
 const RED: &str = "#d8232a";
 
@@ -176,8 +177,8 @@ fn callouts(src: &Path, dst: &Path, rects: &[(usize, [f64; 4])], ppp: f64, work:
             "tr" => (x1 - h - 2.0, y0 + h + 2.0),
             "bl" => (x0 + h + 2.0, y1 - h - 2.0),
             "br" => (x1 - h - 2.0, y1 - h - 2.0),
-            "l" => (x0, (y0 + y1) / 2.0),
-            "r" => (x1, (y0 + y1) / 2.0),
+            "l" => (x0 - h - 3.0, (y0 + y1) / 2.0),
+            "r" => (x1 + h + 3.0, (y0 + y1) / 2.0),
             _ => (x0 + h + 2.0, y0 + h + 2.0),
         };
         args.extend([
@@ -278,10 +279,10 @@ pub fn run(root: &Path) -> Result<(), String> {
     rf.layout()?;
 
     // Close-ups of the mouse indicator, light theme; the Polyline one doubles as the window picture.
-    for (key, label) in CLOSE_UPS {
+    for (key, label, with_shift) in CLOSE_UPS {
         rf.click_label(label)?;
         hover_canvas(&mut rf)?;
-        for shift in [false, true] {
+        for shift in [false, true].into_iter().filter(|s| !s || *with_shift) {
             if shift {
                 rf.call("ui.modifiers", r#"{"modifiers":["shift"]}"#)?;
                 settle();
@@ -293,9 +294,10 @@ pub fn run(root: &Path) -> Result<(), String> {
                 .ok_or("ui.state has no rect for the mouse indicator")?;
             let (pw, _) = png_size(&full)?;
             let ppp = pw / f64::from(WIN_W);
-            let pad = 6.0;
+            // A margin round the frame, but not down into the coordinates row below it.
+            let (pad, below) = (4.0, 1.0);
             let (x, y) = (((r[0] - pad) * ppp).max(0.0), ((r[1] - pad) * ppp).max(0.0));
-            let (w, h) = ((r[2] - r[0] + 2.0 * pad) * ppp, (r[3] - r[1] + 2.0 * pad) * ppp);
+            let (w, h) = ((r[2] - r[0] + 2.0 * pad) * ppp, (r[3] - r[1] + pad + below) * ppp);
             let dst = out.join(format!(
                 "mouse-indicator-{key}{}-light.png",
                 if shift { "-shift" } else { "" }
@@ -310,7 +312,7 @@ pub fn run(root: &Path) -> Result<(), String> {
                 s("-strip"),
                 s(dst.display()),
             ])?;
-            if key == &"polyline" && !shift {
+            if *key == "polyline" && !shift {
                 let rects = area_rects(&state)?;
                 callouts(&full, &out.join("window-light.png"), &rects, ppp, &work)?;
             }

@@ -1,5 +1,11 @@
 # Getting started
 
+## The window
+
+![RustFig's window with its areas numbered: 1 menus, 2 file name, 3 message panel, 4 mouse indicator, 5 units box, 6 mode panel, 7 canvas with rulers, 8 indicator panel, 9 depth manager](../images/window/window-light.png)
+
+Modes are chosen in the mode panel on the left (6), you draw on the canvas (7), the attributes of new objects are in the indicator panel at the bottom (8), and the mouse indicator at the top right (4) says what each mouse button does right now. [The window](window.md) explains every area.
+
 ## Your first figure
 
 1. Pick a mode from the mode panel on the left, for example **Box** (key `B`). The message panel at the top says what to do next, and the mouse indicator shows what each mouse button does right now.

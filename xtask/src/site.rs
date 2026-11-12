@@ -139,12 +139,39 @@ pub fn page(stem: &str, md: &str) -> Page {
         });
     let mut body = String::new();
     html::push_html(&mut body, parser);
+    let body = dark_twins(&body);
     Page {
         stem: stem.to_string(),
         title,
         description,
         body,
     }
+}
+
+/// A `-light.png` picture in a `<picture>` that shows its `-dark.png` twin in a dark theme
+/// (as the program's manual window does).
+fn dark_twins(body: &str) -> String {
+    let mut out = String::new();
+    let mut rest = body;
+    while let Some(i) = rest.find("<img src=\"") {
+        let (before, img) = rest.split_at(i);
+        out.push_str(before);
+        let end = img.find('>').map_or(img.len(), |e| e + 1);
+        let (tag, after) = img.split_at(end);
+        let src = tag.get(10..).and_then(|t| t.split('"').next()).unwrap_or("");
+        match src.strip_suffix("-light.png") {
+            Some(stem) => {
+                let _ = write!(
+                    out,
+                    "<picture><source srcset=\"{stem}-dark.png\" media=\"(prefers-color-scheme: dark)\">{tag}</picture>"
+                );
+            }
+            None => out.push_str(tag),
+        }
+        rest = after;
+    }
+    out.push_str(rest);
+    out
 }
 
 /// `(text)` link targets left after the brackets were dropped.
@@ -561,6 +588,7 @@ pre code { padding: 0; }
 .manual aside ul { list-style: none; padding: 0; margin: 0; }
 .manual aside li { margin: 0.25em 0; }
 .manual main.topic { flex: 1; min-width: 0; padding: 0 0 2em; margin: 0; }
+.manual main.topic img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 4px; }
 .os { border-left: 3px solid var(--line); padding: 0.1em 0 0.1em 1em; margin: 1em 0; }
 .os-label { font-size: 0.85em; color: var(--muted); margin: 0.3em 0; text-transform: uppercase; letter-spacing: 0.04em; }
 table.compare th[scope], table.compare tr th:first-child { white-space: nowrap; }
@@ -640,6 +668,11 @@ pub fn build(root: &Path, out: &Path, app: Option<&Path>) -> Result<usize, Strin
     )
     .map_err(|e| format!("docs/images/rustfig-window.png: {e}"))?;
     copy_dir(&root.join("docs/images/examples"), &out.join("examples"))?;
+    // The manual's pictures, at the path the topics use (`../images/…` from `manual/`).
+    let window = root.join("docs/images/window");
+    if window.is_dir() {
+        copy_dir(&window, &out.join("images/window"))?;
+    }
     let mut urls = vec![BASE.to_string(), format!("{BASE}compare.html"), format!("{BASE}app/")];
     for p in &pages {
         write(&out.join(format!("manual/{}.html", p.stem)), manual_html(p, &toc))?;
@@ -688,6 +721,15 @@ pub fn run(root: &Path) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn light_pictures_get_their_dark_twin() {
+        let b = dark_twins(r#"<p><img src="../images/w-light.png" alt="W" /> <img src="a.png" alt="A" /></p>"#);
+        assert_eq!(
+            b,
+            r#"<p><picture><source srcset="../images/w-dark.png" media="(prefers-color-scheme: dark)"><img src="../images/w-light.png" alt="W" /></picture> <img src="a.png" alt="A" /></p>"#
+        );
+    }
 
     fn root() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("..")

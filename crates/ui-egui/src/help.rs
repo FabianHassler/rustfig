@@ -3,7 +3,9 @@
 //! it works offline and on the web), a topic list, a search box and a small
 //! Markdown renderer for the subset the topics use: headings, paragraphs,
 //! bullet and numbered lists, **bold**, *italic*, `code`, code blocks, simple
-//! tables and links between topics (`[text](topic.md)`).
+//! tables, links between topics (`[text](topic.md)`) and pictures on a line
+//! of their own (`![alt](../images/….png)`, compiled in through [`IMAGES`];
+//! a `-light.png` picture shows its `-dark.png` twin in the dark theme).
 
 use crate::theme::Tokens;
 use crate::App;
@@ -60,6 +62,32 @@ pub const TOPICS: &[Topic] = &[
     topic!("ai-assistants.md"),
     topic!("help-tools.md"),
 ];
+
+macro_rules! image {
+    ($f:literal) => {
+        (
+            concat!("../images/", $f),
+            include_bytes!(concat!("../../../docs/images/", $f)).as_slice(),
+        )
+    };
+}
+
+/// The pictures the topics show, by the path they are written with.
+pub const IMAGES: &[(&str, &[u8])] = &[
+    image!("window/window-light.png"),
+    image!("window/window-dark.png"),
+    image!("window/mouse-indicator-polyline-light.png"),
+    image!("window/mouse-indicator-polyline-shift-light.png"),
+    image!("window/mouse-indicator-move-light.png"),
+];
+
+/// The bytes of a topic's picture, the dark twin in the dark theme when there is one.
+fn image_bytes(src: &str, dark: bool) -> Option<(&'static str, &'static [u8])> {
+    let find = |p: &str| IMAGES.iter().find(|(k, _)| *k == p).copied();
+    let twin = dark.then(|| src.strip_suffix("-light.png")).flatten();
+    twin.and_then(|stem| find(&format!("{stem}-dark.png")))
+        .or_else(|| find(src))
+}
 
 /// The title of a topic: its first `# ` heading.
 pub fn title_of(t: &Topic) -> &'static str {
@@ -151,6 +179,18 @@ pub enum Block {
         head: Vec<Vec<Span>>,
         rows: Vec<Vec<Vec<Span>>>,
     },
+    /// A picture on a line of its own: alt text and path.
+    Image {
+        alt: String,
+        src: String,
+    },
+}
+
+/// `![alt](src)` filling the whole line.
+fn image_line(line: &str) -> Option<(String, String)> {
+    let rest = line.trim().strip_prefix("![")?.strip_suffix(')')?;
+    let (alt, src) = rest.split_once("](")?;
+    (!src.is_empty() && !src.contains(' ')).then(|| (alt.to_string(), src.to_string()))
 }
 
 fn find_seq(chars: &[char], from: usize, pat: &[char]) -> Option<usize> {
@@ -310,6 +350,9 @@ pub fn parse(src: &str) -> Vec<Block> {
             flush!();
         } else if t.trim_start().starts_with("<!--") {
             // A comment line.
+        } else if let Some((alt, src)) = image_line(t) {
+            flush!();
+            blocks.push(Block::Image { alt, src });
         } else if let Some(h) = t.strip_prefix('#') {
             flush!();
             let extra = h.chars().take_while(|c| *c == '#').count();
@@ -383,10 +426,21 @@ pub fn links(text: &str) -> Vec<String> {
                 head.iter().for_each(|s| spans(&mut out, s));
                 rows.iter().flatten().for_each(|s| spans(&mut out, s));
             }
-            Block::Code(_) => {}
+            Block::Code(_) | Block::Image { .. } => {}
         }
     }
     out
+}
+
+/// The pictures of a topic (paths as written).
+pub fn images(text: &str) -> Vec<String> {
+    parse(text)
+        .into_iter()
+        .filter_map(|b| match b {
+            Block::Image { src, .. } => Some(src),
+            _ => None,
+        })
+        .collect()
 }
 
 // ---- window --------------------------------------------------------------------
@@ -398,6 +452,8 @@ pub struct HelpState {
     pub topic: usize,
     pub query: String,
     scroll_top: bool,
+    /// Pictures already decoded, by their compiled-in path.
+    textures: std::collections::HashMap<&'static str, egui::TextureHandle>,
 }
 
 impl Default for HelpState {
@@ -407,6 +463,7 @@ impl Default for HelpState {
             topic: 0,
             query: String::new(),
             scroll_top: true,
+            textures: std::collections::HashMap::new(),
         }
     }
 }
@@ -464,9 +521,40 @@ fn inline(ui: &mut egui::Ui, tk: &Tokens, spans: &[Span], base: Option<f32>, nav
     });
 }
 
-fn show_blocks(ui: &mut egui::Ui, tk: &Tokens, blocks: &[Block], nav: &mut Option<String>) {
+/// A topic's picture, at most half its pixel size (the screenshots are taken at 2x) and no
+/// wider than the page; the alt text when it cannot be shown.
+fn show_image(ui: &mut egui::Ui, tk: &Tokens, textures: &mut Textures, alt: &str, src: &str) {
+    let tex = image_bytes(src, ui.visuals().dark_mode).and_then(|(key, bytes)| {
+        if let Some(t) = textures.get(key) {
+            return Some(t.clone());
+        }
+        let pic = rustfig_engine::import::decode_picture(bytes).ok()?;
+        let size = [usize::try_from(pic.width).ok()?, usize::try_from(pic.height).ok()?];
+        let img = egui::ColorImage::from_rgba_unmultiplied(size, &pic.rgba);
+        let t = ui
+            .ctx()
+            .load_texture(format!("help-{key}"), img, egui::TextureOptions::LINEAR);
+        textures.insert(key, t.clone());
+        Some(t)
+    });
+    let Some(tex) = tex else {
+        ui.label(egui::RichText::new(alt).italics().color(tk.muted));
+        return;
+    };
+    let [w, h] = tex.size_vec2().into();
+    let width = (w / 2.0).min(ui.available_width()).max(1.0);
+    let size = egui::vec2(width, h * width / w.max(1.0));
+    let r = ui.add(egui::Image::new((tex.id(), size)));
+    r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, alt));
+    ui.add_space(6.0);
+}
+
+type Textures = std::collections::HashMap<&'static str, egui::TextureHandle>;
+
+fn show_blocks(ui: &mut egui::Ui, tk: &Tokens, blocks: &[Block], textures: &mut Textures, nav: &mut Option<String>) {
     for b in blocks {
         match b {
+            Block::Image { alt, src } => show_image(ui, tk, textures, alt, src),
             Block::Heading(level, spans) => {
                 ui.add_space(if *level <= 2 { 10.0 } else { 6.0 });
                 let size = match level {
@@ -622,7 +710,8 @@ pub fn help_dialog(app: &mut App, ctx: &egui::Context) {
                 scroll.show(ui, |ui| {
                     if st.query.trim().is_empty() {
                         let Some(t) = TOPICS.get(st.topic) else { return };
-                        show_blocks(ui, &tk, &parse(&crate::platform::for_os(t.text, os)), &mut nav);
+                        let blocks = parse(&crate::platform::for_os(t.text, os));
+                        show_blocks(ui, &tk, &blocks, &mut st.textures, &mut nav);
                         return;
                     }
                     let hits = search(&st.query);
@@ -734,6 +823,42 @@ mod tests {
                 assert!(find_topic(&l).is_some(), "{}: link {l:?} has no topic", t.file);
             }
         }
+    }
+
+    #[test]
+    fn every_manual_picture_is_compiled_in() {
+        for t in TOPICS {
+            for src in images(t.text) {
+                assert!(
+                    image_bytes(&src, false).is_some(),
+                    "{}: picture {src:?} is not in IMAGES",
+                    t.file
+                );
+            }
+        }
+        for (src, bytes) in IMAGES {
+            assert!(
+                rustfig_engine::import::decode_picture(bytes).is_ok(),
+                "{src} does not decode"
+            );
+        }
+    }
+
+    #[test]
+    fn image_lines() {
+        assert_eq!(
+            parse("a\n![The window](../images/w-light.png)\nb"),
+            vec![
+                Block::Para(parse_inline("a")),
+                Block::Image {
+                    alt: "The window".into(),
+                    src: "../images/w-light.png".into()
+                },
+                Block::Para(parse_inline("b")),
+            ]
+        );
+        assert_eq!(image_line("![x](a b.png)"), None);
+        assert_eq!(image_line("see ![x](a.png)"), None);
     }
 
     #[test]

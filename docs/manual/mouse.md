@@ -1,6 +1,16 @@
 # The mouse
 
-xfig is drawn with three mouse buttons, and almost every mode gives each button a different job (left: the main action, middle: a variation, right: cancel or another variation). RustFig keeps that exactly. The mouse indicator in the top strip always shows what the three buttons do right now.
+xfig is drawn with three mouse buttons, and almost every mode gives each button a different job (left: the main action, middle: a variation, right: cancel or another variation). RustFig keeps that exactly. The mouse indicator in the top strip always shows what the three buttons do right now: the left button's job at the left, the middle one's above, the right one's at the right.
+
+![The mouse indicator in Polyline mode: left first point, middle freehand, right single point](../images/window/mouse-indicator-polyline-light.png)
+
+It follows the mode and the step you are in. In Move mode the same three buttons move an object, move it only horizontally or vertically, and move a region:
+
+![The mouse indicator in Move mode: left move object, middle horiz/vert move, right move region](../images/window/mouse-indicator-move-light.png)
+
+Hold Shift and it shows the Shift meanings; in Polyline mode Shift+left draws a dimension line:
+
+![The mouse indicator in Polyline mode with Shift held: left dimension line, middle freehand, right single point](../images/window/mouse-indicator-polyline-shift-light.png)
 
 ## Getting three buttons
 
