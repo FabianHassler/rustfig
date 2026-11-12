@@ -12,4 +12,4 @@ Lines, polygons, boxes, arcs, circles, ellipses, splines and compounds can be cl
 
 The icon shows the idea: a solid line that ends at a cutting edge and goes on as a row of dots, the extension.
 
-The same operations are commands (`tool.trim`, `object.trim`, `object.split_at`, `object.extend`; `object.cut_all` cuts all selected objects against each other), so they can be scripted ([Automation](automation.md)). To cut an object at every crossing with chosen axe objects use [Chop](chop.md).
+To cut an object at every crossing with chosen axe objects use [Chop](chop.md).

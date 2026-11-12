@@ -16,4 +16,4 @@ The panel's values are kept in the settings file. RustFig has no printer name or
 
 ## Scripts
 
-`print.settings`, `print.pdf` (the PDF as base64), `print.run`, `print.quick`, `print.batch_add`, `print.batch_clear`, `print.batch_print`. Without a front end (command line, MCP) the engine has no print system attached and printing reports that.
+Printing from a script: see [Automation](automation.md).

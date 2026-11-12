@@ -22,8 +22,8 @@ Each area is described below.
 
 - **Menus**: File, Edit, View, Tools (RustFig's own, after View: finding objects and modes, importing pictures, plots), Snap and Help. The entries of each menu are grouped under small section titles. See [Menus](menus.md).
 - **File name**: the current file; it is marked when there are unsaved changes. Click it to rename the file.
-- **Message panel**: what to do next, errors and information. Click it to see the history of messages (also Help > Message history..., `app.messages`).
-  - Each message has a level: information, warning (for example the notes after opening a file) or error (red). The window's **Info**, **Warning** and **Error** check boxes choose which levels are listed, **Copy** puts the listed messages on the clipboard one per line (warnings and errors start with their level), **Clear** empties the history and **Dismiss** (or Return) closes the window, as in xfig. Scripts use `app.messages` and `app.copy_messages` with `levels`, for example `["warning","error"]`.
+- **Message panel**: what to do next, errors and information. Click it to see the history of messages (also Help > Message history...).
+  - Each message has a level: information, warning (for example the notes after opening a file) or error (red). The window's **Info**, **Warning** and **Error** check boxes choose which levels are listed, **Copy** puts the listed messages on the clipboard one per line (warnings and errors start with their level), **Clear** empties the history and **Dismiss** (or Return) closes the window, as in xfig.
 - **Mouse indicator**: three boxes, one per mouse button, say what each does in the current mode and step. Hold Shift to see the Shift meanings. Hovering shows the same as text. See [The mouse](mouse.md) for examples.
 - **Units box**: shows the units (inches or centimeters, a scale); a left click pans to the origin, a right click opens the Unit/Scale panel (Edit > Set units).
 
@@ -33,11 +33,11 @@ One button per mode: drawing modes first, then editing modes. Hover for the name
 
 At the top of the panel, which stays in place while the buttons scroll, is the **Go to mode** field. Type part of a mode's name (upper or lower case; the name and xfig's long text are searched, so `arr` finds Add/remove arrows) and a short list shows the matches with each mode's icon at the left and its key at the right, to learn them. Up and Down move in the list (pointing at a row with the mouse moves there too), Return or a click picks the mode exactly as its button does, Escape clears the field. Ctrl+J (⌘ J on macOS; Tools › Go to mode…) puts the caret in the field from anywhere.
 
-Below it, the **Favorites** strip holds up to eight small mode buttons of your own choice; it is hidden while empty. Right-click a mode button and choose Add to favorites (or Remove from favorites); a click on a favorite selects the mode like the panel button, and the same button shows as active. The favorites are kept in the settings file (`[rustfig] mode_favourites`). Scripts use `mode.favourite` and `mode.favourites`.
+Below it, the **Favorites** strip holds up to eight small mode buttons of your own choice; it is hidden while empty. Right-click a mode button and choose Add to favorites (or Remove from favorites); a click on a favorite selects the mode like the panel button, and the same button shows as active. The favorites are kept in the settings file (`[rustfig] mode_favourites`).
 
 ## Start screen
 
-Help › About RustFig shows a card with RustFig's name, version, copyright, license and xfig's copyrights, until you click or press a key. RustFig starts straight into the window; to see the card for three seconds at every start, as xfig shows its splash graphic, start with `-splash` or turn on the `splash` setting in Global settings (the first key or click fades it out and still does its job). Scripts can show it with the `app.splash` command (Show Start Screen).
+Help › About RustFig shows a card with RustFig's name, version, copyright, license and xfig's copyrights, until you click or press a key. RustFig starts straight into the window; to see the card for three seconds at every start, as xfig shows its splash graphic, start with `-splash` or turn on the `splash` setting in Global settings (the first key or click fades it out and still does its job).
 
 ## Canvas
 

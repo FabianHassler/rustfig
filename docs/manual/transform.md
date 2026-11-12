@@ -14,10 +14,10 @@ Key Ctrl+S with the Control key itself (xfig's): always on a Mac (⌃ S); on Win
 
 Key `A`. Aligns the parts of a compound with each other, or one object with another. The indicator's Vert Align and Horiz Align choose how the edges or centers line up.
 
-The seven choices (each of the two indicators): **none**; **start**, **center**, **end** (left, center, right or top, center, bottom: the edges or centers line up with those of the whole group); **distribute centers** (the centers of the objects are evenly spaced, the outer two stay); **distribute edges** (equal gaps between the objects, the outer two stay); **abut** (the objects are put edge to edge, starting from the first). Horizontal and vertical are independent. Command `arrange.align` (`h`, `v`: none, left, center, right, distribute_centres, distribute_edges, abut).
+The seven choices (each of the two indicators): **none**; **start**, **center**, **end** (left, center, right or top, center, bottom: the edges or centers line up with those of the whole group); **distribute centers** (the centers of the objects are evenly spaced, the outer two stay); **distribute edges** (equal gaps between the objects, the outer two stay); **abut** (the objects are put edge to edge, starting from the first). Horizontal and vertical are independent.
 
 - Left, “align compound”: click a compound; its members are aligned with each other.
-- Middle, “align canvas”: every object in the figure is aligned to the page (the paper size, turned for landscape) by the indicator's Vert Align and Horiz Align (command `arrange.align_canvas`). Distribute and abut do not apply to the canvas.
+- Middle, “align canvas”: every object in the figure is aligned to the page (the paper size, turned for landscape) by the indicator's Vert Align and Horiz Align. Distribute and abut do not apply to the canvas.
 - Right, “align to first”: click the object that stays, then click each object to align to it.
 
 ## Flip up/down

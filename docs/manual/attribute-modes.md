@@ -4,7 +4,7 @@ These modes change objects that already exist.
 
 ## Update attributes
 
-Key `U`. Gives an object the current attributes of the [indicator panel](attributes.md) (colors, width, style, fill, arrows and so on). Which attributes are applied is set by the Update Control box shown in this mode: all, none or toggled flags, and individual ones. Under the buttons the line "Update will change: pen color, line width, …" lists the attributes whose flags are on, so you can read what a click will do without checking every button (script: `indicator.update_summary`).
+Key `U`. Gives an object the current attributes of the [indicator panel](attributes.md) (colors, width, style, fill, arrows and so on). Which attributes are applied is set by the Update Control box shown in this mode: all, none or toggled flags, and individual ones. Under the buttons the line "Update will change: pen color, line width, …" lists the attributes whose flags are on, so you can read what a click will do without checking every button.
 
 - Left, “update object”: click an object.
 - Middle, “update settings”: the reverse: the clicked object's attributes become the indicator's current ones.

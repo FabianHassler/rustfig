@@ -62,7 +62,6 @@ Click PenColor or FillColor for the color menu: Default, the 32 standard colors,
     In the web app the button is grayed out: the browser's EyeDropper needs JavaScript.
   - **Keep for all drawings** makes the color a favorite: it is stored in your settings (under the name you type, or its hex code), offered in every drawing's color menus and listed in Global settings > Drawing > Your colors. **Keep all for all drawings** does this for every color of the open drawing that is not a favorite yet.
 
-Scripts and MCP use the `color.*` commands (`color.parse`, `color.new`, `color.edit`, `color.delete`, `color.recent`, …).
 
 ## Styles
 
@@ -75,7 +74,6 @@ Scripts and MCP use the `color.*` commands (`color.parse`, `color.new`, `color.e
   - Limits: 32 families, 64 styles per family (xfig: 16 and 16), names of 1 to 64 characters.
   - Styles are kept in your settings file, for all drawings. They are never written to the .fig file, which stays as xfig reads it.
 
-Scripts and MCP use `style.family_add`, `style.family_delete`, `style.family_rename`, `style.save`, `style.apply`, `style.rename`, `style.delete` and `style.list`, each with a `family` parameter.
 
 ## Hover preview
 
@@ -83,4 +81,4 @@ In Find mode, pointing at a choice in a pictorial panel (Line Style, Join, Cap, 
 
 ## Arrowhead in the middle of a line
 
-Arrow Mode has a fifth choice, **middle** (added; xfig draws arrowheads only at the ends of a line). A polyline, open spline or arc drawn in this mode gets one arrowhead, of the indicator's Arrow Type and Size, centered on the middle of the line. Fig has no arrowheads in the middle of a line, so the line is stored as two pieces glued into a compound: the first ends in a real Fig arrowhead and the second starts under it, so the line runs through the head without a seam. xfig and fig2dev draw the same, and Arrow mode and the edit panel work on the pieces (open the compound to reach them). A spline becomes two polylines along its curve. If the line is too short for the head, the plain line is drawn and the message line says so. Scripts and MCP use `mid_arrows: [fractions of the line's length]` on `shape.polyline`, `shape.spline` and `shape.arc` (any number of heads) and `mid_arrow` in `indicator.set`.
+Arrow Mode has a fifth choice, **middle** (added; xfig draws arrowheads only at the ends of a line). A polyline, open spline or arc drawn in this mode gets one arrowhead, of the indicator's Arrow Type and Size, centered on the middle of the line. Fig has no arrowheads in the middle of a line, so the line is stored as two pieces glued into a compound: the first ends in a real Fig arrowhead and the second starts under it, so the line runs through the head without a seam. xfig and fig2dev draw the same, and Arrow mode and the edit panel work on the pieces (open the compound to reach them). A spline becomes two polylines along its curve. If the line is too short for the head, the plain line is drawn and the message line says so.

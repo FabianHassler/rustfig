@@ -2,13 +2,13 @@
 
 Edit > Global settings holds RustFig's preferences; they are saved when you change them and loaded at every start (the panel shows where).
 
-The window has a **filter** field at the top and five tabs: **Window**, **Drawing**, **Files**, **Programs** and **Advanced**. **Ok** applies every row you changed; **Cancel** (or closing the window) throws the changes away, as in xfig. Switch on **Apply changes immediately** (off by default; kept in the preferences) to have each change take effect as you make it. Each row is a command (`prefs.set`, the View toggles) and is kept in the preferences.
+The window has a **filter** field at the top and five tabs: **Window**, **Drawing**, **Files**, **Programs** and **Advanced**. **Ok** applies every row you changed; **Cancel** (or closing the window) throws the changes away, as in xfig. Switch on **Apply changes immediately** (off by default; kept in the preferences) to have each change take effect as you make it. Each row is kept in the preferences.
 
 **Filter**: type part of a row's label, an xfig resource name (`shownums`) or a command-line option (`-notrack`), in any case. The tabs give way to the matching rows of every tab, grouped under the tab's name, so nothing is hidden by the tab you were on. Clear the field to get the tabs back.
 
 **Advanced** lists all of xfig's resources (see below) as editable fields: a check box for yes/no resources, a field for numbers and texts (empty means xfig's default; a value that does not read as a number is shown in red and not applied), with the command-line option beside each. Only resources that change something in RustFig are listed; the others (for example `canvasbackground` or `grid_unit`) are still accepted on the command line and in `~/.Xdefaults`, and stay in your settings file, but are not shown.
 
-**Defaults** (next to Cancel and Ok) sets every row of the window back to xfig's defaults (RustFig's own for its rows); like any other change, Ok applies it and Cancel discards it. Scripts use `prefs.reset` (optionally with `names`, a list of resource names). Your colors, recent files and saved styles are not touched.
+**Defaults** (next to Cancel and Ok) sets every row of the window back to xfig's defaults (RustFig's own for its rows); like any other change, Ok applies it and Cancel discards it. Your colors, recent files and saved styles are not touched.
 
 The rows of xfig's panel are spread over the tabs: **Window** has the display switches (autorefresh, rulers, page borders, depth manager, balloons, line lengths, vertex numbers, crosshair, negative coordinates, axis lines) and RustFig's look; **Drawing** has the freehand resolution, the current-attributes button, LaTeX text and your colors; **Files** has the recent files and saved versions; **Programs** has the image editor and the spell checker. Each row:
 
@@ -29,7 +29,7 @@ RustFig's own rows (Window tab, except as noted):
 - **xfig keyboard shortcuts in menus**: off by default; xfig's Meta and Ctrl keys ([Keys](keys.md)).
 - **Button style**: 3D (xfig's bevelled buttons) or flat.
 - **Theme**: System (follows the system's light or dark setting), Light or Dark. The drawing's paper stays white in every theme.
-- **UI scale**: 75 % to 200 % (a slider in steps of 5), for small or large screens. Both are kept for every start (`app.theme`, `app.ui_scale`).
+- **UI scale**: 75 % to 200 % (a slider in steps of 5), for small or large screens. Both are kept for every start.
 - **New drawings: units and page**: units (inches or metric), paper and orientation of new drawings, kept for the next start; an empty, unchanged drawing follows at once. The buttons "Set units…" and "Page setup…" change only the open drawing (its file keeps them).
 - **xfig resources** (the Advanced tab; **Open as window…** there opens the table in a window of its own): every X resource and command-line option of xfig under its xfig name (for example `startfontsize`, `startlinewidth`), with its value, default and command-line option (only the ones RustFig uses). A value set here is kept for every start; xfig's command-line options override it for one run.
 - **Use current attributes as defaults**: the indicator panel's values become the start values for new drawings.
@@ -58,7 +58,7 @@ RustFig starts like xfig: `rustfig [options] [file]`, and every option of xfig's
 
 ### Coming from xfig
 
-On the first start RustFig takes the recent files of xfig's `~/.xfigrc` into its File menu (and xfig's `max_recent_files`). On Linux, `install.sh` also installs an `xfig` command that starts RustFig, when no xfig is installed; with Homebrew, `brew install rustfig --with-xfig` does the same (it cannot be installed next to Homebrew's `xfig`). Scripts that call `xfig file.fig` then open RustFig.
+On the first start RustFig takes the recent files of xfig's `~/.xfigrc` into its File menu (and xfig's `max_recent_files`). On Linux, `install.sh` also installs an `xfig` command that starts RustFig, when no xfig is installed; with Homebrew, `brew install rustfig --with-xfig` does the same (it cannot be installed next to Homebrew's `xfig`). Anything that calls `xfig file.fig` then opens RustFig.
 - Options that only make sense on X11 (`-display`, `-visual`, `-iconic`, colors and fonts of the toolkit) are accepted and ignored; RustFig prints a note to the terminal. An unknown option stops the start with a message.
 - Resources in `~/.Xresources` or `~/.Xdefaults` (`Fig.startfontsize: 14`) are read too, and fill in settings your preferences file does not have.
 
