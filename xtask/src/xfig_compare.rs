@@ -2389,7 +2389,7 @@ fn xfig_shot(display: &str, out: &Path) -> Result<(), String> {
     )
 }
 
-fn magick(args: &[&str]) -> Result<String, String> {
+pub(crate) fn magick(args: &[&str]) -> Result<String, String> {
     let o = Command::new("magick")
         .args(args)
         .env(
@@ -2404,15 +2404,15 @@ fn magick(args: &[&str]) -> Result<String, String> {
 
 // ---------------------------------------------------------------- RustFig control channel
 
-struct Rf {
+pub(crate) struct Rf {
     child: Child,
     stream: TcpStream,
     reader: BufReader<TcpStream>,
     id: u64,
     /// Canvas top-left (points) and Fig position of that corner.
-    canvas: (f64, f64),
+    pub(crate) canvas: (f64, f64),
     origin: (f64, f64),
-    log: Vec<String>,
+    pub(crate) log: Vec<String>,
     /// Modifiers held (`Step::Hold`), JSON names, sent with every pointer step: `ui.modifiers` alone
     /// does not reach the press events' own modifier field.
     mods: Vec<String>,
@@ -2444,7 +2444,7 @@ pub(crate) fn numbers_after(s: &str, key: &str, n: usize) -> Option<Vec<f64>> {
 }
 
 impl Rf {
-    fn start(bin: &Path, port: u16, dir: &Path, file: &Path) -> Result<Rf, String> {
+    pub(crate) fn start(bin: &Path, port: u16, dir: &Path, file: &Path) -> Result<Rf, String> {
         let child = Command::new(bin)
             .args([
                 "--control",
@@ -2502,7 +2502,7 @@ impl Rf {
         Ok(rf)
     }
 
-    fn call(&mut self, method: &str, params: &str) -> Result<String, String> {
+    pub(crate) fn call(&mut self, method: &str, params: &str) -> Result<String, String> {
         self.id += 1;
         let line = format!("{{\"id\":{},\"method\":\"{method}\",\"params\":{params}}}\n", self.id);
         self.stream.write_all(line.as_bytes()).map_err(|e| e.to_string())?;
@@ -2519,7 +2519,7 @@ impl Rf {
         Ok(reply)
     }
 
-    fn layout(&mut self) -> Result<(), String> {
+    pub(crate) fn layout(&mut self) -> Result<(), String> {
         let s = self.call("ui.state", "{}")?;
         if let Some(o) = numbers_after(&s, "\"origin\":[", 2) {
             self.origin = (o[0], o[1]);
@@ -2557,7 +2557,7 @@ impl Rf {
         Ok(())
     }
 
-    fn click_label(&mut self, label: &str) -> Result<(), String> {
+    pub(crate) fn click_label(&mut self, label: &str) -> Result<(), String> {
         let r = self.call("ui.click_label", &format!(r#"{{"label":{}}}"#, json_str(label)))?;
         if r.contains("\"error\"") {
             self.log.push(format!("no widget labeled {label:?}"));
@@ -2565,7 +2565,7 @@ impl Rf {
         Ok(())
     }
 
-    fn shot(&mut self, path: &Path) -> Result<(), String> {
+    pub(crate) fn shot(&mut self, path: &Path) -> Result<(), String> {
         self.call(
             "ui.screenshot",
             &format!(r#"{{"path":{}}}"#, json_str(&path.display().to_string())),

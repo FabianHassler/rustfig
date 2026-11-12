@@ -309,6 +309,23 @@ pub fn install_registry(ctx: &egui::Context) -> Registry {
     reg
 }
 
+/// Name a part of the window (menus, message panel, mode panel...) in the accessibility tree, so
+/// `ui.state` lists its rect under `label`. The pictures of `cargo xtask movie` and the manual's
+/// window legend are placed from these; no widget behind the area is affected.
+pub fn mark_area(ctx: &egui::Context, label: &str, rect: egui::Rect) {
+    let id = egui::Id::new(("window_area", label));
+    ctx.accesskit_node_builder(id, |node| {
+        node.set_role(egui::accesskit::Role::Group);
+        node.set_label(label);
+        node.set_bounds(egui::accesskit::Rect {
+            x0: f64::from(rect.min.x),
+            y0: f64::from(rect.min.y),
+            x1: f64::from(rect.max.x),
+            y1: f64::from(rect.max.y),
+        });
+    });
+}
+
 /// Find a widget by label: exact match first, then substring; ignores
 /// widgets without area. `index` picks among several matches.
 pub fn find_label(list: &[WidgetInfo], label: &str, index: usize) -> Option<WidgetInfo> {

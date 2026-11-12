@@ -4775,3 +4775,25 @@ fn unit_panel_set_keeps_changes_made_meanwhile() {
     assert_eq!((s.unit.as_str(), s.factor), ("m", 50.0), "the script's scale is kept");
     assert_eq!(h.state().engine.doc().settings.units, rustfig_model::Units::Metric);
 }
+
+/// Every part of the window named in docs/manual/window.md has a rect in `ui.state`, found by the
+/// label `cargo xtask movie` places its callouts with (the list is `AREAS` in xtask/src/movie.rs;
+/// keep both in step).
+#[test]
+fn window_areas_have_rects() {
+    let h = harness(app());
+    for label in [
+        "Window area: Menus",
+        "Window area: File name",
+        "Window area: Message panel",
+        "Window area: Mouse indicator",
+        "Units: ",
+        "Window area: Mode panel",
+        "Window area: Canvas and rulers",
+        "Window area: Indicator panel",
+        "Window area: Depth manager",
+    ] {
+        let r = h.get_by_label_contains(label).rect();
+        assert!(r.width() > 0.0 && r.height() > 0.0, "empty rect for {label}");
+    }
+}
