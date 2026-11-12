@@ -573,11 +573,61 @@ fn show_image(ui: &mut egui::Ui, tk: &Tokens, textures: &mut Textures, alt: &str
 
 /// The mode a heading names (its text is the mode's name, ignoring case).
 fn heading_mode(spans: &[Span]) -> Option<rustfig_engine::ToolKind> {
-    let text: String = spans.iter().map(|s| s.text.as_str()).collect();
-    let text = text.trim();
+    let text = heading_text(spans);
     rustfig_engine::ToolKind::ALL
         .into_iter()
-        .find(|t| t.label().eq_ignore_ascii_case(text))
+        .find(|t| t.label().eq_ignore_ascii_case(&text))
+}
+
+fn heading_text(spans: &[Span]) -> String {
+    let text: String = spans.iter().map(|s| s.text.as_str()).collect();
+    text.trim().to_string()
+}
+
+/// A heading's picture: an xfig bitmap (or its vector tracing) or a vector icon.
+#[derive(Clone, Copy)]
+enum HeadingIcon {
+    Xbm(&'static crate::xfig_icons::Xbm),
+    Vector(crate::vector_icons::VIcon),
+}
+
+/// Headings that are not a mode's name but explain something with its own button picture.
+const HEADING_ICONS: &[(&str, HeadingIcon)] = {
+    use crate::xfig_icons as xi;
+    use HeadingIcon::{Vector, Xbm};
+    &[
+        ("Library mode", Xbm(&xi::LIBRARY)),
+        ("Libraries", Xbm(&xi::LIBRARY)),
+        ("Smart links", Xbm(&xi::SMARTMOVE)),
+        ("Angle Geom", Xbm(&xi::MOUNTHATTAN)),
+        ("Point Posn and Grid Mode", Xbm(&xi::GRID1)),
+        ("Snap and grid", Xbm(&xi::GRID1)),
+        ("Line styles", Xbm(&xi::DASHLINE)),
+        (
+            "Arrowhead in the middle of a line",
+            Vector(crate::vector_icons::VIcon::ArrowMid),
+        ),
+        ("Join and split", Xbm(&xi::JOIN_SPLIT)),
+        ("Tangent and normal", Xbm(&xi::TANGENT)),
+        ("Trim mode", Xbm(&xi::TRIM)),
+        ("Compounds", Xbm(&xi::GLUE)),
+        ("Edit a compound", Xbm(&xi::OPEN_COMP)),
+        ("Plotting a curve", Xbm(&xi::PLOT)),
+        ("Splines", Xbm(&xi::SPL)),
+        ("Measuring", Xbm(&xi::LENMEAS)),
+    ]
+};
+
+/// The picture beside a heading: the mode's icon for a mode's name, else [`HEADING_ICONS`].
+fn heading_icon(spans: &[Span]) -> Option<HeadingIcon> {
+    if let Some(icon) = heading_mode(spans).and_then(crate::panels::icon_of) {
+        return Some(HeadingIcon::Xbm(icon));
+    }
+    let text = heading_text(spans);
+    HEADING_ICONS
+        .iter()
+        .find(|(h, _)| h.eq_ignore_ascii_case(&text))
+        .map(|(_, i)| *i)
 }
 
 type Textures = std::collections::HashMap<&'static str, egui::TextureHandle>;
@@ -594,14 +644,18 @@ fn show_blocks(ui: &mut egui::Ui, tk: &Tokens, blocks: &[Block], textures: &mut 
                     3 => 15.0,
                     _ => 13.0,
                 };
-                // A mode's heading carries the mode's icon from the mode panel.
-                match heading_mode(spans).and_then(crate::panels::icon_of) {
+                // A mode's heading carries the mode's icon from the mode panel, a few others
+                // their button's picture.
+                match heading_icon(spans) {
                     Some(icon) => {
                         ui.horizontal(|ui| {
                             let (r, _) =
                                 ui.allocate_exact_size(egui::vec2(size * 1.9, size * 1.7), egui::Sense::hover());
                             crate::bevel::paint(ui.painter(), r, tk, crate::bevel::State::Normal);
-                            crate::panels::paint_mode_icon(ui, icon, r.shrink(1.0), tk.icon);
+                            match icon {
+                                HeadingIcon::Xbm(x) => crate::panels::paint_mode_icon(ui, x, r.shrink(1.0), tk.icon),
+                                HeadingIcon::Vector(v) => crate::vector_icons::paint(ui, v, r.shrink(3.0), tk.icon),
+                            }
                             ui.add_space(4.0);
                             inline(ui, tk, spans, Some(size), nav);
                         });
@@ -903,10 +957,36 @@ mod tests {
                 }
             }
         }
-        for t in rustfig_engine::ToolKind::ALL {
-            if crate::panels::icon_of(t).is_some() {
+        use rustfig_engine::ToolKind;
+        for t in ToolKind::ALL {
+            // The three modes without an xfig picture have no icon (yet).
+            let iconless = matches!(
+                t,
+                ToolKind::None | ToolKind::OpenClose | ToolKind::Find | ToolKind::BoundingBox
+            );
+            assert!(
+                iconless || crate::panels::icon_of(t).is_some(),
+                "the mode {:?} has no icon",
+                t.label()
+            );
+            if t != ToolKind::None {
                 assert!(found.contains(&t), "no manual heading names the mode {:?}", t.label());
             }
+        }
+    }
+
+    #[test]
+    fn heading_icons_name_real_headings() {
+        let headings: Vec<String> = TOPICS
+            .iter()
+            .flat_map(|t| parse(t.text))
+            .filter_map(|b| match b {
+                Block::Heading(_, s) => Some(heading_text(&s).to_lowercase()),
+                _ => None,
+            })
+            .collect();
+        for (h, _) in HEADING_ICONS {
+            assert!(headings.contains(&h.to_lowercase()), "no manual heading {h:?}");
         }
     }
 

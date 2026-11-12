@@ -108,10 +108,22 @@ pub fn panel_tools() -> Vec<ToolKind> {
 
 /// A mode's panel icon.
 pub(crate) fn icon_of(t: ToolKind) -> Option<&'static xfig_icons::Xbm> {
-    DRAWING.iter().chain(EDITING.iter()).find_map(|s| match s {
-        Slot::Tool(k, icon) if *k == t => Some(*icon),
-        _ => None,
-    })
+    DRAWING
+        .iter()
+        .chain(EDITING.iter())
+        .find_map(|s| match s {
+            Slot::Tool(k, icon) if *k == t => Some(*icon),
+            _ => None,
+        })
+        .or(match t {
+            // Modes of the Tools menu only: the ellipse tools share the circle buttons' icons
+            // (xfig's ellipse modes), the X-splines get xfig's X-spline bitmaps.
+            ToolKind::EllipseRadii => Some(&xfig_icons::ELLRAD),
+            ToolKind::EllipseDiameter => Some(&xfig_icons::ELLDIA),
+            ToolKind::XSpline => Some(&xfig_icons::XSPL),
+            ToolKind::XSplineClosed => Some(&xfig_icons::C_XSPL),
+            _ => None,
+        })
 }
 
 /// The right-click menu of a mode button: add the mode to the Favorites
