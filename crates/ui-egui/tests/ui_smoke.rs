@@ -4792,6 +4792,9 @@ fn window_areas_have_rects() {
         "Window area: Canvas and rulers",
         "Window area: Indicator panel",
         "Window area: Depth manager",
+        "Mouse button: left",
+        "Mouse button: middle",
+        "Mouse button: right",
     ] {
         let r = h.get_by_label_contains(label).rect();
         assert!(r.width() > 0.0 && r.height() > 0.0, "empty rect for {label}");

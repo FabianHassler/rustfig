@@ -2445,6 +2445,12 @@ pub(crate) fn numbers_after(s: &str, key: &str, n: usize) -> Option<Vec<f64>> {
 
 impl Rf {
     pub(crate) fn start(bin: &Path, port: u16, dir: &Path, file: &Path) -> Result<Rf, String> {
+        // A settings file of its own, so the first start takes nothing from the user's ~/.xfigrc.
+        let settings = dir.join("settings");
+        if !settings.join("settings.toml").exists() {
+            std::fs::create_dir_all(&settings).map_err(|e| e.to_string())?;
+            std::fs::write(settings.join("settings.toml"), "").map_err(|e| e.to_string())?;
+        }
         let child = Command::new(bin)
             .args([
                 "--control",
@@ -2585,7 +2591,7 @@ impl Drop for Rf {
 
 /// The objects of a .fig file as one string each (object line, then its point lines after " / ";
 /// header, comments and blank lines dropped, whitespace and number formats normalized).
-fn fig_objects(text: &str) -> Vec<String> {
+pub(crate) fn fig_objects(text: &str) -> Vec<String> {
     let mut lines = text.lines().map(str::trim_end);
     // header: up to the "<resolution> <coord system>" line
     for l in lines.by_ref() {

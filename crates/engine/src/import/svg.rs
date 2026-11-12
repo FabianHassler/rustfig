@@ -41,7 +41,8 @@ const MAX_IMAGE_PIXELS: u64 = 100_000_000;
 const MAX_DEPTH: usize = 200;
 /// Deepest element nesting accepted in the XML.
 const MAX_NESTING: usize = 256;
-/// Largest external image file read next to the SVG, in bytes.
+/// Largest external image file read next to the SVG, in bytes (none are read on the web).
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 const MAX_EXTERNAL_BYTES: u64 = 64 << 20;
 
 /// What the import made.

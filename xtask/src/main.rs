@@ -9,6 +9,8 @@ mod release_check;
 mod site;
 // Drives xfig under Xvfb: Unix only.
 mod movie;
+mod movie_film;
+mod movie_render;
 #[cfg(unix)]
 mod speed_compare;
 mod xfig_compare;

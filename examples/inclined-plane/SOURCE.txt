@@ -1,0 +1,3 @@
+Source
+
+Original work for RustFig, drawn with the mouse by `cargo xtask movie` (xtask/src/movie_film.rs; MIT OR Apache-2.0, like RustFig): the figure of the movie in the manual's Getting started, a block on an inclined plane with its weight, the normal force and the angle, labels in LaTeX. The movie checks that it draws this figure again.

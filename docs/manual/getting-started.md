@@ -6,6 +6,12 @@
 
 Modes are chosen in the mode panel on the left (6), you draw on the canvas (7), the attributes of new objects are in the indicator panel at the bottom (8), and the mouse indicator at the top right (4) says what each mouse button does right now. [The window](window.md) explains every area.
 
+## Watch a figure being drawn
+
+![A movie of drawing a block on an inclined plane: the slope as a polygon, the angle measured and drawn, a box rotated onto the slope, force arrows, LaTeX labels, a copy undone, Save and Export to PDF](../images/movie/inclined-plane.mp4)
+
+The movie (about a minute and a half, captions switchable) starts with a tour of the window, then draws a block on an inclined plane with the mouse: the slope in Polygon mode, the angle in Measure angle mode (the middle button keeps it as the rotation angle, Shift+middle draws it), the block as a box rotated onto the slope, the forces as lines with arrows, LaTeX labels, a copy taken back with Undo, then Save and File › Export to PDF. A ring marks each click, and the pressed button lights up in the mouse indicator. On a Mac, Option+click is the middle button and Ctrl+click the right one.
+
 ## Your first figure
 
 1. Pick a mode from the mode panel on the left, for example **Box** (key `B`). The message panel at the top says what to do next, and the mouse indicator shows what each mouse button does right now.

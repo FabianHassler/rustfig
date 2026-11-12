@@ -152,7 +152,7 @@ fn finder(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
                     // painted, to know the hovered one first.
                     let rows: Vec<_> = hits
                         .iter()
-                        .map(|_| ui.allocate_exact_size(vec2(200.0, 18.0), Sense::click()))
+                        .map(|_| ui.allocate_exact_size(vec2(220.0, 18.0), Sense::click()))
                         .collect();
                     if let Some(i) = rows.iter().position(|(_, rr)| rr.hovered()) {
                         f.sel = i;
@@ -162,8 +162,14 @@ fn finder(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
                             ui.painter().rect_filled(r, 2.0, tk.tool_active_bg);
                         }
                         let ink = ui.visuals().text_color();
+                        // The mode's icon from the mode panel, then its name.
+                        if let Some(icon) = panels::icon_of(*t) {
+                            let ir = egui::Rect::from_center_size(r.left_center() + vec2(11.0, 0.0), vec2(18.0, 16.0));
+                            let ink = if i == f.sel { tk.icon_active } else { tk.icon };
+                            panels::paint_mode_icon(ui, icon, ir, ink);
+                        }
                         ui.painter().text(
-                            r.left_center() + vec2(4.0, 0.0),
+                            r.left_center() + vec2(24.0, 0.0),
                             Align2::LEFT_CENTER,
                             t.label(),
                             FontId::proportional(12.0),

@@ -17,6 +17,10 @@ Original work for RustFig (MIT OR Apache-2.0), written by `cargo xtask examples`
 | `penrose-tiling/` | Penrose P3 tiling of rhombs after 7 deflations, gold and teal | 7,615 |
 | `gosper-curve/` | Gosper curve (flowsnake) of order 5: one continuous line in 142 joined pieces, rainbow colored | 142 (16,808 points) |
 
+## Drawn in the movie
+
+[`inclined-plane/`](inclined-plane/): a block on an inclined plane, with LaTeX labels: the figure the movie in the manual's Getting started draws with the mouse (`cargo xtask movie`, which checks that it still comes out the same). Original work for RustFig (MIT OR Apache-2.0).
+
 ## Imported from SVG
 
 RustFig's own conversions (File › Open on the SVG), from public-domain and CC0 sources; `SOURCE.txt` in each folder names the original. Fig 3.2 has no gradients or transparency, so gradients become one color and transparent areas are drawn solid.

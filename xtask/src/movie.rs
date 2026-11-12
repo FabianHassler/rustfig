@@ -8,8 +8,13 @@
 //! - `mouse-indicator-polyline{,-shift}-light.png`, `mouse-indicator-move-light.png`: the mouse
 //!   indicator close up, as the manual's Mouse topic shows it.
 //!
-//! Needs ImageMagick (`magick`); skips with a message when it is missing. Environment:
-//! `MOVIE_PORT` (default 8032), `MOVIE_OUT` (default `docs/images/window`).
+//! It also films the movie of plan R9 ([`movie_film`](crate::movie_film)).
+//!
+//! Needs ImageMagick (`magick`), and ffmpeg for the movie; skips with a message when magick is
+//! missing. Environment: `MOVIE_PART` (`pictures` or `film`: only that part), `MOVIE_PORT`
+//! (default 8032; the film uses the next port), `MOVIE_OUT` (default `docs/images/window`),
+//! `MOVIE_FILM_OUT` (default `docs/images/movie`), `MOVIE_UPDATE` (take the drawn figure as the
+//! fixture).
 
 use crate::xfig_compare::{have, json_str, numbers_after, sleep_ms, Rf, WIN_W};
 use std::path::{Path, PathBuf};
@@ -81,7 +86,7 @@ const CLOSE_UPS: &[(&str, &str, bool)] = &[("polyline", "Polyline", true), ("mov
 const RED: &str = "#d8232a";
 
 /// The rect (points) of the first widget whose label starts with `label` in a `ui.state` reply.
-fn rect_of(state: &str, label: &str) -> Option<[f64; 4]> {
+pub(crate) fn rect_of(state: &str, label: &str) -> Option<[f64; 4]> {
     let i = state.find(&format!("\"label\":{}", json_str(label).trim_end_matches('"')))?;
     let v = numbers_after(state.get(i..)?, "\"rect\":[", 4)?;
     let r = [*v.first()?, *v.get(1)?, *v.get(2)?, *v.get(3)?];
@@ -109,7 +114,7 @@ fn s(x: impl ToString) -> String {
 }
 
 /// Pixel size of a PNG.
-fn png_size(p: &Path) -> Result<(f64, f64), String> {
+pub(crate) fn png_size(p: &Path) -> Result<(f64, f64), String> {
     let o = Command::new("magick")
         .args(["identify", "-format", "%w %h"])
         .arg(p)
@@ -262,6 +267,18 @@ pub fn run(root: &Path) -> Result<(), String> {
     eprintln!("$ {b:?}");
     if !b.status().map_err(|e| e.to_string())?.success() {
         return Err("building rustfig failed".into());
+    }
+    let part = std::env::var("MOVIE_PART").unwrap_or_default();
+    if part != "pictures" {
+        let work = target.join("movie-film");
+        let _ = std::fs::remove_dir_all(&work);
+        std::fs::create_dir_all(&work).map_err(|e| e.to_string())?;
+        let film_out = std::env::var_os("MOVIE_FILM_OUT").map_or_else(|| root.join("docs/images/movie"), PathBuf::from);
+        crate::movie_film::film(root, &target.join("release/rustfig"), port + 1, &work, &film_out)?;
+        let _ = std::fs::remove_dir_all(&work);
+        if part == "film" {
+            return Ok(());
+        }
     }
     let work = target.join("movie");
     let _ = std::fs::remove_dir_all(&work);

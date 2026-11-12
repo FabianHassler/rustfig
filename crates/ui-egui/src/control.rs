@@ -14,6 +14,8 @@
 //! `ui.key` {key?, text?, modifiers?}, `ui.click_label` {label, button?,
 //! modifiers?, index?}, `ui.modifiers` {modifiers} (held until changed; an
 //! empty list releases them). Each replies once the input has been processed.
+//! `ui.file_answers` {answers: [path, ...]} answers the next file dialogs
+//! (open, save, export) with these paths instead of asking the system.
 //! `ui.state` lists `open` (pop-ups, menus, dialogs) and `widgets` (label,
 //! role, rect in points) so clients can target widgets by label.
 
@@ -132,6 +134,21 @@ pub fn handle(app: &mut App, method: &str, p: &Value) -> Result<Value, (&'static
             .execute(&command(), &params())
             .map_err(|e| (e.code, e.message)),
         "ui.run" => app.try_run(&command(), &params()).map_err(|m| ("failed", m)),
+        "ui.file_answers" => {
+            let answers: Vec<String> = p
+                .get("answers")
+                .and_then(Value::as_array)
+                .ok_or(("invalid_params", "answers must be a list of paths".to_string()))?
+                .iter()
+                .take(100)
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect();
+            let n = answers.len();
+            let inner = std::mem::replace(&mut app.file_dialogs, Box::new(crate::dialogs::NativeDialogs::new()));
+            app.file_dialogs = Box::new(crate::dialogs::AnsweredDialogs::new(inner, answers));
+            Ok(json!({ "queued": n }))
+        }
         "engine.commands" => {
             let mut v: Vec<Value> = rustfig_engine::cmd::all()
                 .iter()

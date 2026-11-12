@@ -74,7 +74,8 @@ struct Key {
 enum Entry {
     Pending,
     Ready(Typeset),
-    /// TeX's error, as the message panel shows it.
+    /// TeX's error, as the message panel shows it (no TeX runs on the web).
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     Failed(String),
 }
 
@@ -85,7 +86,8 @@ struct Cache {
     pending: usize,
     /// Texts waiting for the worker, in the order asked.
     queue: Vec<Key>,
-    /// A worker thread is typesetting the queue.
+    /// A worker thread is typesetting the queue (no threads on the web).
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     worker: bool,
     /// Errors not yet shown in the message panel.
     messages: Vec<String>,

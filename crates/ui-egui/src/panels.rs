@@ -934,8 +934,10 @@ pub fn mouse_indicator(app: &App, ui: &mut egui::Ui, tk: &Tokens) {
     let top = rect.top() + (ht * 0.45).round();
     let x0 = rect.left() + left_space;
     let line = egui::Stroke::new(1.0_f32, text);
-    for k in [0.0, 1.5, 3.0] {
+    for (k, name) in [(0.0, "left"), (1.5, "middle"), (3.0, "right")] {
         let r = egui::Rect::from_min_size(egui::pos2(x0 + k * but_w, top), vec2(but_w, but_h));
+        // Located by `cargo xtask movie`, which lights up the pressed button.
+        crate::inject::mark_area(ui.ctx(), &format!("Mouse button: {name}"), r);
         if tk.bevel {
             crate::bevel::paint(&p, r, tk, crate::bevel::State::Normal);
         } else {

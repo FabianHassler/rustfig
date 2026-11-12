@@ -1,0 +1,118 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:02.000
+Drawing a block on an inclined plane with RustFig
+
+2
+00:00:02.000 --> 00:00:03.600
+The menus: File, Edit, View, Tools, Snap and Help
+
+3
+00:00:03.600 --> 00:00:05.200
+The name of the figure
+
+4
+00:00:05.200 --> 00:00:06.800
+The message panel says what to do next
+
+5
+00:00:06.800 --> 00:00:08.400
+The mouse indicator: what the left, middle and right buttons do right now
+
+6
+00:00:08.400 --> 00:00:10.000
+The units of the rulers
+
+7
+00:00:10.000 --> 00:00:11.600
+The mode panel: drawing modes at the top, editing modes below
+
+8
+00:00:11.600 --> 00:00:13.200
+The canvas, with its rulers
+
+9
+00:00:13.200 --> 00:00:14.800
+The indicator panel: the attributes of new objects
+
+10
+00:00:14.800 --> 00:00:16.400
+Depths and snapping
+
+11
+00:00:17.000 --> 00:00:22.017
+Polygon mode: the left button places the corners of the slope
+
+12
+00:00:22.017 --> 00:00:24.608
+The middle button places the last corner and closes the polygon
+
+13
+00:00:24.608 --> 00:00:27.988
+Go to mode: type part of a mode's name and press Return
+
+14
+00:00:27.988 --> 00:00:32.218
+Measure angle, middle button at the corner: it measures the angle and keeps it as the rotation angle
+
+15
+00:00:32.218 --> 00:00:35.948
+Shift+middle draws the angle as an arc with its label
+
+16
+00:00:35.948 --> 00:00:40.412
+Box mode: two left clicks at opposite corners
+
+17
+00:00:40.412 --> 00:00:43.872
+Rotate counter-clockwise: the right button sets the center
+
+18
+00:00:43.872 --> 00:00:46.188
+The left button turns the box by the measured angle, onto the slope
+
+19
+00:00:46.188 --> 00:00:52.957
+Polyline mode, with a forward arrow set in the indicator panel
+
+20
+00:00:52.957 --> 00:00:58.989
+The left button starts a line, the middle button ends it: the weight and the normal force
+
+21
+00:00:58.989 --> 00:01:07.955
+Text mode with the TeX flag: the text is LaTeX, typeset on the canvas
+
+22
+00:01:07.955 --> 00:01:08.585
+The middle button ends the text
+
+23
+00:01:08.585 --> 00:01:14.025
+Text mode with the TeX flag: the text is LaTeX, typeset on the canvas
+
+24
+00:01:14.025 --> 00:01:19.718
+Copy mode: pick the block with the left button, place the copy with another click
+
+25
+00:01:19.718 --> 00:01:21.618
+Undo takes it back
+
+26
+00:01:21.618 --> 00:01:22.718
+Save
+
+27
+00:01:22.718 --> 00:01:27.925
+File › Export…: the PDF language is preselected, with the LaTeX typeset
+
+28
+00:01:27.925 --> 00:01:31.446
+Export… asks where to save, then writes the PDF
+
+29
+00:01:31.446 --> 00:01:35.446
+The PDF
+

@@ -730,7 +730,8 @@ pub trait FileDialogs {
 #[derive(Default)]
 pub struct NativeDialogs {
     /// The working folder at start-up; the home folder when that is the root
-    /// (an app started from the Finder or a desktop menu).
+    /// (an app started from the Finder or a desktop menu). Unused on the web.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     start: Option<std::path::PathBuf>,
     /// The current figure's folder.
     file_dir: std::sync::Mutex<Option<std::path::PathBuf>>,
@@ -835,6 +836,48 @@ impl FileDialogs for NativeDialogs {
             let _ = (name, bytes);
             Err("downloads are only available in the browser".to_string())
         }
+    }
+}
+
+/// Dialogs whose next answers come from the control channel (`ui.file_answers`, for scripts
+/// such as `cargo xtask movie`): each pick or save takes the next path; once they are used up,
+/// the dialogs it wraps answer again.
+pub struct AnsweredDialogs {
+    answers: std::cell::RefCell<std::collections::VecDeque<String>>,
+    inner: Box<dyn FileDialogs>,
+}
+
+impl AnsweredDialogs {
+    pub fn new(inner: Box<dyn FileDialogs>, answers: impl IntoIterator<Item = String>) -> Self {
+        AnsweredDialogs {
+            answers: std::cell::RefCell::new(answers.into_iter().collect()),
+            inner,
+        }
+    }
+
+    fn next(&self) -> Option<String> {
+        self.answers.borrow_mut().pop_front()
+    }
+}
+
+impl FileDialogs for AnsweredDialogs {
+    fn pick_file(&self, what: &str, exts: &[&str]) -> Option<String> {
+        self.next().or_else(|| self.inner.pick_file(what, exts))
+    }
+    fn save_file(&self, default_name: &str, what: &str, exts: &[&str]) -> Option<String> {
+        self.next().or_else(|| self.inner.save_file(default_name, what, exts))
+    }
+    fn is_web(&self) -> bool {
+        self.inner.is_web()
+    }
+    fn pick_web(&self, what: &str, exts: &[&str], inbox: &WebInbox) {
+        self.inner.pick_web(what, exts, inbox);
+    }
+    fn download(&self, name: &str, bytes: Vec<u8>) -> Result<(), String> {
+        self.inner.download(name, bytes)
+    }
+    fn set_dir(&self, dir: Option<std::path::PathBuf>) {
+        self.inner.set_dir(dir);
     }
 }
 

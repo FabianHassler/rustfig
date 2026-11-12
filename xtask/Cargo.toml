@@ -13,6 +13,7 @@ workspace = true
 [dependencies]
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 flate2.workspace = true
+tiny-skia.workspace = true
 
 rustfig-geom.workspace = true
 rustfig-model.workspace = true

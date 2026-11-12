@@ -149,7 +149,8 @@ pub fn page(stem: &str, md: &str) -> Page {
 }
 
 /// A `-light.png` picture in a `<picture>` that shows its `-dark.png` twin in a dark theme
-/// (as the program's manual window does).
+/// (as the program's manual window does); a `.mp4` "picture" becomes a `<video>` with its WebM,
+/// poster and WebVTT captions beside it.
 fn dark_twins(body: &str) -> String {
     let mut out = String::new();
     let mut rest = body;
@@ -159,6 +160,22 @@ fn dark_twins(body: &str) -> String {
         let end = img.find('>').map_or(img.len(), |e| e + 1);
         let (tag, after) = img.split_at(end);
         let src = tag.get(10..).and_then(|t| t.split('"').next()).unwrap_or("");
+        if let Some(stem) = src.strip_suffix(".mp4") {
+            // A movie: WebM or MP4 with switchable captions, its poster until it plays.
+            let alt = tag
+                .split("alt=\"")
+                .nth(1)
+                .and_then(|t| t.split('"').next())
+                .unwrap_or("");
+            let _ = write!(
+                out,
+                "<video controls preload=\"none\" poster=\"{stem}-poster.jpg\" aria-label=\"{alt}\">\
+                 <source src=\"{stem}.webm\" type=\"video/webm\"><source src=\"{stem}.mp4\" type=\"video/mp4\">\
+                 <track kind=\"captions\" src=\"{stem}.vtt\" srclang=\"en\" label=\"English\" default>{alt}</video>"
+            );
+            rest = after;
+            continue;
+        }
         match src.strip_suffix("-light.png") {
             Some(stem) => {
                 let _ = write!(
@@ -588,6 +605,7 @@ pre code { padding: 0; }
 .manual aside ul { list-style: none; padding: 0; margin: 0; }
 .manual aside li { margin: 0.25em 0; }
 .manual main.topic { flex: 1; min-width: 0; padding: 0 0 2em; margin: 0; }
+.manual main.topic video { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 4px; }
 .manual main.topic img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 4px; }
 .os { border-left: 3px solid var(--line); padding: 0.1em 0 0.1em 1em; margin: 1em 0; }
 .os-label { font-size: 0.85em; color: var(--muted); margin: 0.3em 0; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -669,9 +687,11 @@ pub fn build(root: &Path, out: &Path, app: Option<&Path>) -> Result<usize, Strin
     .map_err(|e| format!("docs/images/rustfig-window.png: {e}"))?;
     copy_dir(&root.join("docs/images/examples"), &out.join("examples"))?;
     // The manual's pictures, at the path the topics use (`../images/…` from `manual/`).
-    let window = root.join("docs/images/window");
-    if window.is_dir() {
-        copy_dir(&window, &out.join("images/window"))?;
+    for d in ["window", "movie"] {
+        let dir = root.join("docs/images").join(d);
+        if dir.is_dir() {
+            copy_dir(&dir, &out.join("images").join(d))?;
+        }
     }
     let mut urls = vec![BASE.to_string(), format!("{BASE}compare.html"), format!("{BASE}app/")];
     for p in &pages {
@@ -721,6 +741,24 @@ pub fn run(root: &Path) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn movies_become_videos_with_captions() {
+        let b = dark_twins(r#"<p><img src="../images/m/x.mp4" alt="X" /></p>"#);
+        assert!(
+            b.contains(r#"<video controls preload="none" poster="../images/m/x-poster.jpg""#),
+            "{b}"
+        );
+        assert!(
+            b.contains(r#"<source src="../images/m/x.webm" type="video/webm">"#),
+            "{b}"
+        );
+        assert!(
+            b.contains(r#"<track kind="captions" src="../images/m/x.vtt" srclang="en" label="English" default>"#),
+            "{b}"
+        );
+        assert!(!b.contains("<img"), "{b}");
+    }
 
     #[test]
     fn light_pictures_get_their_dark_twin() {

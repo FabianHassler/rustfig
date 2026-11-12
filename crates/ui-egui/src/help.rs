@@ -5,7 +5,8 @@
 //! bullet and numbered lists, **bold**, *italic*, `code`, code blocks, simple
 //! tables, links between topics (`[text](topic.md)`) and pictures on a line
 //! of their own (`![alt](../images/….png)`, compiled in through [`IMAGES`];
-//! a `-light.png` picture shows its `-dark.png` twin in the dark theme).
+//! a `-light.png` picture shows its `-dark.png` twin in the dark theme; a
+//! `.mp4` movie shows its `-poster.jpg` and a link to play it on the website).
 
 use crate::theme::Tokens;
 use crate::App;
@@ -79,6 +80,7 @@ pub const IMAGES: &[(&str, &[u8])] = &[
     image!("window/mouse-indicator-polyline-light.png"),
     image!("window/mouse-indicator-polyline-shift-light.png"),
     image!("window/mouse-indicator-move-light.png"),
+    image!("movie/inclined-plane-poster.jpg"),
 ];
 
 /// The bytes of a topic's picture, the dark twin in the dark theme when there is one.
@@ -523,7 +525,18 @@ fn inline(ui: &mut egui::Ui, tk: &Tokens, spans: &[Span], base: Option<f32>, nav
 
 /// A topic's picture, at most half its pixel size (the screenshots are taken at 2x) and no
 /// wider than the page; the alt text when it cannot be shown.
+/// The website, where a topic's movie plays (with its captions).
+const SITE: &str = "https://fabianhassler.github.io/rustfig/";
+
+/// A movie's poster picture: `x.mp4` shows `x-poster.jpg`.
+fn poster_of(src: &str) -> Option<String> {
+    src.strip_suffix(".mp4").map(|stem| format!("{stem}-poster.jpg"))
+}
+
 fn show_image(ui: &mut egui::Ui, tk: &Tokens, textures: &mut Textures, alt: &str, src: &str) {
+    // A movie: its poster here, played on the website.
+    let poster = poster_of(src);
+    let src = poster.as_deref().unwrap_or(src);
     let tex = image_bytes(src, ui.visuals().dark_mode).and_then(|(key, bytes)| {
         if let Some(t) = textures.get(key) {
             return Some(t.clone());
@@ -546,7 +559,25 @@ fn show_image(ui: &mut egui::Ui, tk: &Tokens, textures: &mut Textures, alt: &str
     let size = egui::vec2(width, h * width / w.max(1.0));
     let r = ui.add(egui::Image::new((tex.id(), size)));
     r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, alt));
+    if poster.is_some() {
+        let url = format!("{SITE}manual/getting-started.html");
+        if ui
+            .link("\u{25B6} Play the movie, with captions, on the website")
+            .clicked()
+        {
+            ui.ctx().open_url(egui::OpenUrl::new_tab(url));
+        }
+    }
     ui.add_space(6.0);
+}
+
+/// The mode a heading names (its text is the mode's name, ignoring case).
+fn heading_mode(spans: &[Span]) -> Option<rustfig_engine::ToolKind> {
+    let text: String = spans.iter().map(|s| s.text.as_str()).collect();
+    let text = text.trim();
+    rustfig_engine::ToolKind::ALL
+        .into_iter()
+        .find(|t| t.label().eq_ignore_ascii_case(text))
 }
 
 type Textures = std::collections::HashMap<&'static str, egui::TextureHandle>;
@@ -563,7 +594,20 @@ fn show_blocks(ui: &mut egui::Ui, tk: &Tokens, blocks: &[Block], textures: &mut 
                     3 => 15.0,
                     _ => 13.0,
                 };
-                inline(ui, tk, spans, Some(size), nav);
+                // A mode's heading carries the mode's icon from the mode panel.
+                match heading_mode(spans).and_then(crate::panels::icon_of) {
+                    Some(icon) => {
+                        ui.horizontal(|ui| {
+                            let (r, _) =
+                                ui.allocate_exact_size(egui::vec2(size * 1.9, size * 1.7), egui::Sense::hover());
+                            crate::bevel::paint(ui.painter(), r, tk, crate::bevel::State::Normal);
+                            crate::panels::paint_mode_icon(ui, icon, r.shrink(1.0), tk.icon);
+                            ui.add_space(4.0);
+                            inline(ui, tk, spans, Some(size), nav);
+                        });
+                    }
+                    None => inline(ui, tk, spans, Some(size), nav),
+                }
                 ui.add_space(2.0);
             }
             Block::Para(spans) => {
@@ -829,6 +873,7 @@ mod tests {
     fn every_manual_picture_is_compiled_in() {
         for t in TOPICS {
             for src in images(t.text) {
+                let src = poster_of(&src).unwrap_or(src);
                 assert!(
                     image_bytes(&src, false).is_some(),
                     "{}: picture {src:?} is not in IMAGES",
@@ -841,6 +886,27 @@ mod tests {
                 rustfig_engine::import::decode_picture(bytes).is_ok(),
                 "{src} does not decode"
             );
+        }
+    }
+
+    /// Every mode of the mode panel is explained under a heading with its name, which shows
+    /// its icon.
+    #[test]
+    fn every_mode_has_a_heading_with_its_icon() {
+        let mut found = Vec::new();
+        for t in TOPICS {
+            for b in parse(t.text) {
+                if let Block::Heading(_, s) = b {
+                    if let Some(m) = heading_mode(&s) {
+                        found.push(m);
+                    }
+                }
+            }
+        }
+        for t in rustfig_engine::ToolKind::ALL {
+            if crate::panels::icon_of(t).is_some() {
+                assert!(found.contains(&t), "no manual heading names the mode {:?}", t.label());
+            }
         }
     }
 
