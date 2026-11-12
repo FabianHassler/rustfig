@@ -50,7 +50,7 @@ The middle button places the last corner and closes the polygon
 
 13
 00:00:24.608 --> 00:00:27.988
-Go to mode: type part of a mode's name and press Return
+Go to mode: type part of a mode's name and press Enter
 
 14
 00:00:27.988 --> 00:00:32.218
@@ -97,22 +97,22 @@ Text mode with the TeX flag: the text is LaTeX, typeset on the canvas
 Copy mode: pick the block with the left button, place the copy with another click
 
 25
-00:01:19.718 --> 00:01:21.618
-Undo takes it back
+00:01:19.718 --> 00:01:23.303
+Edit › Undo takes it back
 
 26
-00:01:21.618 --> 00:01:22.718
-Save
+00:01:23.303 --> 00:01:26.194
+File › Save
 
 27
-00:01:22.718 --> 00:01:27.925
+00:01:26.194 --> 00:01:30.865
 File › Export…: the PDF language is preselected, with the LaTeX typeset
 
 28
-00:01:27.925 --> 00:01:31.446
+00:01:30.865 --> 00:01:34.385
 Export… asks where to save, then writes the PDF
 
 29
-00:01:31.446 --> 00:01:35.446
+00:01:34.385 --> 00:01:38.385
 The PDF
 

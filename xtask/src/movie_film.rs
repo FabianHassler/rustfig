@@ -268,6 +268,18 @@ impl Director {
         Ok(())
     }
 
+    /// Click the menu entry `name` (its label is the name and the entry's key, which differs
+    /// between systems; "Save" is not "Save As...").
+    fn press_entry(&mut self, name: &str) -> Result<(), String> {
+        let st = self.state()?;
+        let r = menu_entry(&st, name).ok_or_else(|| format!("no menu entry {name:?}"))?;
+        self.move_pt(((r[0] + r[2]) / 2.0, (r[1] + r[3]) / 2.0), 2)?;
+        self.click(Btn::Left)?;
+        sleep_ms(200);
+        self.shot()?;
+        Ok(())
+    }
+
     /// A key (egui name) with modifiers, shown as `badge`.
     fn key(&mut self, key: &str, mods: &[&str], badge: &str) -> Result<(), String> {
         let m: Vec<String> = mods.iter().map(|m| json_str(m)).collect();
@@ -331,6 +343,32 @@ impl Director {
         self.shot()?;
         Ok(())
     }
+}
+
+/// The rect of the menu entry `name` in a `ui.state` reply: a label that is the name, or the name
+/// and a key (no further words, no "...").
+fn menu_entry(state: &str, name: &str) -> Option<[f64; 4]> {
+    let key = "\"label\":\"";
+    let mut at = 0;
+    while let Some(i) = state.get(at..)?.find(key) {
+        let start = at + i + key.len();
+        let rest = state.get(start..)?;
+        let label = rest.get(..rest.find('"')?)?;
+        at = start;
+        let tail = label.strip_prefix(name).map(str::trim);
+        let entry = tail.is_some_and(|t| {
+            t.is_empty()
+                || (t.len() <= 16
+                    && !t.contains("...")
+                    && !t.contains('…')
+                    && (t.contains('+') || !t.starts_with(char::is_alphabetic)))
+        });
+        if entry {
+            let v = numbers_after(rest, "\"rect\":[", 4)?;
+            return Some([*v.first()?, *v.get(1)?, *v.get(2)?, *v.get(3)?]);
+        }
+    }
+    None
 }
 
 /// The result: the exported PDF, rendered at the window's pixel size on a gray backdrop.
@@ -474,10 +512,10 @@ pub fn film(root: &Path, bin: &Path, port: u16, work: &Path, out: &Path) -> Resu
     d.hold(1.2);
 
     // ---- the angle
-    d.say("Go to mode: type part of a mode's name and press Return");
+    d.say("Go to mode: type part of a mode's name and press Enter");
     d.press("Go to mode")?;
     d.type_text("angle")?;
-    d.key("Enter", &[], "Return")?;
+    d.key("Enter", &[], "Enter")?;
     d.say("Measure angle, middle button at the corner: it measures the angle and keeps it as the rotation angle");
     d.click_at(A, Btn::Middle)?;
     d.hold(1.6);
@@ -544,11 +582,14 @@ pub fn film(root: &Path, bin: &Path, port: u16, work: &Path, out: &Path) -> Resu
     d.to(((PICK.0 + PLACE.0) / 2.0, (PICK.1 + PLACE.1) / 2.0))?;
     d.click_at(PLACE, Btn::Left)?;
     d.hold(0.8);
-    d.say("Undo takes it back");
-    d.key("Z", &["command"], "⌘ Z")?;
+    d.say("Edit › Undo takes it back");
+    d.press("Edit")?;
+    d.press_entry("Undo")?;
     d.hold(0.8);
-    d.say("Save");
-    d.key("S", &["command"], "⌘ S")?;
+    d.say("File › Save");
+    d.press("File")?;
+    d.press_entry("Save")?;
+    d.hold(0.6);
 
     // ---- export
     d.say("File › Export…: the PDF language is preselected, with the LaTeX typeset");
@@ -622,4 +663,17 @@ pub fn film(root: &Path, bin: &Path, port: u16, work: &Path, out: &Path) -> Resu
     movie_render::render(&movie, out, "inclined-plane", work)?;
     println!("movie: inclined-plane written to {}", out.display());
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn menu_entries_are_found_with_any_key() {
+        let st = r#"{"widgets":[{"label":"Save As... ⇧⌘ S","rect":[1.0,2.0,3.0,4.0]},{"label":"Save ⌘ S","rect":[5.0,6.0,7.0,8.0]},{"label":"Undo Ctrl+Z","rect":[9.0,1.0,11.0,2.0]},{"label":"Saved versions…","rect":[0.0,0.0,1.0,1.0]}]}"#;
+        assert_eq!(menu_entry(st, "Save"), Some([5.0, 6.0, 7.0, 8.0]));
+        assert_eq!(menu_entry(st, "Undo"), Some([9.0, 1.0, 11.0, 2.0]));
+        assert_eq!(menu_entry(st, "Redo"), None);
+    }
 }
