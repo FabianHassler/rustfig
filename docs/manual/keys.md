@@ -85,6 +85,24 @@ Those whose Ctrl key the system does not use always work; the others work while 
 
 ## Platform keys
 
+<!-- os: mac -->
+| Key | Action |
+|---|---|
+| ⌘ N, ⌘ O, ⌘ S, ⇧⌘ S, ⌘ Q | New, Open, Save, Save As, Quit |
+| ⌘ E, ⇧⌘ E | Export |
+| ⌘ Z, ⇧⌘ Z | Undo, Redo |
+| ⌘ V | Paste objects (the cut buffer) |
+| ⌘ =, ⌘ -, ⌘ 0, ⌘ 1 | Zoom in, out, to fit, actual size |
+| ⌘ ', ⌘ B | Show grid, show page border |
+| ⌘ F | Search/Replace |
+| ⌘ P | Print |
+| ⌘ K | Enter point |
+| ⌘ J | Go to mode |
+| ⇧⌘ L | Redraw |
+| ⇧⌘ M | Character map |
+| ⇧⌘ K | Command search |
+| ⇧⌘ P | Plot curve |
+<!-- os: linux windows -->
 | Key | Action |
 |---|---|
 | Ctrl+N, O, S, Shift+S, Q | New, Open, Save, Save As, Quit |
@@ -92,7 +110,7 @@ Those whose Ctrl key the system does not use always work; the others work while 
 | Ctrl+Z, Ctrl+Shift+Z | Undo, Redo |
 | Ctrl+V | Paste objects (the cut buffer) |
 | Ctrl+=, Ctrl+-, Ctrl+0, Ctrl+1 | Zoom in, out, to fit, actual size |
-| Ctrl+' , Ctrl+B | Show grid, show page border |
+| Ctrl+', Ctrl+B | Show grid, show page border |
 | Ctrl+F | Search/Replace |
 | Ctrl+P | Print |
 | Ctrl+K | Enter point |
@@ -101,46 +119,77 @@ Those whose Ctrl key the system does not use always work; the others work while 
 | Ctrl+Shift+M | Character map |
 | Ctrl+Shift+K | Command search |
 | Ctrl+Shift+P | Plot curve |
+<!-- os: end -->
 
 ## xfig's menu keys
 
 <!-- os: mac -->
-Meta is the Option key (⌥).
+Meta is the Option key (⌥), xfig's Ctrl the Control key (⌃).
 <!-- os: linux windows -->
 Meta is the Alt key.
 <!-- os: end -->
 
 Marked *always*: the command has no key of the system's, so xfig's key works whether xfig's keys are on or not. The others work while xfig's keys are on (Edit > Global settings).
 
+<!-- os: mac -->
 | Key | Action | Works |
 |---|---|---|
-| Meta+N, O | New, Open | with xfig's keys |
-| Meta+M | Merge | always |
-| Meta+S, A | Save, Save As | with xfig's keys |
-| Meta+X | Export | with xfig's keys |
-| Shift+Meta+X | Export at once with the last settings | always |
-| Meta+Q | Exit | with xfig's keys |
-| Meta+U | Undo | with xfig's keys |
-| Meta+T | Paste | with xfig's keys |
-| Meta+I | Search/Replace | with xfig's keys |
-| Meta+K | Spell check | always |
-| Meta+D | Delete all | always |
-| Meta+Z | Digitize | always |
-| Meta+P | Print | with xfig's keys |
-| Shift+Meta+P | Print at once | always |
-| Meta+R or Ctrl+L (the physical Ctrl key) | Redraw | with xfig's keys |
-| Meta+C | Portrait/Landscape | always |
-| Meta+B | Show page borders | with xfig's keys |
-| Meta+L | Show line lengths | always |
-| Meta+Y | Show info balloons | always |
-| Meta+G | Global settings | always |
+| ⌥ N, ⌥ O | New, Open | with xfig's keys |
+| ⌥ M | Merge | always |
+| ⌥ S, ⌥ A | Save, Save As | with xfig's keys |
+| ⌥ X | Export | with xfig's keys |
+| ⌥⇧ X | Export at once with the last settings | always |
+| ⌥ Q | Exit | with xfig's keys |
+| ⌥ U | Undo | with xfig's keys |
+| ⌥ T | Paste | with xfig's keys |
+| ⌥ I | Search/Replace | with xfig's keys |
+| ⌥ K | Spell check | always |
+| ⌥ D | Delete all | always |
+| ⌥ Z | Digitize | always |
+| ⌥ P | Print | with xfig's keys |
+| ⌥⇧ P | Print at once | always |
+| ⌥ R or ⌃ L | Redraw | with xfig's keys |
+| ⌥ C | Portrait/Landscape | always |
+| ⌥ B | Show page borders | with xfig's keys |
+| ⌥ L | Show line lengths | always |
+| ⌥ Y | Show info balloons | always |
+| ⌥ G | Global settings | always |
 | Shift+U | Set units | always |
 | Shift+Z, Z | Zoom in, zoom out | with xfig's keys |
-| Ctrl+Z (the physical Ctrl key) | Zoom to fit | with xfig's keys |
-| Ctrl+K (the physical Ctrl key) | Enter point | with xfig's keys |
-| Ctrl+Y (the physical Ctrl key) | Manage Styles | always |
+| ⌃ Z | Zoom to fit | with xfig's keys |
+| ⌃ K | Enter point | with xfig's keys |
+| ⌃ Y | Manage Styles | always |
+<!-- os: linux windows -->
+| Key | Action | Works |
+|---|---|---|
+| Alt+N, O | New, Open | with xfig's keys |
+| Alt+M | Merge | always |
+| Alt+S, A | Save, Save As | with xfig's keys |
+| Alt+X | Export | with xfig's keys |
+| Shift+Alt+X | Export at once with the last settings | always |
+| Alt+Q | Exit | with xfig's keys |
+| Alt+U | Undo | with xfig's keys |
+| Alt+T | Paste | with xfig's keys |
+| Alt+I | Search/Replace | with xfig's keys |
+| Alt+K | Spell check | always |
+| Alt+D | Delete all | always |
+| Alt+Z | Digitize | always |
+| Alt+P | Print | with xfig's keys |
+| Shift+Alt+P | Print at once | always |
+| Alt+R or Ctrl+L | Redraw | with xfig's keys |
+| Alt+C | Portrait/Landscape | always |
+| Alt+B | Show page borders | with xfig's keys |
+| Alt+L | Show line lengths | always |
+| Alt+Y | Show info balloons | always |
+| Alt+G | Global settings | always |
+| Shift+U | Set units | always |
+| Shift+Z, Z | Zoom in, zoom out | with xfig's keys |
+| Ctrl+Z | Zoom to fit | with xfig's keys (else Undo) |
+| Ctrl+K | Enter point | always (the system's key too) |
+| Ctrl+Y | Manage Styles | always |
+<!-- os: end -->
 
-Meta+F, E, V and H open the File, Edit, View and Help menus (the Tools menu has no letter); while a menu is open, the underlined letter of an entry picks it (for example `i` for Zoom In in the View menu). In the Help menu `x` opens this manual and `k` the key list. In the View menu `c` opens the character map (also Ctrl+Shift+M, even while typing). 
+Meta with F, E, V and H opens the File, Edit, View and Help menus (the Tools menu has no letter); while a menu is open, the underlined letter of an entry picks it (for example `i` for Zoom In in the View menu). In the Help menu `x` opens this manual and `k` the key list. In the View menu `c` opens the character map (its key in the table above works even while typing). 
 <!-- os: mac -->
 ⌘ J puts the caret in the Go to mode field of the mode panel, in both key schemes (xfig has no key there).
 <!-- os: linux windows -->

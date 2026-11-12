@@ -39,7 +39,7 @@ Key `Shift+I`.
 
 ## X-spline
 
-No key. The curve's shape at each control point is a number between -1 and 1: 0 makes a sharp corner, 1 a smooth curve that approximates the point, -1 a smooth curve through it. New points are smooth approximations; change them later with [Edit attributes](attribute-modes.md) (right button on a point of the spline).
+No key and no button: Tools > X-spline, or Go to mode. The curve's shape at each control point is a number between -1 and 1: 0 makes a sharp corner, 1 a smooth curve that approximates the point, -1 a smooth curve through it. New points are smooth approximations; change them later with [Edit attributes](attribute-modes.md) (right button on a point of the spline) or with Ctrl+Shift and a click on the point (see *Shape factor on the canvas* below). Any approximated or interpolated spline becomes an X-spline the same way.
 
 - Left, “first point”.
 - Middle, “freehand”.
@@ -53,7 +53,7 @@ No key. As X-spline but closed.
 
 ## Shape factor on the canvas
 
-In the editing modes (not the drawing modes), hold Ctrl and Shift and click a spline point: the left button makes the point more approximating (shape +0.04 up to 1), the right button more interpolating (-0.04 down to -0.5, xfig's `S_SPLINE_INTERP`), the middle button cycles through interpolating (-0.5), angular (0) and approximating (1). The spline becomes an X-spline. The end points of an open spline are refused ("Cannot edit end-points"); a click away from spline points says "Only spline points can be edited". The indicator shows "More approx / Cycle shapes / More interp" while both keys are held. Like xfig, the changed spline goes to the end of the list (it draws on top of its depth). Undo restores the old shape.
+This turns an approximated or interpolated spline into an X-spline, and changes the points of an X-spline. In the editing modes (Move point, Edit and the others, not the drawing modes), hold Ctrl and Shift and click a spline point: the left button makes the point more approximating (shape +0.04 up to 1), the right button more interpolating (-0.04 down to -0.5, xfig's `S_SPLINE_INTERP`), the middle button cycles through interpolating (-0.5), angular (0) and approximating (1). The spline becomes an X-spline. The end points of an open spline are refused ("Cannot edit end-points"); a click away from spline points says "Only spline points can be edited". The indicator shows "More approx / Cycle shapes / More interp" while both keys are held. Like xfig, the changed spline goes to the end of the list (it draws on top of its depth). Undo restores the old shape.
 
 Ctrl is the Control key on every system, on macOS too.
 
