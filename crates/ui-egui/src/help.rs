@@ -597,24 +597,12 @@ const HEADING_ICONS: &[(&str, HeadingIcon)] = {
     use HeadingIcon::{Vector, Xbm};
     &[
         ("Library mode", Xbm(&xi::LIBRARY)),
-        ("Libraries", Xbm(&xi::LIBRARY)),
-        ("Smart links", Xbm(&xi::SMARTMOVE)),
         ("Angle Geom", Xbm(&xi::MOUNTHATTAN)),
         ("Point Posn and Grid Mode", Xbm(&xi::GRID1)),
-        ("Snap and grid", Xbm(&xi::GRID1)),
-        ("Line styles", Xbm(&xi::DASHLINE)),
         (
             "Arrowhead in the middle of a line",
             Vector(crate::vector_icons::VIcon::ArrowMid),
         ),
-        ("Join and split", Xbm(&xi::JOIN_SPLIT)),
-        ("Tangent and normal", Xbm(&xi::TANGENT)),
-        ("Trim mode", Xbm(&xi::TRIM)),
-        ("Compounds", Xbm(&xi::GLUE)),
-        ("Edit a compound", Xbm(&xi::OPEN_COMP)),
-        ("Plotting a curve", Xbm(&xi::PLOT)),
-        ("Splines", Xbm(&xi::SPL)),
-        ("Measuring", Xbm(&xi::LENMEAS)),
     ]
 };
 
@@ -628,6 +616,28 @@ fn heading_icon(spans: &[Span]) -> Option<HeadingIcon> {
         .iter()
         .find(|(h, _)| h.eq_ignore_ascii_case(&text))
         .map(|(_, i)| *i)
+}
+
+/// For each block: whether it is a heading that may get a picture: a section,
+/// or a topic's title without sub-headings (a title over sections such as
+/// Measuring or Libraries gets none; its sections have the pictures).
+fn leaf_headings(blocks: &[Block]) -> Vec<bool> {
+    blocks
+        .iter()
+        .enumerate()
+        .map(|(i, b)| match b {
+            Block::Heading(level, _) if *level >= 2 => true,
+            Block::Heading(level, _) => blocks
+                .iter()
+                .skip(i + 1)
+                .find_map(|n| match n {
+                    Block::Heading(l, _) => Some(*l),
+                    _ => None,
+                })
+                .is_none_or(|next| next <= *level),
+            _ => false,
+        })
+        .collect()
 }
 
 /// The file name of a heading picture in `docs/images/icons/`.
@@ -668,17 +678,22 @@ fn heading_icon_svg(icon: HeadingIcon) -> Option<String> {
 }
 
 /// The pictures beside the manual's headings for the website: each file
-/// (name, SVG) once, and the index of `heading<TAB>file` lines it reads
+/// (name, SVG) once, and the index of `topic<TAB>heading<TAB>file` lines it reads
 /// (`docs/images/icons/`, kept current by `heading_icon_pictures_are_current`).
 pub fn heading_icon_pictures() -> (Vec<(String, String)>, String) {
     let mut files: Vec<(String, String)> = Vec::new();
     let mut index = String::new();
     for t in TOPICS {
-        for b in parse(t.text) {
+        let blocks = parse(t.text);
+        let leaves = leaf_headings(&blocks);
+        for (b, leaf) in blocks.iter().zip(leaves) {
             let Block::Heading(_, spans) = b else { continue };
-            let Some(icon) = heading_icon(&spans) else { continue };
+            let Some(icon) = leaf.then(|| heading_icon(spans)).flatten() else {
+                continue;
+            };
             let file = heading_icon_file(icon);
-            let line = format!("{}\t{file}\n", heading_text(&spans));
+            let stem = t.file.strip_suffix(".md").unwrap_or(t.file);
+            let line = format!("{stem}\t{}\t{file}\n", heading_text(spans));
             if !index.contains(&line) {
                 index.push_str(&line);
             }
@@ -696,7 +711,8 @@ pub fn heading_icon_pictures() -> (Vec<(String, String)>, String) {
 type Textures = std::collections::HashMap<&'static str, egui::TextureHandle>;
 
 fn show_blocks(ui: &mut egui::Ui, tk: &Tokens, blocks: &[Block], textures: &mut Textures, nav: &mut Option<String>) {
-    for b in blocks {
+    let leaves = leaf_headings(blocks);
+    for (i, b) in blocks.iter().enumerate() {
         match b {
             Block::Image { alt, src } => show_image(ui, tk, textures, alt, src),
             Block::Heading(level, spans) => {
@@ -708,8 +724,14 @@ fn show_blocks(ui: &mut egui::Ui, tk: &Tokens, blocks: &[Block], textures: &mut 
                     _ => 13.0,
                 };
                 // A mode's heading carries the mode's icon from the mode panel, a few others
-                // their button's picture.
-                match heading_icon(spans) {
+                // their button's picture; a heading with sub-headings (a topic's title) none.
+                let icon = leaves
+                    .get(i)
+                    .copied()
+                    .unwrap_or(false)
+                    .then(|| heading_icon(spans))
+                    .flatten();
+                match icon {
                     Some(icon) => {
                         ui.horizontal(|ui| {
                             let (r, _) =
@@ -1022,14 +1044,14 @@ mod tests {
         }
         use rustfig_engine::ToolKind;
         for t in ToolKind::ALL {
-            // The three modes without an xfig picture have no icon (yet).
-            let iconless = matches!(
-                t,
-                ToolKind::None | ToolKind::OpenClose | ToolKind::Find | ToolKind::BoundingBox
-            );
-            assert!(
-                iconless || crate::panels::icon_of(t).is_some(),
-                "the mode {:?} has no icon",
+            // Only the pictures the window has: the modes with a button (the
+            // ellipse modes share the circle buttons); the others have none.
+            let shown = crate::panels::panel_tools().contains(&t)
+                || matches!(t, ToolKind::EllipseRadii | ToolKind::EllipseDiameter);
+            assert_eq!(
+                crate::panels::icon_of(t).is_some(),
+                shown,
+                "the mode {:?}: an icon exactly when the window shows it",
                 t.label()
             );
             if t != ToolKind::None {
@@ -1126,8 +1148,13 @@ mod tests {
                 _ => None,
             })
             .collect();
+        let (_, index) = heading_icon_pictures();
         for (h, _) in HEADING_ICONS {
             assert!(headings.contains(&h.to_lowercase()), "no manual heading {h:?}");
+            assert!(
+                index.contains(&format!("\t{h}\t")),
+                "{h:?} never gets its picture (a title over sections?)"
+            );
         }
     }
 

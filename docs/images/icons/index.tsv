@@ -1,61 +1,47 @@
-Circle (radius)	ellrad.svg
-Circle (diameter)	elldia.svg
-Ellipse (radii)	ellrad.svg
-Ellipse (diameter)	elldia.svg
-Polygon	polygon.svg
-Polyline	line.svg
-Box	box.svg
-Arc-box (rounded)	arc-box.svg
-Regular polygon	regpoly.svg
-Arc	arc.svg
-Splines	spl.svg
-Approximated spline	spl.svg
-Closed approximated spline	c-spl.svg
-Interpolated spline	intspl.svg
-Closed interpolated spline	c-intspl.svg
-X-spline	xspl.svg
-Closed X-spline	c-xspl.svg
-Text	text.svg
-Picture	picobj.svg
-Move	move.svg
-Copy	copy.svg
-Delete	delete.svg
-Scale	scale.svg
-Align	align.svg
-Flip up/down	flip-y.svg
-Flip left/right	flip-x.svg
-Rotate counter-clockwise	rotCCW.svg
-Rotate clockwise	rotCW.svg
-Move point	movept.svg
-Add point	addpt.svg
-Delete point	deletept.svg
-Compounds	glue.svg
-Glue into compound	glue.svg
-Break compound	break.svg
-Open compound	open-comp.svg
-Edit a compound	open-comp.svg
-Join and split	join-split.svg
-Join/split lines and splines	join-split.svg
-Chop	chop.svg
-Trim mode	trim.svg
-Trim, split and extend	trim.svg
-Tangent and normal	tangent.svg
-Add tangent/normal to curve	tangent.svg
-Measuring	lenmeas.svg
-Measure angle	anglemeas.svg
-Measure length	lenmeas.svg
-Measure area	areameas.svg
-Libraries	library.svg
-Library mode	library.svg
-Plotting a curve	plot.svg
-Plot	plot.svg
-Update attributes	update.svg
-Edit attributes	edit.svg
-Convert line ↔ spline	convert.svg
-Add/remove arrows	autoarrow.svg
-Arrowhead in the middle of a line	arrow-mid.svg
-Line styles	dashline.svg
-Angle Geom	mounthattan.svg
-Smart links	smartmove.svg
-Snap and grid	grid1.svg
-Point Posn and Grid Mode	grid1.svg
+draw-shapes	Circle (radius)	ellrad.svg
+draw-shapes	Circle (diameter)	elldia.svg
+draw-shapes	Ellipse (radii)	ellrad.svg
+draw-shapes	Ellipse (diameter)	elldia.svg
+draw-shapes	Polygon	polygon.svg
+draw-shapes	Polyline	line.svg
+draw-shapes	Box	box.svg
+draw-shapes	Arc-box (rounded)	arc-box.svg
+draw-shapes	Regular polygon	regpoly.svg
+draw-shapes	Arc	arc.svg
+draw-splines	Approximated spline	spl.svg
+draw-splines	Closed approximated spline	c-spl.svg
+draw-splines	Interpolated spline	intspl.svg
+draw-splines	Closed interpolated spline	c-intspl.svg
+draw-text-pictures	Text	text.svg
+draw-text-pictures	Picture	picobj.svg
+select-move	Move	move.svg
+select-move	Copy	copy.svg
+select-move	Delete	delete.svg
+transform	Scale	scale.svg
+transform	Align	align.svg
+transform	Flip up/down	flip-y.svg
+transform	Flip left/right	flip-x.svg
+transform	Rotate counter-clockwise	rotCCW.svg
+transform	Rotate clockwise	rotCW.svg
+points	Move point	movept.svg
+points	Add point	addpt.svg
+points	Delete point	deletept.svg
+compounds	Glue into compound	glue.svg
+compounds	Break compound	break.svg
+compounds	Open compound	open-comp.svg
+join-split	Join/split lines and splines	join-split.svg
+chop	Chop	chop.svg
+trim	Trim, split and extend	trim.svg
+tangent-normal	Add tangent/normal to curve	tangent.svg
+measure	Measure angle	anglemeas.svg
+measure	Measure length	lenmeas.svg
+measure	Measure area	areameas.svg
+libraries	Library mode	library.svg
+plot	Plot	plot.svg
+attribute-modes	Update attributes	update.svg
+attribute-modes	Edit attributes	edit.svg
+attribute-modes	Convert line ↔ spline	convert.svg
+attribute-modes	Add/remove arrows	autoarrow.svg
+attributes	Arrowhead in the middle of a line	arrow-mid.svg
+angle-geom	Angle Geom	mounthattan.svg
+snap-grid	Point Posn and Grid Mode	grid1.svg

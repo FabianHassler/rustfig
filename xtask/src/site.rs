@@ -153,7 +153,7 @@ pub fn page(stem: &str, md: &str) -> Page {
         });
     let mut body = String::new();
     html::push_html(&mut body, parser);
-    let body = heading_icons(&dark_twins(&body));
+    let body = heading_icons(stem, &dark_twins(&body));
     Page {
         stem: stem.to_string(),
         title,
@@ -206,12 +206,12 @@ fn dark_twins(body: &str) -> String {
 }
 
 /// The pictures beside the manual's headings (a mode's icon), as the program's
-/// manual shows them: `heading<TAB>file` lines, written with the SVG files by
-/// `cargo xtask icons`.
+/// manual shows them: `topic<TAB>heading<TAB>file` lines, written with the SVG
+/// files by `cargo xtask icons`.
 const HEADING_ICONS: &str = include_str!("../../docs/images/icons/index.tsv");
 
-/// An `<h1>`–`<h3>` whose text is in [`HEADING_ICONS`] gets its picture in front.
-fn heading_icons(body: &str) -> String {
+/// An `<h1>`–`<h3>` of topic `stem` that is in [`HEADING_ICONS`] gets its picture in front.
+fn heading_icons(stem: &str, body: &str) -> String {
     let mut out = String::with_capacity(body.len());
     let mut rest = body;
     while let Some(i) = rest.find("<h") {
@@ -228,9 +228,12 @@ fn heading_icons(body: &str) -> String {
                     .replace("&lt;", "<")
                     .replace("&gt;", ">")
                     .replace("&quot;", "\"");
-                let file = HEADING_ICONS
-                    .lines()
-                    .find_map(|l| l.split_once('\t').filter(|(h, _)| *h == text.trim()).map(|(_, f)| f));
+                let file = HEADING_ICONS.lines().find_map(|l| {
+                    let mut f = l.split('\t');
+                    (f.next() == Some(stem) && f.next() == Some(text.trim()))
+                        .then(|| f.next())
+                        .flatten()
+                });
                 out.push_str(tag.get(..=o).unwrap_or(""));
                 if let Some(f) = file {
                     let _ = write!(out, "<img class=\"mode-icon\" src=\"../images/icons/{f}\" alt=\"\">");
@@ -816,7 +819,10 @@ mod tests {
 
     #[test]
     fn mode_headings_get_their_icon() {
-        let b = heading_icons("<h2>Polygon</h2><p>x</p><h3>Other</h3><h2 id=\"b\">Box</h2>");
+        let b = heading_icons(
+            "draw-shapes",
+            "<h2>Polygon</h2><p>x</p><h3>Other</h3><h2 id=\"b\">Box</h2>",
+        );
         assert_eq!(
             b,
             "<h2><img class=\"mode-icon\" src=\"../images/icons/polygon.svg\" alt=\"\">Polygon</h2><p>x</p><h3>Other</h3>\
@@ -825,7 +831,7 @@ mod tests {
         // Every file the index names is there.
         let dir = root().join("docs/images/icons");
         for l in HEADING_ICONS.lines() {
-            let f = l.split_once('\t').map_or("", |(_, f)| f);
+            let f = l.rsplit('\t').next().unwrap_or("");
             assert!(dir.join(f).is_file(), "{f}");
         }
     }

@@ -116,12 +116,11 @@ pub(crate) fn icon_of(t: ToolKind) -> Option<&'static xfig_icons::Xbm> {
             _ => None,
         })
         .or(match t {
-            // Modes of the Tools menu only: the ellipse tools share the circle buttons' icons
-            // (xfig's ellipse modes), the X-splines get xfig's X-spline bitmaps.
+            // The ellipse tools share the circle buttons' icons (those buttons draw
+            // ellipses with the middle button, as xfig's ellipse modes). Modes
+            // without a button show no icon (only pictures the window has).
             ToolKind::EllipseRadii => Some(&xfig_icons::ELLRAD),
             ToolKind::EllipseDiameter => Some(&xfig_icons::ELLDIA),
-            ToolKind::XSpline => Some(&xfig_icons::XSPL),
-            ToolKind::XSplineClosed => Some(&xfig_icons::C_XSPL),
             _ => None,
         })
 }
