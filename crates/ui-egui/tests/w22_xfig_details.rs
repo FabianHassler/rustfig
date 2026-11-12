@@ -93,15 +93,18 @@ fn depth_button_opens_a_popup_that_sets() {
     assert!(h.query_by_label("Depth value").is_none());
 }
 
-/// W22-12: Trim is the last editing button; xfig's buttons keep their
-/// positions.
+/// Trim sits beside Chop (user, 2026-11-12; it was last, W22-12), so the two
+/// Rotate buttons share a row.
 #[test]
-fn trim_button_comes_last_in_the_editing_modes() {
+fn trim_button_sits_beside_chop() {
     let order = rustfig_ui_egui::panels::editing_tools();
     assert_eq!(order.first(), Some(&ToolKind::Glue));
     assert_eq!(order.get(4), Some(&ToolKind::Chop));
-    assert_eq!(order.get(5), Some(&ToolKind::Scale));
-    assert_eq!(order.last(), Some(&ToolKind::Trim));
+    assert_eq!(order.get(5), Some(&ToolKind::Trim));
+    assert_eq!(order.get(6), Some(&ToolKind::Scale));
+    let row = |t| order.iter().position(|x| *x == t).map(|i| i / 2);
+    assert_eq!(row(ToolKind::RotateCw), row(ToolKind::RotateCcw));
+    assert_eq!(order.last(), Some(&ToolKind::AreaMeasure));
 }
 
 /// W22-14: after opening a file the message names the file, not its path.

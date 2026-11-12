@@ -60,7 +60,7 @@ impl Os {
         match self {
             Os::Mac => {
                 "Trackpad or one-button mouse: \u{2325}-click (Option) is the middle button, \
-                 a two-finger click the right button."
+                 \u{2318}-click (Cmd) or a two-finger click the right button."
             }
             Os::Windows | Os::Linux => {
                 "Two-button mouse: press the left and right buttons together for the middle \

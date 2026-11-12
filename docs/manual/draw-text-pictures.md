@@ -11,7 +11,11 @@ Key `T`. Text objects hold one line each.
 - xfig's Control keys edit the line (`d_text.c`; on macOS the Control key itself, on Linux and Windows those that do not clash with Select all, Cut and Paste): Ctrl-A start of the text (macOS only), Ctrl-E end, Ctrl-B back, Ctrl-F forward, Ctrl-D delete the character at the caret, Ctrl-H backspace, Ctrl-K delete to the end of the text, Ctrl-X delete from the start to the caret (macOS only; Cut elsewhere), Ctrl-W delete the selection.
 - **Superscripts and subscripts**: Ctrl-^ (Ctrl+Shift+6) ends the text so far and starts the next piece at the caret, a quarter of a line higher and at three quarters of the size; Ctrl-_ (Ctrl+Shift+-) does the same lower. The opposite key steps back out again, up to four levels deep; Enter starts the next line below the first piece at the original size. Each piece is a text object of its own, as in xfig. The keys also run through the control channel and `tool.event` as `superscript`, `subscript`, `kill_to_end`, `kill_to_start` and `kill_selection`.
 - Clicking in existing text puts the caret at the clicked character (in the text being typed too). Drag to select; double-click selects a word, triple-click the line; Shift+click extends the selection. Shift+Left, Right, Home and End select with the keys.
-- Dead keys and input methods work: on macOS Option+E then E types é, on Linux the compose or dead keys do the same; the pending accent is shown at the caret and replaced by the finished character.
+<!-- os: mac -->
+- Dead keys and input methods work: Option+E then E types é; the pending accent is shown at the caret and replaced by the finished character.
+<!-- os: linux windows -->
+- Dead keys and input methods work: the compose or dead keys type é and the like; the pending accent is shown at the caret and replaced by the finished character.
+<!-- os: end -->
 <!-- os: mac -->
 - Option+Left and Option+Right jump by words, Option+Backspace and Option+Delete delete a word; Cmd+Left and Cmd+Right go to the start and end; Cmd+A selects all, Cmd+C, Cmd+X and Cmd+V copy, cut and paste through the system clipboard. (A lone tap of Option is still xfig's compose key.)
 <!-- os: linux windows -->

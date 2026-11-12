@@ -1251,11 +1251,13 @@ fn web_time_now() -> f64 {
     }
 }
 
-/// The tool button for a physical button: Alt+left is the middle button, for
-/// two-button mice and trackpads (the right button is a two-finger click there).
+/// The tool button for a physical button: Alt (Option) + left is the middle
+/// button, and on macOS Cmd + left the right one, for trackpads and one- or
+/// two-button mice (`input::CtrlClick` turns them into those buttons first).
 pub fn tool_button(b: egui::PointerButton, m: egui::Modifiers) -> Option<Button> {
     match b {
         egui::PointerButton::Primary if m.alt => Some(Button::Middle),
+        egui::PointerButton::Primary if m.mac_cmd => Some(Button::Right),
         egui::PointerButton::Primary => Some(Button::Left),
         egui::PointerButton::Secondary => Some(Button::Right),
         egui::PointerButton::Middle => Some(Button::Middle),

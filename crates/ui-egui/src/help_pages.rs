@@ -43,11 +43,11 @@ pub fn mouse_rows() -> Vec<MouseRow> {
 pub fn substitutes(os: Os) -> Vec<&'static str> {
     let mut v = match os {
         Os::Mac => vec![
-            "Middle button: Option+click.",
-            "Right button: Ctrl+click, or a two-finger click.",
+            "Middle button: Option+click (with the left or the right button).",
+            "Right button: Cmd+click, or a two-finger click (Ctrl+click is xfig's zoom).",
         ],
         Os::Windows | Os::Linux => vec![
-            "Middle button: Alt+click, or the left and right buttons together (a chord, as on a two-button mouse).",
+            "Middle button: Alt+click (with the left or the right button), or the left and right buttons together (a chord, as on a two-button mouse).",
             "Right button: the right button (Ctrl+click is xfig's zoom).",
         ],
     };
@@ -207,7 +207,7 @@ mod tests {
     #[test]
     fn substitutes_per_system() {
         assert!(substitutes(Os::Mac).iter().any(|s| s.contains("Option+click")));
-        assert!(substitutes(Os::Mac).iter().any(|s| s.contains("Ctrl+click")));
+        assert!(substitutes(Os::Mac).iter().any(|s| s.contains("Cmd+click")));
         for os in [Os::Windows, Os::Linux] {
             let v = substitutes(os).join(" ");
             assert!(v.contains("Alt+click") && v.contains("together"));

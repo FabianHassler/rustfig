@@ -18,7 +18,7 @@ Hold Shift and it shows the Shift meanings; in Polyline mode Shift+left draws a 
 | Mouse | Left | Middle | Right |
 |---|---|---|---|
 | Three-button mouse | left button | middle button (wheel click) | right button |
-| Trackpad or one-button mouse | click | Option+click | two-finger click (Ctrl+click is xfig's zoom, see [Zoom and view](view.md)) |
+| Trackpad or one-button mouse | click | Option+click | Cmd+click or a two-finger click |
 
 <!-- os: linux windows -->
 | Mouse | Left | Middle | Right |
@@ -28,6 +28,12 @@ Hold Shift and it shows the Shift meanings; in Polyline mode Shift+left draws a 
 | Keyboard substitute | click | Alt+click | (none: Ctrl+click is xfig's zoom, see [Zoom and view](view.md)) |
 
 The chord works like xfig on a two-button mouse: press both buttons within a moment of each other.
+<!-- os: end -->
+
+<!-- os: mac -->
+Option with the right button is the middle button too, as in xfig. Option and Cmd are only these substitutes: no mode gives a click with Option or Cmd a meaning of its own. The modifiers that change what a button does are Shift and Ctrl (the Control key).
+<!-- os: linux windows -->
+Alt with the right button is the middle button too, as in xfig. Alt is only this substitute: no mode gives a click with Alt a meaning of its own. The modifiers that change what a button does are Shift and Ctrl.
 <!-- os: end -->
 
 ## What the buttons do
@@ -63,4 +69,4 @@ Most placing operations work either way: press, drag and release, or click once 
 
 ## Wheel and trackpad
 
-Scrolling pans the canvas. Ctrl+scroll (Cmd+scroll on macOS) zooms as xfig does: one step of the Zoom In and Zoom Out sequence (1, 1.41, 2, 2.83, 4, ...) per wheel notch, keeping the point under the pointer in place; pinching zooms continuously; and holding Space while dragging pans. On a touch screen, two fingers pan and pinch zooms, and holding one finger still for half a second acts as the right mouse button.
+Scrolling pans the canvas. Ctrl+scroll (⌘+scroll on macOS) zooms as xfig does: one step of the Zoom In and Zoom Out sequence (1, 1.41, 2, 2.83, 4, ...) per wheel notch, keeping the point under the pointer in place; pinching zooms continuously; and holding Space while dragging pans. On a touch screen, two fingers pan and pinch zooms, and holding one finger still for half a second acts as the right mouse button.

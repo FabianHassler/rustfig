@@ -58,6 +58,9 @@ const EDITING: [Slot; 26] = [
     Slot::Tool(ToolKind::OpenCompound, &xfig_icons::OPEN_COMP),
     Slot::Tool(ToolKind::JoinSplit, &xfig_icons::JOIN_SPLIT),
     Slot::Tool(ToolKind::Chop, &xfig_icons::CHOP),
+    // RustFig's own mode (D16) beside Chop, which it extends; the buttons after it move one
+    // slot, so the two Rotate buttons share a row (user, 2026-11-12).
+    Slot::Tool(ToolKind::Trim, &xfig_icons::TRIM),
     Slot::Tool(ToolKind::Scale, &xfig_icons::SCALE),
     Slot::Tool(ToolKind::Align, &xfig_icons::ALIGN),
     Slot::Tool(ToolKind::MovePoint, &xfig_icons::MOVEPT),
@@ -78,12 +81,9 @@ const EDITING: [Slot; 26] = [
     Slot::Tool(ToolKind::AngleMeasure, &xfig_icons::ANGLEMEAS),
     Slot::Tool(ToolKind::LengthMeasure, &xfig_icons::LENMEAS),
     Slot::Tool(ToolKind::AreaMeasure, &xfig_icons::AREAMEAS),
-    // RustFig's own mode (D16), after xfig's buttons so that all of them keep
-    // their grid positions (W22-12).
-    Slot::Tool(ToolKind::Trim, &xfig_icons::TRIM),
 ];
 
-/// The editing modes in the panel's order (Trim, RustFig's own, last).
+/// The editing modes in the panel's order.
 pub fn editing_tools() -> Vec<ToolKind> {
     EDITING
         .iter()

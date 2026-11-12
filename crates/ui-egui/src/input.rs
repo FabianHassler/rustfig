@@ -2,11 +2,12 @@
 //!
 //! For mice and trackpads without three buttons, everywhere in the app
 //! (canvas, rulers, panels, menus):
-//! - Option/Alt + left button is the middle button (all platforms);
-//! - macOS: Ctrl + left button is the right button, the system's own
-//!   convention (the OS reports it to apps as a left click with Ctrl held).
+//! - Option/Alt + left button is the middle button (all platforms), and so
+//!   is Option/Alt + right button (xfig's way);
+//! - macOS: Cmd + left button is the right button (a two-finger click is too;
+//!   the Control key stays xfig's Ctrl, as on the other systems).
 //!
-//! Neither modifier is used with the left button otherwise.
+//! Neither modifier is used with a mouse button otherwise.
 //!
 //! Linux and Windows: left and right pressed together are the middle button
 //! (X11's "emulate 3 buttons"), for when a window manager takes Alt + click.
@@ -116,16 +117,17 @@ impl Chord {
     }
 }
 
-/// Turns Alt + left into the middle button and (with `ctrl_is_right`) Ctrl +
-/// left into the right button; the release follows its press even if the
-/// modifier was let go in between.
+/// Turns Alt + left (and, as xfig does, Alt + right) into the middle button
+/// and (with `cmd_is_right`, macOS) Cmd + left into the right button; the
+/// release follows its press even if the modifier was let go in between.
 #[derive(Debug, Default)]
 pub struct CtrlClick {
-    down: Option<PointerButton>,
+    /// Per button pressed (left, right): what it was turned into.
+    down: [Option<PointerButton>; 2],
 }
 
 impl CtrlClick {
-    pub fn apply(&mut self, raw: &mut RawInput, ctrl_is_right: bool) {
+    pub fn apply(&mut self, raw: &mut RawInput, cmd_is_right: bool) {
         for ev in &mut raw.events {
             if let Event::PointerButton {
                 button,
@@ -134,25 +136,31 @@ impl CtrlClick {
                 ..
             } = ev
             {
-                if *button != PointerButton::Primary {
-                    continue;
-                }
+                let (slot, cmd_right) = match *button {
+                    PointerButton::Primary => (0, cmd_is_right),
+                    PointerButton::Secondary => (1, false),
+                    _ => continue,
+                };
+                let Some(down) = self.down.get_mut(slot) else { continue };
                 let as_button = if *pressed {
-                    self.down = if modifiers.alt {
+                    *down = if modifiers.alt {
                         Some(PointerButton::Middle)
-                    } else if ctrl_is_right && modifiers.ctrl && !modifiers.command {
+                    } else if cmd_right && modifiers.mac_cmd {
                         Some(PointerButton::Secondary)
                     } else {
                         None
                     };
-                    self.down
+                    *down
                 } else {
-                    self.down.take()
+                    down.take()
                 };
                 if let Some(b) = as_button {
                     *button = b;
-                    modifiers.ctrl = false;
                     modifiers.alt = false;
+                    if cmd_is_right {
+                        modifiers.mac_cmd = false;
+                        modifiers.command = false;
+                    }
                 }
             }
         }
@@ -164,8 +172,16 @@ mod tests {
     use super::*;
     use egui::{pos2, Modifiers};
 
-    fn button(pressed: bool, ctrl: bool) -> Event {
-        modifier(pressed, ctrl, false)
+    fn button(pressed: bool, cmd: bool) -> Event {
+        let mut modifiers = Modifiers::NONE;
+        modifiers.mac_cmd = cmd;
+        modifiers.command = cmd;
+        Event::PointerButton {
+            pos: pos2(1.0, 1.0),
+            button: PointerButton::Primary,
+            pressed,
+            modifiers,
+        }
     }
 
     fn modifier(pressed: bool, ctrl: bool, alt: bool) -> Event {
@@ -191,14 +207,35 @@ mod tests {
     }
 
     #[test]
-    fn ctrl_click_becomes_a_right_click_and_its_release_follows() {
+    fn alt_with_left_or_right_is_the_middle_button() {
+        for b in [PointerButton::Primary, PointerButton::Secondary] {
+            let mut c = CtrlClick::default();
+            let mut alt = Modifiers::NONE;
+            alt.alt = true;
+            let ev = |pressed, modifiers| Event::PointerButton {
+                pos: pos2(1.0, 1.0),
+                button: b,
+                pressed,
+                modifiers,
+            };
+            let mut raw = RawInput {
+                events: vec![ev(true, alt), ev(false, Modifiers::NONE)],
+                ..RawInput::default()
+            };
+            c.apply(&mut raw, false);
+            assert_eq!(buttons(&raw), [PointerButton::Middle, PointerButton::Middle], "{b:?}");
+        }
+    }
+
+    #[test]
+    fn cmd_click_becomes_a_right_click_and_its_release_follows() {
         let mut c = CtrlClick::default();
         let mut raw = RawInput {
             events: vec![button(true, true)],
             ..RawInput::default()
         };
         c.apply(&mut raw, true);
-        // Ctrl let go before the button.
+        // Cmd let go before the button.
         let mut up = RawInput {
             events: vec![button(false, false)],
             ..RawInput::default()
@@ -212,7 +249,13 @@ mod tests {
         };
         c.apply(&mut plain, true);
         assert_eq!(buttons(&plain), [PointerButton::Primary, PointerButton::Primary]);
-        // Without the macOS convention Ctrl + left stays left.
+        // Off macOS (no Cmd key) it stays left; the Control key never makes it right.
+        let mut ctrl = RawInput {
+            events: vec![modifier(true, true, false), modifier(false, true, false)],
+            ..RawInput::default()
+        };
+        c.apply(&mut ctrl, true);
+        assert_eq!(buttons(&ctrl), [PointerButton::Primary, PointerButton::Primary]);
         let mut other = RawInput {
             events: vec![button(true, true), button(false, true)],
             ..RawInput::default()

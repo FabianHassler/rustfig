@@ -6,7 +6,7 @@ A plot is **one compound**: the frame, the ticks with their numbers, an optional
 
 ## Plot
 
-Key `y`. The last button of the Drawing column, beside the library button; the same as the Tools menu's **Plot curve...** (Ctrl+Shift+P, Cmd+Shift+P on macOS).
+Key `y`. The last button of the Drawing column, beside the library button; the same as the Tools menu's **Plot curve...** (Ctrl+Shift+P, ⇧⌘ P on macOS).
 
 - Left, “first corner”: click where one corner of the plot's frame goes, as in Box mode. A rubber-band rectangle follows the pointer and the left button now says “final point”: click the opposite corner and the Plot dialog opens for that frame. A single click opens nothing. Nothing is drawn until you press **Draw plot** in the dialog; Cancel leaves the drawing as it was.
 - The right button, “cancel”, drops the frame you have started. The middle button does nothing in this mode.
