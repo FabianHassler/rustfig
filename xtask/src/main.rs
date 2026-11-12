@@ -8,6 +8,7 @@ mod package;
 mod release_check;
 mod site;
 // Drives xfig under Xvfb: Unix only.
+mod movie;
 #[cfg(unix)]
 mod speed_compare;
 mod xfig_compare;
@@ -551,6 +552,7 @@ fn main() -> ExitCode {
         "web" => web(),
         "package" => package::run(&root(), cargo()),
         "source-audit" => audit::run(&root()),
+        "movie" => movie::run(&root()),
         "xfig-compare" => xfig_compare::run(&root(), cargo()),
         #[cfg(unix)]
         "speed-compare" => speed_compare::run(&root()),

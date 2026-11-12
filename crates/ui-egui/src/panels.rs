@@ -750,16 +750,20 @@ pub fn classic_top(app: &mut App, ui: &mut egui::Ui, tk: &Tokens) {
         let left_w = (ui.available_width() - right_w - 8.0).max(200.0);
         ui.allocate_ui_with_layout(vec2(left_w, 48.0), egui::Layout::top_down(egui::Align::Min), |ui| {
             ui.horizontal(|ui| {
-                crate::menus::menu_buttons(app, ui);
+                let r = ui.scope(|ui| crate::menus::menu_buttons(app, ui)).response.rect;
+                crate::inject::mark_area(ui.ctx(), "Window area: Menus", r);
                 ui.separator();
-                current_file(app, ui, tk);
+                let r = ui.scope(|ui| current_file(app, ui, tk)).response.rect;
+                crate::inject::mark_area(ui.ctx(), "Window area: File name", r);
             });
-            message_panel(app, ui, tk);
+            let r = ui.scope(|ui| message_panel(app, ui, tk)).response.rect;
+            crate::inject::mark_area(ui.ctx(), "Window area: Message panel", r);
         });
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
             ui.add_space(4.0);
             ui.vertical(|ui| {
-                mouse_indicator(app, ui, tk);
+                let r = ui.scope(|ui| mouse_indicator(app, ui, tk)).response.rect;
+                crate::inject::mark_area(ui.ctx(), "Window area: Mouse indicator", r);
                 ui.horizontal(|ui| {
                     if let Some(c) = app.canvas.cursor {
                         let d = app.engine.doc();

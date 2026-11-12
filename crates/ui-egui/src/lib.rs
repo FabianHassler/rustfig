@@ -792,11 +792,13 @@ impl App {
         self.context_help
             .zones
             .push((ind.response.rect, context_help::INDICATOR_TOPIC));
-        egui::SidePanel::left("modes")
+        inject::mark_area(ctx, "Window area: Indicator panel", ind.response.rect);
+        let modes = egui::SidePanel::left("modes")
             .resizable(false)
             .exact_width(panels::MODE_PANEL_WIDTH)
             .frame(egui::Frame::side_top_panel(&ctx.style()).inner_margin(panels::MODE_PANEL_MARGIN))
             .show(ctx, |ui| panels::mode_panel(self, ui, &tokens));
+        inject::mark_area(ctx, "Window area: Mode panel", modes.response.rect);
         if self.show_depths {
             let depths = egui::SidePanel::right("depths")
                 .default_width(140.0)
@@ -804,10 +806,12 @@ impl App {
             self.context_help
                 .zones
                 .push((depths.response.rect, context_help::DEPTH_TOPIC));
+            inject::mark_area(ctx, "Window area: Depth manager", depths.response.rect);
         }
-        egui::CentralPanel::default()
+        let canvas = egui::CentralPanel::default()
             .frame(egui::Frame::NONE)
             .show(ctx, |ui| canvas::show(self, ui, &tokens));
+        inject::mark_area(ctx, "Window area: Canvas and rulers", canvas.response.rect);
         dialogs::show(self, ctx);
         #[cfg(not(target_arch = "wasm32"))]
         export_bg::tick(self, ctx);
