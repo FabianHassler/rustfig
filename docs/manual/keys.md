@@ -1,67 +1,87 @@
 # Keys
 
 <!-- os: mac -->
-RustFig understands two sets of keys: xfig's own, and the usual ones of macOS. xfig's set is a switch in Edit > Global settings ("xfig keyboard shortcuts in menus", off by default). The macOS shortcuts use Cmd (written Ctrl in the tables below); xfig's Meta is the Option key. Where a table says "the physical Ctrl key", it means the Control key, not Cmd.
+RustFig has two sets of keys: the usual ones of macOS (with Cmd) and xfig's own (Meta is the Option key, Ctrl the Control key). The mode keys always work, and so do xfig's keys for commands that have no macOS key. xfig's other keys (Option+S for Save and so on) work when **xfig keyboard shortcuts in menus** is on in Edit > Global settings (off by default).
 
-The menus show one key per entry: the system's (`⌘ Z` for Undo on macOS, `Ctrl+Z` elsewhere), or xfig's when you turn on xfig's keys in Edit > Global settings (off when RustFig is new). The mode letters (`s` for spline, `b` for box, …) work either way, and Help > Keys lists both sets. With xfig's keys on, Undo shows `⌥ U`, and `⌘ Z` undoes as well. Option and Cmd are written ⌥ and ⌘ (with Control ⌃ and Shift ⇧), with a thin space before the key, so `⌘ '` (Cmd and the apostrophe key), `⌘ -` and `⌘ =` stay readable.
+The menus show one key per entry: the macOS key (`⌘ Z` for Undo), or xfig's where the command has none, or xfig's for every entry when xfig's keys are on (Undo then shows `⌥ U`, and `⌘ Z` still undoes). Option and Cmd are written ⌥ and ⌘ (with Control ⌃ and Shift ⇧), with a thin space before the key, so `⌘ '` (Cmd and the apostrophe key), `⌘ -` and `⌘ =` stay readable. Option with a letter never picks that letter's mode.
 <!-- os: linux windows -->
-RustFig understands two sets of keys: xfig's own, and the usual ones of your system. xfig's set is a switch in Edit > Global settings ("xfig keyboard shortcuts in menus", off by default). xfig's Meta is the Alt key.
+RustFig has two sets of keys: the usual ones of your system and xfig's own (Meta is the Alt key). The mode keys always work, and so do xfig's keys for commands that have no key of the system's and that take no key of the system's. xfig's other keys work when **xfig keyboard shortcuts in menus** is on in Edit > Global settings (off by default); where both sets want the same key (Ctrl+S, Ctrl+C and so on), xfig's meaning wins while they are on.
 
-Where both sets want the same key (Ctrl+S, Ctrl+C and so on), xfig's meaning wins while xfig's keys are on. The menus show both keys of an entry where it has both, for example `Alt+U / Ctrl+Z`; modifiers are written Ctrl, Alt and Shift, and the key as its symbol (`Ctrl+'` is Ctrl and the apostrophe key, `Ctrl+-`, `Ctrl+=`).
+The menus show one key per entry: the system's (`Ctrl+Z` for Undo), or xfig's where the command has none, or xfig's for every entry when xfig's keys are on (for example `Alt+U / Ctrl+Z`). Modifiers are written Ctrl, Alt and Shift, and the key as its symbol (`Ctrl+'` is Ctrl and the apostrophe key, `Ctrl+-`, `Ctrl+=`). Alt with a letter never picks that letter's mode.
 <!-- os: end -->
 
 ## Mode keys
 
-The keys that choose a mode are shown in the mode sections: for example `C` Circle, `B` Box, `L` Polyline, `M` Move, `D` Delete. `W` Trim, split and extend (RustFig's own). Shift selects the variant: `Shift+C` Circle by diameter, `Shift+B` Arc-box. The Ctrl keys xfig uses for modes are:
+Every mode with a key; the letters are xfig's and always work. Mode keys do nothing while a menu is open or while you type text. The modes without a key (X-spline, Closed X-spline, Open/close, Find properties, Edit bounding box, Library) are in the Tools menu and in Go to mode (Ctrl+J).
 
-| Key | Mode |
+| Mode | Key |
 |---|---|
-| Ctrl+S (physical Ctrl) | Scale |
-| Ctrl+C | Copy |
-| Ctrl+A | Add point |
-| Ctrl+E | Edit attributes |
-| Ctrl+R | Rotate clockwise |
-| Ctrl+P | Picture |
-| Ctrl+G | Measure angle |
-| Ctrl+N | Measure length |
-| Ctrl+M | Measure area |
+| Circle (radius) | C |
+| Circle (diameter) | Shift+C |
+| Ellipse (radii) | E |
+| Ellipse (diameter) | Shift+E |
+| Approximated spline | S |
+| Closed approximated spline | Shift+S |
+| Interpolated spline | I |
+| Closed interpolated spline | Shift+I |
+| Polygon | P |
+| Polyline | L |
+| Box | B |
+| Arc-box (rounded) | Shift+B |
+| Regular polygon | Shift+P |
+| Arc | R |
+| Text | T |
+| Plot | Y |
+| Glue into compound | G |
+| Break compound | Shift+G |
+| Open compound | O |
+| Join/split lines and splines | J |
+| Chop | X |
+| Trim, split and extend | W |
+| Align | A |
+| Move | M |
+| Move point | Shift+M |
+| Delete point | Shift+D |
+| Delete | D |
+| Update attributes | U |
+| Flip up/down | F |
+| Flip left/right | Shift+F |
+| Rotate counter-clockwise | Shift+R |
+| Convert line ↔ spline | V |
+| Add/remove arrows | Shift+A |
+| Add tangent/normal to curve | N |
 
-Mode keys do nothing while a menu is open or while you type text.
+xfig puts nine more modes on the Control key:
 
-In Help > Keys and the menus xfig's key comes first; the system's key is added only where it differs (a mode letter such as `C` is xfig's, so it appears once). On a Mac the Meta key is shown as ⌥ and the physical Ctrl key as ⌃; the words Meta and Alt are not used there.
+<!-- os: mac -->
+They always work (macOS's own keys use Cmd).
 
-The complete list, searchable, is in Help > Keys...: every command with its key in your system's scheme and in xfig's scheme, side by side (it shows the keys of the system you are on). The system's keys always work; xfig's menu keys below (Meta+U, Meta+S, …) work only while xfig's keys are on. When they are off, Meta with a letter is that letter's mode key (Meta+U picks Update mode).
-
-## xfig's menu keys (Meta = Option or Alt)
-
-These work while xfig's keys are on (Edit > Global settings).
-
-| Key | Action |
+| Mode | Key |
 |---|---|
-| Meta+N, O, M | New, Open, Merge |
-| Meta+S, A | Save, Save As |
-| Meta+X | Export; Shift+Meta+X exports at once with the last settings |
-| Meta+Q | Exit |
-| Meta+U | Undo |
-| Meta+T | Paste |
-| Meta+I | Search/Replace |
-| Meta+K | Spell check |
-| Meta+D | Delete all |
-| Meta+Z | Digitize |
-| Meta+P | Print; Shift+Meta+P prints at once |
-| Meta+R or Ctrl+L | Redraw |
-| Meta+C | Portrait/Landscape |
-| Meta+B | Show page borders |
-| Meta+L | Show line lengths |
-| Meta+Y | Show info balloons |
-| Meta+G | Global settings |
-| Shift+U | Set units |
-| Shift+Z, Z | Zoom in, zoom out |
-| Ctrl+Z (the physical Ctrl key) | Zoom to fit |
-| Ctrl+K (the physical Ctrl key) | Enter point |
-| Ctrl+Y (the physical Ctrl key) | Manage Styles |
+| Scale | ⌃ S |
+| Copy | ⌃ C |
+| Add point | ⌃ A |
+| Edit attributes | ⌃ E |
+| Rotate clockwise | ⌃ R |
+| Picture | ⌃ P |
+| Measure angle | ⌃ G |
+| Measure length | ⌃ N |
+| Measure area | ⌃ M |
+<!-- os: linux windows -->
+Those whose Ctrl key the system does not use always work; the others work while xfig's keys are on (otherwise the key keeps the system's meaning).
 
-Meta+F, E, V and H open the File, Edit, View and Help menus (the Tools menu has no letter); while a menu is open, the underlined letter of an entry picks it (for example `i` for Zoom In in the View menu). In the Help menu `x` opens this manual and `k` the key list. In the View menu `c` opens the character map (also Ctrl+Shift+M, even while typing). Ctrl+J (Cmd+J on macOS) puts the caret in the Find mode field of the mode panel, in both key schemes (xfig has no key there).
+| Mode | Key | Works |
+|---|---|---|
+| Scale | Ctrl+S | with xfig's keys on (else Save) |
+| Copy | Ctrl+C | with xfig's keys on (else copy) |
+| Add point | Ctrl+A | with xfig's keys on (else select all) |
+| Edit attributes | Ctrl+E | with xfig's keys on (else Export) |
+| Rotate clockwise | Ctrl+R | always |
+| Picture | Ctrl+P | with xfig's keys on (else Print) |
+| Measure angle | Ctrl+G | always |
+| Measure length | Ctrl+N | with xfig's keys on (else New) |
+| Measure area | Ctrl+M | always |
+<!-- os: end -->
 
 ## Platform keys
 
@@ -81,6 +101,40 @@ Meta+F, E, V and H open the File, Edit, View and Help menus (the Tools menu has 
 | Ctrl+Shift+M | Character map |
 | Ctrl+Shift+K | Command search |
 | Ctrl+Shift+P | Plot curve |
+
+## xfig's menu keys (Meta = Option or Alt)
+
+Marked *always*: the command has no key of the system's, so xfig's key works whether xfig's keys are on or not. The others work while xfig's keys are on (Edit > Global settings).
+
+| Key | Action | Works |
+|---|---|---|
+| Meta+N, O | New, Open | with xfig's keys |
+| Meta+M | Merge | always |
+| Meta+S, A | Save, Save As | with xfig's keys |
+| Meta+X | Export | with xfig's keys |
+| Shift+Meta+X | Export at once with the last settings | always |
+| Meta+Q | Exit | with xfig's keys |
+| Meta+U | Undo | with xfig's keys |
+| Meta+T | Paste | with xfig's keys |
+| Meta+I | Search/Replace | with xfig's keys |
+| Meta+K | Spell check | always |
+| Meta+D | Delete all | always |
+| Meta+Z | Digitize | always |
+| Meta+P | Print | with xfig's keys |
+| Shift+Meta+P | Print at once | always |
+| Meta+R or Ctrl+L (the physical Ctrl key) | Redraw | with xfig's keys |
+| Meta+C | Portrait/Landscape | always |
+| Meta+B | Show page borders | with xfig's keys |
+| Meta+L | Show line lengths | always |
+| Meta+Y | Show info balloons | always |
+| Meta+G | Global settings | always |
+| Shift+U | Set units | always |
+| Shift+Z, Z | Zoom in, zoom out | with xfig's keys |
+| Ctrl+Z (the physical Ctrl key) | Zoom to fit | with xfig's keys |
+| Ctrl+K (the physical Ctrl key) | Enter point | with xfig's keys |
+| Ctrl+Y (the physical Ctrl key) | Manage Styles | always |
+
+Meta+F, E, V and H open the File, Edit, View and Help menus (the Tools menu has no letter); while a menu is open, the underlined letter of an entry picks it (for example `i` for Zoom In in the View menu). In the Help menu `x` opens this manual and `k` the key list. In the View menu `c` opens the character map (also Ctrl+Shift+M, even while typing). Ctrl+J (Cmd+J on macOS) puts the caret in the Find mode field of the mode panel, in both key schemes (xfig has no key there).
 
 ## Other keys
 

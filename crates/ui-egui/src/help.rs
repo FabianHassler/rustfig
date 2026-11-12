@@ -975,6 +975,45 @@ mod tests {
         }
     }
 
+    /// The Keys topic lists every mode key, and says for the Control-key modes whether they work
+    /// with xfig's keys off, as the key handling decides it.
+    #[test]
+    fn keys_topic_lists_every_mode_key() {
+        use rustfig_engine::ToolKind;
+        let keys = TOPICS
+            .iter()
+            .find(|t| t.file == "keys.md")
+            .map(|t| t.text)
+            .unwrap_or("");
+        for t in ToolKind::ALL {
+            let k = t.shortcut();
+            if k.is_empty() {
+                continue;
+            }
+            let k = k.to_ascii_uppercase().replace("SHIFT", "Shift");
+            let row = format!("| {} | {k} |", t.label());
+            assert!(keys.contains(&row), "keys.md lacks the row {row:?}");
+        }
+        for (spec, id) in crate::menus::XFIG_KEYS
+            .iter()
+            .filter(|(s, i)| s.starts_with("PhysCtrl+") && i.starts_with("tool."))
+        {
+            let Some(t) = ToolKind::from_id(id) else { panic!("{id}") };
+            let letter = spec.trim_start_matches("PhysCtrl+");
+            assert!(
+                keys.contains(&format!("| {} | ⌃ {letter} |", t.label())),
+                "macOS row of {id}"
+            );
+            let always = crate::menus::xfig_key_always(spec, id, false);
+            let row = format!(
+                "| {} | Ctrl+{letter} | {}",
+                t.label(),
+                if always { "always" } else { "with xfig's keys on" }
+            );
+            assert!(keys.contains(&row), "keys.md lacks {row:?}");
+        }
+    }
+
     #[test]
     fn heading_icons_name_real_headings() {
         let headings: Vec<String> = TOPICS

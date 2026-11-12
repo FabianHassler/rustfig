@@ -4,7 +4,7 @@ All of these act on the object you click; a compound is one object. With [Smart 
 
 ## Scale
 
-No key (xfig key Ctrl+S). Resizes an object in proportion.
+Key Ctrl+S with the Control key itself (xfig's): always on a Mac (⌃ S); on Windows and Linux only with xfig's keys on, since Ctrl+S is Save there. Resizes an object in proportion.
 
 - Left, “scale box”: press on the object, drag, release. The click picks the nearest of the eight handles of the bounding box. At a corner the fixed point is the opposite corner and the object grows in proportion: the factor is the larger of the width and height ratios of the drag (xfig's `adjust_box_pos`), so the corner may end up away from the pointer on the shorter side. At the middle of an edge only the size across that edge changes (the width for the left and right edges, the height for the top and bottom edges), about the opposite edge (xfig's one-dimension box scale).
 - Middle, “scale about center”: the same around the center of the object, with the factor from the point you pressed on (a vertex when the press is near one) to the pointer, again the larger of the two axis ratios.
@@ -47,7 +47,7 @@ Key `Shift+R`. Rotates the clicked object by the indicator's Rotn Angle (set in 
 
 ## Rotate clockwise
 
-No key (xfig key Ctrl+R). As above, the other way.
+Key Ctrl+R with the Control key itself (xfig's; ⌃ R on a Mac). As above, the other way.
 
 - Left, “rotate object”.
 - Middle, “copy & rotate” (Num Copies as above).

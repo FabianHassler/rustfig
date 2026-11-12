@@ -13,7 +13,7 @@ Key `U`. Gives an object the current attributes of the [indicator panel](attribu
 
 ## Edit attributes
 
-No key (xfig key Ctrl+E). Opens the edit panel for an object with all of its attributes, text, points and comments. The panel is live: every change you make shows on the canvas at once, and Done (Ctrl+Return) keeps the whole edit as one undo step however many changes you made. Cancel (Escape) undoes everything since the panel opened. xfig's Apply button is left out: changes are applied as you make them.
+Key Ctrl+E with the Control key itself (xfig's): always on a Mac (⌃ E); on Windows and Linux only with xfig's keys on, since Ctrl+E is Export there. Opens the edit panel for an object with all of its attributes, text, points and comments. The panel is live: every change you make shows on the canvas at once, and Done (Ctrl+Return) keeps the whole edit as one undo step however many changes you made. Cancel (Escape) undoes everything since the panel opened. xfig's Apply button is left out: changes are applied as you make them.
 
 Number fields of the panel (Width, Dash length or Dot gap, Corner radius, Depth, Text Size and Angle, an ellipse's Angle, the arrow Thick, Width and Length, a picture's Scale) are buttons showing the value. Click one for a small pop-up with the number field, preset values and, where a range helps, a slider (angles have preset chips for 0 to 270 degrees; Depth has -10/-1/+1/+10 buttons). The object follows as you drag or type; Return or a click outside keeps the value, Escape puts back the value the pop-up opened with. Point coordinates stay plain fields.
 

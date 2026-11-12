@@ -1012,8 +1012,10 @@ pub(crate) fn entry_keys(id: &str, xfig_keys: bool, mac: bool) -> String {
     }
     let (platform, xfig) = entry_key_pair(id, mac);
     let platform_shadowed = xfig_keys && shadowed_by_xfig(label_of(id).1, mac);
-    // Mode letters are always on; xfig's other keys follow its switch.
-    if !xfig.is_empty() && (xfig_keys || is_mode_letter(label_of(id).1)) {
+    // Mode letters are always on, and so are xfig's keys of commands without a key of the
+    // system's; xfig's other keys follow its switch.
+    let always = xfig_accelerator(id).is_some_and(|spec| xfig_key_always(spec, id, mac));
+    if !xfig.is_empty() && (xfig_keys || always || is_mode_letter(label_of(id).1)) {
         return xfig;
     }
     if platform_shadowed {
@@ -1068,6 +1070,39 @@ fn shadowed_by_xfig(s: &str, mac: bool) -> bool {
             .any(|(alt, shift, ctrl, key)| {
                 ctrl && key == k.logical_key && shift == k.modifiers.shift && alt == k.modifiers.alt
             })
+}
+
+/// Whether xfig's key `spec` for the command `id` works while xfig's keys are off: the command
+/// has no key of the system's, and the key takes none of the system's. On Windows and Linux
+/// xfig's Ctrl is the system's Ctrl, so its Ctrl keys give way to the system's (and to Ctrl+A, C,
+/// V and X, which select, copy and paste there); on macOS the system's keys use Cmd.
+pub(crate) fn xfig_key_always(spec: &str, id: &str, mac: bool) -> bool {
+    let own = label_of(id).1;
+    if !own.is_empty() && !is_mode_letter(own) {
+        return false;
+    }
+    let Some((alt, shift, ctrl, key)) = parse_xfig_key(spec) else {
+        return false;
+    };
+    if ctrl && !mac && matches!(key, egui::Key::A | egui::Key::C | egui::Key::V | egui::Key::X) {
+        return false;
+    }
+    let taken = cmd::all()
+        .iter()
+        .map(|c| c.shortcut)
+        .chain(UI_COMMANDS.iter().map(|c| c.shortcut))
+        .filter_map(parse_shortcut)
+        .any(|k| {
+            k.logical_key == key
+                && k.modifiers.shift == shift
+                && k.modifiers.alt == alt
+                && if ctrl {
+                    !mac && k.modifiers.command
+                } else {
+                    !k.modifiers.command
+                }
+        });
+    !taken
 }
 
 /// Thin space between the modifier symbols and the key on macOS.
@@ -1530,13 +1565,14 @@ pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
     }
     // xfig's accelerators first: on Windows and Linux they take Ctrl+S,
     // Ctrl+C, … from the platform shortcuts while the xfig keymap is on.
-    if app.xfig_keys {
-        for (spec, id) in XFIG_KEYS {
-            if take_xfig_key(ctx, spec) && app.enabled(id) {
-                app.run(id, json!({}));
-            }
+    // Those of commands without a key of the system's always work.
+    let mac = crate::platform::is_mac();
+    for (spec, id) in XFIG_KEYS {
+        if (app.xfig_keys || xfig_key_always(spec, id, mac)) && take_xfig_key(ctx, spec) && app.enabled(id) {
+            app.run(id, json!({}));
         }
     }
+
     // Most specific shortcuts (more modifiers) first, so Ctrl+Shift+Z beats Ctrl+Z.
     let mut all: Vec<(&'static str, egui::KeyboardShortcut)> = cmd::all()
         .iter()
@@ -1550,6 +1586,16 @@ pub fn handle_shortcuts(app: &mut App, ctx: &egui::Context) {
     });
     let mut ran = Vec::new();
     for (id, k) in all {
+        // Alt (Option) with a key is not that key's shortcut (egui's match ignores Alt).
+        let with_alt = ctx.input(|i| {
+            i.events.iter().any(|e| {
+                matches!(e, egui::Event::Key { key, pressed: true, modifiers, .. }
+                    if *key == k.logical_key && modifiers.alt)
+            })
+        });
+        if with_alt && !k.modifiers.alt {
+            continue;
+        }
         if ctx.input_mut(|i| i.consume_shortcut(&k)) && app.enabled(id) {
             app.run(id, json!({}));
             ran.push(id);
@@ -1834,6 +1880,25 @@ mod tests {
                 "{p}"
             );
         }
+    }
+
+    #[test]
+    fn xfig_keys_without_a_system_key_always_work() {
+        // Commands without a key of the system's.
+        assert!(xfig_key_always("Alt+M", "app.merge", true));
+        assert!(xfig_key_always("Alt+M", "app.merge", false));
+        assert!(xfig_key_always("Shift+U", "app.unit_panel", false));
+        // Commands with one: the system's key it is.
+        assert!(!xfig_key_always("Alt+U", "edit.undo", true));
+        assert!(!xfig_key_always("Alt+S", "app.save", false));
+        // The Control key: free on macOS (the system uses Cmd), shared elsewhere.
+        assert!(xfig_key_always("PhysCtrl+S", "tool.scale", true));
+        assert!(!xfig_key_always("PhysCtrl+S", "tool.scale", false));
+        assert!(!xfig_key_always("PhysCtrl+C", "tool.copy", false));
+        assert!(xfig_key_always("PhysCtrl+G", "tool.angle_measure", false));
+        // The menus show them with xfig's keys off.
+        assert_eq!(entry_keys("app.merge", false, false), "Alt+M");
+        assert_eq!(entry_keys("edit.undo", false, false), "Ctrl+Z");
     }
 
     #[test]

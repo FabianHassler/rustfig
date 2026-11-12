@@ -4,7 +4,7 @@ The three measure modes (the last three buttons of the editing column) report in
 
 ## Measure angle
 
-Key Ctrl+G (the physical Ctrl key). Measures an angle between three points you click, or at a corner of a line or at the center of an arc.
+Key Ctrl+G (the Control key itself, ⌃ G on a Mac). Measures an angle between three points you click, or at a corner of a line or at the center of an arc.
 
 - Left, “first point”: click the first point of the angle. A rubber band follows the pointer. The next click (“angle tip”) is the corner, then the third click (“final point”, left button) measures the angle at the corner between the two lines and reports “Angle defined by three points: 45.00 Degrees”, between -180 and 180 degrees (the sign says which way it turns).
 - Middle, “select & save”: click a vertex of a line or polygon, or one of the three defining points of an arc. The angle is reported and also stored as the **Rotation Angle** (0 to 180 degrees) of the Rotate modes. While the three points are being placed the middle button's label is “save angle”: the third point clicked with it also stores the angle.
@@ -16,7 +16,7 @@ At a polyline corner the report is “Angle at polyline corner: ...”; at an ar
 
 ## Measure length
 
-Key Ctrl+N. Measures the length of lines, polygons, boxes, arcs, circles and ellipses.
+Key Ctrl+N (the Control key; on Windows and Linux only with xfig's keys on, since Ctrl+N is New there). Measures the length of lines, polygons, boxes, arcs, circles and ellipses.
 
 - Left, “select object”: click the object; the message panel says for example “Length of polygon is 3.0 in”. For a circle it is the circumference, for an ellipse an approximation of the perimeter, for an arc the length along the arc. A rounded box (arcbox) gives its perimeter less the circumference of a circle with the corner radius, as xfig does.
 - Middle, “select & add”: the same, and the length is added to a running total: “Length of box is 2.0 in, accumulated 5.0 in”.
@@ -26,7 +26,7 @@ Objects the mode cannot measure (text, splines, compounds) show no markers and a
 
 ## Measure area
 
-Key Ctrl+M. Measures the area of polygons, boxes, arcs, circles and ellipses; lines are not closed, so they have no area.
+Key Ctrl+M (the Control key). Measures the area of polygons, boxes, arcs, circles and ellipses; lines are not closed, so they have no area.
 
 - Left, “select object”: click the object: “Area of box is 2.0 square in”. A circle or ellipse gives pi times the two radii; an arc counts as a sector (“sector”) for a pie arc and as the segment between arc and chord (“open arc”) for an open arc; a rounded box (arcbox) loses the area of a circle with the corner radius, as xfig does. A polygon whose sides cross itself is not measured correctly (as in xfig).
 - Middle, “select & add”: the same, and the area is added to a running total: “Area of polygon is 2.0 square in, accumulated 3.0 square in”.

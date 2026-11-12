@@ -594,6 +594,24 @@ fn xfig_keys_select_modes_and_run_menu_entries() {
 }
 
 #[test]
+fn xfig_keys_without_a_system_key_work_with_xfig_keys_off() {
+    let mut h = harness(app());
+    assert!(!h.state().xfig_keys);
+    // Meta-G (Global settings) has no key of the system's: it works.
+    press_key(&mut h, egui::Key::G, egui::Modifiers::ALT);
+    assert!(h.state().dialogs.global_open, "Meta-G opens Global settings");
+    h.state_mut().dialogs.global_open = false;
+    h.run_steps(2);
+    // Meta-U belongs to the system's Ctrl+Z here, and Alt with a letter is not the letter's mode.
+    h.state_mut().engine.set_tool(ToolKind::None);
+    h.state_mut()
+        .run("shape.rectangle", json!({"x": 0, "y": 0, "width": 600, "height": 300}));
+    press_key(&mut h, egui::Key::U, egui::Modifiers::ALT);
+    assert_ne!(h.state().engine.tool(), ToolKind::Update, "Alt-U is not the u key");
+    assert_eq!(h.state().engine.doc().objects.len(), 1);
+}
+
+#[test]
 fn classic_menus_are_xfigs() {
     let mut h = harness(app());
     // xfig's menu bar: no Object menu (RustFig has no selection).

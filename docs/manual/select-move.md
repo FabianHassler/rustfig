@@ -14,7 +14,7 @@ With [Smart links](smart-links.md) on, lines attached to a moved shape follow. G
 
 ## Copy
 
-No key (xfig key Ctrl+C). As Move, but leaves the original.
+Key Ctrl+C with the Control key itself (xfig's): always on a Mac (⌃ C); on Windows and Linux only with xfig's keys on, since Ctrl+C is copy there. As Move, but leaves the original.
 
 - Left, “copy object”: press, drag, release (or click, click).
 - Middle, “horiz/vert copy”.

@@ -57,7 +57,7 @@ Set the **TeX** flag (the Fig format calls it the *special* flag, as do xfig's m
 
 ## Picture
 
-No key (xfig key Ctrl+P). Places an image file in a box.
+Key Ctrl+P with the Control key itself (xfig's): always on a Mac (⌃ P); on Windows and Linux only with xfig's keys on, since Ctrl+P is Print there. Places an image file in a box.
 
 - Left, “corner point”: drag a box for the picture; then a file dialog asks for the image. The picture is fitted to the box.
 - Middle, “center point”: draw the box from its center (Shift+middle: a square).
