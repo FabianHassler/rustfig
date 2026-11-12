@@ -49,11 +49,15 @@ pub fn matches(query: &str) -> Vec<ToolKind> {
         return Vec::new();
     }
     let mut hits: Vec<(u8, ToolKind)> = Vec::new();
-    // The panel's modes, then the X-splines, which have no button (the
-    // other modes without one are reached through a button of another mode).
-    let modes = panels::panel_tools()
-        .into_iter()
-        .chain([ToolKind::XSpline, ToolKind::XSplineClosed]);
+    // The panel's modes, then those without a button (the X-splines, the
+    // ellipse modes and Open/close), which are found only here.
+    let modes = panels::panel_tools().into_iter().chain([
+        ToolKind::XSpline,
+        ToolKind::XSplineClosed,
+        ToolKind::EllipseRadii,
+        ToolKind::EllipseDiameter,
+        ToolKind::OpenClose,
+    ]);
     for t in modes {
         let (label, long) = haystack(t);
         let all_in = |s: &str| words.iter().all(|w| s.contains(w.as_str()));
@@ -269,7 +273,8 @@ mod tests {
         assert_eq!(m.first(), Some(&ToolKind::Box));
         assert_eq!(matches("x-spline").first(), Some(&ToolKind::XSpline));
         assert!(matches("x-spline").contains(&ToolKind::XSplineClosed));
-        assert!(!matches("ellipse").contains(&ToolKind::EllipseRadii));
+        assert!(matches("ellipse").contains(&ToolKind::EllipseRadii));
+        assert!(matches("open/close").contains(&ToolKind::OpenClose));
         assert!(matches("circle").len() >= 2);
         assert!(matches("e").len() <= MAX_MATCHES);
     }
