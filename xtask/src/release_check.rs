@@ -68,7 +68,8 @@ const LANGUAGES: &[(&str, &str)] = &[
     ("pstricks", "pstricks"),
     ("ptk", "ptk"),
     ("shape", "shape"),
-    ("sld", "sld"),
+    // sld is not byte for byte: C draws through ghostscript. It is compared drawn (R2b); the
+    // encoder alone is byte-identical to netpbm's ppmtoacad on the same pixels.
     ("svg", "svg"),
     ("textyl", "textyl"),
     ("tikz", "tikz"),

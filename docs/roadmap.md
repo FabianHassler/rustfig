@@ -8,7 +8,7 @@
 | M1 | Geometry (X-splines, arcs, arrows), model, Fig 3.x I/O, native format | done |
 | M2 | Renderer: screen, PNG, SVG, EPS, PDF; patterns; text | done |
 | M3 | Engine (commands, undo, tools), egui app, control channel, MCP, CLI | done |
-| M4 | Exports: LaTeX family, PostScript/print, more bitmaps | in progress (every fig2dev language but `sld` done; page layout, previews, hardening left) |
+| M4 | Exports: LaTeX family, PostScript/print, more bitmaps | in progress (every fig2dev language done; page layout, previews, hardening left) |
 | M5 | Web build verified and packaged; browser file I/O | planned |
 | M6 | Libraries (open compound, join/split, chop, tangent/normal, measure modes done) | planned |
 | M7 | Settings, rulers, color editor, character map | planned |
