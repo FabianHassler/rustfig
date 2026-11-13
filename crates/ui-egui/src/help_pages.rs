@@ -110,11 +110,12 @@ pub fn show_mouse_sheet(app: &mut App, ctx: &egui::Context) {
 
 /// The "What's new" text: a few lines per release, newest first.
 pub const WHATS_NEW: &str = "\
-Plots: several curves in one plot, each with its own color, line style and markers (circle, square, triangle, diamond, cross, plus); Bessel, gamma and error functions in expressions; an empty expression draws only the axes.
-Asymptote export draws splines as curves, not as many straight pieces (Export > Splines: guide, hobby or exact).
-A figure can keep its own LaTeX preamble (Global settings > LaTeX text > Edit…); it is saved in the .fig.
-LaTeX texts in one drawing are typeset in a single TeX run, so the preview appears faster.
-For scripts and AI assistants: parameters a command does not take come back as warnings, objects can be named, and the manual's AI assistants page explains the setup.
+Plots: axes crossing at the origin, minor and styled grids, tick label formats (x10^n, decimal comma, own labels), bars, stems and error bars, filled areas between curves, and polar, implicit, derivative, integral and field-line curves.
+Arrowheads partway along a line (Arrow Mode: middle); boxed text and a vertical text anchor (Text Flags, Text Just); Angle measure draws the angle with Shift and the middle or right button.
+View > Bounding box: a figure can keep its own box, edited on the canvas; every export is cut to it.
+A figure typesets with its own LaTeX preamble only; rustfig-cli convert writes what File > Export writes.
+The help shows the window in pictures, and Getting started has a movie of drawing an inclined plane. Mode icons sit beside the manual's headings; Tools > Go to mode… finds every mode, also those without a button.
+Mouse: the Control key is xfig's Ctrl on every system; on macOS Cmd+click is the right button and Option+click the middle one.
 Command search: Ctrl+Shift+K (Cmd+Shift+K on macOS). F1 opens the manual page for what is under the pointer. Help > What's new shows this page again.";
 
 /// Whether the page is shown at start: when the version last seen is not

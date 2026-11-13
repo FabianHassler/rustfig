@@ -597,7 +597,6 @@ const HEADING_ICONS: &[(&str, HeadingIcon)] = {
     use HeadingIcon::{Vector, Xbm};
     &[
         ("Library mode", Xbm(&xi::LIBRARY)),
-        ("Angle Geom", Xbm(&xi::MOUNTHATTAN)),
         ("Point Posn and Grid Mode", Xbm(&xi::GRID1)),
         (
             "Arrowhead in the middle of a line",
