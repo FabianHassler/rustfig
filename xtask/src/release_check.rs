@@ -9,8 +9,28 @@
 //! the port writes from its scene: C-bug list entries 69 and 70),
 //! and compares the outputs with timestamps, creator lines and the output folder masked. A
 //! difference passes only when the local list `c-bugs-diffs.txt` in the fig2dev clone (next to
-//! `c-bugs.md`, P12) names it: lines `LANG FIGURE #N [#M…] note`, where LANG and FIGURE may be `*`
-//! and FIGURE may end in `*` (a prefix). Entries that match nothing are reported as stale.
+//! `c-bugs.md`, P12) names it: lines `LANG FIGURE #N [#M…] [order-only] note`, where LANG and
+//! FIGURE may be `*` and FIGURE may end in `*` (a prefix). Entries that match nothing are reported
+//! as stale. An entry for a whole language or a figure prefix must be backed by rules or
+//! `order-only`, so that it accepts a difference only when it disappears once the known effect is
+//! neutralized: lines `rule LANG #N KIND args` (applied to both outputs after masking, for the
+//! entries of that language that name #N) rewrite or compare as follows.
+//! - `drop PREFIX`: lines starting with PREFIX are removed; the sets of distinct removed lines
+//!   must be equal on both sides (state lines whose count depends on the order of objects).
+//! - `blocks CHARS [AFTER…]`: line breaks are ignored and every char of CHARS ends a block, as
+//!   does each AFTER string (kept in its block); empty blocks are dropped (a different way of
+//!   cutting one text into lines).
+//! - `ids DEF REFERENCE`: blocks (after `blocks`) of the form DEF, a number and a description
+//!   define that number; blocks starting with REFERENCE and a number refer to it. Compared are
+//!   the references with the description in place of the number, and the set of descriptions
+//!   (the same thing defined under other numbers or twice).
+//! - `ltrim PREFIX AFTER`: in lines starting with PREFIX, the blanks right after the first AFTER
+//!   are removed.
+//! - `near K START END`: every run of lines from one containing START to the next ending with END
+//!   must be there on both sides, as many, with every number within K of its counterpart.
+//!
+//! `order-only` accepts outputs that have the same lines in another order (the order of equal
+//! depths, entry 63; for figures too large to renumber their depths) after the rules.
 //!
 //! Environment: `FIG2DEV_C` (default the Homebrew C fig2dev 3.2.9a), `FIG2DEV_DIR` (default
 //! `../fig2dev`), `RELEASE_CHECK_FILTER=substring` limits step 12 to figures whose path has it.
@@ -179,11 +199,217 @@ struct Accept {
     lang: String,
     figure: String,
     bugs: String,
+    /// The C-bug numbers (`#N`) of the entry.
+    nums: Vec<String>,
+    order_only: bool,
+    /// The rules of this entry's numbers (all languages; the compared one is chosen on use).
+    rules: Vec<Rule>,
     line: usize,
     used: AtomicUsize,
 }
 
+/// How an entry neutralizes its known effect before the outputs are compared again.
+#[derive(Clone, Debug)]
+enum RuleKind {
+    Drop(String),
+    Blocks { ends: String, after: Vec<String> },
+    Near { k: i64, start: String, end: String },
+    Ids { def: String, reference: String },
+    Ltrim { prefix: String, after: String },
+}
+
+#[derive(Clone, Debug)]
+struct Rule {
+    lang: String,
+    num: String,
+    kind: RuleKind,
+}
+
+/// The masked lines of C and of RustFig.
+type Pairs = Vec<(Vec<String>, Vec<String>)>;
+
+/// The numbers (runs of digits, with a sign) of a line.
+fn numbers(line: &str) -> Vec<i64> {
+    let mut v = Vec::new();
+    let b = line.as_bytes();
+    let mut i = 0;
+    while i < b.len() {
+        if b[i].is_ascii_digit() {
+            let s = if i > 0 && b[i - 1] == b'-' { i - 1 } else { i };
+            while i < b.len() && b[i].is_ascii_digit() {
+                i += 1;
+            }
+            v.push(line.get(s..i).and_then(|t| t.parse().ok()).unwrap_or(i64::MAX));
+        } else {
+            i += 1;
+        }
+    }
+    v
+}
+
+/// The sections of `v`: each from a line containing `start` to the next line (that one too)
+/// ending with `end`, in order.
+fn sections(v: &[String], start: &str, end: &str) -> Vec<(usize, usize)> {
+    let mut out = Vec::new();
+    let mut i = 0;
+    while let Some(from) = v.iter().skip(i).position(|l| l.contains(start)).map(|p| p + i) {
+        let Some(to) = v.iter().skip(from).position(|l| l.ends_with(end)).map(|p| p + from) else {
+            break;
+        };
+        out.push((from, to));
+        i = to + 1;
+    }
+    out
+}
+
+/// `a` and `b` with each `near` section replaced by one marker line, `None` when the sections
+/// differ in number or length, in the text around the numbers, or in a number by more than `k`.
+fn strip_near(a: &[String], b: &[String], k: i64, start: &str, end: &str) -> Option<(Vec<String>, Vec<String>)> {
+    let (sa, sb) = (sections(a, start, end), sections(b, start, end));
+    if sa.len() != sb.len() {
+        return None;
+    }
+    let shape = |l: &str| l.chars().filter(|c| !c.is_ascii_digit()).collect::<String>();
+    for (&(a0, a1), &(b0, b1)) in sa.iter().zip(&sb) {
+        if a1 - a0 != b1 - b0 {
+            return None;
+        }
+        for (x, y) in a.get(a0..=a1)?.iter().zip(b.get(b0..=b1)?) {
+            let (nx, ny) = (numbers(x), numbers(y));
+            if shape(x) != shape(y)
+                || nx.len() != ny.len()
+                || nx.iter().zip(&ny).any(|(p, q)| p.abs_diff(*q) > k.unsigned_abs())
+            {
+                return None;
+            }
+        }
+    }
+    let cut = |v: &[String], secs: &[(usize, usize)]| -> Vec<String> {
+        let mut o = Vec::new();
+        let mut at = 0;
+        for &(s, e) in secs {
+            o.extend(v.get(at..s).unwrap_or_default().iter().cloned());
+            o.push("(near section)".into());
+            at = e + 1;
+        }
+        o.extend(v.get(at..).unwrap_or_default().iter().cloned());
+        o
+    };
+    Some((cut(a, &sa), cut(b, &sb)))
+}
+
+/// `v` with the blanks right after the first `after` removed in the lines starting with `prefix`.
+fn ltrim(v: &[String], prefix: &str, after: &str) -> Vec<String> {
+    v.iter()
+        .map(|l| match l.strip_prefix(prefix).and_then(|_| l.find(after)) {
+            Some(i) => {
+                let (head, tail) = l.split_at(i + after.len());
+                format!("{head}{}", tail.trim_start_matches(' '))
+            }
+            None => l.clone(),
+        })
+        .collect()
+}
+
+/// `v` (blocks) with the numbered definitions (`def` and a number, then a description) removed
+/// and every `reference` and number replaced by the description of that number; the distinct
+/// descriptions are added at the end. Different numbers for the same thing then compare equal.
+fn ids(v: &[String], def: &str, reference: &str) -> Vec<String> {
+    let split = |l: &str, p: &str| -> Option<(String, String)> {
+        let rest = l.strip_prefix(p)?;
+        let n = rest.chars().take_while(char::is_ascii_digit).count();
+        (n > 0).then(|| {
+            (
+                rest.get(..n).unwrap_or_default().to_string(),
+                rest.get(n..).unwrap_or_default().to_string(),
+            )
+        })
+    };
+    let mut map = BTreeMap::new();
+    for l in v {
+        if let Some((n, d)) = split(l, def) {
+            map.insert(n, d);
+        }
+    }
+    let mut out = Vec::new();
+    for l in v {
+        if split(l, def).is_some() {
+            continue;
+        }
+        out.push(match split(l, reference) {
+            Some((n, rest)) => format!("{reference}[{}]{rest}", map.get(&n).map_or("?", String::as_str)),
+            None => l.clone(),
+        });
+    }
+    let mut descriptions: Vec<String> = map.into_values().collect();
+    descriptions.sort_unstable();
+    descriptions.dedup();
+    out.extend(descriptions.into_iter().map(|d| format!("(defined) {d}")));
+    out
+}
+
+/// `v` without the lines starting with `prefix`, and the set of those lines.
+fn drop_prefix(v: &[String], prefix: &str) -> (Vec<String>, std::collections::BTreeSet<String>) {
+    let (gone, kept): (Vec<&String>, Vec<&String>) = v.iter().partition(|l| l.starts_with(prefix));
+    (kept.into_iter().cloned().collect(), gone.into_iter().cloned().collect())
+}
+
+/// `v` as blocks: no line breaks, every char of `ends` ends a block, and so does each string of
+/// `after` (which stays in its block); no empty block.
+fn blocks(v: &[String], ends: &str, after: &[String]) -> Vec<String> {
+    let mut text = v.concat();
+    for a in after {
+        text = text.replace(a.as_str(), &format!("{a}\n"));
+    }
+    text.split(|c| ends.contains(c) || c == '\n')
+        .filter(|b| !b.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+/// Whether the outputs `a` and `b` are the same once the `rules` (of one language) are applied;
+/// with `order_only`, also when they have the same lines in another order.
+fn explains(rules: &[&Rule], order_only: bool, a: &[String], b: &[String]) -> bool {
+    let (mut a, mut b) = (a.to_vec(), b.to_vec());
+    for r in rules {
+        match &r.kind {
+            RuleKind::Near { k, start, end } => match strip_near(&a, &b, *k, start, end) {
+                Some((x, y)) => (a, b) = (x, y),
+                None => return false,
+            },
+            RuleKind::Drop(prefix) => {
+                let ((x, sx), (y, sy)) = (drop_prefix(&a, prefix), drop_prefix(&b, prefix));
+                if sx != sy {
+                    return false;
+                }
+                (a, b) = (x, y);
+            }
+            RuleKind::Ltrim { prefix, after } => (a, b) = (ltrim(&a, prefix, after), ltrim(&b, prefix, after)),
+            RuleKind::Ids { def, reference } => (a, b) = (ids(&a, def, reference), ids(&b, def, reference)),
+            RuleKind::Blocks { ends, after } => (a, b) = (blocks(&a, ends, after), blocks(&b, ends, after)),
+        }
+    }
+    if a == b {
+        return true;
+    }
+    order_only && {
+        a.sort_unstable();
+        b.sort_unstable();
+        a == b
+    }
+}
+
 impl Accept {
+    /// Whether the difference (as `pairs`, the outputs as they are and with depths renumbered) is
+    /// the entry's known effect. An entry without rules and `order-only` accepts any difference.
+    fn explains(&self, lang: &str, pairs: &Pairs) -> bool {
+        let rules: Vec<&Rule> = self.rules.iter().filter(|r| r.lang == lang).collect();
+        if rules.is_empty() && !self.order_only {
+            return true;
+        }
+        pairs.iter().any(|(a, b)| explains(&rules, self.order_only, a, b))
+    }
+
     fn matches(&self, lang: &str, figure: &str) -> bool {
         let lang_ok = self.lang == "*" || self.lang == lang;
         let fig_ok = match self.figure.strip_suffix('*') {
@@ -199,29 +425,112 @@ fn read_accepts(path: &Path) -> Result<Vec<Accept>, String> {
         return Ok(Vec::new());
     };
     let mut v = Vec::new();
+    let mut rules: Vec<Rule> = Vec::new();
     for (i, line) in text.lines().enumerate() {
         let line = line.trim();
         if line.is_empty() || line.starts_with("//") || line.starts_with(';') {
             continue;
         }
+        let at = |what: &str| format!("{}:{}: {what}", path.display(), i + 1);
         let mut parts = line.splitn(3, char::is_whitespace);
         let (Some(lang), Some(figure), Some(rest)) = (parts.next(), parts.next(), parts.next()) else {
-            return Err(format!("{}:{}: want LANG FIGURE #N note", path.display(), i + 1));
+            return Err(at("want LANG FIGURE #N note"));
         };
-        if !rest.trim_start().starts_with('#') {
-            return Err(format!(
-                "{}:{}: the C-bug number (#N) is missing",
-                path.display(),
-                i + 1
-            ));
+        if lang == "rule" {
+            // rule LANG #N KIND args
+            let mut p = rest.splitn(3, char::is_whitespace);
+            let (Some(num), Some(kind)) = (p.next(), p.next()) else {
+                return Err(at("want rule LANG #N KIND args"));
+            };
+            let args = p.next().unwrap_or("");
+            let kind = match kind {
+                "drop" if !args.is_empty() => RuleKind::Drop(args.to_string()),
+                "blocks" if !args.is_empty() => {
+                    let mut q = args.split_whitespace().map(str::to_string);
+                    RuleKind::Blocks {
+                        ends: q.next().unwrap_or_default(),
+                        after: q.collect(),
+                    }
+                }
+                "ids" => {
+                    let mut q = args.split_whitespace();
+                    let (Some(def), Some(reference)) = (q.next(), q.next()) else {
+                        return Err(at("want ids DEF REFERENCE"));
+                    };
+                    RuleKind::Ids {
+                        def: def.into(),
+                        reference: reference.into(),
+                    }
+                }
+                "ltrim" => {
+                    let mut q = args.split_whitespace();
+                    let (Some(prefix), Some(after)) = (q.next(), q.next()) else {
+                        return Err(at("want ltrim PREFIX AFTER"));
+                    };
+                    RuleKind::Ltrim {
+                        prefix: prefix.into(),
+                        after: after.into(),
+                    }
+                }
+                "near" => {
+                    let mut q = args.split_whitespace();
+                    let (Some(k), Some(start), Some(end)) = (q.next(), q.next(), q.next()) else {
+                        return Err(at("want near K START END"));
+                    };
+                    let k = k.parse().map_err(|_| at("near: K is not a number"))?;
+                    RuleKind::Near {
+                        k,
+                        start: start.into(),
+                        end: end.into(),
+                    }
+                }
+                _ => return Err(at("unknown rule (drop, blocks, ids, ltrim, near)")),
+            };
+            rules.push(Rule {
+                lang: figure.to_string(),
+                num: num.to_string(),
+                kind,
+            });
+            continue;
+        }
+        let mut nums = Vec::new();
+        let mut order_only = false;
+        for w in rest.split_whitespace() {
+            if w.starts_with('#') {
+                nums.push(w.to_string());
+            } else if w == "order-only" && !order_only {
+                order_only = true;
+            } else {
+                break;
+            }
+        }
+        if nums.is_empty() {
+            return Err(at("the C-bug number (#N) is missing"));
         }
         v.push(Accept {
             lang: lang.to_string(),
             figure: figure.to_string(),
             bugs: rest.trim().to_string(),
+            nums,
+            order_only,
+            rules: Vec::new(),
             line: i + 1,
             used: AtomicUsize::new(0),
         });
+    }
+    for a in &mut v {
+        a.rules = rules
+            .iter()
+            .filter(|r| a.nums.contains(&r.num) && (a.lang == "*" || a.lang == r.lang))
+            .cloned()
+            .collect();
+        if (a.lang == "*" || a.figure.ends_with('*')) && a.rules.is_empty() && !a.order_only {
+            return Err(format!(
+                "{}:{}: an entry for a whole language or a prefix needs a rule for its #N or order-only",
+                path.display(),
+                a.line
+            ));
+        }
     }
     Ok(v)
 }
@@ -267,8 +576,9 @@ enum Outcome {
     /// The same lines in another order: objects of one depth in xfig's order, where C sorts
     /// them with the platform's `qsort` (C-bug list entry 63).
     Reordered,
-    /// The first differing line (masked) of C and of RustFig.
-    Differ(usize, String, String),
+    /// The first differing line (masked) of C and of RustFig, and all their lines (as they are
+    /// and, where the figure has equal depths, with the depths renumbered).
+    Differ(usize, String, String, Pairs),
 }
 
 struct Run {
@@ -362,6 +672,20 @@ fn masked(bytes: &[u8], dir: &str) -> Vec<String> {
         .collect()
 }
 
+/// The number (from 1) of the first line where `a` and `b` differ, and both lines.
+fn first_difference(a: &[String], b: &[String]) -> (usize, String, String) {
+    let i = a
+        .iter()
+        .zip(b)
+        .position(|(x, y)| x != y)
+        .unwrap_or(a.len().min(b.len()));
+    let line = |v: &[String]| {
+        let s = v.get(i).cloned().unwrap_or_else(|| "(end)".into());
+        s.chars().take(160).collect::<String>()
+    };
+    (i + 1, line(a), line(b))
+}
+
 fn compare(c: &Run, r: &Run, c_dir: &str, r_dir: &str) -> Outcome {
     match (c.ok, r.ok) {
         (false, false) => Outcome::BothFailed,
@@ -372,30 +696,22 @@ fn compare(c: &Run, r: &Run, c_dir: &str, r_dir: &str) -> Outcome {
             if a == b {
                 return Outcome::Same;
             }
-            let (mut sa, mut sb) = (a.clone(), b.clone());
-            sa.sort_unstable();
-            sb.sort_unstable();
-            if sa == sb {
-                return Outcome::Reordered;
-            }
-            let i = a
-                .iter()
-                .zip(&b)
-                .position(|(x, y)| x != y)
-                .unwrap_or(a.len().min(b.len()));
-            let line = |v: &[String]| {
-                let s = v.get(i).cloned().unwrap_or_else(|| "(end)".into());
-                s.chars().take(160).collect::<String>()
-            };
-            Outcome::Differ(i + 1, line(&a), line(&b))
+            // A difference only in order counts as one (step 12 then tries the figure without
+            // depth ties: only those may reorder).
+            let (n, x, y) = first_difference(&a, &b);
+            Outcome::Differ(n, x, y, vec![(a, b)])
         }
     }
 }
 
-/// `text` (a Fig 3.x file) with no two objects at one depth: depths renumbered by (depth, place
-/// in the file), so C's `qsort` and xfig's order agree. `None`: not Fig 3, no ties, or more
-/// objects than depths.
-fn untied(text: &str) -> Option<String> {
+/// Most objects of one variant: depths run from 0 to 999.
+const DEPTHS: usize = 1000;
+
+/// `text` (a Fig 3.x file) as figures with no two objects at one depth: depths renumbered by
+/// (depth, place in the file), so C's `qsort` and xfig's order agree. A figure of more than
+/// `DEPTHS` objects becomes several, each with the next `DEPTHS` objects in that order (the
+/// others removed), so every object is compared. `None`: not Fig 3 or no ties.
+fn untied(text: &str) -> Option<Vec<String>> {
     if !text.starts_with("#FIG 3") {
         return None;
     }
@@ -415,43 +731,75 @@ fn untied(text: &str) -> Option<String> {
             break;
         }
     }
-    // (line, field index of the depth, depth)
+    // (line, field index of the depth, depth); the lines after an object line that start with
+    // a blank or tab belong to it.
     let mut objs: Vec<(usize, usize, i64)> = Vec::new();
+    let mut owner: Vec<Option<usize>> = vec![None; lines.len()];
     for (i, l) in lines.iter().enumerate().skip(start) {
         let field = match l.as_bytes() {
             [b'1'..=b'3' | b'5', b' ', ..] => 6,
             [b'4', b' ', ..] => 3,
+            [b' ' | b'\t', ..] => {
+                let prev = i.checked_sub(1).and_then(|j| owner.get(j).copied()).flatten();
+                if let (Some(o), Some(slot)) = (prev, owner.get_mut(i)) {
+                    *slot = Some(o);
+                }
+                continue;
+            }
             _ => continue,
         };
         let depth = l.split_whitespace().nth(field)?.parse::<i64>().ok()?;
+        if let Some(slot) = owner.get_mut(i) {
+            *slot = Some(objs.len());
+        }
         objs.push((i, field, depth));
     }
     let mut depths: Vec<i64> = objs.iter().map(|o| o.2).collect();
     depths.sort_unstable();
-    if depths.windows(2).all(|w| w[0] != w[1]) || objs.len() > 1000 {
+    if depths.windows(2).all(|w| w[0] != w[1]) && objs.len() <= DEPTHS {
         return None;
     }
     let mut order: Vec<usize> = (0..objs.len()).collect();
     order.sort_by_key(|&k| (objs[k].2, k));
-    let mut out: Vec<String> = lines.iter().map(|l| (*l).to_string()).collect();
-    for (rank, &k) in order.iter().enumerate() {
-        let (i, field, _) = objs[k];
-        let l = &lines[i];
-        let end = if l.ends_with('\n') { "\n" } else { "" };
-        let mut f: Vec<String> = l.split_whitespace().map(str::to_string).collect();
-        // Text strings keep their blanks: only the fields before the string are rewritten.
-        if field == 3 {
-            let mut parts = l.trim_end_matches('\n').splitn(14, ' ');
-            let mut head: Vec<String> = (0..13).filter_map(|_| parts.next().map(str::to_string)).collect();
-            let rest = parts.next()?;
-            *head.get_mut(3)? = rank.to_string();
-            out[i] = format!("{} {rest}{end}", head.join(" "));
-            continue;
-        }
-        *f.get_mut(field)? = rank.to_string();
-        out[i] = format!("{}{end}", f.join(" "));
+    let mut rank = vec![0usize; objs.len()];
+    for (r, &k) in order.iter().enumerate() {
+        *rank.get_mut(k)? = r;
     }
-    Some(out.concat())
+    let mut variants = Vec::new();
+    for chunk in 0..objs.len().div_ceil(DEPTHS) {
+        let mut out = String::new();
+        for (i, l) in lines.iter().enumerate() {
+            let Some(&Some(o)) = owner.get(i) else {
+                out.push_str(l);
+                continue;
+            };
+            let r = *rank.get(o)?;
+            if r / DEPTHS != chunk {
+                continue;
+            }
+            let (line, field, _) = *objs.get(o)?;
+            if line != i {
+                out.push_str(l);
+                continue;
+            }
+            let r = (r % DEPTHS).to_string();
+            let end = if l.ends_with('\n') { "\n" } else { "" };
+            if field == 3 {
+                // Text strings keep their blanks: only the fields before the string are rewritten.
+                let mut parts = l.trim_end_matches('\n').splitn(14, ' ');
+                let mut head: Vec<String> = (0..13).filter_map(|_| parts.next().map(str::to_string)).collect();
+                let rest = parts.next()?;
+                *head.get_mut(3)? = r;
+                let _ = write!(out, "{} {rest}{end}", head.join(" "));
+            } else {
+                let mut f: Vec<String> = l.split_whitespace().map(str::to_string).collect();
+                *f.get_mut(field)? = r;
+                let _ = write!(out, "{}{end}", f.join(" "));
+            }
+        }
+        variants.push(out);
+    }
+    Some(variants)
 }
 
 fn rustfig_cli(root: &Path, mut cargo: Command) -> Result<PathBuf, String> {
@@ -516,16 +864,33 @@ fn step_fig2dev(root: &Path, out: &Path, cargo: Command) -> Result<(bool, String
                         let text = std::fs::read(&fig)
                             .ok()
                             .map(|b| String::from_utf8_lossy(&b).into_owned());
-                        if let Some(u) = text.as_deref().and_then(untied) {
+                        if let Some(variants) = text.as_deref().and_then(untied) {
                             let tmp = fig.with_file_name(format!(".release-check-{t}.fig"));
-                            if std::fs::write(&tmp, u).is_ok() {
+                            // Every variant must be the same; the ones that differ are the
+                            // evidence (all of them must be explained by an accept entry).
+                            let mut left = Pairs::new();
+                            let mut broken = false;
+                            for u in variants {
+                                if std::fs::write(&tmp, u).is_err() {
+                                    broken = true;
+                                    break;
+                                }
                                 let c = convert(c_bin, &[], lang, &tmp, &c_dir.join(format!("out.{ext}")));
                                 let r = convert(r_bin, &["fig2dev"], lang, &tmp, &r_dir.join(format!("out.{ext}")));
-                                if compare(&c, &r, &c_dir.to_string_lossy(), &r_dir.to_string_lossy()) == Outcome::Same
-                                {
-                                    o = Outcome::Reordered;
+                                match compare(&c, &r, &c_dir.to_string_lossy(), &r_dir.to_string_lossy()) {
+                                    Outcome::Same => {}
+                                    Outcome::Differ(.., p) => left.extend(p),
+                                    _ => broken = true,
                                 }
-                                let _ = std::fs::remove_file(&tmp);
+                            }
+                            let _ = std::fs::remove_file(&tmp);
+                            if !broken {
+                                if left.is_empty() {
+                                    o = Outcome::Reordered;
+                                } else if let Some((a, b)) = left.first() {
+                                    let (n, x, y) = first_difference(a, b);
+                                    o = Outcome::Differ(n, x, y, left);
+                                }
                             }
                         }
                     }
@@ -551,10 +916,15 @@ fn step_fig2dev(root: &Path, out: &Path, cargo: Command) -> Result<(bool, String
     let mut tsv = String::from("status\tlang\tfigure\tline\tC\tRustFig\n");
     for (fig, lang, o) in &results {
         let e = per_lang.entry(lang).or_default();
+        let empty = Pairs::new();
         let accepted = || {
-            accepts.iter().find(|a| a.matches(lang, fig)).inspect(|a| {
-                a.used.fetch_add(1, Ordering::Relaxed);
-            })
+            let pairs = if let Outcome::Differ(.., p) = o { p } else { &empty };
+            accepts
+                .iter()
+                .find(|a| a.matches(lang, fig) && a.explains(lang, pairs))
+                .inspect(|a| {
+                    a.used.fetch_add(1, Ordering::Relaxed);
+                })
         };
         let (status, line, c, r) = match o {
             Outcome::Same => {
@@ -571,7 +941,7 @@ fn step_fig2dev(root: &Path, out: &Path, cargo: Command) -> Result<(bool, String
             }
             Outcome::COnly(m) => ("c-failed", 0, m.clone(), String::new()),
             Outcome::RustFailed(m) => ("rust-failed", 0, String::new(), m.clone()),
-            Outcome::Differ(n, a, b) => ("differ", *n, a.clone(), b.clone()),
+            Outcome::Differ(n, a, b, _) => ("differ", *n, a.clone(), b.clone()),
         };
         match accepted() {
             Some(a) => {
@@ -711,7 +1081,7 @@ mod tests {
 2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2\n\t 0 0 10 10\n\
 4 0 0 50 -1 0 12 0.0000 4 135 300 1200 1200 a  b\\001\n\
 1 3 0 1 0 7 40 -1 -1 0.000 1 0.0000 0 0 10 10 0 0 10 0\n";
-        let u = untied(fig).unwrap();
+        let u = untied(fig).unwrap().remove(0);
         assert!(u.contains("\n2 1 0 1 0 7 1 -1"), "{u}");
         assert!(
             u.contains("\n4 0 0 2 -1 0 12 0.0000 4 135 300 1200 1200 a  b\\001\n"),
@@ -723,11 +1093,74 @@ mod tests {
     }
 
     #[test]
+    fn untied_splits_a_large_figure_into_variants() {
+        let mut fig = String::from("#FIG 3.2\nLandscape\nCenter\nInches\nLetter\n100.00\nSingle\n-2\n1200 2\n");
+        for i in 0..2300 {
+            let _ = writeln!(fig, "2 1 0 1 0 7 50 -1 -1 0.000 0 0 -1 0 0 2\n\t {i} 0 10 10");
+        }
+        let v = untied(&fig).unwrap();
+        assert_eq!(v.len(), 3);
+        // Every object is in exactly one variant, with its coordinates line.
+        let n: Vec<usize> = v.iter().map(|u| u.matches("\n2 1 0").count()).collect();
+        assert_eq!(n, [1000, 1000, 300]);
+        assert!(v[1].contains("\n\t 1000 0 10 10\n"));
+        assert!(!v[1].contains("\n\t 999 0 10 10\n"));
+    }
+
+    fn lines(s: &str) -> Vec<String> {
+        s.lines().map(str::to_string).collect()
+    }
+
+    #[test]
+    fn rules_neutralize_the_known_effect_only() {
+        let rule = |kind| Rule {
+            lang: "x".into(),
+            num: "#1".into(),
+            kind,
+        };
+        let blocks_r = rule(RuleKind::Blocks {
+            ends: "*%".into(),
+            after: vec!["D02".into()],
+        });
+        let (c, r) = (
+            lines("%SF1%\nX1Y2D02*\nX3Y4D01*"),
+            lines("%SF1*%\nX1Y2D02*\n\nX3Y4D01*"),
+        );
+        assert!(explains(&[&blocks_r], false, &c, &r));
+        // A changed coordinate is not the known effect.
+        assert!(!explains(&[&blocks_r], false, &c, &lines("%SF1*%\nX1Y2D02*\nX3Y5D01*")));
+
+        let near = rule(RuleKind::Near {
+            k: 2,
+            start: "table".into(),
+            end: ";".into(),
+        });
+        let c = lines("a\ntable 1\n\t0 142 255;\nb 7");
+        assert!(explains(&[&near], false, &c, &lines("a\ntable 1\n\t0 144 254;\nb 7")));
+        assert!(!explains(&[&near], false, &c, &lines("a\ntable 1\n\t0 146 255;\nb 7")));
+        assert!(!explains(&[&near], false, &c, &lines("a\ntable 1\n\t0 142 255;\nb 8")));
+
+        let drop = rule(RuleKind::Drop("\\thick".into()));
+        let c = lines("\\thick 1\nA\n\\thick 1\nB");
+        assert!(explains(&[&drop], false, &c, &lines("A\n\\thick 1\nB")));
+        assert!(!explains(&[&drop], false, &c, &lines("A\n\\thick 2\nB")));
+
+        // Same lines in another order: only with order-only; a lost line never.
+        let (c, r) = (lines("A\nB\nC"), lines("C\nA\nB"));
+        assert!(!explains(&[], false, &c, &r));
+        assert!(explains(&[], true, &c, &r));
+        assert!(!explains(&[], true, &c, &lines("C\nA")));
+    }
+
+    #[test]
     fn accept_patterns() {
         let a = |lang: &str, figure: &str| Accept {
             lang: lang.into(),
             figure: figure.into(),
             bugs: "#1".into(),
+            nums: vec!["#1".into()],
+            order_only: false,
+            rules: Vec::new(),
             line: 1,
             used: AtomicUsize::new(0),
         };
